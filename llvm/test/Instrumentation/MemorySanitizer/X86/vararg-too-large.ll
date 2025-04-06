@@ -1,5 +1,4 @@
-; RUN: opt < %s -msan-check-access-address=0 -S 2>&1 -passes=msan | FileCheck  \
-; RUN: %s
+; RUN: opt < %s -msan-check-access-address=0 -S 2>&1 -passes=msan | FileCheck %s
 
 ; Test that MSan doesn't generate code overflowing __msan_va_arg_tls when too many arguments are
 ; passed to a variadic function.

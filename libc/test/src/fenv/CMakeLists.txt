@@ -41,6 +41,7 @@ add_libc_unittest(
     libc.src.fenv.fesetenv
     libc.src.fenv.fesetround
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.properties.os
   LINK_LIBRARIES
     LibcFPTestHelpers
 )

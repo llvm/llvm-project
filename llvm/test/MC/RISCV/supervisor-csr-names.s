@@ -1,10 +1,10 @@
-# RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST-ALIAS %s
 #
-# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST,CHECK-ENC %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -d - \
@@ -457,3 +457,46 @@ csrrs t2, 0xDB0, zero
 csrrs t1, scountinhibit, zero
 # uimm12
 csrrs t2, 0x120, zero
+
+##################################
+# Control Transfer Records
+##################################
+
+# sctrctl
+# name
+# CHECK-INST: csrrs t1, sctrctl, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xe0,0x14]
+# CHECK-INST-ALIAS: csrr t1, sctrctl
+# uimm12
+# CHECK-INST: csrrs t2, sctrctl, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xe0,0x14]
+# CHECK-INST-ALIAS: csrr t2, sctrctl
+csrrs t1, sctrctl, zero
+# uimm12
+csrrs t2, 0x14E, zero
+
+# sctrstatus
+# name
+# CHECK-INST: csrrs t1, sctrstatus, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x14]
+# CHECK-INST-ALIAS: csrr t1, sctrstatus
+# uimm12
+# CHECK-INST: csrrs t2, sctrstatus, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x14]
+# CHECK-INST-ALIAS: csrr t2, sctrstatus
+csrrs t1, sctrstatus, zero
+# uimm12
+csrrs t2, 0x14F, zero
+
+# sctrdepth
+# name
+# CHECK-INST: csrrs t1, sctrdepth, zero
+# CHECK-ENC: encoding: [0x73,0x23,0xf0,0x15]
+# CHECK-INST-ALIAS: csrr t1, sctrdepth
+# uimm12
+# CHECK-INST: csrrs t2, sctrdepth, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0xf0,0x15]
+# CHECK-INST-ALIAS: csrr t2, sctrdepth
+csrrs t1, sctrdepth, zero
+# uimm12
+csrrs t2, 0x15F, zero

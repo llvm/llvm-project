@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
@@ -24,10 +25,17 @@ static bool dominatesOrPostDominates(DominanceInfo &dominanceInfo, Block *a,
                                      Block *b) {
   return dominanceInfo.dominates(a, b);
 }
-
 static bool dominatesOrPostDominates(PostDominanceInfo &dominanceInfo, Block *a,
                                      Block *b) {
   return dominanceInfo.postDominates(a, b);
+}
+static bool properlyDominatesOrPostDominates(DominanceInfo &dominanceInfo,
+                                             Block *a, Block *b) {
+  return dominanceInfo.properlyDominates(a, b);
+}
+static bool properlyDominatesOrPostDominates(PostDominanceInfo &dominanceInfo,
+                                             Block *a, Block *b) {
+  return dominanceInfo.properlyPostDominates(a, b);
 }
 
 namespace {
@@ -35,13 +43,28 @@ namespace {
 /// Helper class to print dominance information.
 class DominanceTest {
 public:
+  static constexpr StringRef kBlockIdsAttrName = "test.block_ids";
+
   /// Constructs a new test instance using the given operation.
   DominanceTest(Operation *operation) : operation(operation) {
-    // Create unique ids for each block.
+    Builder b(operation->getContext());
+
+    // Helper function that annotates the IR with block IDs.
+    auto annotateBlockId = [&](Operation *op, int64_t blockId) {
+      auto idAttr = op->getAttrOfType<DenseI64ArrayAttr>(kBlockIdsAttrName);
+      SmallVector<int64_t> ids;
+      if (idAttr)
+        ids = llvm::to_vector(idAttr.asArrayRef());
+      ids.push_back(blockId);
+      op->setAttr(kBlockIdsAttrName, b.getDenseI64ArrayAttr(ids));
+    };
+
+    // Create unique IDs for each block.
     operation->walk([&](Operation *nested) {
       if (blockIds.count(nested->getBlock()) > 0)
         return;
       blockIds.insert({nested->getBlock(), blockIds.size()});
+      annotateBlockId(nested->getBlock()->getParentOp(), blockIds.size() - 1);
     });
   }
 
@@ -61,26 +84,28 @@ public:
         if (!visited.insert(nestedBlock).second)
           return;
         if (printCommonDominatorInfo) {
-          llvm::errs() << "Nearest(" << blockIds[block] << ", "
+          llvm::outs() << "Nearest(" << blockIds[block] << ", "
                        << blockIds[nestedBlock] << ") = ";
           Block *dom =
               dominanceInfo.findNearestCommonDominator(block, nestedBlock);
           if (dom)
-            llvm::errs() << blockIds[dom];
+            llvm::outs() << blockIds[dom];
           else
-            llvm::errs() << "<no dom>";
-          llvm::errs() << "\n";
+            llvm::outs() << "<no dom>";
+          llvm::outs() << "\n";
         } else {
           if (std::is_same<DominanceInfo, DominanceT>::value)
-            llvm::errs() << "dominates(";
+            llvm::outs() << "dominates(";
           else
-            llvm::errs() << "postdominates(";
-          llvm::errs() << blockIds[block] << ", " << blockIds[nestedBlock]
-                       << ") = ";
-          if (dominatesOrPostDominates(dominanceInfo, block, nestedBlock))
-            llvm::errs() << "true\n";
-          else
-            llvm::errs() << "false\n";
+            llvm::outs() << "postdominates(";
+          llvm::outs() << blockIds[block] << ", " << blockIds[nestedBlock]
+                       << ") = "
+                       << std::to_string(dominatesOrPostDominates(
+                              dominanceInfo, block, nestedBlock))
+                       << " (properly = "
+                       << std::to_string(properlyDominatesOrPostDominates(
+                              dominanceInfo, block, nestedBlock))
+                       << ")\n";
         }
       });
     });
@@ -101,24 +126,24 @@ struct TestDominancePass
   }
 
   void runOnOperation() override {
-    llvm::errs() << "Testing : " << getOperation().getName() << "\n";
+    llvm::outs() << "Testing : " << getOperation().getName() << "\n";
     DominanceTest dominanceTest(getOperation());
 
     // Print dominance information.
-    llvm::errs() << "--- DominanceInfo ---\n";
+    llvm::outs() << "--- DominanceInfo ---\n";
     dominanceTest.printDominance(getAnalysis<DominanceInfo>(),
                                  /*printCommonDominatorInfo=*/true);
 
-    llvm::errs() << "--- PostDominanceInfo ---\n";
+    llvm::outs() << "--- PostDominanceInfo ---\n";
     dominanceTest.printDominance(getAnalysis<PostDominanceInfo>(),
                                  /*printCommonDominatorInfo=*/true);
 
     // Print dominance relationship between blocks.
-    llvm::errs() << "--- Block Dominance relationship ---\n";
+    llvm::outs() << "--- Block Dominance relationship ---\n";
     dominanceTest.printDominance(getAnalysis<DominanceInfo>(),
                                  /*printCommonDominatorInfo=*/false);
 
-    llvm::errs() << "--- Block PostDominance relationship ---\n";
+    llvm::outs() << "--- Block PostDominance relationship ---\n";
     dominanceTest.printDominance(getAnalysis<PostDominanceInfo>(),
                                  /*printCommonDominatorInfo=*/false);
   }

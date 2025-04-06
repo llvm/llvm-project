@@ -47,7 +47,7 @@ static void printRegion(raw_ostream &OS,
                         const LiveIntervals *LIS,
                         unsigned MaxInstNum =
                           std::numeric_limits<unsigned>::max()) {
-  auto BB = Begin->getParent();
+  auto *BB = Begin->getParent();
   OS << BB->getParent()->getName() << ":" << printMBBReference(*BB) << ' '
      << BB->getName() << ":\n";
   auto I = Begin;
@@ -76,7 +76,7 @@ static void printLivenessInfo(raw_ostream &OS,
                               MachineBasicBlock::iterator Begin,
                               MachineBasicBlock::iterator End,
                               const LiveIntervals *LIS) {
-  const auto BB = Begin->getParent();
+  auto *const BB = Begin->getParent();
   const auto &MRI = BB->getParent()->getRegInfo();
 
   const auto LiveIns = getLiveRegsBefore(*Begin, *LIS);
@@ -90,7 +90,7 @@ static void printLivenessInfo(raw_ostream &OS,
 LLVM_DUMP_METHOD
 void GCNIterativeScheduler::printRegions(raw_ostream &OS) const {
   const auto &ST = MF.getSubtarget<GCNSubtarget>();
-  for (const auto R : Regions) {
+  for (auto *const R : Regions) {
     OS << "Region to schedule ";
     printRegion(OS, R->Begin, R->End, LIS, 1);
     printLivenessInfo(OS, R->Begin, R->End, LIS);
@@ -127,7 +127,7 @@ class GCNIterativeScheduler::BuildDAG {
 public:
   BuildDAG(const Region &R, GCNIterativeScheduler &_Sch)
     : Sch(_Sch) {
-    auto BB = R.Begin->getParent();
+    auto *BB = R.Begin->getParent();
     Sch.BaseClass::startBlock(BB);
     Sch.BaseClass::enterRegion(BB, R.Begin, R.End, R.NumRegionInstrs);
 
@@ -165,7 +165,7 @@ public:
     , SaveSchedImpl(std::move(_Sch.SchedImpl))
     , SaveMaxRP(R.MaxPressure) {
     Sch.SchedImpl.reset(&OverrideStrategy);
-    auto BB = R.Begin->getParent();
+    auto *BB = R.Begin->getParent();
     Sch.BaseClass::startBlock(BB);
     Sch.BaseClass::enterRegion(BB, R.Begin, R.End, R.NumRegionInstrs);
   }
@@ -355,7 +355,7 @@ void GCNIterativeScheduler::scheduleRegion(Region &R, Range &&Schedule,
 #ifndef NDEBUG
   const auto SchedMaxRP = getSchedulePressure(R, Schedule);
 #endif
-  auto BB = R.Begin->getParent();
+  auto *BB = R.Begin->getParent();
   auto Top = R.Begin;
   for (const auto &I : Schedule) {
     auto MI = getMachineInstr(I);
@@ -480,7 +480,7 @@ void GCNIterativeScheduler::scheduleLegacyMaxOccupancy(
   LLVM_DEBUG(dbgs() << "Scheduling using default scheduler, "
                        "target occupancy = "
                     << TgtOcc << '\n');
-  GCNMaxOccupancySchedStrategy LStrgy(Context);
+  GCNMaxOccupancySchedStrategy LStrgy(Context, /*IsLegacyScheduler=*/true);
   unsigned FinalOccupancy = std::min(Occ, MFI->getOccupancy());
 
   for (int I = 0; I < NumPasses; ++I) {

@@ -18,7 +18,7 @@
 #include <cassert>
 #include <type_traits>
 
-namespace __orc_rt {
+namespace orc_rt {
 
 /// ORC_RT_MARK_AS_BITMASK_ENUM lets you opt in an individual enum type so you
 /// can perform bitwise operations on it without putting static_cast everywhere.
@@ -146,6 +146,6 @@ E &operator^=(E &LHS, E RHS) {
   return LHS;
 }
 
-} // end namespace __orc_rt
+} // namespace orc_rt
 
 #endif // ORC_RT_BITMASK_ENUM_H

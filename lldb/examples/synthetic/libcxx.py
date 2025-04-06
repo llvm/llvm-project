@@ -694,6 +694,13 @@ class stddeque_SynthProvider:
         except:
             return -1
 
+    @staticmethod
+    def _subscript(ptr: lldb.SBValue, idx: int, name: str) -> lldb.SBValue:
+        """Access a pointer value as if it was an array. Returns ptr[idx]."""
+        deref_t = ptr.GetType().GetPointeeType()
+        offset = idx * deref_t.GetByteSize()
+        return ptr.CreateChildAtOffset(name, offset, deref_t)
+
     def get_child_at_index(self, index):
         logger = lldb.formatters.Logger.Logger()
         logger.write("Fetching child " + str(index))
@@ -703,11 +710,8 @@ class stddeque_SynthProvider:
             return None
         try:
             i, j = divmod(self.start + index, self.block_size)
-
-            return self.first.CreateValueFromExpression(
-                "[" + str(index) + "]",
-                "*(*(%s + %d) + %d)" % (self.map_begin.get_expr_path(), i, j),
-            )
+            val = stddeque_SynthProvider._subscript(self.map_begin, i, "")
+            return stddeque_SynthProvider._subscript(val, j, f"[{index}]")
         except:
             return None
 
@@ -721,6 +725,12 @@ class stddeque_SynthProvider:
     def update(self):
         logger = lldb.formatters.Logger.Logger()
         try:
+            has_compressed_pair_layout = True
+            alloc_valobj = self.valobj.GetChildMemberWithName("__alloc_")
+            size_valobj = self.valobj.GetChildMemberWithName("__size_")
+            if alloc_valobj.IsValid() and size_valobj.IsValid():
+                has_compressed_pair_layout = False
+
             # A deque is effectively a two-dim array, with fixed width.
             # 'map' contains pointers to the rows of this array. The
             # full memory area allocated by the deque is delimited
@@ -734,9 +744,13 @@ class stddeque_SynthProvider:
             # variable tells which element in this NxM array is the 0th
             # one, and the 'size' element gives the number of elements
             # in the deque.
-            count = self._get_value_of_compressed_pair(
-                self.valobj.GetChildMemberWithName("__size_")
-            )
+            if has_compressed_pair_layout:
+                count = self._get_value_of_compressed_pair(
+                    self.valobj.GetChildMemberWithName("__size_")
+                )
+            else:
+                count = size_valobj.GetValueAsUnsigned(0)
+
             # give up now if we cant access memory reliably
             if self.block_size < 0:
                 logger.write("block_size < 0")
@@ -748,9 +762,16 @@ class stddeque_SynthProvider:
             self.map_begin = map_.GetChildMemberWithName("__begin_")
             map_begin = self.map_begin.GetValueAsUnsigned(0)
             map_end = map_.GetChildMemberWithName("__end_").GetValueAsUnsigned(0)
-            map_endcap = self._get_value_of_compressed_pair(
-                map_.GetChildMemberWithName("__end_cap_")
-            )
+
+            if has_compressed_pair_layout:
+                map_endcap = self._get_value_of_compressed_pair(
+                    map_.GetChildMemberWithName("__end_cap_")
+                )
+            else:
+                map_endcap = map_.GetChildMemberWithName("__cap_")
+                if not map_endcap.IsValid():
+                    map_endcap = map_.GetChildMemberWithName("__end_cap_")
+                map_endcap = map_endcap.GetValueAsUnsigned(0)
 
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:

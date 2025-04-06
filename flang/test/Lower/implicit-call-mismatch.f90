@@ -45,8 +45,8 @@ subroutine pass_complex_to_proc(a)
   call takes_proc(a)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_complex_to_proc(
-! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.complex<4>>
-! CHECK: %[[procAddr:.*]] = fir.convert %[[arg0]] : (!fir.ref<!fir.complex<4>>) -> (() -> ())
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<complex<f32>>
+! CHECK: %[[procAddr:.*]] = fir.convert %[[arg0]] : (!fir.ref<complex<f32>>) -> (() -> ())
 ! CHECK: %[[boxProc:.*]] = fir.emboxproc %[[procAddr]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: fir.call @_QPtakes_proc(%[[boxProc]]) {{.*}}: (!fir.boxproc<() -> ()>) -> ()
 
@@ -129,14 +129,13 @@ subroutine test_conversion_from_proc
   call pass_real_to_proc(proc)
 
   ! CHECK: %[[proc:.*]] = fir.address_of(@_QPproc) : () -> ()
-  ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : (() -> ()) -> !fir.ref<!fir.complex<4>>
+  ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : (() -> ()) -> !fir.ref<complex<f32>>
   ! CHECK: fir.call @_QPpass_complex_to_proc(%[[convert]])
   call pass_complex_to_proc(proc)
 
   ! CHECK: %[[proc:.*]] = fir.address_of(@_QPproc) : () -> ()
   ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : (() -> ()) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: %[[len:.*]] = fir.undefined index
-  ! CHECK: %[[box:.*]] = fir.emboxchar %[[convert]], %[[len]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK: %[[box:.*]] = fir.emboxchar %[[convert]], %c0{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK: fir.call @_QPpass_char_to_proc(%[[box]])
   call pass_char_to_proc(proc)
 
@@ -218,8 +217,8 @@ subroutine pass_complex_to_char_proc(a)
   call takes_char_proc(a)
 end subroutine
 ! CHECK-LABEL: func.func @_QPpass_complex_to_char_proc(
-! CHECK-SAME: %[[arg0:.*]]: !fir.ref<!fir.complex<4>>
-! CHECK: %[[procAddr:.*]] = fir.convert %[[arg0]] : (!fir.ref<!fir.complex<4>>) -> (() -> ())
+! CHECK-SAME: %[[arg0:.*]]: !fir.ref<complex<f32>>
+! CHECK: %[[procAddr:.*]] = fir.convert %[[arg0]] : (!fir.ref<complex<f32>>) -> (() -> ())
 ! CHECK: %[[boxProc:.*]] = fir.emboxproc %[[procAddr]] : (() -> ()) -> !fir.boxproc<() -> ()>
 ! CHECK: %[[charLen:.*]] = fir.undefined i64
 ! CHECK: %[[tuple:.*]] = fir.undefined tuple<!fir.boxproc<() -> ()>, i64>
@@ -329,7 +328,7 @@ subroutine test_conversion_from_char_proc
   call pass_real_to_char_proc(char_proc)
 
   ! CHECK: %[[proc:.*]] = fir.address_of(@_QPchar_proc) : (!fir.ref<!fir.char<1,8>>, index) -> !fir.boxchar<1>
-  ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : ((!fir.ref<!fir.char<1,8>>, index) -> !fir.boxchar<1>) -> !fir.ref<!fir.complex<4>>
+  ! CHECK: %[[convert:.*]] = fir.convert %[[proc]] : ((!fir.ref<!fir.char<1,8>>, index) -> !fir.boxchar<1>) -> !fir.ref<complex<f32>>
   ! CHECK: fir.call @_QPpass_complex_to_char_proc(%[[convert]])
   call pass_complex_to_char_proc(char_proc)
 

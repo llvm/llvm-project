@@ -147,11 +147,11 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
     if (FileSystem::Instance().Exists(local_file))
       return error;
 
-    error.SetErrorStringWithFormatv(
+    error = Status::FromErrorStringWithFormatv(
         "unable to locate a platform file for '{0}' in platform '{1}'",
         platform_file_path, GetPluginName());
   } else {
-    error.SetErrorString("invalid platform file argument");
+    error = Status::FromErrorString("invalid platform file argument");
   }
   return error;
 }

@@ -2,12 +2,14 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --force-byref-reduction -o - %s 2>&1 | FileCheck %s
 
 !CHECK:  omp.declare_reduction @[[REDUCTION_DECLARE:[_a-z0-9]+]] : !fir.ref<i32>
-!CHECK-SAME: init {
-!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>):
-!CHECK:    %[[I0:[_a-z0-9]+]] = arith.constant 0 : i32
-!CHECK:  %[[REF:.*]] = fir.alloca i32
-!CHECKL  fir.store [[%I0]] to %[[REF]] : !fir.ref<i32>
+!CHECK-SAME: alloc {
+!CHECK:    %[[REF:.*]] = fir.alloca i32
 !CHECK:    omp.yield(%[[REF]] : !fir.ref<i32>)
+!CHECK-LABEL: } init {
+!CHECK:  ^bb0(%{{.*}}: !fir.ref<i32>, %[[ALLOC:.*]]: !fir.ref<i32>):
+!CHECK:    %[[I0:[_a-z0-9]+]] = arith.constant 0 : i32
+!CHECKL    fir.store [[%I0]] to %[[ALLOC]] : !fir.ref<i32>
+!CHECK:    omp.yield(%[[ALLOC]] : !fir.ref<i32>)
 !CHECK:  } combiner {
 !CHECK:  ^bb0(%[[C0:[_a-z0-9]+]]: !fir.ref<i32>, %[[C1:[_a-z0-9]+]]: !fir.ref<i32>):
 !CHECK:    %[[LD0:.*]] = fir.load %[[C0]] : !fir.ref<i32>

@@ -229,10 +229,17 @@ public:
 
   /// Returns true if we may need to fix the unwind information for the
   /// function.
-  virtual bool enableCFIFixup(MachineFunction &MF) const;
+  virtual bool enableCFIFixup(const MachineFunction &MF) const;
+
+  /// enableFullCFIFixup - Returns true if we may need to fix the unwind
+  /// information such that it is accurate for *every* instruction in the
+  /// function (e.g. if the function has an async unwind table).
+  virtual bool enableFullCFIFixup(const MachineFunction &MF) const {
+    return enableCFIFixup(MF);
+  };
 
   /// Emit CFI instructions that recreate the state of the unwind information
-  /// upon fucntion entry.
+  /// upon function entry.
   virtual void resetCFIToInitialState(MachineBasicBlock &MBB) const {}
 
   /// Replace a StackProbe stub (if any) with the actual probe code inline
@@ -277,16 +284,14 @@ public:
     return false;
   }
 
-  /// Return true if the target wants to keep the frame pointer regardless of
-  /// the function attribute "frame-pointer".
-  virtual bool keepFramePointer(const MachineFunction &MF) const {
-    return false;
-  }
-
   /// hasFP - Return true if the specified function should have a dedicated
   /// frame pointer register. For most targets this is true only if the function
   /// has variable sized allocas or if frame pointer elimination is disabled.
-  virtual bool hasFP(const MachineFunction &MF) const = 0;
+  /// For all targets, this is false if the function has the naked attribute
+  /// since there is no prologue to set up the frame pointer.
+  bool hasFP(const MachineFunction &MF) const {
+    return !MF.getFunction().hasFnAttribute(Attribute::Naked) && hasFPImpl(MF);
+  }
 
   /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
   /// not required, we reserve argument space for call sites in the function
@@ -483,6 +488,9 @@ public:
   /// targets can emit remarks based on the final frame layout.
   virtual void emitRemarks(const MachineFunction &MF,
                            MachineOptimizationRemarkEmitter *ORE) const {};
+
+protected:
+  virtual bool hasFPImpl(const MachineFunction &MF) const = 0;
 };
 
 } // End llvm namespace

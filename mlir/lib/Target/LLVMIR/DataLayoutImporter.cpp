@@ -29,15 +29,15 @@ FloatType mlir::LLVM::detail::getFloatType(MLIRContext *context,
                                            unsigned width) {
   switch (width) {
   case 16:
-    return FloatType::getF16(context);
+    return Float16Type::get(context);
   case 32:
-    return FloatType::getF32(context);
+    return Float32Type::get(context);
   case 64:
-    return FloatType::getF64(context);
+    return Float64Type::get(context);
   case 80:
-    return FloatType::getF80(context);
+    return Float80Type::get(context);
   case 128:
-    return FloatType::getF128(context);
+    return Float128Type::get(context);
   default:
     return {};
   }
@@ -163,6 +163,21 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
   return success();
 }
 
+LogicalResult DataLayoutImporter::tryToEmplaceManglingModeEntry(
+    StringRef token, llvm::StringLiteral manglingKey) {
+  auto key = StringAttr::get(context, manglingKey);
+  if (keyEntries.count(key))
+    return success();
+
+  token.consume_front(":");
+  if (token.empty())
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(key, StringAttr::get(context, token)));
+  return success();
+}
+
 LogicalResult
 DataLayoutImporter::tryToEmplaceAddrSpaceEntry(StringRef token,
                                                llvm::StringLiteral spaceKey) {
@@ -197,9 +212,9 @@ DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
   if (failed(alignment))
     return failure();
 
-  // Only store the stack alignment if it has a non-default value.
+  // Stack alignment shouldn't be zero.
   if (*alignment == 0)
-    return success();
+    return failure();
   OpBuilder builder(context);
   keyEntries.try_emplace(key, DataLayoutEntryAttr::get(
                                   key, builder.getI64IntegerAttr(*alignment)));
@@ -251,6 +266,13 @@ void DataLayoutImporter::translateDataLayout(
     if (*prefix == "P") {
       if (failed(tryToEmplaceAddrSpaceEntry(
               token, DLTIDialect::kDataLayoutProgramMemorySpaceKey)))
+        return;
+      continue;
+    }
+    // Parse the mangling mode.
+    if (*prefix == "m") {
+      if (failed(tryToEmplaceManglingModeEntry(
+              token, DLTIDialect::kDataLayoutManglingModeKey)))
         return;
       continue;
     }

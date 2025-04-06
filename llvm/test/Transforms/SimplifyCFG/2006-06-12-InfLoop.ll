@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; END.
 
-define void @main(i32 %c) {
+define void @main(i32 %c, i1 %arg) {
 entry:
 	%tmp.9 = icmp eq i32 %c, 2		; <i1> [#uses=1]
 	br i1 %tmp.9, label %endif.0, label %then.0
@@ -186,7 +186,7 @@ no_exit.0.i31.preheader:		; preds = %loopentry.1.i30
 no_exit.0.i31:		; preds = %loopexit.3.i, %no_exit.0.i31.preheader
 	br i1 false, label %then.1.i, label %else.0.i
 then.1.i:		; preds = %no_exit.0.i31
-	br i1 undef, label %then.0.i29, label %loopentry.0.i31
+	br i1 %arg, label %then.0.i29, label %loopentry.0.i31
 then.0.i29:		; preds = %then.1.i
 	unreachable
 loopentry.0.i31:		; preds = %then.1.i
@@ -194,13 +194,13 @@ loopentry.0.i31:		; preds = %then.1.i
 no_exit.0.i38.preheader:		; preds = %loopentry.0.i31
 	br label %no_exit.0.i38
 no_exit.0.i38:		; preds = %no_exit.0.i38, %no_exit.0.i38.preheader
-	br i1 undef, label %no_exit.0.i38, label %loopentry.1.i.preheader.loopexit
+	br i1 %arg, label %no_exit.0.i38, label %loopentry.1.i.preheader.loopexit
 loopentry.1.i.preheader.loopexit:		; preds = %no_exit.0.i38
 	br label %loopentry.1.i.preheader
 loopentry.1.i.preheader:		; preds = %loopentry.1.i.preheader.loopexit, %loopentry.0.i31
 	br label %loopentry.1.i
 loopentry.1.i:		; preds = %endif.2.i, %loopentry.1.i.preheader
-	br i1 undef, label %loopentry.2.i39.preheader, label %loopexit.1.i79.loopexit2
+	br i1 %arg, label %loopentry.2.i39.preheader, label %loopexit.1.i79.loopexit2
 loopentry.2.i39.preheader:		; preds = %loopentry.1.i
 	br label %loopentry.2.i39
 loopentry.2.i39:		; preds = %loopexit.5.i77, %loopentry.2.i39.preheader
@@ -212,45 +212,45 @@ loopentry.3.i40:		; preds = %loopexit.3.i51, %loopentry.3.i40.preheader
 no_exit.3.preheader.i42:		; preds = %loopentry.3.i40
 	br label %no_exit.3.i49
 no_exit.3.i49:		; preds = %no_exit.3.i49, %no_exit.3.preheader.i42
-	br i1 undef, label %no_exit.3.i49, label %loopexit.3.i51.loopexit
+	br i1 %arg, label %no_exit.3.i49, label %loopexit.3.i51.loopexit
 loopexit.3.i51.loopexit:		; preds = %no_exit.3.i49
 	br label %loopexit.3.i51
 loopexit.3.i51:		; preds = %loopexit.3.i51.loopexit, %loopentry.3.i40
-	br i1 undef, label %loopentry.3.i40, label %loopentry.4.i52
+	br i1 %arg, label %loopentry.3.i40, label %loopentry.4.i52
 loopentry.4.i52:		; preds = %loopexit.3.i51
 	br i1 false, label %no_exit.4.i54.preheader, label %hamming.exit.i71
 no_exit.4.i54.preheader:		; preds = %loopentry.4.i52
 	br label %no_exit.4.i54
 no_exit.4.i54:		; preds = %no_exit.4.backedge.i, %no_exit.4.i54.preheader
-	br i1 undef, label %then.1.i55, label %endif.1.i56
+	br i1 %arg, label %then.1.i55, label %endif.1.i56
 then.1.i55:		; preds = %no_exit.4.i54
-	br i1 undef, label %no_exit.4.backedge.i, label %loopexit.4.i57
+	br i1 %arg, label %no_exit.4.backedge.i, label %loopexit.4.i57
 no_exit.4.backedge.i:		; preds = %endif.1.i56, %then.1.i55
 	br label %no_exit.4.i54
 endif.1.i56:		; preds = %no_exit.4.i54
-	br i1 undef, label %no_exit.4.backedge.i, label %loopexit.4.i57
+	br i1 %arg, label %no_exit.4.backedge.i, label %loopexit.4.i57
 loopexit.4.i57:		; preds = %endif.1.i56, %then.1.i55
 	br i1 false, label %no_exit.i.i69.preheader, label %hamming.exit.i71
 no_exit.i.i69.preheader:		; preds = %loopexit.4.i57
 	br label %no_exit.i.i69
 no_exit.i.i69:		; preds = %no_exit.i.i69, %no_exit.i.i69.preheader
-	br i1 undef, label %no_exit.i.i69, label %hamming.exit.i71.loopexit
+	br i1 %arg, label %no_exit.i.i69, label %hamming.exit.i71.loopexit
 hamming.exit.i71.loopexit:		; preds = %no_exit.i.i69
 	br label %hamming.exit.i71
 hamming.exit.i71:		; preds = %hamming.exit.i71.loopexit, %loopexit.4.i57, %loopentry.4.i52, %loopentry.2.i39
-	br i1 undef, label %endif.2.i, label %loopentry.5.i72
+	br i1 %arg, label %endif.2.i, label %loopentry.5.i72
 loopentry.5.i72:		; preds = %hamming.exit.i71
 	br i1 false, label %shortcirc_next.i74.preheader, label %loopexit.5.i77
 shortcirc_next.i74.preheader:		; preds = %loopentry.5.i72
 	br label %shortcirc_next.i74
 shortcirc_next.i74:		; preds = %no_exit.5.i76, %shortcirc_next.i74.preheader
-	br i1 undef, label %no_exit.5.i76, label %loopexit.5.i77.loopexit
+	br i1 %arg, label %no_exit.5.i76, label %loopexit.5.i77.loopexit
 no_exit.5.i76:		; preds = %shortcirc_next.i74
-	br i1 undef, label %shortcirc_next.i74, label %loopexit.5.i77.loopexit
+	br i1 %arg, label %shortcirc_next.i74, label %loopexit.5.i77.loopexit
 loopexit.5.i77.loopexit:		; preds = %no_exit.5.i76, %shortcirc_next.i74
 	br label %loopexit.5.i77
 loopexit.5.i77:		; preds = %loopexit.5.i77.loopexit, %loopentry.5.i72
-	br i1 undef, label %loopentry.2.i39, label %loopexit.1.i79.loopexit
+	br i1 %arg, label %loopentry.2.i39, label %loopexit.1.i79.loopexit
 endif.2.i:		; preds = %hamming.exit.i71
 	br label %loopentry.1.i
 loopexit.1.i79.loopexit:		; preds = %loopexit.5.i77
@@ -258,7 +258,7 @@ loopexit.1.i79.loopexit:		; preds = %loopexit.5.i77
 loopexit.1.i79.loopexit2:		; preds = %loopentry.1.i
 	br label %loopexit.1.i79
 loopexit.1.i79:		; preds = %loopexit.1.i79.loopexit2, %loopexit.1.i79.loopexit
-	br i1 undef, label %then.3.i, label %loopentry.6.i80
+	br i1 %arg, label %then.3.i, label %loopentry.6.i80
 then.3.i:		; preds = %loopexit.1.i79
 	br i1 false, label %no_exit.6.i82.preheader, label %run.exit
 loopentry.6.i80:		; preds = %loopexit.1.i79
@@ -266,7 +266,7 @@ loopentry.6.i80:		; preds = %loopexit.1.i79
 no_exit.6.i82.preheader:		; preds = %loopentry.6.i80, %then.3.i
 	br label %no_exit.6.i82
 no_exit.6.i82:		; preds = %no_exit.6.i82, %no_exit.6.i82.preheader
-	br i1 undef, label %no_exit.6.i82, label %run.exit.loopexit
+	br i1 %arg, label %no_exit.6.i82, label %run.exit.loopexit
 run.exit.loopexit:		; preds = %no_exit.6.i82
 	br label %run.exit
 run.exit:		; preds = %run.exit.loopexit, %loopentry.6.i80, %then.3.i

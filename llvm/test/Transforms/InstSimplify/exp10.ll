@@ -9,8 +9,8 @@ declare <vscale x 2 x float> @llvm.exp10.nxv2f32(<vscale x 2 x float>)
 
 
 define float @exp10_exp10(float %x) {
-; CHECK-LABEL: define float @exp10_exp10
-; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-LABEL: define float @exp10_exp10(
+; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[EXP100:%.*]] = call float @llvm.exp10.f32(float [[X]])
 ; CHECK-NEXT:    [[EXP101:%.*]] = call float @llvm.exp10.f32(float [[EXP100]])
 ; CHECK-NEXT:    ret float [[EXP101]]
@@ -21,8 +21,8 @@ define float @exp10_exp10(float %x) {
 }
 
 define <2 x float> @exp10_exp10_vector(<2 x float> %x) {
-; CHECK-LABEL: define <2 x float> @exp10_exp10_vector
-; CHECK-SAME: (<2 x float> [[X:%.*]]) {
+; CHECK-LABEL: define <2 x float> @exp10_exp10_vector(
+; CHECK-SAME: <2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[EXP100:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[EXP101:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> [[EXP100]])
 ; CHECK-NEXT:    ret <2 x float> [[EXP101]]
@@ -33,8 +33,8 @@ define <2 x float> @exp10_exp10_vector(<2 x float> %x) {
 }
 
 define float @exp10_exp10_const(float %x) {
-; CHECK-LABEL: define float @exp10_exp10_const
-; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-LABEL: define float @exp10_exp10_const(
+; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[EXP101:%.*]] = call float @llvm.exp10.f32(float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[EXP101]]
 ;
@@ -44,8 +44,8 @@ define float @exp10_exp10_const(float %x) {
 }
 
 define <vscale x 2 x float> @exp10_exp10_scalable_vector(<vscale x 2 x float> %x) {
-; CHECK-LABEL: define <vscale x 2 x float> @exp10_exp10_scalable_vector
-; CHECK-SAME: (<vscale x 2 x float> [[X:%.*]]) {
+; CHECK-LABEL: define <vscale x 2 x float> @exp10_exp10_scalable_vector(
+; CHECK-SAME: <vscale x 2 x float> [[X:%.*]]) {
 ; CHECK-NEXT:    [[EXP100:%.*]] = call <vscale x 2 x float> @llvm.exp10.nxv2f32(<vscale x 2 x float> [[X]])
 ; CHECK-NEXT:    [[EXP101:%.*]] = call <vscale x 2 x float> @llvm.exp10.nxv2f32(<vscale x 2 x float> [[EXP100]])
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[EXP101]]
@@ -101,7 +101,7 @@ define <2 x float> @exp10_undef_vector() {
 
 define <2 x float> @exp10_zero_vector() {
 ; CHECK-LABEL: define <2 x float> @exp10_zero_vector() {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> zeroinitializer)
   ret <2 x float> %ret
@@ -118,7 +118,7 @@ define <vscale x 2 x float> @exp10_zero_scalable_vector() {
 
 define <2 x float> @exp10_zero_negzero_vector() {
 ; CHECK-LABEL: define <2 x float> @exp10_zero_negzero_vector() {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+00>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0.0, float -0.0>)
   ret <2 x float> %ret
@@ -262,7 +262,7 @@ define ppc_fp128 @canonicalize_noncanonical_zero_1_ppcf128() {
 
 define <2 x float> @exp10_splat_4() {
 ; CHECK-LABEL: define <2 x float> @exp10_splat_4() {
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+04, float 1.000000e+04>
+; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+04)
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 4.0, float 4.0>)
   ret <2 x float> %ret
@@ -270,7 +270,7 @@ define <2 x float> @exp10_splat_4() {
 
 define <2 x float> @exp10_splat_qnan() {
 ; CHECK-LABEL: define <2 x float> @exp10_splat_qnan() {
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> splat (float 0x7FF8000000000000))
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>)
@@ -279,7 +279,7 @@ define <2 x float> @exp10_splat_qnan() {
 
 define <2 x float> @exp10_splat_inf() {
 ; CHECK-LABEL: define <2 x float> @exp10_splat_inf() {
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>)
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> splat (float 0x7FF0000000000000))
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>)
@@ -288,7 +288,7 @@ define <2 x float> @exp10_splat_inf() {
 
 define <2 x float> @exp10_splat_neginf() {
 ; CHECK-LABEL: define <2 x float> @exp10_splat_neginf() {
-; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000>)
+; CHECK-NEXT:    [[RET:%.*]] = call <2 x float> @llvm.exp10.v2f32(<2 x float> splat (float 0xFFF0000000000000))
 ; CHECK-NEXT:    ret <2 x float> [[RET]]
 ;
   %ret = call <2 x float> @llvm.exp10.v2f32(<2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000>)

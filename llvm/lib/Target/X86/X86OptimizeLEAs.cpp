@@ -294,8 +294,8 @@ private:
   /// Replace debug value MI with a new debug value instruction using register
   /// VReg with an appropriate offset and DIExpression to incorporate the
   /// address displacement AddrDispShift. Return new debug value instruction.
-  MachineInstr *replaceDebugValue(MachineInstr &MI, unsigned OldReg,
-                                  unsigned NewReg, int64_t AddrDispShift);
+  MachineInstr *replaceDebugValue(MachineInstr &MI, Register OldReg,
+                                  Register NewReg, int64_t AddrDispShift);
 
   /// Removes LEAs which calculate similar addresses.
   bool removeRedundantLEAs(MemOpMap &LEAs);
@@ -572,8 +572,8 @@ bool X86OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
 }
 
 MachineInstr *X86OptimizeLEAPass::replaceDebugValue(MachineInstr &MI,
-                                                    unsigned OldReg,
-                                                    unsigned NewReg,
+                                                    Register OldReg,
+                                                    Register NewReg,
                                                     int64_t AddrDispShift) {
   const DIExpression *Expr = MI.getDebugExpression();
   if (AddrDispShift != 0) {
@@ -741,9 +741,7 @@ bool X86OptimizeLEAPass::runOnMachineFunction(MachineFunction &MF) {
 
     // Remove redundant address calculations. Do it only for -Os/-Oz since only
     // a code size gain is expected from this part of the pass.
-    bool OptForSize = MF.getFunction().hasOptSize() ||
-                      llvm::shouldOptimizeForSize(&MBB, PSI, MBFI);
-    if (OptForSize)
+    if (llvm::shouldOptimizeForSize(&MBB, PSI, MBFI))
       Changed |= removeRedundantAddrCalc(LEAs);
   }
 

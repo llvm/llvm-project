@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/Function.h"
+#include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
@@ -601,4 +602,29 @@ TEST(FunctionTest, UWTable) {
   EXPECT_FALSE(F.hasUWTable());
   EXPECT_TRUE(F.getUWTableKind() == UWTableKind::None);
 }
+
+TEST(FunctionTest, Personality) {
+  LLVMContext Ctx;
+  Module M("test", Ctx);
+  Type *Int8Ty = Type::getInt8Ty(Ctx);
+  FunctionType *FTy = FunctionType::get(Int8Ty, false);
+  Function *F = Function::Create(FTy, GlobalValue::ExternalLinkage, "F", &M);
+  Function *PersonalityFn =
+      Function::Create(FTy, GlobalValue::ExternalLinkage, "PersonalityFn", &M);
+
+  EXPECT_FALSE(F->hasPersonalityFn());
+  F->setPersonalityFn(PersonalityFn);
+  EXPECT_TRUE(F->hasPersonalityFn());
+  EXPECT_EQ(F->getPersonalityFn(), PersonalityFn);
+  F->setPersonalityFn(nullptr);
+  EXPECT_FALSE(F->hasPersonalityFn());
+
+  EXPECT_FALSE(LLVMHasPersonalityFn(wrap(F)));
+  LLVMSetPersonalityFn(wrap(F), wrap(PersonalityFn));
+  EXPECT_TRUE(LLVMHasPersonalityFn(wrap(F)));
+  EXPECT_EQ(LLVMGetPersonalityFn(wrap(F)), wrap(PersonalityFn));
+  LLVMSetPersonalityFn(wrap(F), nullptr);
+  EXPECT_FALSE(LLVMHasPersonalityFn(wrap(F)));
+}
+
 } // end namespace

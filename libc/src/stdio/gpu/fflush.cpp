@@ -16,10 +16,14 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fflush, (::FILE * stream)) {
   int ret;
-  rpc::Client::Port port = rpc::client.open<RPC_FFLUSH>();
+  rpc::Client::Port port = rpc::client.open<LIBC_FFLUSH>();
   port.send_and_recv(
-      [=](rpc::Buffer *buffer) { buffer->data[0] = file::from_stream(stream); },
-      [&](rpc::Buffer *buffer) { ret = static_cast<int>(buffer->data[0]); });
+      [=](rpc::Buffer *buffer, uint32_t) {
+        buffer->data[0] = file::from_stream(stream);
+      },
+      [&](rpc::Buffer *buffer, uint32_t) {
+        ret = static_cast<int>(buffer->data[0]);
+      });
   port.close();
   return ret;
 }

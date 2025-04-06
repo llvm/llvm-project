@@ -3,14 +3,14 @@
 
 declare void @sink() cold
 
-define void @foo(i32 %arg) {
+define void @foo(i32 %arg, i1 %arg2) {
 entry:
-  br i1 undef, label %cold1, label %exit
+  br i1 %arg2, label %cold1, label %exit
 
 cold1:
   ; CHECK: Applying bonus for: 4 non-returning terminators
   call void @sink()
-  br i1 undef, label %cold2, label %cold3
+  br i1 %arg2, label %cold2, label %cold3
 
 cold2:
   br label %cold4

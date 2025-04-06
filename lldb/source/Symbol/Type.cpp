@@ -134,6 +134,20 @@ bool TypeQuery::ContextMatches(
     if (ctx == ctx_end)
       return false; // Pattern too long.
 
+    if (ctx->kind == CompilerContextKind::Namespace && ctx->name.IsEmpty()) {
+      // We're matching an anonymous namespace. These are optional, so we check
+      // if the pattern expects an anonymous namespace.
+      if (pat->name.IsEmpty() && (pat->kind & CompilerContextKind::Namespace) ==
+                                     CompilerContextKind::Namespace) {
+        // Match, advance both iterators.
+        ++pat;
+      }
+      // Otherwise, only advance the context to skip over the anonymous
+      // namespace, and try matching again.
+      ++ctx;
+      continue;
+    }
+
     // See if there is a kind mismatch; they should have 1 bit in common.
     if ((ctx->kind & pat->kind) == CompilerContextKind())
       return false;
@@ -145,10 +159,16 @@ bool TypeQuery::ContextMatches(
     ++pat;
   }
 
-  // Skip over any remaining module entries if we were asked to do that.
-  while (GetIgnoreModules() && ctx != ctx_end &&
-         ctx->kind == CompilerContextKind::Module)
-    ++ctx;
+  // Skip over any remaining module and anonymous namespace entries if we were
+  // asked to do that.
+  auto should_skip = [this](const CompilerContext &ctx) {
+    if (ctx.kind == CompilerContextKind::Module)
+      return GetIgnoreModules();
+    if (ctx.kind == CompilerContextKind::Namespace && ctx.name.IsEmpty())
+      return !GetStrictNamespaces();
+    return false;
+  };
+  ctx = std::find_if_not(ctx, ctx_end, should_skip);
 
   // At this point, we have exhausted the pattern and we have a partial match at
   // least. If that's all we're looking for, we're done.
@@ -435,14 +455,18 @@ Type *Type::GetEncodingType() {
   return m_encoding_type;
 }
 
-std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
+llvm::Expected<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
   if (m_byte_size_has_value)
     return static_cast<uint64_t>(m_byte_size);
 
   switch (m_encoding_uid_type) {
   case eEncodingInvalid:
+    return llvm::createStringError("could not get type size: invalid encoding");
+
   case eEncodingIsSyntheticUID:
-    break;
+    return llvm::createStringError(
+        "could not get type size: synthetic encoding");
+
   case eEncodingIsUID:
   case eEncodingIsConstUID:
   case eEncodingIsRestrictUID:
@@ -452,18 +476,18 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
     Type *encoding_type = GetEncodingType();
     if (encoding_type)
       if (std::optional<uint64_t> size =
-              encoding_type->GetByteSize(exe_scope)) {
+              llvm::expectedToOptional(encoding_type->GetByteSize(exe_scope))) {
         m_byte_size = *size;
         m_byte_size_has_value = true;
         return static_cast<uint64_t>(m_byte_size);
       }
 
-    if (std::optional<uint64_t> size =
-            GetLayoutCompilerType().GetByteSize(exe_scope)) {
-      m_byte_size = *size;
-      m_byte_size_has_value = true;
-      return static_cast<uint64_t>(m_byte_size);
-    }
+    auto size_or_err = GetLayoutCompilerType().GetByteSize(exe_scope);
+    if (!size_or_err)
+      return size_or_err.takeError();
+    m_byte_size = *size_or_err;
+    m_byte_size_has_value = true;
+    return static_cast<uint64_t>(m_byte_size);
   } break;
 
     // If we are a pointer or reference, then this is just a pointer size;
@@ -478,7 +502,8 @@ std::optional<uint64_t> Type::GetByteSize(ExecutionContextScope *exe_scope) {
       }
     } break;
   }
-  return {};
+  return llvm::createStringError(
+      "could not get type size: unexpected encoding");
 }
 
 llvm::Expected<uint32_t> Type::GetNumChildren(bool omit_empty_base_classes) {
@@ -519,7 +544,9 @@ bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
   }
 
   const uint64_t byte_size =
-      GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
+      llvm::expectedToOptional(
+          GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope()
+                              : nullptr))
           .value_or(0);
   if (data.GetByteSize() < byte_size) {
     lldb::DataBufferSP data_sp(new DataBufferHeap(byte_size, '\0'));
@@ -788,7 +815,13 @@ Type::GetTypeScopeAndBasename(llvm::StringRef name) {
     switch (pos.value()) {
     case ':':
       if (prev_is_colon && template_depth == 0) {
-        result.scope.push_back(name.slice(name_begin, pos.index() - 1));
+        llvm::StringRef scope_name = name.slice(name_begin, pos.index() - 1);
+        // The itanium demangler uses this string to represent anonymous
+        // namespaces. Convert it to a more language-agnostic form (which is
+        // also used in DWARF).
+        if (scope_name == "(anonymous namespace)")
+          scope_name = "";
+        result.scope.push_back(scope_name);
         name_begin = pos.index() + 1;
       }
       break;

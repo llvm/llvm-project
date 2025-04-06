@@ -499,12 +499,8 @@ void HwasanOnDeadlySignal(int signo, void *info, void *context) {
 }
 
 void Thread::InitStackAndTls(const InitState *) {
-  uptr tls_size;
-  uptr stack_size;
-  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_size, &tls_begin_,
-                       &tls_size);
-  stack_top_ = stack_bottom_ + stack_size;
-  tls_end_ = tls_begin_ + tls_size;
+  GetThreadStackAndTls(IsMainThread(), &stack_bottom_, &stack_top_, &tls_begin_,
+                       &tls_end_);
 }
 
 uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
@@ -532,6 +528,7 @@ uptr TagMemoryAligned(uptr p, uptr size, tag_t tag) {
 }
 
 static void BeforeFork() {
+  VReport(2, "BeforeFork tid: %llu\n", GetTid());
   if (CAN_SANITIZE_LEAKS) {
     __lsan::LockGlobal();
   }
@@ -551,6 +548,7 @@ static void AfterFork(bool fork_child) {
   if (CAN_SANITIZE_LEAKS) {
     __lsan::UnlockGlobal();
   }
+  VReport(2, "AfterFork tid: %llu\n", GetTid());
 }
 
 void HwasanInstallAtForkHandler() {

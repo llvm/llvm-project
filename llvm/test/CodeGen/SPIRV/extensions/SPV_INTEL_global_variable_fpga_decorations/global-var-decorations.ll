@@ -1,6 +1,6 @@
 ; Adapted from https://github.com/KhronosGroup/SPIRV-LLVM-Translator/tree/main/test/extensions/INTEL/SPV_INTEL_global_variable_fpga_decorations
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_global_variable_fpga_decorations %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_global_variable_fpga_decorations %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
 ; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_global_variable_fpga_decorations %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: Capability GlobalVariableFPGADecorationsINTEL

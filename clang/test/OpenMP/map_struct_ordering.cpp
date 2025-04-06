@@ -57,7 +57,7 @@ int map_struct() {
 // CHECK-NEXT:    [[DATUM:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DAT]], i32 0, i32 0
 // CHECK-NEXT:    [[DATUM2:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[DAT]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DATUM2]], align 8
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 0
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [[STRUCT_DESCRIPTOR]], ptr [[DAT]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP1]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[DAT]] to i64

@@ -17,19 +17,19 @@ entry:
   br label %for.cond
 
 for.cond:                                         ; preds = %entry
-  br i1 undef, label %lbl63A679E5, label %for.body
+  br i1 true, label %lbl63A679E5, label %for.body
 
 for.body:                                         ; preds = %for.cond
   br label %for.cond1
 
 for.cond1:                                        ; preds = %for.cond1, %for.body
-  br i1 undef, label %for.cond1, label %for.cond3.loopexit
+  br i1 false, label %for.cond1, label %for.cond3.loopexit
 
 for.cond3.loopexit:                               ; preds = %for.cond1
   br label %for.cond3
 
 for.cond3:                                        ; preds = %for.cond9, %for.cond3.loopexit
-  br i1 undef, label %for.body4, label %for.cond17
+  br i1 false, label %for.body4, label %for.cond17
 
 for.body4:                                        ; preds = %for.cond3
   br label %for.cond5
@@ -41,7 +41,7 @@ lbl63A679E5:                                      ; preds = %for.cond
   br label %for.cond5
 
 for.cond9:                                        ; preds = %for.end14.split, %for.cond5
-  br i1 undef, label %for.cond3, label %lbl64774A9B
+  br i1 false, label %for.cond3, label %lbl64774A9B
 
 lbl64774A9B:                                      ; preds = %for.cond17, %for.cond9
   br label %for.end14.split

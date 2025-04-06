@@ -17,7 +17,6 @@
 
 #include "ARM.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMBaseInfo.h"
 #include "MVETailPredUtils.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
@@ -304,8 +303,7 @@ MachineInstr *MVETPAndVPTOptimisations::CheckForLRUseInPredecessors(
     }
 
     Visited.insert(MBB);
-    for (auto *Pred : MBB->predecessors())
-      Worklist.push_back(Pred);
+    llvm::append_range(Worklist, MBB->predecessors());
   }
   return LoopStart;
 }

@@ -1,0 +1,18 @@
+! RUN: bbc -emit-hlfir -fcuda %s 2>&1 | FileCheck %s
+
+module mod1
+contains
+
+attributes(device) subroutine sub1(adev)
+  real, device :: adev(10)
+end
+
+attributes(global) subroutine sub2()
+  real, shared :: adev(10)
+  !WARNING: SHARED attribute ignored
+  call sub1(adev)
+end subroutine
+
+end module
+
+! CHECK: warning: SHARED attribute ignored

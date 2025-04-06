@@ -39,7 +39,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.op<"bufferization.materialize_in_destination">)
     %p = transform.num_associations %copy_back : (!transform.op<"bufferization.materialize_in_destination">) -> !transform.param<i64>
     // expected-remark @below {{1}}
@@ -76,7 +76,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [2, 2, 1] {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -112,7 +112,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 pad_to_multiple_of [%c2, 2, 1] {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -155,7 +155,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -178,7 +178,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0: i32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -201,7 +201,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=["{foo}", 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -209,12 +209,26 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// CHECK-LABEL: @pad(
-func.func @pad(%arg0: tensor<24x12xf32>,
-               %arg1: tensor<12x25xf32>,
-               %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
-  // This is attached to an error that is silenceable and is not reported by this transform
-  //   {{when applied to this op}}
+// With all padded being static, there's nothing to pad. However, with the
+// `nofold` attribute set (see `nofold_flags`), the corresponding pad Ops are
+// preserved.
+
+// CHECK-LABEL: @zero_pad_static(
+func.func @zero_pad_static(%arg0: tensor<24x12xf32>,
+                           %arg1: tensor<12x25xf32>,
+                           %arg2: tensor<24x25xf32>) -> tensor<24x25xf32> {
+
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<24x12xf32>,
+// CHECK-SAME:      %[[ARG_1:.*]]: tensor<12x25xf32>,
+// CHECK-SAME:      %[[ARG_2:.*]]: tensor<24x25xf32>) -> tensor<24x25xf32> {
+
+// CHECK:           %[[PAD_ARG_0:.*]] = tensor.pad %[[ARG_0]] nofold low[0, 0] high[0, 0]
+// CHECK:           %[[PAD_ARG_1:.*]] = tensor.pad %[[ARG_1]] nofold low[0, 0] high[0, 0]
+// CHECK-NOT:       tensor.pad
+
+// CHECK:           %[[MATMUL:.*]] = linalg.matmul
+// CHECK-SAME:      ins(%[[PAD_ARG_0:.*]], %[[PAD_ARG_1:.*]] : tensor<24x12xf32>, tensor<12x25xf32>)
+// CHECK-SAME:      outs(%[[ARG_2]]
   %0 = linalg.matmul ins(%arg0, %arg1 : tensor<24x12xf32>, tensor<12x25xf32>) outs(%arg2 : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
 }
@@ -222,12 +236,76 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // This error is silenceable and is not reported by this transform
-    //   {{transform.structured.pad failed to apply}}
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 0]
+      nofold_flags=[1, 1, 0]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// With all padded dims being static, there's nothing to pad. However, with the
+// `nofold` attribute set (see `nofold_flags`), the corresponding pad Ops are
+// preserved. Same as above, but some dims are now dynamic.
+
+// CHECK-LABEL: @zero_pad_dynamic(
+func.func @zero_pad_dynamic(%arg0: tensor<?x12xf32>,
+                            %arg1: tensor<12x?xf32>,
+                            %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+
+// CHECK-SAME:      %[[ARG_0:.*]]: tensor<?x12xf32>,
+// CHECK-SAME:      %[[ARG_1:.*]]: tensor<12x?xf32>,
+// CHECK-SAME:      %[[ARG_2:.*]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
+
+// CHECK:           %[[PAD_ARG_0:.*]] = tensor.pad %[[ARG_0]] nofold low[0, 0] high[0, 0]
+// CHECK:           %[[PAD_ARG_1:.*]] = tensor.pad %[[ARG_1]] nofold low[0, 0] high[0, 0]
+// CHECK:           %[[PAD_ARG_2:.*]] = tensor.pad %[[ARG_2]] nofold low[0, 0] high[0, 0]
+
+// CHECK:           %[[MATMUL:.*]] = linalg.matmul
+// CHECK-SAME:      ins(%[[PAD_ARG_0:.*]], %[[PAD_ARG_1:.*]] : tensor<?x12xf32>, tensor<12x?xf32>)
+// CHECK-SAME:      outs(%[[PAD_ARG_2]]
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x12xf32>, tensor<12x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  func.return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      // Note - only the static dim is padded
+      padding_dimensions=[2],
+      nofold_flags=[1, 1, 1]
+    } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Impossible to get a bound for padding - fails
+
+func.func @negative_no_ub_estimate(%arg0: tensor<?x12xf32>,
+                                   %arg1: tensor<12x?xf32>,
+                                   %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+
+  // expected-note @below {{target op}}
+  %0 = linalg.matmul ins(%arg0, %arg1 : tensor<?x12xf32>, tensor<12x?xf32>) outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  func.return %0 : tensor<?x?xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{ailed to pad op}}
+    %padded, %pad, %copy_back = transform.structured.pad %0 {
+      padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
+      // Note - attempting to pad non-static dim
+      padding_dimensions=[1],
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -284,7 +362,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -336,7 +414,7 @@ module attributes {transform.with_named_sequence} {
     %padded, %pad, %copy_back = transform.structured.pad %0 {
       padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32],
       padding_dimensions=[0, 1, 2],
-      pack_paddings=[1, 1, 1]
+      nofold_flags=[1, 1, 1]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
     transform.yield
   }

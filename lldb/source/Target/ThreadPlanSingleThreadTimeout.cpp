@@ -76,6 +76,9 @@ void ThreadPlanSingleThreadTimeout::PushNewWithTimeout(Thread &thread,
   if (!thread.GetCurrentPlan()->StopOthers())
     return;
 
+  if (!thread.GetCurrentPlan()->SupportsResumeOthers())
+    return;
+
   auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread, info);
   ThreadPlanSP thread_plan_sp(timeout_plan);
   auto status = thread.QueueThreadPlan(thread_plan_sp,
@@ -100,6 +103,9 @@ void ThreadPlanSingleThreadTimeout::ResumeFromPrevState(Thread &thread,
 
   // Do not create timeout if we are not stopping other threads.
   if (!thread.GetCurrentPlan()->StopOthers())
+    return;
+
+  if (!thread.GetCurrentPlan()->SupportsResumeOthers())
     return;
 
   auto timeout_plan = new ThreadPlanSingleThreadTimeout(thread, info);

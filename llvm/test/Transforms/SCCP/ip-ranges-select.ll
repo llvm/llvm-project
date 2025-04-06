@@ -18,7 +18,7 @@ define void @caller.1(ptr %arg) {
 
 define internal i32 @callee.1(i32 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@callee.1
-; CHECK-SAME: (i32 [[ARG:%.*]]) {
+; CHECK-SAME: (i32 range(i32 2, 5) [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 false, i32 16, i32 [[ARG]]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
@@ -40,7 +40,7 @@ declare void @use(i32)
 
 define internal i1 @f1(i32 %x, i32 %y, i1 %cmp) {
 ; CHECK-LABEL: define {{[^@]+}}@f1
-; CHECK-SAME: (i32 [[X:%.*]], i32 [[Y:%.*]], i1 [[CMP:%.*]]) {
+; CHECK-SAME: (i32 range(i32 10, 21) [[X:%.*]], i32 range(i32 100, 201) [[Y:%.*]], i1 [[CMP:%.*]]) {
 ; CHECK-NEXT:    [[SEL_1:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i32 [[SEL_1]], 100
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp eq i32 [[SEL_1]], 50

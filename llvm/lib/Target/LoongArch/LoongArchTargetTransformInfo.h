@@ -45,6 +45,11 @@ public:
   unsigned getRegisterClassForType(bool Vector, Type *Ty = nullptr) const;
   unsigned getMaxInterleaveFactor(ElementCount VF);
   const char *getRegisterClassName(unsigned ClassID) const;
+  TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth);
+
+  unsigned getCacheLineSize() const override;
+  unsigned getPrefetchDistance() const override;
+  bool enableWritePrefetching() const override;
 
   // TODO: Implement more hooks to provide TTI machinery for LoongArch.
 };

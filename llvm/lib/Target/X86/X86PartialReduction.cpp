@@ -19,9 +19,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -278,7 +276,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
     IntrinsicNumElts = 16;
   }
 
-  Function *PSADBWFn = Intrinsic::getDeclaration(Op->getModule(), IID);
+  Function *PSADBWFn = Intrinsic::getOrInsertDeclaration(Op->getModule(), IID);
 
   if (NumElts < 16) {
     // Pad input with zeroes.

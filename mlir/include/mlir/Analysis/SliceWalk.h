@@ -88,9 +88,9 @@ WalkContinuation walkSlice(mlir::ValueRange rootValues,
                            WalkCallback walkCallback);
 
 /// Computes a vector of all control predecessors of `value`. Relies on
-/// RegionBranchOpInterface and BranchOpInterface to determine predecessors.
-/// Returns nullopt if `value` has no predecessors or when the relevant
-/// operations are missing the interface implementations.
+/// RegionBranchOpInterface, BranchOpInterface, and SelectLikeOpInterface to
+/// determine predecessors. Returns nullopt if `value` has no predecessors or
+/// when the relevant operations are missing the interface implementations.
 std::optional<SmallVector<Value>> getControlFlowPredecessors(Value value);
 
 } // namespace mlir

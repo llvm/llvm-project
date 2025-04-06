@@ -104,7 +104,6 @@ subroutine ss(count)
   ! CHECK:   fir.if %[[V_17]] {
   ! CHECK:     %[[C_0:c[0-9a-z_]+]] = arith.constant 0 : i64
   ! CHECK:     fir.store %[[C_0]] to %arg0 : !fir.ref<i64>
-  ! CHECK:   } else {
   ! CHECK:   }
   ! CHECK:   %[[V_18:[0-9]+]] = fir.zero_bits !fir.ptr<i64>
   ! CHECK:   fir.store %[[V_18]] to %[[V_4]] : !fir.ref<!fir.ptr<i64>>
@@ -137,7 +136,6 @@ subroutine ss(count)
   ! CHECK:     %[[V_32]] = fir.load %arg0 : !fir.ref<i64>
   ! CHECK:     %[[V_33]] = fir.call @_FortranAioOutputInteger64(%[[V_31]], %[[V_32]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
   ! CHECK:     %[[V_34]] = fir.call @_FortranAioEndIoStatement(%[[V_31]]) {{.*}}: (!fir.ref<i8>) -> i32
-  ! CHECK:   } else {
   ! CHECK:   }
   ! CHECK:   return
   ! CHECK: }

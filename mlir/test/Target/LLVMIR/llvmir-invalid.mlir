@@ -15,24 +15,40 @@ llvm.func @vector_with_non_vector_type() -> f32 {
 
 // -----
 
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>> {
+  // expected-error @below{{expected an array attribute for a struct constant}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32)>>>>
 }
 
 // -----
 
-llvm.func @no_non_complex_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
-  // expected-error @below{{expected struct type to be a complex number}}
+llvm.func @non_array_attr_for_struct() -> !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>> {
+  // expected-error @below{{expected an array attribute for a struct constant}}
   %0 = llvm.mlir.constant(dense<[[[1, 2], [3, 4]], [[42, 43], [44, 45]]]> : tensor<2x2x2xi32>) : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
   llvm.return %0 : !llvm.array<2 x array<2 x array<2 x struct<(i32, i32, i32)>>>>
 }
 
 // -----
 
+llvm.func @invalid_struct_element_type() -> !llvm.struct<(f64, array<2 x i32>)> {
+  // expected-error @below{{expected struct element types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([1.0 : f64, dense<[1, 2]> : tensor<2xi32>]) : !llvm.struct<(f64, array<2 x i32>)>
+  llvm.return %0 : !llvm.struct<(f64, array<2 x i32>)>
+}
+
+// -----
+
+llvm.func @wrong_struct_element_attr_type() -> !llvm.struct<(f64, f64)> {
+  // expected-error @below{{expected struct element attribute types to be floating point type or integer type}}
+  %0 = llvm.mlir.constant([dense<[1, 2]> : tensor<2xi32>, 2.0 : f64]) : !llvm.struct<(f64, f64)>
+  llvm.return %0 : !llvm.struct<(f64, f64)>
+}
+
+// -----
+
 llvm.func @struct_wrong_attribute_element_type() -> !llvm.struct<(f64, f64)> {
-  // expected-error @below{{FloatAttr does not match expected type of the constant}}
+  // expected-error @below{{struct element at index 0 is of wrong type}}
   %0 = llvm.mlir.constant([1.0 : f32, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -172,7 +188,7 @@ llvm.func @sadd_overflow_intr_wrong_type(%arg0 : i32, %arg1 : f32) -> !llvm.stru
 
 llvm.func @assume_intr_wrong_type(%cond : i16) {
   // expected-error @below{{op operand #0 must be 1-bit signless integer, but got 'i16'}}
-  "llvm.intr.assume"(%cond) : (i16) -> ()
+  llvm.intr.assume %cond : i16
   llvm.return
 }
 
@@ -287,7 +303,7 @@ llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs
 
 llvm.func @stepvector_intr_wrong_type() -> vector<7xf32> {
   // expected-error @below{{op result #0 must be LLVM dialect-compatible vector of signless integer, but got 'vector<7xf32>'}}
-  %0 = llvm.intr.experimental.stepvector : vector<7xf32>
+  %0 = llvm.intr.stepvector : vector<7xf32>
   llvm.return %0 : vector<7xf32>
 }
 
@@ -328,6 +344,20 @@ llvm.comdat @__llvm_comdat_1 {
 llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
   llvm.linker_options ["test"]
+}
+
+// -----
+
+llvm.func @foo() {
+  // expected-error @below{{must appear at the module level}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>]
+}
+
+// -----
+
+module attributes {} {
+  // expected-error @below{{expected a module flag attribute}}
+  llvm.module_flags [4 : i32]
 }
 
 // -----
@@ -381,3 +411,45 @@ module @no_known_conversion_innermost_eltype {
     }
   }
 #-}
+
+// -----
+
+llvm.mlir.global external @zed(42 : i32) : i32
+
+llvm.mlir.alias external @foo : i32 {
+  %0 = llvm.mlir.addressof @zed : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{'llvm.dso_local_equivalent' op must reference an alias to a function}}
+  %0 = llvm.dso_local_equivalent @foo : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external @y() : !llvm.ptr
+
+llvm.func @call_alias_func() {
+  // expected-error @below{{op must reference a global defined by 'llvm.func' or 'llvm.mlir.alias'}}
+  %0 = llvm.dso_local_equivalent @y : !llvm.ptr
+  llvm.call %0() : !llvm.ptr, () -> (i32)
+  llvm.return
+}
+
+// -----
+
+llvm.mlir.global external constant @const() {addr_space = 0 : i32, dso_local} : i32 {
+  %0 = llvm.mlir.addressof @const : !llvm.ptr
+  %1 = llvm.ptrtoint %0 : !llvm.ptr to i64
+  // expected-error @below{{'llvm.dso_local_equivalent' op target function with 'extern_weak' linkage not allowed}}
+  %2 = llvm.dso_local_equivalent @extern_func : !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.sub %3, %1 : i64
+  %5 = llvm.trunc %4 : i64 to i32
+  llvm.return %5 : i32
+}
+
+llvm.func extern_weak @extern_func()

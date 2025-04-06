@@ -20,7 +20,7 @@
 COMPILER_RT_ABI Fcomplex __divsc3(float __a, float __b, float __c, float __d) {
   int __ilogbw = 0;
   float __logbw =
-      __compiler_rt_logbf(__compiler_rt_fmaxf(crt_fabsf(__c), crt_fabsf(__d)));
+      __compiler_rt_logbf(__compiler_rt_fmaxX(crt_fabsf(__c), crt_fabsf(__d)));
   if (crt_isfinite(__logbw)) {
     __ilogbw = (int)__logbw;
     __c = __compiler_rt_scalbnf(__c, -__ilogbw);

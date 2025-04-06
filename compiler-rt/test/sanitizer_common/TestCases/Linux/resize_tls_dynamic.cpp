@@ -1,6 +1,6 @@
 // RUN: %clangxx %s -DBUILD_DSO -fPIC -shared -o %t.so
 // RUN: %clangxx --std=c++11 %s -o %t
-// RUN: %env_tool_opts=verbosity=2 %run %t 2>&1 | FileCheck %s
+// RUN: %env_tool_opts=verbosity=3 %run %t 2>&1 | FileCheck %s
 
 // Does not call __tls_get_addr
 // UNSUPPORTED: i386-linux

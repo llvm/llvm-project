@@ -19,7 +19,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include <optional>
@@ -229,7 +228,7 @@ static void computeRelativePath(FileManager &FM, const DirectoryEntry *Dir,
   StringRef FilePath = File.getDir().getName();
   StringRef Path = FilePath;
   while (!Path.empty()) {
-    if (auto CurDir = FM.getDirectory(Path)) {
+    if (auto CurDir = FM.getOptionalDirectoryRef(Path)) {
       if (*CurDir == Dir) {
         Result = FilePath.substr(Path.size());
         llvm::sys::path::append(Result,
@@ -562,7 +561,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
   if (creatingPCHWithThroughHeader() && !LeavingPCHThroughHeader) {
     // Reached the end of the compilation without finding the through header.
     Diag(CurLexer->getFileLoc(), diag::err_pp_through_header_not_seen)
-        << PPOpts->PCHThroughHeader << 0;
+        << PPOpts.PCHThroughHeader << 0;
   }
 
   if (!isIncrementalProcessingEnabled())
@@ -755,9 +754,10 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
 
-  // This module is visible to itself.
+  // This module is visible to itself, but exports should not be made visible
+  // until they are imported.
   if (FirstTime)
-    makeModuleVisible(M, ImportLoc);
+    makeModuleVisible(M, ImportLoc, /*IncludeExports=*/false);
 }
 
 bool Preprocessor::needModuleMacros() const {

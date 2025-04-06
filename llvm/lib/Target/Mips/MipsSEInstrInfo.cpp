@@ -11,11 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsSEInstrInfo.h"
-#include "MCTargetDesc/MipsInstPrinter.h"
 #include "MipsAnalyzeImmediate.h"
-#include "MipsMachineFunction.h"
 #include "MipsTargetMachine.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -82,8 +79,9 @@ Register MipsSEInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I,
-                                  const DebugLoc &DL, MCRegister DestReg,
-                                  MCRegister SrcReg, bool KillSrc) const {
+                                  const DebugLoc &DL, Register DestReg,
+                                  Register SrcReg, bool KillSrc,
+                                  bool RenamableDest, bool RenamableSrc) const {
   unsigned Opc = 0, ZeroReg = 0;
   bool isMicroMips = Subtarget.inMicroMipsMode();
 
@@ -211,11 +209,13 @@ MipsSEInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
   return std::nullopt;
 }
 
-void MipsSEInstrInfo::
-storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                Register SrcReg, bool isKill, int FI,
-                const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-                int64_t Offset) const {
+void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
+                                      MachineBasicBlock::iterator I,
+                                      Register SrcReg, bool isKill, int FI,
+                                      const TargetRegisterClass *RC,
+                                      const TargetRegisterInfo *TRI,
+                                      int64_t Offset,
+                                      MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOStore);
 
@@ -285,10 +285,10 @@ storeRegToStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
     .addFrameIndex(FI).addImm(Offset).addMemOperand(MMO);
 }
 
-void MipsSEInstrInfo::
-loadRegFromStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                 Register DestReg, int FI, const TargetRegisterClass *RC,
-                 const TargetRegisterInfo *TRI, int64_t Offset) const {
+void MipsSEInstrInfo::loadRegFromStack(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
+    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    int64_t Offset, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
   MachineMemOperand *MMO = GetMemOperand(MBB, FI, MachineMemOperand::MOLoad);

@@ -20,7 +20,7 @@ namespace fs = std::filesystem;
 
 int main(int, char**) {
   test_library_hash_specializations_available();
-  test_hash_enabled_for_type<fs::path>();
+  test_hash_enabled<fs::path>();
 
   return 0;
 }

@@ -12,6 +12,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Duration.h"
@@ -1324,6 +1325,9 @@ TEST_F(FileSystemTest, Remove) {
   EXPECT_TRUE(fs::exists(Paths[3]));
 
   ASSERT_NO_ERROR(fs::remove_directories("D:/footest"));
+
+  ASSERT_NO_ERROR(fs::remove_directories(Twine(BaseDir) + "/foo/bar/baz"));
+  ASSERT_FALSE(fs::exists(Twine(BaseDir) + "/foo/bar/baz"));
 
   ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
   ASSERT_FALSE(fs::exists(BaseDir));

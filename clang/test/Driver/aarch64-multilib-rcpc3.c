@@ -1,4 +1,4 @@
-// RUN: %clang --target=aarch64-none-elf -march=armv8.9-a+rcpc3 -print-multi-flags-experimental -c %s 2>&1 | FileCheck %s
+// RUN: %clang --target=aarch64-none-elf -march=armv8.9-a+rcpc3 -print-multi-flags-experimental -multi-lib-config=%S/Inputs/multilib/empty.yaml -c %s 2>&1 | FileCheck %s
 
 // The purpose of this regression test is to make sure that when
 // compile options are converted into multilib selection flags, no

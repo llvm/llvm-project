@@ -42,9 +42,9 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     sourceFile =
         allSources.Open(path, fileError, "."s /*prepend to search path*/);
   }
-  if (!fileError.str().empty()) {
+  if (!buf.empty()) {
     ProvenanceRange range{allSources.AddCompilerInsertion(path)};
-    messages_.Say(range, "%s"_err_en_US, fileError.str());
+    messages_.Say(range, "%s"_err_en_US, buf);
     return sourceFile;
   }
   CHECK(sourceFile);
@@ -75,17 +75,28 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       messages_, *currentCooked_, preprocessor_, options.features};
   prescanner.set_fixedForm(options.isFixedForm)
       .set_fixedFormColumnLimit(options.fixedFormColumns)
+      .set_preprocessingOnly(options.prescanAndReformat)
+      .set_expandIncludeLines(!options.prescanAndReformat ||
+          options.expandIncludeLinesInPreprocessedOutput)
       .AddCompilerDirectiveSentinel("dir$");
-  if (options.features.IsEnabled(LanguageFeature::OpenACC)) {
+  bool noneOfTheAbove{!options.features.IsEnabled(LanguageFeature::OpenACC) &&
+      !options.features.IsEnabled(LanguageFeature::OpenMP) &&
+      !options.features.IsEnabled(LanguageFeature::CUDA)};
+  if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
   }
-  if (options.features.IsEnabled(LanguageFeature::OpenMP)) {
+  if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
     prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line
   }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
+  if (options.features.IsEnabled(LanguageFeature::CUDA) ||
+      (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
+  }
+  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
     preprocessor_.Define("_CUDA", "1");
   }
   ProvenanceRange range{allSources.AddIncludedFile(
@@ -116,11 +127,13 @@ void Parsing::EmitPreprocessedSource(
   int sourceLine{0};
   int column{1};
   bool inDirective{false};
+  bool ompConditionalLine{false};
   bool inContinuation{false};
   bool lineWasBlankBefore{true};
   const AllSources &allSources{allCooked().allSources()};
-  // All directives that flang support are known to have a length of 3 chars
-  constexpr int directiveNameLength{3};
+  // All directives that flang supports are known to have a length of 4 chars,
+  // except for OpenMP conditional compilation lines (!$).
+  constexpr int directiveNameLength{4};
   // We need to know the current directive in order to provide correct
   // continuation for the directive
   std::string directive;
@@ -130,6 +143,7 @@ void Parsing::EmitPreprocessedSource(
       out << '\n'; // TODO: DOS CR-LF line ending if necessary
       column = 1;
       inDirective = false;
+      ompConditionalLine = false;
       inContinuation = false;
       lineWasBlankBefore = true;
       ++sourceLine;
@@ -150,15 +164,21 @@ void Parsing::EmitPreprocessedSource(
         return ch;
       }};
 
+      bool inDirectiveSentinel{false};
       if (ch == '!' && lineWasBlankBefore) {
         // Other comment markers (C, *, D) in original fixed form source
         // input card column 1 will have been deleted or normalized to !,
         // which signifies a comment (directive) in both source forms.
         inDirective = true;
-      }
-      if (inDirective && directive.size() < directiveNameLength &&
-          IsLetter(ch)) {
-        directive += getOriginalChar(ch);
+        inDirectiveSentinel = true;
+      } else if (inDirective && !ompConditionalLine &&
+          directive.size() < directiveNameLength) {
+        if (IsLetter(ch) || ch == '$' || ch == '@') {
+          directive += getOriginalChar(ch);
+          inDirectiveSentinel = true;
+        } else if (directive == "$"s) {
+          ompConditionalLine = true;
+        }
       }
 
       std::optional<SourcePosition> position{provenance
@@ -195,9 +215,16 @@ void Parsing::EmitPreprocessedSource(
         // column limit override option.
         // OpenMP and OpenACC directives' continuations should have the
         // corresponding sentinel at the next line.
-        const auto continuation{
-            inDirective ? "&\n!$" + directive + "&" : "&\n     &"s};
-        out << continuation;
+        out << "&\n";
+        if (inDirective) {
+          if (ompConditionalLine) {
+            out << "!$   &";
+          } else {
+            out << '!' << directive << '&';
+          }
+        } else {
+          out << "     &";
+        }
         column = 7; // start of fixed form source field
         ++sourceLine;
         inContinuation = true;
@@ -208,10 +235,20 @@ void Parsing::EmitPreprocessedSource(
           out << ' ';
         }
       }
-      if (!inContinuation && position && position->column <= 72 && ch != ' ') {
-        // Preserve original indentation
-        for (; column < position->column; ++column) {
-          out << ' ';
+      if (ch != ' ') {
+        if (ompConditionalLine) {
+          // Only digits can stay in the label field
+          if (!(ch >= '0' && ch <= '9')) {
+            for (; column < 7; ++column) {
+              out << ' ';
+            }
+          }
+        } else if (!inContinuation && !inDirectiveSentinel && position &&
+            position->column <= 72) {
+          // Preserve original indentation
+          for (; column < position->column; ++column) {
+            out << ' ';
+          }
         }
       }
       out << getOriginalChar(ch);

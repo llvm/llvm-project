@@ -549,22 +549,26 @@ struct Strategy<TransferWriteOp> {
 };
 
 template <typename OpTy>
-LogicalResult checkPrepareXferOp(OpTy xferOp,
-                                 VectorTransferToSCFOptions options) {
+static LogicalResult checkPrepareXferOp(OpTy xferOp, PatternRewriter &rewriter,
+                                        VectorTransferToSCFOptions options) {
   if (xferOp->hasAttr(kPassLabel))
-    return failure();
+    return rewriter.notifyMatchFailure(
+        xferOp, "kPassLabel is present (vector-to-scf lowering in progress)");
   if (xferOp.getVectorType().getRank() <= options.targetRank)
-    return failure();
-  // Currently the unpacking of the leading dimension into the memref is not
-  // supported for scalable dimensions.
+    return rewriter.notifyMatchFailure(
+        xferOp, "xferOp vector rank <= transformation target rank");
   if (xferOp.getVectorType().getScalableDims().front())
-    return failure();
+    return rewriter.notifyMatchFailure(
+        xferOp, "Unpacking of the leading dimension into the memref is not yet "
+                "supported for scalable dims");
   if (isTensorOp(xferOp) && !options.lowerTensors)
-    return failure();
-  // Transfer ops that modify the element type are not supported atm.
+    return rewriter.notifyMatchFailure(
+        xferOp, "Unpacking for tensors has been disabled.");
   if (xferOp.getVectorType().getElementType() !=
       xferOp.getShapedType().getElementType())
-    return failure();
+    return rewriter.notifyMatchFailure(
+        xferOp, "Mismatching source and destination element types.");
+
   return success();
 }
 
@@ -597,8 +601,9 @@ struct PrepareTransferReadConversion
 
   LogicalResult matchAndRewrite(TransferReadOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, options).failed())
-      return failure();
+    if (checkPrepareXferOp(xferOp, rewriter, options).failed())
+      return rewriter.notifyMatchFailure(
+          xferOp, "checkPrepareXferOp conditions not met!");
 
     auto buffers = allocBuffers(rewriter, xferOp);
     auto *newXfer = rewriter.clone(*xferOp.getOperation());
@@ -646,8 +651,9 @@ struct PrepareTransferWriteConversion
 
   LogicalResult matchAndRewrite(TransferWriteOp xferOp,
                                 PatternRewriter &rewriter) const override {
-    if (checkPrepareXferOp(xferOp, options).failed())
-      return failure();
+    if (checkPrepareXferOp(xferOp, rewriter, options).failed())
+      return rewriter.notifyMatchFailure(
+          xferOp, "checkPrepareXferOp conditions not met!");
 
     Location loc = xferOp.getLoc();
     auto buffers = allocBuffers(rewriter, xferOp);
@@ -903,7 +909,8 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy xferOp,
                                 PatternRewriter &rewriter) const override {
     if (!xferOp->hasAttr(kPassLabel))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          xferOp, "kPassLabel is present (progressing lowering in progress)");
 
     // Find and cast data buffer. How the buffer can be found depends on OpTy.
     ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
@@ -911,7 +918,8 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     FailureOr<MemRefType> castedDataType = unpackOneDim(dataBufferType);
     if (failed(castedDataType))
-      return failure();
+      return rewriter.notifyMatchFailure(xferOp,
+                                         "Failed to unpack one vector dim.");
 
     auto castedDataBuffer =
         locB.create<vector::TypeCastOp>(*castedDataType, dataBuffer);
@@ -1294,16 +1302,14 @@ struct UnrollTransferReadConversion
           xferOp, "vector rank is less or equal to target rank");
     if (failed(checkLowerTensors(xferOp, rewriter)))
       return failure();
-    // Transfer ops that modify the element type are not supported atm.
     if (xferOp.getVectorType().getElementType() !=
         xferOp.getShapedType().getElementType())
       return rewriter.notifyMatchFailure(
           xferOp, "not yet supported: element type mismatch");
     auto xferVecType = xferOp.getVectorType();
     if (xferVecType.getScalableDims()[0]) {
-      // Cannot unroll a scalable dimension at compile time.
       return rewriter.notifyMatchFailure(
-          xferOp, "scalable dimensions cannot be unrolled");
+          xferOp, "scalable dimensions cannot be unrolled at compile time");
     }
 
     auto insertOp = getInsertOp(xferOp);
@@ -1650,7 +1656,7 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
       return failure();
     if (xferOp.getVectorType().getRank() != 1)
       return failure();
-    if (map.isMinorIdentity() && isLastMemrefDimUnitStride(memRefType))
+    if (map.isMinorIdentity() && memRefType.isLastDimUnitStride())
       return failure(); // Handled by ConvertVectorToLLVM
 
     // Loop bounds, step, state...
@@ -1730,12 +1736,12 @@ struct ConvertVectorToSCFPass
     RewritePatternSet lowerTransferPatterns(&getContext());
     mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
         lowerTransferPatterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(),
-                                       std::move(lowerTransferPatterns));
+    (void)applyPatternsGreedily(getOperation(),
+                                std::move(lowerTransferPatterns));
 
     RewritePatternSet patterns(&getContext());
     populateVectorToSCFConversionPatterns(patterns, options);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
 

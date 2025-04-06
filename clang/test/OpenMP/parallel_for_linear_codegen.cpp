@@ -337,7 +337,7 @@ int main() {
 // CHECK1-NEXT:    [[ADD7:%.*]] = add nsw i32 [[TMP14]], [[MUL6]]
 // CHECK1-NEXT:    store i32 [[ADD7]], ptr [[LVAR3]], align 4
 // CHECK1-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[PVAR2]], align 8
-// CHECK1-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP16]], i32 1
+// CHECK1-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP16]], i32 1
 // CHECK1-NEXT:    store ptr [[INCDEC_PTR]], ptr [[PVAR2]], align 8
 // CHECK1-NEXT:    [[TMP17:%.*]] = load i32, ptr [[LVAR3]], align 4
 // CHECK1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP17]], 1

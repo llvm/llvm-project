@@ -17,7 +17,7 @@ module helper
   integer gli
 
   contains
-!CHECK-DAG: !DISubprogram(name: "test", linkageName: "_QMhelperPtest", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+1]]{{.*}}unit: ![[CU]])
+!CHECK-DAG: !DISubprogram(name: "test", linkageName: "_QMhelperPtest", scope: ![[MOD]], file: ![[FILE2]], line: [[@LINE+1]]{{.*}}unit: ![[CU]]{{.*}})
     subroutine test()
     glr = 12.34
     gli = 67

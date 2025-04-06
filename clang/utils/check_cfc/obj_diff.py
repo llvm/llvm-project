@@ -57,7 +57,7 @@ def first_diff(a, b, fromfile, tofile):
             first_diff_idx = idx
             break
 
-    if first_diff_idx == None:
+    if first_diff_idx is None:
         # No difference
         return None
 

@@ -146,7 +146,7 @@ void OneScalarOp() {
   // CHECK: %[[COND:.+]] = load <4 x i32>
   // CHECK: %[[LHS:.+]] = load <4 x i32>
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i32> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[LHS]], <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[LHS]], <4 x i32> splat (i32 5)
 
   four_ints ?: some_float;
   // CHECK: %[[COND:.+]] = load <4 x i32>
@@ -161,7 +161,7 @@ void OneScalarOp() {
   // CHECK: %[[COND:.+]] = load <4 x i32>
   // CHECK: %[[LHS:.+]] = load <4 x i32>
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i32> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[LHS]], <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i32> %[[LHS]], <4 x i32> splat (i32 5)
 
   four_ints ? some_float : four_ints;
   // CHECK: %[[COND:.+]] = load <4 x i32>
@@ -186,19 +186,19 @@ void OneScalarOp() {
   // CHECK: %[[COND:.+]] = load <4 x i64>
   // CHECK: %[[LHS:.+]] = load <4 x double>
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i64> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x double> %[[LHS]], <4 x double> <double 6.{{.+}}, double 6.{{.+}}, double 6.{{.+}}>
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x double> %[[LHS]], <4 x double> splat (double 6.{{.+}})
 
   four_ll ? four_ll : 6.0;
   // CHECK: %[[COND:.+]] = load <4 x i64>
   // CHECK: %[[LHS:.+]] = load <4 x i64>
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i64> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i64> %[[LHS]], <4 x i64> <i64 6, i64 6, i64 6, i64 6>
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i64> %[[LHS]], <4 x i64> splat (i64 6)
 
   four_ll ? four_ll : 6;
   // CHECK: %[[COND:.+]] = load <4 x i64>
   // CHECK: %[[LHS:.+]] = load <4 x i64>
   // CHECK: %[[NEZERO:.+]] = icmp ne <4 x i64> %[[COND]], zeroinitializer
-  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i64> %[[LHS]], <4 x i64> <i64 6, i64 6, i64 6, i64 6>
+  // CHECK: %[[SELECT:.+]] = select <4 x i1> %[[NEZERO]], <4 x i64> %[[LHS]], <4 x i64> splat (i64 6)
 
   four_ll ? four_ll : some_int;
   // CHECK: %[[COND:.+]] = load <4 x i64>

@@ -18,10 +18,14 @@
 
 namespace mlir {
 class ModuleOp;
-}
+namespace gpu {
+class GPUModuleOp;
+} // namespace gpu
+} // namespace mlir
+
 namespace llvm {
 class DataLayout;
-}
+} // namespace llvm
 
 namespace fir::support {
 /// Create an mlir::DataLayoutSpecInterface attribute from an llvm::DataLayout
@@ -30,12 +34,16 @@ namespace fir::support {
 /// the llvm::DataLayout on the module.
 /// These attributes are replaced if they were already set.
 void setMLIRDataLayout(mlir::ModuleOp mlirModule, const llvm::DataLayout &dl);
+void setMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+                       const llvm::DataLayout &dl);
 
 /// Create an mlir::DataLayoutSpecInterface from the llvm.data_layout attribute
 /// if one is provided. If such attribute is not available, create a default
 /// target independent layout when allowDefaultLayout is true. Otherwise do
 /// nothing.
 void setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
+                                     bool allowDefaultLayout);
+void setMLIRDataLayoutFromAttributes(mlir::gpu::GPUModuleOp mlirModule,
                                      bool allowDefaultLayout);
 
 /// Create mlir::DataLayout from the data layout information on the
@@ -44,7 +52,11 @@ void setMLIRDataLayoutFromAttributes(mlir::ModuleOp mlirModule,
 /// information is present at all and \p allowDefaultLayout is false, returns
 /// std::nullopt.
 std::optional<mlir::DataLayout>
-getOrSetDataLayout(mlir::ModuleOp mlirModule, bool allowDefaultLayout = false);
+getOrSetMLIRDataLayout(mlir::ModuleOp mlirModule,
+                       bool allowDefaultLayout = false);
+std::optional<mlir::DataLayout>
+getOrSetMLIRDataLayout(mlir::gpu::GPUModuleOp mlirModule,
+                       bool allowDefaultLayout = false);
 
 } // namespace fir::support
 

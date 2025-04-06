@@ -266,15 +266,15 @@ Parts:
       MaximumWaveLaneCount: 4294967295
       ResourceStride:  16
       Resources:
-        - Type:            1
+        - Type:            Sampler
           Space:           1
           LowerBound:      1
           UpperBound:      1
-        - Type:            2
+        - Type:            CBV
           Space:           2
           LowerBound:      2
           UpperBound:      2
-        - Type:            3
+        - Type:            SRVTyped
           Space:           3
           LowerBound:      3
           UpperBound:      3
@@ -308,13 +308,13 @@ Parts:
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
   EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
@@ -322,25 +322,25 @@ Parts:
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 2u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::CBV);
   EXPECT_EQ(Binding.Flags, 0u);
 
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
   EXPECT_EQ(Binding.Flags, 0u);
 
   EXPECT_FALSE(It == PSVInfo->getResources().end());
@@ -351,7 +351,7 @@ Parts:
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 
   {
@@ -361,7 +361,7 @@ Parts:
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
     EXPECT_FALSE(Old != PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
     EXPECT_EQ(Binding.Flags, 0u);
   }
 
@@ -369,7 +369,7 @@ Parts:
 
   EXPECT_TRUE(It == PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 
   {
@@ -377,13 +377,13 @@ Parts:
     Binding = *Old;
     EXPECT_TRUE(Old == PSVInfo->getResources().end());
 
-    EXPECT_EQ(Binding.Type, 0u);
+    EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
     EXPECT_EQ(Binding.Flags, 0u);
   }
 
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 3u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVTyped);
   EXPECT_EQ(Binding.Flags, 0u);
 }
 
@@ -587,7 +587,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   dxbc::PSV::v2::ResourceBindInfo Binding;
 
   Binding = *It;
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -595,7 +595,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);
@@ -605,7 +605,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
 
   EXPECT_TRUE(It == PSVInfo->getResources().begin());
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -613,7 +613,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   --It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 1u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Sampler);
   EXPECT_EQ(Binding.Space, 2u);
   EXPECT_EQ(Binding.LowerBound, 3u);
   EXPECT_EQ(Binding.UpperBound, 4u);
@@ -621,7 +621,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   ++It;
   Binding = *It;
 
-  EXPECT_EQ(Binding.Type, 5u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::SRVStructured);
   EXPECT_EQ(Binding.Space, 6u);
   EXPECT_EQ(Binding.LowerBound, 7u);
   EXPECT_EQ(Binding.UpperBound, 8u);;
@@ -635,7 +635,7 @@ TEST(DXCFile, PSVResourceIteratorsStride) {
   EXPECT_TRUE(It == PSVInfo->getResources().end());
   EXPECT_FALSE(It != PSVInfo->getResources().end());
 
-  EXPECT_EQ(Binding.Type, 0u);
+  EXPECT_EQ(Binding.Type, dxbc::PSV::ResourceType::Invalid);
   EXPECT_EQ(Binding.Flags, 0u);
 }
 
@@ -819,5 +819,74 @@ TEST(DXCFile, MalformedSignature) {
         DXContainer::create(getMemoryBuffer<164>(Buffer)),
         FailedWithMessage("Invalid parameter name offset: name starts after "
                           "the end of the part data"));
+  }
+}
+
+TEST(RootSignature, ParseRootFlags) {
+  {
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F,
+        0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00, 0x00, 0x00,
+        0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    };
+    DXContainer C =
+        llvm::cantFail(DXContainer::create(getMemoryBuffer<68>(Buffer)));
+
+    const auto &RS = C.getRootSignature();
+    ASSERT_TRUE(RS.has_value());
+    ASSERT_EQ(RS->getVersion(), 2u);
+    ASSERT_EQ(RS->getNumParameters(), 0u);
+    ASSERT_EQ(RS->getRootParametersOffset(), 0u);
+    ASSERT_EQ(RS->getNumStaticSamplers(), 0u);
+    ASSERT_EQ(RS->getStaticSamplersOffset(), 0u);
+    ASSERT_EQ(RS->getFlags(), 0x01u);
+  }
+
+  {
+    // this parameter has the root signature definition missing some values.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35,
+        0x6F, 0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00,
+        0x00, 0x00, 0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24,
+        0x00, 0x00, 0x00, 0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00,
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
+    EXPECT_THAT_EXPECTED(
+        DXContainer::create(getMemoryBuffer<64>(Buffer)),
+        FailedWithMessage(
+            "Invalid root signature, insufficient space for header."));
+  }
+  {
+    // Version has been changed to an invalid number.
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F,
+        0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00, 0x00, 0x00,
+        0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+    };
+    EXPECT_THAT_EXPECTED(
+        DXContainer::create(getMemoryBuffer<100>(Buffer)),
+        FailedWithMessage("unsupported root signature version read: 3"));
+  }
+  {
+    // Flag has been set to an invalid value
+    uint8_t Buffer[] = {
+        0x44, 0x58, 0x42, 0x43, 0x32, 0x9A, 0x53, 0xD8, 0xEC, 0xBE, 0x35, 0x6F,
+        0x05, 0x39, 0xE1, 0xFE, 0x31, 0x20, 0xF0, 0xC1, 0x01, 0x00, 0x00, 0x00,
+        0x44, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00,
+        0x52, 0x54, 0x53, 0x30, 0x18, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0xFF,
+    };
+    EXPECT_THAT_EXPECTED(
+        DXContainer::create(getMemoryBuffer<100>(Buffer)),
+        FailedWithMessage(
+            "unsupported root signature flag value read: 4278190081"));
   }
 }

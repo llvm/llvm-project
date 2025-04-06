@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "resolve-names-utils.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/fold.h"
@@ -20,6 +18,8 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <initializer_list>
 #include <variant>
 
@@ -30,8 +30,6 @@ using common::LogicalOperator;
 using common::NumericOperator;
 using common::RelationalOperator;
 using IntrinsicOperator = parser::DefinedOperator::IntrinsicOperator;
-
-static constexpr const char *operatorPrefix{"operator("};
 
 static GenericKind MapIntrinsicOperator(IntrinsicOperator);
 
@@ -67,37 +65,6 @@ bool IsIntrinsicOperator(
     }
   }
   return false;
-}
-
-template <typename E>
-std::forward_list<std::string> GetOperatorNames(
-    const SemanticsContext &context, E opr) {
-  std::forward_list<std::string> result;
-  for (const char *name : context.languageFeatures().GetNames(opr)) {
-    result.emplace_front(std::string{operatorPrefix} + name + ')');
-  }
-  return result;
-}
-
-std::forward_list<std::string> GetAllNames(
-    const SemanticsContext &context, const SourceName &name) {
-  std::string str{name.ToString()};
-  if (!name.empty() && name.end()[-1] == ')' &&
-      name.ToString().rfind(std::string{operatorPrefix}, 0) == 0) {
-    for (int i{0}; i != common::LogicalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, LogicalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-    for (int i{0}; i != common::RelationalOperator_enumSize; ++i) {
-      auto names{GetOperatorNames(context, RelationalOperator{i})};
-      if (llvm::is_contained(names, str)) {
-        return names;
-      }
-    }
-  }
-  return {str};
 }
 
 bool IsLogicalConstant(
@@ -435,6 +402,7 @@ void EquivalenceSets::FinishSet(const parser::CharBlock &source) {
 // set.
 bool EquivalenceSets::CheckCanEquivalence(
     const parser::CharBlock &source, const Symbol &sym1, const Symbol &sym2) {
+  std::optional<common::LanguageFeature> feature;
   std::optional<parser::MessageFixedText> msg;
   const DeclTypeSpec *type1{sym1.GetType()};
   const DeclTypeSpec *type2{sym2.GetType()};
@@ -453,24 +421,19 @@ bool EquivalenceSets::CheckCanEquivalence(
   } else if (!(isAnyNum1 || isChar1) &&
       !(isAnyNum2 || isChar2)) { // C8110 - C8113
     if (AreTkCompatibleTypes(type1, type2)) {
-      if (context_.ShouldWarn(LanguageFeature::EquivalenceSameNonSequence)) {
-        msg =
-            "nonstandard: Equivalence set contains '%s' and '%s' with same "
-            "type that is neither numeric nor character sequence type"_port_en_US;
-      }
+      msg =
+          "nonstandard: Equivalence set contains '%s' and '%s' with same type that is neither numeric nor character sequence type"_port_en_US;
+      feature = LanguageFeature::EquivalenceSameNonSequence;
     } else {
       msg = "Equivalence set cannot contain '%s' and '%s' with distinct types "
             "that are not both numeric or character sequence types"_err_en_US;
     }
   } else if (isAnyNum1) {
     if (isChar2) {
-      if (context_.ShouldWarn(
-              LanguageFeature::EquivalenceNumericWithCharacter)) {
-        msg = "nonstandard: Equivalence set contains '%s' that is numeric "
-              "sequence type and '%s' that is character"_port_en_US;
-      }
-    } else if (isAnyNum2 &&
-        context_.ShouldWarn(LanguageFeature::EquivalenceNonDefaultNumeric)) {
+      msg =
+          "nonstandard: Equivalence set contains '%s' that is numeric sequence type and '%s' that is character"_port_en_US;
+      feature = LanguageFeature::EquivalenceNumericWithCharacter;
+    } else if (isAnyNum2) {
       if (isDefaultNum1) {
         msg =
             "nonstandard: Equivalence set contains '%s' that is a default "
@@ -479,12 +442,16 @@ bool EquivalenceSets::CheckCanEquivalence(
         msg = "nonstandard: Equivalence set contains '%s' and '%s' that are "
               "numeric sequence types with non-default kinds"_port_en_US;
       }
+      feature = LanguageFeature::EquivalenceNonDefaultNumeric;
     }
   }
-  if (msg &&
-      (!context_.IsInModuleFile(source) ||
-          msg->severity() == parser::Severity::Error)) {
-    context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+  if (msg) {
+    if (feature) {
+      context_.Warn(
+          *feature, source, std::move(*msg), sym1.name(), sym2.name());
+    } else {
+      context_.Say(source, std::move(*msg), sym1.name(), sym2.name());
+    }
     return false;
   }
   return true;
@@ -795,7 +762,11 @@ void SymbolMapper::MapSymbolExprs(Symbol &symbol) {
               proc.set_procInterfaces(
                   *mappedSymbol, BypassGeneric(mappedSymbol->GetUltimate()));
             } else if (const DeclTypeSpec * mappedType{MapType(proc.type())}) {
-              proc.set_type(*mappedType);
+              if (proc.type()) {
+                CHECK(*proc.type() == *mappedType);
+              } else {
+                proc.set_type(*mappedType);
+              }
             }
             if (proc.init()) {
               if (const Symbol * mapped{MapSymbol(*proc.init())}) {

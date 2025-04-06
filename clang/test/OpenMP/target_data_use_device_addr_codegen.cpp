@@ -54,12 +54,12 @@ int main() {
 // CHECK: [[SIZES:%.+]] = alloca [6 x i64],
 // CHECK: [[VLA_ADDR:%.+]] = alloca float, i64 %{{.+}},
 // CHECK: [[PTR:%.+]] = load ptr, ptr [[PTR_ADDR]],
-// CHECK-NEXT: [[ARR_IDX:%.+]] = getelementptr inbounds float, ptr [[PTR]], i64 3
+// CHECK-NEXT: [[ARR_IDX:%.+]] = getelementptr inbounds nuw float, ptr [[PTR]], i64 3
 // CHECK: [[P5:%.+]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT: [[ARR_IDX1:%.+]] = getelementptr inbounds float, ptr [[P5]], i64 0
 // CHECK: [[P7:%.+]] = load ptr, ptr [[REF_ADDR]],
 // CHECK-NEXT: [[REF:%.+]] = load ptr, ptr [[REF_ADDR]],
-// CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
+// CHECK-NEXT: [[ARR_IDX2:%.+]] = getelementptr inbounds nuw [4 x float], ptr [[ARR_ADDR]], i64 0, i64 0
 // CHECK: [[P10:%.+]] = mul nuw i64 {{.+}}, 4
 // CHECK-NEXT: [[ARR_IDX5:%.+]] = getelementptr inbounds float, ptr [[VLA_ADDR]], i64 0
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[SIZES]], ptr align 8 [[SIZES1]], i64 48, i1 false)
@@ -132,14 +132,14 @@ int main() {
 // CHECK: [[SIZES:%.+]] = alloca [6 x i64],
 // CHECK: [[A_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS:%.+]], i32 0, i32 0
 // CHECK: [[PTR_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 1
-// CHECK: [[ARR_IDX:%.+]] = getelementptr inbounds i32, ptr %{{.+}}, i64 3
+// CHECK: [[ARR_IDX:%.+]] = getelementptr inbounds nuw i32, ptr %{{.+}}, i64 3
 // CHECK: [[REF_REF:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 2
 // CHECK: [[REF_PTR:%.+]] = load ptr, ptr [[REF_REF]],
 // CHECK-NEXT: [[P3:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 1
 // CHECK: [[ARR_IDX5:%.+]] = getelementptr inbounds i32, ptr {{.+}}, i64 0
 // CHECK: [[ARR_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 3
 
-// CHECK: [[ARR_IDX6:%.+]] = getelementptr inbounds [4 x i32], ptr [[ARR_ADDR]], i64 0, i64 0
+// CHECK: [[ARR_IDX6:%.+]] = getelementptr inbounds nuw [4 x i32], ptr [[ARR_ADDR]], i64 0, i64 0
 // CHECK: [[A_ADDR2:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 0
 // CHECK: [[P4:%.+]] = mul nuw i64 [[CONV:%.+]], 4
 // CHECK: [[A_ADDR3:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 0
@@ -147,7 +147,7 @@ int main() {
 // CHECK: [[L6:%.+]] = sext i32 [[L5]] to i64
 // CHECK: [[LB_ADD_LEN:%lb_add_len]] = add nsw i64 -1, [[L6]]
 // CHECK: [[ARR_ADDR9:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[THIS]], i32 0, i32 3
-// CHECK: [[ARR_IDX10:%arrayidx.+]] = getelementptr inbounds [4 x i32], ptr [[ARR_ADDR9]], i64 0, i64 %lb_add_len
+// CHECK: [[ARR_IDX10:%arrayidx.+]] = getelementptr inbounds nuw [4 x i32], ptr [[ARR_ADDR9]], i64 0, i64 %lb_add_len
 // CHECK: [[ARR_END:%.+]] = getelementptr i32, ptr [[ARR_IDX10]], i32 1
 // CHECK: [[E:%.+]] = ptrtoint ptr [[ARR_END]] to i64
 // CHECK: [[B:%.+]] = ptrtoint ptr [[A_ADDR]] to i64

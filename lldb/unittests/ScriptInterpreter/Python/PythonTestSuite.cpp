@@ -154,6 +154,11 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(
   return nullptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBExecutionContext(
+    PyObject *data) {
+  return nullptr;
+}
+
 lldb::ValueObjectSP
 lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(
     void *data) {
@@ -206,9 +211,28 @@ LLDBSwigPythonGetRepeatCommandForScriptedCommand(PyObject *implementor,
   return std::nullopt;
 }
 
+StructuredData::DictionarySP
+LLDBSwigPythonHandleArgumentCompletionForScriptedCommand(
+    PyObject *implementor, std::vector<llvm::StringRef> &args, size_t args_pos,
+    size_t pos_in_arg) {
+  return {};
+}
+
+StructuredData::DictionarySP
+LLDBSwigPythonHandleOptionArgumentCompletionForScriptedCommand(
+    PyObject *implementor, llvm::StringRef &long_options, size_t char_in_arg) {
+  return {};
+}
+
 bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleInit(
     const char *python_module_name, const char *session_dictionary_name,
     lldb::DebuggerSP debugger) {
+  return false;
+}
+
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallModuleNewTarget(
+    const char *python_module_name, const char *session_dictionary_name,
+    lldb::TargetSP target) {
   return false;
 }
 
@@ -269,21 +293,7 @@ void *lldb_private::python::SWIGBridge::LLDBSWIGPython_GetDynamicSetting(
 }
 
 python::PythonObject
-lldb_private::python::SWIGBridge::LLDBSwigPythonCreateScriptedStopHook(
-    lldb::TargetSP target_sp, const char *python_class_name,
-    const char *session_dictionary_name, const StructuredDataImpl &args_impl,
-    Status &error) {
-  return python::PythonObject();
-}
-
-bool lldb_private::python::SWIGBridge::LLDBSwigPythonStopHookCallHandleStop(
-    void *implementor, lldb::ExecutionContextRefSP exc_ctx_sp,
-    lldb::StreamSP stream) {
-  return false;
-}
-
-python::PythonObject
-lldb_private::python::SWIGBridge::ToSWIGWrapper(const Status &status) {
+lldb_private::python::SWIGBridge::ToSWIGWrapper(Status &&status) {
   return python::PythonObject();
 }
 

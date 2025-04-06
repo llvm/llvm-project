@@ -104,7 +104,7 @@ public:
   const llvm::Record *getCombinerDef() const;
 
   // Get the predicates that are combined by this predicate.
-  std::vector<llvm::Record *> getChildren() const;
+  std::vector<const llvm::Record *> getChildren() const;
 };
 
 // A combined predicate that requires all child predicates of 'CPred' type to

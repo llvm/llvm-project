@@ -632,7 +632,7 @@ public:
 };
 
 /// Generator for new versions of polyhedral region statements.
-class RegionGenerator final : BlockGenerator {
+class RegionGenerator final : public BlockGenerator {
 public:
   /// Create a generator for regions.
   ///

@@ -15,6 +15,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;

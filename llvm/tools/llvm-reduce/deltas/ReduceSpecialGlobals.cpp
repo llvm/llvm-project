@@ -15,7 +15,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceSpecialGlobals.h"
-#include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
@@ -27,19 +26,15 @@ static StringRef SpecialGlobalNames[] = {"llvm.used", "llvm.compiler.used"};
 
 /// Removes all special globals aren't inside any of the
 /// desired Chunks.
-static void extractSpecialGlobalsFromModule(Oracle &O,
-                                            ReducerWorkItem &WorkItem) {
+void llvm::reduceSpecialGlobalsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   Module &Program = WorkItem.getModule();
 
   for (StringRef Name : SpecialGlobalNames) {
     if (auto *Used = Program.getNamedGlobal(Name)) {
-      Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
-      Used->eraseFromParent();
+      if (!O.shouldKeep()) {
+        Used->replaceAllUsesWith(getDefaultValue(Used->getType()));
+        Used->eraseFromParent();
+      }
     }
   }
-}
-
-void llvm::reduceSpecialGlobalsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, extractSpecialGlobalsFromModule,
-               "Reducing Special Globals");
 }

@@ -9,6 +9,7 @@
 #ifndef MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H
 #define MLIR_CONVERSION_MATHTOLLVM_MATHTOLLVM_H
 
+#include "mlir/IR/PatternMatch.h"
 #include <memory>
 
 namespace mlir {
@@ -21,9 +22,10 @@ class Pass;
 #define GEN_PASS_DECL_CONVERTMATHTOLLVMPASS
 #include "mlir/Conversion/Passes.h.inc"
 
-void populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
+void populateMathToLLVMConversionPatterns(const LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns,
-                                          bool approximateLog1p = true);
+                                          bool approximateLog1p = true,
+                                          PatternBenefit benefit = 1);
 
 void registerConvertMathToLLVMInterface(DialectRegistry &registry);
 

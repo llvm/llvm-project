@@ -17,18 +17,19 @@
 #include <__assert>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__functional/hash.h>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
+#include <__std_mbstate_t.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__utility/is_pointer_in_range.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iosfwd>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 #  include <cwchar> // for wmemcpy
 #endif
 
@@ -233,7 +234,7 @@ struct __char_traits_base {
 
 // char_traits<wchar_t>
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, wint_t, static_cast<wint_t>(WEOF)> {
   static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 int
@@ -254,9 +255,9 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<wchar_t> : __char_traits_base<wchar_t, w
     return std::__constexpr_wmemchr(__s, __a, __n);
   }
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
@@ -276,7 +277,7 @@ struct _LIBCPP_TEMPLATE_VIS char_traits<char8_t>
   }
 };
 
-#endif // _LIBCPP_HAS_NO_CHAR8_T
+#endif // _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS char_traits<char16_t>
@@ -533,7 +534,7 @@ __str_find_last_not_of(const _CharT* __p, _SizeT __sz, _CharT __c, _SizeT __pos)
 template <class _Ptr>
 inline _LIBCPP_HIDE_FROM_ABI size_t __do_string_hash(_Ptr __p, _Ptr __e) {
   typedef typename iterator_traits<_Ptr>::value_type value_type;
-  return __murmur2_or_cityhash<size_t>()(__p, (__e - __p) * sizeof(value_type));
+  return std::__hash_memory(__p, (__e - __p) * sizeof(value_type));
 }
 
 _LIBCPP_END_NAMESPACE_STD

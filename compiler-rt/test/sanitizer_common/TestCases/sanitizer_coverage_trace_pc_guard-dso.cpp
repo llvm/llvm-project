@@ -1,7 +1,8 @@
 // Tests trace pc guard coverage collection.
 
 // REQUIRES: has_sancovcc
-// UNSUPPORTED: ubsan,target={{(powerpc64|s390x|thumb).*}}
+// Doesn't work on big-endian targets.
+// UNSUPPORTED: ubsan,target={{(powerpc64|s390x|sparc|thumb).*}}
 // XFAIL: tsan,darwin
 // XFAIL: android && asan
 

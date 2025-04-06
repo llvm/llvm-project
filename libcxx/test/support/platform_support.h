@@ -78,7 +78,7 @@ inline std::string get_temp_file_name() {
   for (std::size_t i = 0; i < sizeof(Name); ++i)
     if (Name[i] == 'X')
       Name[i] = chars[rand() % strlen(chars)];
-  FILE* file = fopen(filename, "w");
+  FILE* file = fopen(Name, "w");
   if (!file)
     abort();
   if (fclose(file) == EOF)

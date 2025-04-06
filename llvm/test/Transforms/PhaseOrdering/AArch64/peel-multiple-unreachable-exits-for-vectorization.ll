@@ -248,7 +248,7 @@ define i64 @at_with_int_conversion(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    [[START_INT:%.*]] = ptrtoint ptr [[START]] to i64
 ; CHECK-NEXT:    [[END_INT:%.*]] = ptrtoint ptr [[END]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[END_INT]], [[START_INT]]
-; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ult i64 [[SUB]], [[IDX:%.*]]
+; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ugt i64 [[IDX:%.*]], [[SUB]]
 ; CHECK-NEXT:    br i1 [[INRANGE]], label [[ERROR:%.*]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr i64, ptr [[START]], i64 [[IDX]]

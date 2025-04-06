@@ -6,20 +6,14 @@
 // X64-LABEL: define dso_local double @test_double_post_inc(
 // X64-SAME: ) #[[ATTR0:[0-9]+]] {
 // X64-NEXT:  entry:
-// X64-NEXT:    [[RETVAL:%.*]] = alloca double, align 8
-// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_post_inc.n, float 1.000000e+00 seq_cst, align 8
-// X64-NEXT:    store float [[TMP0]], ptr [[RETVAL]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL]], align 8
-// X64-NEXT:    ret double [[TMP1]]
+// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_post_inc.n, double 1.000000e+00 seq_cst, align 8
+// X64-NEXT:    ret double [[TMP0]]
 //
 // X86-LABEL: define dso_local double @test_double_post_inc(
 // X86-SAME: ) #[[ATTR0:[0-9]+]] {
 // X86-NEXT:  entry:
-// X86-NEXT:    [[RETVAL:%.*]] = alloca double, align 4
-// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_post_inc.n, float 1.000000e+00 seq_cst, align 8
-// X86-NEXT:    store float [[TMP0]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret double [[TMP1]]
+// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_post_inc.n, double 1.000000e+00 seq_cst, align 8
+// X86-NEXT:    ret double [[TMP0]]
 //
 double test_double_post_inc()
 {
@@ -30,20 +24,14 @@ double test_double_post_inc()
 // X64-LABEL: define dso_local double @test_double_post_dc(
 // X64-SAME: ) #[[ATTR0]] {
 // X64-NEXT:  entry:
-// X64-NEXT:    [[RETVAL:%.*]] = alloca double, align 8
-// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_post_dc.n, float 1.000000e+00 seq_cst, align 8
-// X64-NEXT:    store float [[TMP0]], ptr [[RETVAL]], align 8
-// X64-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL]], align 8
-// X64-NEXT:    ret double [[TMP1]]
+// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_post_dc.n, double 1.000000e+00 seq_cst, align 8
+// X64-NEXT:    ret double [[TMP0]]
 //
 // X86-LABEL: define dso_local double @test_double_post_dc(
 // X86-SAME: ) #[[ATTR0]] {
 // X86-NEXT:  entry:
-// X86-NEXT:    [[RETVAL:%.*]] = alloca double, align 4
-// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_post_dc.n, float 1.000000e+00 seq_cst, align 8
-// X86-NEXT:    store float [[TMP0]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP1:%.*]] = load double, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret double [[TMP1]]
+// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_post_dc.n, double 1.000000e+00 seq_cst, align 8
+// X86-NEXT:    ret double [[TMP0]]
 //
 double test_double_post_dc()
 {
@@ -54,22 +42,16 @@ double test_double_post_dc()
 // X64-LABEL: define dso_local double @test_double_pre_dc(
 // X64-SAME: ) #[[ATTR0]] {
 // X64-NEXT:  entry:
-// X64-NEXT:    [[RETVAL:%.*]] = alloca double, align 8
-// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_pre_dc.n, float 1.000000e+00 seq_cst, align 8
-// X64-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// X64-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 8
-// X64-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 8
-// X64-NEXT:    ret double [[TMP2]]
+// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_pre_dc.n, double 1.000000e+00 seq_cst, align 8
+// X64-NEXT:    [[TMP1:%.*]] = fsub double [[TMP0]], 1.000000e+00
+// X64-NEXT:    ret double [[TMP1]]
 //
 // X86-LABEL: define dso_local double @test_double_pre_dc(
 // X86-SAME: ) #[[ATTR0]] {
 // X86-NEXT:  entry:
-// X86-NEXT:    [[RETVAL:%.*]] = alloca double, align 4
-// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_pre_dc.n, float 1.000000e+00 seq_cst, align 8
-// X86-NEXT:    [[TMP1:%.*]] = fsub float [[TMP0]], 1.000000e+00
-// X86-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret double [[TMP2]]
+// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fsub ptr @test_double_pre_dc.n, double 1.000000e+00 seq_cst, align 8
+// X86-NEXT:    [[TMP1:%.*]] = fsub double [[TMP0]], 1.000000e+00
+// X86-NEXT:    ret double [[TMP1]]
 //
 double test_double_pre_dc()
 {
@@ -80,25 +62,43 @@ double test_double_pre_dc()
 // X64-LABEL: define dso_local double @test_double_pre_inc(
 // X64-SAME: ) #[[ATTR0]] {
 // X64-NEXT:  entry:
-// X64-NEXT:    [[RETVAL:%.*]] = alloca double, align 8
-// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_pre_inc.n, float 1.000000e+00 seq_cst, align 8
-// X64-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// X64-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 8
-// X64-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 8
-// X64-NEXT:    ret double [[TMP2]]
+// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_pre_inc.n, double 1.000000e+00 seq_cst, align 8
+// X64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// X64-NEXT:    ret double [[TMP1]]
 //
 // X86-LABEL: define dso_local double @test_double_pre_inc(
 // X86-SAME: ) #[[ATTR0]] {
 // X86-NEXT:  entry:
-// X86-NEXT:    [[RETVAL:%.*]] = alloca double, align 4
-// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_pre_inc.n, float 1.000000e+00 seq_cst, align 8
-// X86-NEXT:    [[TMP1:%.*]] = fadd float [[TMP0]], 1.000000e+00
-// X86-NEXT:    store float [[TMP1]], ptr [[RETVAL]], align 4
-// X86-NEXT:    [[TMP2:%.*]] = load double, ptr [[RETVAL]], align 4
-// X86-NEXT:    ret double [[TMP2]]
+// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @test_double_pre_inc.n, double 1.000000e+00 seq_cst, align 8
+// X86-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// X86-NEXT:    ret double [[TMP1]]
 //
 double test_double_pre_inc()
 {
     static _Atomic double n;
     return ++n;
+}
+
+// X64-LABEL: define dso_local i32 @pr107054(
+// X64-SAME: ) #[[ATTR0]] {
+// X64-NEXT:  entry:
+// X64-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @pr107054.n, double 1.000000e+00 seq_cst, align 8
+// X64-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// X64-NEXT:    [[CMP:%.*]] = fcmp oeq double [[TMP1]], 1.000000e+00
+// X64-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+// X64-NEXT:    ret i32 [[CONV]]
+//
+// X86-LABEL: define dso_local i32 @pr107054(
+// X86-SAME: ) #[[ATTR0]] {
+// X86-NEXT:  entry:
+// X86-NEXT:    [[TMP0:%.*]] = atomicrmw fadd ptr @pr107054.n, double 1.000000e+00 seq_cst, align 8
+// X86-NEXT:    [[TMP1:%.*]] = fadd double [[TMP0]], 1.000000e+00
+// X86-NEXT:    [[CMP:%.*]] = fcmp oeq double [[TMP1]], 1.000000e+00
+// X86-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
+// X86-NEXT:    ret i32 [[CONV]]
+//
+int pr107054()
+{
+    static _Atomic double n;
+    return (++n) == 1;
 }

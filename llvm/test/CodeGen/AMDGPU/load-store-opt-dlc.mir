@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -passes=si-load-store-opt -verify-machineinstrs -o - %s | FileCheck %s
 
 # The purpose of this test is to make sure we are combining relevant memory
 # operations correctly with/without DLC bit.
@@ -48,7 +49,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
@@ -79,7 +80,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
@@ -110,7 +111,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
@@ -140,7 +141,7 @@ body: |
     $sgpr3 = S_MOV_B32 61440
 
     %0:sgpr_64 = COPY $sgpr0_sgpr1
-    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) undef`, addrspace 4)
+    %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `ptr addrspace(4) poison`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2

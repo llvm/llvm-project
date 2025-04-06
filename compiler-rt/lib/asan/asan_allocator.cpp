@@ -21,6 +21,7 @@
 #include "asan_poisoning.h"
 #include "asan_report.h"
 #include "asan_stack.h"
+#include "asan_suppressions.h"
 #include "asan_thread.h"
 #include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
@@ -576,8 +577,15 @@ struct Allocator {
     }
 
     AsanThread *t = GetCurrentThread();
-    void *allocated = allocator.Allocate(
-        GetAllocatorCache(&t->malloc_storage()), needed_size, 8);
+    void *allocated;
+    if (t) {
+      AllocatorCache *cache = GetAllocatorCache(&t->malloc_storage());
+      allocated = allocator.Allocate(cache, needed_size, 8);
+    } else {
+      SpinMutexLock l(&fallback_mutex);
+      AllocatorCache *cache = &fallback_allocator_cache;
+      allocated = allocator.Allocate(cache, needed_size, 8);
+    }
     if (UNLIKELY(!allocated)) {
       SetAllocatorOutOfMemory();
       if (AllocatorMayReturnNull())
@@ -725,7 +733,8 @@ struct Allocator {
     if (!AtomicallySetQuarantineFlagIfAllocated(m, ptr, stack)) return;
 
     if (m->alloc_type != alloc_type) {
-      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire)) {
+      if (atomic_load(&alloc_dealloc_mismatch, memory_order_acquire) &&
+          !IsAllocDeallocMismatchSuppressed(stack)) {
         ReportAllocTypeMismatch((uptr)ptr, stack, (AllocType)m->alloc_type,
                                 (AllocType)alloc_type);
       }

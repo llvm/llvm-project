@@ -135,7 +135,7 @@ public:
   // implicit conversion operator to ArrayRef.
   operator ArrayRef<EltTy>() const {
     if (Val.isNull())
-      return std::nullopt;
+      return {};
     if (isa<EltTy>(Val))
       return *Val.getAddrOfPtr1();
     return *cast<VecTy *>(Val);
@@ -144,7 +144,7 @@ public:
   // implicit conversion operator to MutableArrayRef.
   operator MutableArrayRef<EltTy>() {
     if (Val.isNull())
-      return std::nullopt;
+      return {};
     if (isa<EltTy>(Val))
       return *Val.getAddrOfPtr1();
     return *cast<VecTy *>(Val);

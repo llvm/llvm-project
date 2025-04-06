@@ -321,7 +321,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(Pass *pass,
     passOS << ")";
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 void PassCrashReproducerGenerator::prepareReproducerFor(
     iterator_range<PassManager::pass_iterator> passes, Operation *op) {
@@ -331,7 +331,7 @@ void PassCrashReproducerGenerator::prepareReproducerFor(
       passes, passOS, [&](Pass &pass) { pass.printAsTextualPipeline(passOS); });
 
   impl->activeContexts.push_back(std::make_unique<RecoveryReproducerContext>(
-      passOS.str(), op, impl->streamFactory, impl->pmFlagVerifyPasses));
+      passStr, op, impl->streamFactory, impl->pmFlagVerifyPasses));
 }
 
 void PassCrashReproducerGenerator::removeLastReproducerFor(Pass *pass,

@@ -311,11 +311,6 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
   // original layout positions and finding the original fallthroughs.
   MF.RenumberBlocks();
 
-  if (BBSectionsType == BasicBlockSection::Labels) {
-    MF.setBBSectionsType(BBSectionsType);
-    return true;
-  }
-
   DenseMap<UniqueBBID, BBClusterInfo> FuncClusterInfo;
   if (BBSectionsType == BasicBlockSection::List) {
     auto [HasProfile, ClusterInfo] =
@@ -382,8 +377,6 @@ bool BasicBlockSections::handleBBSections(MachineFunction &MF) {
 // avoids the need to store basic block IDs in the BB address map section, since
 // they can be determined implicitly.
 bool BasicBlockSections::handleBBAddrMap(MachineFunction &MF) {
-  if (MF.getTarget().getBBSectionsType() == BasicBlockSection::Labels)
-    return false;
   if (!MF.getTarget().Options.BBAddrMap)
     return false;
   MF.RenumberBlocks();

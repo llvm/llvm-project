@@ -1363,7 +1363,7 @@ Whatever code you want that control, use ``DebugCounter::shouldExecute`` to cont
     I->eraseFromParent();
 
 That's all you have to do. Now, using opt, you can control when this code triggers using
-the '``--debug-counter``' Options.To specify when to execute the codepath.
+the '``--debug-counter``' Options. To specify when to execute the codepath.
 
 .. code-block:: none
 
@@ -3358,15 +3358,15 @@ the ``PassManager.h`` system, and there is a more detailed introduction to it
 by Sean Parent in several of his talks and papers:
 
 #. `Inheritance Is The Base Class of Evil
-   <http://channel9.msdn.com/Events/GoingNative/2013/Inheritance-Is-The-Base-Class-of-Evil>`_
+   <https://learn.microsoft.com/en-us/shows/goingnative-2013/inheritance-base-class-of-evil>`_
    - The GoingNative 2013 talk describing this technique, and probably the best
    place to start.
 #. `Value Semantics and Concepts-based Polymorphism
    <http://www.youtube.com/watch?v=_BpMYeUFXv8>`_ - The C++Now! 2012 talk
    describing this technique in more detail.
 #. `Sean Parent's Papers and Presentations
-   <http://github.com/sean-parent/sean-parent.github.com/wiki/Papers-and-Presentations>`_
-   - A GitHub project full of links to slides, video, and sometimes code.
+   <https://sean-parent.stlab.cc/papers-and-presentations>`_
+   - Links to slides, videos, and sometimes code.
 
 When deciding between creating a type hierarchy (with either tagged or virtual
 dispatch) and using templates or concepts-based polymorphism, consider whether

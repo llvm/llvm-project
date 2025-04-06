@@ -11,9 +11,10 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/mode_t.h"
 #include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
 

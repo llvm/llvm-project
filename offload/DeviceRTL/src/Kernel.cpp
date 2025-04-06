@@ -14,18 +14,16 @@
 
 #include "Allocator.h"
 #include "Debug.h"
+#include "DeviceTypes.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
 #include "Synchronization.h"
-#include "Types.h"
 #include "Workshare.h"
 
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 
 using namespace ompx;
-
-#pragma omp begin declare target device_type(nohost)
 
 static void
 inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -155,5 +153,3 @@ void __kmpc_target_deinit() {
 
 int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }
-
-#pragma omp end declare target

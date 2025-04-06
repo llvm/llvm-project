@@ -33,11 +33,15 @@ enum class BlockType : unsigned {
   Externref = unsigned(wasm::ValType::EXTERNREF),
   Funcref = unsigned(wasm::ValType::FUNCREF),
   Exnref = unsigned(wasm::ValType::EXNREF),
-  // Multivalue blocks (and other non-void blocks) are only emitted when the
-  // blocks will never be exited and are at the ends of functions (see
-  // WebAssemblyCFGStackify::fixEndsAtEndOfFunction). They also are never made
-  // to pop values off the stack, so the exact multivalue signature can always
-  // be inferred from the return type of the parent function in MCInstLower.
+  // Multivalue blocks are emitted in two cases:
+  // 1. When the blocks will never be exited and are at the ends of functions
+  //    (see WebAssemblyCFGStackify::fixEndsAtEndOfFunction). In this case the
+  //    exact multivalue signature can always be inferred from the return type
+  //    of the parent function.
+  // 2. (catch_ref ...) clause in try_table instruction. Currently all tags we
+  //    support (cpp_exception and c_longjmp) throws a single i32, so the
+  //    multivalue signature for this case will be (i32, exnref).
+  // The real multivalue siganture will be added in MCInstLower.
   Multivalue = 0xffff,
 };
 

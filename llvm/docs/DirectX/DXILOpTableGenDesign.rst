@@ -93,18 +93,14 @@ properties are specified as fields of the ``DXILOp`` class as described below.
         class DXILOpClass;
 
    Concrete operation records, such as ``unary`` are defined by inheriting from ``DXILOpClass``.
-6. Return type of the operation is represented as ``LLVMType``.
-7. Operation arguments are represented as a list of ``LLVMType`` with each type
-   corresponding to the argument position. An overload type, if supported by the operation, is
-   denoted as the positional type ``overloadTy`` in the argument or in the result, where
-   ``overloadTy`` is defined to be synonymous to ``llvm_any_ty``.
-
-   .. code-block::
-
-      defvar overloadTy = llvm_any_ty
-
-   Empty list, ``[]`` represents an operation with no arguments.
-
+6. A set of type names are defined that represent return and argument types,
+   which all inherit from ``DXILOpParamType``. These represent simple types
+   like ``int32Ty``, DXIL types like ``dx.types.Handle``, and a special
+   ``overloadTy`` which can be any type allowed by ``Overloads``, described
+   below.
+7. Operation return type is represented as a ``DXILOpParamType``, and arguments
+   are represented as a list of the same. An operation with no return value
+   shall specify ``VoidTy`` as its return.
 8. Valid operation overload types predicated on DXIL version are specified as
    a list of ``Overloads`` records. Representation of ``Overloads``
    class is described in a later section.
@@ -145,10 +141,10 @@ TableGen representations of its properties described above.
      Intrinsic LLVMIntrinsic = ?;
 
      // Result type of the op.
-     LLVMType result;
+     DXILOpParamType result;
 
      // List of argument types of the op. Default to 0 arguments.
-     list<LLVMType> arguments = [];
+     list<DXILOpParamType> arguments = [];
 
      // List of valid overload types predicated by DXIL version
      list<Overloads> overloads;
@@ -233,9 +229,9 @@ overloads predicated on DXIL version as list of records of the following class
 
 .. code-block::
 
-   class Overloads<Version minver, list<LLVMType> ols> {
+   class Overloads<Version minver, list<DXILOpParamType> ols> {
      Version dxil_version = minver;
-     list<LLVMType> overload_types = ols;
+     list<DXILOpParamType> overload_types = ols;
    }
 
 Following is an example specification of valid overload types for ``DXIL1_0`` and

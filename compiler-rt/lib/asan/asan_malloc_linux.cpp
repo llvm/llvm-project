@@ -25,7 +25,6 @@
 #  include "sanitizer_common/sanitizer_allocator_checks.h"
 #  include "sanitizer_common/sanitizer_allocator_dlsym.h"
 #  include "sanitizer_common/sanitizer_errno.h"
-#  include "sanitizer_common/sanitizer_tls_get_addr.h"
 
 // ---------------------- Replacement functions ---------------- {{{1
 using namespace __asan;
@@ -99,9 +98,7 @@ INTERCEPTOR(void*, memalign, uptr boundary, uptr size) {
 
 INTERCEPTOR(void*, __libc_memalign, uptr boundary, uptr size) {
   GET_STACK_TRACE_MALLOC;
-  void *res = asan_memalign(boundary, size, &stack, FROM_MALLOC);
-  DTLS_on_libc_memalign(res, size);
-  return res;
+  return asan_memalign(boundary, size, &stack, FROM_MALLOC);
 }
 #endif // SANITIZER_INTERCEPT_MEMALIGN
 

@@ -8,6 +8,7 @@
 
 // Ensure that we never change the size or alignment of `basic_string`
 
+#include <cstdint>
 #include <iterator>
 #include <string>
 

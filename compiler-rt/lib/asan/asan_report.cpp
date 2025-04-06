@@ -367,6 +367,16 @@ void ReportBadParamsToAnnotateDoubleEndedContiguousContainer(
   in_report.ReportError(error);
 }
 
+void ReportBadParamsToCopyContiguousContainerAnnotations(
+    uptr old_storage_beg, uptr old_storage_end, uptr new_storage_beg,
+    uptr new_storage_end, BufferedStackTrace *stack) {
+  ScopedInErrorReport in_report;
+  ErrorBadParamsToCopyContiguousContainerAnnotations error(
+      GetCurrentTidOrInvalid(), stack, old_storage_beg, old_storage_end,
+      new_storage_beg, new_storage_end);
+  in_report.ReportError(error);
+}
+
 void ReportODRViolation(const __asan_global *g1, u32 stack_id1,
                         const __asan_global *g2, u32 stack_id2) {
   ScopedInErrorReport in_report;
@@ -582,5 +592,5 @@ void __sanitizer_ptr_cmp(void *a, void *b) {
 } // extern "C"
 
 // Provide default implementation of __asan_on_error that does nothing
-// and may be overriden by user.
+// and may be overridden by user.
 SANITIZER_INTERFACE_WEAK_DEF(void, __asan_on_error, void) {}

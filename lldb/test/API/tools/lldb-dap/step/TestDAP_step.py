@@ -68,5 +68,18 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
                     self.assertEqual(x4, x3, "verify step over variable")
                     self.assertGreater(line4, line3, "verify step over line")
                     self.assertEqual(src1, src4, "verify step over source")
+
+                    # Step a single assembly instruction.
+                    # Unfortunately, there is no portable way to verify the correct
+                    # stepping behavior here, because the generated assembly code
+                    # depends highly on the compiler, its version, the operating
+                    # system, and many more factors.
+                    self.stepOver(
+                        threadId=tid, waitForStop=True, granularity="instruction"
+                    )
+                    self.stepIn(
+                        threadId=tid, waitForStop=True, granularity="instruction"
+                    )
+
                     # only step one thread that is at the breakpoint and stop
                     break

@@ -8,7 +8,7 @@ define void @fn2(ptr %P, i1 %C) {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind memory(argmem: readwrite)
 ; TUNIT-LABEL: define {{[^@]+}}@fn2
-; TUNIT-SAME: (ptr nocapture nofree [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree captures(none) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[IF_END:%.*]]
 ; TUNIT:       for.cond1:
@@ -16,15 +16,14 @@ define void @fn2(ptr %P, i1 %C) {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    [[E_2:%.*]] = phi ptr [ [[P]], [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[E_2]], align 4
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 [[TMP0]]) #[[ATTR3:[0-9]+]]
-; TUNIT-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
 ; TUNIT-NEXT:    br label [[FOR_COND1]]
 ; TUNIT:       exit:
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@fn2
-; CGSCC-SAME: (ptr nocapture nofree nonnull align 4 dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull align 4 captures(none) dereferenceable(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       for.cond1:
@@ -55,11 +54,11 @@ exit:
 }
 
 define internal i32 @fn1(i32 %p1) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@fn1
-; CHECK-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 [[P1]]
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@fn1
+; CGSCC-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1:[0-9]+]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    ret i32 [[P1]]
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0
@@ -71,7 +70,7 @@ define void @fn_no_null_opt(ptr %P, i1 %C) null_pointer_is_valid {
 ;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind null_pointer_is_valid
 ; TUNIT-LABEL: define {{[^@]+}}@fn_no_null_opt
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    br label [[IF_END:%.*]]
 ; TUNIT:       for.cond1:
@@ -79,15 +78,14 @@ define void @fn_no_null_opt(ptr %P, i1 %C) null_pointer_is_valid {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    [[E_2:%.*]] = phi ptr [ undef, [[ENTRY:%.*]] ], [ null, [[FOR_COND1:%.*]] ]
 ; TUNIT-NEXT:    [[TMP0:%.*]] = load i32, ptr null, align 4294967296
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]]) #[[ATTR3]]
-; TUNIT-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
+; TUNIT-NEXT:    store i32 [[TMP0]], ptr [[P]], align 4
 ; TUNIT-NEXT:    br label [[FOR_COND1]]
 ; TUNIT:       exit:
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind null_pointer_is_valid
 ; CGSCC-LABEL: define {{[^@]+}}@fn_no_null_opt
-; CGSCC-SAME: (ptr nocapture nofree writeonly align 4 dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree writeonly align 4 captures(none) dereferenceable_or_null(4) [[P:%.*]], i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[IF_END:%.*]]
 ; CGSCC:       for.cond1:
@@ -118,11 +116,11 @@ exit:
 }
 
 define internal i32 @fn0(i32 %p1) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@fn0
-; CHECK-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i32 [[P1]]
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@fn0
+; CGSCC-SAME: (i32 returned [[P1:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    ret i32 [[P1]]
 ;
 entry:
   %tobool = icmp ne i32 %p1, 0
@@ -131,12 +129,12 @@ entry:
 }
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind memory(argmem: readwrite) }
-; TUNIT: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
-; TUNIT: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
-; TUNIT: attributes #[[ATTR3]] = { nofree nosync nounwind memory(none) }
+; TUNIT: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind null_pointer_is_valid }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR2]] = { nofree nosync nounwind null_pointer_is_valid }
 ; CGSCC: attributes #[[ATTR3]] = { nofree nosync }
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

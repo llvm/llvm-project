@@ -272,18 +272,18 @@ define <8 x i64> @extaddsu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1) {
 ; CHECK-GI-NEXT:    mul x15, x15, x16
 ; CHECK-GI-NEXT:    mul x10, x10, x11
 ; CHECK-GI-NEXT:    fmov x11, d0
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    mov v1.d[0], x9
 ; CHECK-GI-NEXT:    mul x13, x13, x18
-; CHECK-GI-NEXT:    mov v0.d[1], x12
 ; CHECK-GI-NEXT:    mul x11, x11, x14
 ; CHECK-GI-NEXT:    mov x14, v6.d[1]
+; CHECK-GI-NEXT:    mov v0.d[1], x12
+; CHECK-GI-NEXT:    mov v2.d[0], x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x15
-; CHECK-GI-NEXT:    fmov d2, x10
 ; CHECK-GI-NEXT:    mul x14, x14, x17
-; CHECK-GI-NEXT:    fmov d3, x11
-; CHECK-GI-NEXT:    mov v3.d[1], x13
+; CHECK-GI-NEXT:    mov v3.d[0], x11
 ; CHECK-GI-NEXT:    mov v2.d[1], x14
+; CHECK-GI-NEXT:    mov v3.d[1], x13
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>
@@ -423,22 +423,22 @@ define <8 x i64> @extmuladdsu_v8i8_i64(<8 x i8> %s0, <8 x i8> %s1, <8 x i64> %b)
 ; CHECK-GI-NEXT:    mul x15, x15, x16
 ; CHECK-GI-NEXT:    mul x10, x10, x11
 ; CHECK-GI-NEXT:    fmov x11, d0
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fmov d1, x9
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    mov v1.d[0], x9
 ; CHECK-GI-NEXT:    mul x13, x13, x18
-; CHECK-GI-NEXT:    mov v0.d[1], x12
 ; CHECK-GI-NEXT:    mul x11, x11, x14
 ; CHECK-GI-NEXT:    mov x14, v18.d[1]
+; CHECK-GI-NEXT:    mov v0.d[1], x12
+; CHECK-GI-NEXT:    mov v6.d[0], x10
 ; CHECK-GI-NEXT:    mov v1.d[1], x15
-; CHECK-GI-NEXT:    fmov d6, x10
-; CHECK-GI-NEXT:    add v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    mul x14, x14, x17
+; CHECK-GI-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-GI-NEXT:    mov v7.d[0], x11
 ; CHECK-GI-NEXT:    add v1.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    fmov d7, x11
-; CHECK-GI-NEXT:    mov v7.d[1], x13
 ; CHECK-GI-NEXT:    mov v6.d[1], x14
-; CHECK-GI-NEXT:    add v3.2d, v7.2d, v5.2d
+; CHECK-GI-NEXT:    mov v7.d[1], x13
 ; CHECK-GI-NEXT:    add v2.2d, v6.2d, v4.2d
+; CHECK-GI-NEXT:    add v3.2d, v7.2d, v5.2d
 ; CHECK-GI-NEXT:    ret
 entry:
   %s0s = sext <8 x i8> %s0 to <8 x i64>

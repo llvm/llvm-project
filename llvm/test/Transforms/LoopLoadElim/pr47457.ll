@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; Make sure it does not crash with assert.
-define void @test() {
+define void @test(i1 %arg) {
 ; CHECK-LABEL: test
 
 bb:
@@ -13,7 +13,7 @@ bb:
 
 bb1:                                              ; preds = %bb6, %bb1, %bb
   %tmp = phi i32 [ undef, %bb ], [ 0, %bb1 ], [ %tmp3, %bb6 ]
-  br i1 undef, label %bb1, label %bb2
+  br i1 %arg, label %bb1, label %bb2
 
 bb2:                                              ; preds = %bb1
   %tmp3 = add i32 %tmp, 1
@@ -24,7 +24,7 @@ bb5:                                              ; preds = %bb2
   ret void
 
 bb6:                                              ; preds = %bb2
-  br i1 undef, label %bb7, label %bb1
+  br i1 %arg, label %bb7, label %bb1
 
 bb7:                                              ; preds = %bb7, %bb6
   %tmp8 = phi i32 [ %tmp15, %bb7 ], [ %tmp3, %bb6 ]

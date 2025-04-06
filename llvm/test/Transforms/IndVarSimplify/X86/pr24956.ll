@@ -5,7 +5,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
 
-define void @re_update_line(ptr %new) {
+define void @re_update_line(ptr %new, i1 %arg) {
 ; CHECK: @re_update_line(
 entry:
   %incdec.ptr6 = getelementptr inbounds i8, ptr %new, i64 1
@@ -26,7 +26,7 @@ for.cond.11:                                      ; preds = %land.rhs.16
 
 land.rhs.16:                                      ; preds = %for.cond.11, %land.rhs.16.lr.ph
   %p.053 = phi ptr [ %n.154, %land.rhs.16.lr.ph ], [ %incdec.ptr24, %for.cond.11 ]
-  br i1 undef, label %for.cond.11, label %for.inc.26
+  br i1 %arg, label %for.cond.11, label %for.inc.26
 
 for.inc.26:                                       ; preds = %land.rhs.16, %for.cond.11, %for.cond.11.preheader
   %incdec.ptr27 = getelementptr inbounds i8, ptr %n.154, i64 1

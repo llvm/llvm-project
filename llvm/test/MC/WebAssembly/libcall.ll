@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj -mattr=-bulk-memory,-bulk-memory-opt %s -o - | obj2yaml | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 

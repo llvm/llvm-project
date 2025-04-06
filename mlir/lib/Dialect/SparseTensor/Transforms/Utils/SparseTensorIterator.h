@@ -95,6 +95,8 @@ enum class IterKind : uint8_t {
 class SparseIterationSpace {
 public:
   SparseIterationSpace() = default;
+  SparseIterationSpace(SparseIterationSpace &) = delete;
+  SparseIterationSpace(SparseIterationSpace &&) = default;
 
   // Constructs a N-D iteration space.
   SparseIterationSpace(Location loc, OpBuilder &b, Value t, unsigned tid,

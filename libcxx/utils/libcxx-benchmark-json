@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+
+set -e
+
+PROGNAME="$(basename "${0}")"
+MONOREPO_ROOT="$(realpath $(dirname "${PROGNAME}"))"
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [-h|--help] <build-directory> benchmarks...
+
+Print the path to the JSON files containing benchmark results for the given benchmarks.
+
+This requires those benchmarks to have already been run, i.e. this only resolves the path
+to the benchmark .json file within the build directory.
+
+<build-directory>  The path to the build directory.
+benchmarks...      Paths of the benchmarks to extract the results for. Those paths are relative to '<monorepo-root>'.
+
+Example
+=======
+$ cmake -S runtimes -B build/ -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"
+$ libcxx-lit build/ -sv libcxx/test/benchmarks/algorithms/for_each.bench.cpp
+$ less \$(${PROGNAME} build/ libcxx/test/benchmarks/algorithms/for_each.bench.cpp)
+EOF
+}
+
+if [[ "${1}" == "-h" || "${1}" == "--help" ]]; then
+    usage
+    exit 0
+fi
+
+if [[ $# -lt 1 ]]; then
+    usage
+    exit 1
+fi
+
+build_dir="${1}"
+shift
+
+for benchmark in ${@}; do
+    # Normalize the paths by turning all benchmarks paths into absolute ones and then making them
+    # relative to the root of the monorepo.
+    benchmark="$(realpath ${benchmark})"
+    relative=$(python -c "import os; import sys; print(os.path.relpath(sys.argv[1], sys.argv[2]))" "${benchmark}" "${MONOREPO_ROOT}")
+
+    # Extract components of the benchmark path
+    directory="$(dirname ${relative})"
+    file="$(basename ${relative})"
+
+    # Reconstruct the (slightly weird) path to the benchmark json file. This should be kept in sync
+    # whenever the test suite changes.
+    json="${build_dir}/${directory}/Output/${file}.dir/benchmark-result.json"
+    if [[ -f "${json}" ]]; then
+        echo "${json}"
+    fi
+done

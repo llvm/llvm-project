@@ -1,7 +1,7 @@
-; RUN: llc -march=mipsel < %s | FileCheck -check-prefix=ALL %s
-; RUN: llc -march=mipsel -mcpu=mips32 < %s | FileCheck -check-prefixes=ALL,NO-MFHC1 %s
-; RUN: llc -march=mipsel -mcpu=mips32r2              < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
-; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
+; RUN: llc -mtriple=mipsel < %s | FileCheck -check-prefix=ALL %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32 < %s | FileCheck -check-prefixes=ALL,NO-MFHC1 %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2              < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
+; RUN: llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+fp64 < %s | FileCheck -check-prefixes=ALL,HAS-MFHC1 %s
 
 ; $f12, $f14
 ; ALL-LABEL: testlowercall0:

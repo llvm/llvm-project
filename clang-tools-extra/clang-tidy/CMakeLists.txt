@@ -8,7 +8,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/clang-tidy-config.h)
 include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
-add_clang_library(clangTidy
+add_clang_library(clangTidy STATIC
   ClangTidy.cpp
   ClangTidyCheck.cpp
   ClangTidyModule.cpp
@@ -35,7 +35,6 @@ clang_target_link_libraries(clangTidy
   clangFrontend
   clangLex
   clangRewrite
-  clangSema
   clangSerialization
   clangTooling
   clangToolingCore

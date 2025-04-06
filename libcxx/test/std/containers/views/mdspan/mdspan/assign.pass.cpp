@@ -12,9 +12,10 @@
 // constexpr mdspan& operator=(const mdspan& rhs) = default;
 
 #include <mdspan>
-#include <type_traits>
-#include <concepts>
 #include <cassert>
+#include <concepts>
+#include <span> // dynamic_extent
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -48,9 +49,8 @@ constexpr void test_mdspan_types(const H& handle, const M& map, const A& acc) {
     assert(m.accessor() == acc);
 
   static_assert(std::is_trivially_assignable_v<MDS, const MDS&> ==
-                ((!std::is_class_v<H> ||
-                  std::is_trivially_assignable_v<H, const H&>)&&std::is_trivially_assignable_v<M, const M&> &&
-                 std::is_trivially_assignable_v<A, const A&>));
+                ((!std::is_class_v<H> || std::is_trivially_assignable_v<H, const H&>) &&
+                 std::is_trivially_assignable_v<M, const M&> && std::is_trivially_assignable_v<A, const A&>));
 }
 
 template <class H, class L, class A>

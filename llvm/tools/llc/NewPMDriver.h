@@ -32,6 +32,8 @@ class ToolOutputFile;
 class LLVMContext;
 class MIRParser;
 
+enum class VerifierKind { None, InputOutput, EachPass };
+
 struct LLCDiagnosticHandler : public DiagnosticHandler {
   bool handleDiagnostics(const DiagnosticInfo &DI) override;
 };
@@ -42,7 +44,7 @@ int compileModuleWithNewPM(StringRef Arg0, std::unique_ptr<Module> M,
                            std::unique_ptr<ToolOutputFile> Out,
                            std::unique_ptr<ToolOutputFile> DwoOut,
                            LLVMContext &Context,
-                           const TargetLibraryInfoImpl &TLII, bool NoVerify,
+                           const TargetLibraryInfoImpl &TLII, VerifierKind VK,
                            StringRef PassPipeline, CodeGenFileType FileType);
 } // namespace llvm
 

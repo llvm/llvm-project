@@ -10,44 +10,81 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/SandboxIR/SandboxIR.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/StructuralHash.h"
+#include "llvm/SandboxIR/Instruction.h"
 #include <sstream>
 
 using namespace llvm::sandboxir;
 
 #ifndef NDEBUG
+
+std::string IRSnapshotChecker::dumpIR(const llvm::Function &F) const {
+  std::string Result;
+  raw_string_ostream SS(Result);
+  F.print(SS, /*AssemblyAnnotationWriter=*/nullptr);
+  return Result;
+}
+
+IRSnapshotChecker::ContextSnapshot IRSnapshotChecker::takeSnapshot() const {
+  ContextSnapshot Result;
+  for (const auto &Entry : Ctx.LLVMModuleToModuleMap)
+    for (const auto &F : *Entry.first) {
+      FunctionSnapshot Snapshot;
+      Snapshot.Hash = StructuralHash(F, /*DetailedHash=*/true);
+      Snapshot.TextualIR = dumpIR(F);
+      Result[&F] = Snapshot;
+    }
+  return Result;
+}
+
+bool IRSnapshotChecker::diff(const ContextSnapshot &Orig,
+                             const ContextSnapshot &Curr) const {
+  bool DifferenceFound = false;
+  for (const auto &[F, OrigFS] : Orig) {
+    auto CurrFSIt = Curr.find(F);
+    if (CurrFSIt == Curr.end()) {
+      DifferenceFound = true;
+      dbgs() << "Function " << F->getName() << " not found in current IR.\n";
+      dbgs() << OrigFS.TextualIR << "\n";
+      continue;
+    }
+    const FunctionSnapshot &CurrFS = CurrFSIt->second;
+    if (OrigFS.Hash != CurrFS.Hash) {
+      DifferenceFound = true;
+      dbgs() << "Found IR difference in Function " << F->getName() << "\n";
+      dbgs() << "Original:\n" << OrigFS.TextualIR << "\n";
+      dbgs() << "Current:\n" << CurrFS.TextualIR << "\n";
+    }
+  }
+  // Check that Curr doesn't contain any new functions.
+  for (const auto &[F, CurrFS] : Curr) {
+    if (!Orig.contains(F)) {
+      DifferenceFound = true;
+      dbgs() << "Function " << F->getName()
+             << " found in current IR but not in original snapshot.\n";
+      dbgs() << CurrFS.TextualIR << "\n";
+    }
+  }
+  return DifferenceFound;
+}
+
+void IRSnapshotChecker::save() { OrigContextSnapshot = takeSnapshot(); }
+
+void IRSnapshotChecker::expectNoDiff() {
+  ContextSnapshot CurrContextSnapshot = takeSnapshot();
+  if (diff(OrigContextSnapshot, CurrContextSnapshot)) {
+    llvm_unreachable(
+        "Original and current IR differ! Probably a checkpointing bug.");
+  }
+}
+
 void UseSet::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
 
 void UseSwap::dump() const {
-  dump(dbgs());
-  dbgs() << "\n";
-}
-#endif // NDEBUG
-
-PHISetIncoming::PHISetIncoming(PHINode *PHI, unsigned Idx, What What)
-    : PHI(PHI), Idx(Idx) {
-  switch (What) {
-  case What::Value:
-    OrigValueOrBB = PHI->getIncomingValue(Idx);
-    break;
-  case What::Block:
-    OrigValueOrBB = PHI->getIncomingBlock(Idx);
-    break;
-  }
-}
-
-void PHISetIncoming::revert(Tracker &Tracker) {
-  if (auto *V = OrigValueOrBB.dyn_cast<Value *>())
-    PHI->setIncomingValue(Idx, V);
-  else
-    PHI->setIncomingBlock(Idx, OrigValueOrBB.get<BasicBlock *>());
-}
-
-#ifndef NDEBUG
-void PHISetIncoming::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
@@ -137,10 +174,10 @@ void EraseFromParent::accept() {
 void EraseFromParent::revert(Tracker &Tracker) {
   // Place the bottom-most instruction first.
   auto [Operands, BotLLVMI] = InstrData[0];
-  if (auto *NextLLVMI = NextLLVMIOrBB.dyn_cast<llvm::Instruction *>()) {
-    BotLLVMI->insertBefore(NextLLVMI);
+  if (auto *NextLLVMI = dyn_cast<llvm::Instruction *>(NextLLVMIOrBB)) {
+    BotLLVMI->insertBefore(NextLLVMI->getIterator());
   } else {
-    auto *LLVMBB = NextLLVMIOrBB.get<llvm::BasicBlock *>();
+    auto *LLVMBB = cast<llvm::BasicBlock *>(NextLLVMIOrBB);
     BotLLVMI->insertInto(LLVMBB, LLVMBB->end());
   }
   for (auto [OpNum, Op] : enumerate(Operands))
@@ -148,7 +185,7 @@ void EraseFromParent::revert(Tracker &Tracker) {
 
   // Go over the rest of the instructions and stack them on top.
   for (auto [Operands, LLVMI] : drop_begin(InstrData)) {
-    LLVMI->insertBefore(BotLLVMI);
+    LLVMI->insertBefore(BotLLVMI->getIterator());
     for (auto [OpNum, Op] : enumerate(Operands))
       LLVMI->setOperand(OpNum, Op);
     BotLLVMI = LLVMI;
@@ -171,10 +208,10 @@ RemoveFromParent::RemoveFromParent(Instruction *RemovedI) : RemovedI(RemovedI) {
 }
 
 void RemoveFromParent::revert(Tracker &Tracker) {
-  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+  if (auto *NextI = dyn_cast<Instruction *>(NextInstrOrBB)) {
     RemovedI->insertBefore(NextI);
   } else {
-    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    auto *BB = cast<BasicBlock *>(NextInstrOrBB);
     RemovedI->insertInto(BB, BB->end());
   }
 }
@@ -186,20 +223,53 @@ void RemoveFromParent::dump() const {
 }
 #endif
 
-CallBrInstSetIndirectDest::CallBrInstSetIndirectDest(CallBrInst *CallBr,
-                                                     unsigned Idx)
-    : CallBr(CallBr), Idx(Idx) {
-  OrigIndirectDest = CallBr->getIndirectDest(Idx);
+CatchSwitchAddHandler::CatchSwitchAddHandler(CatchSwitchInst *CSI)
+    : CSI(CSI), HandlerIdx(CSI->getNumHandlers()) {}
+
+void CatchSwitchAddHandler::revert(Tracker &Tracker) {
+  // TODO: This should ideally use sandboxir::CatchSwitchInst::removeHandler()
+  // once it gets implemented.
+  auto *LLVMCSI = cast<llvm::CatchSwitchInst>(CSI->Val);
+  LLVMCSI->removeHandler(LLVMCSI->handler_begin() + HandlerIdx);
 }
-void CallBrInstSetIndirectDest::revert(Tracker &Tracker) {
-  CallBr->setIndirectDest(Idx, OrigIndirectDest);
+
+SwitchRemoveCase::SwitchRemoveCase(SwitchInst *Switch) : Switch(Switch) {
+  for (const auto &C : Switch->cases())
+    Cases.push_back({C.getCaseValue(), C.getCaseSuccessor()});
 }
+
+void SwitchRemoveCase::revert(Tracker &Tracker) {
+  // SwitchInst::removeCase doesn't provide any guarantees about the order of
+  // cases after removal. In order to preserve the original ordering, we save
+  // all of them and, when reverting, clear them all then insert them in the
+  // desired order. This still relies on the fact that `addCase` will insert
+  // them at the end, but it is documented to invalidate `case_end()` so it's
+  // probably okay.
+  unsigned NumCases = Switch->getNumCases();
+  for (unsigned I = 0; I < NumCases; ++I)
+    Switch->removeCase(Switch->case_begin());
+  for (auto &Case : Cases)
+    Switch->addCase(Case.Val, Case.Dest);
+}
+
 #ifndef NDEBUG
-void CallBrInstSetIndirectDest::dump() const {
+void SwitchRemoveCase::dump() const {
   dump(dbgs());
   dbgs() << "\n";
 }
-#endif
+#endif // NDEBUG
+
+void SwitchAddCase::revert(Tracker &Tracker) {
+  auto It = Switch->findCaseValue(Val);
+  Switch->removeCase(It);
+}
+
+#ifndef NDEBUG
+void SwitchAddCase::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif // NDEBUG
 
 MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
   if (auto *NextI = MovedI->getNextNode())
@@ -209,10 +279,10 @@ MoveInstr::MoveInstr(Instruction *MovedI) : MovedI(MovedI) {
 }
 
 void MoveInstr::revert(Tracker &Tracker) {
-  if (auto *NextI = NextInstrOrBB.dyn_cast<Instruction *>()) {
+  if (auto *NextI = dyn_cast<Instruction *>(NextInstrOrBB)) {
     MovedI->moveBefore(NextI);
   } else {
-    auto *BB = NextInstrOrBB.get<BasicBlock *>();
+    auto *BB = cast<BasicBlock *>(NextInstrOrBB);
     MovedI->moveBefore(*BB, BB->end());
   }
 }
@@ -244,14 +314,47 @@ void CreateAndInsertInst::dump() const {
 }
 #endif
 
-void Tracker::save() { State = TrackerState::Record; }
+ShuffleVectorSetMask::ShuffleVectorSetMask(ShuffleVectorInst *SVI)
+    : SVI(SVI), PrevMask(SVI->getShuffleMask()) {}
+
+void ShuffleVectorSetMask::revert(Tracker &Tracker) {
+  SVI->setShuffleMask(PrevMask);
+}
+
+#ifndef NDEBUG
+void ShuffleVectorSetMask::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+CmpSwapOperands::CmpSwapOperands(CmpInst *Cmp) : Cmp(Cmp) {}
+
+void CmpSwapOperands::revert(Tracker &Tracker) { Cmp->swapOperands(); }
+#ifndef NDEBUG
+void CmpSwapOperands::dump() const {
+  dump(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void Tracker::save() {
+  State = TrackerState::Record;
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.save();
+#endif
+}
 
 void Tracker::revert() {
   assert(State == TrackerState::Record && "Forgot to save()!");
-  State = TrackerState::Disabled;
+  State = TrackerState::Reverting;
   for (auto &Change : reverse(Changes))
     Change->revert(*this);
   Changes.clear();
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+  SnapshotChecker.expectNoDiff();
+#endif
+  State = TrackerState::Disabled;
 }
 
 void Tracker::accept() {

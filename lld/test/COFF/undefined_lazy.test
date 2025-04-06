@@ -1,0 +1,26 @@
+# REQUIRES: x86
+
+# RUN: split-file %s %t.dir
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/foo.s -o %t.foo.obj
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/bar.s -o %t.bar.obj
+# RUN: llvm-mc --filetype=obj -triple=x86_64-windows-msvc %t.dir/qux.s -o %t.qux.obj
+# RUN: llvm-lib %t.foo.obj -out:%t.foo.lib
+# RUN: llvm-lib %t.bar.obj -out:%t.bar.lib
+# RUN: lld-link %t.foo.lib %t.bar.lib %t.qux.obj -out:%t.dll -dll
+#
+#--- foo.s
+.text
+.globl foo
+foo:
+  call bar
+#--- bar.s
+.text
+.globl bar
+bar:
+  ret
+#--- qux.s
+.text
+.global _DllMainCRTStartup
+_DllMainCRTStartup:
+  call *__imp_foo(%rip)
+  ret

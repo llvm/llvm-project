@@ -72,8 +72,8 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_X:.*]]",
 // CHECK-NEXT:       "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/X.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/X.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
@@ -85,11 +85,11 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_Y_WITH_A]]",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Y.h",
-// CHECK-NEXT:         "[[PREFIX]]/a/a.h",
 // CHECK-NEXT:         "[[PREFIX]]/begin/begin.h",
-// CHECK-NEXT:         "[[PREFIX]]/end/end.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/a/a.h",
+// CHECK-NEXT:         "[[PREFIX]]/end/end.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"
@@ -128,8 +128,8 @@ module X { header "X.h" }
 // also has a different context hash from the first version of module X.
 // CHECK-NOT:        "context-hash": "[[HASH_X]]",
 // CHECK:            "file-deps": [
-// CHECK-NEXT:         "[[PREFIX]]/X.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
+// CHECK-NEXT:         "[[PREFIX]]/X.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "X"
@@ -141,10 +141,10 @@ module X { header "X.h" }
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "[[HASH_Y_WITHOUT_A]]",
 // CHECK-NEXT:       "file-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/Y.h",
 // CHECK-NEXT:         "[[PREFIX]]/begin/begin.h",
-// CHECK-NEXT:         "[[PREFIX]]/end/end.h",
-// CHECK-NEXT:         "[[PREFIX]]/module.modulemap"
+// CHECK-NEXT:         "[[PREFIX]]/end/end.h"
 // CHECK-NEXT:       ],
 // CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "Y"

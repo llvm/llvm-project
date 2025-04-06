@@ -8,10 +8,21 @@ define void @test1(i64 %x, ptr %a, ptr %b) {
 ; CHECK-NEXT:  Loop %header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: (-1 + (1 umax %x))
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: (-1 + (1 umax %x))
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 -2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
@@ -51,10 +62,21 @@ define void @test2(i64 %x, ptr %a) {
 ; CHECK-NEXT:  Loop %header: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated exit count for latch: (-1 + (1 umax %x))
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-EMPTY:
 ; CHECK-NEXT:  Loop %header: Unpredictable constant max backedge-taken count.
 ; CHECK-NEXT:  Loop %header: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:    symbolic max exit count for header: ***COULDNOTCOMPUTE***
 ; CHECK-NEXT:    symbolic max exit count for latch: ***COULDNOTCOMPUTE***
+; CHECK-NEXT:    predicated symbolic max exit count for latch: (-1 + (1 umax %x))
+; CHECK-NEXT:     Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
+; CHECK-EMPTY:
+; CHECK-NEXT:  Loop %header: Predicated constant max backedge-taken count is i64 -2
+; CHECK-NEXT:   Predicates:
+; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>
 ; CHECK-NEXT:  Loop %header: Predicated symbolic max backedge-taken count is (-1 + (1 umax %x))
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      {1,+,1}<%header> Added Flags: <nusw>

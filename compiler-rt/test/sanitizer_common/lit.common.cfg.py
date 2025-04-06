@@ -18,6 +18,9 @@ elif config.tool_name == "hwasan":
     tool_options = "HWASAN_OPTIONS"
     if not config.has_lld:
         config.unsupported = True
+elif config.tool_name == "rtsan":
+    tool_cflags = ["-fsanitize=realtime"]
+    tool_options = "RTSAN_OPTIONS"
 elif config.tool_name == "tsan":
     tool_cflags = ["-fsanitize=thread"]
     tool_options = "TSAN_OPTIONS"
@@ -97,3 +100,6 @@ if not config.parallelism_group:
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
+
+if os.path.exists("/etc/services"):
+    config.available_features.add("netbase")

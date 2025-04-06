@@ -21,7 +21,9 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/RegionKindInterface.td"
+include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
 // EmitC op definitions
@@ -54,6 +56,52 @@ def CExpression : NativeOpTrait<"emitc::CExpression">;
 def IntegerIndexOrOpaqueType : Type<CPred<"emitc::isIntegerIndexOrOpaqueType($_self)">,
 "integer, index or opaque type supported by EmitC">;
 def FloatIntegerIndexOrOpaqueType : AnyTypeOf<[EmitCFloatType, IntegerIndexOrOpaqueType]>;
+
+def EmitC_FileOp
+    : EmitC_Op<"file", [IsolatedFromAbove, NoRegionArguments, SymbolTable,
+                        OpAsmOpInterface]#GraphRegionNoTerminator.traits> {
+  let summary = "A file container operation";
+  let description = [{
+    A `file` represents a single C/C++ file.
+
+    `mlir-translate` ignores the body of all `emitc.file` ops
+    unless the `-file-id=id` flag is used. With that flag, all `emitc.file` ops
+    with matching id are emitted.
+
+    Example:
+
+    ```mlir
+    emitc.file "main" {
+      emitc.func @func_one() {
+        emitc.return
+      }
+    }
+    ```
+  }];
+
+  let arguments = (ins Builtin_StringAttr:$id);
+  let regions = (region SizedRegion<1>:$bodyRegion);
+
+  let assemblyFormat = "$id attr-dict-with-keyword $bodyRegion";
+  let builders = [OpBuilder<(ins CArg<"StringRef">:$id)>];
+  let extraClassDeclaration = [{
+    /// Construct a file op from the given location with a name.
+    static FileOp create(Location loc, StringRef name);
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
+
+  // We need to ensure that the body region has a block;
+  // the auto-generated builders do not guarantee that.
+  let skipDefaultBuilders = 1;
+}
 
 def EmitC_AddOp : EmitC_BinaryOp<"add", [CExpression]> {
   let summary = "Addition operation";
@@ -88,17 +136,17 @@ def EmitC_ApplyOp : EmitC_Op<"apply", [CExpression]> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
+    %0 = emitc.apply "&"(%arg0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.ptr<i32>
+        : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
 
     ```
   }];
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
-    EmitCType:$operand
+    AnyTypeOf<[EmitCType, EmitC_LValueType]>:$operand
   );
   let results = (outs EmitCType:$result);
   let assemblyFormat = [{
@@ -265,8 +313,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpression]> {
 
 def EmitC_CastOp : EmitC_Op<"cast",
     [CExpression,
-     DeclareOpInterfaceMethods<CastOpInterface>,
-     SameOperandsAndResultShape]> {
+     DeclareOpInterfaceMethods<CastOpInterface>]> {
   let summary = "Cast operation";
   let description = [{
     The `emitc.cast` operation performs an explicit type conversion and is emitted
@@ -385,8 +432,8 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", [CExpression]> {
 }
 
 def EmitC_ExpressionOp : EmitC_Op<"expression",
-      [HasOnlyGraphRegion, SingleBlockImplicitTerminator<"emitc::YieldOp">,
-       NoRegionArguments]> {
+      [HasOnlyGraphRegion, OpAsmOpInterface,
+       SingleBlockImplicitTerminator<"emitc::YieldOp">, NoRegionArguments]> {
   let summary = "Expression operation";
   let description = [{
     The `emitc.expression` operation returns a single SSA value which is yielded by
@@ -452,12 +499,21 @@ def EmitC_ExpressionOp : EmitC_Op<"expression",
       return llvm::any_of(getRegion().front().without_terminator(), predicate);
     };
     Operation *getRootOp();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
 }
 
 def EmitC_ForOp : EmitC_Op<"for",
       [AllTypesMatch<["lowerBound", "upperBound", "step"]>,
-       SingleBlockImplicitTerminator<"emitc::YieldOp">,
+       OpAsmOpInterface, SingleBlockImplicitTerminator<"emitc::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "For operation";
   let description = [{
@@ -509,6 +565,15 @@ def EmitC_ForOp : EmitC_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
 
   let hasCanonicalizer = 1;
@@ -532,7 +597,13 @@ def EmitC_CallOp : EmitC_Op<"call",
     %2 = emitc.call @my_add(%0, %1) : (f32, f32) -> f32
     ```
   }];
-  let arguments = (ins FlatSymbolRefAttr:$callee, Variadic<EmitCType>:$operands);
+  let arguments = (ins 
+    FlatSymbolRefAttr:$callee,
+    Variadic<EmitCType>:$operands,
+    OptionalAttr<DictArrayAttr>:$arg_attrs,
+    OptionalAttr<DictArrayAttr>:$res_attrs
+  );
+
   let results = (outs Variadic<EmitCType>);
 
   let builders = [
@@ -579,7 +650,7 @@ def EmitC_CallOp : EmitC_Op<"call",
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
+      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
     }
   }];
 
@@ -632,7 +703,7 @@ def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
 
 def EmitC_FuncOp : EmitC_Op<"func", [
   AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove
+  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -700,6 +771,15 @@ def EmitC_FuncOp : EmitC_Op<"func", [
 
     /// Returns the result types of this function.
     ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -717,7 +797,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
     Example:
 
     ```mlir
-    emitc.func @foo() : (i32) {
+    emitc.func @foo() -> (i32) {
       ...
       emitc.return %0 : i32
     }
@@ -730,7 +810,7 @@ def EmitC_ReturnOp : EmitC_Op<"return", [Pure, HasParent<"FuncOp">,
 }
 
 def EmitC_IncludeOp
-    : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
+    : EmitC_Op<"include", []> {
   let summary = "Include operation";
   let description = [{
     The `emitc.include` operation allows to define a source file inclusion via the
@@ -764,6 +844,17 @@ def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
   let description = [{
     The `emitc.literal` operation produces an SSA value equal to some constant
     specified by an attribute.
+
+    Example:
+
+    ```mlir
+    %p0 = emitc.literal "M_PI" : f32
+    %1 = "emitc.add" (%arg0, %p0) : (f32, f32) -> f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    float v2 = v1 + M_PI;
+    ```
   }];
 
   let arguments = (ins StrAttr:$value);
@@ -836,6 +927,35 @@ def EmitC_LogicalOrOp : EmitC_BinaryOp<"logical_or", [CExpression]> {
   let assemblyFormat = "operands attr-dict `:` type(operands)";
 }
 
+def EmitC_LoadOp : EmitC_Op<"load", [
+  TypesMatchWith<"result type matches value type of 'operand'",
+                  "operand", "result",
+                  "::llvm::cast<LValueType>($_self).getValueType()">
+]> {
+  let summary = "Load an lvalue into an SSA value.";
+  let description = [{
+    This operation loads the content of a modifiable lvalue into an SSA value. 
+    Modifications of the lvalue executed after the load are not observable on 
+    the produced value.
+
+    Example:
+
+    ```mlir
+    %1 = emitc.load %0 : !emitc.lvalue<i32>
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    int32_t v2 = v1;
+    ```
+  }];
+
+  let arguments = (ins 
+      Res<EmitC_LValueType, "", [MemRead<DefaultResource, 0, FullEffect>]>:$operand);
+  let results = (outs AnyType:$result);
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)"; 
+}
+
 def EmitC_MulOp : EmitC_BinaryOp<"mul", [CExpression]> {
   let summary = "Multiplication operation";
   let description = [{
@@ -895,7 +1015,7 @@ def EmitC_SubOp : EmitC_BinaryOp<"sub", [CExpression]> {
     %0 = emitc.sub %arg0, %arg1 : (i32, i32) -> i32
     %1 = emitc.sub %arg2, %arg3 : (!emitc.ptr<f32>, i32) -> !emitc.ptr<f32>
     %2 = emitc.sub %arg4, %arg5 : (!emitc.ptr<i32>, !emitc.ptr<i32>)
-        -> !emitc.opaque<"ptrdiff_t">
+        -> !emitc.ptrdiff_t
     ```
     ```c++
     // Code emitted for the operations above.
@@ -918,15 +1038,15 @@ def EmitC_MemberOp : EmitC_Op<"member"> {
 
     ```mlir
     %0 = "emitc.member" (%arg0) {member = "a"}
-        : (!emitc.opaque<"mystruct">) -> i32
+        : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
     ```
   }];
 
   let arguments = (ins
     Arg<StrAttr, "the member to access">:$member,
-    EmitC_OpaqueType:$operand
+    EmitC_LValueOf<[EmitC_OpaqueType]>:$operand
   );
-  let results = (outs EmitCType);
+  let results = (outs EmitC_LValueOf<[EmitCType]>);
 }
 
 def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
@@ -939,15 +1059,16 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr"> {
 
     ```mlir
     %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
-        : (!emitc.ptr<!emitc.opaque<"mystruct">>) -> i32
+        : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
+        -> !emitc.lvalue<i32>
     ```
   }];
 
   let arguments = (ins
     Arg<StrAttr, "the member to access">:$member,
-    AnyTypeOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
+    EmitC_LValueOf<[EmitC_OpaqueType,EmitC_PointerType]>:$operand
   );
-  let results = (outs EmitCType);
+  let results = (outs EmitC_LValueOf<[EmitCType]>);
 }
 
 def EmitC_ConditionalOp : EmitC_Op<"conditional",
@@ -1031,28 +1152,29 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
     %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">} 
-      : () -> !emitc.ptr<!emitc.opaque<"int32_t">>
+      : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"int32_t">>>
     ```
 
     Since folding is not supported, it can be used with pointers.
     As an example, it is valid to create pointers to `variable` operations
     by using `apply` operations and pass these to a `call` operation.
     ```mlir
-    %0 = "emitc.variable"() {value = 0 : i32} : () -> i32
-    %1 = "emitc.variable"() {value = 0 : i32} : () -> i32
-    %2 = emitc.apply "&"(%0) : (i32) -> !emitc.ptr<i32>
-    %3 = emitc.apply "&"(%1) : (i32) -> !emitc.ptr<i32>
+    %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %2 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+    %3 = emitc.apply "&"(%1) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
     emitc.call_opaque "write"(%2, %3)
       : (!emitc.ptr<i32>, !emitc.ptr<i32>) -> ()
     ```
   }];
 
   let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
-  let results = (outs EmitCType);
+  let results = (outs Res<AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>, "",
+                          [MemAlloc<DefaultResource, 0, FullEffect>]>);
 
   let hasVerifier = 1;
 }
@@ -1061,8 +1183,8 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   let summary = "A global variable";
   let description = [{
     The `emitc.global` operation declares or defines a named global variable.
-    The backing memory for the variable is allocated statically and is
-    described by the type of the variable.
+    The backing memory for the variable is allocated statically and described by
+    the variable's type, which must be an EmitC type.
     Optionally, an `initial_value` can be provided.
     Internal linkage can be specified using the `static_specifier` unit attribute
     and external linkage can be specified using the `extern_specifier` unit attribute.
@@ -1079,9 +1201,13 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
 
     ```mlir
     // Global variable with an initial value.
-    emitc.global @x : emitc.array<2xf32> = dense<0.0, 2.0>
+    emitc.global @x : !emitc.array<2xf32> = dense<0.0>
+    // Global variable with an initial values.
+    emitc.global @x : !emitc.array<3xi32> = dense<[0, 1, 2]>
+    // Global variable with an opaque initial value.
+    emitc.global @x : !emitc.opaque<"char"> = #emitc.opaque<"CHAR_MIN">
     // External global variable
-    emitc.global extern @x : emitc.array<2xf32>
+    emitc.global extern @x : !emitc.array<2xf32>
     // Constant global variable with internal linkage
     emitc.global static const @x : i32 = 0
     ```
@@ -1118,11 +1244,12 @@ def EmitC_GetGlobalOp : EmitC_Op<"get_global",
 
      ```mlir
      %x = emitc.get_global @foo : !emitc.array<2xf32>
+     %y = emitc.get_global @bar : !emitc.lvalue<i32>
      ```
   }];
 
   let arguments = (ins FlatSymbolRefAttr:$name);
-  let results = (outs EmitCType:$result);
+  let results = (outs AnyTypeOf<[EmitC_ArrayType, EmitC_LValueType]>:$result);
   let assemblyFormat = "$name `:` type($result) attr-dict";
 }
 
@@ -1154,10 +1281,41 @@ def EmitC_VerbatimOp : EmitC_Op<"verbatim"> {
     }
     #endif
     ```
+
+    If the `emitc.verbatim` op has operands, then the `value` is interpreted as
+    format string, where `{}` is a placeholder for an operand in their order.
+    For example, `emitc.verbatim "#pragma my src={} dst={}" %src, %dest : i32, i32`
+    would be emitted as `#pragma my src=a dst=b` if `%src` became `a` and
+    `%dest` became `b` in the C code.
+    `{{` in the format string is interpreted as a single `{` and doesn't introduce
+    a placeholder.
+
+    Example:
+
+    ```mlir
+    emitc.verbatim "typedef float f32;"
+    emitc.verbatim "#pragma my var={} property" args %arg : f32
+    ```
+    ```c++
+    // Code emitted for the operation above.
+    typedef float f32;
+    #pragma my var=v1 property
+    ```
   }];
 
-  let arguments = (ins StrAttr:$value);
-  let assemblyFormat = "$value attr-dict";
+  let extraClassDeclaration = [{
+    FailureOr<SmallVector<::mlir::emitc::ReplacementItem>> parseFormatString();
+  }];
+
+  let arguments = (ins StrAttr:$value, Variadic<EmitCType>:$fmtArgs);
+
+  let builders = [OpBuilder<(ins "::mlir::StringAttr":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let builders = [OpBuilder<(ins "::llvm::StringRef":$value),
+                            [{ build($_builder, $_state, value, {}); }]>];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      "$value (`args` $fmtArgs^ `:` type($fmtArgs))? attr-dict";
 }
 
 def EmitC_AssignOp : EmitC_Op<"assign", []> {
@@ -1172,15 +1330,17 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
     %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
-    "emitc.assign"(%0, %1) : (i32, i32) -> ()
+    "emitc.assign"(%0, %1) : (!emitc.lvalue<i32>, i32) -> ()
     ```
   }];
 
-  let arguments = (ins EmitCType:$var, EmitCType:$value);
+  let arguments = (ins 
+      Res<EmitC_LValueType, "", [MemWrite<DefaultResource, 1, FullEffect>]>:$var,
+      EmitCType:$value);
   let results = (outs);
 
   let hasVerifier = 1;
@@ -1188,7 +1348,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 }
 
 def EmitC_YieldOp : EmitC_Op<"yield",
-      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp"]>]> {
+      [Pure, Terminator, ParentOneOf<["ExpressionOp", "IfOp", "ForOp", "SwitchOp"]>]> {
   let summary = "Block termination operation";
   let description = [{
     The `emitc.yield` terminates its parent EmitC op's region, optionally yielding
@@ -1211,7 +1371,7 @@ def EmitC_YieldOp : EmitC_Op<"yield",
 def EmitC_IfOp : EmitC_Op<"if",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions"]>, SingleBlock,
+    "getEntrySuccessorRegions"]>, OpAsmOpInterface, SingleBlock,
     SingleBlockImplicitTerminator<"emitc::YieldOp">,
     RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "If-then-else operation";
@@ -1259,8 +1419,15 @@ def EmitC_IfOp : EmitC_Op<"if",
       Block* body = getBody(1);
       return OpBuilder::atBlockEnd(body, listener);
     }
-    Block* thenBlock();
-    Block* elseBlock();
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -1276,8 +1443,10 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
     ```mlir
     %i = index.constant 1
     %j = index.constant 7
-    %0 = emitc.subscript %arg0[%i, %j] : !emitc.array<4x8xf32>, index, index
-    %1 = emitc.subscript %arg1[%i] : !emitc.ptr<i32>, index
+    %0 = emitc.subscript %arg0[%i, %j] : (!emitc.array<4x8xf32>, index, index)
+           -> !emitc.lvalue<f32>
+    %1 = emitc.subscript %arg1[%i] : (!emitc.ptr<i32>, index)
+           -> !emitc.lvalue<i32>
     ```
   }];
   let arguments = (ins Arg<AnyTypeOf<[
@@ -1286,15 +1455,26 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
       EmitC_PointerType]>,
     "the value to subscript">:$value,
     Variadic<EmitCType>:$indices);
-  let results = (outs EmitCType:$result);
+  let results = (outs EmitC_LValueType:$result);
 
   let builders = [
     OpBuilder<(ins "TypedValue<ArrayType>":$array, "ValueRange":$indices), [{
-      build($_builder, $_state, array.getType().getElementType(), array, indices);
+      build(
+        $_builder,
+        $_state,
+        emitc::LValueType::get(array.getType().getElementType()),
+        array,
+        indices
+      );
     }]>,
     OpBuilder<(ins "TypedValue<PointerType>":$pointer, "Value":$index), [{
-      build($_builder, $_state, pointer.getType().getPointee(), pointer,
-            ValueRange{index});
+      build(
+        $_builder,
+        $_state,
+        emitc::LValueType::get(pointer.getType().getPointee()),
+        pointer,
+        ValueRange{index}
+      );
     }]>
   ];
 
@@ -1302,5 +1482,97 @@ def EmitC_SubscriptOp : EmitC_Op<"subscript", []> {
   let assemblyFormat = "$value `[` $indices `]` attr-dict `:` functional-type(operands, results)";
 }
 
+def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
+    OpAsmOpInterface, SingleBlockImplicitTerminator<"emitc::YieldOp">,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                              ["getRegionInvocationBounds",
+                               "getEntrySuccessorRegions"]>]> {
+  let summary = "Switch operation";
+  let description = [{
+    The `emitc.switch` is a control-flow operation that branches to one of
+    the given regions based on the values of the argument and the cases.
+    The operand to a switch operation is a opaque, integral or pointer
+    wide types.
+
+    The operation always has a "default" region and any number of case regions
+    denoted by integer constants. Control-flow transfers to the case region
+    whose constant value equals the value of the argument. If the argument does
+    not equal any of the case values, control-flow transfer to the "default"
+    region.
+
+    The operation does not return any value. Moreover, case regions must be
+    explicitly terminated using the `emitc.yield` operation. Default region is
+    yielded implicitly.
+
+    Example:
+
+    ```mlir
+    // Example:
+    emitc.switch %0 : i32
+    case 2 {
+      %1 = emitc.call_opaque "func_b" () : () -> i32
+      emitc.yield
+    }
+    case 5 {
+      %2 = emitc.call_opaque "func_a" () : () -> i32
+      emitc.yield
+    }
+    default {
+      %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+      emitc.call_opaque "func2" (%3) : (f32) -> ()
+    }
+    ```
+    ```c++
+    // Code emitted for the operations above.
+    switch (v1) {
+    case 2: {
+      int32_t v2 = func_b();
+      break;
+    }
+    case 5: {
+      int32_t v3 = func_a();
+      break;
+    }
+    default: {
+      float v4 = 4.200000000e+01f;
+      func2(v4);
+      break;
+    }
+    }
+    ```
+  }];
+
+  let arguments = (ins IntegerIndexOrOpaqueType:$arg, DenseI64ArrayAttr:$cases);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$defaultRegion,
+                        VariadicRegion<SizedRegion<1>>:$caseRegions);
+
+  let assemblyFormat = [{
+    $arg `:` type($arg) attr-dict custom<SwitchCases>($cases, $caseRegions) `\n`
+    `` `default` $defaultRegion
+  }];
+
+  let extraClassDeclaration = [{
+    /// Get the number of cases.
+    unsigned getNumCases();
+
+    /// Get the default region body.
+    Block &getDefaultBlock();
+
+    /// Get the body of a case region.
+    Block &getCaseBlock(unsigned idx);
+
+    //===------------------------------------------------------------------===//
+    // OpAsmOpInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// EmitC ops in the body can omit their 'emitc.' prefix in the assembly.
+    static ::llvm::StringRef getDefaultDialect() {
+      return "emitc";
+    }
+  }];
+
+  let hasVerifier = 1;
+}
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITC

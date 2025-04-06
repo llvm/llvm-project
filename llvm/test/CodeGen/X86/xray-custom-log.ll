@@ -84,7 +84,7 @@ define void @leaf_func() "function-instrument"="xray-always" "frame-pointer"="no
   ; CHECK:         pushq %rax
   ; CHECK:         movl $leaf_func.event_id, %eax
   ; CHECK-NEXT:    movl $4, %ecx
-  ; CHECK-NEXT:    .p2align 1, 0x90
+  ; CHECK-NEXT:    .p2align 1
   ; CHECK-NEXT:  .Lxray_event_sled_1:
   call void @llvm.xray.customevent(ptr @leaf_func.event_id, i64 4)
   ret void

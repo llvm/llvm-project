@@ -81,11 +81,24 @@ namespace llvm {
     // marker instruction.
     CALL_RVMARKER,
 
+    /// The same as ISD::CopyFromReg except that this node makes it explicit
+    /// that it may lower to an x87 FPU stack pop. Optimizations should be more
+    /// cautious when handling this node than a normal CopyFromReg to avoid
+    /// removing a required FPU stack pop. A key requirement is optimizations
+    /// should not optimize any users of a chain that contains a
+    /// POP_FROM_X87_REG to use a chain from a point earlier than the
+    /// POP_FROM_X87_REG (which may remove a required FPU stack pop).
+    POP_FROM_X87_REG,
+
     /// X86 compare and logical compare instructions.
     CMP,
     FCMP,
     COMI,
     UCOMI,
+
+    // X86 compare with Intrinsics similar to COMI.
+    COMX,
+    UCOMX,
 
     /// X86 bit-test instructions.
     BT,
@@ -340,6 +353,9 @@ namespace llvm {
 
     // Vector FP round.
     VFPROUND,
+    // Convert TWO packed single data to one packed data
+    VFPROUND2,
+    VFPROUND2_RND,
     VFPROUND_RND,
     VFPROUNDS,
     VFPROUNDS_RND,
@@ -618,6 +634,28 @@ namespace llvm {
 
     MPSADBW,
 
+    VCVT2PH2BF8,
+    VCVT2PH2BF8S,
+    VCVT2PH2HF8,
+    VCVT2PH2HF8S,
+    VCVTBIASPH2BF8,
+    VCVTBIASPH2BF8S,
+    VCVTBIASPH2HF8,
+    VCVTBIASPH2HF8S,
+    VCVTPH2BF8,
+    VCVTPH2BF8S,
+    VCVTPH2HF8,
+    VCVTPH2HF8S,
+    VMCVTBIASPH2BF8,
+    VMCVTBIASPH2BF8S,
+    VMCVTBIASPH2HF8,
+    VMCVTBIASPH2HF8S,
+    VMCVTPH2BF8,
+    VMCVTPH2BF8S,
+    VMCVTPH2HF8,
+    VMCVTPH2HF8S,
+    VCVTHF82PH,
+
     // Compress and expand.
     COMPRESS,
     EXPAND,
@@ -649,6 +687,18 @@ namespace llvm {
     CVTTP2UI,
     CVTTP2SI_SAE,
     CVTTP2UI_SAE,
+
+    // Saturation enabled Vector float/double to signed/unsigned
+    // integer with truncation.
+    CVTTP2SIS,
+    CVTTP2UIS,
+    CVTTP2SIS_SAE,
+    CVTTP2UIS_SAE,
+    // Masked versions of above. Used for v2f64 to v4i32.
+    // SRC, PASSTHRU, MASK
+    MCVTTP2SIS,
+    MCVTTP2UIS,
+
     // Scalar float/double to signed/unsigned integer with truncation.
     CVTTS2SI,
     CVTTS2UI,
@@ -658,6 +708,12 @@ namespace llvm {
     // Vector signed/unsigned integer to float/double.
     CVTSI2P,
     CVTUI2P,
+
+    // Scalar float/double to signed/unsigned integer with saturation.
+    CVTTS2SIS,
+    CVTTS2UIS,
+    CVTTS2SIS_SAE,
+    CVTTS2UIS_SAE,
 
     // Masked versions of above. Used for v2f64->v4f32.
     // SRC, PASSTHRU, MASK
@@ -669,8 +725,6 @@ namespace llvm {
     MCVTUI2P,
 
     // Vector float to bfloat16.
-    // Convert TWO packed single data to one packed BF16 data
-    CVTNE2PS2BF16,
     // Convert packed single data to packed BF16 data
     CVTNEPS2BF16,
     // Masked version of above.
@@ -764,7 +818,8 @@ namespace llvm {
     CTEST,
 
     /// X86 strict FP compare instructions.
-    STRICT_FCMP = ISD::FIRST_TARGET_STRICTFP_OPCODE,
+    FIRST_STRICTFP_OPCODE,
+    STRICT_FCMP = FIRST_STRICTFP_OPCODE,
     STRICT_FCMPS,
 
     // Vector packed double/float comparison.
@@ -805,11 +860,14 @@ namespace llvm {
     // Perform an FP80 add after changing precision control in FPCW.
     STRICT_FP80_ADD,
 
-    // WARNING: Only add nodes here if they are strict FP nodes. Non-memory and
-    // non-strict FP nodes should be above FIRST_TARGET_STRICTFP_OPCODE.
+    /// Floating point max and min.
+    STRICT_FMAX,
+    STRICT_FMIN,
+    LAST_STRICTFP_OPCODE = STRICT_FMIN,
 
     // Compare and swap.
-    LCMPXCHG_DAG = ISD::FIRST_TARGET_MEMORY_OPCODE,
+    FIRST_MEMORY_OPCODE,
+    LCMPXCHG_DAG = FIRST_MEMORY_OPCODE,
     LCMPXCHG8_DAG,
     LCMPXCHG16_DAG,
     LCMPXCHG16_SAVE_RBX_DAG,
@@ -858,6 +916,10 @@ namespace llvm {
 
     // Load x87 FPU environment from memory.
     FLDENVm,
+
+    // Custom handling for FP_TO_xINT_SAT
+    FP_TO_SINT_SAT,
+    FP_TO_UINT_SAT,
 
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
@@ -930,10 +992,7 @@ namespace llvm {
     // Conditional load/store instructions
     CLOAD,
     CSTORE,
-
-    // WARNING: Do not add anything in the end unless you want the node to
-    // have memop! In fact, starting from FIRST_TARGET_MEMORY_OPCODE all
-    // opcodes will be thought as target memory ops!
+    LAST_MEMORY_OPCODE = CSTORE,
   };
   } // end namespace X86ISD
 
@@ -1030,8 +1089,7 @@ namespace llvm {
     /// function arguments in the caller parameter area. For X86, aggregates
     /// that contains are placed at 16-byte boundaries while the rest are at
     /// 4-byte boundaries.
-    uint64_t getByValTypeAlignment(Type *Ty,
-                                   const DataLayout &DL) const override;
+    Align getByValTypeAlignment(Type *Ty, const DataLayout &DL) const override;
 
     EVT getOptimalMemOpType(const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
@@ -1359,10 +1417,6 @@ namespace llvm {
 
     bool isLegalStoreImmediate(int64_t Imm) const override;
 
-    /// This is used to enable splatted operand transforms for vector shifts
-    /// and vector funnel shifts.
-    bool isVectorShiftByScalarCheap(Type *Ty) const override;
-
     /// Add x86-specific opcodes to the default list.
     bool isBinOp(unsigned Opcode) const override;
 
@@ -1389,8 +1443,6 @@ namespace llvm {
     bool isZExtFree(EVT VT1, EVT VT2) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
-    bool shouldSinkOperands(Instruction *I,
-                            SmallVectorImpl<Use *> &Ops) const override;
     bool shouldConvertPhiType(Type *From, Type *To) const override;
 
     /// Return true if folding a vector load into ExtVal (a sign, zero, or any
@@ -1406,7 +1458,7 @@ namespace llvm {
     /// Return true if it's profitable to narrow operations of type SrcVT to
     /// DestVT. e.g. on x86, it's profitable to narrow from i32 to i8 but not
     /// from i32 to i16.
-    bool isNarrowingProfitable(EVT SrcVT, EVT DestVT) const override;
+    bool isNarrowingProfitable(SDNode *N, EVT SrcVT, EVT DestVT) const override;
 
     bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
                                               EVT VT) const override;
@@ -1525,7 +1577,7 @@ namespace llvm {
     /// returns the address of that location. Otherwise, returns nullptr.
     Value *getIRStackGuard(IRBuilderBase &IRB) const override;
 
-    bool useLoadStackGuardNode() const override;
+    bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
     void insertSSPDeclarations(Module &M) const override;
     Value *getSDagStackGuard(const Module &M) const override;
@@ -1560,6 +1612,10 @@ namespace llvm {
     unsigned getVectorTypeBreakdownForCallingConv(
         LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
         unsigned &NumIntermediates, MVT &RegisterVT) const override;
+
+    bool functionArgumentNeedsConsecutiveRegisters(
+        Type *Ty, CallingConv::ID CallConv, bool isVarArg,
+        const DataLayout &DL) const override;
 
     bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
@@ -1760,7 +1816,8 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context,
+                        const Type *RetTy) const override;
 
     const MCPhysReg *getScratchRegisters(CallingConv::ID CC) const override;
     ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
@@ -1804,9 +1861,6 @@ namespace llvm {
 
     MachineBasicBlock *EmitLoweredProbedAlloca(MachineInstr &MI,
                                                MachineBasicBlock *BB) const;
-
-    MachineBasicBlock *EmitLoweredTLSAddr(MachineInstr &MI,
-                                          MachineBasicBlock *BB) const;
 
     MachineBasicBlock *EmitLoweredTLSCall(MachineInstr &MI,
                                           MachineBasicBlock *BB) const;

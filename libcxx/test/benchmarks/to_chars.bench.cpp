@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14
+
 #include <array>
 #include <charconv>
 #include <random>
@@ -50,10 +52,4 @@ static void BM_to_chars_bad(benchmark::State& state) {
 }
 BENCHMARK(BM_to_chars_bad)->DenseRange(2, 36, 1);
 
-int main(int argc, char** argv) {
-  benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  benchmark::RunSpecifiedBenchmarks();
-}
+BENCHMARK_MAIN();

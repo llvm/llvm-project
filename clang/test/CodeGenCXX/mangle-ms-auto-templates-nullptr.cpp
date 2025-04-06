@@ -19,6 +19,6 @@ void template_mangling() {
   // BEFORE: call {{.*}} @"??0?$AutoParmTemplate@$0A@@@QEAA@XZ"
 
   AutoFunc<nullptr>();
-  // AFTER: call {{.*}} @"??$AutoFunc@$M$$T0A@@@YA?A?<auto>@@XZ"
+  // AFTER: call {{.*}} @"??$AutoFunc@$M$$T0A@@@YA?A_PXZ"
   // BEFORE: call {{.*}} @"??$AutoFunc@$0A@@@YA?A?<auto>@@XZ"
 }

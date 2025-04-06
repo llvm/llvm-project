@@ -239,9 +239,10 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
     // AddRunTimeLibs).
-    if (D.IsFlangMode()) {
-      addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-      addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    if (D.IsFlangMode() &&
+        !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       if (Profiling)
         CmdArgs.push_back("-lm_p");
       else
@@ -371,7 +372,7 @@ void OpenBSD::AddCXXStdlibLibArgs(const ArgList &Args,
 }
 
 std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
-                                   FileType Type) const {
+                                   FileType Type, bool IsFortran) const {
   if (Component == "builtins") {
     SmallString<128> Path(getDriver().SysRoot);
     llvm::sys::path::append(Path, "/usr/lib/libcompiler_rt.a");
@@ -379,13 +380,13 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
       return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   llvm::sys::path::append(P, "lib", CRTBasename);
   // Checks if this is the base system case which uses a different location.
   if (getVFS().exists(P))
     return std::string(P);
-  return ToolChain::getCompilerRT(Args, Component, Type);
+  return ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
 }
 
 Tool *OpenBSD::buildAssembler() const {

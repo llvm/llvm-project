@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - -force-instr-ref-livedebugvalues=1 -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -force-instr-ref-livedebugvalues=1 -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
 
   ;; When using instruction referencing LiveDebugValues, when a register gets
   ;; clobbered, we should transfer variable locations to backup locations, if

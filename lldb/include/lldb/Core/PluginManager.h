@@ -22,6 +22,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
   namespace lldb_private {                                                     \
@@ -46,6 +47,12 @@ namespace lldb_private {
 class CommandInterpreter;
 class Debugger;
 class StringList;
+
+struct RegisteredPluginInfo {
+  llvm::StringRef name = "";
+  llvm::StringRef description = "";
+  bool enabled = false;
+};
 
 class PluginManager {
 public:
@@ -168,6 +175,12 @@ public:
   static SystemRuntimeCreateInstance
   GetSystemRuntimeCreateCallbackAtIndex(uint32_t idx);
 
+  static std::vector<RegisteredPluginInfo> GetSystemRuntimePluginInfo();
+
+  // Modify the enabled state of a SystemRuntime plugin.
+  // Returns false if the plugin name is not found.
+  static bool SetSystemRuntimePluginEnabled(llvm::StringRef name, bool enabled);
+
   // ObjectFile
   static bool
   RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
@@ -194,7 +207,7 @@ public:
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
   static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         const lldb_private::SaveCoreOptions &core_options);
+                         lldb_private::SaveCoreOptions &core_options);
 
   // ObjectContainer
   static bool RegisterPlugin(

@@ -24,15 +24,16 @@ class DataLayoutEntryAttrStorage;
 } // namespace mlir
 namespace mlir {
 namespace dlti {
-/// Find the first DataLayoutSpec associated to `op`, via either the
-/// DataLayoutOpInterface, a method on ModuleOp, or an attribute implementing
-/// the interface, on `op` and else on `op`'s ancestors in turn.
-DataLayoutSpecInterface getDataLayoutSpec(Operation *op);
+/// Perform a DLTI-query at `op`, recursively querying each key of `keys` on
+/// query interface-implementing attrs, starting from attr obtained from `op`.
+FailureOr<Attribute> query(Operation *op, ArrayRef<DataLayoutEntryKey> keys,
+                           bool emitError = false);
 
-/// Find the first TargetSystemSpec associated to `op`, via either the
-/// DataLayoutOpInterface, a method on ModuleOp, or an attribute implementing
-/// the interface, on `op` and else on `op`'s ancestors in turn.
-TargetSystemSpecInterface getTargetSystemSpec(Operation *op);
+/// Perform a DLTI-query at `op` using each string in `keys` as a separate DLTI
+/// entry key, recursively querying on query interface-implementing attrs,
+/// starting from attr obtained from `op`.
+FailureOr<Attribute> query(Operation *op, ArrayRef<StringRef> keys,
+                           bool emitError = false);
 } // namespace dlti
 } // namespace mlir
 

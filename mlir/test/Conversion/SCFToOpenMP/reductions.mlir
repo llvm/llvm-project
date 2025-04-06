@@ -44,7 +44,6 @@ func.func @reduction1(%arg0 : index, %arg1 : index, %arg2 : index,
     }
     // CHECK: omp.yield
   }
-  // CHECK:   omp.terminator
   // CHECK: omp.terminator
   // CHECK: llvm.load %[[BUF]]
   return
@@ -240,7 +239,6 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     }
     // CHECK: omp.yield
   }
-  // CHECK:   omp.terminator
   // CHECK: omp.terminator
   // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]] : !llvm.ptr -> f32
   // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]] : !llvm.ptr -> i64

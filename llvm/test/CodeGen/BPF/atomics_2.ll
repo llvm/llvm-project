@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -mcpu=v3 -verify-machineinstrs -show-mc-encoding | FileCheck %s
 ;
 ; Source:
 ;   int test_load_add_32(int *p, int v) {
@@ -224,7 +224,7 @@ entry:
 }
 
 ; CHECK-LABEL: test_atomic_xor_64
-; CHECK: r2 = atomic_fetch_xor((u64 *)(r1 + 0), r2)
+; CHECK: atomic_fetch_xor((u64 *)(r1 + 0), r2)
 ; CHECK: encoding: [0xdb,0x21,0x00,0x00,0xa1,0x00,0x00,0x00]
 ; CHECK: w0 = 0
 define dso_local i32 @test_atomic_xor_64(ptr nocapture %p, i64 %v) local_unnamed_addr {

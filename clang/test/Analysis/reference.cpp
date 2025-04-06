@@ -89,8 +89,8 @@ namespace PR13440 {
     S s = { a };
     S2 s2 = { a };
 
-    if (s.x != a) return;
-    if (s2.x != a) return;
+    if (s.x != a) return;  // expected-warning {{comparison between two arrays}}
+    if (s2.x != a) return; // expected-warning {{comparison between two arrays}}
 
     a[0] = 42;
     clang_analyzer_eval(s.x[0] == 42); // expected-warning{{TRUE}}

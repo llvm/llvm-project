@@ -99,7 +99,7 @@ func.func @arith_constant_dense_2d_zero_f64() {
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C16]] : index
 // CHECK: %[[TILE:.*]] = scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] iter_args(%[[CURRENT_TILE:.*]] = %[[INIT_TILE]]) -> (vector<[16]x[16]xi8>) {
-// CHECK:   %[[TILE_UPDATE:.*]] = arm_sme.move_vector_to_tile_slice %[[C2_SPLAT]], %[[CURRENT_TILE]], %[[TILE_SLICE_INDEX]] : vector<[16]xi8> into vector<[16]x[16]xi8>
+// CHECK:   %[[TILE_UPDATE:.*]] = arm_sme.insert_tile_slice %[[C2_SPLAT]], %[[CURRENT_TILE]][%[[TILE_SLICE_INDEX]]] : vector<[16]xi8> into vector<[16]x[16]xi8>
 // CHECK:    scf.yield %[[TILE_UPDATE]] : vector<[16]x[16]xi8>
 // CHECK: "prevent.dce"(%[[TILE]]) : (vector<[16]x[16]xi8>) -> ()
 func.func @arith_constant_dense_2d_nonzero_i8() {
@@ -119,7 +119,7 @@ func.func @arith_constant_dense_2d_nonzero_i8() {
 // CHECK: %[[VSCALE:.*]] = vector.vscale
 // CHECK: %[[NUM_TILE_SLICES:.*]] = arith.muli %[[VSCALE]], %[[C2]] : index
 // CHECK: %[[TILE:.*]] = scf.for %[[TILE_SLICE_INDEX:.*]] = %[[C0]] to %[[NUM_TILE_SLICES]] step %[[C1]] iter_args(%[[CURRENT_TILE:.*]] = %[[INIT_TILE]]) -> (vector<[2]x[2]xf64>) {
-// CHECK:   %[[TILE_UPDATE:.*]] = arm_sme.move_vector_to_tile_slice %[[C2_SPLAT]], %[[CURRENT_TILE]], %[[TILE_SLICE_INDEX]] : vector<[2]xf64> into vector<[2]x[2]xf64>
+// CHECK:   %[[TILE_UPDATE:.*]] = arm_sme.insert_tile_slice %[[C2_SPLAT]], %[[CURRENT_TILE]][%[[TILE_SLICE_INDEX]]] : vector<[2]xf64> into vector<[2]x[2]xf64>
 // CHECK:    scf.yield %[[TILE_UPDATE]] : vector<[2]x[2]xf64>
 // CHECK: "prevent.dce"(%[[TILE]]) : (vector<[2]x[2]xf64>) -> ()
 func.func @arith_constant_dense_2d_nonzero_f64() {

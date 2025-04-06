@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check that we generate store instructions with global + offset
 
 %s.0 = type { i8, i8, i16, i32 }

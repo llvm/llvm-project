@@ -1,6 +1,6 @@
-REQUIRES: system-windows, lld
+REQUIRES: target-windows, lld
 RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/VariablesLocationsTest.cpp
-RUN: env LLDB_USE_NATIVE_PDB_READER=0 %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
+RUN: %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
 RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
 
 CHECK: g_var = 2222

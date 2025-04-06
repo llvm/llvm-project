@@ -129,7 +129,12 @@ class SparseSet {
   using DenseT = SmallVector<ValueT, 8>;
   using size_type = unsigned;
   DenseT Dense;
-  SparseT *Sparse = nullptr;
+
+  struct Deleter {
+    void operator()(SparseT *S) { free(S); }
+  };
+  std::unique_ptr<SparseT[], Deleter> Sparse;
+
   unsigned Universe = 0;
   KeyFunctorT KeyIndexOf;
   SparseSetValFunctor<KeyT, ValueT, KeyFunctorT> ValIndexOf;
@@ -144,7 +149,7 @@ public:
   SparseSet() = default;
   SparseSet(const SparseSet &) = delete;
   SparseSet &operator=(const SparseSet &) = delete;
-  ~SparseSet() { free(Sparse); }
+  SparseSet(SparseSet &&) = default;
 
   /// setUniverse - Set the universe size which determines the largest key the
   /// set can hold.  The universe must be sized before any elements can be
@@ -159,11 +164,10 @@ public:
     // Hysteresis prevents needless reallocations.
     if (U >= Universe/4 && U <= Universe)
       return;
-    free(Sparse);
     // The Sparse array doesn't actually need to be initialized, so malloc
     // would be enough here, but that will cause tools like valgrind to
     // complain about branching on uninitialized data.
-    Sparse = static_cast<SparseT*>(safe_calloc(U, sizeof(SparseT)));
+    Sparse.reset(static_cast<SparseT *>(safe_calloc(U, sizeof(SparseT))));
     Universe = U;
   }
 

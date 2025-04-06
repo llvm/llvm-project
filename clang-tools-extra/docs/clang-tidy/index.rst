@@ -9,9 +9,10 @@ See also:
 .. toctree::
    :maxdepth: 1
 
-   The list of clang-tidy checks <checks/list>
+   List of Clang-Tidy Checks <checks/list>
    Clang-tidy IDE/Editor Integrations <Integrations>
    Getting Involved <Contributing>
+   External Clang-Tidy Examples <ExternalClang-TidyExamples>
 
 :program:`clang-tidy` is a clang-based C++ "linter" tool. Its purpose is to
 provide an extensible framework for diagnosing and fixing typical programming
@@ -20,7 +21,7 @@ static analysis. :program:`clang-tidy` is modular and provides a convenient
 interface for writing new checks.
 
 
-Using clang-tidy
+Using Clang-Tidy
 ================
 
 :program:`clang-tidy` is a `LibTooling`_-based tool, and it's easier to work
@@ -31,6 +32,14 @@ compilation options on the command line after ``--``:
 .. code-block:: console
 
   $ clang-tidy test.cpp -- -Imy_project/include -DMY_DEFINES ...
+
+If there are too many options or source files to specify on the command line,
+you can store them in a parameter file, and use :program:`clang-tidy` with that
+parameters file:
+
+.. code-block:: console
+
+  $ clang-tidy @parameters_file
 
 :program:`clang-tidy` has its own checks and can also run Clang Static Analyzer
 checks. Each check has a name and the checks to run can be chosen using the
@@ -263,6 +272,9 @@ An overview of all the command-line options:
     automatically removed, but the rest of a relative path must be a
     suffix of a path in the compile command database.
 
+  Parameters files:
+    A large number of options or source files can be passed as parameter files
+    by use '@parameter-file' in the command line.
 
   Configuration files:
     clang-tidy attempts to read configuration for each source file from a
@@ -281,12 +293,12 @@ An overview of all the command-line options:
                                    globs can be specified as a list instead of a
                                    string.
     ExcludeHeaderFilterRegex     - Same as '--exclude-header-filter'.
-    ExtraArgs                    - Same as '--extra-args'.
-    ExtraArgsBefore              - Same as '--extra-args-before'.
+    ExtraArgs                    - Same as '--extra-arg'.
+    ExtraArgsBefore              - Same as '--extra-arg-before'.
     FormatStyle                  - Same as '--format-style'.
     HeaderFileExtensions         - File extensions to consider to determine if a
                                    given diagnostic is located in a header file.
-    HeaderFilterRegex            - Same as '--header-filter-regex'.
+    HeaderFilterRegex            - Same as '--header-filter'.
     ImplementationFileExtensions - File extensions to consider to determine if a
                                    given diagnostic is located in an
                                    implementation file.

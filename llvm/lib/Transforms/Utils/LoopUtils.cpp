@@ -445,21 +445,22 @@ TransformationMode llvm::hasLICMVersioningTransformation(const Loop *L) {
 }
 
 /// Does a BFS from a given node to all of its children inside a given loop.
-/// The returned vector of nodes includes the starting point.
-SmallVector<DomTreeNode *, 16>
-llvm::collectChildrenInLoop(DomTreeNode *N, const Loop *CurLoop) {
-  SmallVector<DomTreeNode *, 16> Worklist;
+/// The returned vector of basic blocks includes the starting point.
+SmallVector<BasicBlock *, 16> llvm::collectChildrenInLoop(DominatorTree *DT,
+                                                          DomTreeNode *N,
+                                                          const Loop *CurLoop) {
+  SmallVector<BasicBlock *, 16> Worklist;
   auto AddRegionToWorklist = [&](DomTreeNode *DTN) {
     // Only include subregions in the top level loop.
     BasicBlock *BB = DTN->getBlock();
     if (CurLoop->contains(BB))
-      Worklist.push_back(DTN);
+      Worklist.push_back(DTN->getBlock());
   };
 
   AddRegionToWorklist(N);
 
   for (size_t I = 0; I < Worklist.size(); I++) {
-    for (DomTreeNode *Child : Worklist[I]->children())
+    for (DomTreeNode *Child : DT->getNode(Worklist[I])->children())
       AddRegionToWorklist(Child);
   }
 
@@ -699,8 +700,7 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // Finally, the blocks from loopinfo.  This has to happen late because
     // otherwise our loop iterators won't work.
 
-    SmallPtrSet<BasicBlock *, 8> blocks;
-    blocks.insert(L->block_begin(), L->block_end());
+    SmallPtrSet<BasicBlock *, 8> blocks(llvm::from_range, L->blocks());
     for (BasicBlock *BB : blocks)
       LI->removeBlock(BB);
 
@@ -819,7 +819,7 @@ static BranchInst *getExpectedExitLoopLatchBranch(Loop *L) {
 
 /// Return the estimated trip count for any exiting branch which dominates
 /// the loop latch.
-static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
+static std::optional<unsigned> getEstimatedTripCount(BranchInst *ExitingBranch,
                                                      Loop *L,
                                                      uint64_t &OrigExitWeight) {
   // To estimate the number of times the loop body was executed, we want to
@@ -841,6 +841,11 @@ static std::optional<uint64_t> getEstimatedTripCount(BranchInst *ExitingBranch,
   // Estimated exit count is a ratio of the loop weight by the weight of the
   // edge exiting the loop, rounded to nearest.
   uint64_t ExitCount = llvm::divideNearest(LoopWeight, ExitWeight);
+
+  // When ExitCount + 1 would wrap in unsigned, saturate at UINT_MAX.
+  if (ExitCount >= std::numeric_limits<unsigned>::max())
+    return std::numeric_limits<unsigned>::max();
+
   // Estimated trip count is one plus estimated exit count.
   return ExitCount + 1;
 }
@@ -956,6 +961,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   }
 }
 
+// This is the inverse to getReductionForBinop
 unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   switch (RdxID) {
   case Intrinsic::vector_reduce_fadd:
@@ -983,6 +989,25 @@ unsigned llvm::getArithmeticReductionInstruction(Intrinsic::ID RdxID) {
   default:
     llvm_unreachable("Unexpected ID");
   }
+}
+
+// This is the inverse to getArithmeticReductionInstruction
+Intrinsic::ID llvm::getReductionForBinop(Instruction::BinaryOps Opc) {
+  switch (Opc) {
+  default:
+    break;
+  case Instruction::Add:
+    return Intrinsic::vector_reduce_add;
+  case Instruction::Mul:
+    return Intrinsic::vector_reduce_mul;
+  case Instruction::And:
+    return Intrinsic::vector_reduce_and;
+  case Instruction::Or:
+    return Intrinsic::vector_reduce_or;
+  case Instruction::Xor:
+    return Intrinsic::vector_reduce_xor;
+  }
+  return Intrinsic::not_intrinsic;
 }
 
 Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID) {
@@ -1172,9 +1197,9 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                        const RecurrenceDescriptor &Desc,
-                                        PHINode *OrigPhi) {
+Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
+                                  const RecurrenceDescriptor &Desc,
+                                  PHINode *OrigPhi) {
   assert(
       RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
       "Unexpected reduction kind");
@@ -1207,82 +1232,122 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
-Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,
-                                         RecurKind RdxKind) {
+Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
+                                       Value *Start,
+                                       const RecurrenceDescriptor &Desc) {
+  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+             Desc.getRecurrenceKind()) &&
+         "Unexpected reduction kind");
+  Value *Sentinel = Desc.getSentinelValue();
+  Value *MaxRdx = Src->getType()->isVectorTy()
+                      ? Builder.CreateIntMaxReduce(Src, true)
+                      : Src;
+  // Correct the final reduction result back to the start value if the maximum
+  // reduction is sentinel value.
+  Value *Cmp =
+      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
+  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
+}
+
+Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
+                                  FastMathFlags Flags) {
+  bool Negative = false;
+  switch (RdxID) {
+  default:
+    llvm_unreachable("Expecting a reduction intrinsic");
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_mul:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_xor:
+  case Intrinsic::vector_reduce_and:
+  case Intrinsic::vector_reduce_fadd:
+  case Intrinsic::vector_reduce_fmul: {
+    unsigned Opc = getArithmeticReductionInstruction(RdxID);
+    return ConstantExpr::getBinOpIdentity(Opc, Ty, false,
+                                          Flags.noSignedZeros());
+  }
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax: {
+    Intrinsic::ID ScalarID = getMinMaxReductionIntrinsicOp(RdxID);
+    return ConstantExpr::getIntrinsicIdentity(ScalarID, Ty);
+  }
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fmaximum:
+    Negative = true;
+    [[fallthrough]];
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fminimum: {
+    bool PropagatesNaN = RdxID == Intrinsic::vector_reduce_fminimum ||
+                         RdxID == Intrinsic::vector_reduce_fmaximum;
+    const fltSemantics &Semantics = Ty->getFltSemantics();
+    return (!Flags.noNaNs() && !PropagatesNaN)
+               ? ConstantFP::getQNaN(Ty, Negative)
+           : !Flags.noInfs()
+               ? ConstantFP::getInfinity(Ty, Negative)
+               : ConstantFP::get(Ty, APFloat::getLargest(Semantics, Negative));
+  }
+  }
+}
+
+Value *llvm::getRecurrenceIdentity(RecurKind K, Type *Tp, FastMathFlags FMF) {
+  assert((!(K == RecurKind::FMin || K == RecurKind::FMax) ||
+          (FMF.noNaNs() && FMF.noSignedZeros())) &&
+         "nnan, nsz is expected to be set for FP min/max reduction.");
+  Intrinsic::ID RdxID = getReductionIntrinsicID(K);
+  return getReductionIdentity(RdxID, Tp, FMF);
+}
+
+Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
+                                   RecurKind RdxKind) {
   auto *SrcVecEltTy = cast<VectorType>(Src->getType())->getElementType();
+  auto getIdentity = [&]() {
+    return getRecurrenceIdentity(RdxKind, SrcVecEltTy,
+                                 Builder.getFastMathFlags());
+  };
   switch (RdxKind) {
   case RecurKind::Add:
-    return Builder.CreateAddReduce(Src);
   case RecurKind::Mul:
-    return Builder.CreateMulReduce(Src);
   case RecurKind::And:
-    return Builder.CreateAndReduce(Src);
   case RecurKind::Or:
-    return Builder.CreateOrReduce(Src);
   case RecurKind::Xor:
-    return Builder.CreateXorReduce(Src);
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin:
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMinimum:
+  case RecurKind::FMaximum:
+    return Builder.CreateUnaryIntrinsic(getReductionIntrinsicID(RdxKind), Src);
   case RecurKind::FMulAdd:
   case RecurKind::FAdd:
-    return Builder.CreateFAddReduce(ConstantFP::getNegativeZero(SrcVecEltTy),
-                                    Src);
+    return Builder.CreateFAddReduce(getIdentity(), Src);
   case RecurKind::FMul:
-    return Builder.CreateFMulReduce(ConstantFP::get(SrcVecEltTy, 1.0), Src);
-  case RecurKind::SMax:
-    return Builder.CreateIntMaxReduce(Src, true);
-  case RecurKind::SMin:
-    return Builder.CreateIntMinReduce(Src, true);
-  case RecurKind::UMax:
-    return Builder.CreateIntMaxReduce(Src, false);
-  case RecurKind::UMin:
-    return Builder.CreateIntMinReduce(Src, false);
-  case RecurKind::FMax:
-    return Builder.CreateFPMaxReduce(Src);
-  case RecurKind::FMin:
-    return Builder.CreateFPMinReduce(Src);
-  case RecurKind::FMinimum:
-    return Builder.CreateFPMinimumReduce(Src);
-  case RecurKind::FMaximum:
-    return Builder.CreateFPMaximumReduce(Src);
+    return Builder.CreateFMulReduce(getIdentity(), Src);
   default:
     llvm_unreachable("Unhandled opcode");
   }
 }
 
-Value *llvm::createSimpleTargetReduction(VectorBuilder &VBuilder, Value *Src,
-                                         const RecurrenceDescriptor &Desc) {
-  RecurKind Kind = Desc.getRecurrenceKind();
+Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
+                                   RecurKind Kind) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+         "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
   Value *Iden =
-      Desc.getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
+      getRecurrenceIdentity(Kind, SrcEltTy, VBuilder.getFastMathFlags());
   Value *Ops[] = {Iden, Src};
-  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
-Value *llvm::createTargetReduction(IRBuilderBase &B,
-                                   const RecurrenceDescriptor &Desc, Value *Src,
-                                   PHINode *OrigPhi) {
-  // TODO: Support in-order reductions based on the recurrence descriptor.
-  // All ops in the reduction inherit fast-math-flags from the recurrence
-  // descriptor.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
-  B.setFastMathFlags(Desc.getFastMathFlags());
-
-  RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfTargetReduction(B, Src, Desc, OrigPhi);
-
-  return createSimpleTargetReduction(B, Src, RK);
-}
-
-Value *llvm::createOrderedReduction(IRBuilderBase &B,
-                                    const RecurrenceDescriptor &Desc,
+Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
                                     Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1290,11 +1355,9 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   return B.CreateFAddReduce(Start, Src);
 }
 
-Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
-                                    const RecurrenceDescriptor &Desc,
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder, RecurKind Kind,
                                     Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1302,7 +1365,7 @@ Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
   Intrinsic::ID Id = getReductionIntrinsicID(RecurKind::FAdd);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Value *Ops[] = {Start, Src};
-  return VBuilder.createSimpleTargetReduction(Id, SrcTy, Ops);
+  return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
 void llvm::propagateIRFlags(Value *I, ArrayRef<Value *> VL, Value *OpValue,
@@ -1966,7 +2029,7 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
-    auto *VFTimesUFTimesSize =
+    auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
@@ -1974,13 +2037,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

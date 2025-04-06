@@ -1118,9 +1118,9 @@ struct ST {
 void foo(int arg) {
   ST arr[3][4];
   // CK20: [[DIMS:%.+]] = alloca [3 x [[STRUCT_DESCRIPTOR]]],
-  // CK20: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [[STRUCT_ST]]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK20: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [3 x [4 x [[STRUCT_ST]]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
   // CK20: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [[STRUCT_ST]]], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-  // CK20: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [[STRUCT_ST]], ptr [[ARRAY_DECAY]], {{.+}}
+  // CK20: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds nuw [[STRUCT_ST]], ptr [[ARRAY_DECAY]], {{.+}}
   // CK20: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
   // CK20: store ptr [[ARR]], ptr [[BP0]],
   // CK20: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], {{.+}} 0, {{.+}} 0
@@ -1186,9 +1186,9 @@ struct ST {
   // CK21: _ZN2ST3fooEv
   void foo() {
     // CK21: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
-    // CK21: [[ARRAY_IDX:%.+]] = getelementptr inbounds [10 x [10 x [10 x ptr]]], ptr [[DPTR:%.+]], {{.+}} 0, {{.+}} 0
+    // CK21: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [10 x [10 x [10 x ptr]]], ptr [[DPTR:%.+]], {{.+}} 0, {{.+}} 0
     // CK21: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [10 x [10 x ptr]], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-    // CK21: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [10 x ptr], ptr [[ARRAY_DECAY]], {{.+}} 1
+    // CK21: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds nuw [10 x ptr], ptr [[ARRAY_DECAY]], {{.+}} 1
     // CK21: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [10 x ptr], ptr [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
     // CK21: [[ARRAY_IDX_3:%.+]] = getelementptr inbounds {{.+}}, ptr [[ARRAY_DECAY_2]], {{.+}} 0
     // CK21: [[BP0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
@@ -1262,9 +1262,9 @@ struct ST {
   // CK22: _ZN2ST3fooEPA10_Pi
   void foo(int *arr[5][10]) {
     // CK22: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
-    // CK22: [[ARRAY_IDX:%.+]] = getelementptr inbounds [10 x ptr], ptr [[ARR:%.+]], {{.+}} 0
+    // CK22: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [10 x ptr], ptr [[ARR:%.+]], {{.+}} 0
     // CK22: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [10 x ptr], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-    // CK22: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds ptr, ptr [[ARRAY_DECAY:%.+]], {{.+}} 1
+    // CK22: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds nuw ptr, ptr [[ARRAY_DECAY:%.+]], {{.+}} 1
     // CK22: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
     // CK22: [[P0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[P:%.+]], i{{.+}} 0, i{{.+}} 0
     // CK22: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0
@@ -1338,11 +1338,11 @@ void foo(int arg) {
   float farr[5][5][5];
   // CK23: [[ARG_ADDR:%.+]] = alloca i32,
   // CK23: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
-  // CK23: [[ARRAY_IDX:%.+]] = getelementptr inbounds [5 x [5 x [5 x float]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK23: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [5 x [5 x [5 x float]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
   // CK23: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [5 x [5 x float]], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-  // CK23: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x float], ptr [[ARRAY_DECAY]], {{.+}}
+  // CK23: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds nuw [5 x float], ptr [[ARRAY_DECAY]], {{.+}}
   // CK23: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x float], ptr [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
-  // CK23: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds float, ptr [[ARRAY_DECAY_2]], {{.+}}
+  // CK23: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds nuw float, ptr [[ARRAY_DECAY_2]], {{.+}}
   // CK23: [[MUL:%.+]] = mul nuw i64 4,
   // CK23: [[BP0:%.+]] = getelementptr inbounds [1 x ptr], ptr [[BP:%.+]], {{.+}} 0, {{.+}} 0
   // CK23: store ptr [[ARR]], ptr [[BP0]],
@@ -1411,11 +1411,11 @@ void foo(int arg) {
 void foo(int arg) {
   double darr[3][4][5];
   // CK24: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
-  // CK24: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [5 x double]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK24: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [3 x [4 x [5 x double]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
   // CK24: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [5 x double]], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-  // CK24: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x double], ptr [[ARRAY_DECAY]], {{.+}}
+  // CK24: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds nuw [5 x double], ptr [[ARRAY_DECAY]], {{.+}}
   // CK24: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x double], ptr [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
-  // CK24: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds double, ptr [[ARRAY_DECAY_2]], {{.+}}
+  // CK24: [[ARRAY_IDX_2:%.+]] = getelementptr inbounds nuw double, ptr [[ARRAY_DECAY_2]], {{.+}}
   // CK24: [[MUL:%.+]] = mul nuw i64 8,
   // CK24: [[SUB:%.+]] = sub nuw i64 4, [[ARG:%.+]]
   // CK24: [[LEN:%.+]] = udiv {{.+}} [[SUB]], 1
@@ -1488,15 +1488,15 @@ void foo(int arg) {
 
   // CK25: [[DIMS:%.+]] = alloca [4 x [[STRUCT_DESCRIPTOR]]],
   // CK25: [[DIMS_2:%.+]] = alloca [3 x [[STRUCT_DESCRIPTOR]]],
-  // CK25: [[ARRAY_IDX:%.+]] = getelementptr inbounds [3 x [4 x [5 x i32]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_IDX:%.+]] = getelementptr inbounds nuw [3 x [4 x [5 x i32]]], ptr [[ARR:%.+]], {{.+}} 0, {{.+}} 0
   // CK25: [[ARRAY_DECAY:%.+]] = getelementptr inbounds [4 x [5 x i32]], ptr [[ARRAY_IDX]], {{.+}} 0, {{.+}} 0
-  // CK25: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds [5 x i32], ptr [[ARRAY_DECAY]], {{.+}}
+  // CK25: [[ARRAY_IDX_1:%.+]] = getelementptr inbounds nuw [5 x i32], ptr [[ARRAY_DECAY]], {{.+}}
   // CK25: [[ARRAY_DECAY_2:%.+]] = getelementptr inbounds [5 x i32], ptr [[ARRAY_IDX_1]], {{.+}} 0, {{.+}} 0
-  // CK25: [[ARRAY_IDX_3:%.+]] = getelementptr inbounds {{.+}}, ptr [[ARRAY_DECAY_2]], {{.+}} 1
+  // CK25: [[ARRAY_IDX_3:%.+]] = getelementptr inbounds nuw {{.+}}, ptr [[ARRAY_DECAY_2]], {{.+}} 1
   // CK25: [[LEN:%.+]] = sub nuw i64 4, [[ARG_ADDR:%.+]]
-  // CK25: [[ARRAY_IDX_4:%.+]] = getelementptr inbounds [4 x [3 x float]], ptr [[FARR:%.+]], {{.+}} 0, {{.+}} 0
+  // CK25: [[ARRAY_IDX_4:%.+]] = getelementptr inbounds nuw [4 x [3 x float]], ptr [[FARR:%.+]], {{.+}} 0, {{.+}} 0
   // CK25: [[ARRAY_DECAY_5:%.+]] = getelementptr inbounds [3 x float], ptr [[ARRAY_IDX_4]], {{.+}} 0, {{.+}} 0
-  // CK25: [[ARRAY_IDX_6:%.+]] = getelementptr inbounds float, ptr [[ARRAY_DECAY_5:%.+]], {{.+}} 1
+  // CK25: [[ARRAY_IDX_6:%.+]] = getelementptr inbounds nuw float, ptr [[ARRAY_DECAY_5:%.+]], {{.+}} 1
   // CK25: [[BP0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[BP:%.+]], i{{.+}} 0, i{{.+}} 0
   // CK25: [[P0:%.+]] = getelementptr inbounds [3 x ptr], ptr [[P:%.+]], i{{.+}} 0, i{{.+}} 0
   // CK25: [[DIM_1:%.+]] = getelementptr inbounds [4 x [[STRUCT_DESCRIPTOR]]], ptr [[DIMS]], {{.+}} 0, {{.+}} 0

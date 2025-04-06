@@ -93,6 +93,12 @@ namespace llvm {
   Value *emitStrLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
                     const TargetLibraryInfo *TLI);
 
+  /// Emit a call to the wcslen function to the builder, for the specified
+  /// pointer. Ptr is required to be some pointer type, and the return value has
+  /// 'size_t' type.
+  Value *emitWcsLen(Value *Ptr, IRBuilderBase &B, const DataLayout &DL,
+                    const TargetLibraryInfo *TLI);
+
   /// Emit a call to the strdup function to the builder, for the specified
   /// pointer. Ptr is required to be some pointer type, and the return value has
   /// 'i8*' type.
@@ -251,7 +257,7 @@ namespace llvm {
 
   /// Emit a call to the calloc function.
   Value *emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
-                    const TargetLibraryInfo &TLI);
+                    const TargetLibraryInfo &TLI, unsigned AddrSpace);
 
   /// Emit a call to the hot/cold operator new function.
   Value *emitHotColdNew(Value *Num, IRBuilderBase &B,

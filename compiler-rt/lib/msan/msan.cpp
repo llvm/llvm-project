@@ -457,10 +457,11 @@ void __msan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
+  InitializePlatformEarly();
+
   InitializeInterceptors();
   InstallAtForkHandler();
   CheckASLR();
-  InitTlsSize();
   InstallDeadlySignalHandlers(MsanOnDeadlySignal);
   InstallAtExitHandler(); // Needs __cxa_atexit interceptor.
 

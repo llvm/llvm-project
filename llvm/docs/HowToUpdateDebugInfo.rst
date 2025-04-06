@@ -9,7 +9,8 @@ Introduction
 ============
 
 Certain kinds of code transformations can inadvertently result in a loss of
-debug info, or worse, make debug info misrepresent the state of a program.
+debug info, or worse, make debug info misrepresent the state of a program. Debug
+info availability is also essential for SamplePGO.
 
 This document specifies how to correctly update debug info in various kinds of
 code transformations, and offers suggestions for how to create targeted debug
@@ -76,31 +77,49 @@ When to merge instruction locations
 -----------------------------------
 
 A transformation should merge instruction locations if it replaces multiple
-instructions with a single merged instruction, *and* that merged instruction
-does not correspond to any of the original instructions' locations. The API to
-use is ``Instruction::applyMergedLocation``.
+instructions with one or more new instructions, *and* the new instruction(s)
+produce the output of more than one of the original instructions. The API to use
+is ``Instruction::applyMergedLocation``. For each new instruction I, its new
+location should be a merge of the locations of all instructions whose output is
+produced by I. Typically, this includes any instruction being RAUWed by a new
+instruction, and excludes any instruction that only produces an intermediate
+value used by the RAUWed instruction.
 
 The purpose of this rule is to ensure that a) the single merged instruction
 has a location with an accurate scope attached, and b) to prevent misleading
 single-stepping (or breakpoint) behavior. Often, merged instructions are memory
 accesses which can trap: having an accurate scope attached greatly assists in
 crash triage by identifying the (possibly inlined) function where the bad
-memory access occurred. This rule is also meant to assist SamplePGO by banning
-scenarios in which a sample of a block containing a merged instruction is
-misattributed to a block containing one of the instructions-to-be-merged.
+memory access occurred.
+
+To maintain distinct source locations for SamplePGO, it is often beneficial to
+retain an arbitrary but deterministic location instead of discarding line and
+column information as part of merging. In particular, loss of location
+information for calls inhibit optimizations such as indirect call promotion.
+This behavior can be optionally enabled until support for accurately
+representing merged instructions in the line table is implemented.
 
 Examples of transformations that should follow this rule include:
 
-* Merging identical loads/stores which occur on both sides of a CFG diamond
-  (see the ``MergedLoadStoreMotion`` pass).
+* Hoisting identical instructions from all successors of a conditional branch
+  or sinking those from all paths to a postdominating block. For example,
+  merging identical loads/stores which occur on both sides of a CFG diamond
+  (see the ``MergedLoadStoreMotion`` pass). For each group of identical
+  instructions being hoisted/sunk, the merge of all their locations should be
+  applied to the merged instruction.
 
 * Merging identical loop-invariant stores (see the LICM utility
   ``llvm::promoteLoopAccessesToScalars``).
 
-* Peephole optimizations which combine multiple instructions together, like
-  ``(add (mul A B) C) => llvm.fma.f32(A, B, C)``.  Note that the location of
-  the ``fma`` does not exactly correspond to the locations of either the
-  ``mul`` or the ``add`` instructions.
+* Scalar instructions being combined into a vector instruction, like
+  ``(add A1, B1), (add A2, B2) => (add (A1, A2), (B1, B2))``. As the new vector
+  ``add`` computes the result of both original ``add`` instructions
+  simultaneously, it should use a merge of the two locations. Similarly, if
+  prior optimizations have already produced vectors ``(A1, A2)`` and
+  ``(B2, B1)``, then we might create a ``(shufflevector (1, 0), (B2, B1))``
+  instruction to produce ``(B1, B2)`` for the vector ``add``; in this case we've
+  created two instructions to replace the original ``adds``, so both new
+  instructions should use the merged location.
 
 Examples of transformations for which this rule *does not* apply include:
 
@@ -109,15 +128,22 @@ Examples of transformations for which this rule *does not* apply include:
   ``zext`` is modified but remains in its block, so the rule for
   :ref:`preserving locations<WhenToPreserveLocation>` should apply.
 
+* Peephole optimizations which combine multiple instructions together, like
+  ``(add (mul A B) C) => llvm.fma.f32(A, B, C)``. Note that the result of the
+  ``mul`` no longer appears in the program, while the result of the ``add`` is
+  now produced by the ``fma``, so the ``add``'s location should be used.
+
 * Converting an if-then-else CFG diamond into a ``select``. Preserving the
   debug locations of speculated instructions can make it seem like a condition
   is true when it's not (or vice versa), which leads to a confusing
   single-stepping experience. The rule for
   :ref:`dropping locations<WhenToDropLocation>` should apply here.
 
-* Hoisting identical instructions which appear in several successor blocks into
-  a predecessor block (see ``BranchFolder::HoistCommonCodeInSuccs``). In this
-  case there is no single merged instruction. The rule for
+* Hoisting/sinking that would make a location reachable when it previously
+  wasn't. Consider hoisting two identical instructions with the same location
+  from first two cases of a switch that has three cases. Merging their
+  locations would make the location from the first two cases reachable when the
+  third case is taken. The rule for
   :ref:`dropping locations<WhenToDropLocation>` applies.
 
 .. _WhenToDropLocation:

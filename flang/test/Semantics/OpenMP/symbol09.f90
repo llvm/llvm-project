@@ -23,7 +23,7 @@ subroutine function_call_in_region
   !$omp parallel  default(none) private(a) shared(b)
   !DEF: /function_call_in_region/OtherConstruct1/a (OmpPrivate) HostAssoc REAL(4)
   !REF: /function_call_in_region/foo
-  !DEF: /function_call_in_region/OtherConstruct1/b HostAssoc REAL(4)
+  !DEF: /function_call_in_region/OtherConstruct1/b (OmpShared) HostAssoc REAL(4)
   a = foo(b)
   !$omp end parallel
   !REF: /function_call_in_region/a

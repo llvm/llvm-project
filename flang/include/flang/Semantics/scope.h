@@ -11,11 +11,11 @@
 
 #include "attr.h"
 #include "symbol.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/reference.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
+#include "flang/Support/Fortran.h"
 #include <list>
 #include <map>
 #include <optional>
@@ -61,7 +61,7 @@ class Scope {
 public:
   ENUM_CLASS(Kind, Global, IntrinsicModules, Module, MainProgram, Subprogram,
       BlockData, DerivedType, BlockConstruct, Forall, OtherConstruct,
-      OpenACCConstruct, ImpliedDos)
+      OpenACCConstruct, ImpliedDos, OtherClause)
   using ImportKind = common::ImportKind;
 
   // Create the Global scope -- the root of the scope tree
@@ -138,6 +138,8 @@ public:
   const_iterator cend() const { return symbols_.cend(); }
 
   // Return symbols in declaration order (the iterators above are in name order)
+  // When a generic procedure interface shadows a derived type or specific
+  // procedure, only the generic's symbol appears in the output.
   SymbolVector GetSymbols() const;
   MutableSymbolVector GetSymbols();
 

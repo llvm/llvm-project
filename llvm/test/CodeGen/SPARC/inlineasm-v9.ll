@@ -1,4 +1,4 @@
-; RUN: llc -march=sparcv9 <%s | FileCheck %s
+; RUN: llc -mtriple=sparcv9 <%s | FileCheck %s
 
 ;; Ensures that inline-asm accepts and uses 'f' and 'e' register constraints.
 ; CHECK-LABEL: faddd:

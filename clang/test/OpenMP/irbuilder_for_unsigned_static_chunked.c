@@ -108,24 +108,24 @@ extern "C" void workshareloop_unsigned_static_chunked(float *a, float *b, float 
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[B_ADDR]], align 8
 // CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[TMP18]] to i64
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 [[IDXPROM]]
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP17]], i64 [[IDXPROM]]
 // CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[TMP20:%.*]] = load ptr, ptr [[C_ADDR]], align 8
 // CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM2:%.*]] = zext i32 [[TMP21]] to i64
-// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i64 [[IDXPROM2]]
+// CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP20]], i64 [[IDXPROM2]]
 // CHECK-NEXT:    [[TMP22:%.*]] = load float, ptr [[ARRAYIDX3]], align 4
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[TMP19]], [[TMP22]]
 // CHECK-NEXT:    [[TMP23:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP24]] to i64
-// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[TMP23]], i64 [[IDXPROM4]]
+// CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP23]], i64 [[IDXPROM4]]
 // CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[ARRAYIDX5]], align 4
 // CHECK-NEXT:    [[MUL6:%.*]] = fmul float [[MUL]], [[TMP25]]
 // CHECK-NEXT:    [[TMP26:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[I]], align 4
 // CHECK-NEXT:    [[IDXPROM7:%.*]] = zext i32 [[TMP27]] to i64
-// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds float, ptr [[TMP26]], i64 [[IDXPROM7]]
+// CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP26]], i64 [[IDXPROM7]]
 // CHECK-NEXT:    store float [[MUL6]], ptr [[ARRAYIDX8]], align 4
 // CHECK-NEXT:    br label [[OMP_LOOP_INC]]
 // CHECK:       omp_loop.inc:

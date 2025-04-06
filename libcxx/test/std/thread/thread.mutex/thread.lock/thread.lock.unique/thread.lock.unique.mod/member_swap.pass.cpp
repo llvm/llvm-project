@@ -13,21 +13,29 @@
 // void swap(unique_lock& u);
 
 #include <cassert>
+#include <memory>
 #include <mutex>
 
+#include "checking_mutex.h"
 #include "test_macros.h"
-#include "../types.h"
 
-MyMutex m;
+#if TEST_STD_VER >= 11
+static_assert(
+    noexcept(std::declval<std::unique_lock<checking_mutex>&>().swap(std::declval<std::unique_lock<checking_mutex>&>())),
+    "");
+#endif
 
 int main(int, char**) {
-  std::unique_lock<MyMutex> lk1(m);
-  std::unique_lock<MyMutex> lk2;
-  lk1.swap(lk2);
-  assert(lk1.mutex() == nullptr);
-  assert(lk1.owns_lock() == false);
-  assert(lk2.mutex() == &m);
-  assert(lk2.owns_lock() == true);
+  checking_mutex mux;
+  std::unique_lock<checking_mutex> lock1(mux);
+  std::unique_lock<checking_mutex> lock2;
+
+  lock1.swap(lock2);
+
+  assert(lock1.mutex() == nullptr);
+  assert(!lock1.owns_lock());
+  assert(lock2.mutex() == std::addressof(mux));
+  assert(lock2.owns_lock() == true);
 
   return 0;
 }

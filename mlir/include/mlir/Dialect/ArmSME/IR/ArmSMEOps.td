@@ -371,7 +371,7 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
   let arguments = (ins
     Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base,
     Variadic<Index>:$indices,
-    Optional<AnyType>:$padding, Optional<AnyVector>:$mask,
+    Optional<AnyType>:$padding, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
   );
   let results = (outs SMETile:$result);
@@ -444,7 +444,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
   }];
   let arguments = (ins SMETile:$valueToStore,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
-    Variadic<Index>:$indices, Optional<AnyVector>:$mask,
+    Variadic<Index>:$indices, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
   );
   let extraClassDeclaration = [{
@@ -592,7 +592,7 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
   }];
 }
 
-def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
+def InsertTileSliceOp : ArmSME_Op<"insert_tile_slice", [
     ArmSMETileOpInterface, Pure,
     AllTypesMatch<["tile", "result"]>,
     TypesMatchWith<
@@ -603,25 +603,25 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
         "::llvm::cast<mlir::VectorType>($_self).getElementType(),"
         "/*scalableDims=*/{true})">,
 ]> {
-  let summary = "Move 1-D scalable vector to slice of 2-D tile";
+  let summary = "Insert 1-D scalable vector into slice of 2-D tile";
   let description = [{
-    The vector to tile slice operation moves a 1-D scalable vector to a slice
-    of a 2-D scalable vector tile at the given index. The type of the 1-D
-    scalable vector to be moved must match the type of the tile slice. A tile
-    slice is a 1-D vector of horizontally or vertically contiguous elements
-    within a ZA tile. The updated tile is returned as the result.
+    Inserts a 1-D scalable vector into a slice of a 2-D scalable vector tile at
+    the given index. The type of the 1-D scalable vector to be inserted must
+    match the type of the tile slice. A tile slice is a 1-D vector of
+    horizontally or vertically contiguous elements within a ZA tile. The updated
+    tile is returned as the result.
 
     An optional tile slice layout attribute specifies whether the tile slice is
     horizontal (default) or vertical.
 
-    Example 1: Move a vector<[16]xi8> into tile horizontally (default) at given index.
+    Example 1: Insert `vector<[16]xi8>` into tile horizontally at the given index.
     ```mlir
-    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[16]xi8> into vector<[16]x[16]xi8>
+    %tile_update = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[16]xi8> into vector<[16]x[16]xi8>
     ```
 
-    Example 2: Move a vector<[2]xf64> into tile vertically at given index.
+    Example 2: Insert `vector<[2]xf64>` into tile vertically at the given index.
     ```mlir
-    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index layout<vertical> : vector<[2]xf64> into vector<[2]x[2]xf64>
+    %tile_update = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> into vector<[2]x[2]xf64>
     ```
   }];
   let arguments = (ins
@@ -636,35 +636,35 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
   }];
 
   let assemblyFormat = [{
-    $vector `,` $tile `,` $tile_slice_index (`layout` `` $layout^)?
+    $vector `,` $tile `[` $tile_slice_index `]` (`layout` `` $layout^)?
       attr-dict `:` type($vector) `into` type($result)
   }];
 }
 
-def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [
+def ExtractTileSliceOp : ArmSME_Op<"extract_tile_slice", [
     ArmSMETileOpInterface, Pure,
     TypesMatchWith<
       "type of 'result' matches type of 'tile' slice",
       "tile", "result",
       "VectorType(VectorType::Builder(::llvm::cast<mlir::VectorType>($_self)).dropDim(0))">,
 ]> {
-  let summary = "Move slice of a 2-D tile to a 1-D scalable vector";
+  let summary = "Extract 1-D scalable vector from slice of 2-D tile";
   let description = [{
-    The tile slice to vector operation extracts a 1-D scalable slice from a 2-D
-    scalable tile at the given index. A tile slice is a 1-D vector of
-    horizontally or vertically contiguous elements within a ZA tile.
+    Extracts a 1-D scalable slice from a 2-D scalable tile at the given index.
+    A tile slice is a 1-D vector of horizontally or vertically contiguous
+    elements within a ZA tile.
 
     An optional tile slice layout attribute specifies whether the tile slice is
     horizontal (default) or vertical.
 
     Example 1: Extract `vector<[16]xi8>` from tile horizontally at the given index.
     ```mlir
-    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
+    %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
     ```
 
     Example 2: Extract `vector<[2]xf64>` from tile vertically at the given index.
     ```mlir
-    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
+    %slice = arm_sme.extract_tile_slice %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
     ```
   }];
 
@@ -799,9 +799,9 @@ class OuterProductWideningBase<string mnemonic,
   ]> {
 
   let arguments = (ins
-    AnyTypeOf<allowedInputVectorTypes>:$lhs, AnyVector:$rhs,
-    Optional<AnyVector>:$lhsMask, Optional<AnyVector>:$rhsMask,
-    Optional<AnyVector>:$acc);
+    AnyTypeOf<allowedInputVectorTypes>:$lhs, AnyVectorOfNonZeroRank:$rhs,
+    Optional<AnyVectorOfNonZeroRank>:$lhsMask, Optional<AnyVectorOfNonZeroRank>:$rhsMask,
+    Optional<AnyVectorOfNonZeroRank>:$acc);
   let results = (outs AnyTypeOf<allowedResultVectorTypes>:$result);
 
   let assemblyFormat = [{

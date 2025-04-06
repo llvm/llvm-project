@@ -26,7 +26,7 @@ define dso_local i64 @test_stdcx(ptr %a, i64 %b) {
 ; CHECK-NEXT:    stdcx. 4, 0, 3
 ; CHECK-NEXT:    mfocrf 3, 128
 ; CHECK-NEXT:    srwi 3, 3, 28
-; CHECK-NEXT:    extsw 3, 3
+; CHECK-NEXT:    rlwinm 3, 3, 31, 31, 31
 ; CHECK-NEXT:    blr
 entry:
   %0 = tail call i32 @llvm.ppc.stdcx(ptr %a, i64 %b)

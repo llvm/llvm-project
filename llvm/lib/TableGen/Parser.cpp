@@ -28,7 +28,7 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   auto *MainFileBuffer = SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID());
   Records.saveInputFilename(MainFileBuffer->getBufferIdentifier().str());
 
-  TGParser Parser(SrcMgr, /*Macros=*/std::nullopt, Records,
+  TGParser Parser(SrcMgr, /*Macros=*/{}, Records,
                   /*NoWarnOnUnusedTemplateArgs=*/false,
                   /*TrackReferenceLocs=*/true);
   bool ParseResult = Parser.ParseFile();

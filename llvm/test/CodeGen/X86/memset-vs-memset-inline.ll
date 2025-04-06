@@ -163,3 +163,14 @@ define void @inlined_set_doesnt_call_external_function(ptr %a, i8 %value) nounwi
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 1024, i1 0)
   ret void
 }
+
+define void @memset_inlined_insize(ptr %a) nounwind minsize {
+; CHECK-LABEL: memset_inlined_insize:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1024, %ecx # imm = 0x400
+; CHECK-NEXT:    movb $42, %al
+; CHECK-NEXT:    rep;stosb %al, %es:(%rdi)
+; CHECK-NEXT:    retq
+  tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 42, i64 1024, i1 0)
+  ret void
+}

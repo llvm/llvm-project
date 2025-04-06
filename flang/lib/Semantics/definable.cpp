@@ -127,7 +127,7 @@ static std::optional<parser::Message> WhyNotDefinableBase(parser::CharBlock at,
       (!IsPointer(ultimate) || (isWholeSymbol && isPointerDefinition))) {
     return BlameSymbol(
         at, "'%s' is an INTENT(IN) dummy argument"_en_US, original);
-  } else if (acceptAllocatable &&
+  } else if (acceptAllocatable && IsAllocatable(ultimate) &&
       !flags.test(DefinabilityFlag::SourcedAllocation)) {
     // allocating a function result doesn't count as a def'n
     // unless there's SOURCE=
@@ -204,7 +204,8 @@ static std::optional<parser::Message> WhyNotDefinableLast(parser::CharBlock at,
     }
     return std::nullopt; // pointer assignment - skip following checks
   }
-  if (IsOrContainsEventOrLockComponent(ultimate)) {
+  if (!flags.test(DefinabilityFlag::AllowEventLockOrNotifyType) &&
+      IsOrContainsEventOrLockComponent(ultimate)) {
     return BlameSymbol(at,
         "'%s' is an entity with either an EVENT_TYPE or LOCK_TYPE"_en_US,
         original);
@@ -349,7 +350,8 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
                 if (!portabilityWarning &&
                     scope.context().languageFeatures().ShouldWarn(
                         common::UsageWarning::VectorSubscriptFinalization)) {
-                  portabilityWarning = parser::Message{at,
+                  portabilityWarning = parser::Message{
+                      common::UsageWarning::VectorSubscriptFinalization, at,
                       "Variable '%s' has a vector subscript and will be finalized by non-elemental subroutine '%s'"_port_en_US,
                       expr.AsFortran(), anyRankMatch->name()};
                 }
@@ -379,7 +381,7 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     if (auto whyNotDataRef{WhyNotDefinable(at, scope, flags, *dataRef)}) {
       return whyNotDataRef;
     }
-  } else if (evaluate::IsNullPointer(expr)) {
+  } else if (evaluate::IsNullPointerOrAllocatable(&expr)) {
     return parser::Message{
         at, "'%s' is a null pointer"_err_en_US, expr.AsFortran()};
   } else if (flags.test(DefinabilityFlag::PointerDefinition)) {

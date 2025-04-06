@@ -31,13 +31,28 @@ public:
     return m_object_instance_sp;
   }
 
-  virtual llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const = 0;
+  struct AbstractMethodRequirement {
+    llvm::StringLiteral name;
+    size_t min_arg_count = 0;
+  };
+
+  virtual llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const = 0;
+
+  llvm::SmallVector<llvm::StringLiteral> const GetAbstractMethods() const {
+    llvm::SmallVector<llvm::StringLiteral> abstract_methods;
+    llvm::transform(GetAbstractMethodRequirements(), abstract_methods.begin(),
+                    [](const AbstractMethodRequirement &requirement) {
+                      return requirement.name;
+                    });
+    return abstract_methods;
+  }
 
   template <typename Ret>
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,
-                              LLDBLog log_caterogy = LLDBLog::Process) {
-    LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
+                              LLDBLog log_category = LLDBLog::Process) {
+    LLDB_LOGF(GetLog(log_category), "%s ERROR = %s", caller_name.data(),
               error_msg.data());
     std::string full_error_message =
         llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
@@ -48,7 +63,7 @@ public:
           llvm::Twine(llvm::Twine(" (") + llvm::Twine(detailed_error) +
                       llvm::Twine(")"))
               .str();
-    error.SetErrorString(full_error_message);
+    error = Status(std::move(full_error_message));
     return {};
   }
 

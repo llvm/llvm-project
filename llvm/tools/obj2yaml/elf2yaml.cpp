@@ -1266,8 +1266,7 @@ ELFDumper<ELFT>::dumpSymtabShndxSection(const Elf_Shdr *Shdr) {
     return EntriesOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Word &E : *EntriesOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *EntriesOrErr);
   return S.release();
 }
 
@@ -1451,7 +1450,15 @@ ELFDumper<ELFT>::dumpVerdefSection(const Elf_Shdr *Shdr) {
     if (Verdef->vd_hash != 0)
       Entry.Hash = Verdef->vd_hash;
 
+    if (Verdef->vd_aux != sizeof(Elf_Verdef))
+      Entry.VDAux = Verdef->vd_aux;
+
     const uint8_t *BufAux = Buf + Verdef->vd_aux;
+    if (BufAux > Data.end())
+      return createStringError(
+          errc::invalid_argument,
+          "corrupted section: vd_aux value " + Twine(Verdef->vd_aux) +
+              " in section verdef points past end of the section");
     while (BufAux) {
       const Elf_Verdaux *Verdaux =
           reinterpret_cast<const Elf_Verdaux *>(BufAux);
@@ -1482,8 +1489,7 @@ ELFDumper<ELFT>::dumpSymverSection(const Elf_Shdr *Shdr) {
     return VersionsOrErr.takeError();
 
   S->Entries.emplace();
-  for (const Elf_Half &E : *VersionsOrErr)
-    S->Entries->push_back(E);
+  llvm::append_range(*S->Entries, *VersionsOrErr);
 
   return S.release();
 }

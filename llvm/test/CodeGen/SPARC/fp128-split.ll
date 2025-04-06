@@ -13,16 +13,16 @@ define fp128 @testcase(fp128 %0) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:qfpregs = COPY $q0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:dfpregs = COPY [[COPY]].sub_odd64
   ; CHECK-NEXT:   [[ADDri:%[0-9]+]]:i64regs = ADDri %stack.0, 0
-  ; CHECK-NEXT:   [[ORri:%[0-9]+]]:i64regs = ORri killed [[ADDri]], 8
-  ; CHECK-NEXT:   STDFrr [[ORri]], $g0, killed [[COPY1]] :: (store (s64) into %stack.0 + 8)
+  ; CHECK-NEXT:   %3:i64regs = disjoint ORri killed [[ADDri]], 8
+  ; CHECK-NEXT:   STDFrr %3, $g0, killed [[COPY1]] :: (store (s64) into %stack.0 + 8)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:dfpregs = COPY [[COPY]].sub_even64
   ; CHECK-NEXT:   STDFri %stack.0, 0, killed [[COPY2]] :: (store (s64) into %stack.0, align 16)
-  ; CHECK-NEXT:   [[LDXrr:%[0-9]+]]:i64regs = LDXrr [[ORri]], $g0 :: (load (s64) from %stack.0 + 8)
+  ; CHECK-NEXT:   [[LDXrr:%[0-9]+]]:i64regs = LDXrr %3, $g0 :: (load (s64) from %stack.0 + 8)
   ; CHECK-NEXT:   [[LDXri:%[0-9]+]]:i64regs = LDXri %stack.0, 0 :: (load (s64) from %stack.0, align 16)
   ; CHECK-NEXT:   [[ADDri1:%[0-9]+]]:i64regs = ADDri %stack.1, 0
-  ; CHECK-NEXT:   [[ORri1:%[0-9]+]]:i64regs = ORri killed [[ADDri1]], 8
+  ; CHECK-NEXT:   %8:i64regs = disjoint ORri killed [[ADDri1]], 8
   ; CHECK-NEXT:   [[ADDri2:%[0-9]+]]:i64regs = ADDri [[LDXrr]], -1
-  ; CHECK-NEXT:   STXrr [[ORri1]], $g0, killed [[ADDri2]] :: (store (s64) into %stack.1 + 8, basealign 16)
+  ; CHECK-NEXT:   STXrr %8, $g0, killed [[ADDri2]] :: (store (s64) into %stack.1 + 8, basealign 16)
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:intregs = COPY $g0
   ; CHECK-NEXT:   [[MOVRri:%[0-9]+]]:intregs = MOVRri [[LDXrr]], 1, [[COPY3]], 49
   ; CHECK-NEXT:   [[SRLri:%[0-9]+]]:i64regs = SRLri killed [[MOVRri]], 0
@@ -31,7 +31,7 @@ define fp128 @testcase(fp128 %0) {
   ; CHECK-NEXT:   [[LDDFri:%[0-9]+]]:dfpregs = LDDFri %stack.1, 0 :: (load (s64) from %stack.1, align 16)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:qfpregs = IMPLICIT_DEF
   ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:qfpregs = INSERT_SUBREG [[DEF]], killed [[LDDFri]], %subreg.sub_even64
-  ; CHECK-NEXT:   [[LDDFrr:%[0-9]+]]:dfpregs = LDDFrr [[ORri1]], $g0 :: (load (s64) from %stack.1 + 8)
+  ; CHECK-NEXT:   [[LDDFrr:%[0-9]+]]:dfpregs = LDDFrr %8, $g0 :: (load (s64) from %stack.1 + 8)
   ; CHECK-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:qfpregs = INSERT_SUBREG [[INSERT_SUBREG]], killed [[LDDFrr]], %subreg.sub_odd64
   ; CHECK-NEXT:   $q0 = COPY [[INSERT_SUBREG1]]
   ; CHECK-NEXT:   RETL 8, implicit $q0

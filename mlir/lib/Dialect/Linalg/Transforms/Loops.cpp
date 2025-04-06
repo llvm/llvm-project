@@ -321,7 +321,7 @@ static void lowerLinalgToLoopsImpl(Operation *enclosingOp) {
   affine::AffineApplyOp::getCanonicalizationPatterns(patterns, context);
   patterns.add<FoldAffineOp>(context);
   // Just apply the patterns greedily.
-  (void)applyPatternsAndFoldGreedily(enclosingOp, std::move(patterns));
+  (void)applyPatternsGreedily(enclosingOp, std::move(patterns));
 }
 
 struct LowerToAffineLoops

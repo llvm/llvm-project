@@ -18,8 +18,9 @@
 
 // static const time_zone* default_zone();
 
-#include <chrono>
 #include <cassert>
+#include <chrono>
+#include <concepts>
 
 int main(int, char**) {
   std::same_as<const std::chrono::time_zone*> decltype(auto) tz =

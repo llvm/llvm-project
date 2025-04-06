@@ -68,9 +68,11 @@ void GpuModuleToBinaryPass::runOnOperation() {
     }
     return &parentTable.value();
   };
-
-  TargetOptions targetOptions(toolkitPath, linkFiles, cmdOptions, *targetFormat,
-                              lazyTableBuilder);
+  SmallVector<Attribute> librariesToLink;
+  for (const std::string &path : linkFiles)
+    librariesToLink.push_back(StringAttr::get(&getContext(), path));
+  TargetOptions targetOptions(toolkitPath, librariesToLink, cmdOptions,
+                              elfSection, *targetFormat, lazyTableBuilder);
   if (failed(transformGpuModulesToBinaries(
           getOperation(), OffloadingLLVMTranslationAttrInterface(nullptr),
           targetOptions)))
@@ -99,7 +101,8 @@ LogicalResult moduleSerializer(GPUModuleOp op,
       return failure();
     }
 
-    Attribute object = target.createObject(*serializedModule, targetOptions);
+    Attribute object =
+        target.createObject(op, *serializedModule, targetOptions);
     if (!object) {
       op.emitError("An error happened while creating the object.");
       return failure();

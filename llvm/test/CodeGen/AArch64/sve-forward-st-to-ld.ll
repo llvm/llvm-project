@@ -4,8 +4,7 @@
 define <vscale x 2 x i64> @sti64ldi64(ptr nocapture %P, <vscale x 2 x i64> %v) {
 ; CHECK-LABEL: sti64ldi64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds <vscale x 2 x i64>, ptr %P, i64 1
@@ -18,8 +17,7 @@ entry:
 define <vscale x 2 x double> @stf64ldf64(ptr nocapture %P, <vscale x 2 x double> %v) {
 ; CHECK-LABEL: stf64ldf64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %arrayidx0 = getelementptr inbounds <vscale x 2 x double>, ptr %P, i64 1
@@ -48,9 +46,8 @@ entry:
 define <2 x i64> @sti64ldfixedi64(ptr nocapture %P, <vscale x 2 x i64> %v) {
 ; CHECK-LABEL: sti64ldfixedi64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ldr q0, [x0, x8]
 ; CHECK-NEXT:    ret
 entry:
@@ -64,10 +61,8 @@ entry:
 define <vscale x 4 x i32> @sti64ldi32(ptr nocapture %P, <vscale x 2 x i64> %v) {
 ; CHECK-LABEL: sti64ldi32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1w { z0.s }, p1/z, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast ptr %P to ptr
@@ -81,9 +76,8 @@ entry:
 define <vscale x 2 x i64> @stf64ldi64(ptr nocapture %P, <vscale x 2 x double> %v) {
 ; CHECK-LABEL: stf64ldi64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #1, mul vl]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast ptr %P to ptr

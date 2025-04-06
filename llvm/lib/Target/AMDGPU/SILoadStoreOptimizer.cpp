@@ -57,6 +57,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SILoadStoreOptimizer.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -104,7 +105,7 @@ struct AddressRegs {
 // GFX10 image_sample instructions can have 12 vaddrs + srsrc + ssamp.
 const unsigned MaxAddressRegs = 12 + 1 + 1;
 
-class SILoadStoreOptimizer : public MachineFunctionPass {
+class SILoadStoreOptimizer {
   struct CombineInfo {
     MachineBasicBlock::iterator I;
     unsigned EltSize;
@@ -227,11 +228,11 @@ private:
   CombineInfo *checkAndPrepareMerge(CombineInfo &CI, CombineInfo &Paired);
 
   void copyToDestRegs(CombineInfo &CI, CombineInfo &Paired,
-                      MachineBasicBlock::iterator InsertBefore, int OpName,
-                      Register DestReg) const;
+                      MachineBasicBlock::iterator InsertBefore,
+                      AMDGPU::OpName OpName, Register DestReg) const;
   Register copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                            MachineBasicBlock::iterator InsertBefore,
-                           int OpName) const;
+                           AMDGPU::OpName OpName) const;
 
   unsigned read2Opcode(unsigned EltSize) const;
   unsigned read2ST64Opcode(unsigned EltSize) const;
@@ -295,16 +296,20 @@ private:
   static InstClassEnum getCommonInstClass(const CombineInfo &CI,
                                           const CombineInfo &Paired);
 
-public:
-  static char ID;
-
-  SILoadStoreOptimizer() : MachineFunctionPass(ID) {
-    initializeSILoadStoreOptimizerPass(*PassRegistry::getPassRegistry());
-  }
-
   bool optimizeInstsWithSameBaseAddr(std::list<CombineInfo> &MergeList,
                                      bool &OptimizeListAgain);
   bool optimizeBlock(std::list<std::list<CombineInfo> > &MergeableInsts);
+
+public:
+  SILoadStoreOptimizer(AliasAnalysis *AA) : AA(AA) {}
+  bool run(MachineFunction &MF);
+};
+
+class SILoadStoreOptimizerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  SILoadStoreOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -694,7 +699,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   if (TII.isImage(Opc)) {
     int VAddr0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0);
     if (VAddr0Idx >= 0) {
-      int RsrcName =
+      AMDGPU::OpName RsrcName =
           TII.isMIMG(Opc) ? AMDGPU::OpName::srsrc : AMDGPU::OpName::rsrc;
       int RsrcIdx = AMDGPU::getNamedOperandIdx(Opc, RsrcName);
       Result.NumVAddrs = RsrcIdx - VAddr0Idx;
@@ -882,18 +887,18 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
 
 } // end anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SILoadStoreOptimizer, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
                       "SI Load Store Optimizer", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(SILoadStoreOptimizer, DEBUG_TYPE, "SI Load Store Optimizer",
-                    false, false)
+INITIALIZE_PASS_END(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
+                    "SI Load Store Optimizer", false, false)
 
-char SILoadStoreOptimizer::ID = 0;
+char SILoadStoreOptimizerLegacy::ID = 0;
 
-char &llvm::SILoadStoreOptimizerID = SILoadStoreOptimizer::ID;
+char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
 
-FunctionPass *llvm::createSILoadStoreOptimizerPass() {
-  return new SILoadStoreOptimizer();
+FunctionPass *llvm::createSILoadStoreOptimizerLegacyPass() {
+  return new SILoadStoreOptimizerLegacy();
 }
 
 static void addDefsUsesToList(const MachineInstr &MI,
@@ -963,11 +968,11 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
     return false;
 
   // Check other optional immediate operands for equality.
-  unsigned OperandsToMatch[] = {AMDGPU::OpName::cpol, AMDGPU::OpName::d16,
-                                AMDGPU::OpName::unorm, AMDGPU::OpName::da,
-                                AMDGPU::OpName::r128, AMDGPU::OpName::a16};
+  AMDGPU::OpName OperandsToMatch[] = {
+      AMDGPU::OpName::cpol, AMDGPU::OpName::d16,  AMDGPU::OpName::unorm,
+      AMDGPU::OpName::da,   AMDGPU::OpName::r128, AMDGPU::OpName::a16};
 
-  for (auto op : OperandsToMatch) {
+  for (AMDGPU::OpName op : OperandsToMatch) {
     int Idx = AMDGPU::getNamedOperandIdx(CI.I->getOpcode(), op);
     if (AMDGPU::getNamedOperandIdx(Paired.I->getOpcode(), op) != Idx)
       return false;
@@ -1251,7 +1256,7 @@ SILoadStoreOptimizer::checkAndPrepareMerge(CombineInfo &CI,
 // Paired.
 void SILoadStoreOptimizer::copyToDestRegs(
     CombineInfo &CI, CombineInfo &Paired,
-    MachineBasicBlock::iterator InsertBefore, int OpName,
+    MachineBasicBlock::iterator InsertBefore, AMDGPU::OpName OpName,
     Register DestReg) const {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
@@ -1282,7 +1287,7 @@ void SILoadStoreOptimizer::copyToDestRegs(
 Register
 SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
                                       MachineBasicBlock::iterator InsertBefore,
-                                      int OpName) const {
+                                      AMDGPU::OpName OpName) const {
   MachineBasicBlock *MBB = CI.I->getParent();
   DebugLoc DL = CI.I->getDebugLoc();
 
@@ -2009,7 +2014,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
   MachineOperand OffsetHi =
     createRegOrImm(static_cast<int32_t>(Addr.Offset >> 32), MI);
 
-  const auto *CarryRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
+  const auto *CarryRC = TRI->getWaveMaskRegClass();
   Register CarryReg = MRI->createVirtualRegister(CarryRC);
   Register DeadCarryReg = MRI->createVirtualRegister(CarryRC);
 
@@ -2051,7 +2056,7 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
 void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
                                                Register NewBase,
                                                int32_t NewOffset) const {
-  auto Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  auto *Base = TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   Base->setReg(NewBase);
   Base->setIsKill(false);
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
@@ -2169,12 +2174,13 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
 
   // Step1: Find the base-registers and a 64bit constant offset.
   MachineOperand &Base = *TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
+  auto [It, Inserted] = Visited.try_emplace(&MI);
   MemAddress MAddr;
-  if (!Visited.contains(&MI)) {
+  if (Inserted) {
     processBaseWithConstOffset(Base, MAddr);
-    Visited[&MI] = MAddr;
+    It->second = MAddr;
   } else
-    MAddr = Visited[&MI];
+    MAddr = It->second;
 
   if (MAddr.Offset == 0) {
     LLVM_DEBUG(dbgs() << "  Failed to extract constant-offset or there are no"
@@ -2182,8 +2188,9 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  BASE: {" << MAddr.Base.HiReg << ", "
-             << MAddr.Base.LoReg << "} Offset: " << MAddr.Offset << "\n\n";);
+  LLVM_DEBUG(dbgs() << "  BASE: {" << printReg(MAddr.Base.HiReg, TRI) << ", "
+                    << printReg(MAddr.Base.LoReg, TRI)
+                    << "} Offset: " << MAddr.Offset << "\n\n";);
 
   // Step2: Traverse through MI's basic block and find an anchor(that has the
   // same base-registers) with the highest 13bit distance from MI's offset.
@@ -2233,11 +2240,12 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     const MachineOperand &BaseNext =
       *TII->getNamedOperand(MINext, AMDGPU::OpName::vaddr);
     MemAddress MAddrNext;
-    if (!Visited.contains(&MINext)) {
+    auto [It, Inserted] = Visited.try_emplace(&MINext);
+    if (Inserted) {
       processBaseWithConstOffset(BaseNext, MAddrNext);
-      Visited[&MINext] = MAddrNext;
+      It->second = MAddrNext;
     } else
-      MAddrNext = Visited[&MINext];
+      MAddrNext = It->second;
 
     if (MAddrNext.Base.LoReg != MAddr.Base.LoReg ||
         MAddrNext.Base.HiReg != MAddr.Base.HiReg ||
@@ -2522,10 +2530,15 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
   return Modified;
 }
 
-bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
+bool SILoadStoreOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+  return SILoadStoreOptimizer(
+             &getAnalysis<AAResultsWrapperPass>().getAAResults())
+      .run(MF);
+}
 
+bool SILoadStoreOptimizer::run(MachineFunction &MF) {
   STM = &MF.getSubtarget<GCNSubtarget>();
   if (!STM->loadStoreOptEnabled())
     return false;
@@ -2534,7 +2547,6 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   MRI = &MF.getRegInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   LLVM_DEBUG(dbgs() << "Running SILoadStoreOptimizer\n");
 
@@ -2570,4 +2582,25 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Modified;
+}
+
+PreservedAnalyses
+SILoadStoreOptimizerPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (MF.getFunction().hasOptNone())
+    return PreservedAnalyses::all();
+
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  AAResults &AA = FAM.getResult<AAManager>(MF.getFunction());
+
+  bool Changed = SILoadStoreOptimizer(&AA).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

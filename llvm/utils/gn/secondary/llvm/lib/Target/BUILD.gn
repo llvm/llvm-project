@@ -40,7 +40,6 @@ static_library("Target") {
   ]
   sources = [
     "Target.cpp",
-    "TargetIntrinsicInfo.cpp",
     "TargetLoweringObjectFile.cpp",
     "TargetMachine.cpp",
     "TargetMachineC.cpp",

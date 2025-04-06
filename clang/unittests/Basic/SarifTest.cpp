@@ -35,7 +35,6 @@ static std::string serializeSarifDocument(llvm::json::Object &&Doc) {
   llvm::json::Value Value(std::move(Doc));
   llvm::raw_string_ostream OS{Output};
   OS << llvm::formatv("{0}", Value);
-  OS.flush();
   return Output;
 }
 

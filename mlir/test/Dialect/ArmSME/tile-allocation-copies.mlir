@@ -59,7 +59,7 @@ func.func @cond_branch(%cond: i1, %tile: vector<[4]x[4]xf32>) {
 //       CHECK: ^[[BB2_COPIES]]:
 //  CHECK-NEXT:   cf.br ^[[BB2:[[:alnum:]]+]]
 //       CHECK: ^[[BB2]]:
-//  CHECK-NEXT:   %[[NEXT_TILE:.*]] = arm_sme.move_vector_to_tile_slice %{{.*}}, %[[ITER_TILE]]
+//  CHECK-NEXT:   %[[NEXT_TILE:.*]] = arm_sme.insert_tile_slice %{{.*}}, %[[ITER_TILE]]
 //       CHECK:   %[[BB1_COPY_1:.*]] = arm_sme.copy_tile %[[NEXT_TILE]] : vector<[4]x[4]xf32>
 //       CHECK:   cf.br ^bb1(%{{[[:alnum:]]+}}, %[[BB1_COPY_1]]
 //       CHECK: ^[[BB3]](%{{.*}}: vector<[4]x[4]xf32>):
@@ -80,7 +80,7 @@ func.func @cond_branch_with_backedge(%tileA: vector<[4]x[4]xf32>, %tileB: vector
   cf.cond_br %continueLoop, ^bb2, ^bb3(%iterTile, %tileB, %tileC, %tileD : vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>, vector<[4]x[4]xf32>)
 ^bb2:
   // Live here: %iterTile, %tileB, %tileC, %tileD
-  %nextTile = arm_sme.move_vector_to_tile_slice %slice, %iterTile, %currentIndex : vector<[4]xf32> into vector<[4]x[4]xf32>
+  %nextTile = arm_sme.insert_tile_slice %slice, %iterTile[%currentIndex] : vector<[4]xf32> into vector<[4]x[4]xf32>
   %nextIndex = arith.addi %currentIndex, %c1 : index
   cf.br ^bb1(%nextIndex, %nextTile : index, vector<[4]x[4]xf32>)
 ^bb3(%finalTileA: vector<[4]x[4]xf32>, %finalTileB: vector<[4]x[4]xf32>, %finalTileC: vector<[4]x[4]xf32>, %finalTileD: vector<[4]x[4]xf32>):

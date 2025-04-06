@@ -28,12 +28,12 @@ struct maptest {
     // CHECK: getelementptr inbounds
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds nuw %struct.maptest, ptr [[THIS:%.+]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
-    // CHECK: [[S_DATA_0_ADDR:%.+]] = getelementptr inbounds [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 0
+    // CHECK: [[S_DATA_0_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 0
 
     // SZ = &this->s.data[6]-&this->s.data[0]
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds nuw %struct.maptest, ptr [[THIS]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
-    // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
+    // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
     // CHECK: [[S_DATA_6_ADDR:%.+]] = getelementptr float, ptr [[S_DATA_5_ADDR]], i32 1
     // CHECK: [[END_BC:%.+]] = ptrtoint ptr [[S_DATA_6_ADDR]] to i64
     // CHECK: [[BEG_BC:%.+]] = ptrtoint ptr [[S_DATA_0_ADDR]] to i64
@@ -64,12 +64,12 @@ struct maptest {
     // CHECK: [[SIZE:%.+]] = alloca [2 x i64],
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds nuw %struct.maptest, ptr [[THIS:%.+]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
-    // CHECK: [[S_DATA_0_ADDR:%.+]] = getelementptr inbounds [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 0
+    // CHECK: [[S_DATA_0_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 0
 
     // SZ = &this->s.data[6]-&this->s.data[0]
     // CHECK: [[S_ADDR:%.+]] = getelementptr inbounds nuw %struct.maptest, ptr [[THIS]], i32 0, i32 0
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
-    // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
+    // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
     // CHECK: [[S_DATA_6_ADDR:%.+]] = getelementptr float, ptr [[S_DATA_5_ADDR]], i32 1
     // CHECK: [[END_BC:%.+]] = ptrtoint ptr [[S_DATA_6_ADDR]] to i64
     // CHECK: [[BEG_BC:%.+]] = ptrtoint ptr [[S_DATA_0_ADDR]] to i64

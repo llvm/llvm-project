@@ -63,7 +63,7 @@ public:
       // Default filter just calls Pred on each of the base types.
       std::vector<Constant *> Result;
       for (Type *T : BaseTypes) {
-        Constant *V = UndefValue::get(T);
+        Constant *V = PoisonValue::get(T);
         if (Pred(Cur, V))
           makeConstantsWithType(T, Result);
       }
@@ -155,7 +155,8 @@ static inline SourcePred anyPtrType() {
     std::vector<Constant *> Result;
     // TODO: Should these point at something?
     for (Type *T : Ts)
-      Result.push_back(UndefValue::get(PointerType::getUnqual(T)));
+      Result.push_back(
+          PoisonValue::get(PointerType::getUnqual(T->getContext())));
     return Result;
   };
   return {Pred, Make};
@@ -175,7 +176,8 @@ static inline SourcePred sizedPtrType() {
     // as the pointer type will always be the same.
     for (Type *T : Ts)
       if (T->isSized())
-        Result.push_back(UndefValue::get(PointerType::getUnqual(T)));
+        Result.push_back(
+            PoisonValue::get(PointerType::getUnqual(T->getContext())));
 
     return Result;
   };

@@ -38,6 +38,10 @@ void SMEAttrs::set(unsigned M, bool Enable) {
                         isPreservesZT0())) &&
       "Attributes 'aarch64_new_zt0', 'aarch64_in_zt0', 'aarch64_out_zt0', "
       "'aarch64_inout_zt0' and 'aarch64_preserves_zt0' are mutually exclusive");
+
+  assert(!(hasAgnosticZAInterface() && hasSharedZAInterface()) &&
+         "Function cannot have a shared-ZA interface and an agnostic-ZA "
+         "interface");
 }
 
 SMEAttrs::SMEAttrs(const CallBase &CB) {
@@ -56,6 +60,9 @@ SMEAttrs::SMEAttrs(StringRef FuncName) : Bitmask(0) {
   if (FuncName == "__arm_sc_memcpy" || FuncName == "__arm_sc_memset" ||
       FuncName == "__arm_sc_memmove" || FuncName == "__arm_sc_memchr")
     Bitmask |= SMEAttrs::SM_Compatible;
+  if (FuncName == "__arm_sme_save" || FuncName == "__arm_sme_restore" ||
+      FuncName == "__arm_sme_state_size")
+    Bitmask |= SMEAttrs::SM_Compatible | SMEAttrs::SME_ABI_Routine;
 }
 
 SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
@@ -66,6 +73,8 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= SM_Compatible;
   if (Attrs.hasFnAttr("aarch64_pstate_sm_body"))
     Bitmask |= SM_Body;
+  if (Attrs.hasFnAttr("aarch64_za_state_agnostic"))
+    Bitmask |= ZA_State_Agnostic;
   if (Attrs.hasFnAttr("aarch64_in_za"))
     Bitmask |= encodeZAState(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_out_za"))

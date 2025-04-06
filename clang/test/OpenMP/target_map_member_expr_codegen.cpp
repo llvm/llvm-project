@@ -223,7 +223,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP10:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[A4:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[TMP10]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP11:%.*]] = load ptr, ptr [[A4]], align 8
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 0
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 0
 // CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ASIZE]], align 4
 // CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[TMP12]] to i64
 // CHECK-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[CONV]], 4
@@ -233,7 +233,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP16:%.*]] = load ptr, ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[C5:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[TMP16]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP17:%.*]] = load ptr, ptr [[C5]], align 8
-// CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds float, ptr [[TMP17]], i64 0
+// CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[TMP17]], i64 0
 // CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[CSIZE]], align 4
 // CHECK-NEXT:    [[CONV7:%.*]] = zext i32 [[TMP18]] to i64
 // CHECK-NEXT:    [[TMP19:%.*]] = mul nuw i64 [[CONV7]], 4
@@ -343,7 +343,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP79:%.*]] = load ptr, ptr [[_TMP12]], align 8
 // CHECK-NEXT:    [[C15:%.*]] = getelementptr inbounds nuw [[STRUCT_DESCRIPTOR]], ptr [[TMP79]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP80:%.*]] = load ptr, ptr [[C15]], align 8
-// CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds float, ptr [[TMP80]], i64 0
+// CHECK-NEXT:    [[ARRAYIDX16:%.*]] = getelementptr inbounds nuw float, ptr [[TMP80]], i64 0
 // CHECK-NEXT:    [[TMP81:%.*]] = load i32, ptr [[CSIZE]], align 4
 // CHECK-NEXT:    [[CONV17:%.*]] = zext i32 [[TMP81]] to i64
 // CHECK-NEXT:    [[TMP82:%.*]] = mul nuw i64 [[CONV17]], 4

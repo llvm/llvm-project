@@ -65,4 +65,4 @@ struct R {
 };
 
 template<typename T>
-R(T) -> R<T> requires true; // expected-error{{deduction guide cannot have a requires clause}}
+R(T) -> R<T> requires true;

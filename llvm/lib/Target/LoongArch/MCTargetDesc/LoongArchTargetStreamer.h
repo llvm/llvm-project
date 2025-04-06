@@ -12,6 +12,7 @@
 #include "LoongArch.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/FormattedStream.h"
 
 namespace llvm {
 class LoongArchTargetStreamer : public MCTargetStreamer {
@@ -21,6 +22,24 @@ public:
   LoongArchTargetStreamer(MCStreamer &S);
   void setTargetABI(LoongArchABI::ABI ABI);
   LoongArchABI::ABI getTargetABI() const { return TargetABI; }
+
+  virtual void emitDirectiveOptionPush();
+  virtual void emitDirectiveOptionPop();
+  virtual void emitDirectiveOptionRelax();
+  virtual void emitDirectiveOptionNoRelax();
+};
+
+// This part is for ascii assembly output.
+class LoongArchTargetAsmStreamer : public LoongArchTargetStreamer {
+  formatted_raw_ostream &OS;
+
+public:
+  LoongArchTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
+
+  void emitDirectiveOptionPush() override;
+  void emitDirectiveOptionPop() override;
+  void emitDirectiveOptionRelax() override;
+  void emitDirectiveOptionNoRelax() override;
 };
 
 } // end namespace llvm

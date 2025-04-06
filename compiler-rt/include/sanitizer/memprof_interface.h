@@ -47,9 +47,9 @@ void SANITIZER_CDECL __memprof_print_accumulated_stats(void);
 
 /// User-provided default option settings.
 ///
-/// You can provide your own implementation of this function to return a string
-/// containing MemProf runtime options (for example,
-/// <c>verbosity=1:print_stats=1</c>).
+/// You can set these options via the -memprof-runtime-default-options LLVM flag
+/// or you can provide your own implementation of this function. See
+/// memprof_flags.h for more info.
 ///
 /// \returns Default options string.
 const char *SANITIZER_CDECL __memprof_default_options(void);

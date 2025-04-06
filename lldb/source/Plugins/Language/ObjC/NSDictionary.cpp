@@ -16,8 +16,6 @@
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/StackFrame.h"
@@ -26,6 +24,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -109,8 +109,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -150,8 +148,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -181,8 +177,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -215,8 +209,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -235,8 +227,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -269,8 +259,6 @@ namespace Foundation1100 {
 
     lldb::ChildCacheState Update() override;
 
-    bool MightHaveChildren() override;
-    
     size_t GetIndexOfChildWithName(ConstString name) override;
     
   private:
@@ -648,11 +636,6 @@ lldb_private::formatters::NSDictionaryISyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::NSDictionaryISyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 lldb::ValueObjectSP
 lldb_private::formatters::NSDictionaryISyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
@@ -768,11 +751,6 @@ lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::Update() {
   return m_hashtable.Update(valobj_sp->GetValueAsUnsigned(0), m_exe_ctx_ref)
              ? lldb::ChildCacheState::eReuse
              : lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::NSCFDictionarySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 lldb::ValueObjectSP
@@ -914,11 +892,6 @@ lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::Update() {
                          : lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::NSConstantDictionarySyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 lldb::ValueObjectSP lldb_private::formatters::
     NSConstantDictionarySyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   uint32_t num_children = CalculateNumChildrenIgnoringErrors();
@@ -1003,11 +976,6 @@ lldb::ChildCacheState
 lldb_private::formatters::NSDictionary1SyntheticFrontEnd::Update() {
   m_pair.reset();
   return lldb::ChildCacheState::eRefetch;
-}
-
-bool lldb_private::formatters::NSDictionary1SyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 lldb::ValueObjectSP
@@ -1129,13 +1097,6 @@ lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,
 
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
-}
-
-template <typename D32, typename D64>
-bool
-lldb_private::formatters::GenericNSDictionaryMSyntheticFrontEnd<D32,D64>::
-    MightHaveChildren() {
-  return true;
 }
 
 template <typename D32, typename D64>
@@ -1290,12 +1251,6 @@ lldb::ChildCacheState lldb_private::formatters::Foundation1100::
 
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
-}
-
-bool
-lldb_private::formatters::Foundation1100::
-  NSDictionaryMSyntheticFrontEnd::MightHaveChildren() {
-  return true;
 }
 
 lldb::ValueObjectSP

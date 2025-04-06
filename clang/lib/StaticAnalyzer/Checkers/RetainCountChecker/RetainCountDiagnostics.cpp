@@ -635,8 +635,9 @@ public:
 };
 } // namespace
 
-Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
-                                    const ExplodedNode *Node, SymbolRef Sym) {
+static Bindings getAllVarBindingsForSymbol(ProgramStateManager &Manager,
+                                           const ExplodedNode *Node,
+                                           SymbolRef Sym) {
   Bindings Result;
   VarBindingsCollector Collector{Sym, Result};
   while (Result.empty() && Node) {
@@ -689,7 +690,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
       const MemRegion *R = FB.getRegion();
       // Do not show local variables belonging to a function other than
       // where the error is reported.
-      if (auto MR = dyn_cast<StackSpaceRegion>(R->getMemorySpace()))
+      if (const auto *MR = R->getMemorySpaceAs<StackSpaceRegion>(St))
         if (MR->getStackFrame() == LeakContext->getStackFrame())
           FirstBinding = R;
     }

@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64 -mcpu=octeon -target-abi=n64 < %s -o - | FileCheck %s
+; RUN: llc -mtriple=mips64 -mcpu=octeon -target-abi=n64 < %s -o - | FileCheck %s
 
 define i64 @cins_zext(i32 signext %n) {
 entry:

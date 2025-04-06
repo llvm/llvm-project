@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_GENERIC_ADD_SUB_H
 
-#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/CPP/bit.h"
@@ -17,6 +16,7 @@
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/macros/attributes.h"
@@ -106,15 +106,11 @@ add_or_sub(InType x, InType y) {
       volatile InType tmp = y;
       if constexpr (IsSub)
         tmp = -tmp;
-      return static_cast<OutType>(tmp);
+      return cast<OutType>(tmp);
     }
 
-    if (y_bits.is_zero()) {
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return static_cast<OutType>(tmp);
-    }
+    if (y_bits.is_zero())
+      return cast<OutType>(x);
   }
 
   InType x_abs = x_bits.abs().get_val();
@@ -159,20 +155,22 @@ add_or_sub(InType x, InType y) {
   } else {
     InStorageType max_mant = max_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
     InStorageType min_mant = min_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-    int alignment =
-        max_bits.get_biased_exponent() - min_bits.get_biased_exponent();
+
+    int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
+                    (min_bits.get_biased_exponent() - min_bits.is_normal());
 
     InStorageType aligned_min_mant =
         min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
     bool aligned_min_mant_sticky;
 
-    if (alignment <= 3)
+    if (alignment <= GUARD_BITS_LEN)
       aligned_min_mant_sticky = false;
-    else if (alignment <= InFPBits::FRACTION_LEN + 3)
-      aligned_min_mant_sticky =
-          (min_mant << (InFPBits::STORAGE_LEN - alignment)) != 0;
-    else
+    else if (alignment > InFPBits::FRACTION_LEN + GUARD_BITS_LEN)
       aligned_min_mant_sticky = true;
+    else
+      aligned_min_mant_sticky =
+          (static_cast<InStorageType>(
+              min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
 
     InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
 
@@ -182,7 +180,7 @@ add_or_sub(InType x, InType y) {
       result_mant = max_mant - (aligned_min_mant | min_mant_sticky);
   }
 
-  int result_exp = max_bits.get_exponent() - RESULT_FRACTION_LEN;
+  int result_exp = max_bits.get_explicit_exponent() - RESULT_FRACTION_LEN;
   DyadicFloat result(result_sign, result_exp, result_mant);
   return result.template as<OutType, /*ShouldSignalExceptions=*/true>();
 }

@@ -11,10 +11,8 @@ define i32 @fn_text() {
     entry:
     ret i32 0
 }
-; CHECK:        .text{{$}}
-; CHECK-NEXT:   .file
 ; FNSECTIONS:   .section	.text.fn_text,"ax",@progbits{{$}}
-; CHECK-NEXT:   .globl fn_text
+; CHECK:        .globl fn_text
 ; CHECK:        fn_text:
 
 ; A second function placed in .text, to check the behaviour with -function-sections.

@@ -13,30 +13,40 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
-
 void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
-  const auto SupportedContainers = hasType(
-      hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
-          hasAnyName("::std::set", "::std::unordered_set", "::std::map",
-                     "::std::unordered_map", "::std::multiset",
-                     "::std::unordered_multiset", "::std::multimap",
-                     "::std::unordered_multimap"))))));
+  const auto HasContainsMatchingParamType = hasMethod(
+      cxxMethodDecl(isConst(), parameterCountIs(1), returns(booleanType()),
+                    hasName("contains"), unless(isDeleted()), isPublic(),
+                    hasParameter(0, hasType(hasUnqualifiedDesugaredType(
+                                        equalsBoundNode("parameterType"))))));
 
   const auto CountCall =
-      cxxMemberCallExpr(on(SupportedContainers),
-                        callee(cxxMethodDecl(hasName("count"))),
-                        argumentCountIs(1))
+      cxxMemberCallExpr(
+          argumentCountIs(1),
+          callee(cxxMethodDecl(
+              hasName("count"),
+              hasParameter(0, hasType(hasUnqualifiedDesugaredType(
+                                  type().bind("parameterType")))),
+              ofClass(cxxRecordDecl(HasContainsMatchingParamType)))))
           .bind("call");
 
   const auto FindCall =
-      cxxMemberCallExpr(on(SupportedContainers),
-                        callee(cxxMethodDecl(hasName("find"))),
-                        argumentCountIs(1))
+      cxxMemberCallExpr(
+          argumentCountIs(1),
+          callee(cxxMethodDecl(
+              hasName("find"),
+              hasParameter(0, hasType(hasUnqualifiedDesugaredType(
+                                  type().bind("parameterType")))),
+              ofClass(cxxRecordDecl(HasContainsMatchingParamType)))))
           .bind("call");
 
-  const auto EndCall = cxxMemberCallExpr(on(SupportedContainers),
-                                         callee(cxxMethodDecl(hasName("end"))),
-                                         argumentCountIs(0));
+  const auto EndCall = cxxMemberCallExpr(
+      argumentCountIs(0),
+      callee(
+          cxxMethodDecl(hasName("end"),
+                        // In the matchers below, FindCall should always appear
+                        // before EndCall so 'parameterType' is properly bound.
+                        ofClass(cxxRecordDecl(HasContainsMatchingParamType)))));
 
   const auto Literal0 = integerLiteral(equals(0));
   const auto Literal1 = integerLiteral(equals(1));
@@ -52,50 +62,44 @@ void ContainerContainsCheck::registerMatchers(MatchFinder *Finder) {
                          .bind("positiveComparison"),
                      this);
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("!="), hasRHS(Literal0))
+      binaryOperation(hasOperatorName("!="), hasOperands(CountCall, Literal0))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("!="), hasRHS(CountCall))
+      binaryOperation(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName(">"), hasRHS(Literal0))
+      binaryOperation(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
           .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("<"), hasRHS(CountCall))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName(">="), hasRHS(Literal1))
-          .bind("positiveComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal1), hasOperatorName("<="), hasRHS(CountCall))
-          .bind("positiveComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName(">="),
+                                   hasRHS(Literal1))
+                       .bind("positiveComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(Literal1), hasOperatorName("<="),
+                                   hasRHS(CountCall))
+                       .bind("positiveComparison"));
 
   // Find inverted membership tests which use `count()`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("=="), hasRHS(Literal0))
+      binaryOperation(hasOperatorName("=="), hasOperands(CountCall, Literal0))
+          .bind("negativeComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(CountCall), hasOperatorName("<="),
+                                   hasRHS(Literal0))
+                       .bind("negativeComparison"));
+  AddSimpleMatcher(binaryOperation(hasLHS(Literal0), hasOperatorName(">="),
+                                   hasRHS(CountCall))
+                       .bind("negativeComparison"));
+  AddSimpleMatcher(
+      binaryOperation(hasLHS(CountCall), hasOperatorName("<"), hasRHS(Literal1))
           .bind("negativeComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName("=="), hasRHS(CountCall))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("<="), hasRHS(Literal0))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal0), hasOperatorName(">="), hasRHS(CountCall))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(CountCall), hasOperatorName("<"), hasRHS(Literal1))
-          .bind("negativeComparison"));
-  AddSimpleMatcher(
-      binaryOperator(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
+      binaryOperation(hasLHS(Literal1), hasOperatorName(">"), hasRHS(CountCall))
           .bind("negativeComparison"));
 
   // Find membership tests based on `find() == end()`.
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("!="), hasRHS(EndCall))
+      binaryOperation(hasOperatorName("!="), hasOperands(FindCall, EndCall))
           .bind("positiveComparison"));
   AddSimpleMatcher(
-      binaryOperator(hasLHS(FindCall), hasOperatorName("=="), hasRHS(EndCall))
+      binaryOperation(hasOperatorName("=="), hasOperands(FindCall, EndCall))
           .bind("negativeComparison"));
 }
 

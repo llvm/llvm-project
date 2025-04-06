@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Verify __builtin_HEXAGON_V6_vd0 maps to vxor
 ; CHECK: v{{[0-9]*}} = vxor(v{{[0-9]*}},v{{[0-9]*}})

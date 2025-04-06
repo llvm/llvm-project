@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03
 // UNSUPPORTED: no-threads
-// ALLOW_RETRIES: 2
 
 // <mutex>
 
@@ -15,46 +15,67 @@
 
 // bool try_lock();
 
+#include <mutex>
+#include <atomic>
 #include <cassert>
 #include <chrono>
-#include <cstdlib>
-#include <mutex>
 #include <thread>
 
 #include "make_test_thread.h"
-#include "test_macros.h"
 
-std::recursive_timed_mutex m;
+bool is_lockable(std::recursive_timed_mutex& m) {
+  bool did_lock;
+  std::thread t = support::make_test_thread([&] {
+    did_lock = m.try_lock();
+    if (did_lock)
+      m.unlock(); // undo side effects
+  });
+  t.join();
 
-typedef std::chrono::system_clock Clock;
-typedef Clock::time_point time_point;
-typedef Clock::duration duration;
-typedef std::chrono::milliseconds ms;
-typedef std::chrono::nanoseconds ns;
-
-void f()
-{
-    time_point t0 = Clock::now();
-    assert(!m.try_lock());
-    assert(!m.try_lock());
-    assert(!m.try_lock());
-    while(!m.try_lock())
-        ;
-    time_point t1 = Clock::now();
-    assert(m.try_lock());
-    m.unlock();
-    m.unlock();
-    ns d = t1 - t0 - ms(250);
-    assert(d < ms(200));  // within 200ms
+  return did_lock;
 }
 
-int main(int, char**)
-{
-    m.lock();
-    std::thread t = support::make_test_thread(f);
-    std::this_thread::sleep_for(ms(250));
+int main(int, char**) {
+  // Try to lock a mutex that is not locked yet. This should succeed.
+  {
+    std::recursive_timed_mutex m;
+    bool succeeded = m.try_lock();
+    assert(succeeded);
     m.unlock();
+  }
+
+  // Try to lock a mutex that is already locked by this thread. This should succeed and the mutex should only
+  // be unlocked after a matching number of calls to unlock() on the same thread.
+  {
+    std::recursive_timed_mutex m;
+    int lock_count = 0;
+    for (int i = 0; i != 10; ++i) {
+      assert(m.try_lock());
+      ++lock_count;
+    }
+    while (lock_count != 0) {
+      assert(!is_lockable(m));
+      m.unlock();
+      --lock_count;
+    }
+    assert(is_lockable(m));
+  }
+
+  // Try to lock a mutex that is already locked by another thread. This should fail.
+  {
+    std::recursive_timed_mutex m;
+    m.lock();
+
+    std::thread t = support::make_test_thread([&] {
+      for (int i = 0; i != 10; ++i) {
+        bool succeeded = m.try_lock();
+        assert(!succeeded);
+      }
+    });
     t.join();
+
+    m.unlock();
+  }
 
   return 0;
 }

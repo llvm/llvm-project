@@ -1,0 +1,37 @@
+## Tests the env command in various scenarios: without arguments, setting, unsetting, and mixing envrionment variables.
+
+## Check default environment.
+# RUN: env | FileCheck -check-prefix=NO-ARGS %s
+#
+# NO-ARGS: BAR=2
+# NO-ARGS: FOO=1
+# NO-ARGS: QUX=3
+
+## Set environment variables.
+# RUN: env FOO=2 BAR=1 | FileCheck -check-prefix=SET-VAL %s
+#
+# SET-VAL: BAR=1
+# SET-VAL: FOO=2
+# SET-VAL: QUX=3
+
+## Unset environment variables.
+# RUN: env -u FOO -u BAR | FileCheck -check-prefix=UNSET-U %s
+#
+# UNSET-U-NOT: BAR
+# UNSET-U-NOT: FOO
+# UNSET-U: QUX=3
+
+## Mixed set and unset environment variables.
+# RUN: env -u FOO BAR=1 -u BAR FOO=2 | FileCheck -check-prefix=MIXED-SET-UNSET %s
+#
+# MIXED-SET-UNSET-NOT: BAR
+# MIXED-SET-UNSET: FOO=2
+# MIXED-SET-UNSET: QUX=3
+
+## Mixed set and unset with additional variable.
+# RUN: env -u FOO BAR=1 -u BAR FOO=2 BAZ=4 | FileCheck -check-prefix=MIXED-SET-UNSET-ADD-3 %s
+#
+# MIXED-SET-UNSET-ADD-NOT: BAR
+# MIXED-SET-UNSET-ADD: BAZ=4
+# MIXED-SET-UNSET-ADD: FOO=2
+# MIXED-SET-UNSET-ADD: QUX=3 

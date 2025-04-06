@@ -41,7 +41,6 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
   bool hasReservedCallFrame(const MachineFunction &MF) const override;
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   DwarfFrameBase getDwarfFrameBase(const MachineFunction &MF) const override;
@@ -67,6 +66,9 @@ public:
   static unsigned getOpcAnd(const MachineFunction &MF);
   static unsigned getOpcGlobGet(const MachineFunction &MF);
   static unsigned getOpcGlobSet(const MachineFunction &MF);
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
   bool hasBP(const MachineFunction &MF) const;

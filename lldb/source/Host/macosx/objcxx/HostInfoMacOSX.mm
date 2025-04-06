@@ -393,6 +393,33 @@ lldb_private::FileSpec HostInfoMacOSX::GetXcodeDeveloperDirectory() {
   return g_developer_directory;
 }
 
+std::string HostInfoMacOSX::FindComponentInPath(llvm::StringRef path,
+                                                llvm::StringRef component) {
+  auto begin = llvm::sys::path::begin(path);
+  auto end = llvm::sys::path::end(path);
+  for (auto it = begin; it != end; ++it) {
+    if (it->contains(component)) {
+      llvm::SmallString<128> buffer;
+      llvm::sys::path::append(buffer, begin, ++it,
+                              llvm::sys::path::Style::posix);
+      return buffer.str().str();
+    }
+  }
+  return {};
+}
+
+FileSpec HostInfoMacOSX::GetCurrentXcodeToolchainDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), ".xctoolchain"));
+  return {};
+}
+
+FileSpec HostInfoMacOSX::GetCurrentCommandLineToolsDirectory() {
+  if (FileSpec fspec = HostInfo::GetShlibDir())
+    return FileSpec(FindComponentInPath(fspec.GetPath(), "CommandLineTools"));
+  return {};
+}
+
 static llvm::Expected<std::string>
 xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
       llvm::StringRef developer_dir = "") {
@@ -650,12 +677,15 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
   if (!dyld_process)
     return false;
 
+  auto cleanup_process_on_exit =
+      llvm::make_scope_exit([&]() { dyld_process_dispose(dyld_process); });
+
   dyld_process_snapshot_t snapshot =
       dyld_process_snapshot_create_for_process(dyld_process, nullptr);
   if (!snapshot)
     return false;
 
-  auto on_exit =
+  auto cleanup_snapshot_on_exit =
       llvm::make_scope_exit([&]() { dyld_process_snapshot_dispose(snapshot); });
 
   dyld_shared_cache_t shared_cache =

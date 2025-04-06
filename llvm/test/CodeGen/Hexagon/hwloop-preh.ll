@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-machine-licm -hwloop-spec-preheader=1 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-machine-licm -hwloop-spec-preheader=1 < %s | FileCheck %s
 ; CHECK: loop0
 
 target triple = "hexagon"

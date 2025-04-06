@@ -202,14 +202,6 @@ def int_wasm_shuffle :
                          ImmArg<ArgIndex<12>>, ImmArg<ArgIndex<13>>,
                          ImmArg<ArgIndex<14>>, ImmArg<ArgIndex<15>>,
                          ImmArg<ArgIndex<16>>, ImmArg<ArgIndex<17>>]>;
-def int_wasm_sub_sat_signed :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_sub_sat_unsigned :
-  DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                        [LLVMMatchType<0>, LLVMMatchType<0>],
-                        [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_avgr_unsigned :
   DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                         [LLVMMatchType<0>, LLVMMatchType<0>],
@@ -346,7 +338,7 @@ def int_wasm_relaxed_dot_bf16x8_add_f32:
 // TODO: Replace these intrinsic with normal ISel patterns once the XXX
 // instructions are merged to the proposal.
 def int_wasm_loadf16_f32:
-  Intrinsic<[llvm_float_ty],
+  DefaultAttrsIntrinsic<[llvm_float_ty],
             [llvm_ptr_ty],
             [IntrReadMem, IntrArgMemOnly],
              "", [SDNPMemOperand]>;

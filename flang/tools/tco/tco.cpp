@@ -70,7 +70,8 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
-#include "flang/Tools/CLOptions.inc"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
@@ -138,6 +139,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       return mlir::failure();
   } else {
     MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
+    config.EnableOpenMP = true;  // assume the input contains OpenMP
     config.AliasAnalysis = true; // enabled when optimizing for speed
     if (codeGenLLVM) {
       // Run only CodeGen passes.

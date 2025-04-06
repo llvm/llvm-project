@@ -20,7 +20,7 @@
 int llvm_test_function_attributes(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef M = llvm_load_module(false, true);
+  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, true);
 
   LLVMValueRef F = LLVMGetFirstFunction(M);
   while (F) {
@@ -49,7 +49,7 @@ int llvm_test_function_attributes(void) {
 int llvm_test_callsite_attributes(void) {
   LLVMEnablePrettyStackTrace();
 
-  LLVMModuleRef M = llvm_load_module(false, true);
+  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, true);
 
   LLVMValueRef F = LLVMGetFirstFunction(M);
   while (F) {

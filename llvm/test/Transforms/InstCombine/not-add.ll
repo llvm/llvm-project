@@ -42,7 +42,7 @@ define i8 @basic_use_xor(i8 %x, i8 %y) {
 define i8 @basic_use_add(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_use_add(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[NOTX]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
@@ -58,7 +58,7 @@ define i8 @basic_use_both(i8 %x, i8 %y) {
 ; CHECK-LABEL: @basic_use_both(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use(i8 [[NOTX]])
-; CHECK-NEXT:    [[A:%.*]] = add i8 [[NOTX]], [[Y:%.*]]
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[NOTX]]
 ; CHECK-NEXT:    call void @use(i8 [[A]])
 ; CHECK-NEXT:    [[NOTA:%.*]] = sub i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[NOTA]]
@@ -143,8 +143,8 @@ define i32 @pr50308(i1 %c1, i32 %v1, i32 %v2, i32 %v3) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
-; CHECK-NEXT:    [[ADD_NOT:%.*]] = sub i32 -2, [[V1:%.*]]
-; CHECK-NEXT:    [[ADD1_NEG:%.*]] = xor i32 [[ADD_NOT]], [[V2:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -2, [[V1:%.*]]
+; CHECK-NEXT:    [[ADD1_NEG:%.*]] = xor i32 [[TMP0]], [[V2:%.*]]
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
 ; CHECK-NEXT:    [[COND_NEG:%.*]] = phi i32 [ [[ADD1_NEG]], [[COND_TRUE]] ], [ 0, [[ENTRY:%.*]] ]

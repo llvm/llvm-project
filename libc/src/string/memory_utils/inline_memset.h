@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_MEMSET_H
 
-#include "src/__support/macros/config.h"                   // LIBC_INLINE
+#include "src/__support/macros/attributes.h"               // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h" // LIBC_TARGET_ARCH_IS_
 #include "src/string/memory_utils/utils.h"                 // Ptr, CPtr
 
@@ -24,14 +24,12 @@
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "src/string/memory_utils/riscv/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_riscv
-#elif defined(LIBC_TARGET_ARCH_IS_ARM)
-#include "src/string/memory_utils/generic/byte_per_byte.h"
-#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/string/memory_utils/generic/builtin.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_builtin
 #else
-#error "Unsupported architecture"
+#include "src/string/memory_utils/generic/byte_per_byte.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_byte_per_byte
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

@@ -29,6 +29,24 @@ func.func @tensor_extract_constant(%a : index, %b: index, %c: index) -> i32 {
 
 // -----
 
+// CHECK-LABEL: test_spirv_unsupported_type_index
+func.func @test_spirv_unsupported_type_index(%a : index) {
+  %cst = arith.constant dense<[1, 2]> : tensor<2xindex>
+  // CHECK: tensor.extract
+  %extract = tensor.extract %cst[%a] : tensor<2xindex>
+  return
+}
+
+// CHECK-LABEL: test_spirv_unsupported_type_i128
+func.func @test_spirv_unsupported_type_i128(%a : index) {
+  %cst = arith.constant dense<[1, 2]> : tensor<2xi128>
+  // CHECK: tensor.extract
+  %extract = tensor.extract %cst[%a] : tensor<2xi128>
+  return
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // Type conversion
 //===----------------------------------------------------------------------===//

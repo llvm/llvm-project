@@ -20,6 +20,10 @@ using namespace llvm::opt;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#define OPTTABLE_STR_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_STR_TABLE_CODE
+
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
 #define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
@@ -28,20 +32,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_PREFIXES_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
-static constexpr const StringLiteral PrefixTable_init[] =
-#define PREFIX_UNION(VALUES) VALUES
+#define OPTTABLE_PREFIXES_UNION_CODE
 #include "Opts.inc"
-#undef PREFIX_UNION
-    ;
-static constexpr const ArrayRef<StringLiteral>
-    PrefixTable(PrefixTable_init, std::size(PrefixTable_init) - 1);
+#undef OPTTABLE_PREFIXES_UNION_CODE
 
 enum OptionFlags {
   OptFlag1 = (1 << 4),
@@ -64,13 +61,15 @@ namespace {
 class TestOptTable : public GenericOptTable {
 public:
   TestOptTable(bool IgnoreCase = false)
-      : GenericOptTable(InfoTable, IgnoreCase) {}
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                        IgnoreCase) {}
 };
 
 class TestPrecomputedOptTable : public PrecomputedOptTable {
 public:
   TestPrecomputedOptTable(bool IgnoreCase = false)
-      : PrecomputedOptTable(InfoTable, PrefixTable, IgnoreCase) {}
+      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
+                            OptionPrefixesUnion, IgnoreCase) {}
 };
 }
 

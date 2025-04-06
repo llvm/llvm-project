@@ -66,7 +66,8 @@ BreakpointResolverSP BreakpointResolverScripted::CreateFromStructuredData(
   success = options_dict.GetValueForKeyAsString(
       GetKey(OptionNames::PythonClassName), class_name);
   if (!success) {
-    error.SetErrorString("BRFL::CFSD: Couldn't find class name entry.");
+    error =
+        Status::FromErrorString("BRFL::CFSD: Couldn't find class name entry.");
     return nullptr;
   }
   // The Python function will actually provide the search depth, this is a

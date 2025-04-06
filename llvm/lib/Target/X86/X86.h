@@ -145,7 +145,7 @@ FunctionPass *createX86IndirectThunksPass();
 FunctionPass *createX86ReturnThunksPass();
 
 /// This pass ensures instructions featuring a memory operand
-/// have distinctive <LineNumber, Discriminator> (with respect to eachother)
+/// have distinctive <LineNumber, Discriminator> (with respect to each other)
 FunctionPass *createX86DiscriminateMemOpsPass();
 
 /// This pass applies profiling information to insert cache prefetches.
@@ -184,6 +184,7 @@ void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
+void initializeX86DynAllocaExpanderPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
 void initializeX86FastPreTileConfigPass(PassRegistry &);

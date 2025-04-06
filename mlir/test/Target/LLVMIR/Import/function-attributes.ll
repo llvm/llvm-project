@@ -12,6 +12,15 @@ define internal spir_func void @spir_func_internal() {
 
 ; // -----
 
+; Ensure that we have dso_local.
+; CHECK: llvm.func @dsolocal_func()
+; CHECK-SAME: attributes {dso_local}
+define dso_local void @dsolocal_func() {
+  ret void
+}
+
+; // -----
+
 ; CHECK-LABEL: @func_readnone
 ; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
 ; CHECK:   llvm.return
@@ -45,6 +54,7 @@ attributes #0 = { readnone }
 ; CHECK-SAME:  !llvm.ptr {llvm.returned}
 ; CHECK-SAME:  !llvm.ptr {llvm.alignstack = 32 : i64}
 ; CHECK-SAME:  !llvm.ptr {llvm.writeonly}
+; CHECK-SAME:  i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>}
 define ptr @func_arg_attrs(
     ptr byval(i64) %arg0,
     ptr byref(i64) %arg1,
@@ -57,13 +67,14 @@ define ptr @func_arg_attrs(
     ptr dereferenceable(12) %arg10,
     ptr dereferenceable_or_null(42) %arg11,
     double inreg %arg12,
-    ptr nocapture %arg13,
+    ptr captures(none) %arg13,
     ptr nofree %arg14,
     ptr nonnull %arg15,
     ptr preallocated(double) %arg16,
     ptr returned %arg17,
     ptr alignstack(32) %arg18,
-    ptr writeonly %arg19) {
+    ptr writeonly %arg19,
+    i64 range(i64 0, 4097) %arg20) {
   ret ptr %arg17
 }
 
@@ -138,6 +149,12 @@ declare dereferenceable_or_null(42) ptr @func_res_attr_dereferenceable_or_null()
 ; CHECK-LABEL: @func_res_attr_inreg
 ; CHECK-SAME:  !llvm.ptr {llvm.inreg}
 declare inreg ptr @func_res_attr_inreg()
+
+; // -----
+
+; CHECK-LABEL: @func_res_attr_range
+; CHECK-SAME:  (i64 {llvm.range = #llvm.constant_range<i64, 0, 4097>})
+declare range(i64 0, 4097) i64 @func_res_attr_range()
 
 ; // -----
 

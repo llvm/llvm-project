@@ -324,6 +324,10 @@ let Command = "disassemble" in {
     Arg<"DisassemblyFlavor">, Desc<"Name of the disassembly flavor you want to "
     "use. Currently the only valid options are default, and for Intel "
     "architectures, att and intel.">;
+  def disassemble_options_cpu : Option<"cpu", "X">, Arg<"CPUName">,
+    Desc<"Override the CPU for disassembling.">;
+  def disassemble_options_features : Option<"features", "Y">, Arg<"CPUFeatures">,
+    Desc<"Specify additional CPU features for disassembling.">;
   def disassemble_options_arch : Option<"arch", "A">, Arg<"Architecture">,
     Desc<"Specify the architecture to use from cross disassembly.">;
   def disassemble_options_start_address : Option<"start-address", "s">,
@@ -691,7 +695,10 @@ let Command = "process launch" in {
   def process_launch_plugin : Option<"plugin", "P">, Arg<"Plugin">,
     Desc<"Name of the process plugin you want to use.">;
   def process_launch_working_dir : Option<"working-dir", "w">, Arg<"DirectoryName">,
-    Desc<"Set the current working directory to <path> when running the inferior.">;
+    Desc<"Set the current working directory to <path> when running the inferior. This option "
+         "applies only to the current `process launch` invocation. If "
+         "`target.launch-working-dir` is set and this option is given, the value of this "
+         "option will be used instead of the setting.">;
   def process_launch_arch : Option<"arch", "a">, Arg<"Architecture">,
     Desc<"Set the architecture for the process to launch when ambiguous.">;
   def process_launch_environment : Option<"environment", "E">,
@@ -958,6 +965,8 @@ let Command = "target modules show unwind" in {
   def target_modules_show_unwind_address : Option<"address", "a">, Group<2>,
     Arg<"AddressOrExpression">, Desc<"Show unwind instructions for a function "
     "or symbol containing an address">;
+  def target_modules_show_unwind_cached : Option<"cached", "c">,
+    Arg<"Boolean">, Desc<"Show cached unwind information">;
 }
 
 let Command = "target modules lookup" in {
@@ -1048,6 +1057,8 @@ let Command = "thread backtrace" in {
   Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
   def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
   Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+  def thread_backtrace_unfiltered : Option<"unfiltered", "u">, Group<1>,
+  Desc<"Do not filter out frames according to installed frame recognizers">;
 }
 
 let Command = "thread step scope" in {
@@ -1097,6 +1108,9 @@ let Command = "thread info" in {
     " JSON format.">;
   def thread_info_stop_info : Option<"stop-info", "s">, Desc<"Display the "
     "extended stop info in JSON format.">;
+  def thread_info_backing_thread : Option<"backing-thread", "b">,
+    Desc<"If this is an OS plugin thread, query the backing thread instead; has"
+    " no effect otherwise.">;
 }
 
 let Command = "thread return" in {
@@ -1197,7 +1211,7 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
     Group<1>,
     Desc<"Dump only the events that happened during the execution of the "
-    "target. No instrutions are dumped.">;
+    "target. No instructions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "

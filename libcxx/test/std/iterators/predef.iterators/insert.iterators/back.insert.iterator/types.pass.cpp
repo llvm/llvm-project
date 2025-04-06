@@ -27,6 +27,7 @@
 //   typedef void                        pointer;
 // };
 
+#include <cstddef>
 #include <iterator>
 #include <type_traits>
 #include <vector>

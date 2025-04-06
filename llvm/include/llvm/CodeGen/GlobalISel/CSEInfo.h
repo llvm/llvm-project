@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 
@@ -177,6 +178,8 @@ public:
   const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
   const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
   const GISelInstProfileBuilder &addNodeIDRegType(const Register) const;
+  const GISelInstProfileBuilder &
+      addNodeIDRegType(MachineRegisterInfo::VRegAttrs) const;
 
   const GISelInstProfileBuilder &
   addNodeIDRegType(const TargetRegisterClass *RC) const;

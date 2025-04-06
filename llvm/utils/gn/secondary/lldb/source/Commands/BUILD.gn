@@ -26,6 +26,7 @@ static_library("Commands") {
     #"//lldb/source/Symbol", # FIXME: many-hop dependency cycle.
     #"//lldb/source/Target", # FIXME: 2-hop dependency cycle.
     "//lldb/source/Utility",
+    "//lldb/source/ValueObject",
     "//lldb/source/Version",
   ]
   sources = [

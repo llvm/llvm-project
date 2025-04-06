@@ -83,7 +83,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cassert>
-#include <cstdint>
 #include <memory>
 
 using namespace llvm;
@@ -349,10 +348,14 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
       // calling convention definitions, so we need to watch for it, too. An LR
       // mentioned implicitly by a return (or "branch to link register")
       // instruction we can ignore, otherwise we may pessimize shrinkwrapping.
-      UseOrDefCSR =
-          (!MI.isCall() && PhysReg == SP) ||
-          RCI.getLastCalleeSavedAlias(PhysReg) ||
-          (!MI.isReturn() && TRI->isNonallocatableRegisterCalleeSave(PhysReg));
+      // PPC's Frame pointer (FP) is also not described as a callee-saved
+      // register. Until the FP is assigned a Physical Register PPC's FP needs
+      // to be checked separately.
+      UseOrDefCSR = (!MI.isCall() && PhysReg == SP) ||
+                    RCI.getLastCalleeSavedAlias(PhysReg) ||
+                    (!MI.isReturn() &&
+                     TRI->isNonallocatableRegisterCalleeSave(PhysReg)) ||
+                    TRI->isVirtualFrameRegister(PhysReg);
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.
       for (unsigned Reg : getCurrentCSRs(RS)) {
@@ -376,12 +379,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
 template <typename ListOfBBs, typename DominanceAnalysis>
 static MachineBasicBlock *FindIDom(MachineBasicBlock &Block, ListOfBBs BBs,
                                    DominanceAnalysis &Dom, bool Strict = true) {
-  MachineBasicBlock *IDom = &Block;
-  for (MachineBasicBlock *BB : BBs) {
-    IDom = Dom.findNearestCommonDominator(IDom, BB);
-    if (!IDom)
-      break;
-  }
+  MachineBasicBlock *IDom = Dom.findNearestCommonDominator(iterator_range(BBs));
   if (Strict && IDom == &Block)
     return nullptr;
   return IDom;
@@ -411,8 +409,7 @@ hasDirtyPred(const DenseSet<const MachineBasicBlock *> &ReachableByDirty,
 /// Derives the list of all the basic blocks reachable from MBB.
 static void markAllReachable(DenseSet<const MachineBasicBlock *> &Visited,
                              const MachineBasicBlock &MBB) {
-  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.succ_begin(),
-                                               MBB.succ_end());
+  SmallVector<MachineBasicBlock *, 4> Worklist(MBB.successors());
   Visited.insert(&MBB);
   while (!Worklist.empty()) {
     MachineBasicBlock *SuccMBB = Worklist.pop_back_val();
@@ -988,6 +985,7 @@ bool ShrinkWrap::isShrinkWrapEnabled(const MachineFunction &MF) {
            !(MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
+             MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
              MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress));
   // If EnableShrinkWrap is set, it takes precedence on whatever the
   // target sets. The rational is that we assume we want to test

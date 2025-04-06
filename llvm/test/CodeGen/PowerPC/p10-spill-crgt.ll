@@ -65,8 +65,8 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-NEXT:    lwz r5, 0(r3)
 ; CHECK-NEXT:    rlwinm r4, r5, 0, 21, 22
 ; CHECK-NEXT:    cmpwi cr3, r4, 512
-; CHECK-NEXT:    lwax r4, r30, r29
-; CHECK-NEXT:    add r4, r4, r29
+; CHECK-NEXT:    lwax r4, r29, r30
+; CHECK-NEXT:    add r4, r29, r4
 ; CHECK-NEXT:    mtctr r4
 ; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    bctr
@@ -258,8 +258,8 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    lwz r5, 0(r3)
 ; CHECK-BE-NEXT:    rlwinm r4, r5, 0, 21, 22
 ; CHECK-BE-NEXT:    cmpwi cr3, r4, 512
-; CHECK-BE-NEXT:    lwax r4, r30, r29
-; CHECK-BE-NEXT:    add r4, r4, r29
+; CHECK-BE-NEXT:    lwax r4, r29, r30
+; CHECK-BE-NEXT:    add r4, r29, r4
 ; CHECK-BE-NEXT:    mtctr r4
 ; CHECK-BE-NEXT:    li r4, 0
 ; CHECK-BE-NEXT:    bctr

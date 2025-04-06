@@ -248,7 +248,7 @@ static void EmitPrefix(llvm::raw_ostream &o, llvm::raw_ostream::Colors color,
 
 std::optional<ProvenanceRange> AllSources::GetInclusionInfo(
     const std::optional<ProvenanceRange> &range) const {
-  if (!range)
+  if (!range || !IsValid(range->start()))
     return std::nullopt;
   const Origin &origin{MapToOrigin(range->start())};
 

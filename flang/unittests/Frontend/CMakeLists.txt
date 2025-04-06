@@ -12,13 +12,21 @@ add_flang_unittest(FlangFrontendTests
 
 target_link_libraries(FlangFrontendTests
   PRIVATE
-  clangBasic
   flangFrontend
   flangFrontendTool
   FortranLower
   FortranParser
   FortranSemantics
-  FortranCommon
+  FortranSupport
   FortranEvaluate
+)
+
+clang_target_link_libraries(FlangFrontendTests
+  PRIVATE
+  clangBasic
+)
+
+mlir_target_link_libraries(FlangFrontendTests
+  PRIVATE
   MLIRIR
 )

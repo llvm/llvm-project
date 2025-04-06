@@ -34,7 +34,7 @@ define void @render(double %a0) nounwind {
 ; CHECK-NEXT:    jne .LBB2_5
 ; CHECK-NEXT:  # %bb.1: # %for.cond5.preheader
 ; CHECK-NEXT:    movb $1, %bl
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB2_2: # %for.cond5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %bl, %bl

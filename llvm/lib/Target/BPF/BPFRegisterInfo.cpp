@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "BPFRegisterInfo.h"
-#include "BPF.h"
 #include "BPFSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -38,6 +37,17 @@ BPFRegisterInfo::BPFRegisterInfo()
 const MCPhysReg *
 BPFRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   return CSR_SaveList;
+}
+
+const uint32_t *
+BPFRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                      CallingConv::ID CC) const {
+  switch (CC) {
+  default:
+    return CSR_RegMask;
+  case CallingConv::PreserveAll:
+    return CSR_PreserveAll_RegMask;
+  }
 }
 
 BitVector BPFRegisterInfo::getReservedRegs(const MachineFunction &MF) const {

@@ -159,6 +159,7 @@ public:
   lldb::SBError Destroy();
 
   lldb::SBError Continue();
+  lldb::SBError ContinueInDirection(lldb::RunDirection direction);
 
   lldb::SBError Stop();
 
@@ -586,6 +587,7 @@ protected:
   friend class SBBreakpointCallbackBaton;
   friend class SBBreakpointLocation;
   friend class SBCommandInterpreter;
+  friend class SBSaveCoreOptions;
   friend class SBDebugger;
   friend class SBExecutionContext;
   friend class SBFunction;

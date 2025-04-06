@@ -53,13 +53,13 @@ def FeatureR700 : R600SubtargetFeatureGeneration<"R700", "r700",
 >;
 
 def FeatureEvergreen : R600SubtargetFeatureGeneration<"EVERGREEN", "evergreen",
-  [FeatureFetchLimit16, FeatureLocalMemorySize32768]
+  [FeatureFetchLimit16, FeatureAddressableLocalMemorySize32768]
 >;
 
 def FeatureNorthernIslands : R600SubtargetFeatureGeneration<"NORTHERN_ISLANDS",
   "northern-islands",
   [FeatureFetchLimit16, FeatureWavefrontSize64,
-   FeatureLocalMemorySize32768]
+   FeatureAddressableLocalMemorySize32768]
 >;
 
 

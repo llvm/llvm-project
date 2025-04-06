@@ -102,9 +102,8 @@ if(${LIBOMP_FORTRAN_MODULES})
 endif()
 
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
-if("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-  check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_LINUX_PTHREAD_SETNAME)
-endif()
+check_symbol_exists(pthread_setname_np "pthread.h" LIBOMP_HAVE_PTHREAD_SETNAME_NP)
+check_symbol_exists(pthread_set_name_np "pthread.h;pthread_np.h" LIBOMP_HAVE_PTHREAD_SET_NAME_NP)
 
 # Check for Unix shared memory
 check_symbol_exists(shm_open "sys/mman.h" LIBOMP_HAVE_SHM_OPEN_NO_LRT)
@@ -317,7 +316,9 @@ else()
       (LIBOMP_ARCH STREQUAL ppc64) OR
       (LIBOMP_ARCH STREQUAL riscv64) OR
       (LIBOMP_ARCH STREQUAL loongarch64) OR
-      (LIBOMP_ARCH STREQUAL s390x))
+      (LIBOMP_ARCH STREQUAL s390x) OR
+      (LIBOMP_ARCH STREQUAL sparc) OR
+      (LIBOMP_ARCH STREQUAL sparcv9))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
       (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))

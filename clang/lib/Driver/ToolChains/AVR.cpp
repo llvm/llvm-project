@@ -400,6 +400,14 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
     Action::OffloadKind DeviceOffloadKind) const {
+  // Reject C/C++ compilation for avr1 devices since they have no SRAM.
+  const Driver &D = getDriver();
+  std::string CPU = getCPUName(D, DriverArgs, getTriple());
+  std::optional<StringRef> FamilyName = GetMCUFamilyName(CPU);
+  if (CPU == "avr1" || (FamilyName && *FamilyName == "avr1"))
+    D.Diag(diag::err_drv_opt_unsupported_input_type)
+        << "-mmcu=" + CPU << "c/c++";
+
   // By default, use `.ctors` (not `.init_array`), as required by libgcc, which
   // runs constructors/destructors on AVR.
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
@@ -416,9 +424,10 @@ Tool *AVRToolChain::buildLinker() const {
   return new tools::AVR::Linker(getTriple(), *this);
 }
 
-std::string
-AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type = ToolChain::FT_Static) const {
+std::string AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args,
+                                        StringRef Component,
+                                        FileType Type = ToolChain::FT_Static,
+                                        bool IsFortran) const {
   assert(Type == ToolChain::FT_Static && "AVR only supports static libraries");
   // Since AVR can never be a host environment, its compiler-rt library files
   // should always have ".a" suffix, even on windows.

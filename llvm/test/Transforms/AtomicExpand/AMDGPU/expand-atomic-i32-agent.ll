@@ -3,7 +3,7 @@
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX906 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX908 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX90A %s
-; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx940 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX940 %s
+; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX942 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX10 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX11 %s
 ; RUN: opt -S -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -passes=atomic-expand %s | FileCheck -check-prefixes=COMMON,GFX12 %s
@@ -228,7 +228,7 @@ define i32 @test_atomicrmw_nand_i32_global_agent__amdgpu_no_fine_grained_memory(
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -248,7 +248,7 @@ define i32 @test_atomicrmw_nand_i32_global_agent__amdgpu_no_remote_memory(ptr ad
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -268,7 +268,7 @@ define i32 @test_atomicrmw_nand_i32_global_agent__amdgpu_no_fine_grained_memory_
 ; COMMON-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; COMMON-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE]]
 ; COMMON-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4
+; COMMON-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] syncscope("agent") seq_cst seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META0]], !amdgpu.no.remote.memory [[META0]]
 ; COMMON-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; COMMON-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; COMMON-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -649,7 +649,7 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_agent__amdgpu_no_fine_grained_me
 ;.
 ; GFX90A: [[META0]] = !{}
 ;.
-; GFX940: [[META0]] = !{}
+; GFX942: [[META0]] = !{}
 ;.
 ; GFX10: [[META0]] = !{}
 ;.
@@ -665,4 +665,4 @@ define i32 @test_atomicrmw_udec_wrap_i32_global_agent__amdgpu_no_fine_grained_me
 ; GFX906: {{.*}}
 ; GFX908: {{.*}}
 ; GFX90A: {{.*}}
-; GFX940: {{.*}}
+; GFX942: {{.*}}

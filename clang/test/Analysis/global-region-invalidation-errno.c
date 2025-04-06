@@ -1,9 +1,9 @@
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
-// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint \
+// RUN:   -analyzer-checker=core,deadcode,optin.taint \
 // RUN:   -DERRNO_VAR
 
 // RUN: %clang_analyze_cc1 -triple x86_64-apple-darwin10 -disable-free -verify %s \
-// RUN:   -analyzer-checker=core,deadcode,alpha.security.taint \
+// RUN:   -analyzer-checker=core,deadcode,optin.taint \
 // RUN:   -DERRNO_FUNC
 
 // Note, we do need to include headers here, since the analyzer checks if the function declaration is located in a system header.

@@ -18,7 +18,7 @@ class TwoAddressInstructionPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
-  MachineFunctionProperties getSetProperties() {
+  MachineFunctionProperties getSetProperties() const {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::TiedOpsRewritten);
   }

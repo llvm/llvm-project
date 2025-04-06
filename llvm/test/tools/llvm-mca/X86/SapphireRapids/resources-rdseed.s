@@ -35,10 +35,10 @@ rdseed   %rax
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]
-# CHECK-NEXT: 19.50  24.00  1.00   1.00    -     18.00  10.50   -      -      -      -     1.00    -
+# CHECK-NEXT: 19.50  24.00  1.00   1.00    -     18.00  10.50   -      -      -     1.00    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   Instructions:
-# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -      -     0.33    -     rdseedw	%ax
-# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -      -     0.33    -     rdseedl	%eax
-# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -      -     0.33    -     rdseedq	%rax
+# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -     0.33    -      -     rdseedw	%ax
+# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -     0.33    -      -     rdseedl	%eax
+# CHECK-NEXT: 6.50   8.00   0.33   0.33    -     6.00   3.50    -      -      -     0.33    -      -     rdseedq	%rax

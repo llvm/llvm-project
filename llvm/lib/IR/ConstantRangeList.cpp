@@ -39,12 +39,14 @@ void ConstantRangeList::insert(const ConstantRange &NewRange) {
     return;
   assert(!NewRange.isFullSet() && "Do not support full set");
   assert(NewRange.getLower().slt(NewRange.getUpper()));
-  assert(getBitWidth() == NewRange.getBitWidth());
   // Handle common cases.
   if (empty() || Ranges.back().getUpper().slt(NewRange.getLower())) {
     Ranges.push_back(NewRange);
     return;
   }
+
+  assert(getBitWidth() == NewRange.getBitWidth());
+
   if (NewRange.getUpper().slt(Ranges.front().getLower())) {
     Ranges.insert(Ranges.begin(), NewRange);
     return;
@@ -142,13 +144,14 @@ void ConstantRangeList::subtract(const ConstantRange &SubRange) {
 
 ConstantRangeList
 ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
-  assert(getBitWidth() == CRL.getBitWidth() &&
-         "ConstantRangeList bitwidths don't agree!");
   // Handle common cases.
   if (empty())
     return CRL;
   if (CRL.empty())
     return *this;
+
+  assert(getBitWidth() == CRL.getBitWidth() &&
+         "ConstantRangeList bitwidths don't agree!");
 
   ConstantRangeList Result;
   size_t i = 0, j = 0;
@@ -192,14 +195,14 @@ ConstantRangeList::unionWith(const ConstantRangeList &CRL) const {
 
 ConstantRangeList
 ConstantRangeList::intersectWith(const ConstantRangeList &CRL) const {
-  assert(getBitWidth() == CRL.getBitWidth() &&
-         "ConstantRangeList bitwidths don't agree!");
-
   // Handle common cases.
   if (empty())
     return *this;
   if (CRL.empty())
     return CRL;
+
+  assert(getBitWidth() == CRL.getBitWidth() &&
+         "ConstantRangeList bitwidths don't agree!");
 
   ConstantRangeList Result;
   size_t i = 0, j = 0;

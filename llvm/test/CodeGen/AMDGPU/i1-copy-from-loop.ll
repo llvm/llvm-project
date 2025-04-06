@@ -36,11 +36,12 @@ define amdgpu_ps void @i1_copy_from_loop(ptr addrspace(8) inreg %rsrc, i32 %tid)
 ; SI-NEXT:    v_cmp_le_f32_e32 vcc, 0, v1
 ; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_and_saveexec_b64 s[12:13], vcc
+; SI-NEXT:    s_cbranch_execz .LBB0_6
 ; SI-NEXT:  ; %bb.5: ; %end.loop
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_add_i32 s14, s14, 1
 ; SI-NEXT:    s_xor_b64 s[8:9], exec, -1
-; SI-NEXT:  ; %bb.6: ; %Flow1
+; SI-NEXT:  .LBB0_6: ; %Flow1
 ; SI-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; SI-NEXT:    s_or_b64 exec, exec, s[12:13]
 ; SI-NEXT:    s_branch .LBB0_2
@@ -73,7 +74,7 @@ for.end:
   br i1 %cc, label %if, label %end
 
 if:
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float undef, float undef, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float poison, float poison, float poison, float poison, i1 true, i1 true)
   br label %end
 
 end:

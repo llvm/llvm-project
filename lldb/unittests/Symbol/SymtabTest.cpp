@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
@@ -31,7 +33,7 @@ using namespace lldb_private::plugin::dwarf;
 
 class SymtabTest : public testing::Test {
   SubsystemRAII<FileSystem, HostInfo, ObjectFileMachO, SymbolFileDWARF,
-                TypeSystemClang>
+                ObjectFileELF, SymbolFileSymtab, TypeSystemClang>
       subsystem;
 };
 
@@ -717,4 +719,45 @@ LinkEditData:
                                                  Symtab::eDebugAny,
                                                  Symtab::eVisibilityAny);
   ASSERT_NE(symbol, nullptr);
+}
+
+TEST_F(SymtabTest, TestSymtabCreatedOnDemand) {
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x0000000000400180
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x0000000000400180
+    AddressAlign:    0x0000000000000010
+    Content:         554889E58B042500106000890425041060005DC3
+Symbols:
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x0000000000400180
+    Size:            0x0000000000000014
+    Binding:         STB_GLOBAL
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  auto module_sp = std::make_shared<Module>(ExpectedFile->moduleSpec());
+
+  // The symbol table should not be loaded by default.
+  Symtab *module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, nullptr);
+
+  // But it should be created on demand.
+  module_symtab = module_sp->GetSymtab(/*can_create=*/true);
+  ASSERT_NE(module_symtab, nullptr);
+
+  // And we should be able to get it again once it has been created.
+  Symtab *cached_module_symtab = module_sp->GetSymtab(/*can_create=*/false);
+  ASSERT_EQ(module_symtab, cached_module_symtab);
 }

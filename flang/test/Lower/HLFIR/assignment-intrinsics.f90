@@ -40,10 +40,10 @@ subroutine scalar_complex(x, y)
   x = y
 end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_complex(
-! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEx"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
-! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEy"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEx"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
+! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complexEy"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_3]]#0
-! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : !fir.complex<4>, !fir.ref<!fir.complex<4>>
+! CHECK:  hlfir.assign %[[VAL_4]] to %[[VAL_2]]#0 : complex<f32>, !fir.ref<complex<f32>>
 
 subroutine scalar_character(x, y)
   character(*) :: x, y
@@ -91,13 +91,13 @@ subroutine scalar_complex_2(x)
   x = (1., -1.)
 end subroutine
 ! CHECK-LABEL: func.func @_QPscalar_complex_2(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complex_2Ex"} : (!fir.ref<!fir.complex<4>>, !fir.dscope) -> (!fir.ref<!fir.complex<4>>, !fir.ref<!fir.complex<4>>)
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare {{.*}}  {uniq_name = "_QFscalar_complex_2Ex"} : (!fir.ref<complex<f32>>, !fir.dscope) -> (!fir.ref<complex<f32>>, !fir.ref<complex<f32>>)
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 1.000000e+00 : f32
 ! CHECK:  %[[VAL_3:.*]] = arith.constant -1.000000e+00 : f32
-! CHECK:  %[[VAL_4:.*]] = fir.undefined !fir.complex<4>
-! CHECK:  %[[VAL_5:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_2]], [0 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_3]], [1 : index] : (!fir.complex<4>, f32) -> !fir.complex<4>
-! CHECK:  hlfir.assign %[[VAL_6]] to %[[VAL_1]]#0 : !fir.complex<4>, !fir.ref<!fir.complex<4>>
+! CHECK:  %[[VAL_4:.*]] = fir.undefined complex<f32>
+! CHECK:  %[[VAL_5:.*]] = fir.insert_value %[[VAL_4]], %[[VAL_2]], [0 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  %[[VAL_6:.*]] = fir.insert_value %[[VAL_5]], %[[VAL_3]], [1 : index] : (complex<f32>, f32) -> complex<f32>
+! CHECK:  hlfir.assign %[[VAL_6]] to %[[VAL_1]]#0 : complex<f32>, !fir.ref<complex<f32>>
 
 subroutine scalar_character_2(x)
   character(*) :: x

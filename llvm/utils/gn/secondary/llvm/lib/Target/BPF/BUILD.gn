@@ -71,6 +71,7 @@ static_library("LLVMBPFCodeGen") {
     "BPFISelLowering.cpp",
     "BPFInstrInfo.cpp",
     "BPFMCInstLower.cpp",
+    "BPFMIChecking.cpp",
     "BPFMIPeephole.cpp",
     "BPFMISimplifyPatchable.cpp",
     "BPFPreserveDIType.cpp",

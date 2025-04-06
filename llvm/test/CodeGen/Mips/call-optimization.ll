@@ -1,6 +1,6 @@
-; RUN: llc -march=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | \
+; RUN: llc -mtriple=mipsel -disable-mips-delay-filler -relocation-model=pic < %s | \
 ; RUN:  FileCheck %s -check-prefix=O32
-; RUN: llc -march=mipsel -mips-load-target-from-got=false \
+; RUN: llc -mtriple=mipsel -mips-load-target-from-got=false \
 ; RUN:  -disable-mips-delay-filler -relocation-model=pic < %s | FileCheck %s -check-prefix=O32-LOADTGT
 
 @gd1 = common global double 0.000000e+00, align 8

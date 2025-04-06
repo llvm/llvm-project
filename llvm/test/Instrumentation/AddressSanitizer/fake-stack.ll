@@ -27,7 +27,7 @@ define void @Simple() uwtable sanitize_address {
 ; NEVER-NEXT:    store i64 1102416563, ptr [[TMP3]], align 8
 ; NEVER-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 8
 ; NEVER-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; NEVER-NEXT:    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr [[TMP5]], align 8
+; NEVER-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP5]], align 8
 ; NEVER-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 16
 ; NEVER-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; NEVER-NEXT:    store i64 ptrtoint (ptr @Simple to i64), ptr [[TMP7]], align 8
@@ -69,7 +69,7 @@ define void @Simple() uwtable sanitize_address {
 ; RUNTIME-NEXT:    store i64 1102416563, ptr [[TMP13]], align 8
 ; RUNTIME-NEXT:    [[TMP14:%.*]] = add i64 [[TMP10]], 8
 ; RUNTIME-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
-; RUNTIME-NEXT:    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr [[TMP15]], align 8
+; RUNTIME-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP15]], align 8
 ; RUNTIME-NEXT:    [[TMP16:%.*]] = add i64 [[TMP10]], 16
 ; RUNTIME-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
 ; RUNTIME-NEXT:    store i64 ptrtoint (ptr @Simple to i64), ptr [[TMP17]], align 8
@@ -119,7 +119,7 @@ define void @Simple() uwtable sanitize_address {
 ; ALWAYS-NEXT:    store i64 1102416563, ptr [[TMP8]], align 8
 ; ALWAYS-NEXT:    [[TMP9:%.*]] = add i64 [[TMP5]], 8
 ; ALWAYS-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[TMP9]] to ptr
-; ALWAYS-NEXT:    store i64 ptrtoint (ptr @___asan_gen_ to i64), ptr [[TMP10]], align 8
+; ALWAYS-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack to i64), ptr [[TMP10]], align 8
 ; ALWAYS-NEXT:    [[TMP11:%.*]] = add i64 [[TMP5]], 16
 ; ALWAYS-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
 ; ALWAYS-NEXT:    store i64 ptrtoint (ptr @Simple to i64), ptr [[TMP12]], align 8
@@ -167,7 +167,7 @@ define void @Huge() uwtable sanitize_address {
 ; CHECK-NEXT:    store i64 1102416563, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = inttoptr i64 [[TMP4]] to ptr
-; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_.1 to i64), ptr [[TMP5]], align 8
+; CHECK-NEXT:    store i64 ptrtoint (ptr @___asan_gen_stack.1 to i64), ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[TMP7:%.*]] = inttoptr i64 [[TMP6]] to ptr
 ; CHECK-NEXT:    store i64 ptrtoint (ptr @Huge to i64), ptr [[TMP7]], align 8

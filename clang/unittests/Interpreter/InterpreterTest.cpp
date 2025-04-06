@@ -107,6 +107,13 @@ TEST_F(InterpreterTest, Errors) {
 
   auto RecoverErr = Interp->Parse("int var1 = 42;");
   EXPECT_TRUE(!!RecoverErr);
+
+  Err = Interp->Parse("try { throw 1; } catch { 0; }").takeError();
+  EXPECT_THAT(DiagnosticOutput, HasSubstr("error: expected '('"));
+  EXPECT_EQ("Parsing failed.", llvm::toString(std::move(Err)));
+
+  RecoverErr = Interp->Parse("var1 = 424;");
+  EXPECT_TRUE(!!RecoverErr);
 }
 
 // Here we test whether the user can mix declarations and statements. The
@@ -379,6 +386,28 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V9.getType()->isMemberFunctionPointerType());
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
+}
+
+TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
+  std::vector<const char *> Args;
+  std::unique_ptr<Interpreter> Interp = createInterpreter(Args);
+
+  Sema &sema = Interp->getCompilerInstance()->getSema();
+
+  llvm::cantFail(Interp->ParseAndExecute("int x = 42;"));
+
+  TranslationUnitDecl *TU =
+      sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl();
+
+  llvm::cantFail(Interp->ParseAndExecute("long y = 84;"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
+
+  llvm::cantFail(Interp->ParseAndExecute("char z = 'z';"));
+
+  EXPECT_EQ(TU,
+            sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
 }
 
 } // end anonymous namespace

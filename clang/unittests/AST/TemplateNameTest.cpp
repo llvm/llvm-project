@@ -21,7 +21,7 @@ std::string printTemplateName(TemplateName TN, const PrintingPolicy &Policy,
   std::string Result;
   llvm::raw_string_ostream Out(Result);
   TN.print(Out, Policy, Qual);
-  return Out.str();
+  return Result;
 }
 
 TEST(TemplateName, PrintTemplate) {

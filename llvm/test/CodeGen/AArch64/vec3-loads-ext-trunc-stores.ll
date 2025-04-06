@@ -303,7 +303,7 @@ define <3 x i32> @load_v3i8_zext_to_3xi32(ptr %src) {
 ; BE-NEXT:    add x8, x0, #2
 ; BE-NEXT:    ldr s0, [sp, #12]
 ; BE-NEXT:    rev32 v0.8b, v0.8b
-; BE-NEXT:    ushll v0.8h, v0.8b, #0
+; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    ld1 { v0.b }[4], [x8]
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0
 ; BE-NEXT:    and v0.16b, v0.16b, v1.16b
@@ -358,11 +358,10 @@ define void @store_trunc_from_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    add x9, x0, #4
 ; CHECK-NEXT:    ld1r.4h { v0 }, [x9]
-; CHECK-NEXT:    fmov s1, w8
+; CHECK-NEXT:    lsr w9, w8, #16
 ; CHECK-NEXT:    strb w8, [x1]
-; CHECK-NEXT:    add x8, x1, #1
-; CHECK-NEXT:    st1.b { v1 }[2], [x8]
 ; CHECK-NEXT:    add x8, x1, #2
+; CHECK-NEXT:    strb w9, [x1, #1]
 ; CHECK-NEXT:    st1.b { v0 }[4], [x8]
 ; CHECK-NEXT:    ret
 ;

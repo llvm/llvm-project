@@ -42,13 +42,13 @@ static const unsigned ZOSAddressMap[] = {
     1, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    0, // hlsl_constant
     0  // wasm_funcref
 };
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
   static const char *const GCCRegNames[];
-  std::string CPU;
   int ISARevision;
   bool HasTransactionalExecution;
   bool HasVector;
@@ -58,7 +58,7 @@ class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
 public:
   SystemZTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), CPU("z10"), ISARevision(8),
+      : TargetInfo(Triple), ISARevision(getISARevision("z10")),
         HasTransactionalExecution(false), HasVector(false), SoftFloat(false),
         UnalignedSymbols(false) {
     IntMaxType = SignedLong;
@@ -100,13 +100,13 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  ArrayRef<Builtin::Info> getTargetBuiltins() const override;
+  llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return std::nullopt;
+    return {};
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
@@ -168,8 +168,7 @@ public:
   }
 
   bool setCPU(const std::string &Name) override {
-    CPU = Name;
-    ISARevision = getISARevision(CPU);
+    ISARevision = getISARevision(Name);
     return ISARevision != -1;
   }
 
@@ -188,6 +187,10 @@ public:
       Features["vector-enhancements-2"] = true;
     if (ISARevision >= 14)
       Features["nnp-assist"] = true;
+    if (ISARevision >= 15) {
+      Features["miscellaneous-extensions-4"] = true;
+      Features["vector-enhancements-3"] = true;
+    }
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
@@ -248,6 +251,8 @@ public:
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     return RegNo < 4 ? 6 + RegNo : -1;
   }
+
+  bool hasSjLjLowering() const override { return true; }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(256, 256);

@@ -207,17 +207,13 @@ define half @bcvt_i64_to_f16_via_i16(i64 %a, i64 %b) nounwind {
 define half @uitofp_aext_i32_to_f16(i32 %a) nounwind {
 ; RV64IZFHMIN-LABEL: uitofp_aext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    slli a0, a0, 32
-; RV64IZFHMIN-NEXT:    srli a0, a0, 32
-; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: uitofp_aext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    slli a0, a0, 32
-; RV64IZHINXMIN-NEXT:    srli a0, a0, 32
-; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = uitofp i32 %a to half
@@ -227,17 +223,13 @@ define half @uitofp_aext_i32_to_f16(i32 %a) nounwind {
 define half @uitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 ; RV64IZFHMIN-LABEL: uitofp_sext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    slli a0, a0, 32
-; RV64IZFHMIN-NEXT:    srli a0, a0, 32
-; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: uitofp_sext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    slli a0, a0, 32
-; RV64IZHINXMIN-NEXT:    srli a0, a0, 32
-; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = uitofp i32 %a to half
@@ -247,13 +239,13 @@ define half @uitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 define half @uitofp_zext_i32_to_f16(i32 zeroext %a) nounwind {
 ; RV64IZFHMIN-LABEL: uitofp_zext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.lu fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.wu fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: uitofp_zext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    fcvt.s.lu a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.wu a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = uitofp i32 %a to half
@@ -263,15 +255,13 @@ define half @uitofp_zext_i32_to_f16(i32 zeroext %a) nounwind {
 define half @sitofp_aext_i32_to_f16(i32 %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_aext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    sext.w a0, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: sitofp_aext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    sext.w a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = sitofp i32 %a to half
@@ -281,13 +271,13 @@ define half @sitofp_aext_i32_to_f16(i32 %a) nounwind {
 define half @sitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_sext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: sitofp_sext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = sitofp i32 %a to half
@@ -297,15 +287,13 @@ define half @sitofp_sext_i32_to_f16(i32 signext %a) nounwind {
 define half @sitofp_zext_i32_to_f16(i32 zeroext %a) nounwind {
 ; RV64IZFHMIN-LABEL: sitofp_zext_i32_to_f16:
 ; RV64IZFHMIN:       # %bb.0:
-; RV64IZFHMIN-NEXT:    sext.w a0, a0
-; RV64IZFHMIN-NEXT:    fcvt.s.l fa5, a0
+; RV64IZFHMIN-NEXT:    fcvt.s.w fa5, a0
 ; RV64IZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; RV64IZFHMIN-NEXT:    ret
 ;
 ; RV64IZHINXMIN-LABEL: sitofp_zext_i32_to_f16:
 ; RV64IZHINXMIN:       # %bb.0:
-; RV64IZHINXMIN-NEXT:    sext.w a0, a0
-; RV64IZHINXMIN-NEXT:    fcvt.s.l a0, a0
+; RV64IZHINXMIN-NEXT:    fcvt.s.w a0, a0
 ; RV64IZHINXMIN-NEXT:    fcvt.h.s a0, a0
 ; RV64IZHINXMIN-NEXT:    ret
   %1 = sitofp i32 %a to half

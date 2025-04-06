@@ -1,5 +1,5 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -fsanitize=array-bounds,enum,float-cast-overflow,integer-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,unsigned-integer-overflow,signed-integer-overflow,shift-base,shift-exponent -O0 -emit-llvm -o - %s | FileCheck %s
 
 // The runtime test checking the _BitInt ubsan feature is located in compiler-rt/test/ubsan/TestCases/Integer/bit-int.c
 

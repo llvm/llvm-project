@@ -8,13 +8,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 @c = external global i32, align 4
 
 ; CHECK-LABEL: @fn1
-define void @fn1() {
+define void @fn1(i1 %arg) {
 entry:
   br label %for.body
 
 for.cond1.preheader:                              ; preds = %for.body
   %0 = load i32, ptr @c, align 4
-  br i1 undef, label %for.cond1.us.preheader, label %for.cond1
+  br i1 %arg, label %for.cond1.us.preheader, label %for.cond1
 
 for.cond1.us.preheader:                           ; preds = %for.cond1.preheader
   br label %for.cond1.us
@@ -23,13 +23,13 @@ for.cond1.us:                                     ; preds = %for.cond1.us, %for.
   br label %for.cond1.us
 
 for.body:                                         ; preds = %for.body, %entry
-  br i1 undef, label %for.body, label %for.cond1.preheader
+  br i1 %arg, label %for.body, label %for.cond1.preheader
 
 for.cond1:                                        ; preds = %for.cond1.preheader
   br i1 true, label %for.body9.lr.ph, label %for.cond13.preheader
 
 for.body9.lr.ph:                                  ; preds = %for.cond1
-  br i1 undef, label %for.body9.us.preheader, label %for.body9
+  br i1 %arg, label %for.body9.us.preheader, label %for.body9
 
 for.body9.us.preheader:                           ; preds = %for.body9.lr.ph
   br label %for.body9.us
@@ -47,7 +47,7 @@ for.body9:                                        ; preds = %for.body9.lr.ph
 for.cond13:                                       ; preds = %for.cond13, %for.cond13.preheader
   %d.1 = phi i32 [ %t.1, %for.cond13 ], [ %0, %for.cond13.preheader ]
   %t.1 = phi i32 [ %b.0.lcssa, %for.cond13 ], [ %0, %for.cond13.preheader ]
-  br i1 undef, label %for.cond18.preheader, label %for.cond13
+  br i1 %arg, label %for.cond18.preheader, label %for.cond13
 
 for.cond18.preheader:                             ; preds = %for.cond13
   br label %for.cond18

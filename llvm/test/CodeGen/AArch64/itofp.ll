@@ -3309,26 +3309,17 @@ define <3 x double> @stofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-LABEL: stofp_v3i8_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NEXT:    mov h2, v1.h[1]
-; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    smov x8, v0.s[0]
-; CHECK-GI-NEXT:    smov x9, v0.s[1]
-; CHECK-GI-NEXT:    sshll v0.4s, v1.4h, #0
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    smov x8, v0.s[0]
+; CHECK-GI-NEXT:    smov x8, v0.h[0]
+; CHECK-GI-NEXT:    smov x9, v0.h[1]
+; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    smov x8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    smov x9, v0.s[1]
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    smov x9, v0.h[3]
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    scvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
@@ -3363,26 +3354,17 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-GI-LABEL: utofp_v3i8_v3f64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NEXT:    mov h2, v1.h[1]
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-GI-NEXT:    mov w8, v0.s[0]
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
-; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov w8, v0.s[0]
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    umov w8, v0.h[2]
 ; CHECK-GI-NEXT:    mov v1.d[1], x9
-; CHECK-GI-NEXT:    mov w9, v0.s[1]
-; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    umov w9, v0.h[3]
+; CHECK-GI-NEXT:    mov v2.d[0], x8
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v1.2d
 ; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
@@ -4439,22 +4421,42 @@ entry:
 }
 
 define <2 x float> @stofp_v2i64_v2f32(<2 x i64> %a) {
-; CHECK-LABEL: stofp_v2i64_v2f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v2i64_v2f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x9, d0
+; CHECK-SD-NEXT:    scvtf s0, x9
+; CHECK-SD-NEXT:    scvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v2i64_v2f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %c
 }
 
 define <2 x float> @utofp_v2i64_v2f32(<2 x i64> %a) {
-; CHECK-LABEL: utofp_v2i64_v2f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v2i64_v2f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x9, d0
+; CHECK-SD-NEXT:    ucvtf s0, x9
+; CHECK-SD-NEXT:    ucvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v2i64_v2f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <2 x i64> %a to <2 x float>
   ret <2 x float> %c
@@ -4464,13 +4466,18 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v3i64_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    scvtf v1.2d, v2.2d
-; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    scvtf s3, x8
+; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    scvtf s1, x8
+; CHECK-SD-NEXT:    fmov x8, d2
+; CHECK-SD-NEXT:    mov v0.s[0], v3.s[0]
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    scvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v3i64_v3f32:
@@ -4479,13 +4486,13 @@ define <3 x float> @stofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    scvtf v1.2d, v2.2d
+; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
+; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <3 x i64> %a to <3 x float>
@@ -4496,13 +4503,18 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v3i64_v3f32:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    ucvtf v1.2d, v2.2d
-; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ucvtf s3, x8
+; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    ucvtf s1, x8
+; CHECK-SD-NEXT:    fmov x8, d2
+; CHECK-SD-NEXT:    mov v0.s[0], v3.s[0]
+; CHECK-SD-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-SD-NEXT:    ucvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v3i64_v3f32:
@@ -4511,13 +4523,13 @@ define <3 x float> @utofp_v3i64_v3f32(<3 x i64> %a) {
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ucvtf v1.2d, v2.2d
+; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
 ; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-GI-NEXT:    fcvtn v1.2s, v1.2d
-; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NEXT:    mov s2, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-GI-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-GI-NEXT:    fcvtn v2.2s, v2.2d
+; CHECK-GI-NEXT:    fcvtn v1.2s, v0.2d
+; CHECK-GI-NEXT:    mov v0.s[0], v1.s[0]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
+; CHECK-GI-NEXT:    mov v0.s[2], v2.s[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <3 x i64> %a to <3 x float>
@@ -4525,26 +4537,56 @@ entry:
 }
 
 define <4 x float> @stofp_v4i64_v4f32(<4 x i64> %a) {
-; CHECK-LABEL: stofp_v4i64_v4f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v4i64_v4f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x9, d0
+; CHECK-SD-NEXT:    scvtf s0, x9
+; CHECK-SD-NEXT:    mov x9, v1.d[1]
+; CHECK-SD-NEXT:    scvtf s2, x8
+; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    scvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-SD-NEXT:    scvtf s1, x9
+; CHECK-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v4i64_v4f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    scvtf v1.2d, v1.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <4 x i64> %a to <4 x float>
   ret <4 x float> %c
 }
 
 define <4 x float> @utofp_v4i64_v4f32(<4 x i64> %a) {
-; CHECK-LABEL: utofp_v4i64_v4f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v1.2d, v1.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v1.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v4i64_v4f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x9, d0
+; CHECK-SD-NEXT:    ucvtf s0, x9
+; CHECK-SD-NEXT:    mov x9, v1.d[1]
+; CHECK-SD-NEXT:    ucvtf s2, x8
+; CHECK-SD-NEXT:    fmov x8, d1
+; CHECK-SD-NEXT:    ucvtf s1, x8
+; CHECK-SD-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-SD-NEXT:    ucvtf s1, x9
+; CHECK-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v4i64_v4f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    ucvtf v1.2d, v1.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fcvtn2 v0.4s, v1.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <4 x i64> %a to <4 x float>
   ret <4 x float> %c
@@ -4553,14 +4595,29 @@ entry:
 define <8 x float> @stofp_v8i64_v8f32(<8 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v8i64_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    scvtf v4.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-SD-NEXT:    scvtf v2.2d, v3.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v4.2d
-; CHECK-SD-NEXT:    fcvtn2 v1.4s, v2.2d
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    mov x9, v2.d[1]
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    fmov x11, d2
+; CHECK-SD-NEXT:    scvtf s0, x10
+; CHECK-SD-NEXT:    mov x10, v3.d[1]
+; CHECK-SD-NEXT:    scvtf s4, x8
+; CHECK-SD-NEXT:    scvtf s5, x9
+; CHECK-SD-NEXT:    scvtf s2, x11
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    fmov x11, d3
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    scvtf s1, x9
+; CHECK-SD-NEXT:    mov v0.s[1], v4.s[0]
+; CHECK-SD-NEXT:    scvtf s3, x11
+; CHECK-SD-NEXT:    mov v2.s[1], v5.s[0]
+; CHECK-SD-NEXT:    scvtf s4, x8
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-SD-NEXT:    scvtf s1, x10
+; CHECK-SD-NEXT:    mov v2.s[2], v3.s[0]
+; CHECK-SD-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-SD-NEXT:    mov v2.s[3], v1.s[0]
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v8i64_v8f32:
@@ -4582,14 +4639,29 @@ entry:
 define <8 x float> @utofp_v8i64_v8f32(<8 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v8i64_v8f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    ucvtf v4.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-SD-NEXT:    ucvtf v2.2d, v3.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v4.2d
-; CHECK-SD-NEXT:    fcvtn2 v1.4s, v2.2d
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    mov x9, v2.d[1]
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    fmov x11, d2
+; CHECK-SD-NEXT:    ucvtf s0, x10
+; CHECK-SD-NEXT:    mov x10, v3.d[1]
+; CHECK-SD-NEXT:    ucvtf s4, x8
+; CHECK-SD-NEXT:    ucvtf s5, x9
+; CHECK-SD-NEXT:    ucvtf s2, x11
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    fmov x11, d3
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    ucvtf s1, x9
+; CHECK-SD-NEXT:    mov v0.s[1], v4.s[0]
+; CHECK-SD-NEXT:    ucvtf s3, x11
+; CHECK-SD-NEXT:    mov v2.s[1], v5.s[0]
+; CHECK-SD-NEXT:    ucvtf s4, x8
+; CHECK-SD-NEXT:    mov v0.s[2], v1.s[0]
+; CHECK-SD-NEXT:    ucvtf s1, x10
+; CHECK-SD-NEXT:    mov v2.s[2], v3.s[0]
+; CHECK-SD-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-SD-NEXT:    mov v2.s[3], v1.s[0]
+; CHECK-SD-NEXT:    mov v1.16b, v2.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v8i64_v8f32:
@@ -4609,50 +4681,148 @@ entry:
 }
 
 define <16 x float> @stofp_v16i64_v16f32(<16 x i64> %a) {
-; CHECK-LABEL: stofp_v16i64_v16f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-NEXT:    scvtf v16.2d, v1.2d
-; CHECK-NEXT:    scvtf v17.2d, v3.2d
-; CHECK-NEXT:    scvtf v5.2d, v5.2d
-; CHECK-NEXT:    scvtf v7.2d, v7.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-NEXT:    fcvtn v2.2s, v4.2d
-; CHECK-NEXT:    fcvtn v3.2s, v6.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v16.2d
-; CHECK-NEXT:    fcvtn2 v1.4s, v17.2d
-; CHECK-NEXT:    fcvtn2 v2.4s, v5.2d
-; CHECK-NEXT:    fcvtn2 v3.4s, v7.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: stofp_v16i64_v16f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov x13, d2
+; CHECK-SD-NEXT:    mov x9, v0.d[1]
+; CHECK-SD-NEXT:    mov x10, v2.d[1]
+; CHECK-SD-NEXT:    fmov x11, d0
+; CHECK-SD-NEXT:    mov x12, v4.d[1]
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    scvtf s16, x13
+; CHECK-SD-NEXT:    fmov x13, d4
+; CHECK-SD-NEXT:    scvtf s0, x11
+; CHECK-SD-NEXT:    mov x11, v6.d[1]
+; CHECK-SD-NEXT:    scvtf s17, x9
+; CHECK-SD-NEXT:    scvtf s18, x10
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    scvtf s1, x12
+; CHECK-SD-NEXT:    fmov x12, d6
+; CHECK-SD-NEXT:    scvtf s2, x13
+; CHECK-SD-NEXT:    fmov x13, d3
+; CHECK-SD-NEXT:    mov x10, v3.d[1]
+; CHECK-SD-NEXT:    scvtf s4, x11
+; CHECK-SD-NEXT:    mov v0.s[1], v17.s[0]
+; CHECK-SD-NEXT:    scvtf s6, x9
+; CHECK-SD-NEXT:    scvtf s3, x12
+; CHECK-SD-NEXT:    mov v16.s[1], v18.s[0]
+; CHECK-SD-NEXT:    mov x9, v5.d[1]
+; CHECK-SD-NEXT:    fmov x11, d5
+; CHECK-SD-NEXT:    scvtf s5, x13
+; CHECK-SD-NEXT:    fmov x13, d7
+; CHECK-SD-NEXT:    mov x12, v7.d[1]
+; CHECK-SD-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-SD-NEXT:    mov v0.s[2], v6.s[0]
+; CHECK-SD-NEXT:    scvtf s6, x10
+; CHECK-SD-NEXT:    scvtf s7, x11
+; CHECK-SD-NEXT:    scvtf s1, x13
+; CHECK-SD-NEXT:    mov v3.s[1], v4.s[0]
+; CHECK-SD-NEXT:    mov v16.s[2], v5.s[0]
+; CHECK-SD-NEXT:    scvtf s4, x8
+; CHECK-SD-NEXT:    scvtf s5, x9
+; CHECK-SD-NEXT:    mov v2.s[2], v7.s[0]
+; CHECK-SD-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-SD-NEXT:    scvtf s1, x12
+; CHECK-SD-NEXT:    mov v16.s[3], v6.s[0]
+; CHECK-SD-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-SD-NEXT:    mov v2.s[3], v5.s[0]
+; CHECK-SD-NEXT:    mov v3.s[3], v1.s[0]
+; CHECK-SD-NEXT:    mov v1.16b, v16.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: stofp_v16i64_v16f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    scvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    scvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    scvtf v4.2d, v4.2d
+; CHECK-GI-NEXT:    scvtf v6.2d, v6.2d
+; CHECK-GI-NEXT:    scvtf v16.2d, v1.2d
+; CHECK-GI-NEXT:    scvtf v17.2d, v3.2d
+; CHECK-GI-NEXT:    scvtf v5.2d, v5.2d
+; CHECK-GI-NEXT:    scvtf v7.2d, v7.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fcvtn v1.2s, v2.2d
+; CHECK-GI-NEXT:    fcvtn v2.2s, v4.2d
+; CHECK-GI-NEXT:    fcvtn v3.2s, v6.2d
+; CHECK-GI-NEXT:    fcvtn2 v0.4s, v16.2d
+; CHECK-GI-NEXT:    fcvtn2 v1.4s, v17.2d
+; CHECK-GI-NEXT:    fcvtn2 v2.4s, v5.2d
+; CHECK-GI-NEXT:    fcvtn2 v3.4s, v7.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <16 x i64> %a to <16 x float>
   ret <16 x float> %c
 }
 
 define <16 x float> @utofp_v16i64_v16f32(<16 x i64> %a) {
-; CHECK-LABEL: utofp_v16i64_v16f32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-NEXT:    ucvtf v16.2d, v1.2d
-; CHECK-NEXT:    ucvtf v17.2d, v3.2d
-; CHECK-NEXT:    ucvtf v5.2d, v5.2d
-; CHECK-NEXT:    ucvtf v7.2d, v7.2d
-; CHECK-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-NEXT:    fcvtn v2.2s, v4.2d
-; CHECK-NEXT:    fcvtn v3.2s, v6.2d
-; CHECK-NEXT:    fcvtn2 v0.4s, v16.2d
-; CHECK-NEXT:    fcvtn2 v1.4s, v17.2d
-; CHECK-NEXT:    fcvtn2 v2.4s, v5.2d
-; CHECK-NEXT:    fcvtn2 v3.4s, v7.2d
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: utofp_v16i64_v16f32:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov x13, d2
+; CHECK-SD-NEXT:    mov x9, v0.d[1]
+; CHECK-SD-NEXT:    mov x10, v2.d[1]
+; CHECK-SD-NEXT:    fmov x11, d0
+; CHECK-SD-NEXT:    mov x12, v4.d[1]
+; CHECK-SD-NEXT:    mov x8, v1.d[1]
+; CHECK-SD-NEXT:    ucvtf s16, x13
+; CHECK-SD-NEXT:    fmov x13, d4
+; CHECK-SD-NEXT:    ucvtf s0, x11
+; CHECK-SD-NEXT:    mov x11, v6.d[1]
+; CHECK-SD-NEXT:    ucvtf s17, x9
+; CHECK-SD-NEXT:    ucvtf s18, x10
+; CHECK-SD-NEXT:    fmov x9, d1
+; CHECK-SD-NEXT:    ucvtf s1, x12
+; CHECK-SD-NEXT:    fmov x12, d6
+; CHECK-SD-NEXT:    ucvtf s2, x13
+; CHECK-SD-NEXT:    fmov x13, d3
+; CHECK-SD-NEXT:    mov x10, v3.d[1]
+; CHECK-SD-NEXT:    ucvtf s4, x11
+; CHECK-SD-NEXT:    mov v0.s[1], v17.s[0]
+; CHECK-SD-NEXT:    ucvtf s6, x9
+; CHECK-SD-NEXT:    ucvtf s3, x12
+; CHECK-SD-NEXT:    mov v16.s[1], v18.s[0]
+; CHECK-SD-NEXT:    mov x9, v5.d[1]
+; CHECK-SD-NEXT:    fmov x11, d5
+; CHECK-SD-NEXT:    ucvtf s5, x13
+; CHECK-SD-NEXT:    fmov x13, d7
+; CHECK-SD-NEXT:    mov x12, v7.d[1]
+; CHECK-SD-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-SD-NEXT:    mov v0.s[2], v6.s[0]
+; CHECK-SD-NEXT:    ucvtf s6, x10
+; CHECK-SD-NEXT:    ucvtf s7, x11
+; CHECK-SD-NEXT:    ucvtf s1, x13
+; CHECK-SD-NEXT:    mov v3.s[1], v4.s[0]
+; CHECK-SD-NEXT:    mov v16.s[2], v5.s[0]
+; CHECK-SD-NEXT:    ucvtf s4, x8
+; CHECK-SD-NEXT:    ucvtf s5, x9
+; CHECK-SD-NEXT:    mov v2.s[2], v7.s[0]
+; CHECK-SD-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-SD-NEXT:    ucvtf s1, x12
+; CHECK-SD-NEXT:    mov v16.s[3], v6.s[0]
+; CHECK-SD-NEXT:    mov v0.s[3], v4.s[0]
+; CHECK-SD-NEXT:    mov v2.s[3], v5.s[0]
+; CHECK-SD-NEXT:    mov v3.s[3], v1.s[0]
+; CHECK-SD-NEXT:    mov v1.16b, v16.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: utofp_v16i64_v16f32:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ucvtf v0.2d, v0.2d
+; CHECK-GI-NEXT:    ucvtf v2.2d, v2.2d
+; CHECK-GI-NEXT:    ucvtf v4.2d, v4.2d
+; CHECK-GI-NEXT:    ucvtf v6.2d, v6.2d
+; CHECK-GI-NEXT:    ucvtf v16.2d, v1.2d
+; CHECK-GI-NEXT:    ucvtf v17.2d, v3.2d
+; CHECK-GI-NEXT:    ucvtf v5.2d, v5.2d
+; CHECK-GI-NEXT:    ucvtf v7.2d, v7.2d
+; CHECK-GI-NEXT:    fcvtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    fcvtn v1.2s, v2.2d
+; CHECK-GI-NEXT:    fcvtn v2.2s, v4.2d
+; CHECK-GI-NEXT:    fcvtn v3.2s, v6.2d
+; CHECK-GI-NEXT:    fcvtn2 v0.4s, v16.2d
+; CHECK-GI-NEXT:    fcvtn2 v1.4s, v17.2d
+; CHECK-GI-NEXT:    fcvtn2 v2.4s, v5.2d
+; CHECK-GI-NEXT:    fcvtn2 v3.4s, v7.2d
+; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <16 x i64> %a to <16 x float>
   ret <16 x float> %c
@@ -4661,42 +4831,99 @@ entry:
 define <32 x float> @stofp_v32i64_v32f32(<32 x i64> %a) {
 ; CHECK-SD-LABEL: stofp_v32i64_v32f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp q17, q16, [sp, #64]
-; CHECK-SD-NEXT:    scvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldp q19, q18, [sp, #32]
-; CHECK-SD-NEXT:    scvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    ldp q21, q20, [sp]
-; CHECK-SD-NEXT:    scvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ldp q23, q22, [sp, #96]
-; CHECK-SD-NEXT:    scvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    scvtf v19.2d, v19.2d
-; CHECK-SD-NEXT:    scvtf v17.2d, v17.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    scvtf v21.2d, v21.2d
-; CHECK-SD-NEXT:    scvtf v24.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-SD-NEXT:    scvtf v23.2d, v23.2d
-; CHECK-SD-NEXT:    scvtf v25.2d, v3.2d
-; CHECK-SD-NEXT:    fcvtn v2.2s, v4.2d
-; CHECK-SD-NEXT:    scvtf v26.2d, v5.2d
-; CHECK-SD-NEXT:    fcvtn v3.2s, v6.2d
-; CHECK-SD-NEXT:    scvtf v27.2d, v7.2d
-; CHECK-SD-NEXT:    scvtf v20.2d, v20.2d
-; CHECK-SD-NEXT:    fcvtn v5.2s, v19.2d
-; CHECK-SD-NEXT:    scvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtn v4.2s, v21.2d
-; CHECK-SD-NEXT:    fcvtn v6.2s, v17.2d
-; CHECK-SD-NEXT:    scvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    fcvtn v7.2s, v23.2d
-; CHECK-SD-NEXT:    scvtf v17.2d, v22.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v24.2d
-; CHECK-SD-NEXT:    fcvtn2 v1.4s, v25.2d
-; CHECK-SD-NEXT:    fcvtn2 v2.4s, v26.2d
-; CHECK-SD-NEXT:    fcvtn2 v3.4s, v27.2d
-; CHECK-SD-NEXT:    fcvtn2 v5.4s, v18.2d
-; CHECK-SD-NEXT:    fcvtn2 v4.4s, v20.2d
-; CHECK-SD-NEXT:    fcvtn2 v6.4s, v16.2d
-; CHECK-SD-NEXT:    fcvtn2 v7.4s, v17.2d
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    mov v16.16b, v1.16b
+; CHECK-SD-NEXT:    fmov x11, d2
+; CHECK-SD-NEXT:    ldp q24, q20, [sp]
+; CHECK-SD-NEXT:    mov x9, v2.d[1]
+; CHECK-SD-NEXT:    fmov x12, d3
+; CHECK-SD-NEXT:    fmov x13, d4
+; CHECK-SD-NEXT:    scvtf s0, x10
+; CHECK-SD-NEXT:    ldp q21, q18, [sp, #32]
+; CHECK-SD-NEXT:    scvtf s2, x8
+; CHECK-SD-NEXT:    scvtf s1, x11
+; CHECK-SD-NEXT:    mov x10, v4.d[1]
+; CHECK-SD-NEXT:    fmov x11, d16
+; CHECK-SD-NEXT:    ldp q19, q17, [sp, #96]
+; CHECK-SD-NEXT:    scvtf s22, x9
+; CHECK-SD-NEXT:    mov x8, v3.d[1]
+; CHECK-SD-NEXT:    scvtf s4, x12
+; CHECK-SD-NEXT:    mov x12, v24.d[1]
+; CHECK-SD-NEXT:    mov x9, v16.d[1]
+; CHECK-SD-NEXT:    scvtf s3, x11
+; CHECK-SD-NEXT:    ldp q23, q16, [sp, #64]
+; CHECK-SD-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-SD-NEXT:    scvtf s25, x10
+; CHECK-SD-NEXT:    fmov x10, d6
+; CHECK-SD-NEXT:    mov v1.s[1], v22.s[0]
+; CHECK-SD-NEXT:    mov x11, v6.d[1]
+; CHECK-SD-NEXT:    scvtf s2, x13
+; CHECK-SD-NEXT:    mov x13, v21.d[1]
+; CHECK-SD-NEXT:    fmov x14, d19
+; CHECK-SD-NEXT:    scvtf s22, x9
+; CHECK-SD-NEXT:    mov x9, v5.d[1]
+; CHECK-SD-NEXT:    fmov x15, d17
+; CHECK-SD-NEXT:    mov v0.s[2], v3.s[0]
+; CHECK-SD-NEXT:    scvtf s3, x10
+; CHECK-SD-NEXT:    fmov x10, d24
+; CHECK-SD-NEXT:    mov v1.s[2], v4.s[0]
+; CHECK-SD-NEXT:    scvtf s24, x12
+; CHECK-SD-NEXT:    scvtf s6, x11
+; CHECK-SD-NEXT:    fmov x11, d5
+; CHECK-SD-NEXT:    fmov x12, d7
+; CHECK-SD-NEXT:    mov v2.s[1], v25.s[0]
+; CHECK-SD-NEXT:    scvtf s4, x10
+; CHECK-SD-NEXT:    fmov x10, d21
+; CHECK-SD-NEXT:    scvtf s21, x8
+; CHECK-SD-NEXT:    mov x8, v23.d[1]
+; CHECK-SD-NEXT:    scvtf s25, x13
+; CHECK-SD-NEXT:    mov x13, v19.d[1]
+; CHECK-SD-NEXT:    scvtf s26, x11
+; CHECK-SD-NEXT:    mov x11, v20.d[1]
+; CHECK-SD-NEXT:    mov v3.s[1], v6.s[0]
+; CHECK-SD-NEXT:    scvtf s5, x10
+; CHECK-SD-NEXT:    mov x10, v7.d[1]
+; CHECK-SD-NEXT:    scvtf s7, x14
+; CHECK-SD-NEXT:    mov v4.s[1], v24.s[0]
+; CHECK-SD-NEXT:    scvtf s24, x12
+; CHECK-SD-NEXT:    fmov x12, d20
+; CHECK-SD-NEXT:    scvtf s20, x8
+; CHECK-SD-NEXT:    fmov x8, d23
+; CHECK-SD-NEXT:    scvtf s19, x13
+; CHECK-SD-NEXT:    fmov x13, d18
+; CHECK-SD-NEXT:    fmov x14, d16
+; CHECK-SD-NEXT:    mov v2.s[2], v26.s[0]
+; CHECK-SD-NEXT:    mov v5.s[1], v25.s[0]
+; CHECK-SD-NEXT:    scvtf s23, x10
+; CHECK-SD-NEXT:    mov v0.s[3], v22.s[0]
+; CHECK-SD-NEXT:    scvtf s6, x8
+; CHECK-SD-NEXT:    mov x8, v18.d[1]
+; CHECK-SD-NEXT:    scvtf s18, x12
+; CHECK-SD-NEXT:    mov x12, v16.d[1]
+; CHECK-SD-NEXT:    scvtf s16, x13
+; CHECK-SD-NEXT:    mov x13, v17.d[1]
+; CHECK-SD-NEXT:    scvtf s17, x14
+; CHECK-SD-NEXT:    mov v7.s[1], v19.s[0]
+; CHECK-SD-NEXT:    scvtf s19, x9
+; CHECK-SD-NEXT:    mov v3.s[2], v24.s[0]
+; CHECK-SD-NEXT:    scvtf s24, x11
+; CHECK-SD-NEXT:    mov v1.s[3], v21.s[0]
+; CHECK-SD-NEXT:    mov v6.s[1], v20.s[0]
+; CHECK-SD-NEXT:    scvtf s20, x15
+; CHECK-SD-NEXT:    mov v4.s[2], v18.s[0]
+; CHECK-SD-NEXT:    scvtf s18, x8
+; CHECK-SD-NEXT:    mov v5.s[2], v16.s[0]
+; CHECK-SD-NEXT:    scvtf s16, x12
+; CHECK-SD-NEXT:    mov v2.s[3], v19.s[0]
+; CHECK-SD-NEXT:    mov v3.s[3], v23.s[0]
+; CHECK-SD-NEXT:    mov v6.s[2], v17.s[0]
+; CHECK-SD-NEXT:    mov v7.s[2], v20.s[0]
+; CHECK-SD-NEXT:    scvtf s17, x13
+; CHECK-SD-NEXT:    mov v4.s[3], v24.s[0]
+; CHECK-SD-NEXT:    mov v5.s[3], v18.s[0]
+; CHECK-SD-NEXT:    mov v6.s[3], v16.s[0]
+; CHECK-SD-NEXT:    mov v7.s[3], v17.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: stofp_v32i64_v32f32:
@@ -4746,42 +4973,99 @@ entry:
 define <32 x float> @utofp_v32i64_v32f32(<32 x i64> %a) {
 ; CHECK-SD-LABEL: utofp_v32i64_v32f32:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ldp q17, q16, [sp, #64]
-; CHECK-SD-NEXT:    ucvtf v0.2d, v0.2d
-; CHECK-SD-NEXT:    ldp q19, q18, [sp, #32]
-; CHECK-SD-NEXT:    ucvtf v2.2d, v2.2d
-; CHECK-SD-NEXT:    ldp q21, q20, [sp]
-; CHECK-SD-NEXT:    ucvtf v4.2d, v4.2d
-; CHECK-SD-NEXT:    ldp q23, q22, [sp, #96]
-; CHECK-SD-NEXT:    ucvtf v6.2d, v6.2d
-; CHECK-SD-NEXT:    ucvtf v19.2d, v19.2d
-; CHECK-SD-NEXT:    ucvtf v17.2d, v17.2d
-; CHECK-SD-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    ucvtf v21.2d, v21.2d
-; CHECK-SD-NEXT:    ucvtf v24.2d, v1.2d
-; CHECK-SD-NEXT:    fcvtn v1.2s, v2.2d
-; CHECK-SD-NEXT:    ucvtf v23.2d, v23.2d
-; CHECK-SD-NEXT:    ucvtf v25.2d, v3.2d
-; CHECK-SD-NEXT:    fcvtn v2.2s, v4.2d
-; CHECK-SD-NEXT:    ucvtf v26.2d, v5.2d
-; CHECK-SD-NEXT:    fcvtn v3.2s, v6.2d
-; CHECK-SD-NEXT:    ucvtf v27.2d, v7.2d
-; CHECK-SD-NEXT:    ucvtf v20.2d, v20.2d
-; CHECK-SD-NEXT:    fcvtn v5.2s, v19.2d
-; CHECK-SD-NEXT:    ucvtf v18.2d, v18.2d
-; CHECK-SD-NEXT:    fcvtn v4.2s, v21.2d
-; CHECK-SD-NEXT:    fcvtn v6.2s, v17.2d
-; CHECK-SD-NEXT:    ucvtf v16.2d, v16.2d
-; CHECK-SD-NEXT:    fcvtn v7.2s, v23.2d
-; CHECK-SD-NEXT:    ucvtf v17.2d, v22.2d
-; CHECK-SD-NEXT:    fcvtn2 v0.4s, v24.2d
-; CHECK-SD-NEXT:    fcvtn2 v1.4s, v25.2d
-; CHECK-SD-NEXT:    fcvtn2 v2.4s, v26.2d
-; CHECK-SD-NEXT:    fcvtn2 v3.4s, v27.2d
-; CHECK-SD-NEXT:    fcvtn2 v5.4s, v18.2d
-; CHECK-SD-NEXT:    fcvtn2 v4.4s, v20.2d
-; CHECK-SD-NEXT:    fcvtn2 v6.4s, v16.2d
-; CHECK-SD-NEXT:    fcvtn2 v7.4s, v17.2d
+; CHECK-SD-NEXT:    mov x8, v0.d[1]
+; CHECK-SD-NEXT:    fmov x10, d0
+; CHECK-SD-NEXT:    mov v16.16b, v1.16b
+; CHECK-SD-NEXT:    fmov x11, d2
+; CHECK-SD-NEXT:    ldp q24, q20, [sp]
+; CHECK-SD-NEXT:    mov x9, v2.d[1]
+; CHECK-SD-NEXT:    fmov x12, d3
+; CHECK-SD-NEXT:    fmov x13, d4
+; CHECK-SD-NEXT:    ucvtf s0, x10
+; CHECK-SD-NEXT:    ldp q21, q18, [sp, #32]
+; CHECK-SD-NEXT:    ucvtf s2, x8
+; CHECK-SD-NEXT:    ucvtf s1, x11
+; CHECK-SD-NEXT:    mov x10, v4.d[1]
+; CHECK-SD-NEXT:    fmov x11, d16
+; CHECK-SD-NEXT:    ldp q19, q17, [sp, #96]
+; CHECK-SD-NEXT:    ucvtf s22, x9
+; CHECK-SD-NEXT:    mov x8, v3.d[1]
+; CHECK-SD-NEXT:    ucvtf s4, x12
+; CHECK-SD-NEXT:    mov x12, v24.d[1]
+; CHECK-SD-NEXT:    mov x9, v16.d[1]
+; CHECK-SD-NEXT:    ucvtf s3, x11
+; CHECK-SD-NEXT:    ldp q23, q16, [sp, #64]
+; CHECK-SD-NEXT:    mov v0.s[1], v2.s[0]
+; CHECK-SD-NEXT:    ucvtf s25, x10
+; CHECK-SD-NEXT:    fmov x10, d6
+; CHECK-SD-NEXT:    mov v1.s[1], v22.s[0]
+; CHECK-SD-NEXT:    mov x11, v6.d[1]
+; CHECK-SD-NEXT:    ucvtf s2, x13
+; CHECK-SD-NEXT:    mov x13, v21.d[1]
+; CHECK-SD-NEXT:    fmov x14, d19
+; CHECK-SD-NEXT:    ucvtf s22, x9
+; CHECK-SD-NEXT:    mov x9, v5.d[1]
+; CHECK-SD-NEXT:    fmov x15, d17
+; CHECK-SD-NEXT:    mov v0.s[2], v3.s[0]
+; CHECK-SD-NEXT:    ucvtf s3, x10
+; CHECK-SD-NEXT:    fmov x10, d24
+; CHECK-SD-NEXT:    mov v1.s[2], v4.s[0]
+; CHECK-SD-NEXT:    ucvtf s24, x12
+; CHECK-SD-NEXT:    ucvtf s6, x11
+; CHECK-SD-NEXT:    fmov x11, d5
+; CHECK-SD-NEXT:    fmov x12, d7
+; CHECK-SD-NEXT:    mov v2.s[1], v25.s[0]
+; CHECK-SD-NEXT:    ucvtf s4, x10
+; CHECK-SD-NEXT:    fmov x10, d21
+; CHECK-SD-NEXT:    ucvtf s21, x8
+; CHECK-SD-NEXT:    mov x8, v23.d[1]
+; CHECK-SD-NEXT:    ucvtf s25, x13
+; CHECK-SD-NEXT:    mov x13, v19.d[1]
+; CHECK-SD-NEXT:    ucvtf s26, x11
+; CHECK-SD-NEXT:    mov x11, v20.d[1]
+; CHECK-SD-NEXT:    mov v3.s[1], v6.s[0]
+; CHECK-SD-NEXT:    ucvtf s5, x10
+; CHECK-SD-NEXT:    mov x10, v7.d[1]
+; CHECK-SD-NEXT:    ucvtf s7, x14
+; CHECK-SD-NEXT:    mov v4.s[1], v24.s[0]
+; CHECK-SD-NEXT:    ucvtf s24, x12
+; CHECK-SD-NEXT:    fmov x12, d20
+; CHECK-SD-NEXT:    ucvtf s20, x8
+; CHECK-SD-NEXT:    fmov x8, d23
+; CHECK-SD-NEXT:    ucvtf s19, x13
+; CHECK-SD-NEXT:    fmov x13, d18
+; CHECK-SD-NEXT:    fmov x14, d16
+; CHECK-SD-NEXT:    mov v2.s[2], v26.s[0]
+; CHECK-SD-NEXT:    mov v5.s[1], v25.s[0]
+; CHECK-SD-NEXT:    ucvtf s23, x10
+; CHECK-SD-NEXT:    mov v0.s[3], v22.s[0]
+; CHECK-SD-NEXT:    ucvtf s6, x8
+; CHECK-SD-NEXT:    mov x8, v18.d[1]
+; CHECK-SD-NEXT:    ucvtf s18, x12
+; CHECK-SD-NEXT:    mov x12, v16.d[1]
+; CHECK-SD-NEXT:    ucvtf s16, x13
+; CHECK-SD-NEXT:    mov x13, v17.d[1]
+; CHECK-SD-NEXT:    ucvtf s17, x14
+; CHECK-SD-NEXT:    mov v7.s[1], v19.s[0]
+; CHECK-SD-NEXT:    ucvtf s19, x9
+; CHECK-SD-NEXT:    mov v3.s[2], v24.s[0]
+; CHECK-SD-NEXT:    ucvtf s24, x11
+; CHECK-SD-NEXT:    mov v1.s[3], v21.s[0]
+; CHECK-SD-NEXT:    mov v6.s[1], v20.s[0]
+; CHECK-SD-NEXT:    ucvtf s20, x15
+; CHECK-SD-NEXT:    mov v4.s[2], v18.s[0]
+; CHECK-SD-NEXT:    ucvtf s18, x8
+; CHECK-SD-NEXT:    mov v5.s[2], v16.s[0]
+; CHECK-SD-NEXT:    ucvtf s16, x12
+; CHECK-SD-NEXT:    mov v2.s[3], v19.s[0]
+; CHECK-SD-NEXT:    mov v3.s[3], v23.s[0]
+; CHECK-SD-NEXT:    mov v6.s[2], v17.s[0]
+; CHECK-SD-NEXT:    mov v7.s[2], v20.s[0]
+; CHECK-SD-NEXT:    ucvtf s17, x13
+; CHECK-SD-NEXT:    mov v4.s[3], v24.s[0]
+; CHECK-SD-NEXT:    mov v5.s[3], v18.s[0]
+; CHECK-SD-NEXT:    mov v6.s[3], v16.s[0]
+; CHECK-SD-NEXT:    mov v7.s[3], v17.s[0]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: utofp_v32i64_v32f32:
@@ -5267,17 +5551,12 @@ define <3 x float> @stofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-LABEL: stofp_v3i8_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov h3, v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -5302,17 +5581,12 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-GI-LABEL: utofp_v3i8_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fmov s0, w0
-; CHECK-GI-NEXT:    fmov s1, w1
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    fmov s1, w2
-; CHECK-GI-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
+; CHECK-GI-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NEXT:    mov h3, v1.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[2]
+; CHECK-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
@@ -6227,12 +6501,9 @@ define <2 x half> @stofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i64_v2f16:
@@ -6276,12 +6547,9 @@ define <2 x half> @utofp_v2i64_v2f16(<2 x i64> %a) {
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2d, v0.2d
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v0.2s, v0.2d
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i64_v2f16:
@@ -7215,12 +7483,9 @@ define <2 x half> @stofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-LABEL: stofp_v2i32_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = sitofp <2 x i32> %a to <2 x half>
@@ -7238,12 +7503,9 @@ define <2 x half> @utofp_v2i32_v2f16(<2 x i32> %a) {
 ; CHECK-GI-LABEL: utofp_v2i32_v2f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = uitofp <2 x i32> %a to <2 x half>
@@ -7448,23 +7710,15 @@ define <2 x half> @stofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-GI-NOFP16-NEXT:    sshr v0.2s, v0.2s, #16
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i16_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i16> %a to <2 x half>
@@ -7491,23 +7745,15 @@ define <2 x half> @utofp_v2i16_v2f16(<2 x i16> %a) {
 ; CHECK-GI-NOFP16-NEXT:    movi d1, #0x00ffff0000ffff
 ; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i16_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i16> %a to <2 x half>
@@ -7986,28 +8232,17 @@ define <2 x half> @stofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    shl v0.2s, v0.2s, #24
 ; CHECK-GI-NOFP16-NEXT:    sshr v0.2s, v0.2s, #24
 ; CHECK-GI-NOFP16-NEXT:    scvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: stofp_v2i8_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-FP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-FP16-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-FP16-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = sitofp <2 x i8> %a to <2 x half>
@@ -8048,31 +8283,17 @@ define <2 x half> @utofp_v2i8_v2f16(<2 x i8> %a) {
 ; CHECK-GI-NOFP16-NEXT:    movi d1, #0x0000ff000000ff
 ; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NOFP16-NEXT:    ucvtf v0.2s, v0.2s
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v0.4s
-; CHECK-GI-NOFP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.s[1], v0.s[1]
+; CHECK-GI-NOFP16-NEXT:    fcvtn v0.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: utofp_v2i8_v2f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-FP16-NEXT:    mov v0.s[1], v1.s[0]
-; CHECK-GI-FP16-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
 ; CHECK-GI-FP16-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-FP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-FP16-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-FP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
+; CHECK-GI-FP16-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-FP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-FP16-NEXT:    ret
 entry:
   %c = uitofp <2 x i8> %a to <2 x half>
@@ -8105,17 +8326,12 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-LABEL: stofp_v3i8_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    fmov s0, w0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w1
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w2
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NOFP16-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-GI-NOFP16-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v1.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[0], v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    sshll v1.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
@@ -8126,10 +8342,8 @@ define <3 x half> @stofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-FP16-LABEL: stofp_v3i8_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fmov s0, w0
-; CHECK-GI-FP16-NEXT:    fmov s1, w1
-; CHECK-GI-FP16-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-FP16-NEXT:    fmov s1, w2
-; CHECK-GI-FP16-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-FP16-NEXT:    mov v0.b[1], w1
+; CHECK-GI-FP16-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-FP16-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-FP16-NEXT:    scvtf v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ret
@@ -8162,17 +8376,12 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-NOFP16-LABEL: utofp_v3i8_v3f16:
 ; CHECK-GI-NOFP16:       // %bb.0: // %entry
 ; CHECK-GI-NOFP16-NEXT:    fmov s0, w0
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w1
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[0]
-; CHECK-GI-NOFP16-NEXT:    fmov s1, w2
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    movi d1, #0xff00ff00ff00ff
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], w1
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], w2
 ; CHECK-GI-NOFP16-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NOFP16-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NOFP16-NEXT:    mov h2, v0.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov h3, v1.h[1]
-; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[0]
-; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v3.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[0], v0.h[2]
+; CHECK-GI-NOFP16-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-GI-NOFP16-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    ushll v1.4s, v1.4h, #0
 ; CHECK-GI-NOFP16-NEXT:    mov v0.d[1], v1.d[0]
@@ -8183,10 +8392,8 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-GI-FP16-LABEL: utofp_v3i8_v3f16:
 ; CHECK-GI-FP16:       // %bb.0: // %entry
 ; CHECK-GI-FP16-NEXT:    fmov s0, w0
-; CHECK-GI-FP16-NEXT:    fmov s1, w1
-; CHECK-GI-FP16-NEXT:    mov v0.b[1], v1.b[0]
-; CHECK-GI-FP16-NEXT:    fmov s1, w2
-; CHECK-GI-FP16-NEXT:    mov v0.b[2], v1.b[0]
+; CHECK-GI-FP16-NEXT:    mov v0.b[1], w1
+; CHECK-GI-FP16-NEXT:    mov v0.b[2], w2
 ; CHECK-GI-FP16-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-FP16-NEXT:    ucvtf v0.4h, v0.4h
 ; CHECK-GI-FP16-NEXT:    ret

@@ -43,12 +43,15 @@ def GPUTargetAttrInterface : AttrInterface<"TargetAttrInterface"> {
     InterfaceMethod<[{
         Creates a GPU object attribute from a binary string.
 
+        The `module` parameter must be a `GPUModuleOp` and can be used to
+        retrieve additional information like the list of kernels in the binary.
         The `object` parameter is a binary string. The `options` parameter is
         meant to be used for passing additional options that are not in the
         attribute.
       }], "::mlir::Attribute", "createObject",
-        (ins "const ::llvm::SmallVector<char, 0>&":$object,
-             "const ::mlir::gpu::TargetOptions&":$options)>
+        (ins "::mlir::Operation *":$module,
+             "const ::llvm::SmallVector<char, 0> &":$object,
+             "const ::mlir::gpu::TargetOptions &":$options)>
   ];
 }
 
