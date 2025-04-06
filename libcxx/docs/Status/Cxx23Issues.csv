@@ -213,7 +213,7 @@
 "`LWG3753 <https://wg21.link/LWG3753>`__","Clarify entity vs. freestanding entity","2022-11 (Kona)","","",""
 "`LWG3754 <https://wg21.link/LWG3754>`__","Class template expected synopsis contains declarations that do not match the detailed description","2022-11 (Kona)","|Nothing To Do|","",""
 "`LWG3755 <https://wg21.link/LWG3755>`__","``tuple-for-each`` can call ``user-defined`` ``operator,``","2022-11 (Kona)","|Complete|","17",""
-"`LWG3757 <https://wg21.link/LWG3757>`__","What's the effect of ``std::forward_like<void>(x)``?","2022-11 (Kona)","","",""
+"`LWG3757 <https://wg21.link/LWG3757>`__","What's the effect of ``std::forward_like<void>(x)``?","2022-11 (Kona)","|Nothing To Do|","",""
 "`LWG3759 <https://wg21.link/LWG3759>`__","``ranges::rotate_copy`` should use ``std::move``","2022-11 (Kona)","|Complete|","15",""
 "`LWG3760 <https://wg21.link/LWG3760>`__","``cartesian_product_view::iterator``'s ``parent_`` is never valid","2022-11 (Kona)","","",""
 "`LWG3761 <https://wg21.link/LWG3761>`__","``cartesian_product_view::iterator::operator-`` should pass by reference","2022-11 (Kona)","","",""

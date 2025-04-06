@@ -426,8 +426,13 @@ void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     AArch64MCExpr::Specifier SymLoc = AArch64MCExpr::getSymbolLoc(RefKind);
     if (SymLoc == AArch64AuthMCExpr::VK_AUTH ||
         SymLoc == AArch64AuthMCExpr::VK_AUTHADDR) {
+      const auto *Expr = dyn_cast<AArch64AuthMCExpr>(Fixup.getValue());
+      if (!Expr) {
+        Asm.getContext().reportError(Fixup.getValue()->getLoc(),
+                                     "expected relocatable expression");
+        return;
+      }
       assert(Value == 0);
-      const auto *Expr = cast<AArch64AuthMCExpr>(Fixup.getValue());
       Value = (uint64_t(Expr->getDiscriminator()) << 32) |
               (uint64_t(Expr->getKey()) << 60) |
               (uint64_t(Expr->hasAddressDiversity()) << 63);

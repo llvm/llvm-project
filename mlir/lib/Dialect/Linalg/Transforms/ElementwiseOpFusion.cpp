@@ -1897,6 +1897,9 @@ struct FoldReshapeWithGenericOpByCollapsing
                                          "fusion blocked by control function");
     }
 
+    // Set the insertion point after `producer` because there could be uses
+    // of `producer` between it and the `tensor.collapse_shape` op.
+    rewriter.setInsertionPointAfter(producer);
     std::optional<CollapseResult> collapseResult =
         collapseOpIterationDims(producer, collapsableIterationDims, rewriter);
     if (!collapseResult) {

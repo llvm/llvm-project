@@ -66,10 +66,8 @@ static const MCSection *getTargetSection(const MCExpr *Expr) {
 unsigned WebAssemblyWasmObjectWriter::getRelocType(
     const MCValue &Target, const MCFixup &Fixup,
     const MCSectionWasm &FixupSection, bool IsLocRel) const {
-  const MCSymbolRefExpr *RefA = Target.getSymA();
-  assert(RefA);
-  auto& SymA = cast<MCSymbolWasm>(RefA->getSymbol());
-  auto Spec = WebAssemblyMCExpr::Specifier(Target.getAccessVariant());
+  auto &SymA = cast<MCSymbolWasm>(*Target.getAddSym());
+  auto Spec = WebAssemblyMCExpr::Specifier(Target.getSpecifier());
   switch (Spec) {
   case WebAssemblyMCExpr::VK_GOT:
     SymA.setUsedInGOT();

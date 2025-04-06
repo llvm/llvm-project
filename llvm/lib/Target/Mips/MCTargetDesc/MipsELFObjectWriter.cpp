@@ -171,8 +171,8 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   case MipsMCExpr::MEK_GOTTPREL:
   case MipsMCExpr::MEK_TPREL_HI:
   case MipsMCExpr::MEK_TPREL_LO:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

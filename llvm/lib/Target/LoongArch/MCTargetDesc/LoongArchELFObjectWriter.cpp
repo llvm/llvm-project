@@ -64,8 +64,8 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
   case LoongArchMCExpr::VK_TLS_LD_PCREL20_S2:
   case LoongArchMCExpr::VK_TLS_GD_PCREL20_S2:
   case LoongArchMCExpr::VK_TLS_DESC_PCREL20_S2:
-    if (auto *S = Target.getSymA())
-      cast<MCSymbolELF>(S->getSymbol()).setType(ELF::STT_TLS);
+    if (auto *SA = Target.getAddSym())
+      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

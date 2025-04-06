@@ -1339,9 +1339,7 @@ struct InformationCache {
   bool stackIsAccessibleByOtherThreads() { return !targetIsGPU(); }
 
   /// Return true if the target is a GPU.
-  bool targetIsGPU() {
-    return TargetTriple.isAMDGPU() || TargetTriple.isNVPTX();
-  }
+  bool targetIsGPU() { return TargetTriple.isGPU(); }
 
   /// Return all functions that might be called indirectly, only valid for
   /// closed world modules (see isClosedWorldModule).

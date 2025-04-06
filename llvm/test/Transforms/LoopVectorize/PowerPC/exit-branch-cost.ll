@@ -42,8 +42,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[STEP_ADD_5:%.*]] = add <2 x i64> [[STEP_ADD_4]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_6:%.*]] = add <2 x i64> [[STEP_ADD_5]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_7:%.*]] = add <2 x i64> [[STEP_ADD_6]], splat (i64 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 4
@@ -124,7 +123,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP57:%.*]] = insertelement <2 x i64> zeroinitializer, i64 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX26:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT32:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND27:%.*]] = phi <2 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT28:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI29:%.*]] = phi <2 x i64> [ [[TMP57]], %[[VEC_EPILOG_PH]] ], [ [[TMP58:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[NEXT_GEP30:%.*]] = getelementptr i8, ptr [[START]], i64 [[INDEX]]
@@ -134,7 +133,7 @@ define i1 @select_exit_cond(ptr %start, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP62:%.*]] = shl <2 x i64> [[VEC_IND27]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP63:%.*]] = shl <2 x i64> [[TMP61]], [[TMP62]]
 ; CHECK-NEXT:    [[TMP58]] = or <2 x i64> [[TMP63]], [[VEC_PHI29]]
-; CHECK-NEXT:    [[INDEX_NEXT32]] = add nuw i64 [[INDEX26]], 2
+; CHECK-NEXT:    [[INDEX_NEXT32]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[VEC_IND_NEXT28]] = add <2 x i64> [[VEC_IND27]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP54:%.*]] = icmp eq i64 [[INDEX_NEXT32]], [[N_VEC25]]
 ; CHECK-NEXT:    br i1 [[TMP54]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

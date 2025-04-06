@@ -1298,7 +1298,7 @@ TEST(YAMLIO, TestScalarAfterBlockScalar) {
 - block_scalac:     |
     AA
     BB
-scalar:          a
+  scalar:          a
 ...
 )");
 }

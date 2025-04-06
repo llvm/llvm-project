@@ -262,8 +262,10 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
   bool canMacroFuseCmp();
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment);
-  bool isLegalMaskedStore(Type *DataType, Align Alignment);
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace);
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace);
   bool isLegalNTLoad(Type *DataType, Align Alignment);
   bool isLegalNTStore(Type *DataType, Align Alignment);
   bool isLegalBroadcastLoad(Type *ElementTy, ElementCount NumElements) const;

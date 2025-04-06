@@ -32,7 +32,6 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP134:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP135:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x double> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP136:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 6
@@ -40,7 +39,7 @@ define void @QLA_F3_r_veq_norm2_V(ptr noalias %r, ptr noalias %a, i32 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 10
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 14
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP1]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[INDEX]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP2]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP3]], i64 0, i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [3 x { float, float }], ptr [[A]], i64 [[TMP4]], i64 0, i32 0
