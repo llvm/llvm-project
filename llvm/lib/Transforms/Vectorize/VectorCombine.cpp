@@ -290,6 +290,8 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
     uint64_t ScalarSizeInBytes = ScalarSize / 8;
     if (auto UnalignedBytes = Offset.urem(ScalarSizeInBytes);
         UnalignedBytes != 0) {
+      if (DL->isBigEndian())
+        return false;
       uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
       // Assign the greatest common divisor between UnalignedBytes and Offset to
       // ScalarSizeInBytes
