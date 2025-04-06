@@ -196,9 +196,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Type = ELF::R_PPC_ADDR14; // XXX: or BRNTAKEN?_
       break;
     case PPC::fixup_ppc_half16:
-      switch (RefKind) {
+      switch (Modifier) {
       default:
-        break;
+        llvm_unreachable("Unsupported specifier");
       case PPCMCExpr::VK_LO:
         return ELF::R_PPC_ADDR16_LO;
       case PPCMCExpr::VK_HI:
@@ -217,9 +217,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         return ELF::R_PPC64_ADDR16_HIGHEST;
       case PPCMCExpr::VK_HIGHESTA:
         return ELF::R_PPC64_ADDR16_HIGHESTA;
-      }
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
+
       case PPCMCExpr::VK_None:
         Type = ELF::R_PPC_ADDR16;
         break;
@@ -373,17 +371,12 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       break;
     case PPC::fixup_ppc_half16ds:
     case PPC::fixup_ppc_half16dq:
-      switch (RefKind) {
+      switch (Modifier) {
       default:
         Ctx.reportError(Fixup.getLoc(), "invalid VariantKind");
         return ELF::R_PPC64_NONE;
-      case PPCMCExpr::VK_None:
-        break;
       case PPCMCExpr::VK_LO:
         return ELF::R_PPC64_ADDR16_LO_DS;
-      }
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
       case PPCMCExpr::VK_None:
         Type = ELF::R_PPC64_ADDR16_DS;
         break;

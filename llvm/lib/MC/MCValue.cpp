@@ -43,9 +43,3 @@ LLVM_DUMP_METHOD void MCValue::dump() const {
   print(dbgs());
 }
 #endif
-
-uint16_t MCValue::getAccessVariant() const {
-  if (!SymA)
-    return 0;
-  return SymA->getSpecifier();
-}

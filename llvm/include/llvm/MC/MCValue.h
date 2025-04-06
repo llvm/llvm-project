@@ -36,6 +36,10 @@ class MCValue {
   int64_t Cst = 0;
   uint32_t Specifier = 0;
 
+  // SymA has a relocation specifier. This is a workaround for targets
+  // that encode specifiers within MCSymbolRefExpr::SubclassData.
+  bool SymSpecifier = false;
+
   // SymB cannot have a specifier. Use getSubSym instead.
   const MCSymbolRefExpr *getSymB() const { return SymB; }
 
@@ -67,18 +71,23 @@ public:
 
   // Get the relocation specifier from SymA. This is a workaround for targets
   // that do not use MCValue::Specifier.
-  uint16_t getSymSpecifier() const { return SymA->getSpecifier(); }
-  // Get the relocation specifier from SymA, or 0 when SymA is null.
-  uint16_t getAccessVariant() const;
+  uint16_t getSymSpecifier() const { return Specifier; }
+  uint16_t getAccessVariant() const { return Specifier; }
 
   static MCValue get(const MCSymbolRefExpr *SymA,
-                     const MCSymbolRefExpr *SymB = nullptr,
-                     int64_t Val = 0, uint32_t RefKind = 0) {
+                     const MCSymbolRefExpr *SymB = nullptr, int64_t Val = 0,
+                     uint32_t Specifier = 0) {
     MCValue R;
     R.Cst = Val;
     R.SymA = SymA;
     R.SymB = SymB;
-    R.Specifier = RefKind;
+    R.Specifier = Specifier;
+    assert(!(Specifier && SymA && SymA->getSpecifier()) &&
+           "Specifier cannot be used with legacy SymSpecifier");
+    if (!Specifier && SymA && SymA->getSpecifier()) {
+      R.Specifier = SymA->getSpecifier();
+      R.SymSpecifier = true;
+    }
     return R;
   }
 
