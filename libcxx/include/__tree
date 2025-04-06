@@ -1800,12 +1800,65 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__emplace_hint_unique_key_args(
     const_iterator __p, _Key const& __k, _Args&&... __args) {
   __parent_pointer __parent;
+  // std::__tree_end_node<std::__tree_node_base<void *> *>
   __node_base_pointer __dummy;
+  // min_pointer<std::__tree_node_base<min_pointer<void>>>
+
   __node_base_pointer& __child = __find_equal(__p, __parent, __dummy, __k);
   __node_pointer __r           = static_cast<__node_pointer>(__child);
   bool __inserted              = false;
   if (__child == nullptr) {
     __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
+    // std::unique_ptr<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>, std::__tree_node_destructor<min_allocator<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>>>>
+
+    // *h
+    // std::__tree_node<std::__value_type<int, double>, min_pointer<void>>
+    // (*__h).fooooo;
+    // std::__tree_node<std::__value_type<int, double>, min_pointer<void>>
+
+    // __h.get().foooooo;
+    // min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void>>>
+
+    // __node_base_pointer  = min_pointer<std::__tree_node_base<                                min_pointer<void>>>
+    // __h.get()            = min_pointer<std::__tree_node     <std::__value_type<int, double>, min_pointer<void>>>
+
+
+    // static_assert();
+
+    // __tree_node::__node_value_type = std::__value_type<int, double>
+
+    /*
+    without 233
+    no matching conversion for static_cast
+    from 'pointer' (aka
+      'min_pointer<std::__tree_node<std::__value_type<int, double>, min_pointer<void, std::integral_constant<unsigned long, 0>>>>'
+    ) 
+    to '__node_base_pointer' (aka 
+      'min_pointer<std::__tree_node_base<min_pointer<void, std::integral_constant<unsigned long, 0>>>, std::integral_constant<unsigned long, 0>>'
+    )
+    */
+
+
+
+
+    [[maybe_unused]] __node_base_pointer foo = static_cast<__node_base_pointer>(__h.get());
+    // [[maybe_unused]] __node_base_pointer foo2 = __node_base_pointer(__h.get());
+
+
+
+
+    /*
+    note:
+    cast from 'void *' is not allowed in a constant expression
+    because the pointed object type
+      'std::__tree_node<std::__value_type<int, double>, min_pointer<void>>'
+    is not similar to the target type
+      'std::__tree_node_base<min_pointer<void>>'
+    */
+
+// i believe this cast fails because the lifetime of __h.get() has not begun
+
+
     __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
     __r        = __h.release();
     __inserted = true;
