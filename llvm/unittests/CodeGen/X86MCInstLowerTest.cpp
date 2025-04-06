@@ -149,7 +149,7 @@ protected:
 TEST_F(X86MCInstLowerTest, moExternalSymbol_MCSYMBOL) {
 
   MachineModuleInfoWrapperPass *MMIWP =
-      new MachineModuleInfoWrapperPass(TM.get(), &*MCFoo);
+      new OwningMachineModuleInfoWrapperPass(*TM, *MCFoo);
 
   SmallString<1024> Buf;
   llvm::raw_svector_ostream OS(Buf);
