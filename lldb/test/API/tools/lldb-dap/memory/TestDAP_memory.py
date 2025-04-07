@@ -182,3 +182,13 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
             mem_response["message"],
             r"Data cannot be empty value. Provide valid data",
         )
+
+        # Verify that large memory writes fail if the range spans non-writable
+        # or non -contiguous regions.
+        data = bytes([0xFF]*8192)
+        mem_response = self.writeMemory(memref, int.from_bytes(data, byteorder='little'), 0, False)
+        self.assertEqual(mem_response["success"], False)
+        self.assertRegex(
+            mem_response["message"],
+            r"Memory " + memref + " region is not writable",
+        )

@@ -96,13 +96,13 @@ void WriteMemoryRequestHandler::operator()(
   FillResponse(request, response);
 
   auto arguments = request.getObject("arguments");
-  llvm::StringRef memoryReference =
+  llvm::StringRef memory_reference =
       GetString(arguments, "memoryReference").value_or("");
 
-  auto addr_opt = DecodeMemoryReference(memoryReference);
+  auto addr_opt = DecodeMemoryReference(memory_reference);
   if (!addr_opt.has_value()) {
     dap.SendErrorResponse(response, "Malformed memory reference: " +
-                                        memoryReference.str());
+                                        memory_reference.str());
     return;
   }
   lldb::addr_t address =
@@ -127,7 +127,7 @@ void WriteMemoryRequestHandler::operator()(
     return;
   }
 
-  bool allowPartial = GetBoolean(arguments, "allowPartial").value_or(true);
+  bool allow_partial = GetBoolean(arguments, "allowPartial").value_or(true);
   lldb::SBError write_error;
   uint64_t bytes_written = 0;
 
@@ -137,21 +137,34 @@ void WriteMemoryRequestHandler::operator()(
     // If 'allowPartial' is false or missing, a debug adapter should attempt to
     // verify the region is writable before writing, and fail the response if it
     // is not.
-    if (!allowPartial) {
+    if (!allow_partial) {
+      // Start checking from the initial write address.
+      lldb::addr_t start_address = address;
       // Compute the end of the write range.
-      lldb::addr_t end_address = address + output.size();
-      // Get memory region info for the given address.
-      // This provides the region's base, end, and permissions
-      // (read/write/executable).
-      lldb::SBMemoryRegionInfo region_info;
-      lldb::SBError error = process.GetMemoryRegionInfo(address, region_info);
-      // Fail if the region info retrieval fails, is not writable, or the range
-      // exceeds the region.
-      if (!error.Success() || !region_info.IsWritable() ||
-          end_address > region_info.GetRegionEnd()) {
-        dap.SendErrorResponse(response, "Memory 0x" + llvm::utohexstr(address) +
-                                            " region is not writable");
-        return;
+      lldb::addr_t end_address = start_address + output.size() - 1;
+
+      while (start_address <= end_address) {
+        // Get memory region info for the given address.
+        // This provides the region's base, end, and permissions
+        // (read/write/executable).
+        lldb::SBMemoryRegionInfo region_info;
+        lldb::SBError error =
+            process.GetMemoryRegionInfo(start_address, region_info);
+        // Fail if the region info retrieval fails, is not writable, or the
+        // range exceeds the region.
+        if (!error.Success() || !region_info.IsWritable()) {
+          dap.SendErrorResponse(response, "Memory 0x" +
+                                              llvm::utohexstr(address) +
+                                              " region is not writable");
+          return;
+        }
+        // If the current region covers the full requested range, stop futher
+        // iterations.
+        if (end_address <= region_info.GetRegionEnd()) {
+          break;
+        }
+        // Move to the start of the next memory region.
+        start_address = region_info.GetRegionEnd();
       }
     }
 
