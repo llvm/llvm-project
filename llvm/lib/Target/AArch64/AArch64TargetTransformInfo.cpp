@@ -12,7 +12,6 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"

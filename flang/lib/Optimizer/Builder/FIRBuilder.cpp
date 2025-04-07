@@ -105,9 +105,9 @@ fir::FirOpBuilder::getNamedGlobal(mlir::ModuleOp modOp,
   return modOp.lookupSymbol<fir::GlobalOp>(name);
 }
 
-mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy) {
+mlir::Type fir::FirOpBuilder::getRefType(mlir::Type eleTy, bool isVolatile) {
   assert(!mlir::isa<fir::ReferenceType>(eleTy) && "cannot be a reference type");
-  return fir::ReferenceType::get(eleTy);
+  return fir::ReferenceType::get(eleTy, isVolatile);
 }
 
 mlir::Type fir::FirOpBuilder::getVarLenSeqTy(mlir::Type eleTy, unsigned rank) {
