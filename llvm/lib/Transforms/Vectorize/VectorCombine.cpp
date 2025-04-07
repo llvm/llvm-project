@@ -370,10 +370,13 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   Value *CastedPtr =
       Builder.CreatePointerBitCastOrAddrSpaceCast(SrcPtr, Builder.getPtrTy(AS));
   Result = Builder.CreateAlignedLoad(MinVecTy, CastedPtr, Alignment);
+  Worklist.pushValue(Result);
   Result = Builder.CreateShuffleVector(Result, Mask);
-
-  if (NeedCast)
+  Worklist.pushValue(Result);
+  if (NeedCast) {
     Result = Builder.CreateBitOrPointerCast(Result, I.getType());
+    Worklist.pushValue(Result);
+  }
 
   replaceValue(I, *Result);
   ++NumVecLoad;
