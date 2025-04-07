@@ -2380,7 +2380,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+    BasicBlock *UncountableExitingBlock) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
@@ -2391,17 +2391,29 @@ void VPlanTransforms::handleUncountableEarlyExit(
   // tracks if the uncountable early exit has been taken. Also split the middle
   // block and have it conditionally branch to the early exit block if
   // EarlyExitTaken.
-  auto *EarlyExitingBranch =
-      cast<BranchInst>(UncountableExitingBlock->getTerminator());
-  BasicBlock *TrueSucc = EarlyExitingBranch->getSuccessor(0);
-  BasicBlock *FalseSucc = EarlyExitingBranch->getSuccessor(1);
-  BasicBlock *EarlyExitIRBB =
-      !OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc;
-  VPIRBasicBlock *VPEarlyExitBlock = Plan.getExitBlock(EarlyExitIRBB);
+  VPBasicBlock *EEB = nullptr;
+  for (auto *EB : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : EB->getPredecessors()) {
+      if (Pred != MiddleVPBB) {
+        EEB = cast<VPBasicBlock>(Pred);
+        break;
+      }
+    }
+  }
 
-  VPValue *EarlyExitNotTakenCond = RecipeBuilder.getBlockInMask(
-      OrigLoop->contains(TrueSucc) ? TrueSucc : FalseSucc);
-  auto *EarlyExitTakenCond = Builder.createNot(EarlyExitNotTakenCond);
+  VPBlockBase *TrueSucc = EEB->getSuccessors()[0];
+  VPBlockBase *FalseSucc = EEB->getSuccessors()[1];
+  auto *VPEarlyExitBlock =
+      cast<VPIRBasicBlock>(TrueSucc->getParent() ? FalseSucc : TrueSucc);
+
+  VPValue *EarlyExitCond = EEB->getTerminator()->getOperand(0);
+  auto *EarlyExitTakenCond = TrueSucc == VPEarlyExitBlock
+                                 ? EarlyExitCond
+                                 : Builder.createNot(EarlyExitCond);
+
+  EEB->getTerminator()->eraseFromParent();
+  VPBlockUtils::disconnectBlocks(EEB, VPEarlyExitBlock);
+
   IsEarlyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {EarlyExitTakenCond});
 
@@ -2422,29 +2434,27 @@ void VPlanTransforms::handleUncountableEarlyExit(
     if (!ExitIRI)
       break;
 
-    PHINode &ExitPhi = ExitIRI->getIRPhi();
-    VPValue *IncomingFromEarlyExit = RecipeBuilder.getVPValueOrAddLiveIn(
-        ExitPhi.getIncomingValueForBlock(UncountableExitingBlock));
+    unsigned EarlyExitIdx = 0;
 
     if (OrigLoop->getUniqueExitBlock()) {
+      EarlyExitIdx = 1;
       // If there's a unique exit block, VPEarlyExitBlock has 2 predecessors
       // (MiddleVPBB and NewMiddle). Add the incoming value from MiddleVPBB
       // which is coming from the original latch.
-      VPValue *IncomingFromLatch = RecipeBuilder.getVPValueOrAddLiveIn(
-          ExitPhi.getIncomingValueForBlock(OrigLoop->getLoopLatch()));
-      ExitIRI->addOperand(IncomingFromLatch);
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
+    VPValue *IncomingFromEarlyExit = ExitIRI->getOperand(EarlyExitIdx);
     // Add the incoming value from the early exit.
     if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");
-      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
-          nullptr, "early.exit.value");
+      ExitIRI->setOperand(
+          EarlyExitIdx,
+          EarlyExitB.createNaryOp(Instruction::ExtractElement,
+                                  {IncomingFromEarlyExit, FirstActiveLane},
+                                  nullptr, "early.exit.value"));
     }
-    ExitIRI->addOperand(IncomingFromEarlyExit);
   }
   MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {IsEarlyExitTaken});
 
