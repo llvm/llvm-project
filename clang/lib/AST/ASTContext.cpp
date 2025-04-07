@@ -12832,7 +12832,7 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
       return true;
 
     // FIXME: Functions declared with SYCL_EXTERNAL are required during
-    // FIXME: device compilation.
+    // device compilation.
 
     // Constructors and destructors are required.
     if (FD->hasAttr<ConstructorAttr>() || FD->hasAttr<DestructorAttr>())
@@ -14860,10 +14860,10 @@ static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
 
   // Construct a mangled name for the SYCL kernel caller offload entry point.
   // FIXME: The Itanium typeinfo mangling (_ZTS<type>) is currently used to
-  // FIXME: name the SYCL kernel caller offload entry point function. This
-  // FIXME: mangling does not suffice to clearly identify symbols that
-  // FIXME: correspond to SYCL kernel caller functions, nor is this mangling
-  // FIXME: natural for targets that use a non-Itanium ABI.
+  // name the SYCL kernel caller offload entry point function. This mangling
+  // does not suffice to clearly identify symbols that correspond to SYCL
+  // kernel caller functions, nor is this mangling natural for targets that
+  // use a non-Itanium ABI.
   std::string Buffer;
   Buffer.reserve(128);
   llvm::raw_string_ostream Out(Buffer);

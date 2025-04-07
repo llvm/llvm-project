@@ -62,13 +62,13 @@ int main() {
 // attributed functions during host compilation. ODR-use of these functions may
 // require them to be emitted, but they have no effect if called.
 //
-// CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #[[LINUX_ATTR0:[0-9]+]] {
+// CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
-// CHECK-HOST-LINUX:      define internal void @_Z18kernel_single_taskIZ4mainE18lambda_kernel_nameZ4mainEUlvE_EvT0_(i32 %kernelFunc.coerce) #[[LINUX_ATTR0:[0-9]+]] {
+// CHECK-HOST-LINUX:      define internal void @_Z18kernel_single_taskIZ4mainE18lambda_kernel_nameZ4mainEUlvE_EvT0_(i32 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
@@ -76,7 +76,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
-// CHECK-HOST-WINDOWS:      define dso_local void @"?single_purpose_kernel_task@@YAXUsingle_purpose_kernel@@@Z"(i8 %kernelFunc.coerce) #[[WINDOWS_ATTR0:[0-9]+]] {
+// CHECK-HOST-WINDOWS:      define dso_local void @"?single_purpose_kernel_task@@YAXUsingle_purpose_kernel@@@Z"(i8 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-WINDOWS-NEXT: entry:
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %struct.single_purpose_kernel, ptr %kernelFunc, i32 0, i32 0
@@ -84,7 +84,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
-// CHECK-HOST-WINDOWS:      define internal void @"??$kernel_single_task@Vlambda_kernel_name@?1??main@@9@V<lambda_1>@?0??2@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %kernelFunc.coerce) #[[WINDOWS_ATTR0:[0-9]+]] {
+// CHECK-HOST-WINDOWS:      define internal void @"??$kernel_single_task@Vlambda_kernel_name@?1??main@@9@V<lambda_1>@?0??2@9@@@YAXV<lambda_1>@?0??main@@9@@Z"(i32 %kernelFunc.coerce) #{{[0-9]+}} {
 // CHECK-HOST-WINDOWS-NEXT: entry:
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %class.anon, align 4
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
@@ -95,8 +95,8 @@ int main() {
 // Verify that SYCL kernel caller functions are emitted for each device target.
 //
 // FIXME: The following set of matches are used to skip over the declaration of
-// FIXME: main(). main() shouldn't be emitted in device code, but that pruning
-// FIXME: isn't performed yet.
+// main(). main() shouldn't be emitted in device code, but that pruning isn't
+// performed yet.
 // CHECK-DEVICE:      Function Attrs: convergent mustprogress noinline norecurse nounwind optnone
 // CHECK-DEVICE-NEXT: define {{[a-z_ ]*}}noundef i32 @main() #0
 

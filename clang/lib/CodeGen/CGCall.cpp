@@ -746,7 +746,8 @@ CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
 
   return arrangeLLVMFunctionInfo(
       GetReturnType(resultType), FnInfoOpts::None, argTypes,
-      FunctionType::ExtInfo(CC_OpenCLKernel), {}, RequiredArgs::All);
+      FunctionType::ExtInfo(CC_OpenCLKernel), /*paramInfos=*/{},
+      RequiredArgs::All);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
