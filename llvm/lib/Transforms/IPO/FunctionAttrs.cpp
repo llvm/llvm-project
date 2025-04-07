@@ -1864,6 +1864,19 @@ static bool InstrBreaksNonConvergent(Instruction &I,
          !SCCNodes.contains(CB->getCalledFunction());
 }
 
+static bool FunctionRequiresConvergence(const Function &F) {
+  for (auto &Use : F.uses()) {
+    CallBase *CB = dyn_cast<CallBase>(Use.getUser());
+    if (!CB)
+      return true;
+
+    if (CB->getConvergenceControlToken())
+      return true;
+  }
+
+  return false;
+}
+
 /// Helper for NoUnwind inference predicate InstrBreaksAttribute.
 static bool InstrBreaksNonThrowing(Instruction &I, const SCCNodeSet &SCCNodes) {
   if (!I.mayThrow(/* IncludePhaseOneUnwind */ true))
@@ -1967,7 +1980,9 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
   AI.registerAttrInference(AttributeInferer::InferenceDescriptor{
       Attribute::Convergent,
       // Skip non-convergent functions.
-      [](const Function &F) { return !F.isConvergent(); },
+      [](const Function &F) {
+        return !F.isConvergent() || FunctionRequiresConvergence(F);
+      },
       // Instructions that break non-convergent assumption.
       [SCCNodes](Instruction &I) {
         return InstrBreaksNonConvergent(I, SCCNodes);

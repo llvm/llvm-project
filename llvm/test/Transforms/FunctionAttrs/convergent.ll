@@ -129,3 +129,35 @@ define i32 @noopt_friend() convergent {
   %a = call i32 @noopt()
   ret i32 0
 }
+
+; A function which should normally be stripped of its convergent attribute,
+; but because it's used in a controlled convergence call, the attribute
+; remains.
+; This could be improved by propagating the non-convergence outside of the
+; function, but for the time being, we stop when we encounter this scenario.
+define i32 @leaf_noconvergent_used() convergent {
+; CHECK: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@leaf_noconvergent_used
+; CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    ret i32 0
+;
+  ret i32 0
+}
+
+define i32 @nonleaf_convergent() convergent {
+; CHECK: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@nonleaf_convergent
+; CHECK-SAME: () #[[ATTR7]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @leaf_noconvergent_used() [ "convergencectrl"(token [[TMP1]]) ]
+; CHECK-NEXT:    ret i32 0
+;
+  %1 = call token @llvm.experimental.convergence.entry()
+  %2 = call i32 @leaf_noconvergent_used() [ "convergencectrl"(token %1) ]
+  ret i32 0
+}
+
+
+declare token @llvm.experimental.convergence.entry() #1
+
+attributes #1 = { convergent nocallback nofree nosync nounwind willreturn memory(none) }
