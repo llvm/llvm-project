@@ -1290,25 +1290,23 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; X86-SSE2-LABEL: add_ss_mask:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    jne .LBB70_1
-; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; X86-SSE2-NEXT:    retl
-; X86-SSE2-NEXT:  .LBB70_1:
+; X86-SSE2-NEXT:    je .LBB70_2
+; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    addss %xmm0, %xmm1
-; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X86-SSE2-NEXT:    movaps %xmm1, %xmm2
+; X86-SSE2-NEXT:  .LBB70_2:
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: add_ss_mask:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE41-NEXT:    jne .LBB70_1
-; X86-SSE41-NEXT:  # %bb.2:
-; X86-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; X86-SSE41-NEXT:    retl
-; X86-SSE41-NEXT:  .LBB70_1:
+; X86-SSE41-NEXT:    je .LBB70_2
+; X86-SSE41-NEXT:  # %bb.1:
 ; X86-SSE41-NEXT:    addss %xmm0, %xmm1
-; X86-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X86-SSE41-NEXT:    movaps %xmm1, %xmm2
+; X86-SSE41-NEXT:  .LBB70_2:
+; X86-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; X86-SSE41-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: add_ss_mask:
@@ -1332,25 +1330,23 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ; X64-SSE2-LABEL: add_ss_mask:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    testb $1, %dil
-; X64-SSE2-NEXT:    jne .LBB70_1
-; X64-SSE2-NEXT:  # %bb.2:
-; X64-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; X64-SSE2-NEXT:    retq
-; X64-SSE2-NEXT:  .LBB70_1:
+; X64-SSE2-NEXT:    je .LBB70_2
+; X64-SSE2-NEXT:  # %bb.1:
 ; X64-SSE2-NEXT:    addss %xmm0, %xmm1
-; X64-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X64-SSE2-NEXT:    movaps %xmm1, %xmm2
+; X64-SSE2-NEXT:  .LBB70_2:
+; X64-SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: add_ss_mask:
 ; X64-SSE41:       # %bb.0:
 ; X64-SSE41-NEXT:    testb $1, %dil
-; X64-SSE41-NEXT:    jne .LBB70_1
-; X64-SSE41-NEXT:  # %bb.2:
-; X64-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
-; X64-SSE41-NEXT:    retq
-; X64-SSE41-NEXT:  .LBB70_1:
+; X64-SSE41-NEXT:    je .LBB70_2
+; X64-SSE41-NEXT:  # %bb.1:
 ; X64-SSE41-NEXT:    addss %xmm0, %xmm1
-; X64-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X64-SSE41-NEXT:    movaps %xmm1, %xmm2
+; X64-SSE41-NEXT:  .LBB70_2:
+; X64-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0],xmm0[1,2,3]
 ; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: add_ss_mask:
@@ -1384,25 +1380,23 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; X86-SSE2-LABEL: add_sd_mask:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE2-NEXT:    jne .LBB71_1
-; X86-SSE2-NEXT:  # %bb.2:
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
-; X86-SSE2-NEXT:    retl
-; X86-SSE2-NEXT:  .LBB71_1:
+; X86-SSE2-NEXT:    je .LBB71_2
+; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    addsd %xmm0, %xmm1
-; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-SSE2-NEXT:    movapd %xmm1, %xmm2
+; X86-SSE2-NEXT:  .LBB71_2:
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-SSE41-LABEL: add_sd_mask:
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; X86-SSE41-NEXT:    jne .LBB71_1
-; X86-SSE41-NEXT:  # %bb.2:
-; X86-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
-; X86-SSE41-NEXT:    retl
-; X86-SSE41-NEXT:  .LBB71_1:
+; X86-SSE41-NEXT:    je .LBB71_2
+; X86-SSE41-NEXT:  # %bb.1:
 ; X86-SSE41-NEXT:    addsd %xmm0, %xmm1
-; X86-SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-SSE41-NEXT:    movapd %xmm1, %xmm2
+; X86-SSE41-NEXT:  .LBB71_2:
+; X86-SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; X86-SSE41-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: add_sd_mask:
@@ -1426,25 +1420,23 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ; X64-SSE2-LABEL: add_sd_mask:
 ; X64-SSE2:       # %bb.0:
 ; X64-SSE2-NEXT:    testb $1, %dil
-; X64-SSE2-NEXT:    jne .LBB71_1
-; X64-SSE2-NEXT:  # %bb.2:
-; X64-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
-; X64-SSE2-NEXT:    retq
-; X64-SSE2-NEXT:  .LBB71_1:
+; X64-SSE2-NEXT:    je .LBB71_2
+; X64-SSE2-NEXT:  # %bb.1:
 ; X64-SSE2-NEXT:    addsd %xmm0, %xmm1
-; X64-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-SSE2-NEXT:    movapd %xmm1, %xmm2
+; X64-SSE2-NEXT:  .LBB71_2:
+; X64-SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; X64-SSE2-NEXT:    retq
 ;
 ; X64-SSE41-LABEL: add_sd_mask:
 ; X64-SSE41:       # %bb.0:
 ; X64-SSE41-NEXT:    testb $1, %dil
-; X64-SSE41-NEXT:    jne .LBB71_1
-; X64-SSE41-NEXT:  # %bb.2:
-; X64-SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2,3]
-; X64-SSE41-NEXT:    retq
-; X64-SSE41-NEXT:  .LBB71_1:
+; X64-SSE41-NEXT:    je .LBB71_2
+; X64-SSE41-NEXT:  # %bb.1:
 ; X64-SSE41-NEXT:    addsd %xmm0, %xmm1
-; X64-SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X64-SSE41-NEXT:    movapd %xmm1, %xmm2
+; X64-SSE41-NEXT:  .LBB71_2:
+; X64-SSE41-NEXT:    blendpd {{.*#+}} xmm0 = xmm2[0],xmm0[1]
 ; X64-SSE41-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: add_sd_mask:
