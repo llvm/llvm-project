@@ -1053,10 +1053,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   }
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
-  if (ST.hasCvtPkF16F32Inst())
-    FPTruncActions.legalFor(
-        {{S32, S64}, {S16, S32}, {V2S16, V2S32}, {V2S16, V2S64}});
-  else
+  if (ST.hasCvtPkF16F32Inst()) {
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}});
+    if (TM.Options.UnsafeFPMath)
+      FPTruncActions.legalFor({V2S16, V2S64});
+  } else
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   FPTruncActions.scalarize(0).lower();
 

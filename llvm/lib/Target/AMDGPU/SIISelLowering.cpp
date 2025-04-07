@@ -915,7 +915,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst()) {
+  if (Subtarget->hasCvtPkF16F32Inst() && TM.Options.UnsafeFPMath) {
     setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
   }
 
