@@ -56,9 +56,6 @@ namespace {
 class NVVMReflect : public ModulePass {
 private:
   StringMap<int> VarMap;
-  /// Process a reflect function by finding all its uses and replacing them with
-  /// appropriate constant values. For __CUDA_FTZ, uses the module flag value.
-  /// For __CUDA_ARCH, uses SmVersion * 10. For all other strings, uses 0.
   void handleReflectFunction(Function *F);
   void setVarMap(Module &M);
   void foldReflectCall(CallInst *Call, Constant *NewValue);
@@ -135,6 +132,9 @@ void NVVMReflect::setVarMap(Module &M) {
   }
 }
 
+/// Process a reflect function by finding all its uses and replacing them with
+/// appropriate constant values. For __CUDA_FTZ, uses the module flag value.
+/// For __CUDA_ARCH, uses SmVersion * 10. For all other strings, uses 0.
 void NVVMReflect::handleReflectFunction(Function *F) {
   // Validate _reflect function
   assert(F->isDeclaration() && "_reflect function should not have a body");
