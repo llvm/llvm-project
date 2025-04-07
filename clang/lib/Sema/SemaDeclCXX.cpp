@@ -1660,8 +1660,8 @@ void Sema::CheckCompleteDecompositionDeclaration(DecompositionDecl *DD) {
     DD->setInvalidDecl();
 }
 
-std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
-                                                           SourceLocation Loc) {
+UnsignedOrNone Sema::GetDecompositionElementCount(QualType T,
+                                                  SourceLocation Loc) {
   const ASTContext &Ctx = getASTContext();
   assert(!T->isDependentType());
 
@@ -1671,18 +1671,18 @@ std::optional<unsigned> Sema::GetDecompositionElementCount(QualType T,
   T = Context.getQualifiedType(Unqual, Quals);
 
   if (auto *CAT = Ctx.getAsConstantArrayType(T))
-    return CAT->getSize().getZExtValue();
+    return static_cast<unsigned>(CAT->getSize().getZExtValue());
   if (auto *VT = T->getAs<VectorType>())
     return VT->getNumElements();
   if (T->getAs<ComplexType>())
-    return 2;
+    return 2u;
 
   llvm::APSInt TupleSize(Ctx.getTypeSize(Ctx.getSizeType()));
   switch (isTupleLike(*this, Loc, T, TupleSize)) {
   case IsTupleLike::Error:
     return std::nullopt;
   case IsTupleLike::TupleLike:
-    return TupleSize.getExtValue();
+    return static_cast<unsigned>(TupleSize.getExtValue());
   case IsTupleLike::NotTupleLike:
     break;
   }
@@ -9006,8 +9006,7 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
       return true;
 
     if (llvm::none_of(RD->friends(), [&](const FriendDecl *F) {
-          return FD->getCanonicalDecl() ==
-                 F->getFriendDecl()->getCanonicalDecl();
+          return declaresSameEntity(F->getFriendDecl(), FD);
         })) {
       Diag(FD->getLocation(), diag::err_defaulted_comparison_not_friend)
           << int(DCK) << int(0) << RD;
@@ -11049,12 +11048,12 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // Lookup delete[] too in case we have to emit a vector deleting dtor;
       DeclarationName VDeleteName =
           Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
-      FunctionDecl *ArrOperatorDelete =
-          FindDeallocationFunctionForDestructor(Loc, RD, VDeleteName);
+      FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
+          Loc, RD, VDeleteName, /*Diagnose=*/false);
       // delete[] in the TU will make sure the operator is referenced and its
       // uses diagnosed, otherwise vector deleting dtor won't be called anyway,
       // so just record it in the destructor.
-      Destructor->setOperatorArrayDelete(ArrOperatorDelete, ThisArg);
+      Destructor->setOperatorArrayDelete(ArrOperatorDelete);
     }
   }
 
@@ -18996,8 +18995,8 @@ bool Sema::checkThisInStaticMemberFunctionType(CXXMethodDecl *Method) {
     return true;
 
   // Check the trailing requires clause
-  if (Expr *E = Method->getTrailingRequiresClause())
-    if (!Finder.TraverseStmt(E))
+  if (const AssociatedConstraint &TRC = Method->getTrailingRequiresClause())
+    if (!Finder.TraverseStmt(const_cast<Expr *>(TRC.ConstraintExpr)))
       return true;
 
   return checkThisInStaticMemberFunctionAttributes(Method);

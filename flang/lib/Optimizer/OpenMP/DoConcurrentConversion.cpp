@@ -181,9 +181,9 @@ bool isPerfectlyNested(fir::DoLoopOp outerLoop, fir::DoLoopOp innerLoop) {
   // `innerLoop` + the `fir.result` terminator. In other words, `innerLoop` is
   // perfectly nested inside `outerLoop`.
   bool result = (outerLoopBodySet == indVarSet);
-  mlir::Location loc = outerLoop.getLoc();
-  LLVM_DEBUG(DBGS() << "Loop pair starting at location " << loc << " is"
-                    << (result ? "" : " not") << " perfectly nested\n");
+  LLVM_DEBUG(DBGS() << "Loop pair starting at location " << outerLoop.getLoc()
+                    << " is" << (result ? "" : " not")
+                    << " perfectly nested\n");
 
   return result;
 }
