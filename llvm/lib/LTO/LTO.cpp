@@ -2187,8 +2187,9 @@ namespace {
 // For this out-of-process backend no codegen is done when invoked for each
 // task. Instead we generate the required information (e.g. the summary index
 // shard, import list, etc..) to allow for the codegen to be performed
-// externally . This backend's `wait` function then invokes an external
-// distributor process to do backend compilations.
+// externally (similar to WriteIndexesThinBackend). This backend's `wait`
+// function then invokes an external distributor process to do backend
+// compilations.
 class OutOfProcessThinBackend : public CGThinBackend {
   using SString = SmallString<128>;
 
