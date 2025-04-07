@@ -1311,15 +1311,89 @@ float min(float __x, float __y) { return __builtin_fminf(__x, __y); }
 __DEVICE__
 double min(double __x, double __y) { return __builtin_fmin(__x, __y); }
 
-#if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
-__host__ inline static int min(int __arg1, int __arg2) {
-  return __arg1 < __arg2 ? __arg1 : __arg2;
+// Define host min/max functions.
+#if !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__) &&                  \
+    !defined(__HIP_NO_HOST_MIN_MAX_IN_GLOBAL_NAMESPACE__)
+
+// TODO: make this default to 1 after existing HIP apps adopting this change.
+#ifndef __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+#define __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__ 0
+#endif
+
+#ifndef __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+#define __HIP_DEFINE_MIXED_HOST_MIN_MAX__ 0
+#endif
+
+#pragma push_macro("DEFINE_MIN_MAX_FUNCTIONS")
+#pragma push_macro("DEFINE_MIN_MAX_FUNCTIONS")
+#define DEFINE_MIN_MAX_FUNCTIONS(ret_type, type1, type2)                       \
+  inline ret_type min(const type1 __a, const type2 __b) {                      \
+    return (__a < __b) ? __a : __b;                                            \
+  }                                                                            \
+  inline ret_type max(const type1 __a, const type2 __b) {                      \
+    return (__a > __b) ? __a : __b;                                            \
+  }
+
+// Define min and max functions for same type comparisons
+DEFINE_MIN_MAX_FUNCTIONS(int, int, int)
+
+#if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, unsigned int, unsigned int)
+DEFINE_MIN_MAX_FUNCTIONS(long, long, long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, unsigned long, unsigned long)
+DEFINE_MIN_MAX_FUNCTIONS(long long, long long, long long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, unsigned long long,
+                         unsigned long long)
+#endif // if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+
+// The host min/max functions below accept mixed signed/unsigned integer
+// parameters and perform unsigned comparisons, which may produce unexpected
+// results if a signed integer was passed unintentionally. To avoid this
+// happening silently, these overloaded functions are not defined by default.
+// However, for compatibility with CUDA, they will be defined if users define
+// __HIP_DEFINE_MIXED_HOST_MIN_MAX__.
+#if __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, int, unsigned int)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned int, unsigned int, int)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, long, unsigned long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long, unsigned long, long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, long long, unsigned long long)
+DEFINE_MIN_MAX_FUNCTIONS(unsigned long long, unsigned long long, long long)
+#endif // if __HIP_DEFINE_MIXED_HOST_MIN_MAX__
+
+// Floating-point comparisons using built-in functions
+#if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+inline float min(float const __a, float const __b) {
+  return __builtin_fminf(__a, __b);
+}
+inline double min(double const __a, double const __b) {
+  return __builtin_fmin(__a, __b);
+}
+inline double min(float const __a, double const __b) {
+  return __builtin_fmin(__a, __b);
+}
+inline double min(double const __a, float const __b) {
+  return __builtin_fmin(__a, __b);
 }
 
-__host__ inline static int max(int __arg1, int __arg2) {
-  return __arg1 > __arg2 ? __arg1 : __arg2;
+inline float max(float const __a, float const __b) {
+  return __builtin_fmaxf(__a, __b);
 }
-#endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__)
+inline double max(double const __a, double const __b) {
+  return __builtin_fmax(__a, __b);
+}
+inline double max(float const __a, double const __b) {
+  return __builtin_fmax(__a, __b);
+}
+inline double max(double const __a, float const __b) {
+  return __builtin_fmax(__a, __b);
+}
+#endif // if __HIP_DEFINE_EXTENDED_HOST_MIN_MAX__
+
+#pragma pop_macro("DEFINE_MIN_MAX_FUNCTIONS")
+
+#endif // !defined(__HIPCC_RTC__) && !defined(__OPENMP_AMDGCN__) &&
+       // !defined(__HIP_NO_HOST_MIN_MAX_IN_GLOBAL_NAMESPACE__)
 #endif
 
 #pragma pop_macro("__DEVICE__")

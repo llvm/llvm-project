@@ -57,7 +57,7 @@ bool DagLeaf::isNativeCodeCall() const {
 
 bool DagLeaf::isConstantAttr() const { return isSubClassOf("ConstantAttr"); }
 
-bool DagLeaf::isEnumCase() const { return isSubClassOf("EnumAttrCaseInfo"); }
+bool DagLeaf::isEnumCase() const { return isSubClassOf("EnumCase"); }
 
 bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
 

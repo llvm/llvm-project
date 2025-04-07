@@ -20,7 +20,7 @@ define fastcc i32 @S_regrepeat(ptr %startposp, i32 %max, i8 %0, i1 %cmp343) noun
 ; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    andi a2, a2, 255
+; CHECK-NEXT:    zext.b a2, a2
 ; CHECK-NEXT:    addi a4, a2, -19
 ; CHECK-NEXT:    li a5, 2
 ; CHECK-NEXT:    mv a0, a1

@@ -76,7 +76,6 @@ struct MissingFeatures {
   static bool opScopeCleanupRegion() { return false; }
 
   // Unary operator handling
-  static bool opUnarySignedOverflow() { return false; }
   static bool opUnaryPromotionType() { return false; }
 
   // Clang early optimizations or things defered to LLVM lowering.
@@ -119,15 +118,14 @@ struct MissingFeatures {
   static bool vectorType() { return false; }
   static bool complexType() { return false; }
   static bool fixedPointType() { return false; }
+  static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
   static bool awaitOp() { return false; }
-  static bool breakOp() { return false; }
   static bool callOp() { return false; }
   static bool complexCreateOp() { return false; }
   static bool complexImagOp() { return false; }
   static bool complexRealOp() { return false; }
-  static bool continueOp() { return false; }
   static bool ifOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }

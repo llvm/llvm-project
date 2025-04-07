@@ -461,6 +461,9 @@ The current vendor extensions supported are:
 ``experimental-Xqcicsr``
   LLVM implements `version 0.2 of the Qualcomm uC CSR extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
+``experimental-Xqciio``
+  LLVM implements `version 0.1 of the Qualcomm uC External Input Output extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
+
 ``experimental-Xqciint``
   LLVM implements `version 0.4 of the Qualcomm uC Interrupts extension specification <https://github.com/quic/riscv-unified-db/releases/latest>`__ by Qualcomm.  All instructions are prefixed with `qc.` as described in the specification. These instructions are only available for riscv32.
 
