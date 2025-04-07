@@ -6273,7 +6273,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
 
     SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
     for (auto [I, V] : zip(UserBVHead, TE.Scalars)) {
-      if (!V->hasNUsesOrMore(1))
+      if (isa<Constant>(V) || !V->hasNUsesOrMore(1))
         continue;
       auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
       if (!II)
@@ -13433,7 +13433,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
        allSameBlock(VectorizableTree.front()->Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
-                 return isa<ExtractElementInst, UndefValue>(V) ||
+                 return isa<ExtractElementInst, Constant>(V) ||
                         (IsAllowedSingleBVNode &&
                          !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), IsaPred<InsertElementInst>));
@@ -19459,7 +19459,7 @@ bool BoUpSLP::collectValuesToDemote(
     return FinalAnalysis();
 
   if (any_of(E.Scalars, [&](Value *V) {
-        return !all_of(V->users(), [=](User *U) {
+        return !isa<Constant>(V) && !all_of(V->users(), [=](User *U) {
           return isVectorized(U) ||
                  (E.Idx == 0 && UserIgnoreList &&
                   UserIgnoreList->contains(U)) ||
