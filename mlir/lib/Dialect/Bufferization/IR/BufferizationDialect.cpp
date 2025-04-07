@@ -76,6 +76,11 @@ void mlir::bufferization::BufferizationDialect::initialize() {
       >();
   addInterfaces<BufferizationInlinerInterface>();
 
+  // Note: Unlike with other external models, declaring bufferization's
+  // "promised interfaces" in builtins for TensorLike and MemRefLike type
+  // interfaces is not possible (due to builtins being independent of
+  // bufferization). Thus, the compromise is to attach these interfaces directly
+  // during dialect initialization.
   RankedTensorType::attachInterface<
       BuiltinTensorExternalModel<RankedTensorType>>(*getContext());
   UnrankedTensorType::attachInterface<

@@ -14,17 +14,13 @@
 #define BUFFERIZATION_TYPE_INTERFACES
 
 include "mlir/IR/OpBase.td"
-include "mlir/IR/BuiltinTypeInterfaces.td"
 
 def Bufferization_TensorLikeTypeInterface
-    : TypeInterface<"TensorLikeType", [ShapedTypeInterface]> {
+    : TypeInterface<"TensorLikeType"> {
   let cppNamespace = "::mlir::bufferization";
   let description = [{
-    Indicates that the type that attaches this interface can be treated as a
-    tensor type (similarly to a MLIR builtin tensor) during bufferization.
-
-    Implementing this interface means that the type also implements
-    ShapedTypeInterface.
+    Indicates that this type is a tensor type (similarly to a MLIR builtin
+    tensor) for bufferization purposes.
 
     The interface currently has no methods as it is used by types to opt into
     being supported by the bufferization procedures.
@@ -32,14 +28,11 @@ def Bufferization_TensorLikeTypeInterface
 }
 
 def Bufferization_MemRefLikeTypeInterface
-    : TypeInterface<"MemRefLikeType", [ShapedTypeInterface]> {
+    : TypeInterface<"MemRefLikeType"> {
   let cppNamespace = "::mlir::bufferization";
   let description = [{
-    Indicates that the type that attaches this interface can be treated as a
-    memref type (similarly to a MLIR builtin memref) during bufferization.
-
-    Implementing this interface means that the type also implements
-    ShapedTypeInterface.
+    Indicates that this type is a memref type (similarly to a MLIR builtin
+    memref) for bufferization purposes.
 
     The interface currently has no methods as it is used by types to opt into
     being supported by the bufferization procedures.

@@ -404,7 +404,8 @@ def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
   let mnemonic = "op_asm_type_interface";
 }
 
-def TestTensorType : Test_Type<"TestTensor", [Bufferization_TensorLikeTypeInterface]> {
+def TestTensorType : Test_Type<"TestTensor",
+    [Bufferization_TensorLikeTypeInterface, ShapedTypeInterface]> {
   let mnemonic = "test_tensor";
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,
@@ -425,7 +426,8 @@ def TestTensorType : Test_Type<"TestTensor", [Bufferization_TensorLikeTypeInterf
   }];
 }
 
-def TestMemrefType : Test_Type<"TestMemref", [Bufferization_MemRefLikeTypeInterface]> {
+def TestMemrefType : Test_Type<"TestMemref",
+    [Bufferization_MemRefLikeTypeInterface, ShapedTypeInterface]> {
   let mnemonic = "test_memref";
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,

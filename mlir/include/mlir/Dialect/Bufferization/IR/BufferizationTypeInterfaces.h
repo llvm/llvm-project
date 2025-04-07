@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_
 #define MLIR_DIALECT_BUFFERIZATION_IR_BUFFERIZATIONTYPEINTERFACES_H_
 
-#include "mlir/IR/BuiltinTypeInterfaces.h" // for ShapedTypeInterface
-
 //===----------------------------------------------------------------------===//
 // Bufferization Type Interfaces
 //===----------------------------------------------------------------------===//
