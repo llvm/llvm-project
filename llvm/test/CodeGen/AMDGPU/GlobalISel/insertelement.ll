@@ -6555,11 +6555,11 @@ define amdgpu_kernel void @insert_very_small_from_very_large(<32 x i16> %L3, ptr
 ; GFX11-NEXT:    flat_store_b8 v[0:1], v2
 ; GFX11-NEXT:    s_endpgm
 bb:
-  %0 = bitcast <32 x i16> %L3 to i512
-  %1 = trunc i512 %0 to i8
-  %2 = trunc i8 %1 to i2
-  %3 = bitcast i2 %2 to <2 x i1>
-  %I = insertelement <2 x i1> %3, i1 false, i32 0
-  store <2 x i1> %I, ptr %ptr, align 1
+  %a = bitcast <32 x i16> %L3 to i512
+  %b = trunc i512 %a to i8
+  %c = trunc i8 %b to i2
+  %d = bitcast i2 %c to <2 x i1>
+  %insert = insertelement <2 x i1> %d, i1 false, i32 0
+  store <2 x i1> %insert, ptr %ptr, align 1
   ret void
 }
