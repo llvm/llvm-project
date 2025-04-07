@@ -5643,49 +5643,24 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
       return bcastOp.getSource();
   }
 
+  // Replace shape_cast(arith.constant) with arith.constant. Currently only
+  // handles splat constants.
+  if (auto constantOp = getSource().getDefiningOp<arith::ConstantOp>()) {
+    if (auto dense = llvm::dyn_cast<SplatElementsAttr>(constantOp.getValue())) {
+      return DenseElementsAttr::get(cast<VectorType>(getType()),
+                                    dense.getSplatValue<Attribute>());
+    }
+  }
+
+  // Replace shape_cast(poison) with poison.
+  if (getSource().getDefiningOp<ub::PoisonOp>()) {
+    return ub::PoisonAttr::get(getContext());
+  }
+
   return {};
 }
 
 namespace {
-// Pattern to rewrite a ShapeCast(splat ConstantOp) -> ConstantOp.
-class ShapeCastConstantFolder final : public OpRewritePattern<ShapeCastOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-    auto constantOp =
-        shapeCastOp.getSource().getDefiningOp<arith::ConstantOp>();
-    if (!constantOp)
-      return failure();
-    // Only handle splat for now.
-    auto dense = llvm::dyn_cast<SplatElementsAttr>(constantOp.getValue());
-    if (!dense)
-      return failure();
-    auto newAttr =
-        DenseElementsAttr::get(llvm::cast<VectorType>(shapeCastOp.getType()),
-                               dense.getSplatValue<Attribute>());
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(shapeCastOp, newAttr);
-    return success();
-  }
-};
-
-// Pattern to rewrite a ShapeCast(PoisonOp) -> PoisonOp.
-class ShapeCastPoisonFolder final : public OpRewritePattern<ShapeCastOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (!shapeCastOp.getSource().getDefiningOp<ub::PoisonOp>())
-      return failure();
-
-    rewriter.replaceOpWithNewOp<ub::PoisonOp>(shapeCastOp,
-                                              shapeCastOp.getType());
-    return success();
-  }
-};
 
 /// Helper function that computes a new vector type based on the input vector
 /// type by removing the trailing one dims:
@@ -5846,8 +5821,7 @@ public:
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results
-      .add<ShapeCastConstantFolder, ShapeCastPoisonFolder,
-           ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
+      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
           context);
 }
 
