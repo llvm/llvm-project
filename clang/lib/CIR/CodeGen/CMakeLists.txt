@@ -9,12 +9,14 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRGenDecl.cpp
+  CIRGenOpenACCDecl.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
   CIRGenExprConstant.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenModule.cpp
+  CIRGenOpenACCStmt.cpp
   CIRGenStmt.cpp
   CIRGenTypes.cpp
 
