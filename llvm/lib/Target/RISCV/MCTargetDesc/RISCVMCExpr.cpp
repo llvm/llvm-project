@@ -48,11 +48,9 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
-  const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
-  if (!AUIPCSRE)
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
     return nullptr;
-
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
   const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
 
   if (!DF)

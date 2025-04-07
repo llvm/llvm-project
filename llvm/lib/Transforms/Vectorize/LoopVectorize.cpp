@@ -2082,17 +2082,11 @@ public:
 
     auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
-    // Create new preheader for vector loop.
-    if (OuterLoop)
-      OuterLoop->addBasicBlockToLoop(SCEVCheckBlock, *LI);
 
     SCEVCheckBlock->getTerminator()->eraseFromParent();
     SCEVCheckBlock->moveBefore(LoopVectorPreHeader);
     Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
                                                 SCEVCheckBlock);
-
-    DT->addNewBlock(SCEVCheckBlock, Pred);
-    DT->changeImmediateDominator(LoopVectorPreHeader, SCEVCheckBlock);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheckCond);
@@ -2118,12 +2112,7 @@ public:
     Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
                                                 MemCheckBlock);
 
-    DT->addNewBlock(MemCheckBlock, Pred);
-    DT->changeImmediateDominator(LoopVectorPreHeader, MemCheckBlock);
     MemCheckBlock->moveBefore(LoopVectorPreHeader);
-
-    if (OuterLoop)
-      OuterLoop->addBasicBlockToLoop(MemCheckBlock, *LI);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheckCond);
@@ -2562,13 +2551,9 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   }
 
   // Create new preheader for vector loop.
-  LoopVectorPreHeader =
-      SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(), DT, LI, nullptr,
-                 "vector.ph");
-
-  assert(DT->properlyDominates(DT->getNode(TCCheckBlock),
-                               DT->getNode(Bypass)->getIDom()) &&
-         "TC check is expected to dominate Bypass");
+  LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
+                                   static_cast<DominatorTree *>(nullptr), LI,
+                                   nullptr, "vector.ph");
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
@@ -4868,7 +4853,7 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
         const RecurrenceDescriptor &RdxDesc =
             Legal->getReductionVars().find(PN)->second;
         if (PreferInLoopReductions || useOrderedReductions(RdxDesc) ||
-            TTI.preferInLoopReduction(RdxDesc.getOpcode(),
+            TTI.preferInLoopReduction(RdxDesc.getRecurrenceKind(),
                                       RdxDesc.getRecurrenceType()))
           continue;
         T = RdxDesc.getRecurrenceType();
@@ -7035,9 +7020,9 @@ void LoopVectorizationCostModel::collectInLoopReductions() {
 
     // If the target would prefer this reduction to happen "in-loop", then we
     // want to record it as such.
-    unsigned Opcode = RdxDesc.getOpcode();
+    RecurKind Kind = RdxDesc.getRecurrenceKind();
     if (!PreferInLoopReductions && !useOrderedReductions(RdxDesc) &&
-        !TTI.preferInLoopReduction(Opcode, Phi->getType()))
+        !TTI.preferInLoopReduction(Kind, Phi->getType()))
       continue;
 
     // Check that we can correctly put the reductions into the loop, by
@@ -7963,13 +7948,10 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
   // Create new preheader for vector loop.
   LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
-                                   DT, LI, nullptr, "vector.ph");
+                                   static_cast<DominatorTree *>(nullptr), LI,
+                                   nullptr, "vector.ph");
 
   if (ForEpilogue) {
-    assert(DT->properlyDominates(DT->getNode(TCCheckBlock),
-                                 DT->getNode(Bypass)->getIDom()) &&
-           "TC check is expected to dominate Bypass");
-
     LoopBypassBlocks.push_back(TCCheckBlock);
 
     // Save the trip count so we don't have to regenerate it in the
@@ -8073,10 +8055,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   assert(EPI.TripCount &&
          "Expected trip count to have been saved in the first pass.");
-  assert(
-      (!isa<Instruction>(EPI.TripCount) ||
-       DT->dominates(cast<Instruction>(EPI.TripCount)->getParent(), Insert)) &&
-      "saved trip count does not dominate insertion point.");
   Value *TC = EPI.TripCount;
   IRBuilder<> Builder(Insert->getTerminator());
   Value *Count = Builder.CreateSub(TC, EPI.VectorTripCount, "n.vec.remaining");
