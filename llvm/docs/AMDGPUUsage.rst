@@ -500,12 +500,6 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Packed
                                                                         work-item                       Add product
                                                                         IDs                             names.
-     ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
-                                                    - wavefrontsize64   flat
-                                                                        scratch                       .. TODO::
-                                                                      - Packed
-                                                                        work-item                       Add product
-                                                                        IDs                             names.
 
      ``gfx1152``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
