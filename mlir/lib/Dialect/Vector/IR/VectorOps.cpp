@@ -42,6 +42,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Casting.h"
 
 #include <cassert>
 #include <cstdint>
@@ -5611,28 +5612,27 @@ LogicalResult ShapeCastOp::verify() {
 }
 
 OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
+
   // No-op shape cast.
-  if (getSource().getType() == getResult().getType())
+  if (getSource().getType() == getType())
     return getSource();
 
   // Canceling shape casts.
   if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
-    if (getResult().getType() == otherOp.getSource().getType())
-      return otherOp.getSource();
 
-    // Only allows valid transitive folding.
-    VectorType srcType = llvm::cast<VectorType>(otherOp.getSource().getType());
-    VectorType resultType = llvm::cast<VectorType>(getResult().getType());
-    if (srcType.getRank() < resultType.getRank()) {
-      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
+    // Only allows valid transitive folding (expand/collapse dimensions).
+    VectorType srcType = otherOp.getSource().getType();
+    if (getType() == srcType)
+      return otherOp.getSource();
+    if (srcType.getRank() < getType().getRank()) {
+      if (!isValidShapeCast(srcType.getShape(), getType().getShape()))
         return {};
-    } else if (srcType.getRank() > resultType.getRank()) {
-      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
+    } else if (srcType.getRank() > getType().getRank()) {
+      if (!isValidShapeCast(getType().getShape(), srcType.getShape()))
         return {};
     } else {
       return {};
     }
-
     setOperand(otherOp.getSource());
     return getResult();
   }
@@ -5643,17 +5643,15 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
       return bcastOp.getSource();
   }
 
-  // Replace shape_cast(arith.constant) with arith.constant. Currently only
-  // handles splat constants.
-  if (auto constantOp = getSource().getDefiningOp<arith::ConstantOp>()) {
-    if (auto dense = llvm::dyn_cast<SplatElementsAttr>(constantOp.getValue())) {
-      return DenseElementsAttr::get(cast<VectorType>(getType()),
-                                    dense.getSplatValue<Attribute>());
-    }
+  // shape_cast(constant) -> constant
+  if (auto splatAttr =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
+    return DenseElementsAttr::get(getType(),
+                                  splatAttr.getSplatValue<Attribute>());
   }
 
-  // Replace shape_cast(poison) with poison.
-  if (getSource().getDefiningOp<ub::PoisonOp>()) {
+  // shape_cast(poison) -> poison
+  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
     return ub::PoisonAttr::get(getContext());
   }
 
