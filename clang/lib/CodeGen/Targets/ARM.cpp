@@ -134,8 +134,6 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
-    if (GV->isDeclaration())
-      return;
     auto *Fn = dyn_cast<llvm::Function>(GV);
     if (!Fn)
       return;

@@ -447,6 +447,8 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
 
   if (Linkage == llvm::GlobalVariable::InternalLinkage)
     SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
+  else
+    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
 
   Fn->setCallingConv(getRuntimeCC());
 
@@ -793,7 +795,6 @@ void CodeGenModule::EmitCXXModuleInitFunc(Module *Primary) {
     }
     CodeGenFunction(*this).GenerateCXXGlobalInitFunc(Fn, ModuleInits,
                                                      GuardAddr);
-    getTargetCodeGenInfo().setTargetAttributes(nullptr, Fn, *this);
   }
 
   // We allow for the case that a module object is added to a linked binary
