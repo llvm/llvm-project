@@ -16230,6 +16230,9 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // If the function implicitly returns zero (like 'main') or is naked,
       // don't complain about missing return statements.
+      // Clang implicitly returns 0 in C89 mode, but that's considered an
+      // extension. The check is necessary to ensure the expected extension
+      // warning is emitted in C89 mode.
       if ((FD->hasImplicitReturnZero() &&
            (getLangOpts().CPlusPlus || getLangOpts().C99 || !FD->isMain())) ||
           FD->hasAttr<NakedAttr>())
