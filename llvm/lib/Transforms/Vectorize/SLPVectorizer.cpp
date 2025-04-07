@@ -1205,6 +1205,25 @@ convertTo(Instruction *I, const InstructionsState &S) {
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
 
+/// Find an instruction with a specific opcode in VL.
+/// \param VL Array of values to search through. Must contain only Instructions
+///           and PoisonValues.
+/// \param Opcode The instruction opcode to search for
+/// \returns
+/// - The first instruction found with matching opcode
+/// - nullptr if no matching instruction is found
+Instruction *findInstructionWithOpcode(ArrayRef<Value *> VL, unsigned Opcode) {
+  for (Value *V : VL) {
+    if (isa<PoisonValue>(V))
+      continue;
+    assert(isa<Instruction>(V) && "Only accepts PoisonValue and Instruction.");
+    auto *Inst = cast<Instruction>(V);
+    if (Inst->getOpcode() == Opcode)
+      return Inst;
+  }
+  return nullptr;
+}
+
 /// Checks if the provided operands of 2 cmp instructions are compatible, i.e.
 /// compatible instructions or constants, or just some other regular values.
 static bool areCompatibleCmpOps(Value *BaseOp0, Value *BaseOp1, Value *Op0,
@@ -1258,17 +1277,6 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   if ((VL.size() > 2 && !isa<PHINode>(MainOp) && InstCnt < VL.size() / 2) ||
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
-
-  auto FindInstructionWithOpcode = [&](unsigned Opcode) {
-    for (Value *V : VL) {
-      if (isa<PoisonValue>(V))
-        continue;
-      auto *Inst = cast<Instruction>(V);
-      if (Inst->getOpcode() == Opcode)
-        return Inst;
-    }
-    llvm_unreachable("Opcode not found.");
-  };
 
   bool IsCastOp = isa<CastInst>(MainOp);
   bool IsBinOp = isa<BinaryOperator>(MainOp);
@@ -1429,8 +1437,10 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
 
   if (IsBinOp) {
-    MainOp = FindInstructionWithOpcode(BinOpHelper.getMainOpcode());
-    AltOp = FindInstructionWithOpcode(BinOpHelper.getAltOpcode());
+    MainOp = findInstructionWithOpcode(VL, BinOpHelper.getMainOpcode());
+    assert(MainOp && "Cannot find MainOp with Opcode from BinOpHelper.");
+    AltOp = findInstructionWithOpcode(VL, BinOpHelper.getAltOpcode());
+    assert(MainOp && "Cannot find AltOp with Opcode from BinOpHelper.");
   }
   assert((MainOp == AltOp || !allSameOpcode(VL)) &&
          "Incorrect implementation of allSameOpcode.");
