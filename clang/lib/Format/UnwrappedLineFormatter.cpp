@@ -316,8 +316,13 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if (!(*J)->InPPDirective && !(*J)->isComment() &&
-                (*J)->Level < TheLine->Level) {
+            if ((*J)->InPPDirective || (*J)->isComment() ||
+                (*J)->Level > TheLine->Level) {
+              continue;
+            }
+            if ((*J)->Level < TheLine->Level ||
+                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+                 (*J)->First->is(tok::l_brace))) {
               Line = *J;
               break;
             }

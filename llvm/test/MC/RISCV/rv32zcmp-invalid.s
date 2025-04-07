@@ -45,3 +45,6 @@ cm.pop {ra, x8-x9, x18-x17}, -40
 
 # CHECK-ERROR: :[[@LINE+1]]:16: error: invalid register
 cm.pop {ra, x8-f8, x18-x17}, -40
+
+# CHECK-ERROR: :[[@LINE+1]]:9: error: operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}
+cm.push x1, -16

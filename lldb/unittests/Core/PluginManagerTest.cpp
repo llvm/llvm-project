@@ -7,11 +7,21 @@ using namespace lldb;
 using namespace lldb_private;
 
 // Mock system runtime plugin create functions.
-SystemRuntime *CreateSystemRuntimePluginA(Process *process) { return nullptr; }
+// Make them all return different values to avoid the ICF optimization
+// from combining them into the same function. The values returned
+// are not valid SystemRuntime pointers, but they are unique and
+// sufficient for testing.
+SystemRuntime *CreateSystemRuntimePluginA(Process *process) {
+  return (SystemRuntime *)0x1;
+}
 
-SystemRuntime *CreateSystemRuntimePluginB(Process *process) { return nullptr; }
+SystemRuntime *CreateSystemRuntimePluginB(Process *process) {
+  return (SystemRuntime *)0x2;
+}
 
-SystemRuntime *CreateSystemRuntimePluginC(Process *process) { return nullptr; }
+SystemRuntime *CreateSystemRuntimePluginC(Process *process) {
+  return (SystemRuntime *)0x3;
+}
 
 // Test class for testing the PluginManager.
 // The PluginManager modifies global state when registering new plugins. This
@@ -24,6 +34,10 @@ public:
 
   // Add mock system runtime plugins for testing.
   void RegisterMockSystemRuntimePlugins() {
+    // Make sure the create functions all have different addresses.
+    ASSERT_NE(CreateSystemRuntimePluginA, CreateSystemRuntimePluginB);
+    ASSERT_NE(CreateSystemRuntimePluginB, CreateSystemRuntimePluginC);
+
     ASSERT_TRUE(PluginManager::RegisterPlugin("a", "test instance A",
                                               CreateSystemRuntimePluginA));
     ASSERT_TRUE(PluginManager::RegisterPlugin("b", "test instance B",
