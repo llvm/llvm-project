@@ -166,15 +166,14 @@ static Error parseFailed(const Twine &Msg) {
 
 class RootSignature {
 private:
-  uint32_t Version = 2;
-  uint32_t NumParameters = 0;
-  uint32_t RootParametersOffset = 0;
-  uint32_t NumStaticSamplers = 0;
-  uint32_t StaticSamplersOffset = 0;
-  uint32_t Flags = 0;
-
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t RootParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplersOffset;
+  uint32_t Flags;
   ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
-  size_t ParameterSpaceOffset;
+  uint32_t ParameterSpaceOffset;
   StringRef ParameterSpace;
 
   using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
@@ -199,9 +198,10 @@ public:
 
   llvm::Expected<RootParameterView>
   getParameter(const dxbc::RootParameterHeader &Header) const {
+    assert(ParameterSpaceOffset != 0 &&
+           "This should be initialized before reading parameters");
     size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
     StringRef Data;
-
     size_t DataSize;
 
     switch (Header.ParameterType) {
@@ -214,7 +214,6 @@ public:
       return parseFailed("Reading structure out of file bounds");
 
     Data = ParameterSpace.substr(CorrectOffset, DataSize);
-
     RootParameterView View = RootParameterView(Header, Data);
     return View;
   }

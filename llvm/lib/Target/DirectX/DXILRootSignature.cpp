@@ -16,7 +16,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/BinaryFormat/RootSignatureVerifier.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -93,8 +92,10 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
   return HasError;
 }
 
+static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
+
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!dxbc::RootSignatureVerifier::verifyRootFlag(RSD.Header.Flags)) {
+  if (!verifyRootFlag(RSD.Header.Flags)) {
     return reportError(Ctx, "Invalid Root Signature flag value");
   }
   return false;

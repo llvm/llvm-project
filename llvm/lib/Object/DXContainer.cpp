@@ -8,7 +8,6 @@
 
 #include "llvm/Object/DXContainer.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/BinaryFormat/RootSignatureVerifier.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
@@ -258,14 +257,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
-  uint32_t VValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Version = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureVerifier::verifyVersion(VValue))
-    return validationFailed("unsupported root signature version read: " +
-                            llvm::Twine(VValue));
-  Version = VValue;
 
   NumParameters =
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
@@ -283,14 +276,8 @@ Error DirectX::RootSignature::parse(StringRef Data) {
       support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  uint32_t FValue =
-      support::endian::read<uint32_t, llvm::endianness::little>(Current);
+  Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
-
-  if (!dxbc::RootSignatureVerifier::verifyRootFlag(FValue))
-    return validationFailed("unsupported root signature flag value read: " +
-                            llvm::Twine(FValue));
-  Flags = FValue;
 
   assert(Current == Begin + RootParametersOffset);
 
@@ -305,17 +292,6 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   ParameterSpace = Data.substr(ParameterSpaceOffset,
                                ParameterSpaceEnd - ParameterSpaceOffset);
 
-  for (auto P : param_header()) {
-
-    if (!dxbc::RootSignatureVerifier::verifyParameterType(P.ParameterType))
-      return validationFailed("unsupported parameter type value read: " +
-                              llvm::Twine((uint32_t)P.ParameterType));
-
-    if (!dxbc::RootSignatureVerifier::verifyShaderVisibility(
-            P.ShaderVisibility))
-      return validationFailed("unsupported shader visility flag value read: " +
-                              llvm::Twine((uint32_t)P.ShaderVisibility));
-  }
   return Error::success();
 }
 
