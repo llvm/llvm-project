@@ -2720,6 +2720,15 @@ def : Pat<(v2f64 (any_fmaxnum v2f64:$src1, v2f64:$src2)),
 def : Pat<(v2f64 (any_fminnum v2f64:$src1, v2f64:$src2)),
           (v2f64 (XVMINDP $src1, $src2))>;
 
+def : Pat<(v4f32 (fmaxnum_ieee v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMAXSP $src1, $src2))>;
+def : Pat<(v4f32 (fminnum_ieee v4f32:$src1, v4f32:$src2)),
+          (v4f32 (XVMINSP $src1, $src2))>;
+def : Pat<(v2f64 (fmaxnum_ieee v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMAXDP $src1, $src2))>;
+def : Pat<(v2f64 (fminnum_ieee v2f64:$src1, v2f64:$src2)),
+          (v2f64 (XVMINDP $src1, $src2))>;
+
 // f32 abs
 def : Pat<(f32 (fabs f32:$S)),
           (f32 (COPY_TO_REGCLASS (XSABSDP
@@ -2733,39 +2742,23 @@ def : Pat<(f32 (fneg (fabs f32:$S))),
 // f32 Min.
 def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Min)>;
-def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), f32:$B)),
-          (f32 FpMinMax.F32Min)>;
-def : Pat<(f32 (fminnum_ieee f32:$A, (fcanonicalize f32:$B))),
-          (f32 FpMinMax.F32Min)>;
-def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+def : Pat<(f32 (fminnum f32:$A, f32:$B)),
           (f32 FpMinMax.F32Min)>;
 // F32 Max.
 def : Pat<(f32 (fmaxnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Max)>;
-def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), f32:$B)),
-          (f32 FpMinMax.F32Max)>;
-def : Pat<(f32 (fmaxnum_ieee f32:$A, (fcanonicalize f32:$B))),
-          (f32 FpMinMax.F32Max)>;
-def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
+def : Pat<(f32 (fmaxnum f32:$A, f32:$B)),
           (f32 FpMinMax.F32Max)>;
 
 // f64 Min.
 def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
           (f64 (XSMINDP $A, $B))>;
-def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), f64:$B)),
-          (f64 (XSMINDP $A, $B))>;
-def : Pat<(f64 (fminnum_ieee f64:$A, (fcanonicalize f64:$B))),
-          (f64 (XSMINDP $A, $B))>;
-def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+def : Pat<(f64 (fminnum f64:$A, f64:$B)),
           (f64 (XSMINDP $A, $B))>;
 // f64 Max.
 def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
           (f64 (XSMAXDP $A, $B))>;
-def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), f64:$B)),
-          (f64 (XSMAXDP $A, $B))>;
-def : Pat<(f64 (fmaxnum_ieee f64:$A, (fcanonicalize f64:$B))),
-          (f64 (XSMAXDP $A, $B))>;
-def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
+def : Pat<(f64 (fmaxnum f64:$A, f64:$B)),
           (f64 (XSMAXDP $A, $B))>;
 
 def : Pat<(int_ppc_vsx_stxvd2x_be v2f64:$rS, ForceXForm:$dst),
