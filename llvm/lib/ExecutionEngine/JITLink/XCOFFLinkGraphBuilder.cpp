@@ -143,6 +143,7 @@ static llvm::StringRef getStorageClassString(XCOFF::StorageClass SC) {
   case XCOFF::StorageClass::C_TCSYM:
     return "C_TCSYM (Reserved)";
   }
+  llvm_unreachable("Unknown XCOFF::StorageClass enum");
 }
 
 Error XCOFFLinkGraphBuilder::processSections() {
