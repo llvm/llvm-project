@@ -1419,6 +1419,10 @@ unsigned TargetTransformInfo::getMaxNumArgs() const {
   return TTIImpl->getMaxNumArgs();
 }
 
+bool TargetTransformInfo::canVectorizei8s() const {
+  return TTIImpl->canVectorizei8s();
+}
+
 bool TargetTransformInfo::shouldExpandReduction(const IntrinsicInst *II) const {
   return TTIImpl->shouldExpandReduction(II);
 }

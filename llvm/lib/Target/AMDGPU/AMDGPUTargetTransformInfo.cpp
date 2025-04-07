@@ -344,9 +344,10 @@ unsigned GCNTTIImpl::getMinVectorRegisterBitWidth() const {
 unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   if (Opcode == Instruction::Load || Opcode == Instruction::Store)
     return 32 * 4 / ElemWidth;
-  return (ElemWidth == 16 && ST->has16BitInsts()) ? 2
-       : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
-       : 1;
+  return ElemWidth == 8                                ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
+         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+                                                       : 1;
 }
 
 unsigned GCNTTIImpl::getLoadVectorFactor(unsigned VF, unsigned LoadSize,
@@ -1120,6 +1121,17 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
   }
 }
 
+InstructionCost GCNTTIImpl::getScalarizationOverhead(
+    VectorType *InTy, const APInt &DemandedElts, bool Insert, bool Extract,
+    TTI::TargetCostKind CostKind, ArrayRef<Value *> VL) {
+  unsigned NumVectorElts = cast<FixedVectorType>(InTy)->getNumElements();
+  if (NumVectorElts > 1 &&
+      InTy->getElementType() == IntegerType::getInt8Ty(InTy->getContext()))
+    return 0;
+  return BaseT::getScalarizationOverhead(InTy, DemandedElts, Insert, Extract,
+                                         CostKind, VL);
+}
+
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *VT, ArrayRef<int> Mask,
                                            TTI::TargetCostKind CostKind,
@@ -1134,6 +1146,11 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   // Larger vector widths may require additional instructions, but are
   // typically cheaper than scalarized versions.
   unsigned NumVectorElts = cast<FixedVectorType>(VT)->getNumElements();
+
+  if (NumVectorElts > 1 &&
+      VT->getElementType() == IntegerType::getInt8Ty(VT->getContext()))
+    return 0;
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       DL.getTypeSizeInBits(VT->getElementType()) == 16) {
     bool HasVOP3P = ST->hasVOP3PInsts();
@@ -1423,3 +1440,5 @@ void GCNTTIImpl::collectKernelLaunchBounds(
   LB.push_back({"amdgpu-waves-per-eu[0]", WavesPerEU.first});
   LB.push_back({"amdgpu-waves-per-eu[1]", WavesPerEU.second});
 }
+
+bool GCNTTIImpl::canVectorizei8s() const { return true; }

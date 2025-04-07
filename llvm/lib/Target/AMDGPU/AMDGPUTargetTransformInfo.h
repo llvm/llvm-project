@@ -240,6 +240,12 @@ public:
 
   InstructionCost getVectorSplitCost() { return 0; }
 
+  InstructionCost getScalarizationOverhead(VectorType *InTy,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
+
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
                                  TTI::TargetCostKind CostKind, int Index,
@@ -282,6 +288,9 @@ public:
   void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
+  /// \return return true if we can pack 4 i8s into an i32.
+  bool canVectorizei8s() const;
 };
 
 } // end namespace llvm
