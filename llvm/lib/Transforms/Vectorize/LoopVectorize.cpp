@@ -4718,8 +4718,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
 
   if (EpilogueVectorizationForceVF > 1) {
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
-    ElementCount ForcedEC =
-        ElementCount::getFixed(EpilogueVectorizationForceVF);
+    ElementCount ForcedEC = ElementCount::getFixed(EpilogueVectorizationForceVF);
     if (hasPlanWithVF(ForcedEC))
       return {ForcedEC, 0, 0};
 
