@@ -57,6 +57,8 @@ void fun() {
 
 // CHECK: call void @llvm.memset{{.*}}, !dbg [[G14R1:!.*]]
     __builtin___memset_chk(f4, 0, sizeof(float), -1);
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -75,3 +77,4 @@ void fun() {
 // CHECK: [[G12R1]] = !DILocation({{.*}}, atomGroup: 12, atomRank: 1)
 // CHECK: [[G13R1]] = !DILocation({{.*}}, atomGroup: 13, atomRank: 1)
 // CHECK: [[G14R1]] = !DILocation({{.*}}, atomGroup: 14, atomRank: 1)
+// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])

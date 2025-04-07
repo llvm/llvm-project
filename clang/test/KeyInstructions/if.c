@@ -31,7 +31,9 @@ void a(int A) {
 // CHECK-CXX: br i1 %tobool4, label %if.then5, label %if.end6{{.*}}, !dbg [[G5R1:!.*]]
     if (int B = A; B)
         ;
-#endif 
+#endif
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -44,3 +46,4 @@ void a(int A) {
 // CHECK-CXX: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK-CXX: [[G5R2]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 2)
 // CHECK-CXX: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])

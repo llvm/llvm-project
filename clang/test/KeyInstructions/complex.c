@@ -28,6 +28,8 @@ void test() {
 // CHECK: %add = fadd float %0, %1, !dbg [[G4R2:!.*]]
 // CHECK: store float %add, ptr getelementptr inbounds nuw ({ float, float }, ptr @ci, i32 0, i32 1){{.*}}, !dbg [[G4R1:!.*]]
   __imag ci = __imag ci + __imag ci;
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R2]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 2)
@@ -38,3 +40,4 @@ void test() {
 // CHECK: [[G3R1]] = !DILocation({{.*}}, atomGroup: 3, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])

@@ -27,6 +27,8 @@ void a(int A) {
 // CHECK: %inc = add{{.*}}, !dbg [[G4R2:!.*]]
 // CHECK: store i32 %inc, ptr %i{{.*}}, !dbg [[G4R1:!.*]]
     for (int i = 0; i < A; ++i) { }
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -35,3 +37,4 @@ void a(int A) {
 // CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
 // CHECK: [[G4R2]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 2)
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
+// CHECK: [[RET:!.*]] = !DILocation({{.*}}, atomGroup: [[#]], atomRank: [[#]])
