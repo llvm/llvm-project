@@ -5,7 +5,10 @@
 
 expression = unary_expression ;
 
-unary_expression = unary_operator primary_expression ;
+unary_expression = unary_operator expression
+                 | primary_expression ;
+
+unary_operator = "*" | "&" ;
 
 primary_expression = id_expression
                    | "(" expression ")";

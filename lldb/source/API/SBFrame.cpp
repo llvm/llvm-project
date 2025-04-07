@@ -492,6 +492,41 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
   return sb_value;
 }
 
+lldb::SBValue SBFrame::TestGetValueForVariablePath(const char *var_path,
+                                                   DynamicValueType use_dynamic,
+                                                   bool use_DIL) {
+  LLDB_INSTRUMENT_VA(this, var_path, use_dynamic);
+
+  SBValue sb_value;
+  if (var_path == nullptr || var_path[0] == '\0') {
+    return sb_value;
+  }
+
+  std::unique_lock<std::recursive_mutex> lock;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+  StackFrame *frame = nullptr;
+  Target *target = exe_ctx.GetTargetPtr();
+  Process *process = exe_ctx.GetProcessPtr();
+  if (target && process) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process->GetRunLock())) {
+      frame = exe_ctx.GetFramePtr();
+      if (frame) {
+        VariableSP var_sp;
+        Status error;
+        ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
+            var_path, eNoDynamicValues,
+            StackFrame::eExpressionPathOptionCheckPtrVsMember |
+                StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+            var_sp, error, use_DIL));
+        sb_value.SetSP(value_sp, use_dynamic);
+      }
+    }
+  }
+  return sb_value;
+}
+
 SBValue SBFrame::FindVariable(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 

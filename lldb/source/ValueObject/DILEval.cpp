@@ -275,13 +275,6 @@ Interpreter::Visit(const UnaryOpNode *node) {
   }
   lldb::ValueObjectSP rhs = *rhs_or_err;
 
-  if (rhs->GetCompilerType().IsReferenceType()) {
-    rhs = rhs->Dereference(error);
-    if (error.Fail()) {
-      return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
-                                                  node->GetLocation());
-    }
-  }
   CompilerType rhs_type = rhs->GetCompilerType();
   switch (node->kind()) {
   case UnaryOpKind::Deref: {
@@ -292,8 +285,14 @@ Interpreter::Visit(const UnaryOpNode *node) {
     if (dynamic_rhs)
       rhs = dynamic_rhs;
 
-    if (rhs->GetCompilerType().IsPointerType())
+    if (rhs->GetCompilerType().IsPointerType()) {
+      if (rhs->GetCompilerType().IsPointerToVoid()) {
+        return llvm::make_error<DILDiagnosticError>(
+            m_expr, "indirection not permitted on operand of type 'void *'",
+            node->GetLocation(), 1);
+      }
       return EvaluateDereference(rhs);
+    }
     lldb::ValueObjectSP child_sp = rhs->Dereference(error);
     if (error.Success())
       rhs = child_sp;

@@ -182,6 +182,9 @@ public:
   // variable value.
   lldb::SBValue GetValueForVariablePath(const char *var_expr_cstr,
                                         DynamicValueType use_dynamic);
+  lldb::SBValue TestGetValueForVariablePath(const char *var_expr_cstr,
+                                            DynamicValueType use_dynamic,
+                                            bool use_DIL = false);
 
   /// The version that doesn't supply a 'use_dynamic' value will use the
   /// target's default.

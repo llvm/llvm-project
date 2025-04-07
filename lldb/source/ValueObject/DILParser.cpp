@@ -87,7 +87,8 @@ ASTNodeUP DILParser::ParseExpression() { return ParseUnaryExpression(); }
 // Parse an unary_expression.
 //
 //  unary_expression:
-//    unary_operator primary_expression
+//    unary_operator expression
+//    primary_expression
 //
 //  unary_operator:
 //    "&"
@@ -98,7 +99,7 @@ ASTNodeUP DILParser::ParseUnaryExpression() {
     Token token = CurToken();
     uint32_t loc = token.GetLocation();
     m_dil_lexer.Advance();
-    auto rhs = ParsePrimaryExpression();
+    auto rhs = ParseExpression();
     switch (token.GetKind()) {
     case Token::star:
       return std::make_unique<UnaryOpNode>(loc, UnaryOpKind::Deref,

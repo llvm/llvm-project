@@ -308,6 +308,9 @@ public:
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
       uint32_t options, lldb::VariableSP &var_sp, Status &error);
+  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error, bool use_DIL);
 
   /// Determine whether this StackFrame has debug information available or not.
   ///
