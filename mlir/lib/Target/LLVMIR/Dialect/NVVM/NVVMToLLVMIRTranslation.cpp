@@ -131,9 +131,8 @@ static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
     return llvm::Intrinsic::nvvm_vote_ballot_sync;
   case NVVM::VoteSyncKind::uni:
     return llvm::Intrinsic::nvvm_vote_uni_sync;
-  default:
-    llvm_unreachable("unsupported vote kind");
   }
+  llvm_unreachable("unsupported vote kind");
 }
 
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
