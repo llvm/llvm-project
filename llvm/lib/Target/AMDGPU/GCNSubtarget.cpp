@@ -71,7 +71,8 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
   // default
   if (isAmdHsaOS())
-    FullFS += "+flat-for-global,+unaligned-access-mode,+trap-handler,";
+    FullFS += "+flat-for-global,+unaligned-access-mode,+trap-handler,"
+              "+relaxed-buffer-oob-mode,";
 
   FullFS += "+enable-prt-strict-null,"; // This is overridden by a disable in FS
 
