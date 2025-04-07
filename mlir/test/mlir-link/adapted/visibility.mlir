@@ -1,7 +1,7 @@
 // RUN: mlir-link %s %p/Inputs/visibility.mlir -o - | FileCheck %s
 // RUN: mlir-link %p/Inputs/visibility.mlir %s -o - | FileCheck %s
 
-// visibility not yet supported
+// mlir.alias not yet supported; comdat not yet supported
 // XFAIL: *
 
 module {
