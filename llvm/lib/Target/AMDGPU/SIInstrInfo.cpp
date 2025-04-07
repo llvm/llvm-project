@@ -151,11 +151,12 @@ static bool resultDependsOnExec(const MachineInstr &MI) {
   // Ignore comparisons which are only used masked with exec.
   // This allows some hoisting/sinking of VALU comparisons.
   if (MI.isCompare()) {
-    if (SIInstrInfo::isVOPC(MI))
+    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
+    const MachineOperand &Dst = MI.getOperand(0);
+    if (!Dst.isReg() || !Dst.isDef() || MI.getNumExplicitDefs() > 1)
       return false;
 
-    const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    Register DstReg = MI.getOperand(0).getReg();
+    Register DstReg = Dst.getReg();
     if (!DstReg.isVirtual())
       return true;
     for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
