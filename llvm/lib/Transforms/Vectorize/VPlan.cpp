@@ -1414,6 +1414,13 @@ void VPValue::replaceUsesWithIf(
   }
 }
 
+void VPUser::replaceUsesOfWith(VPValue *From, VPValue *To) {
+  for (unsigned Idx = 0; Idx != getNumOperands(); ++Idx) {
+    if (getOperand(Idx) == From)
+      setOperand(Idx, To);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
   OS << Tracker.getOrCreateName(this);
