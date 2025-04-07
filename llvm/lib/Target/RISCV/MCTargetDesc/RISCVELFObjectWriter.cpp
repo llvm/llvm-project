@@ -56,7 +56,7 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
-  auto Spec = RISCVMCExpr::Specifier(Target.getRefKind());
+  auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
   switch (Spec) {
   case RISCVMCExpr::VK_TPREL_HI:
   case RISCVMCExpr::VK_TLS_GOT_HI:
