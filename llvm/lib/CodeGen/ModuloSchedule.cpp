@@ -2215,14 +2215,6 @@ void ModuloScheduleExpanderMVE::insertCondBranch(MachineBasicBlock &MBB,
   }
 }
 
-/// Some registers are generated during the kernel expansion. We calculate the
-/// live intervals of these registers after the expansion.
-void ModuloScheduleExpanderMVE::calculateIntervals() {
-  for (Register Reg : NewVRegs)
-    LIS.createAndComputeVirtRegInterval(Reg);
-  NewVRegs.clear();
-}
-
 /// Generate a pipelined loop that is unrolled by using MVE algorithm and any
 /// other necessary blocks. The control flow is modified to execute the
 /// pipelined loop if the trip count satisfies the condition, otherwise the
@@ -2354,8 +2346,6 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   generateProlog(PrologVRMap);
   generateKernel(PrologVRMap, KernelVRMap, LastStage0Insts);
   generateEpilog(KernelVRMap, EpilogVRMap, LastStage0Insts);
-
-  calculateIntervals();
 }
 
 /// Replace MI's use operands according to the maps.
@@ -2553,8 +2543,6 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
 
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
-
-    NewVRegs.push_back(PhiReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the
@@ -2575,6 +2563,10 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
       replacePhiSrc(*Phi, InitReg, NewInit, NewPreheader);
     }
   }
+
+  // The interval of OrigReg has been modified and should be recalculated when
+  // LiveInterval::getInterval() is called.
+  LIS.removeInterval(OrigReg);
 }
 
 void ModuloScheduleExpanderMVE::generateProlog(

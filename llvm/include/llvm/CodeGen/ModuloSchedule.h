@@ -404,9 +404,6 @@ private:
   /// NumUnroll = 1 means no unrolling.
   int NumUnroll;
 
-  /// Record the registers that need to compute live intervals.
-  SmallVector<Register> NewVRegs;
-
   void calcNumUnroll();
   void generatePipelinedLoop();
   void generateProlog(SmallVectorImpl<ValueMapTy> &VRMap);
@@ -438,8 +435,6 @@ private:
                         InstrMapTy &LastStage0Insts,
                         MachineBasicBlock &GreaterThan,
                         MachineBasicBlock &Otherwise);
-
-  void calculateIntervals();
 
 public:
   ModuloScheduleExpanderMVE(MachineFunction &MF, ModuloSchedule &S,
