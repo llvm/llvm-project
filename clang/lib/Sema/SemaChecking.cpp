@@ -4229,7 +4229,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     if (std::optional<llvm::APSInt> Result =
             Scope->getIntegerConstantExpr(Context)) {
       if (!ScopeModel->isValid(Result->getZExtValue()))
-        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_synch_scope)
+        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
             << Scope->getSourceRange();
     }
     SubExprs.push_back(Scope);
@@ -14731,9 +14731,8 @@ static bool isLayoutCompatibleStruct(const ASTContext &C, const RecordDecl *RD1,
 /// (C++11 [class.mem] p18)
 static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                     const RecordDecl *RD2) {
-  llvm::SmallPtrSet<const FieldDecl *, 8> UnmatchedFields;
-  for (auto *Field2 : RD2->fields())
-    UnmatchedFields.insert(Field2);
+  llvm::SmallPtrSet<const FieldDecl *, 8> UnmatchedFields(llvm::from_range,
+                                                          RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
     auto I = UnmatchedFields.begin();

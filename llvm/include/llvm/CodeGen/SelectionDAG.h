@@ -2448,6 +2448,9 @@ public:
                                 const SDLoc &DLoc);
 
 private:
+#ifndef NDEBUG
+  void verifyNode(SDNode *N) const;
+#endif
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

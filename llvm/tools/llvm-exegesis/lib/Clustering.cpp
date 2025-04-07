@@ -148,8 +148,8 @@ void BenchmarkClustering::clusterizeDbScan(const size_t MinPts) {
     CurrentCluster.PointIndices.push_back(P);
 
     // Process P's neighbors.
-    SetVector<size_t, std::deque<size_t>> ToProcess;
-    ToProcess.insert_range(Neighbors);
+    SetVector<size_t, std::deque<size_t>> ToProcess(llvm::from_range,
+                                                    Neighbors);
     while (!ToProcess.empty()) {
       // Retrieve a point from the set.
       const size_t Q = *ToProcess.begin();

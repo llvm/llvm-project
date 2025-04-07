@@ -22,9 +22,9 @@ class StringRef;
 
 class RISCVMCExpr : public MCTargetExpr {
 public:
-  enum Specifier {
+  enum Specifier : uint8_t {
     VK_None,
-    VK_LO,
+    VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_HI,
     VK_PCREL_LO,
     VK_PCREL_HI,
@@ -37,6 +37,8 @@ public:
     VK_CALL,
     VK_CALL_PLT,
     VK_32_PCREL,
+    VK_GOTPCREL,
+    VK_PLTPCREL,
     VK_TLSDESC_HI,
     VK_TLSDESC_LOAD_LO,
     VK_TLSDESC_ADD_LO,
@@ -46,8 +48,6 @@ public:
 private:
   const MCExpr *Expr;
   const Specifier specifier;
-
-  int64_t evaluateAsInt64(int64_t Value) const;
 
   explicit RISCVMCExpr(const MCExpr *Expr, Specifier S)
       : Expr(Expr), specifier(S) {}
@@ -75,8 +75,6 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  bool evaluateAsConstant(int64_t &Res) const;
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
@@ -84,7 +82,6 @@ public:
   static std::optional<Specifier> getSpecifierForName(StringRef name);
   static StringRef getSpecifierName(Specifier Kind);
 };
-
 } // end namespace llvm.
 
 #endif

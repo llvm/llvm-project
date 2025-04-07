@@ -997,15 +997,12 @@ define <8 x double> @concat_vpermilvar_v8f64_v2f64(<2 x double> %a0, <2 x double
 ;
 ; X64-LABEL: concat_vpermilvar_v8f64_v2f64:
 ; X64:       # %bb.0:
+; X64-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
 ; X64-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-NEXT:    vextractf32x4 $2, %zmm4, %xmm5
-; X64-NEXT:    vextractf32x4 $3, %zmm4, %xmm6
-; X64-NEXT:    vpermilpd %xmm5, %xmm2, %xmm2
-; X64-NEXT:    vpermilpd %xmm6, %xmm3, %xmm3
 ; X64-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
 ; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; X64-NEXT:    vpermilpd %ymm4, %ymm0, %ymm0
 ; X64-NEXT:    vinsertf64x4 $1, %ymm2, %zmm0, %zmm0
+; X64-NEXT:    vpermilpd %zmm4, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %m0 = shufflevector <8 x i64> %m, <8 x i64> poison, <2 x i32> <i32 0, i32 1>
   %m1 = shufflevector <8 x i64> %m, <8 x i64> poison, <2 x i32> <i32 2, i32 3>

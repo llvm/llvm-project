@@ -598,6 +598,32 @@ namespace IncDec {
   static_assert(UnderFlow() == -1, "");  // both-error {{not an integral constant expression}} \
                                          // both-note {{in call to 'UnderFlow()'}}
 
+  /// This UnaryOperator can't overflow, so we shouldn't diagnose any overflow.
+  constexpr int CanOverflow() {
+    char c = 127;
+    char p;
+    ++c;
+    c++;
+    p = ++c;
+    p = c++;
+
+    c = -128;
+    --c;
+    c--;
+    p = --c;
+    p = ++c;
+
+    return 0;
+  }
+  static_assert(CanOverflow() == 0, "");
+
+  constexpr char OverflownChar() {
+    char c = 127;
+    c++;
+    return c;
+  }
+  static_assert(OverflownChar() == -128, "");
+
   constexpr int getTwo() {
     int i = 1;
     return (i += 1);

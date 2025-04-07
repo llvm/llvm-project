@@ -19,6 +19,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace mlir;
 using namespace cir;
@@ -74,8 +75,8 @@ void cir::CIRDialect::initialize() {
 
 // Check if a region's termination omission is valid and, if so, creates and
 // inserts the omitted terminator into the region.
-LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
-                               SMLoc errLoc) {
+static LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
+                                      SMLoc errLoc) {
   Location eLoc = parser.getEncodedSourceLoc(parser.getCurrentLocation());
   OpBuilder builder(parser.getBuilder().getContext());
 
@@ -101,7 +102,7 @@ LogicalResult ensureRegionTerm(OpAsmParser &parser, Region &region,
 }
 
 // True if the region's terminator should be omitted.
-bool omitRegionTerm(mlir::Region &r) {
+static bool omitRegionTerm(mlir::Region &r) {
   const auto singleNonEmptyBlock = r.hasOneBlock() && !r.back().empty();
   const auto yieldsNothing = [&r]() {
     auto y = dyn_cast<cir::YieldOp>(r.back().getTerminator());
@@ -148,6 +149,52 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
     odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
   }
   odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BreakOp::verify() {
+  assert(!cir::MissingFeatures::switchOp());
+  if (!getOperation()->getParentOfType<LoopOpInterface>())
+    return emitOpError("must be within a loop");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionOp
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------
+// BranchOpTerminatorInterface Methods
+//===----------------------------------
+
+void cir::ConditionOp::getSuccessorRegions(
+    ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
+  // TODO(cir): The condition value may be folded to a constant, narrowing
+  // down its list of possible successors.
+
+  // Parent is a loop: condition may branch to the body or to the parent op.
+  if (auto loopOp = dyn_cast<LoopOpInterface>(getOperation()->getParentOp())) {
+    regions.emplace_back(&loopOp.getBody(), loopOp.getBody().getArguments());
+    regions.emplace_back(loopOp->getResults());
+  }
+
+  assert(!cir::MissingFeatures::awaitOp());
+}
+
+MutableOperandRange
+cir::ConditionOp::getMutableSuccessorOperands(RegionBranchPoint point) {
+  // No values are yielded to the successor region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
+LogicalResult cir::ConditionOp::verify() {
+  assert(!cir::MissingFeatures::awaitOp());
+  if (!isa<LoopOpInterface>(getOperation()->getParentOp()))
+    return emitOpError("condition must be within a conditional region");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -206,12 +253,22 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 }
 
 //===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::ContinueOp::verify() {
+  if (!getOperation()->getParentOfType<LoopOpInterface>())
+    return emitOpError("must be within a loop");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CastOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::CastOp::verify() {
-  auto resType = getResult().getType();
-  auto srcType = getSrc().getType();
+  const mlir::Type resType = getResult().getType();
+  const mlir::Type srcType = getSrc().getType();
 
   switch (getKind()) {
   case cir::CastKind::int_to_bool: {
@@ -233,6 +290,15 @@ LogicalResult cir::CastOp::verify() {
       return emitOpError() << "requires !cir.int type for result";
     if (!mlir::isa<cir::IntType>(srcType))
       return emitOpError() << "requires !cir.int type for source";
+    return success();
+  }
+  case cir::CastKind::array_to_ptrdecay: {
+    const auto arrayPtrTy = mlir::dyn_cast<cir::PointerType>(srcType);
+    const auto flatPtrTy = mlir::dyn_cast<cir::PointerType>(resType);
+    if (!arrayPtrTy || !flatPtrTy)
+      return emitOpError() << "requires !cir.ptr type for source and result";
+
+    // TODO(CIR): Make sure the AddrSpace of both types are equals
     return success();
   }
   case cir::CastKind::bitcast: {
@@ -310,9 +376,9 @@ LogicalResult cir::CastOp::verify() {
       return emitOpError() << "requires two types differ in addrspace only";
     return success();
   }
+  default:
+    llvm_unreachable("Unknown CastOp kind?");
   }
-
-  llvm_unreachable("Unknown CastOp kind?");
 }
 
 static bool isIntOrBoolCast(cir::CastOp op) {
@@ -417,9 +483,9 @@ mlir::LogicalResult cir::ReturnOp::verify() {
 
 /// Given the region at `index`, or the parent operation if `index` is None,
 /// return the successor regions. These are the regions that may be selected
-/// during the flow of control. `operands` is a set of optional attributes that
-/// correspond to a constant value for each operand, or null if that operand is
-/// not a constant.
+/// during the flow of control. `operands` is a set of optional attributes
+/// that correspond to a constant value for each operand, or null if that
+/// operand is not a constant.
 void cir::ScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   // The only region always branch back to the parent operation.
@@ -440,12 +506,24 @@ void cir::ScopeOp::build(
   OpBuilder::InsertionGuard guard(builder);
   Region *scopeRegion = result.addRegion();
   builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
 
   mlir::Type yieldTy;
   scopeBuilder(builder, yieldTy, result.location);
 
   if (yieldTy)
     result.addTypes(TypeRange{yieldTy});
+}
+
+void cir::ScopeOp::build(
+    OpBuilder &builder, OperationState &result,
+    function_ref<void(OpBuilder &, Location)> scopeBuilder) {
+  assert(scopeBuilder && "the builder callback for 'then' must be present");
+  OpBuilder::InsertionGuard guard(builder);
+  Region *scopeRegion = result.addRegion();
+  builder.createBlock(scopeRegion);
+  assert(!cir::MissingFeatures::opScopeCleanupRegion());
+  scopeBuilder(builder, result.location);
 }
 
 LogicalResult cir::ScopeOp::verify() {
@@ -472,6 +550,22 @@ mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
 
 Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
   return getDest();
+}
+
+//===----------------------------------------------------------------------===//
+// BrCondOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrCondOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDestOperandsTrueMutable()
+                                      : getDestOperandsFalseMutable());
+}
+
+Block *cir::BrCondOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  if (IntegerAttr condAttr = dyn_cast_if_present<IntegerAttr>(operands.front()))
+    return condAttr.getValue().isOne() ? getDestTrue() : getDestFalse();
+  return nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -619,8 +713,8 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 }
 
 bool cir::FuncOp::isDeclaration() {
-  // TODO(CIR): This function will actually do something once external function
-  // declarations and aliases are upstreamed.
+  // TODO(CIR): This function will actually do something once external
+  // function declarations and aliases are upstreamed.
   return false;
 }
 
@@ -646,9 +740,59 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// CIR defined traits
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
+  if (failed(verifyAtLeastNOperands(op, 1)) || failed(verifyOneResult(op)))
+    return failure();
+
+  const Type type = op->getResult(0).getType();
+  const Type opType = op->getOperand(0).getType();
+
+  if (type != opType)
+    return op->emitOpError()
+           << "requires the same type for first operand and result";
+
+  return success();
+}
+
 // TODO(CIR): The properties of functions that require verification haven't
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
+
+LogicalResult cir::BinOp::verify() {
+  bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
+  bool saturated = getSaturated();
+
+  if (!isa<cir::IntType>(getType()) && noWrap)
+    return emitError()
+           << "only operations on integer values may have nsw/nuw flags";
+
+  bool noWrapOps = getKind() == cir::BinOpKind::Add ||
+                   getKind() == cir::BinOpKind::Sub ||
+                   getKind() == cir::BinOpKind::Mul;
+
+  bool saturatedOps =
+      getKind() == cir::BinOpKind::Add || getKind() == cir::BinOpKind::Sub;
+
+  if (noWrap && !noWrapOps)
+    return emitError() << "The nsw/nuw flags are applicable to opcodes: 'add', "
+                          "'sub' and 'mul'";
+  if (saturated && !saturatedOps)
+    return emitError() << "The saturated flag is applicable to opcodes: 'add' "
+                          "and 'sub'";
+  if (noWrap && saturated)
+    return emitError() << "The nsw/nuw flags and the saturated flag are "
+                          "mutually exclusive";
+
+  assert(!cir::MissingFeatures::complexType());
+  // TODO(cir): verify for complex binops
+
+  return mlir::success();
+}
 
 //===----------------------------------------------------------------------===//
 // UnaryOp

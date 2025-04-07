@@ -604,7 +604,7 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
   bool HasComputedGoto = false;
   if (!TailBB.empty()) {
     HasIndirectbr = TailBB.back().isIndirectBranch();
-    HasComputedGoto = TailBB.back().isComputedGoto();
+    HasComputedGoto = TailBB.terminatorIsComputedGoto();
   }
 
   if (HasIndirectbr && PreRegAlloc)
@@ -878,7 +878,7 @@ bool TailDuplicator::tailDuplicate(bool IsSimple, MachineBasicBlock *TailBB,
   if (CandidatePtr)
     Preds.insert_range(*CandidatePtr);
   else
-    Preds.insert(TailBB->pred_begin(), TailBB->pred_end());
+    Preds.insert_range(TailBB->predecessors());
 
   for (MachineBasicBlock *PredBB : Preds) {
     assert(TailBB != PredBB &&

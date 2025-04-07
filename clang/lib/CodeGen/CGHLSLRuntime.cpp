@@ -338,9 +338,9 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
                                               llvm::Type *Ty) {
   assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
   if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
-    llvm::Function *DxGroupIndex =
-        CGM.getIntrinsic(Intrinsic::dx_flattened_thread_id_in_group);
-    return B.CreateCall(FunctionCallee(DxGroupIndex));
+    llvm::Function *GroupIndex =
+        CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
+    return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
     llvm::Function *ThreadIDIntrinsic =
@@ -385,8 +385,8 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
     assert(EntryFn->isConvergent());
-    llvm::Value *I = B.CreateIntrinsic(
-        llvm::Intrinsic::experimental_convergence_entry, {}, {});
+    llvm::Value *I =
+        B.CreateIntrinsic(llvm::Intrinsic::experimental_convergence_entry, {});
     llvm::Value *bundleArgs[] = {I};
     OB.emplace_back("convergencectrl", bundleArgs);
   }

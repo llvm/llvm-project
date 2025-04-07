@@ -12,6 +12,7 @@
 #include "MCTargetDesc/ARMAsmBackendELF.h"
 #include "MCTargetDesc/ARMAsmBackendWinCOFF.h"
 #include "MCTargetDesc/ARMFixupKinds.h"
+#include "MCTargetDesc/ARMMCExpr.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -459,9 +460,9 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
   // Other relocation types don't want this bit though (branches couldn't encode
   // it if it *was* present, and no other relocations exist) and it can
   // interfere with checking valid expressions.
-  if (const MCSymbolRefExpr *A = Target.getSymA()) {
-    if (A->hasSubsectionsViaSymbols() && Asm.isThumbFunc(&A->getSymbol()) &&
-        A->getSymbol().isExternal() &&
+  bool IsMachO = Asm.getContext().getObjectFileType() == MCContext::IsMachO;
+  if (const auto *SA = Target.getAddSym()) {
+    if (IsMachO && Asm.isThumbFunc(SA) && SA->isExternal() &&
         (Kind == FK_Data_4 || Kind == ARM::fixup_arm_movw_lo16 ||
          Kind == ARM::fixup_arm_movt_hi16 || Kind == ARM::fixup_t2_movw_lo16 ||
          Kind == ARM::fixup_t2_movt_hi16))
@@ -605,7 +606,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     // Offset by 8 just as above.
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
+      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
         return 0;
     return 0xffffff & (Value >> 2);
   case ARM::fixup_t2_uncondbranch: {
@@ -732,7 +733,7 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     uint32_t offset = (Value - 4) >> 2;
     if (const MCSymbolRefExpr *SRE =
             dyn_cast<MCSymbolRefExpr>(Fixup.getValue()))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_TLSCALL)
+      if (getSpecifier(SRE) == ARMMCExpr::VK_TLSCALL)
         offset = 0;
     uint32_t signBit = (offset & 0x400000) >> 22;
     uint32_t I1Bit = (offset & 0x200000) >> 21;
@@ -957,8 +958,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                           const MCFixup &Fixup,
                                           const MCValue &Target,
                                           const MCSubtargetInfo *STI) {
-  const MCSymbolRefExpr *A = Target.getSymA();
-  const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
+  const MCSymbol *Sym = Target.getAddSym();
   const unsigned FixupKind = Fixup.getKind();
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
@@ -988,12 +988,12 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // We must always generate a relocation for BL/BLX instructions if we have
   // a symbol to reference, as the linker relies on knowing the destination
   // symbol's thumb-ness to get interworking right.
-  if (A && (FixupKind == ARM::fixup_arm_thumb_blx ||
-            FixupKind == ARM::fixup_arm_blx ||
-            FixupKind == ARM::fixup_arm_uncondbl ||
-            FixupKind == ARM::fixup_arm_condbl))
+  if (Sym && (FixupKind == ARM::fixup_arm_thumb_blx ||
+              FixupKind == ARM::fixup_arm_blx ||
+              FixupKind == ARM::fixup_arm_uncondbl ||
+              FixupKind == ARM::fixup_arm_condbl))
     return true;
-  return false;
+  return Target.getSpecifier();
 }
 
 /// getFixupKindNumBytes - The number of bytes the fixup may change.

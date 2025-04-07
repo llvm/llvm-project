@@ -30,6 +30,30 @@ public:
                 // the .s file)
     VK_LO_0_7,  // The R_ARM_THM_ALU_ABS_G0_NC relocation (:lower0_7: in the
                 // .s file)
+
+    VK_ARM_NONE,
+    VK_FUNCDESC,
+    VK_GOT,
+    VK_GOTFUNCDESC,
+    VK_GOTOFF,
+    VK_GOTOFFFUNCDESC,
+    VK_GOTTPOFF,
+    VK_GOTTPOFF_FDPIC,
+    VK_GOT_PREL,
+    VK_PLT,
+    VK_PREL31,
+    VK_SBREL,
+    VK_TARGET1,
+    VK_TARGET2,
+    VK_TLSCALL,
+    VK_TLSDESC,
+    VK_TLSDESCSEQ,
+    VK_TLSGD,
+    VK_TLSGD_FDPIC,
+    VK_TLSLDM,
+    VK_TLSLDM_FDPIC,
+    VK_TLSLDO,
+    VK_TPOFF,
   };
 
 private:
@@ -93,6 +117,10 @@ public:
     return E->getKind() == MCExpr::Target;
   }
 };
+
+static inline ARMMCExpr::Specifier getSpecifier(const MCSymbolRefExpr *SRE) {
+  return ARMMCExpr::Specifier(SRE->getKind());
+}
 } // end namespace llvm
 
 #endif

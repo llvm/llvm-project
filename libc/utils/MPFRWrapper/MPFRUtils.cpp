@@ -455,6 +455,8 @@ explain_ternary_operation_one_output_error(Operation,
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 template void explain_ternary_operation_one_output_error(
+    Operation, const TernaryInput<float16> &, float16, double, RoundingMode);
+template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<float> &, float16, double, RoundingMode);
 template void explain_ternary_operation_one_output_error(
     Operation, const TernaryInput<double> &, float16, double, RoundingMode);
@@ -672,6 +674,9 @@ compare_ternary_operation_one_output(Operation,
                                      long double, double, RoundingMode);
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<float16> &,
+                                     float16, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,
                                                    float16, double,
