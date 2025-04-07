@@ -1599,7 +1599,7 @@ public:
   // uint64_t bytes_read_for_chunk, the actual count of bytes read for this
   // chunk
   typedef std::function<IterationAction(lldb_private::Status &, const void *,
-    lldb::addr_t, uint64_t, uint64_t)>
+                                        lldb::addr_t, uint64_t, uint64_t)>
       ReadMemoryChunkCallback;
 
   /// Read of memory from a process in discrete chunks, terminating
@@ -1610,9 +1610,13 @@ public:
   ///     A virtual load address that indicates where to start reading
   ///     memory from.
   ///
-  /// \param[in] data
-  ///     The data buffer heap to use to read the chunk. The chunk size
-  ///     depends upon the byte size of the buffer.
+  /// \param[in] buf
+  ///     A byte buffer that is at least \a chunk_size bytes long that
+  ///     will receive the memory bytes.
+  ///
+  /// \param[in] chunk_size
+  ///     The minimum size of the byte buffer, and the chunk size of memory
+  ///     to read.
   ///
   /// \param[in] size
   ///     The number of bytes to read.
@@ -1627,8 +1631,9 @@ public:
   ///     size, then this function will get called again with \a
   ///     vm_addr, \a buf, and \a size updated appropriately. Zero is
   ///     returned in the case of an error.
-  size_t ReadMemoryInChunks(lldb::addr_t vm_addr, DataBufferHeap &data,
-                            size_t size, ReadMemoryChunkCallback callback);
+  size_t ReadMemoryInChunks(lldb::addr_t vm_addr, void *buf,
+                            lldb::addr_t chunk_size, size_t size,
+                            ReadMemoryChunkCallback callback);
 
   /// Read a NULL terminated C string from memory
   ///
