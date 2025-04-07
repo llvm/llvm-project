@@ -925,11 +925,12 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     // `global_load_lds` instructions.
     size_t loadWidth;
     Type transferType = op.getTransferType();
-    if (auto transferVectorType = dyn_cast<VectorType>(transferType))
+    if (auto transferVectorType = dyn_cast<VectorType>(transferType)) {
       loadWidth = transferVectorType.getNumElements() *
-                  transferVectorType.getElementTypeBitWidth() / 8;
-    else
+                  (transferVectorType.getElementTypeBitWidth() / 8);
+    } else {
       loadWidth = transferType.getIntOrFloatBitWidth() / 8;
+    }
 
     // Currently only 1, 2, and 4 byte loads are supported.
     if (loadWidth != 1 && loadWidth != 2 && loadWidth != 4)

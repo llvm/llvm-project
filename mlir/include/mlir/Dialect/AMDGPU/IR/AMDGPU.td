@@ -784,7 +784,8 @@ def AMDGPU_GatherToLDSOp :
     * `$srcIndices`: indices into `$src` to read from for this thread.
     * `$dst`: LDS memory memref to write to.
     * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
-      number of subgroup size of elements will be written contiguously to `$dst[$dstIndices]`.
+      The elements gathered by the subgroup will be written in order of lane ID will be written
+      into contiguously starting at `$dst[$dstIndices]`.
     * `$transferType`: type of the data to be transferred by each thread. This is used to determine
       the size of the data to be transferred and the number of threads in the subgroup.
       The transfer type must be a scalar type or a vector type with a single element type.
