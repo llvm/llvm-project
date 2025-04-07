@@ -19,6 +19,9 @@
 #include <map>
 #include <tuple>
 
+#include <cassert>
+#include "test_macros.h"
+
 TEST_CONSTEXPR_CXX26 bool test() {
   std::map<std::tuple<int, int>, std::size_t> m;
   m[std::make_tuple(2, 3)] = 7;
@@ -26,7 +29,7 @@ return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
