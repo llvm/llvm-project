@@ -47,6 +47,9 @@ void AddPoisonRecord(const PoisonRecord &new_record) {
 }
 
 bool FindPoisonRecord(uptr addr, const PoisonRecord &match) {
+  if (flags()->poison_history_size <= 0)
+    return false;
+
   poison_records_mutex.Lock();
 
   if (poison_records) {
@@ -65,11 +68,19 @@ bool FindPoisonRecord(uptr addr, const PoisonRecord &match) {
   return false;
 }
 
-void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
+__attribute__((no_thread_safety_analysis)) void SANITIZER_ACQUIRE(
+    poison_records_mutex) AcquirePoisonRecords() {
+  if (flags()->poison_history_size <= 0)
+    return;
+
   poison_records_mutex.Lock();
 }
 
-void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
+__attribute__((no_thread_safety_analysis)) void SANITIZER_RELEASE(
+    poison_records_mutex) ReleasePoisonRecords() {
+  if (flags()->poison_history_size <= 0)
+    return;
+
   poison_records_mutex.Unlock();
 }
 
