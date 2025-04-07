@@ -101,8 +101,8 @@ Classes, Structs, and Unions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Classes, structs, and unions can be annotated with ``LLVM_ABI`` at their
-definition, but this option is generally discouraged. Annotating the entire
-definition exports unnecessary symbols, such as private functions, vtables, and
+declaration, but this option is generally discouraged. Annotating the entire
+class exports unnecessary symbols, such as private functions, vtables, and
 type information. Instead, ``LLVM_ABI`` should be applied only to public and
 protected method declarations without a body in the header, including
 constructors and destructors.
