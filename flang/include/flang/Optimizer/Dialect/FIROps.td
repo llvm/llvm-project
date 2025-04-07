@@ -16,6 +16,7 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "mlir/Dialect/OpenMP/OpenMPClauses.td"
 include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
@@ -2226,7 +2227,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
   let hasVerifier = 1;
   let hasCustomAssemblyFormat = 1;
 
-  let arguments = (ins
+  defvar opArgs = (ins
     Index:$lowerBound,
     Index:$upperBound,
     Index:$step,
@@ -2237,6 +2238,8 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
     OptionalAttr<ArrayAttr>:$reduceAttrs,
     OptionalAttr<LoopAnnotationAttr>:$loopAnnotation
   );
+
+  let arguments = !con(opArgs, OpenMP_PrivateClause.arguments);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -2248,24 +2251,38 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
       CArg<"mlir::ValueRange", "std::nullopt">:$iterArgs,
       CArg<"mlir::ValueRange", "std::nullopt">:$reduceOperands,
       CArg<"llvm::ArrayRef<mlir::Attribute>", "{}">:$reduceAttrs,
-      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes)>
+      CArg<"llvm::ArrayRef<mlir::NamedAttribute>", "{}">:$attributes,
+      CArg<"mlir::ValueRange", "std::nullopt">:$private_vars,
+      CArg<"mlir::ArrayRef<mlir::Attribute>", "{}">:$private_syms
+      )>
   ];
 
-  let extraClassDeclaration = [{
-    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
+  defvar opExtraClassDeclaration = [{
     mlir::OpBuilder getBodyBuilder() {
       return mlir::OpBuilder(getBody(), std::prev(getBody()->end()));
     }
+
+    /// Region argument accessors.
+    mlir::Value getInductionVar() { return getBody()->getArgument(0); }
     mlir::Block::BlockArgListType getRegionIterArgs() {
-      return getBody()->getArguments().drop_front();
+      // 1 for skipping the induction variable.
+      return getBody()->getArguments().slice(1, getNumIterOperands());
     }
+    mlir::Block::BlockArgListType getRegionPrivateArgs() {
+     return getBody()->getArguments().slice(1 + getNumIterOperands(),
+                                            numPrivateBlockArgs());
+    }
+
+    /// Operation operand accessors.
     mlir::Operation::operand_range getIterOperands() {
       return getOperands()
-          .drop_front(getNumControlOperands() + getNumReduceOperands());
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumIterOperands());
     }
     llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
       return getOperation()->getOpOperands()
-          .drop_front(getNumControlOperands() + getNumReduceOperands());
+          .slice(getNumControlOperands() + getNumReduceOperands(),
+                 getNumIterOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2274,7 +2291,7 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
 
     /// Number of region arguments for loop-carried values
     unsigned getNumRegionIterArgs() {
-      return getBody()->getNumArguments() - 1;
+      return getNumIterOperands();
     }
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
@@ -2313,6 +2330,10 @@ def fir_DoLoopOp : region_Op<"do_loop", [AttrSizedOperandSegments,
                            unsigned resultNum);
     mlir::Value blockArgToSourceOp(unsigned blockArgNum);
   }];
+
+  let extraClassDeclaration =
+    !strconcat(opExtraClassDeclaration, "\n",
+               OpenMP_PrivateClause.extraClassDeclaration);
 }
 
 def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
