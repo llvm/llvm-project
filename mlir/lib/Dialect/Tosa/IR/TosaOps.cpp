@@ -600,6 +600,11 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   if (inputETy.isF32() && !accType.isF32())
     return emitOpError("accumulator type for f32 tensor is not f32");
 
+  if ((llvm::isa<Float8E5M2Type>(inputETy) ||
+       llvm::isa<Float8E4M3FNType>(inputETy)) &&
+      !accType.isF16())
+    return emitOpError("accumulator type for f8 tensor is not f16");
+
   if (inputETy != inputZpETy)
     return emitOpError("expect both input and its zero point are the same "
                        "element type, got ")
