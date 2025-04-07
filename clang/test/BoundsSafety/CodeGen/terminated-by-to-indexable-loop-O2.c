@@ -2,8 +2,8 @@
 
 // REQUIRES: x86-registered-target
 
-// Disable loop idiom recognize for wcslen(), since we actually want to check
-// if we generate correct loops.
+// Disable loop idiom recognize for wcslen() as a workaround for rdar://148775324
+// (https://github.com/llvm/llvm-project/issues/134736).
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -mllvm -disable-loop-idiom-wcslen -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -O2 -triple x86_64 -fbounds-safety -x objective-c -fbounds-attributes-objc-experimental -mllvm -disable-loop-idiom-wcslen -emit-llvm %s -o - | FileCheck %s
 
