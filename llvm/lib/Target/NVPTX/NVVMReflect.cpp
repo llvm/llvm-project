@@ -86,18 +86,13 @@ INITIALIZE_PASS(NVVMReflect, "nvvm-reflect",
 // are the last to be added to the VarMap, and therefore will take precedence over initial
 // values (i.e. __CUDA_FTZ from module medadata and __CUDA_ARCH from SmVersion).
 static cl::list<std::string>
-ReflectList("nvvm-reflect-list", cl::value_desc("name=<int>"), cl::Hidden,
-            cl::CommaSeparated,
-            cl::desc("list of comma-separated key=value pairs"),
+ReflectList("nvvm-reflect-add", cl::value_desc("name=<int>"), cl::Hidden,
+            cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
             cl::ValueRequired);
 
 // Set the VarMap with, first, the value of __CUDA_FTZ from module metadata, and then
 // the key/value pairs from the command line.
 void NVVMReflect::setVarMap(Module &M) {
-  LLVM_DEBUG(dbgs() << "Reflect list values:\n");
-  for (StringRef Option : ReflectList) {
-    LLVM_DEBUG(dbgs() << "  " << Option << "\n");
-  }
   if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
       M.getModuleFlag("nvvm-reflect-ftz")))
     VarMap["__CUDA_FTZ"] = Flag->getSExtValue();
