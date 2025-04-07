@@ -325,7 +325,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_balance_after_in
 //                nor any of its children refer to __z.  end_node->__left_
 //                may be different than the value passed in as __root.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_remove(_NodePtr __root, _NodePtr __z) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__root != nullptr, "Root node should not be null");
   _LIBCPP_ASSERT_INTERNAL(__z != nullptr, "The node to remove should not be null");
   _LIBCPP_ASSERT_INTERNAL(std::__tree_invariant(__root), "The tree invariants should hold");
@@ -1153,7 +1153,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(const_iterator __p, __node_pointer __nd);
 
-  _LIBCPP_HIDE_FROM_ABI iterator __remove_node_pointer(__node_pointer) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __remove_node_pointer(__node_pointer) _NOEXCEPT;
 
 #if _LIBCPP_STD_VER >= 17
   template <class _NodeHandle, class _InsertReturnType>
@@ -1176,12 +1176,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI _NodeHandle __node_handle_extract(const_iterator);
 #endif
 
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p);
-  _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(const_iterator __p);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator erase(const_iterator __f, const_iterator __l);
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI size_type __erase_unique(const _Key& __k);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type __erase_unique(const _Key& __k);
   template <class _Key>
-  _LIBCPP_HIDE_FROM_ABI size_type __erase_multi(const _Key& __k);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type __erase_multi(const _Key& __k);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
   __insert_node_at(__parent_pointer __parent, __node_base_pointer& __child, __node_base_pointer __new_node) _NOEXCEPT;
@@ -1979,7 +1979,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(const_iterator __p, __nod
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__remove_node_pointer(__node_pointer __ptr) _NOEXCEPT {
   iterator __r(__ptr);
   ++__r;
@@ -2110,7 +2110,7 @@ _LIBCPP_HIDE_FROM_ABI void __tree<_Tp, _Compare, _Allocator>::__node_handle_merg
 #endif // _LIBCPP_STD_VER >= 17
 
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator __tree<_Tp, _Compare, _Allocator>::erase(const_iterator __p) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator __tree<_Tp, _Compare, _Allocator>::erase(const_iterator __p) {
   __node_pointer __np    = __p.__get_np();
   iterator __r           = __remove_node_pointer(__np);
   __node_allocator& __na = __node_alloc();
@@ -2120,7 +2120,7 @@ typename __tree<_Tp, _Compare, _Allocator>::iterator __tree<_Tp, _Compare, _Allo
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::erase(const_iterator __f, const_iterator __l) {
   while (__f != __l)
     __f = erase(__f);
@@ -2129,7 +2129,7 @@ __tree<_Tp, _Compare, _Allocator>::erase(const_iterator __f, const_iterator __l)
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__erase_unique(const _Key& __k) {
   iterator __i = find(__k);
   if (__i == end())
@@ -2140,7 +2140,7 @@ __tree<_Tp, _Compare, _Allocator>::__erase_unique(const _Key& __k) {
 
 template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
-typename __tree<_Tp, _Compare, _Allocator>::size_type
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__erase_multi(const _Key& __k) {
   pair<iterator, iterator> __p = __equal_range_multi(__k);
   size_type __r                = 0;
