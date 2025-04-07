@@ -116,6 +116,7 @@
 // MCPU-MIPS-P8700-SAME: "-target-feature" "+zbb"
 
 // RUN: %clang --target=riscv64-mti-linux-gnu -### -c %s 2>&1| FileCheck -check-prefix=MCPU-MTI-P8700 %s
+// RUN: %clang --target=riscv64-mti-unknown-gnu -### -c %s 2>&1| FileCheck -check-prefix=MCPU-MTI-P8700 %s
 // MCPU-MTI-P8700: "-target-cpu" "mips-p8700"
 // MCPU-MTI-P8700-SAME: "-target-feature" "+m"
 // MCPU-MTI-P8700-SAME: "-target-feature" "+a"

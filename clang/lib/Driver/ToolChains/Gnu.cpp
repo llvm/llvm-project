@@ -403,9 +403,8 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Triple.isRISCV() &&
-      Triple.getVendor() == llvm::Triple::MipsTechnologies) {
+      Triple.getVendor() == llvm::Triple::MipsTechnologies)
     CmdArgs.push_back("-EL");
-  }
 
   // Most Android ARM64 targets should enable the linker fix for erratum
   // 843419. Only non-Cortex-A53 devices are allowed to skip this flag.

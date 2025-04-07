@@ -343,11 +343,10 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
     return "rv32imafdc";
   }
 
-  if (Triple.getOS() == llvm::Triple::UnknownOS &&
-      Triple.getVendor() != llvm::Triple::MipsTechnologies)
-    return "rv64imac";
   if (Triple.getVendor() == llvm::Triple::MipsTechnologies)
     return "rv64imafdc_zba_zbb_zicsr_zifencei";
+  if (Triple.getOS() == llvm::Triple::UnknownOS)
+    return "rv64imac";
   if (Triple.isAndroid())
     return "rv64imafdcv_zba_zbb_zbs";
   if (Triple.isOSFuchsia())

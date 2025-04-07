@@ -81,11 +81,10 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   bool Is64Bit = TT.isArch64Bit();
   if (CPU.empty() || CPU == "generic") {
     if (Is64Bit) {
-      if (TT.getVendor() == llvm::Triple::MipsTechnologies) {
+      if (TT.getVendor() == llvm::Triple::MipsTechnologies)
         CPU = "mips-p8700";
-      } else {
+      else
         CPU = "generic-rv64";
-      }
     } else {
       CPU = "generic-rv32";
     }
