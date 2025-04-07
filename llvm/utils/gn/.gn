@@ -11,7 +11,7 @@ assert(gn_version >= 2207,
 
 
 # Disallow all calls to exec_script. We should be very conservative about
-# whitelisting things here.
+# allowing things here.
 exec_script_allowlist = []
 
 # Execute action() targets using Python 3.
