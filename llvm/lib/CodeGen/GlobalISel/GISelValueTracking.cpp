@@ -129,10 +129,10 @@ LLVM_ATTRIBUTE_UNUSED static void dumpKnownBitsResult(const MachineInstr &MI,
 LLVM_ATTRIBUTE_UNUSED static void
 dumpKnownFPClassResult(const MachineInstr &MI, const KnownFPClass &Known,
                        unsigned Depth) {
-  dbgs() << "[" << Depth << "] Compute known FP class: " << MI << "[" << Depth
-         << "] Computed for: " << MI << "[" << Depth
-         << "] KnownFPClasses: " << Known.KnownFPClasses << "\n"
-         << "[" << Depth << "] SignBit: " << Known.SignBit << "\n";
+  dbgs() << '[' << Depth << "] Compute known FP class: " << MI << '[' << Depth
+         << "] Computed for: " << MI << '[' << Depth
+         << "] KnownFPClasses: " << Known.KnownFPClasses << '\n'
+         << '[' << Depth << "] SignBit: " << Known.SignBit << '\n';
 }
 
 /// Compute known bits for the intersection of \p Src0 and \p Src1
