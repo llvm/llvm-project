@@ -856,12 +856,13 @@ void ToolChain::addFlangRTLibPath(const ArgList &Args,
   if (getVFS().exists(Twine(Path = getCompilerRTArgString(
                                 Args, "runtime", ToolChain::FT_Static, true))))
     CmdArgs.push_back(Path);
-  else if (getVFS().exists(
-               Twine(Path = getCompilerRTArgString(
-                         Args, "runtime", ToolChain::FT_Shared, true))))
-    CmdArgs.push_back(Path);
   else {
-    CmdArgs.push_back("-lflang_rt.runtime");
+    if (getVFS().exists(
+            Twine(Path = getCompilerRTArgString(Args, "runtime",
+                                                ToolChain::FT_Shared, true))))
+      CmdArgs.push_back(Path);
+    else
+      CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(*this, Args, CmdArgs);
   }
 }
