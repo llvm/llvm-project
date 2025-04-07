@@ -42,7 +42,10 @@ public:
   GOFF::LDAttr getLDAttributes() const { return LDAttributes; }
   bool hasLDAttributes() const { return getFlags() & SF_LD; }
 
-  void setADA(MCSectionGOFF *AssociatedDataArea) { ADA = AssociatedDataArea; }
+  void setADA(MCSectionGOFF *AssociatedDataArea) {
+    ADA = AssociatedDataArea;
+    AssociatedDataArea->RequiresNonZeroLength = true;
+  }
   MCSectionGOFF *getADA() const { return ADA; }
 
   static bool classof(const MCSymbol *S) { return S->isGOFF(); }

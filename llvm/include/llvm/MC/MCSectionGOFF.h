@@ -42,34 +42,23 @@ class MCSectionGOFF final : public MCSection {
   // generate an error in this case.
   unsigned RequiresNonZeroLength : 1;
 
+  // Set to true if the section definition was already emitted.
+  mutable unsigned Emitted : 1;
+
   friend class MCContext;
+  friend class MCSymbolGOFF;
   MCSectionGOFF(StringRef Name, SectionKind K, GOFF::ESDSymbolType SymbolType,
                 GOFF::SDAttr SDAttributes, GOFF::EDAttr EDAttributes,
                 GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent = nullptr)
       : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
         Parent(Parent), SDAttributes(SDAttributes), EDAttributes(EDAttributes),
-        PRAttributes(PRAttributes), SymbolType(SymbolType) {}
+        PRAttributes(PRAttributes), SymbolType(SymbolType),
+        RequiresNonZeroLength(0), Emitted(0) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            uint32_t Subsection) const override {
-    switch (SymbolType) {
-    case GOFF::ESD_ST_SectionDefinition:
-      OS << Name << " CSECT\n";
-      break;
-    case GOFF::ESD_ST_ElementDefinition:
-      getParent()->printSwitchToSection(MAI, T, OS, Subsection);
-      OS << Name << " CATTR\n";
-      break;
-    case GOFF::ESD_ST_PartReference:
-      getParent()->printSwitchToSection(MAI, T, OS, Subsection);
-      OS << Name << " XATTR\n";
-      break;
-    default:
-      llvm_unreachable("Wrong section type");
-    }
-  }
+                            uint32_t Subsection) const override;
 
   bool useCodeAlign() const override { return false; }
 
@@ -100,7 +89,6 @@ public:
     return PRAttributes;
   }
 
-  void setRequiresNonZeroLength() { RequiresNonZeroLength = true; }
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
 
   void setName(StringRef SectionName) { Name = SectionName; }

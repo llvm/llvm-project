@@ -2781,14 +2781,15 @@ TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   // Construct the default names for the root SD and the ADA PR symbol.
   StringRef FileName = sys::path::stem(M.getSourceFileName());
+  if (FileName.size() > 1 && FileName.starts_with('<') &&
+      FileName.ends_with('>'))
+    FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
   MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(RootSDSection);
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
-  // The length of the ADA needs to be adjusted in case it is 0.
-  ADAPR->setRequiresNonZeroLength();
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
