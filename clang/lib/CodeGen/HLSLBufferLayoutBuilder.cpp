@@ -195,7 +195,8 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
     // Unwrap array to find the element type and get combined array size.
     QualType Ty = FieldTy;
     while (Ty->isConstantArrayType()) {
-      const ConstantArrayType *ArrayTy = cast<ConstantArrayType>(Ty);
+      const ConstantArrayType *ArrayTy =
+          cast<ConstantArrayType>(Ty.getDesugaredType(CGM.getContext()));
       ArrayCount *= ArrayTy->getSExtSize();
       Ty = ArrayTy->getElementType();
     }
