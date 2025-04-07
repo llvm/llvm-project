@@ -1913,7 +1913,7 @@ static mlir::omp::LoopNestOp genLoopNestOp(
       queue, item, clauseOps);
 }
 
-static mlir::Operation *
+static mlir::omp::LoopOp
 genLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
           mlir::Location loc, const ConstructQueue &queue,
@@ -2540,7 +2540,7 @@ genTeamsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 // also be a leaf of a composite construct
 //===----------------------------------------------------------------------===//
 
-static mlir::Operation *genStandaloneDistribute(
+static mlir::omp::DistributeOp genStandaloneDistribute(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2571,7 +2571,7 @@ static mlir::Operation *genStandaloneDistribute(
   return distributeOp;
 }
 
-static mlir::Operation *genStandaloneDo(
+static mlir::omp::WsloopOp genStandaloneDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2605,7 +2605,7 @@ static mlir::Operation *genStandaloneDo(
   return wsloopOp;
 }
 
-static mlir::Operation *genStandaloneParallel(
+static mlir::omp::ParallelOp genStandaloneParallel(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2634,13 +2634,12 @@ static mlir::Operation *genStandaloneParallel(
                        enableDelayedPrivatization ? &dsp.value() : nullptr);
 }
 
-static mlir::Operation *genStandaloneSimd(lower::AbstractConverter &converter,
-                                          lower::SymMap &symTable,
-                                          semantics::SemanticsContext &semaCtx,
-                                          lower::pft::Evaluation &eval,
-                                          mlir::Location loc,
-                                          const ConstructQueue &queue,
-                                          ConstructQueue::const_iterator item) {
+static mlir::omp::SimdOp
+genStandaloneSimd(lower::AbstractConverter &converter, lower::SymMap &symTable,
+                  semantics::SemanticsContext &semaCtx,
+                  lower::pft::Evaluation &eval, mlir::Location loc,
+                  const ConstructQueue &queue,
+                  ConstructQueue::const_iterator item) {
   mlir::omp::SimdOperands simdClauseOps;
   llvm::SmallVector<const semantics::Symbol *> simdReductionSyms;
   genSimdClauses(converter, semaCtx, item->clauses, loc, simdClauseOps,
@@ -2670,7 +2669,7 @@ static mlir::Operation *genStandaloneSimd(lower::AbstractConverter &converter,
   return simdOp;
 }
 
-static mlir::Operation *genStandaloneTaskloop(
+static mlir::omp::TaskloopOp genStandaloneTaskloop(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::Location loc, const ConstructQueue &queue,
@@ -2683,7 +2682,7 @@ static mlir::Operation *genStandaloneTaskloop(
 // Code generation functions for composite constructs
 //===----------------------------------------------------------------------===//
 
-static mlir::Operation *genCompositeDistributeParallelDo(
+static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2749,7 +2748,7 @@ static mlir::Operation *genCompositeDistributeParallelDo(
   return distributeOp;
 }
 
-static mlir::Operation *genCompositeDistributeParallelDoSimd(
+static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2840,7 +2839,7 @@ static mlir::Operation *genCompositeDistributeParallelDoSimd(
   return distributeOp;
 }
 
-static mlir::Operation *genCompositeDistributeSimd(
+static mlir::omp::DistributeOp genCompositeDistributeSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2894,7 +2893,7 @@ static mlir::Operation *genCompositeDistributeSimd(
   return distributeOp;
 }
 
-static mlir::Operation *genCompositeDoSimd(
+static mlir::omp::WsloopOp genCompositeDoSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
@@ -2951,7 +2950,7 @@ static mlir::Operation *genCompositeDoSimd(
   return wsloopOp;
 }
 
-static mlir::Operation *genCompositeTaskloopSimd(
+static mlir::omp::TaskloopOp genCompositeTaskloopSimd(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     lower::StatementContext &stmtCtx, semantics::SemanticsContext &semaCtx,
     lower::pft::Evaluation &eval, mlir::Location loc,
