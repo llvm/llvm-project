@@ -1286,7 +1286,7 @@ AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
     GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI)
-    : Combiner(MF, CInfo, TPC, /*KB*/ nullptr, CSEInfo),
+    : Combiner(MF, CInfo, TPC, /*VT*/ nullptr, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -1322,8 +1322,6 @@ void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
     : MachineFunctionPass(ID) {
-  initializeAArch64PostLegalizerLoweringPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }

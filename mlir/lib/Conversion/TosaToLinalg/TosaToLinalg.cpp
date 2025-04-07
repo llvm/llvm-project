@@ -711,50 +711,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   return nullptr;
 }
 
-static Value expandRank(PatternRewriter &rewriter, Location loc, Value tensor,
-                        int64_t rank) {
-  // No need to expand if we are already at the desired rank
-  auto tensorType = dyn_cast<RankedTensorType>(tensor.getType());
-  assert(tensorType && "expected a ranked tensor type");
-  int64_t tensorRank = tensorType.getRank();
-  int64_t numExtraDims = rank - tensorRank;
-  assert(numExtraDims >= 0 && "cannot expand tensor to a lower rank");
-  if (!numExtraDims)
-    return tensor;
-
-  // Compute reassociation indices
-  SmallVector<ReassociationIndices> reassociationIndices(tensorRank);
-  int64_t index = 0;
-  if (tensorRank != 0) {
-    for (index = 0; index <= numExtraDims; index++)
-      reassociationIndices[0].push_back(index);
-    for (size_t position = 1; position < reassociationIndices.size();
-         position++)
-      reassociationIndices[position].push_back(index++);
-  }
-
-  // Compute result type
-  SmallVector<int64_t> resultShape;
-  for (index = 0; index < numExtraDims; index++)
-    resultShape.push_back(1);
-  for (auto size : tensorType.getShape())
-    resultShape.push_back(size);
-  auto resultType =
-      RankedTensorType::get(resultShape, tensorType.getElementType());
-
-  // Emit 'tensor.expand_shape' op
-  return rewriter.create<tensor::ExpandShapeOp>(loc, resultType, tensor,
-                                                reassociationIndices);
-}
-
-static SmallVector<Value> expandInputRanks(PatternRewriter &rewriter,
-                                           Location loc, ValueRange operands,
-                                           int64_t rank) {
-  return llvm::map_to_vector(operands, [&](Value operand) {
-    return expandRank(rewriter, loc, operand, rank);
-  });
-}
-
 using IndexPool = DenseMap<int64_t, Value>;
 
 // Emit an 'arith.constant' op for the given index if it has not been created
@@ -1036,6 +992,17 @@ emitElementwiseComputation(ConversionPatternRewriter &rewriter, Location loc,
   return success();
 }
 
+static ValueRange getBroadcastableOperands(Operation *operation,
+                                           ValueRange operands) {
+  // Shift cannot broadcast
+  if (isa<tosa::MulOp>(operation))
+    return operands.take_front(2);
+  // Input1_zp and output_zp cannot broadcast
+  if (isa<tosa::NegateOp>(operation))
+    return operands.take_front(1);
+  return operands;
+}
+
 static LogicalResult
 elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
                                  ConversionPatternRewriter &rewriter,
@@ -1052,19 +1019,12 @@ elementwiseMatchAndRewriteHelper(Operation *operation, ValueRange operands,
   // Lower operation
   IndexPool indexPool;
   auto loc = operation->getLoc();
-  auto rank =
-      cast<RankedTensorType>(operation->getResultTypes().front()).getRank();
-  // For the mul op we need to avoid expanding the rank of the optional shift
-  // input.
-  auto operandsToExpand =
-      isa<tosa::MulOp>(operation) ? operands.take_front(2) : operands;
-
-  auto expandedOperands =
-      expandInputRanks(rewriter, loc, operandsToExpand, rank);
+  auto operandsToBroadcast = getBroadcastableOperands(operation, operands);
   auto [targetShape, masterOperands] =
-      computeTargetShape(rewriter, loc, indexPool, expandedOperands);
-  auto broadcastOperands = broadcastDynamicDimensions(
-      rewriter, loc, indexPool, expandedOperands, targetShape, masterOperands);
+      computeTargetShape(rewriter, loc, indexPool, operandsToBroadcast);
+  auto broadcastOperands =
+      broadcastDynamicDimensions(rewriter, loc, indexPool, operandsToBroadcast,
+                                 targetShape, masterOperands);
   return emitElementwiseComputation(rewriter, loc, operation, broadcastOperands,
                                     targetShape, converter);
 }

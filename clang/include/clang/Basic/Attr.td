@@ -936,7 +936,8 @@ def PatchableFunctionEntry
            "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
-  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
+  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
+              StringArgument<"Section", /* optional */ 1>];
   let Documentation = [PatchableFunctionEntryDocs];
 }
 
@@ -4395,8 +4396,8 @@ def HLSLControlFlowHint: StmtAttr {
   /// [branch]
   /// [flatten]
   let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
-  let Subjects = SubjectList<[IfStmt],
-                              ErrorDiag, "'if' statements">;
+  let Subjects = SubjectList<[IfStmt, SwitchStmt],
+                              ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }

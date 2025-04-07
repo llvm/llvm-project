@@ -1818,7 +1818,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     for (const Expr *Init : Inits) {
       // Skip unnamed bitfields.
       while (InitIndex < R->getNumFields() &&
-             R->getField(InitIndex)->Decl->isUnnamedBitField())
+             R->getField(InitIndex)->isUnnamedBitField())
         ++InitIndex;
 
       if (std::optional<PrimType> T = classify(Init)) {
@@ -2084,6 +2084,37 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       return true;
 
     return this->emitConst(Size.getQuantity(), E);
+  }
+
+  if (Kind == UETT_CountOf) {
+    QualType Ty = E->getTypeOfArgument();
+    assert(Ty->isArrayType());
+
+    // We don't need to worry about array element qualifiers, so getting the
+    // unsafe array type is fine.
+    if (const auto *CAT =
+            dyn_cast<ConstantArrayType>(Ty->getAsArrayTypeUnsafe())) {
+      if (DiscardResult)
+        return true;
+      return this->emitConst(CAT->getSize(), E);
+    }
+
+    assert(!Ty->isConstantSizeType());
+
+    // If it's a variable-length array type, we need to check whether it is a
+    // multidimensional array. If so, we need to check the size expression of
+    // the VLA to see if it's a constant size. If so, we can return that value.
+    const auto *VAT = ASTCtx.getAsVariableArrayType(Ty);
+    assert(VAT);
+    if (VAT->getElementType()->isArrayType()) {
+      std::optional<APSInt> Res =
+          VAT->getSizeExpr()->getIntegerConstantExpr(ASTCtx);
+      if (Res) {
+        if (DiscardResult)
+          return true;
+        return this->emitConst(*Res, E);
+      }
+    }
   }
 
   if (Kind == UETT_AlignOf || Kind == UETT_PreferredAlignOf) {
@@ -4033,6 +4064,9 @@ template <class Emitter> bool Compiler<Emitter>::visitBool(const Expr *E) {
 template <class Emitter>
 bool Compiler<Emitter>::visitZeroInitializer(PrimType T, QualType QT,
                                              const Expr *E) {
+  if (const auto *AT = QT->getAs<AtomicType>())
+    QT = AT->getValueType();
+
   switch (T) {
   case PT_Bool:
     return this->emitZeroBool(E);
@@ -4081,7 +4115,7 @@ bool Compiler<Emitter>::visitZeroRecordInitializer(const Record *R,
   assert(R);
   // Fields
   for (const Record::Field &Field : R->fields()) {
-    if (Field.Decl->isUnnamedBitField())
+    if (Field.isUnnamedBitField())
       continue;
 
     const Descriptor *D = Field.Desc;

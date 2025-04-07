@@ -370,7 +370,7 @@ private:
   ///
   /// Only meaningful for standard C++ named modules. See the comments in
   /// createSignatureForNamedModule() for details.
-  llvm::DenseSet<Module *> TouchedTopLevelModules;
+  llvm::SetVector<Module *> TouchedTopLevelModules;
 
   /// An update to a Decl.
   class DeclUpdate {
