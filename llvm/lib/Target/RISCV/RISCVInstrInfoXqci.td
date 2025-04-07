@@ -103,7 +103,18 @@ def simm16nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_SIMM16_NONZERO";
 }
 
-def simm20 : RISCVSImmLeafOp<20>;
+def simm20_li : RISCVOp<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<20, "LI">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<20>";
+  let OperandType = "OPERAND_SIMM20_LI";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<20>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 
 def simm26 : RISCVSImmLeafOp<26>;
 
@@ -118,7 +129,7 @@ def simm32 : RISCVOp<XLenVT> {
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<32>(Imm);
-    return false;
+    return MCOp.isBareSymbolRef();
   }];
 }
 
@@ -1009,7 +1020,7 @@ let Predicates = [HasVendorXqcilb, IsRV32] in {
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20:$imm20),
+  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20_li:$imm20),
                       "qc.li", "$rd, $imm20"> {
     let Inst{31} = imm20{19};
     let Inst{30-16} = imm20{14-0};
@@ -1017,7 +1028,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   }
 
   def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins simm32:$imm),
-                         "qc.e.li", "$rd, $imm", [], InstFormatOther> {
+                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI> {
     bits<5> rd;
     bits<32> imm;
 

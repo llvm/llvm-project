@@ -93,6 +93,8 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_tlsdesc_add_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_call", 0, 0, 0},
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_32", 16, 32, 0},
+      {"fixup_riscv_qc_abs20_u", 12, 20, 0},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -559,7 +561,20 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
             (Bit5 << 2);
     return Value;
   }
-
+  case RISCV::fixup_riscv_qc_e_32: {
+    if (!isInt<32>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    return ((Value & 0xffffffff) << 16);
+  }
+  case RISCV::fixup_riscv_qc_abs20_u: {
+    if (!isInt<20>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    uint64_t Bit20 = (Value >> 20) & 0x1;
+    uint64_t Bit15_1 = (Value >> 1) & 0x7fff;
+    uint64_t Bit19_16 = (Value >> 16) & 0xf;
+    Value = (Bit20 << 31) | (Bit15_1 << 16) | (Bit19_16 << 12);
+    return Value;
+  }
   }
 }
 
