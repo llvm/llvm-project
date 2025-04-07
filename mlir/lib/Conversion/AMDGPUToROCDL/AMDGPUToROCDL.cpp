@@ -1049,7 +1049,8 @@ struct GatherToLDSOpLowering : public ConvertOpToLLVMPattern<GatherToLDSOp> {
     rewriter.replaceOpWithNewOp<ROCDL::GlobalLoadLDSOp>(
         op, srcPtr, dstPtr, createI32Constant(rewriter, loc, loadWidth),
         createI32Constant(rewriter, loc, 0),
-        createI32Constant(rewriter, loc, 0));
+        createI32Constant(rewriter, loc, 0), ArrayAttr{}, ArrayAttr{},
+        ArrayAttr{});
 
     return success();
   }
