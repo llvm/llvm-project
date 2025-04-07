@@ -160,6 +160,7 @@ class SemaAVR;
 class SemaBPF;
 class SemaCodeCompletion;
 class SemaCUDA;
+class SemaDirectX;
 class SemaHLSL;
 class SemaHexagon;
 class SemaLoongArch;
@@ -1074,6 +1075,11 @@ public:
     return *CUDAPtr;
   }
 
+  SemaDirectX &DirectX() {
+    assert(DirectXPtr);
+    return *DirectXPtr;
+  }
+
   SemaHLSL &HLSL() {
     assert(HLSLPtr);
     return *HLSLPtr;
@@ -1212,6 +1218,7 @@ private:
   std::unique_ptr<SemaBPF> BPFPtr;
   std::unique_ptr<SemaCodeCompletion> CodeCompletionPtr;
   std::unique_ptr<SemaCUDA> CUDAPtr;
+  std::unique_ptr<SemaDirectX> DirectXPtr;
   std::unique_ptr<SemaHLSL> HLSLPtr;
   std::unique_ptr<SemaHexagon> HexagonPtr;
   std::unique_ptr<SemaLoongArch> LoongArchPtr;
@@ -4710,6 +4717,8 @@ public:
                                              Expr *X, Expr *Y, Expr *Z);
   void addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
                           Expr *Y, Expr *Z);
+  /// Add a no_cluster attribute to a particular declaration.
+  void addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI);
 
 #endif /* LLPC_BUILD_NPI */
   enum class RetainOwnershipKind { NS, CF, OS };
@@ -10135,13 +10144,14 @@ public:
 
   /// Contexts in which a converted constant expression is required.
   enum CCEKind {
-    CCEK_CaseValue,    ///< Expression in a case label.
-    CCEK_Enumerator,   ///< Enumerator value with fixed underlying type.
-    CCEK_TemplateArg,  ///< Value of a non-type template parameter.
-    CCEK_InjectedTTP,  ///< Injected parameter of a template template parameter.
-    CCEK_ArrayBound,   ///< Array bound in array declarator or new-expression.
-    CCEK_ExplicitBool, ///< Condition in an explicit(bool) specifier.
-    CCEK_Noexcept,     ///< Condition in a noexcept(bool) specifier.
+    CCEK_CaseValue,     ///< Expression in a case label.
+    CCEK_Enumerator,    ///< Enumerator value with fixed underlying type.
+    CCEK_TemplateArg,   ///< Value of a non-type template parameter.
+    CCEK_TempArgStrict, ///< As above, but applies strict template checking
+                        ///< rules.
+    CCEK_ArrayBound,    ///< Array bound in array declarator or new-expression.
+    CCEK_ExplicitBool,  ///< Condition in an explicit(bool) specifier.
+    CCEK_Noexcept,      ///< Condition in a noexcept(bool) specifier.
     CCEK_StaticAssertMessageSize, ///< Call to size() in a static assert
                                   ///< message.
     CCEK_StaticAssertMessageData, ///< Call to data() in a static assert
@@ -11903,7 +11913,7 @@ public:
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &SugaredConverted,
                                    TemplateArgument &CanonicalConverted,
-                                   bool MatchingTTP,
+                                   bool StrictCheck,
                                    CheckTemplateArgumentKind CTAK);
 
   /// Check a template argument against its corresponding

@@ -5848,12 +5848,17 @@ void Sema::addClusterDimsAttr(Decl *D, const AttributeCommonInfo &CI, Expr *X,
     D->addAttr(Attr);
 }
 
+void Sema::addNoClusterAttr(Decl *D, const AttributeCommonInfo &CI) {
+  if (CUDANoClusterAttr *Attr = ::new (Context) CUDANoClusterAttr(Context, CI))
+    D->addAttr(Attr);
+}
+
 static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   auto &TTI = S.Context.getTargetInfo();
   auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
   if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
       (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
-    S.Diag(AL.getLoc(), diag::err_cuda_cluster_dims_not_supported);
+    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported) << 0;
     return;
   }
 
@@ -5864,6 +5869,18 @@ static void handleClusterDimsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   S.addClusterDimsAttr(D, AL, AL.getArgAsExpr(0),
                        AL.getNumArgs() > 1 ? AL.getArgAsExpr(1) : nullptr,
                        AL.getNumArgs() > 2 ? AL.getArgAsExpr(2) : nullptr);
+}
+
+static void handleNoClusterAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto &TTI = S.Context.getTargetInfo();
+  auto Arch = StringToOffloadArch(TTI.getTargetOpts().CPU);
+  if ((TTI.getTriple().isNVPTX() && Arch < clang::OffloadArch::SM_90) ||
+      (TTI.getTriple().isAMDGPU() && Arch < clang::OffloadArch::GFX1250)) {
+    S.Diag(AL.getLoc(), diag::err_cuda_cluster_attr_not_supported) << 1;
+    return;
+  }
+
+  S.addNoClusterAttr(D, AL);
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -7306,6 +7323,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 #if LLPC_BUILD_NPI
   case ParsedAttr::AT_CUDAClusterDims:
     handleClusterDimsAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_CUDANoCluster:
+    handleNoClusterAttr(S, D, AL);
     break;
 #endif /* LLPC_BUILD_NPI */
   case ParsedAttr::AT_Restrict:

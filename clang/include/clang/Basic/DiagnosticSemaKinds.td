@@ -12570,8 +12570,8 @@ def warn_cuda_maxclusterrank_sm_90 : Warning<
   "%1 attribute">, InGroup<IgnoredAttributes>;
 
 #ifdef LLPC_BUILD_NPI
-def err_cuda_cluster_dims_not_supported : Error<
-  "__cluster_dims__ is not supported for this GPU architecture"
+def err_cuda_cluster_attr_not_supported : Error<
+  "%select{__cluster_dims__|__no_cluster__}0 is not supported for this GPU architecture"
 >;
 
 def err_cuda_cluster_dims_too_large : Error<

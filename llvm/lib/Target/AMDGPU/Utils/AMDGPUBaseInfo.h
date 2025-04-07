@@ -1872,8 +1872,8 @@ bool isIntrinsicSourceOfDivergence(unsigned IntrID);
 
 /// \returns true if the intrinsic is uniform
 bool isIntrinsicAlwaysUniform(unsigned IntrID);
-#if LLPC_BUILD_NPI
 
+#if LLPC_BUILD_NPI
 /// \returns a register class for the physical register \p Reg if it is a VGPR
 /// or nullptr otherwise.
 const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
@@ -1895,12 +1895,58 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc);
 
 /// \returns true if a memory instruction supports scale_offset modifier.
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
 /// \returns lds block size in terms of dwords. \p
 /// This is used to calculate the lds size encoded for PAL metadata 3.0+ which
 /// must be defined in terms of bytes.
 unsigned getLdsDwGranularity(const MCSubtargetInfo &ST);
+#if LLPC_BUILD_NPI
+
+class ClusterDimsAttr {
+public:
+  enum class Kind { Unknown, NoCluster, VariableDims, FixedDims };
+
+  ClusterDimsAttr() = default;
+
+  Kind getKind() const { return AttrKind; }
+
+  bool isUnknown() const { return getKind() == Kind::Unknown; }
+
+  bool isNoCluster() const { return getKind() == Kind::NoCluster; }
+
+  bool isFixedDims() const { return getKind() == Kind::FixedDims; }
+
+  bool isVariableedDims() const { return getKind() == Kind::VariableDims; }
+
+  void setUnknown() { *this = ClusterDimsAttr(Kind::Unknown); }
+
+  void setNoCluster() { *this = ClusterDimsAttr(Kind::NoCluster); }
+
+  void setVariableDims() { *this = ClusterDimsAttr(Kind::VariableDims); }
+
+  /// \returns the dims stored. Note that this function can only be called if
+  /// the kind is \p Fixed.
+  const std::array<unsigned, 3> &getDims() const;
+
+  bool operator==(const ClusterDimsAttr &RHS) const {
+    return AttrKind == RHS.AttrKind && Dims == RHS.Dims;
+  }
+
+  std::string to_string() const;
+
+  static ClusterDimsAttr get(const Function &F);
+
+private:
+  enum Encoding { EncoNoCluster = 0, EncoVariableDims = 1024 };
+
+  ClusterDimsAttr(Kind AttrKind) : AttrKind(AttrKind) {}
+
+  std::array<unsigned, 3> Dims = {0, 0, 0};
+
+  Kind AttrKind = Kind::Unknown;
+};
+#endif /* LLPC_BUILD_NPI */
 
 } // end namespace AMDGPU
 

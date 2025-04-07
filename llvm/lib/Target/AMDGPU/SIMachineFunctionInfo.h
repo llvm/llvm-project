@@ -514,7 +514,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
 
 #if LLPC_BUILD_NPI
   // Requested cluster dimensions.
-  std::optional<std::array<unsigned, 3>> ClusterDims;
+  AMDGPU::ClusterDimsAttr ClusterDims;
 
 #endif /* LLPC_BUILD_NPI */
 private:
@@ -1292,10 +1292,7 @@ public:
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 #if LLPC_BUILD_NPI
 
-  /// \returns Requested cluster dimensions.
-  std::optional<std::array<unsigned, 3>> getClusterDims() const {
-    return ClusterDims;
-  }
+  AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 #endif /* LLPC_BUILD_NPI */
 };
 

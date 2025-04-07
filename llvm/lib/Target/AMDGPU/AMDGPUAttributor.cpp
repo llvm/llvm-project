@@ -1330,6 +1330,159 @@ struct AAAMDGPUNoAGPR
 
 const char AAAMDGPUNoAGPR::ID = 0;
 
+#if LLPC_BUILD_NPI
+/// An abstract attribute to propagate the function attribute
+/// "amdgpu-cluster-dims" from kernel entry functions to device functions.
+struct AAAMDGPUClusterDims
+    : public StateWrapper<BooleanState, AbstractAttribute> {
+  using Base = StateWrapper<BooleanState, AbstractAttribute>;
+  AAAMDGPUClusterDims(const IRPosition &IRP, Attributor &A) : Base(IRP) {}
+
+  /// Create an abstract attribute view for the position \p IRP.
+  static AAAMDGPUClusterDims &createForPosition(const IRPosition &IRP,
+                                                Attributor &A);
+
+  /// See AbstractAttribute::getName().
+  const std::string getName() const override { return "AAAMDGPUClusterDims"; }
+
+  /// See AbstractAttribute::getIdAddr().
+  const char *getIdAddr() const override { return &ID; }
+
+  /// This function should return true if the type of the \p AA is
+  /// AAAMDGPUClusterDims.
+  static bool classof(const AbstractAttribute *AA) {
+    return (AA->getIdAddr() == &ID);
+  }
+
+  virtual const AMDGPU::ClusterDimsAttr &getClusterDims() const = 0;
+
+  /// Unique ID (due to the unique address)
+  static const char ID;
+};
+
+const char AAAMDGPUClusterDims::ID = 0;
+
+struct AAAMDGPUClusterDimsFunction : public AAAMDGPUClusterDims {
+  AAAMDGPUClusterDimsFunction(const IRPosition &IRP, Attributor &A)
+      : AAAMDGPUClusterDims(IRP, A) {}
+
+  void initialize(Attributor &A) override {
+    Function *F = getAssociatedFunction();
+    assert(F && "empty associated function");
+
+    Attr = AMDGPU::ClusterDimsAttr::get(*F);
+
+    // No matter what a kernel function has, it is final.
+    if (AMDGPU::isEntryFunctionCC(F->getCallingConv())) {
+      if (Attr.isUnknown())
+        indicatePessimisticFixpoint();
+      else
+        indicateOptimisticFixpoint();
+    }
+  }
+
+  const std::string getAsStr(Attributor *A) const override {
+    if (!getAssumed() || Attr.isUnknown())
+      return "unknown";
+    if (Attr.isNoCluster())
+      return "no";
+    if (Attr.isVariableedDims())
+      return "variable";
+    return Attr.to_string();
+  }
+
+  void trackStatistics() const override {}
+
+  ChangeStatus updateImpl(Attributor &A) override {
+    auto OldState = Attr;
+
+    auto CheckCallSite = [&](AbstractCallSite CS) {
+      const auto *CallerAA = A.getAAFor<AAAMDGPUClusterDims>(
+          *this, IRPosition::function(*CS.getInstruction()->getFunction()),
+          DepClassTy::REQUIRED);
+      if (!CallerAA || !CallerAA->isValidState())
+        return false;
+
+      return merge(CallerAA->getClusterDims());
+    };
+
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllCallSites(CheckCallSite, *this,
+                                /*RequireAllCallSites=*/true,
+                                UsedAssumedInformation))
+      return indicatePessimisticFixpoint();
+
+    return OldState == Attr ? ChangeStatus::UNCHANGED : ChangeStatus::CHANGED;
+  }
+
+  ChangeStatus manifest(Attributor &A) override {
+    if (Attr.isUnknown())
+      return ChangeStatus::UNCHANGED;
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(getAssociatedFunction()->getContext(), AttrName,
+                        Attr.to_string())},
+        /*ForceReplace=*/true);
+  }
+
+  const AMDGPU::ClusterDimsAttr &getClusterDims() const override {
+    return Attr;
+  }
+
+private:
+  bool merge(const AMDGPU::ClusterDimsAttr &Other) {
+    // Case 1: Both of them are unknown yet, we do nothing and continue wait for
+    // propagation.
+    if (Attr.isUnknown() && Other.isUnknown())
+      return true;
+
+    // Case 2: The other is determined, but we are unknown yet, we simply take
+    // the other's value.
+    if (Attr.isUnknown()) {
+      Attr = Other;
+      return true;
+    }
+
+    // Case 3: We are determined but the other is unknown yet, we simply keep
+    // everything unchanged.
+    if (Other.isUnknown())
+      return true;
+
+    // After this point, both are determined.
+
+    // Case 4: If they are same, we do nothing.
+    if (Attr == Other)
+      return true;
+
+    // Now they are not same.
+
+    // Case 5: If either of us uses cluster (but not both; otherwise case 4
+    // would hold), then it is unknown whether cluster will be used, and the
+    // state is final, unlike case 1.
+    if (Attr.isNoCluster() || Other.isNoCluster()) {
+      Attr.setUnknown();
+      return false;
+    }
+
+    // Case 6: Both of us use cluster, but the dims are different, so the result
+    // is, cluster is used, but we just don't have a fixed dims.
+    Attr.setVariableDims();
+    return true;
+  }
+
+  AMDGPU::ClusterDimsAttr Attr;
+
+  static constexpr const char AttrName[] = "amdgpu-cluster-dims";
+};
+
+AAAMDGPUClusterDims &
+AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
+  if (IRP.getPositionKind() == IRPosition::IRP_FUNCTION)
+    return *new (A.Allocator) AAAMDGPUClusterDimsFunction(IRP, A);
+  llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
+}
+
+#endif /* LLPC_BUILD_NPI */
 static void addPreloadKernArgHint(Function &F, TargetMachine &TM) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   for (unsigned I = 0;
@@ -1362,7 +1515,11 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID, &AAAMDGPUNoAGPR::ID,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
+#if LLPC_BUILD_NPI
+       &AAInstanceInfo::ID, &AAAMDGPUClusterDims::ID});
+#else /* LLPC_BUILD_NPI */
        &AAInstanceInfo::ID});
+#endif /* LLPC_BUILD_NPI */
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
@@ -1397,6 +1554,12 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
     } else if (CC == CallingConv::AMDGPU_KERNEL) {
       addPreloadKernArgHint(*F, TM);
     }
+#if LLPC_BUILD_NPI
+
+    const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*F);
+    if (!F->isDeclaration() && ST.hasClusters())
+      A.getOrCreateAAFor<AAAMDGPUClusterDims>(IRPosition::function(*F));
+#endif /* LLPC_BUILD_NPI */
 
     for (auto &I : instructions(F)) {
       if (auto *LI = dyn_cast<LoadInst>(&I)) {

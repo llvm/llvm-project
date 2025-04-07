@@ -1511,6 +1511,15 @@ def CUDAClusterDims : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def CUDANoCluster : InheritableAttr {
+  let Spellings = [GNU<"no_cluster">, Declspec<"__no_cluster__">];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+  let LangOpts = [CUDA];
+  let Documentation = [Undocumented];
+}
+
+def : MutualExclusions<[CUDAClusterDims, CUDANoCluster]>;
+
 #endif /* LLPC_BUILD_NPI */
 def CUDAInvalidTarget : InheritableAttr {
   let Spellings = [];
