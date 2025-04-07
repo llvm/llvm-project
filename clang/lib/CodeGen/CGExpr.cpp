@@ -3967,16 +3967,19 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
+  llvm::MDBuilder MDHelper(getLLVMContext());
   if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
     Call->applyMergedLocation(Call->getDebugLoc(),
                               Builder.getCurrentDebugLocation());
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
   } else {
     TrapBB = createBasicBlock("trap");
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
     EmitBlock(TrapBB);
 
     llvm::CallInst *TrapCall =

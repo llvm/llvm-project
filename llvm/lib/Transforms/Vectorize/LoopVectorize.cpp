@@ -2082,17 +2082,11 @@ public:
 
     auto *Pred = LoopVectorPreHeader->getSinglePredecessor();
     BranchInst::Create(LoopVectorPreHeader, SCEVCheckBlock);
-    // Create new preheader for vector loop.
-    if (OuterLoop)
-      OuterLoop->addBasicBlockToLoop(SCEVCheckBlock, *LI);
 
     SCEVCheckBlock->getTerminator()->eraseFromParent();
     SCEVCheckBlock->moveBefore(LoopVectorPreHeader);
     Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
                                                 SCEVCheckBlock);
-
-    DT->addNewBlock(SCEVCheckBlock, Pred);
-    DT->changeImmediateDominator(LoopVectorPreHeader, SCEVCheckBlock);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, SCEVCheckCond);
@@ -2118,12 +2112,7 @@ public:
     Pred->getTerminator()->replaceSuccessorWith(LoopVectorPreHeader,
                                                 MemCheckBlock);
 
-    DT->addNewBlock(MemCheckBlock, Pred);
-    DT->changeImmediateDominator(LoopVectorPreHeader, MemCheckBlock);
     MemCheckBlock->moveBefore(LoopVectorPreHeader);
-
-    if (OuterLoop)
-      OuterLoop->addBasicBlockToLoop(MemCheckBlock, *LI);
 
     BranchInst &BI =
         *BranchInst::Create(Bypass, LoopVectorPreHeader, MemRuntimeCheckCond);
@@ -2486,12 +2475,13 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it.
+  // ResumePhis by adding an incoming value for it, replicating the last value.
   for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
     auto *ResumePhi = dyn_cast<VPInstruction>(&R);
     if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
       continue;
-    ResumePhi->addOperand(ResumePhi->getOperand(1));
+    ResumePhi->addOperand(
+        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
   }
 }
 
@@ -2561,13 +2551,9 @@ void InnerLoopVectorizer::emitIterationCountCheck(BasicBlock *Bypass) {
   }
 
   // Create new preheader for vector loop.
-  LoopVectorPreHeader =
-      SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(), DT, LI, nullptr,
-                 "vector.ph");
-
-  assert(DT->properlyDominates(DT->getNode(TCCheckBlock),
-                               DT->getNode(Bypass)->getIDom()) &&
-         "TC check is expected to dominate Bypass");
+  LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
+                                   static_cast<DominatorTree *>(nullptr), LI,
+                                   nullptr, "vector.ph");
 
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
@@ -2660,7 +2646,10 @@ void InnerLoopVectorizer::createVectorLoopSkeleton(StringRef Prefix) {
   LoopScalarPreHeader =
       SplitBlock(LoopVectorPreHeader, LoopVectorPreHeader->getTerminator(), DT,
                  LI, nullptr, Twine(Prefix) + "scalar.ph");
-  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
+  // NOTE: The Plan's scalar preheader VPBB isn't replaced with a VPIRBasicBlock
+  // wrapping LoopScalarPreHeader here at the moment, because the Plan's scalar
+  // preheader may be unreachable at this point. Instead it is replaced in
+  // createVectorizedLoopSkeleton.
 }
 
 /// Return the expanded step for \p ID using \p ExpandedSCEVs to look up SCEV
@@ -2756,6 +2745,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   // faster.
   emitMemRuntimeChecks(LoopScalarPreHeader);
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -7909,6 +7899,7 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   // Generate the induction variable.
   EPI.VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -7957,13 +7948,10 @@ EpilogueVectorizerMainLoop::emitIterationCountCheck(BasicBlock *Bypass,
 
   // Create new preheader for vector loop.
   LoopVectorPreHeader = SplitBlock(TCCheckBlock, TCCheckBlock->getTerminator(),
-                                   DT, LI, nullptr, "vector.ph");
+                                   static_cast<DominatorTree *>(nullptr), LI,
+                                   nullptr, "vector.ph");
 
   if (ForEpilogue) {
-    assert(DT->properlyDominates(DT->getNode(TCCheckBlock),
-                                 DT->getNode(Bypass)->getIDom()) &&
-           "TC check is expected to dominate Bypass");
-
     LoopBypassBlocks.push_back(TCCheckBlock);
 
     // Save the trip count so we don't have to regenerate it in the
@@ -8057,6 +8045,7 @@ EpilogueVectorizerEpilogueLoop::createEpilogueVectorizedLoopSkeleton() {
       Phi->removeIncomingValue(EPI.MemSafetyCheck);
   }
 
+  replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
 
@@ -8066,10 +8055,6 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
 
   assert(EPI.TripCount &&
          "Expected trip count to have been saved in the first pass.");
-  assert(
-      (!isa<Instruction>(EPI.TripCount) ||
-       DT->dominates(cast<Instruction>(EPI.TripCount)->getParent(), Insert)) &&
-      "saved trip count does not dominate insertion point.");
   Value *TC = EPI.TripCount;
   IRBuilder<> Builder(Insert->getTerminator());
   Value *Count = Builder.CreateSub(TC, EPI.VectorTripCount, "n.vec.remaining");

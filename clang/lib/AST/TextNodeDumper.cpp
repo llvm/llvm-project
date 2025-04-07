@@ -405,9 +405,6 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Async:
     case OpenACCClauseKind::Auto:
     case OpenACCClauseKind::Attach:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::PCopy:
-    case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::Host:
     case OpenACCClauseKind::If:
     case OpenACCClauseKind::IfPresent:
@@ -457,26 +454,38 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
         OS << ": force";
       break;
 
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
+      OS << " clause";
+      if (cast<OpenACCCopyClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCopyClause>(C)->getModifierList();
+      break;
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
     case OpenACCClauseKind::PresentOrCopyIn:
       OS << " clause";
-      if (cast<OpenACCCopyInClause>(C)->isReadOnly())
-        OS << " : readonly";
+      if (cast<OpenACCCopyInClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCopyInClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
     case OpenACCClauseKind::PresentOrCopyOut:
       OS << " clause";
-      if (cast<OpenACCCopyOutClause>(C)->isZero())
-        OS << " : zero";
+      if (cast<OpenACCCopyOutClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: "
+           << cast<OpenACCCopyOutClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::Create:
     case OpenACCClauseKind::PCreate:
     case OpenACCClauseKind::PresentOrCreate:
       OS << " clause";
-      if (cast<OpenACCCreateClause>(C)->isZero())
-        OS << " : zero";
+      if (cast<OpenACCCreateClause>(C)->getModifierList() !=
+          OpenACCModifierKind::Invalid)
+        OS << " modifiers: " << cast<OpenACCCreateClause>(C)->getModifierList();
       break;
     case OpenACCClauseKind::Wait:
       OS << " clause";

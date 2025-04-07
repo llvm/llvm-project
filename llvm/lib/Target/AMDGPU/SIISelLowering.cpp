@@ -911,8 +911,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2bf16, Legal);
-    setOperationAction(ISD::FP_ROUND, MVT::bf16, Legal);
+    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -6888,23 +6887,34 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getValueType() == MVT::f16 &&
-         "Do not know how to custom lower FP_ROUND for non-f16 type");
-
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
-  if (SrcVT != MVT::f64)
+  if (SrcVT.getScalarType() != MVT::f64)
     return Op;
 
-  // TODO: Handle strictfp
-  if (Op.getOpcode() != ISD::FP_ROUND)
-    return Op;
-
+  EVT DstVT = Op.getValueType();
   SDLoc DL(Op);
+  if (DstVT == MVT::f16) {
+    // TODO: Handle strictfp
+    if (Op.getOpcode() != ISD::FP_ROUND)
+      return Op;
 
-  SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
-  return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
+    SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
+    return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
+  }
+
+  assert(DstVT.getScalarType() == MVT::bf16 &&
+         "custom lower FP_ROUND for f16 or bf16");
+  assert(Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
+
+  // Round-inexact-to-odd f64 to f32, then do the final rounding using the
+  // hardware f32 -> bf16 instruction.
+  EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
+                                 MVT::f32;
+  SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
+  return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
+                     DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,

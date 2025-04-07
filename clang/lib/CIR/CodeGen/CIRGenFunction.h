@@ -399,6 +399,8 @@ public:
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
+  mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+  mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)

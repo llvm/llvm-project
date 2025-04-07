@@ -466,3 +466,93 @@ _Float16 fp16UMinus(_Float16 f) {
 // OGCG:   %[[PROMOTED:.*]] = fpext half %[[F_LOAD]] to float
 // OGCG:   %[[RESULT:.*]] = fneg float %[[PROMOTED]]
 // OGCG:   %[[UNPROMOTED:.*]] = fptrunc float %[[RESULT]] to half
+
+void test_logical_not() {
+  int a = 5;
+  a = !a;
+  bool b = false;
+  b = !b;
+  float c = 2.0f;
+  c = !c;
+  int *p = 0;
+  b = !p;
+  double d = 3.0;
+  b = !d;
+}
+
+// CHECK: cir.func @test_logical_not()
+// CHECK:   %[[A:.*]] = cir.load %[[A_ADDR:.*]] : !cir.ptr<!s32i>, !s32i
+// CHECK:   %[[A_BOOL:.*]] = cir.cast(int_to_bool, %[[A]] : !s32i), !cir.bool
+// CHECK:   %[[A_NOT:.*]] = cir.unary(not, %[[A_BOOL]]) : !cir.bool, !cir.bool
+// CHECK:   %[[A_CAST:.*]] = cir.cast(bool_to_int, %[[A_NOT]] : !cir.bool), !s32i
+// CHECK:   cir.store %[[A_CAST]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:   %[[B:.*]] = cir.load %[[B_ADDR:.*]] : !cir.ptr<!cir.bool>, !cir.bool
+// CHECK:   %[[B_NOT:.*]] = cir.unary(not, %[[B]]) : !cir.bool, !cir.bool
+// CHECK:   cir.store %[[B_NOT]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:   %[[C:.*]] = cir.load %[[C_ADDR:.*]] : !cir.ptr<!cir.float>, !cir.float
+// CHECK:   %[[C_BOOL:.*]] = cir.cast(float_to_bool, %[[C]] : !cir.float), !cir.bool
+// CHECK:   %[[C_NOT:.*]] = cir.unary(not, %[[C_BOOL]]) : !cir.bool, !cir.bool
+// CHECK:   %[[C_CAST:.*]] = cir.cast(bool_to_float, %[[C_NOT]] : !cir.bool), !cir.float
+// CHECK:   cir.store %[[C_CAST]], %[[C_ADDR]] : !cir.float, !cir.ptr<!cir.float>
+// CHECK:   %[[P:.*]] = cir.load %[[P_ADDR:.*]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CHECK:   %[[P_BOOL:.*]] = cir.cast(ptr_to_bool, %[[P]] : !cir.ptr<!s32i>), !cir.bool
+// CHECK:   %[[P_NOT:.*]] = cir.unary(not, %[[P_BOOL]]) : !cir.bool, !cir.bool
+// CHECK:   cir.store %[[P_NOT]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+// CHECK:   %[[D:.*]] = cir.load %[[D_ADDR:.*]] : !cir.ptr<!cir.double>, !cir.double
+// CHECK:   %[[D_BOOL:.*]] = cir.cast(float_to_bool, %[[D]] : !cir.double), !cir.bool
+// CHECK:   %[[D_NOT:.*]] = cir.unary(not, %[[D_BOOL]]) : !cir.bool, !cir.bool
+// CHECK:   cir.store %[[D_NOT]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
+
+// LLVM: define void @test_logical_not()
+// LLVM:   %[[A:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// LLVM:   %[[A_BOOL:.*]] = icmp ne i32 %[[A]], 0
+// LLVM:   %[[A_NOT:.*]] = xor i1 %[[A_BOOL]], true
+// LLVM:   %[[A_CAST:.*]] = zext i1 %[[A_NOT]] to i32
+// LLVM:   store i32 %[[A_CAST]], ptr %[[A_ADDR]], align 4
+// LLVM:   %[[B:.*]] = load i8, ptr %[[B_ADDR:.*]], align 1
+// LLVM:   %[[B_BOOL:.*]] = trunc i8 %[[B]] to i1
+// LLVM:   %[[B_NOT:.*]] = xor i1 %[[B_BOOL]], true
+// LLVM:   %[[B_CAST:.*]] = zext i1 %[[B_NOT]] to i8
+// LLVM:   store i8 %[[B_CAST]], ptr %[[B_ADDR]], align 1
+// LLVM:   %[[C:.*]] = load float, ptr %[[C_ADDR:.*]], align 4
+// LLVM:   %[[C_BOOL:.*]] = fcmp une float %[[C]], 0.000000e+00
+// LLVM:   %[[C_NOT:.*]] = xor i1 %[[C_BOOL]], true
+// LLVM:   %[[C_CAST:.*]] = uitofp i1 %[[C_NOT]] to float
+// LLVM:   store float %[[C_CAST]], ptr %[[C_ADDR]], align 4
+// LLVM:   %[[P:.*]] = load ptr, ptr %[[P_ADDR:.*]], align 8
+// LLVM:   %[[P_BOOL:.*]] = icmp ne ptr %[[P]], null
+// LLVM:   %[[P_NOT:.*]] = xor i1 %[[P_BOOL]], true
+// LLVM:   %[[P_CAST:.*]] = zext i1 %[[P_NOT]] to i8
+// LLVM:   store i8 %[[P_CAST]], ptr %[[B_ADDR]], align 1
+// LLVM:   %[[D:.*]] = load double, ptr %[[D_ADDR:.*]], align 8
+// LLVM:   %[[D_BOOL:.*]] = fcmp une double %[[D]], 0.000000e+00
+// LLVM:   %[[D_NOT:.*]] = xor i1 %[[D_BOOL]], true
+// LLVM:   %[[D_CAST:.*]] = zext i1 %[[D_NOT]] to i8
+// LLVM:   store i8 %[[D_CAST]], ptr %[[B_ADDR]], align 1
+
+// OGCG: define{{.*}} void @_Z16test_logical_notv()
+// OGCG:   %[[A:.*]] = load i32, ptr %[[A_ADDR:.*]], align 4
+// OGCG:   %[[A_BOOL:.*]] = icmp ne i32 %[[A]], 0
+// OGCG:   %[[A_NOT:.*]] = xor i1 %[[A_BOOL]], true
+// OGCG:   %[[A_CAST:.*]] = zext i1 %[[A_NOT]] to i32
+// OGCG:   store i32 %[[A_CAST]], ptr %[[A_ADDR]], align 4
+// OGCG:   %[[B:.*]] = load i8, ptr %[[B_ADDR:.*]], align 1
+// OGCG:   %[[B_BOOL:.*]] = trunc i8 %[[B]] to i1
+// OGCG:   %[[B_NOT:.*]] = xor i1 %[[B_BOOL]], true
+// OGCG:   %[[B_CAST:.*]] = zext i1 %[[B_NOT]] to i8
+// OGCG:   store i8 %[[B_CAST]], ptr %[[B_ADDR]], align 1
+// OGCG:   %[[C:.*]] = load float, ptr %[[C_ADDR:.*]], align 4
+// OGCG:   %[[C_BOOL:.*]] = fcmp une float %[[C]], 0.000000e+00
+// OGCG:   %[[C_NOT:.*]] = xor i1 %[[C_BOOL]], true
+// OGCG:   %[[C_CAST:.*]] = uitofp i1 %[[C_NOT]] to float
+// OGCG:   store float %[[C_CAST]], ptr %[[C_ADDR]], align 4
+// OGCG:   %[[P:.*]] = load ptr, ptr %[[P_ADDR:.*]], align 8
+// OGCG:   %[[P_BOOL:.*]] = icmp ne ptr %[[P]], null
+// OGCG:   %[[P_NOT:.*]] = xor i1 %[[P_BOOL]], true
+// OGCG:   %[[P_CAST:.*]] = zext i1 %[[P_NOT]] to i8
+// OGCG:   store i8 %[[P_CAST]], ptr %[[B_ADDR]], align 1
+// OGCG:   %[[D:.*]] = load double, ptr %[[D_ADDR:.*]], align 8
+// OGCG:   %[[D_BOOL:.*]] = fcmp une double %[[D]], 0.000000e+00
+// OGCG:   %[[D_NOT:.*]] = xor i1 %[[D_BOOL]], true
+// OGCG:   %[[D_CAST:.*]] = zext i1 %[[D_NOT]] to i8
+// OGCG:   store i8 %[[D_CAST]], ptr %[[B_ADDR]], align 1

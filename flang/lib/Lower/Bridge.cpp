@@ -3209,13 +3209,11 @@ private:
           builder->restoreInsertionPoint(insPt);
         }
 
-        // Create the hlfir.declare operation using the symbol's name
-        auto declareOp = builder->create<hlfir::DeclareOp>(
-            loc, ivValue, toStringRef(name.symbol->name()));
-        ivValue = declareOp.getResult(0);
-
         // Bind the symbol to the declared variable
         bindSymbol(*name.symbol, ivValue);
+        Fortran::lower::SymbolBox hsb = localSymbols.lookupSymbol(*name.symbol);
+        fir::ExtendedValue extIvValue = symBoxToExtendedValue(hsb);
+        ivValue = fir::getBase(extIvValue);
         ivValues.push_back(ivValue);
         ivTypes.push_back(idxTy);
         ivLocs.push_back(loc);
