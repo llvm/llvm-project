@@ -4597,12 +4597,12 @@ static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
   InstructionCost LoopCost = 0;
 
   if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return 0;
+    return false;
 
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
       if (!shouldUnrollLoopWithInstruction(I, TTI))
-        return 0;
+        return false;
 
       SmallVector<const Value *, 4> Operands(I.operand_values());
       InstructionCost Cost =
@@ -4610,11 +4610,11 @@ static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
       // This can happen with intrinsics that don't currently have a cost model
       // or for some operations that require SVE.
       if (!Cost.isValid())
-        return 0;
+        return false;
 
       LoopCost += Cost;
       if (LoopCost > Budget)
-        return 0;
+        return false;
     }
   }
 
