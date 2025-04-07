@@ -402,8 +402,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
-  if (Triple.isRISCV() &&
-      Triple.getVendor() == llvm::Triple::MipsTechnologies)
+  if (Triple.isRISCV() && Triple.getVendor() == llvm::Triple::MipsTechnologies)
     CmdArgs.push_back("-EL");
 
   // Most Android ARM64 targets should enable the linker fix for erratum
