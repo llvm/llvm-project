@@ -2506,10 +2506,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<OpenCLKernelAttr>() &&
         CallingConv != CallingConv::CC_C &&
-        CallingConv !=
-            CallingConv::CC_SpirFunction) { // Check CallingConv to avoid adding
-                                            // uniform-work-group-size attribute
-                                            // to OpenCL Kernel Stub
+        CallingConv != CallingConv::CC_SpirFunction) {
+      // Check CallingConv to avoid adding uniform-work-group-size attribute to
+      // OpenCL Kernel Stub
       if (getLangOpts().OpenCLVersion <= 120) {
         // OpenCL v1.2 Work groups are always uniform
         FuncAttrs.addAttribute("uniform-work-group-size", "true");

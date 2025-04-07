@@ -1614,7 +1614,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
         CGM.getRawFunctionPointer(GDStub, FTy);
     CGCallee GDStubCallee = CGCallee::forDirect(GDStubFunctionPointer, GDStub);
     EmitCall(FnInfo, GDStubCallee, ReturnValueSlot(), CallArgs, nullptr, false,
-             Loc); // set IsMustTail=true?
+             Loc);
   } else if (Body) {
     EmitFunctionBody(Body);
   } else
