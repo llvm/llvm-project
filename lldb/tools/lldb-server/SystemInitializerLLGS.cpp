@@ -56,9 +56,8 @@ using HostObjectFile = ObjectFileELF;
 
 using namespace lldb_private;
 
-llvm::Error
-SystemInitializerLLGS::Initialize(LoadPluginCallbackType plugin_callback) {
-  if (auto e = SystemInitializerCommon::Initialize(plugin_callback))
+llvm::Error SystemInitializerLLGS::Initialize() {
+  if (auto e = SystemInitializerCommon::Initialize())
     return e;
 
   HostObjectFile::Initialize();

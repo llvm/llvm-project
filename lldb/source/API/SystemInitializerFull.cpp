@@ -8,6 +8,7 @@
 
 #include "SystemInitializerFull.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
@@ -49,9 +50,8 @@ SystemInitializerFull::SystemInitializerFull()
     : SystemInitializerCommon(g_shlib_dir_helper) {}
 SystemInitializerFull::~SystemInitializerFull() = default;
 
-llvm::Error
-SystemInitializerFull::Initialize(LoadPluginCallbackType plugin_callback) {
-  llvm::Error error = SystemInitializerCommon::Initialize(plugin_callback);
+llvm::Error SystemInitializerFull::Initialize() {
+  llvm::Error error = SystemInitializerCommon::Initialize();
   if (error)
     return error;
 
@@ -87,7 +87,46 @@ SystemInitializerFull::Initialize(LoadPluginCallbackType plugin_callback) {
 
   LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
 
-  Debugger::Initialize(plugin_callback);
+  auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
+                       const FileSpec &spec,
+                       Status &error) -> llvm::sys::DynamicLibrary {
+    llvm::sys::DynamicLibrary dynlib =
+        llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
+    if (dynlib.isValid()) {
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
+
+      lldb::SBDebugger debugger_sb(debugger_sp);
+      // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
+      // function.
+      // TODO: mangle this differently for your system - on OSX, the first
+      // underscore needs to be removed and the second one stays
+      LLDBCommandPluginInit init_func =
+          (LLDBCommandPluginInit)(uintptr_t)dynlib.getAddressOfSymbol(
+              "_ZN4lldb16PluginInitializeENS_10SBDebuggerE");
+      if (init_func) {
+        if (init_func(debugger_sb))
+          return dynlib;
+        else
+          error = Status::FromErrorString(
+              "plug-in refused to load "
+              "(lldb::PluginInitialize(lldb::SBDebugger) "
+              "returned false)");
+      } else {
+        error = Status::FromErrorString(
+            "plug-in is missing the required initialization: "
+            "lldb::PluginInitialize(lldb::SBDebugger)");
+      }
+    } else {
+      if (FileSystem::Instance().Exists(spec))
+        error = Status::FromErrorString(
+            "this file does not represent a loadable dylib");
+      else
+        error = Status::FromErrorString("no such file");
+    }
+    return llvm::sys::DynamicLibrary();
+  };
+
+  Debugger::Initialize(LoadPlugin);
 
   return llvm::Error::success();
 }

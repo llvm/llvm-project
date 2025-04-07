@@ -41,8 +41,7 @@ SystemInitializerCommon::SystemInitializerCommon(
 
 SystemInitializerCommon::~SystemInitializerCommon() = default;
 
-llvm::Error
-SystemInitializerCommon::Initialize(LoadPluginCallbackType plugin_callback) {
+llvm::Error SystemInitializerCommon::Initialize() {
 #if defined(_WIN32)
   const char *disable_crash_dialog_var = getenv("LLDB_DISABLE_CRASH_DIALOG");
   if (disable_crash_dialog_var &&
