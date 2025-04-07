@@ -988,6 +988,11 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
                                InitBool->getName() + ".val", false, Align(1),
                                LI->getOrdering(), LI->getSyncScopeID(),
                                LI->getIterator());
+      // FIXME: Should we use the DebugLoc of the load used by the predicate, or
+      // the predicate? The load seems most appropriate, but there's an argument
+      // that the new load does not represent the old load, but is simply a
+      // component of recomputing the predicate.
+      cast<LoadInst>(LV)->setDebugLoc(LI->getDebugLoc());
       InitBoolUsed = true;
       switch (ICI->getPredicate()) {
       default: llvm_unreachable("Unknown ICmp Predicate!");
@@ -1000,6 +1005,7 @@ OptimizeGlobalAddressOfAllocation(GlobalVariable *GV, CallInst *CI,
       case ICmpInst::ICMP_ULE:
       case ICmpInst::ICMP_EQ:
         LV = BinaryOperator::CreateNot(LV, "notinit", ICI->getIterator());
+        cast<BinaryOperator>(LV)->setDebugLoc(ICI->getDebugLoc());
         break;
       case ICmpInst::ICMP_NE:
       case ICmpInst::ICMP_UGT:
@@ -1276,6 +1282,7 @@ static bool TryToShrinkGlobalToBoolean(GlobalVariable *GV, Constant *OtherVal) {
               new LoadInst(NewGV->getValueType(), NewGV, LI->getName() + ".b",
                            false, Align(1), LI->getOrdering(),
                            LI->getSyncScopeID(), LI->getIterator());
+          cast<LoadInst>(StoreVal)->setDebugLoc(LI->getDebugLoc());
         } else {
           assert((isa<CastInst>(StoredVal) || isa<SelectInst>(StoredVal)) &&
                  "This is not a form that we understand!");
