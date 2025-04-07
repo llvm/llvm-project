@@ -1459,10 +1459,11 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
     RawAddress Tmp =
         CreateTempAllocaForCoercion(*this, SrcTy, Dst.getAlignment());
     Builder.CreateStore(Src, Tmp);
-    Builder.CreateMemCpy(Dst.emitRawPointer(*this),
-                         Dst.getAlignment().getAsAlign(), Tmp.getPointer(),
-                         Tmp.getAlignment().getAsAlign(),
-                         Builder.CreateTypeSize(IntPtrTy, DstSize));
+    auto *I = Builder.CreateMemCpy(
+        Dst.emitRawPointer(*this), Dst.getAlignment().getAsAlign(),
+        Tmp.getPointer(), Tmp.getAlignment().getAsAlign(),
+        Builder.CreateTypeSize(IntPtrTy, DstSize));
+    addInstToCurrentSourceAtom(I, Src);
   }
 }
 
