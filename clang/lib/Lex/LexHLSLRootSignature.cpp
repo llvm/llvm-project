@@ -15,16 +15,16 @@ using TokenKind = RootSignatureToken::Kind;
 
 // Lexer Definitions
 
-static bool IsNumberChar(char C) {
+static bool isNumberChar(char C) {
   // TODO(#126565): extend for float support exponents
   return isdigit(C); // integer support
 }
 
-RootSignatureToken RootSignatureLexer::LexToken() {
+RootSignatureToken RootSignatureLexer::lexToken() {
   // Discard any leading whitespace
-  AdvanceBuffer(Buffer.take_while(isspace).size());
+  advanceBuffer(Buffer.take_while(isspace).size());
 
-  if (EndOfBuffer())
+  if (isEndOfBuffer())
     return RootSignatureToken(TokenKind::end_of_stream, SourceLoc);
 
   // Record where this token is in the text for usage in parser diagnostics
@@ -37,7 +37,7 @@ RootSignatureToken RootSignatureLexer::LexToken() {
 #define PUNCTUATOR(X, Y)                                                       \
   case Y: {                                                                    \
     Result.TokKind = TokenKind::pu_##X;                                        \
-    AdvanceBuffer();                                                           \
+    advanceBuffer();                                                           \
     return Result;                                                             \
   }
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
@@ -48,8 +48,8 @@ RootSignatureToken RootSignatureLexer::LexToken() {
   // Integer literal
   if (isdigit(C)) {
     Result.TokKind = TokenKind::int_literal;
-    Result.NumSpelling = Buffer.take_while(IsNumberChar);
-    AdvanceBuffer(Result.NumSpelling.size());
+    Result.NumSpelling = Buffer.take_while(isNumberChar);
+    advanceBuffer(Result.NumSpelling.size());
     return Result;
   }
 
@@ -82,11 +82,11 @@ RootSignatureToken RootSignatureLexer::LexToken() {
       llvm_unreachable("Switch for an expected token was not provided");
     }
 
-    AdvanceBuffer();
+    advanceBuffer();
 
     // Lex the integer literal
-    Result.NumSpelling = Buffer.take_while(IsNumberChar);
-    AdvanceBuffer(Result.NumSpelling.size());
+    Result.NumSpelling = Buffer.take_while(isNumberChar);
+    advanceBuffer(Result.NumSpelling.size());
 
     return Result;
   }
@@ -103,26 +103,26 @@ RootSignatureToken RootSignatureLexer::LexToken() {
 
   // Then attempt to retreive a string from it
   Result.TokKind = Switch.Default(TokenKind::invalid);
-  AdvanceBuffer(TokSpelling.size());
+  advanceBuffer(TokSpelling.size());
   return Result;
 }
 
-RootSignatureToken RootSignatureLexer::ConsumeToken() {
+RootSignatureToken RootSignatureLexer::consumeToken() {
   // If we previously peeked then just return the previous value over
   if (NextToken && NextToken->TokKind != TokenKind::end_of_stream) {
     RootSignatureToken Result = *NextToken;
     NextToken = std::nullopt;
     return Result;
   }
-  return LexToken();
+  return lexToken();
 }
 
-RootSignatureToken RootSignatureLexer::PeekNextToken() {
+RootSignatureToken RootSignatureLexer::peekNextToken() {
   // Already peeked from the current token
   if (NextToken)
     return *NextToken;
 
-  NextToken = LexToken();
+  NextToken = lexToken();
   return *NextToken;
 }
 

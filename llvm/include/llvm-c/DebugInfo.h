@@ -175,7 +175,6 @@ enum {
   LLVMDISubrangeMetadataKind,
   LLVMDIEnumeratorMetadataKind,
   LLVMDIBasicTypeMetadataKind,
-  LLVMDIFixedPointTypeMetadataKind,
   LLVMDIDerivedTypeMetadataKind,
   LLVMDICompositeTypeMetadataKind,
   LLVMDISubroutineTypeMetadataKind,
@@ -204,6 +203,7 @@ enum {
   LLVMDIFragmentMetadataKind,
   LLVMDILifetimeMetadataKind,
   LLVMDISubrangeTypeMetadataKind,
+  LLVMDIFixedPointTypeMetadataKind,
 };
 typedef unsigned LLVMMetadataKind;
 
