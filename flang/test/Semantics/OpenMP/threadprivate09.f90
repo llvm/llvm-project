@@ -18,6 +18,7 @@ contains
   end subroutine internal
 end subroutine host_assoc_fail
 
+! This sub-test is not supposed to emit a compiler error.
 subroutine host_assoc()
   integer, save :: i
   !$omp threadprivate(i)
