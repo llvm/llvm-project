@@ -36,7 +36,7 @@
 #include "llvm/Support/KnownFPClass.h"
 #include "llvm/Target/TargetMachine.h"
 
-#define DEBUG_TYPE "gisel-known-bits"
+#define DEBUG_TYPE "gisel-value-tacking"
 
 using namespace llvm;
 using namespace MIPatternMatch;
@@ -44,7 +44,7 @@ using namespace MIPatternMatch;
 char llvm::GISelValueTrackingAnalysis::ID = 0;
 
 INITIALIZE_PASS(GISelValueTrackingAnalysis, DEBUG_TYPE,
-                "Analysis for ComputingKnownBits", false, true)
+                "Analysis for ComputingKnownBits and ComputingKnownFPClass", false, true)
 
 GISelValueTracking::GISelValueTracking(MachineFunction &MF, unsigned MaxDepth)
     : MF(MF), MRI(MF.getRegInfo()), TL(*MF.getSubtarget().getTargetLowering()),
