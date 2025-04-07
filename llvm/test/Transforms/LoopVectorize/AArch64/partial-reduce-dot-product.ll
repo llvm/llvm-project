@@ -3423,12 +3423,12 @@ define dso_local void @not_dotp_high_register_pressure(ptr %a, ptr %b, ptr %sum,
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_FOR_COND_CLEANUP_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
-; CHECK-REGS-LABEL: LV: Checking a loop in 'dotp_high_register_pressure' from <stdin>
+; CHECK-REGS-LABEL: LV: Checking a loop in 'not_dotp_high_register_pressure' from <stdin>
 ; CHECK-REGS:       LV(REG): VF = 16
 ; CHECK-REGS-NEXT:  LV(REG): Found max usage: 2 item
 ; CHECK-REGS-NEXT:  LV(REG): RegisterClass: Generic::ScalarRC, 3 registers
-; CHECK-REGS-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 24 registers
-; CHECK-REGS-NEXT:  LV(REG): Found invariant usage: 1 item
+; CHECK-REGS-NEXT:  LV(REG): RegisterClass: Generic::VectorRC, 40 registers
+; CHECK-REGS-NEXT:  LV(REG): Found invariant usage: 2 item
 entry:
   %cmp100 = icmp sgt i32 %n, 0
   br i1 %cmp100, label %for.body.lr.ph, label %for.cond.cleanup
