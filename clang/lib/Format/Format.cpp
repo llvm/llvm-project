@@ -4094,6 +4094,9 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
       FileName.ends_with_insensitive(".vh")) {
     return FormatStyle::LK_Verilog;
   }
+  // OpenCL is based on C99 and C11.
+  if (FileName.ends_with(".cl"))
+    return FormatStyle::LK_C;
   return FormatStyle::LK_Cpp;
 }
 
@@ -4121,6 +4124,8 @@ static FormatStyle::LanguageKind getLanguageByComment(const Environment &Env) {
       return FormatStyle::LK_Cpp;
     if (Text == "ObjC")
       return FormatStyle::LK_ObjC;
+    if (Text == "OpenCL")
+      return FormatStyle::LK_C;
   }
 
   return FormatStyle::LK_None;

@@ -25187,6 +25187,9 @@ TEST_F(FormatTest, GetLanguageByComment) {
   EXPECT_EQ(FormatStyle::LK_ObjC,
             guessLanguage("foo.h", "// clang-format Language: ObjC\n"
                                    "int i;"));
+  EXPECT_EQ(FormatStyle::LK_C,
+            guessLanguage("foo.h", "// clang-format Language: OpenCL\n"
+                                   "int i;"));
 }
 
 TEST_F(FormatTest, TypenameMacros) {
