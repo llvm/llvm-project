@@ -116,7 +116,7 @@ void NVVMReflect::setVarMap(Module &M) {
   for (StringRef Option : ReflectList) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
     while (!Option.empty()) {
-      std::pair<StringRef, StringRef> Split = Option.split(',');
+      auto Split = Option.split(',');
       StringRef NameVal = Split.first;
       Option = Split.second;
 
