@@ -218,10 +218,11 @@ commonly used first:
 Branches
 ========
 
-It is possible to create branches in `llvm/llvm-project/` that start with `users/<username>/`, however this is
-intended to be able to support "stacked" pull-request. Do not create any branches in the
-llvm/llvm-project repository otherwise, please use a fork (see above). User branches that
-aren't associated with a pull-request **will be deleted**.
+It is possible to create branches in `llvm/llvm-project/` that start with
+`users/<username>/`, however this is intended to be able to support "stacked"
+pull-request. Do not create any branches in the `llvm/llvm-project` repository
+otherwise, please use a fork (see above). User branches that aren't
+associated with a pull-request **will be deleted**.
 
 Stacked Pull Requests
 =====================
