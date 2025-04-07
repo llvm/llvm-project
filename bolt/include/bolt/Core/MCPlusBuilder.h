@@ -611,6 +611,21 @@ public:
     return std::nullopt;
   }
 
+  virtual bool isPSignOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthOnLR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isPAuthAndRet(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   /// Returns the register used as a return address. Returns std::nullopt if
   /// not applicable, such as reading the return address from a system register
   /// or from the stack.
@@ -847,13 +862,6 @@ public:
   virtual bool isAArch64ExclusiveClear(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-  virtual bool isPAuth(MCInst &Inst) const {
-    llvm_unreachable("not implemented");
-  }
-
-  virtual bool isPSign(MCInst &Inst) const {
-    llvm_unreachable("not implemented");
   }
 
   virtual bool isCleanRegXOR(const MCInst &Inst) const {

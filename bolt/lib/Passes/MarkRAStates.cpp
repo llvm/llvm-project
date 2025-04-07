@@ -46,7 +46,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
   for (BinaryBasicBlock &BB : BF) {
     for (auto It = BB.begin(); It != BB.end(); ++It) {
       MCInst &Inst = *It;
-      if ((BC.MIB->isPSign(Inst) || BC.MIB->isPAuth(Inst)) &&
+      if ((BC.MIB->isPSignOnLR(Inst) ||
+           (BC.MIB->isPAuthOnLR(Inst) && !BC.MIB->isPAuthAndRet(Inst))) &&
           !BC.MIB->hasNegateRAState(Inst)) {
         // no .cfi_negate_ra_state attached to signing or authenticating instr
         // means, that this is a function with handwritten assembly, which might
@@ -71,7 +72,7 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
       if (BC.MIB->isCFI(Inst))
         continue;
 
-      if (BC.MIB->isPSign(Inst)) {
+      if (BC.MIB->isPSignOnLR(Inst)) {
         if (RAState) {
           // RA signing instructions should only follow unsigned RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
@@ -80,7 +81,7 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           return;
         }
         BC.MIB->setRASigning(Inst);
-      } else if (BC.MIB->isPAuth(Inst)) {
+      } else if (BC.MIB->isPAuthOnLR(Inst)) {
         if (!RAState) {
           // RA authenticating instructions should only follow signed RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "

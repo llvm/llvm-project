@@ -46,14 +46,16 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   bool FirstIter = true;
   MCInst PrevInst;
   BinaryBasicBlock *PrevBB = nullptr;
+  // We need to iterate on BBs in the Layout order
+  // not in the order they are stored in the BF class.
   auto *Begin = BF.getLayout().block_begin();
   auto *End = BF.getLayout().block_end();
   for (auto *BB = Begin; BB != End; BB++) {
 
     // Support for function splitting:
-    // if two consecutive BBs are going to end up in different functions,
-    // we have to negate the RA State, so the new function starts with a Signed
-    // state.
+    // if two consecutive BBs with Signed state are going to end up in different
+    // functions, we have to add a OpNegateRAState to the beginning of the newly
+    // split function, so it starts with a Signed state.
     if (PrevBB != nullptr &&
         PrevBB->getFragmentNum() != (*BB)->getFragmentNum() &&
         BC.MIB->isRASigned(*((*BB)->begin()))) {
@@ -68,6 +70,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
         continue;
 
       if (!FirstIter) {
+        // Consecutive instructions with different RAState means we need to add
+        // a OpNegateRAState.
         if ((BC.MIB->isRASigned(PrevInst) && BC.MIB->isRAUnsigned(Inst)) ||
             (BC.MIB->isRAUnsigned(PrevInst) && BC.MIB->isRASigned(Inst))) {
 
@@ -90,7 +94,8 @@ bool InsertNegateRAState::addNegateRAStateAfterPacOrAuth(BinaryFunction &BF) {
   for (BinaryBasicBlock &BB : BF) {
     for (auto Iter = BB.begin(); Iter != BB.end(); ++Iter) {
       MCInst &Inst = *Iter;
-      if (BC.MIB->isPSign(Inst) || BC.MIB->isPAuth(Inst)) {
+      if (BC.MIB->isPSignOnLR(Inst) ||
+          (BC.MIB->isPAuthOnLR(Inst) && !BC.MIB->isPAuthAndRet(Inst))) {
         Iter = BF.addCFIInstruction(
             &BB, Iter + 1, MCCFIInstruction::createNegateRAState(nullptr));
         FoundAny = true;
