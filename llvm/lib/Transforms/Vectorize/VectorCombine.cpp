@@ -2052,7 +2052,6 @@ bool VectorCombine::foldShuffleOfSelects(Instruction &I) {
 
   auto *SrcVecTy = cast<FixedVectorType>(T1->getType());
   auto *DstVecTy = cast<FixedVectorType>(I.getType());
-
   auto SK = TargetTransformInfo::SK_PermuteTwoSrc;
   auto SelOp = Instruction::Select;
   InstructionCost OldCost = TTI.getCmpSelInstrCost(
