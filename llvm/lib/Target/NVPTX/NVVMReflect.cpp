@@ -86,7 +86,8 @@ INITIALIZE_PASS(NVVMReflect, "nvvm-reflect",
 // are the last to be added to the VarMap, and therefore will take precedence over initial
 // values (i.e. __CUDA_FTZ from module medadata and __CUDA_ARCH from SmVersion).
 static cl::list<std::string>
-ReflectList("nvvm-reflect-add", cl::value_desc("name=<int>"), cl::Hidden,
+ReflectList("nvvm-reflect-list", cl::value_desc("name=<int>"), cl::Hidden,
+            cl::CommaSeparated,
             cl::desc("list of comma-separated key=value pairs"),
             cl::ValueRequired);
 
@@ -101,28 +102,17 @@ void NVVMReflect::setVarMap(Module &M) {
       M.getModuleFlag("nvvm-reflect-ftz")))
     VarMap["__CUDA_FTZ"] = Flag->getSExtValue();
 
-  /// The command line can look as follows :
-  /// -nvvm-reflect-add a=1,b=2 -nvvm-reflect-add c=3,d=0 -nvvm-reflect-add e=2
-  /// The strings "a=1,b=2", "c=3,d=0", "e=2" are available in the
-  /// ReflectList vector. First, each of ReflectList[i] is 'split'
-  /// using "," as the delimiter. Then each of this part is split
-  /// using "=" as the delimiter.
   for (StringRef Option : ReflectList) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
-    while (!Option.empty()) {
-      auto Split = Option.split(',');
-      StringRef NameVal = Split.first;
-      Option = Split.second;
-
-      auto NameValPair = NameVal.split('=');
-      assert(!NameValPair.first.empty() && !NameValPair.second.empty() && 
-             "name=val expected");
-      
-      int Val;
-      if (!to_integer(NameValPair.second.trim(), Val, 10))
-        report_fatal_error("integer value expected");
-      VarMap[NameValPair.first] = Val;
-    }
+    auto [Name, Val] = Option.split('=');
+    if (Name.empty())
+      report_fatal_error("Empty name in nvvm-reflect-list option '" + Option + "'");
+    if (Val.empty()) 
+      report_fatal_error("Missing value in nvvm-reflect- option '" + Option + "'");
+    int ValInt;
+    if (!to_integer(Val.trim(), ValInt, 10))
+      report_fatal_error("integer value expected in nvvm-reflect-list option '" + Option + "'");
+    VarMap[Name] = ValInt;
   }
 }
 
