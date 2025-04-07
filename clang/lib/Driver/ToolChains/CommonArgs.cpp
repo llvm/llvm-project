@@ -1339,61 +1339,6 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
       Args.MakeArgString(Twine(Targets) + llvm::join(Triples, ",")));
 }
 
-/// Add Fortran runtime libs
-void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs) {
-  // Link flang_rt.runtime
-  // These are handled earlier on Windows by telling the frontend driver to
-  // add the correct libraries to link against as dependents in the object
-  // file.
-  if (!TC.getTriple().isKnownWindowsMSVCEnvironment()) {
-    StringRef F128LibName = TC.getDriver().getFlangF128MathLibrary();
-    F128LibName.consume_front_insensitive("lib");
-    if (!F128LibName.empty()) {
-      bool AsNeeded = !TC.getTriple().isOSAIX();
-      CmdArgs.push_back("-lflang_rt.quadmath");
-      if (AsNeeded)
-        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/true);
-      CmdArgs.push_back(Args.MakeArgString("-l" + F128LibName));
-      if (AsNeeded)
-        addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
-    }
-    CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(TC, Args, CmdArgs);
-
-    // needs libexecinfo for backtrace functions
-    if (TC.getTriple().isOSFreeBSD() || TC.getTriple().isOSNetBSD() ||
-        TC.getTriple().isOSOpenBSD() || TC.getTriple().isOSDragonFly())
-      CmdArgs.push_back("-lexecinfo");
-  }
-
-  // libomp needs libatomic for atomic operations if using libgcc
-  if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                   options::OPT_fno_openmp, false)) {
-    Driver::OpenMPRuntimeKind OMPRuntime =
-        TC.getDriver().getOpenMPRuntime(Args);
-    ToolChain::RuntimeLibType RuntimeLib = TC.GetRuntimeLibType(Args);
-    if (OMPRuntime == Driver::OMPRT_OMP && RuntimeLib == ToolChain::RLT_Libgcc)
-      CmdArgs.push_back("-latomic");
-  }
-}
-
-void tools::addFortranRuntimeLibraryPath(const ToolChain &TC,
-                                         const llvm::opt::ArgList &Args,
-                                         ArgStringList &CmdArgs) {
-  // Default to the <driver-path>/../lib directory. This works fine on the
-  // platforms that we have tested so far. We will probably have to re-fine
-  // this in the future. In particular, on some platforms, we may need to use
-  // lib64 instead of lib.
-  SmallString<256> DefaultLibPath =
-      llvm::sys::path::parent_path(TC.getDriver().Dir);
-  llvm::sys::path::append(DefaultLibPath, "lib");
-  if (TC.getTriple().isKnownWindowsMSVCEnvironment())
-    CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
-  else
-    CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
-}
-
 static void addSanitizerRuntime(const ToolChain &TC, const ArgList &Args,
                                 ArgStringList &CmdArgs, StringRef Sanitizer,
                                 bool IsShared, bool IsWhole) {

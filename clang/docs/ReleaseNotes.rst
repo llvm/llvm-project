@@ -190,8 +190,6 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
-- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
-
 Removed Compiler Flags
 -------------------------
 
@@ -318,6 +316,9 @@ Improvements to Clang's diagnostics
 
 - Split diagnosing base class qualifiers from the ``-Wignored-Qualifiers`` diagnostic group into a new ``-Wignored-base-class-qualifiers`` diagnostic group (which is grouped under ``-Wignored-qualifiers``). Fixes #GH131935.
 
+- ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
+  ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -353,6 +354,10 @@ Bug Fixes to Compiler Builtins
 
 - The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
 
+- The signature for ``__builtin___clear_cache`` was changed from
+  ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
+  for the same builtin. (#GH47833)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
@@ -361,6 +366,10 @@ Bug Fixes to Attribute Support
   argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
+
+- Corrected the diagnostic for the ``callback`` attribute when passing too many
+  or too few attribute argument indicies for the specified callback function.
+  (#GH47451)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -384,6 +393,8 @@ Bug Fixes to C++ Support
 - Improved fix for an issue with pack expansions of type constraints, where this
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
+- Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
+  a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
@@ -402,6 +413,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
+- Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

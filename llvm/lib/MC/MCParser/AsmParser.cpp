@@ -981,20 +981,19 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
-    bool Parsed = parseStatement(Info, nullptr);
+    bool HasError = parseStatement(Info, nullptr);
 
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
-    if (Parsed && !hasPendingError() && Lexer.getTok().is(AsmToken::Error)) {
+    if (HasError && !hasPendingError() && Lexer.getTok().is(AsmToken::Error))
       Lex();
-    }
 
     // parseStatement returned true so may need to emit an error.
     printPendingErrors();
 
     // Skipping to the next line if needed.
-    if (Parsed && !getLexer().isAtStartOfStatement())
+    if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
   }
 

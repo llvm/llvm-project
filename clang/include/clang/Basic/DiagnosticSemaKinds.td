@@ -49,6 +49,8 @@ defm constexpr_ctor_missing_init : CXX20Compat<
 defm adl_only_template_id : CXX20Compat<
   "use of function template name with no prior declaration in function call "
   "with explicit template arguments is">;
+defm ctad_for_alias_templates
+    : CXX20Compat<"class template argument deduction for alias templates is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -3193,6 +3195,10 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
+def err_callback_attribute_wrong_arg_count : Error<
+  "'callback' attribute references function of type %0 which expects %1 "
+  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
+  "%plural{1:argument|:arguments}2">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
@@ -8448,11 +8454,6 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-
-  // C++20 class template argument deduction for alias templates.
-  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
-  "class template argument deduction for alias templates is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -13054,6 +13055,8 @@ def warn_acc_confusing_routine_name
       InGroup<DiagGroup<"openacc-confusing-routine-name">>;
 def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
+def err_acc_invalid_modifier
+    : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
