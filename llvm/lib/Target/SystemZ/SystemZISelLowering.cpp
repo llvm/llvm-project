@@ -553,7 +553,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f16, LibCall);
     setOperationAction(ISD::BITCAST, MVT::i16, Custom);
     setOperationAction(ISD::IS_FPCLASS, MVT::f16, Custom);
-    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Custom);
+    setOperationAction(ISD::FCOPYSIGN, MVT::f16, Legal);
   }
 
   for (unsigned I = MVT::FIRST_FP_VALUETYPE;
@@ -6989,21 +6989,6 @@ SDValue SystemZTargetLowering::lowerIS_FPCLASS(SDValue Op,
   return getCCResult(DAG, Intr);
 }
 
-SDValue SystemZTargetLowering::lowerFCOPYSIGN(SDValue Op,
-                                              SelectionDAG &DAG) const {
-  MVT VT = Op.getSimpleValueType();
-  SDValue ValOp = Op.getOperand(0);
-  SDValue SignOp = Op.getOperand(1);
-
-  // Remove the rounding which would result in a libcall for half.
-  if (VT == MVT::f16 && SignOp.getOpcode() == ISD::FP_ROUND) {
-    SDValue WideOp = SignOp.getOperand(0);
-    return DAG.getNode(ISD::FCOPYSIGN, SDLoc(Op), VT, ValOp, WideOp);
-  }
-
-  return Op; // Legal
-}
-
 SDValue SystemZTargetLowering::lowerREADCYCLECOUNTER(SDValue Op,
                                                      SelectionDAG &DAG) const {
   SDLoc DL(Op);
@@ -7175,8 +7160,6 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerStoreF16(Op, DAG);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
-  case ISD::FCOPYSIGN:
-    return lowerFCOPYSIGN(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::READCYCLECOUNTER:
