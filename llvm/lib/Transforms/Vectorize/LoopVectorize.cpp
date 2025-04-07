@@ -4876,7 +4876,8 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
 /// Returns the register usage for each VF in \p VFs.
 static SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
 calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
-                       const TargetTransformInfo &TTI) {
+                       const TargetTransformInfo &TTI,
+                       const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
   // This function calculates the register usage by measuring the highest number
   // of values that are alive at a single location. Obviously, this is a very
   // rough estimation. We scan the loop in a topological order in order and
@@ -4989,8 +4990,17 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
     for (VPRecipeBase *ToRemove : List)
       OpenIntervals.erase(ToRemove);
 
-    // Ignore recipes that are never used within the loop.
+    // Ignore recipes that are never used within the loop and do not have side
+    // effects.
     if (!Ends.count(R) && !R->mayHaveSideEffects())
+      continue;
+
+    // Skip recipes for ignored values.
+    // TODO: Should mark recipes for ephemeral values that cannot be removed
+    // explictly in VPlan.
+    if (isa<VPSingleDefRecipe>(R) &&
+        ValuesToIgnore.contains(
+            cast<VPSingleDefRecipe>(R)->getUnderlyingValue()))
       continue;
 
     // For each VF find the maximum usage of registers.
@@ -5147,7 +5157,8 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
       return 1;
   }
 
-  RegisterUsage R = ::calculateRegisterUsage(Plan, {VF}, TTI)[0];
+  RegisterUsage R =
+      ::calculateRegisterUsage(Plan, {VF}, TTI, ValuesToIgnore)[0];
   // We divide by these constants so assume that we have at least one
   // instruction that uses at least one register.
   for (auto &Pair : R.MaxLocalUsers) {
