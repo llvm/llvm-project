@@ -723,5 +723,4 @@ gpu.func @test_convert_layout_wg(%a: vector<32x64xf16>) {
   gpu.return
 }
 
-
 }
