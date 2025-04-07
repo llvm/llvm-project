@@ -3042,6 +3042,7 @@ public:
 
   /// Emit an aggregate assignment.
   void EmitAggregateAssign(LValue Dest, LValue Src, QualType EltTy) {
+    ApplyAtomGroup Grp(getDebugInfo());
     bool IsVolatile = hasVolatileMember(EltTy);
     EmitAggregateCopy(Dest, Src, EltTy, AggValueSlot::MayOverlap, IsVolatile);
   }
