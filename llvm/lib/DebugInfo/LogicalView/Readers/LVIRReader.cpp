@@ -1923,7 +1923,7 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
       SeenVars.push_back(DVA);
     }
 
-    // Skip Undefined values.
+    // Skip undefined values.
     if (!DbgVar->isKillLocation())
       getOrCreateVariable(DbgVar->getVariable(), DbgVar->getDebugLoc().get());
 
