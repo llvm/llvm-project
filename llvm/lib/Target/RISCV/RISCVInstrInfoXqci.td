@@ -1152,6 +1152,39 @@ let EmitPriority = 0 in {
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions
+//===----------------------------------------------------------------------===//
+
+class LongBcciPseudo<DAGOperand InTyImm, int size>
+    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
+{
+  let Size = size;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let hasSideEffects = 0;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let isAsmParserOnly = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+// This will be expanded into either:
+// QC.BXXX(4 bytes) + JAL(4 bytes)
+// or
+// QC.E.BXXX(6 bytes) + JAL(4 bytes)
+def PseudoLongQC_BEQI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BNEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BGEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_BGEUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_E_BEQI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BNEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
+def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns

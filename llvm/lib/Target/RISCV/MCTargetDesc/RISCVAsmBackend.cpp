@@ -198,6 +198,30 @@ static unsigned getRelaxedOpcode(unsigned Op) {
     return RISCV::PseudoLongBLTU;
   case RISCV::BGEU:
     return RISCV::PseudoLongBGEU;
+  case RISCV::QC_BEQI:
+    return RISCV::PseudoLongQC_BEQI;
+  case RISCV::QC_BNEI:
+    return RISCV::PseudoLongQC_BNEI;
+  case RISCV::QC_BLTI:
+    return RISCV::PseudoLongQC_BLTI;
+  case RISCV::QC_BGEI:
+    return RISCV::PseudoLongQC_BGEI;
+  case RISCV::QC_BLTUI:
+    return RISCV::PseudoLongQC_BLTUI;
+  case RISCV::QC_BGEUI:
+    return RISCV::PseudoLongQC_BGEUI;
+  case RISCV::QC_E_BEQI:
+    return RISCV::PseudoLongQC_E_BEQI;
+  case RISCV::QC_E_BNEI:
+    return RISCV::PseudoLongQC_E_BNEI;
+  case RISCV::QC_E_BLTI:
+    return RISCV::PseudoLongQC_E_BLTI;
+  case RISCV::QC_E_BGEI:
+    return RISCV::PseudoLongQC_E_BGEI;
+  case RISCV::QC_E_BLTUI:
+    return RISCV::PseudoLongQC_E_BLTUI;
+  case RISCV::QC_E_BGEUI:
+    return RISCV::PseudoLongQC_E_BGEUI;
   }
 }
 
@@ -224,6 +248,18 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::QC_BEQI:
+  case RISCV::QC_BNEI:
+  case RISCV::QC_BLTI:
+  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTUI:
+  case RISCV::QC_BGEUI:
+  case RISCV::QC_E_BEQI:
+  case RISCV::QC_E_BNEI:
+  case RISCV::QC_E_BLTI:
+  case RISCV::QC_E_BGEI:
+  case RISCV::QC_E_BLTUI:
+  case RISCV::QC_E_BGEUI:
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
@@ -563,7 +599,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA())
+  if (!AUIPCTarget.getAddSym())
     return false;
 
   const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
@@ -592,7 +628,7 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
-  assert(Target.getRefKind() == 0 &&
+  assert(Target.getSpecifier() == 0 &&
          "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
@@ -620,8 +656,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TA));

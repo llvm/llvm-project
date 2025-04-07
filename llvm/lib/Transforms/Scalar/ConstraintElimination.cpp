@@ -238,7 +238,7 @@ struct ConstraintTy {
   unsigned empty() const { return Coefficients.empty(); }
 
   /// Returns true if all preconditions for this list of constraints are
-  /// satisfied given \p CS and the corresponding \p Value2Index mapping.
+  /// satisfied given \p Info.
   bool isValid(const ConstraintInfo &Info) const;
 
   bool isEq() const { return IsEq; }

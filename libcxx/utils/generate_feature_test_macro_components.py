@@ -520,7 +520,6 @@ feature_test_macros = [
             "name": "__cpp_lib_flat_set",
             "values": {"c++23": 202207},
             "headers": ["flat_set"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_format",
@@ -1081,7 +1080,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_join_with",

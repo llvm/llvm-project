@@ -10,6 +10,84 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Guidelines on NVPTX Intrinsic design
+//===----------------------------------------------------------------------===//
+// 
+// The NVPTX intrinsics are used to model instructions in the PTX ISA.
+// While simpler intrinsics can represent certain features effectively,
+// more complex instructions like TMA and MMA are not as straightforward
+// to model. A single variant of these complex instructions can expand
+// into hundreds of intrinsics. Additionally, any expansion in the
+// corresponding ISA can exponentially increase these numbers, making it
+// difficult to manage them in the IR and backend passes. Therefore,
+// a careful design of intrinsic interfaces can ease maintenance and
+// contribute to a sustainable, long-term solution.
+//
+// The default approach is to have a 1:1 match between the intrinsic and
+// the instruction where the instruction suffixes map to the intrinsic name
+// and the instruction arguments map to the intrinsic arguments or return
+// value.
+//
+// However, when there are too many instruction/intrinsic variants like
+// the TMA/MMA family, it is desirable to encode some variants as a
+// constant argument, referred to as 'flags'.
+// TODO: Add a guideline to quantify the metric on 'how many intrinsics' here.
+//
+// Below are a set of guidelines that may help in choosing
+// an appropriate design for the complex intrinsics:
+// 
+// 1. Each flag argument represents one set of instruction modifiers.
+//    These flags are compile-time integer constants.
+// 
+// 2. When an intrinsic uses flags, document it with details of the
+//    flag usage in the ``NVPTXUsage.rst`` file.
+// 3. Annotate all flag arguments with ImmArg<ArgIdx<>>.
+// 4. Place the flag arguments at the end of the (actual)argument list.
+// 
+// 5. Use `i1` for boolean flags and `i8` for others. Usually,
+//    the `i8` types represent an `enum` encoding the family of
+//    modifiers.
+// 6. Note that, the specific variant for non-boolean flags may not be
+//    obvious in the IR. So, maintain consistency between the enum value
+//    definitions and their usage in the backend.
+//    * Provide a meaningful default value in the enums wherever applicable.
+//    * TODO: Investigate auto-upgrade capability for intrinsics
+//      when only flag value mappings change.
+//
+// 7. Identify the key features of an intrinsic and distinguish between
+//    first-order and supplementary information. Typically, encoding the
+//    first-order information in the intrinsic name while using flags
+//    for supplementary details improves readability.
+//    For example:
+// 
+//    i. For MMA intrinsics, 'dense' vs. 'sparse' is a fundamental feature,
+//    whereas an optional scaling applied to matrices is relatively secondary.
+// 
+//    ii. For TMAs, the mode of copy (e.g., 'Tile' or 'Im2col') is a first-order
+//    information, while features like an optional cache hint tend to be
+//    secondary.
+// 
+// 8. If there are invalid combinations within a set of modifiers, avoid
+//    encoding them as flags, as much as possible. This helps reduce the
+//    need for error handling of unsupported cases in the backend.
+//    For example, some 'cvt' intrinsics support only a subset of the
+//    possible rounding modes; so it is preferable not to encode the
+//    rounding modes as flags.
+// 9. Similarly, when there are invalid combinations across a set of
+//    modifiers, avoid encoding them as flags to prevent additional
+//    complexity in error handling.
+// 
+// 10. Maintain a consistent design within an intrinsic family, including
+//     argument ordering as well as the usage and ordering of flags.
+// 11. When designing an intrinsic corresponding to an instruction or its variant,
+//     consider the entire instruction family. This may reveal common features
+//     that can be modelled consistently across the family.
+// 
+// In summary, strive to balance the aspects mentioned above, to achieve
+// a scalable design with maximum readability.
+//===----------------------------------------------------------------------===//
+
 // The following intrinsics were once defined here, but are now auto-upgraded
 // to target-generic LLVM intrinsics.
 //

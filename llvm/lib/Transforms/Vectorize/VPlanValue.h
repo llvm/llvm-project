@@ -246,6 +246,9 @@ public:
     New->addUser(*this);
   }
 
+  /// Replaces all uses of \p From in the VPUser with \p To.
+  void replaceUsesOfWith(VPValue *From, VPValue *To);
+
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
   typedef iterator_range<operand_iterator> operand_range;

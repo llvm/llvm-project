@@ -85,6 +85,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::UselessIomsg);
   warnUsage_.set(UsageWarning::UnsignedLiteralTruncation);
   warnUsage_.set(UsageWarning::NullActualForDefaultIntentAllocatable);
+  warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);

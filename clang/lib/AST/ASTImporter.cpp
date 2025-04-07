@@ -8273,14 +8273,13 @@ ASTNodeImporter::VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
 
 ExpectedStmt ASTNodeImporter::VisitPackExpansionExpr(PackExpansionExpr *E) {
   Error Err = Error::success();
-  auto ToType = importChecked(Err, E->getType());
-  auto ToPattern = importChecked(Err, E->getPattern());
+  auto *ToPattern = importChecked(Err, E->getPattern());
   auto ToEllipsisLoc = importChecked(Err, E->getEllipsisLoc());
   if (Err)
     return std::move(Err);
 
-  return new (Importer.getToContext()) PackExpansionExpr(
-      ToType, ToPattern, ToEllipsisLoc, E->getNumExpansions());
+  return new (Importer.getToContext())
+      PackExpansionExpr(ToPattern, ToEllipsisLoc, E->getNumExpansions());
 }
 
 ExpectedStmt ASTNodeImporter::VisitSizeOfPackExpr(SizeOfPackExpr *E) {

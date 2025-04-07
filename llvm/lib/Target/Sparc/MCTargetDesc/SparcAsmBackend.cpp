@@ -277,7 +277,7 @@ namespace {
       default:
         return false;
       case Sparc::fixup_sparc_wplt30:
-        if (Target.getSymA()->getSymbol().isTemporary())
+        if (Target.getAddSym()->isTemporary())
           return false;
         [[fallthrough]];
       case Sparc::fixup_sparc_tls_gd_hi22:

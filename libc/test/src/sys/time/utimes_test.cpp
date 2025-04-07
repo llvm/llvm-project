@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fcntl_macros.h"
+#include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_timeval.h"
 #include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
@@ -14,17 +15,22 @@
 #include "src/sys/stat/stat.h"
 #include "src/sys/time/utimes.h"
 #include "src/unistd/close.h"
+
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LlvmLibcUtimesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
 // SUCCESS: Takes a file and successfully updates
 // its last access and modified times.
-TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
+TEST_F(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
   constexpr const char *FILE_PATH = "utimes_pass.test";
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
-  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
+  ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
@@ -36,11 +42,11 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
   times[1].tv_usec = 23456;
 
   // ensure utimes succeeds
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Succeeds(0));
 
   // verify the times values against stat of the TEST_FILE
   struct stat statbuf;
-  ASSERT_EQ(LIBC_NAMESPACE::stat(FILE_PATH, &statbuf), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::stat(TEST_FILE, &statbuf), 0);
 
   // seconds
   ASSERT_EQ(statbuf.st_atim.tv_sec, times[0].tv_sec);
@@ -57,13 +63,13 @@ TEST(LlvmLibcUtimesTest, ChangeTimesSpecific) {
 
 // FAILURE: Invalid values in the timeval struct
 // to check that utimes rejects it.
-TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
+TEST_F(LlvmLibcUtimesTest, InvalidMicroseconds) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
   constexpr const char *FILE_PATH = "utimes_fail.test";
   auto TEST_FILE = libc_make_test_file_path(FILE_PATH);
-  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT);
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
@@ -76,7 +82,7 @@ TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   times[1].tv_usec = 1000000; // invalid
 
   // ensure utimes fails
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));
 
   // check for failure on
   // the other possible bad values
@@ -87,6 +93,6 @@ TEST(LlvmLibcUtimesTest, InvalidMicroseconds) {
   times[1].tv_usec = 1000;
 
   // ensure utimes fails once more
-  ASSERT_THAT(LIBC_NAMESPACE::utimes(FILE_PATH, times), Fails(EINVAL));
+  ASSERT_THAT(LIBC_NAMESPACE::utimes(TEST_FILE, times), Fails(EINVAL));
   ASSERT_THAT(LIBC_NAMESPACE::remove(TEST_FILE), Succeeds(0));
 }

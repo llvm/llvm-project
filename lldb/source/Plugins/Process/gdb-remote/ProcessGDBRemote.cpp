@@ -3410,6 +3410,9 @@ Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
 void ProcessGDBRemote::Clear() {
   m_thread_list_real.Clear();
   m_thread_list.Clear();
+  if (m_thread_create_bp_sp)
+    if (TargetSP target_sp = m_target_wp.lock())
+      target_sp->RemoveBreakpointByID(m_thread_create_bp_sp->GetID());
 }
 
 Status ProcessGDBRemote::DoSignal(int signo) {

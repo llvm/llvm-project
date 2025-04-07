@@ -39,7 +39,7 @@ namespace clang {
       DIAG_SIZE_FRONTEND      =  200,
       DIAG_SIZE_SERIALIZATION =  120,
       DIAG_SIZE_LEX           =  500,
-      DIAG_SIZE_PARSE         =  700,
+      DIAG_SIZE_PARSE         =  800,
       DIAG_SIZE_AST           =  300,
       DIAG_SIZE_COMMENT       =  100,
       DIAG_SIZE_CROSSTU       =  100,

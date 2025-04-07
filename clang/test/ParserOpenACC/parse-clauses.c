@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -verify -fopenacc -std=c99
-// RUNX: %clang_cc1 %s -verify -fopenacc
-// RUNX: %clang_cc1 %s -verify -fopenacc -x c++
+// RUN: %clang_cc1 %s -verify=expected,c -fopenacc -std=c99
+// RUN: %clang_cc1 %s -verify=expected,c -fopenacc
+// RUN: %clang_cc1 %s -verify=expected,cpp -fopenacc -x c++
 
 void func() {
 
@@ -422,7 +422,8 @@ void VarListClauses() {
 #pragma acc serial copy(HasMem.MemArr[:]), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{expected expression}}
+  // cpp-error@+2{{expected unqualified-id}}
+  // c-error@+1{{expected expression}}
 #pragma acc serial copy(HasMem.MemArr[::]), self
   for(int i = 0; i < 5;++i) {}
 
@@ -441,6 +442,21 @@ void VarListClauses() {
 
   // expected-warning@+1{{OpenACC clause name 'present_or_copy' is a deprecated clause name and is now an alias for 'copy'}}
 #pragma acc serial present_or_copy(HasMem.MemArr[3:])
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+2{{unknown modifier 'foo' in OpenACC modifier-list on 'copy' clause}}
+  // expected-error@+1{{unknown modifier 'bar' in OpenACC modifier-list on 'copy' clause}}
+#pragma acc parallel copy(foo, bar: HasMem.MemArr[3:]) self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+1{{duplicate modifier 'always' in OpenACC modifier-list on 'copy' clause}}
+#pragma acc parallel copy(always, alwaysin, always: HasMem.MemArr[3:]) self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+3{{use of undeclared identifier 'always'}}
+  // expected-error@+2{{use of undeclared identifier 'alwaysin'}}
+  // expected-error@+1{{use of undeclared identifier 'always'}}
+#pragma acc parallel copy(always, alwaysin, always, HasMem.MemArr[3:]) self
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2 2{{OpenACC variable in 'use_device' clause is not a valid variable name or array name}}
@@ -580,21 +596,30 @@ void VarListClauses() {
 #pragma acc serial copyout(zero s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'readonly' on 'copyout' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copyout' clause}}
 #pragma acc serial copyout(readonly:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyout' clause}}
 #pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'copyout' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyout' clause}}
 #pragma acc serial copyout(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2{{use of undeclared identifier 'invalid'}}
   // expected-error@+1{{expected ','}}
 #pragma acc serial copyout(invalid s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyout' clause}}
+  // expected-error@+1{{unknown modifier 'bar' in OpenACC modifier-list on 'copyout' clause}}
+#pragma acc serial copyout(invalid, bar: s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+1{{duplicate modifier 'zero' in OpenACC modifier-list on 'copyout' clause}}
+#pragma acc serial copyout(zero, zero, always: s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+1{{expected ','}}
@@ -605,6 +630,20 @@ void VarListClauses() {
   for(int i = 0; i < 5;++i) {}
 
 #pragma acc serial create(zero:s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc serial create(always, zero:s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+2{{duplicate modifier 'always' in OpenACC modifier-list on 'create' clause}}
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc serial create(always, always, zero:s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'create' clause}}
+  // expected-error@+1{{OpenACC 'always' modifier not valid on 'create' clause}}
+#pragma acc serial create(always, invalid, zero:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
   // expected-warning@+1{{OpenACC clause name 'pcreate' is a deprecated clause name and is now an alias for 'create'}}
@@ -623,15 +662,15 @@ void VarListClauses() {
 #pragma acc serial create(zero s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'readonly' on 'create' clause}}
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'create' clause}}
 #pragma acc serial create(readonly:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'create' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'create' clause}}
 #pragma acc serial create(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'create' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'create' clause}}
 #pragma acc serial create(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
@@ -666,21 +705,30 @@ void VarListClauses() {
 #pragma acc serial copyin(readonly s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'zero' on 'copyin' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc serial copyin(zero :s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyin' clause}}
 #pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+1{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-error@+1{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyin' clause}}
 #pragma acc serial copyin(invalid:s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+2{{use of undeclared identifier 'invalid'}}
   // expected-error@+1{{expected ','}}
 #pragma acc serial copyin(invalid s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+2{{unknown modifier 'foo' in OpenACC modifier-list on 'copyin' clause}}
+  // expected-error@+1{{unknown modifier 'bar' in OpenACC modifier-list on 'copyin' clause}}
+#pragma acc serial copyin(foo, bar: s.array[s.value : 5], s.value), self
+  for(int i = 0; i < 5;++i) {}
+
+  // expected-error@+1{{duplicate modifier 'readonly' in OpenACC modifier-list on 'copyin' clause}}
+#pragma acc serial copyin(always, readonly, readonly: s.array[s.value : 5], s.value), self
   for(int i = 0; i < 5;++i) {}
 }
 

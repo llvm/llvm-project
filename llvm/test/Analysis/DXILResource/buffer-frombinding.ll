@@ -1,4 +1,4 @@
-; RUN: opt -S -disable-output -passes="print<dxil-resource-binding>" < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output -passes="print<dxil-resources>" < %s 2>&1 | FileCheck %s
 
 @G = external constant <4 x float>, align 4
 

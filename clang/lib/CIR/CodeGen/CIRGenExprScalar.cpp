@@ -488,6 +488,8 @@ public:
     return emitUnaryOp(e, cir::UnaryOpKind::Not, op);
   }
 
+  mlir::Value VisitUnaryLNot(const UnaryOperator *e);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -1315,7 +1317,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                      "fixed point casts");
       return {};
     }
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(), "fp options");
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());
   }
@@ -1351,6 +1353,33 @@ mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
          "Invalid scalar expression to emit");
   return ScalarExprEmitter(*this, builder)
       .emitScalarConversion(src, srcTy, dstTy, loc);
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
+  // Perform vector logical not on comparison with zero vector.
+  if (e->getType()->isVectorType() &&
+      e->getType()->castAs<VectorType>()->getVectorKind() ==
+          VectorKind::Generic) {
+    assert(!cir::MissingFeatures::vectorType());
+    cgf.cgm.errorNYI(e->getSourceRange(), "vector logical not");
+    return {};
+  }
+
+  // Compare operand to zero.
+  mlir::Value boolVal = cgf.evaluateExprAsBool(e->getSubExpr());
+
+  // Invert value.
+  boolVal = builder.createNot(boolVal);
+
+  // ZExt result to the expr type.
+  mlir::Type dstTy = cgf.convertType(e->getType());
+  if (mlir::isa<cir::IntType>(dstTy))
+    return builder.createBoolToInt(boolVal, dstTy);
+  if (mlir::isa<cir::BoolType>(dstTy))
+    return boolVal;
+
+  cgf.cgm.errorNYI("destination type for logical-not unary operator is NYI");
+  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

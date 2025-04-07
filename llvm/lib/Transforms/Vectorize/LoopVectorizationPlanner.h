@@ -263,10 +263,10 @@ public:
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
                       FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
-                      VPValue *VF) {
+                      VPValue *VF, DebugLoc DL) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
-        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
   //===--------------------------------------------------------------------===//

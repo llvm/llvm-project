@@ -126,7 +126,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
             IC.Builder.CreateBitCast(II.getArgOperand(0), Mask->getType());
         Value *Op1 =
             IC.Builder.CreateBitCast(II.getArgOperand(1), Mask->getType());
-        Value *Result = UndefValue::get(Op0->getType());
+        Value *Result = PoisonValue::get(Op0->getType());
 
         // Only extract each element once.
         Value *ExtractedElts[32];

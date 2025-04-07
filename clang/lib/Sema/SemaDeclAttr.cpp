@@ -4145,15 +4145,10 @@ static void handleCallbackAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (CalleeFnProtoType->getNumParams() > EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << AL << (unsigned)(EncodingIndices.size() - 1);
-    return;
-  }
-
-  if (CalleeFnProtoType->getNumParams() < EncodingIndices.size() - 1) {
-    S.Diag(AL.getLoc(), diag::err_attribute_wrong_number_arguments)
-        << AL << (unsigned)(EncodingIndices.size() - 1);
+  if (CalleeFnProtoType->getNumParams() != EncodingIndices.size() - 1) {
+    S.Diag(AL.getLoc(), diag::err_callback_attribute_wrong_arg_count)
+        << QualType{CalleeFnProtoType, 0} << CalleeFnProtoType->getNumParams()
+        << (unsigned)(EncodingIndices.size() - 1);
     return;
   }
 

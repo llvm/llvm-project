@@ -319,6 +319,9 @@ Improvements to Clang's diagnostics
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
 
+- Now correctly diagnose a tentative definition of an array with static
+  storage duration in pedantic mode in C. (#GH50661)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -354,6 +357,10 @@ Bug Fixes to Compiler Builtins
 
 - The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
 
+- The signature for ``__builtin___clear_cache`` was changed from
+  ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
+  for the same builtin. (#GH47833)
+
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
  - Fixed crash when a parameter to the ``clang::annotate`` attribute evaluates to ``void``. See #GH119125
@@ -362,6 +369,10 @@ Bug Fixes to Attribute Support
   argument form of GCC 11's ``__attribute__((malloc(deallocator)))``
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
+
+- Corrected the diagnostic for the ``callback`` attribute when passing too many
+  or too few attribute argument indicies for the specified callback function.
+  (#GH47451)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -385,6 +396,7 @@ Bug Fixes to C++ Support
 - Improved fix for an issue with pack expansions of type constraints, where this
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
+- Fixes to partial ordering of non-type template parameter packs. (#GH132562)
 - Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
   a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)

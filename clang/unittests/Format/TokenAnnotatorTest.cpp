@@ -3935,6 +3935,12 @@ TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
 }
 
+TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
+  auto Tokens = annotate("return u8\"foo\";", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
+}
+
 } // namespace
 } // namespace format
 } // namespace clang

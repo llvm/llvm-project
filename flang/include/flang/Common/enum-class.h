@@ -17,6 +17,7 @@
 #ifndef FORTRAN_COMMON_ENUM_CLASS_H_
 #define FORTRAN_COMMON_ENUM_CLASS_H_
 
+#include "flang/Common/variant.h"
 #include <array>
 #include <string>
 

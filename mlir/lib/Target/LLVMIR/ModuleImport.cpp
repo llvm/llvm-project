@@ -563,6 +563,23 @@ LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   return success();
 }
 
+LogicalResult ModuleImport::convertDependentLibrariesMetadata() {
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    if (named.getName() != "llvm.dependent-libraries")
+      continue;
+    SmallVector<StringRef> libraries;
+    for (const llvm::MDNode *node : named.operands()) {
+      if (node->getNumOperands() == 1)
+        if (auto *mdString = dyn_cast<llvm::MDString>(node->getOperand(0)))
+          libraries.push_back(mdString->getString());
+    }
+    if (!libraries.empty())
+      mlirModule->setAttr(LLVM::LLVMDialect::getDependentLibrariesAttrName(),
+                          builder.getStrArrayAttr(libraries));
+  }
+  return success();
+}
+
 LogicalResult ModuleImport::convertIdentMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     // llvm.ident should have a single operand. That operand is itself an
@@ -624,6 +641,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertDependentLibrariesMetadata()))
     return failure();
   if (failed(convertModuleFlagsMetadata()))
     return failure();

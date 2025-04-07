@@ -125,7 +125,7 @@ bool RootSignatureParser::peekExpectedToken(TokenKind Expected) {
 }
 
 bool RootSignatureParser::peekExpectedToken(ArrayRef<TokenKind> AnyExpected) {
-  RootSignatureToken Result = Lexer.PeekNextToken();
+  RootSignatureToken Result = Lexer.peekNextToken();
   return llvm::is_contained(AnyExpected, Result.TokKind);
 }
 

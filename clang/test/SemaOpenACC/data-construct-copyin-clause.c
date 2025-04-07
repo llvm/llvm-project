@@ -58,7 +58,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data copyin((float)ArrayParam[2])
   ;
-  // expected-error@+2{{invalid tag 'invalid' on 'copyin' clause}}
+  // expected-error@+2{{unknown modifier 'invalid' in OpenACC modifier-list on 'copyin' clause}}
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, member of a composite variable, or composite variable member}}
 #pragma acc data copyin(invalid:(float)ArrayParam[2])
   ;
@@ -70,4 +70,25 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
   // expected-error@+1{{OpenACC 'pcopyin' clause is not valid on 'host_data' directive}}
 #pragma acc host_data pcopyin(LocalInt)
   ;
+}
+
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc data copyin(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+#pragma acc data copyin(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc data copyin(zero: V1)
+#pragma acc data copyin(always, alwaysin, readonly: V1)
+
+  // expected-error@+2{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc enter data copyin(always, alwaysin, alwaysout, zero, readonly: V1)
+  // expected-error@+1{{OpenACC 'alwaysout' modifier not valid on 'copyin' clause}}
+#pragma acc enter data copyin(alwaysout: V1)
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
+#pragma acc enter data copyin(zero: V1)
+#pragma acc enter data copyin(always, alwaysin, readonly: V1)
 }

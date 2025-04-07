@@ -1257,7 +1257,7 @@ public:
     // We are going to mutate this 1D vector until it is either the final
     // result (in the non-aggregate case) or the value that needs to be
     // inserted into the aggregate result.
-    Value sourceAggregate = adaptor.getSource();
+    Value sourceAggregate = adaptor.getValueToStore();
     if (insertIntoInnermostDim) {
       // Scalar-into-1D-vector case, so we know we will have to create a
       // InsertElementOp. The question is into what destination.
@@ -1279,7 +1279,8 @@ public:
       }
       // Insert the scalar into the 1D vector.
       sourceAggregate = rewriter.create<LLVM::InsertElementOp>(
-          loc, sourceAggregate.getType(), sourceAggregate, adaptor.getSource(),
+          loc, sourceAggregate.getType(), sourceAggregate,
+          adaptor.getValueToStore(),
           getAsLLVMValue(rewriter, loc, positionOfScalarWithin1DVector));
     }
 
@@ -1305,7 +1306,7 @@ struct VectorScalableInsertOpLowering
   matchAndRewrite(vector::ScalableInsertOp insOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<LLVM::vector_insert>(
-        insOp, adaptor.getDest(), adaptor.getSource(), adaptor.getPos());
+        insOp, adaptor.getDest(), adaptor.getValueToStore(), adaptor.getPos());
     return success();
   }
 };

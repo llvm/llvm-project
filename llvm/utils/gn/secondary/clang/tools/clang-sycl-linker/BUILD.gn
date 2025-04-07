@@ -9,15 +9,17 @@ executable("clang-sycl-linker") {
   deps = [
     ":SYCLLinkOpts",
     "//clang/lib/Basic",
+    "//llvm/lib/Analysis",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/Bitcode/Writer",
     "//llvm/lib/IR",
     "//llvm/lib/IRReader",
     "//llvm/lib/Linker",
+    "//llvm/lib/MC",
     "//llvm/lib/Option",
     "//llvm/lib/Object",
     "//llvm/lib/Support",
-    "//llvm/lib/TargetParser",
+    "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [ "ClangSYCLLinker.cpp" ]
 }

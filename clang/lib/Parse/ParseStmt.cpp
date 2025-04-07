@@ -2142,7 +2142,13 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     }
     DeclGroupPtrTy DG;
     SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
-    if (Tok.is(tok::kw_using)) {
+    if (!getLangOpts().CPlusPlus &&
+        Tok.isOneOf(tok::kw_static_assert, tok::kw__Static_assert)) {
+      ProhibitAttributes(attrs);
+      Decl *D = ParseStaticAssertDeclaration(DeclEnd);
+      DG = Actions.ConvertDeclToDeclGroup(D);
+      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
+    } else if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
       FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());

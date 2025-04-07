@@ -6757,7 +6757,7 @@ public:
 /// and corresponding __opencl_atomic_* for OpenCL 2.0.
 /// All of these instructions take one primary pointer, at least one memory
 /// order. The instructions for which getScopeModel returns non-null value
-/// take one synch scope.
+/// take one sync scope.
 class AtomicExpr : public Expr {
 public:
   enum AtomicOp {

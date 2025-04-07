@@ -136,16 +136,10 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 ///                       Pass (Manager) Boilerplate
 /// ----------------------------------------------------------------------------
 
-namespace llvm {
-void initializeNVPTXForwardParamsPassPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 struct NVPTXForwardParamsPass : public MachineFunctionPass {
   static char ID;
-  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {
-    initializeNVPTXForwardParamsPassPass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

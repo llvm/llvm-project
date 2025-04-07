@@ -1733,16 +1733,20 @@ bool HadUseError(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
     for (const auto &[location, sym] : details->occurrences()) {
       const Symbol &ultimate{sym->GetUltimate()};
-      auto &attachment{
-          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-              at, sym->owner().GetName().value())};
-      if (&*sym != &ultimate) {
-        // For incompatible definitions where one comes from a hermetic
-        // module file's incorporated dependences and the other from another
-        // module of the same name.
-        attachment.Attach(ultimate.name(),
-            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
-            ultimate.owner().GetName().value());
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
       }
     }
     context.SetError(*symbol);

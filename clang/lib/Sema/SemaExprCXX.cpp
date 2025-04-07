@@ -3265,11 +3265,13 @@ FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
   return Result.FD;
 }
 
-FunctionDecl *Sema::FindDeallocationFunctionForDestructor(
-    SourceLocation Loc, CXXRecordDecl *RD, DeclarationName Name) {
+FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
+                                                          CXXRecordDecl *RD,
+                                                          DeclarationName Name,
+                                                          bool Diagnose) {
 
   FunctionDecl *OperatorDelete = nullptr;
-  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete))
+  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, Diagnose))
     return nullptr;
   if (OperatorDelete)
     return OperatorDelete;

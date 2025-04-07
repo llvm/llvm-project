@@ -37,3 +37,8 @@ qc.cm.pop {ra, s0-s1}, -40
 # CHECK-ERROR: :[[@LINE+1]]:14: error: register list must include 's0' or 'x8'
 qc.cm.pushfp {ra}, -16
 
+# CHECK-ERROR: :[[@LINE+1]]:12: error: operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}
+qc.cm.push x1, -16
+
+# CHECK-ERROR: :[[@LINE+1]]:14: error: operand must be {ra, s0[-sN]} or {x1, x8[-x9][, x18[-xN]]}
+qc.cm.pushfp x1, -16

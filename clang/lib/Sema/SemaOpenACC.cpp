@@ -2070,7 +2070,6 @@ void SemaOpenACC::CheckRoutineDecl(SourceLocation DirLoc,
     return;
   }
 
-  // TODO ERICH: Check bind here.
   auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
   for (auto *A : NextParsedFDecl->attrs()) {
     // OpenACC 3.3 2.15:

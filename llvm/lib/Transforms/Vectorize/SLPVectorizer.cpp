@@ -817,7 +817,28 @@ namespace {
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
-  /// The main/alternate instruction. MainOp is also VL0.
+  /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
+  /// only BinaryOperator, CastInst, and CmpInst support alternate instructions
+  /// (i.e., AltOp is not equal to MainOp; this can be checked using
+  /// isAltShuffle).
+  /// A rare exception is TrySplitNode, where the InstructionsState is derived
+  /// from getMainAltOpsNoStateVL.
+  /// For those InstructionsState that use alternate instructions, the resulting
+  /// vectorized output ultimately comes from a shufflevector. For example,
+  /// given a vector list (VL):
+  /// VL[0] = add i32 a, e
+  /// VL[1] = sub i32 b, f
+  /// VL[2] = add i32 c, g
+  /// VL[3] = sub i32 d, h
+  /// The vectorized result would be:
+  /// intermediated_0 = add <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// intermediated_1 = sub <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// result = shufflevector <4 x i32> intermediated_0,
+  ///                        <4 x i32> intermediated_1,
+  ///                        <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  /// Since shufflevector is used in the final result, when calculating the cost
+  /// (getEntryCost), we must account for the usage of shufflevector in
+  /// GetVectorCost.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
 
@@ -6273,7 +6294,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
 
     SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
     for (auto [I, V] : zip(UserBVHead, TE.Scalars)) {
-      if (!V->hasNUsesOrMore(1))
+      if (isa<Constant>(V) || !V->hasNUsesOrMore(1))
         continue;
       auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
       if (!II)
@@ -12346,8 +12367,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   }
   InstructionCost CommonCost = 0;
   SmallVector<int> Mask;
-  if (!E->ReorderIndices.empty() && (E->State != TreeEntry::StridedVectorize ||
-                                     !isReverseOrder(E->ReorderIndices))) {
+  if (!E->ReorderIndices.empty() && E->State != TreeEntry::CompressVectorize &&
+      (E->State != TreeEntry::StridedVectorize ||
+       !isReverseOrder(E->ReorderIndices))) {
     SmallVector<int> NewMask;
     if (E->getOpcode() == Instruction::Store) {
       // For stores the order is actually a mask.
@@ -12924,16 +12946,22 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        SmallVector<Value *> PointerOps(VL.size());
-        for (auto [I, V] : enumerate(VL))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         bool IsMasked;
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
+        SmallVector<Value *> Scalars(VL.begin(), VL.end());
+        if (!E->ReorderIndices.empty()) {
+          SmallVector<int> Mask(E->ReorderIndices.begin(),
+                                E->ReorderIndices.end());
+          reorderScalars(Scalars, Mask);
+        }
+        SmallVector<Value *> PointerOps(Scalars.size());
+        for (auto [I, V] : enumerate(Scalars))
+          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            VL, PointerOps, std::nullopt, *TTI, *DL, *SE, *AC, *DT, *TLI,
-            [](Value *) { return true; }, IsMasked, InterleaveFactor,
+            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
+            *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
         Align CommonAlignment;
@@ -13426,7 +13454,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
        allSameBlock(VectorizableTree.front()->Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
-                 return isa<ExtractElementInst, UndefValue>(V) ||
+                 return isa<ExtractElementInst, Constant>(V) ||
                         (IsAllowedSingleBVNode &&
                          !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), IsaPred<InsertElementInst>));
@@ -15384,12 +15412,20 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   if (E->State == TreeEntry::SplitVectorize) {
     Res = FindLastInst();
+    if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
+      for (auto *E : Entries) {
+        auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
+        if (!I)
+          I = &getLastInstructionInBundle(E);
+        if (Res->comesBefore(I))
+          Res = I;
+      }
+    }
     return *Res;
   }
 
   // Set insertpoint for gathered loads to the very first load.
-  if (E->State != TreeEntry::SplitVectorize &&
-      GatheredLoadsEntriesFirst.has_value() &&
+  if (GatheredLoadsEntriesFirst.has_value() &&
       E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
       E->getOpcode() == Instruction::Load) {
     Res = FindFirstInst();
@@ -16933,7 +16969,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           ArrayRef(reinterpret_cast<const int *>(E->ReorderIndices.begin()),
                    E->ReorderIndices.size());
       ShuffleBuilder.add(V, Mask);
-    } else if (E->State == TreeEntry::StridedVectorize && IsReverseOrder) {
+    } else if ((E->State == TreeEntry::StridedVectorize && IsReverseOrder) ||
+               E->State == TreeEntry::CompressVectorize) {
       ShuffleBuilder.addOrdered(V, {});
     } else {
       ShuffleBuilder.addOrdered(V, E->ReorderIndices);
@@ -17459,15 +17496,21 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (E->State == TreeEntry::Vectorize) {
         NewLI = Builder.CreateAlignedLoad(VecTy, PO, LI->getAlign());
       } else if (E->State == TreeEntry::CompressVectorize) {
-        SmallVector<Value *> PointerOps(E->Scalars.size());
-        for (auto [I, V] : enumerate(E->Scalars))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         bool IsMasked;
         unsigned InterleaveFactor;
         SmallVector<int> CompressMask;
         VectorType *LoadVecTy;
+        SmallVector<Value *> Scalars(E->Scalars.begin(), E->Scalars.end());
+        if (!E->ReorderIndices.empty()) {
+          SmallVector<int> Mask(E->ReorderIndices.begin(),
+                                E->ReorderIndices.end());
+          reorderScalars(Scalars, Mask);
+        }
+        SmallVector<Value *> PointerOps(Scalars.size());
+        for (auto [I, V] : enumerate(Scalars))
+          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
         [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
-            E->Scalars, PointerOps, std::nullopt, *TTI, *DL, *SE, *AC, *DT,
+            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
@@ -19445,7 +19488,7 @@ bool BoUpSLP::collectValuesToDemote(
     return FinalAnalysis();
 
   if (any_of(E.Scalars, [&](Value *V) {
-        return !all_of(V->users(), [=](User *U) {
+        return !isa<Constant>(V) && !all_of(V->users(), [=](User *U) {
           return isVectorized(U) ||
                  (E.Idx == 0 && UserIgnoreList &&
                   UserIgnoreList->contains(U)) ||
@@ -20322,6 +20365,38 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
   return Dev * 96 / (Mean * Mean) == 0;
 }
 
+namespace {
+
+/// A group of stores that we'll try to bundle together using vector ops.
+/// They are ordered using the signed distance of their address operand to the
+/// address of this group's BaseInstr.
+struct RelatedStoreInsts {
+  RelatedStoreInsts(unsigned BaseInstrIdx) { reset(BaseInstrIdx); }
+  void reset(unsigned NewBaseInstr) {
+    BaseInstrIdx = NewBaseInstr;
+    Instrs.clear();
+    insertOrLookup(NewBaseInstr, 0);
+  }
+
+  /// Tries to insert \p InstrIdx as the store with a pointer distance of
+  /// \p PtrDist.
+  /// Does nothing if there is already a store with that \p PtrDist.
+  /// \returns The previously associated Instruction index, or std::nullopt
+  std::optional<unsigned> insertOrLookup(unsigned InstrIdx, int PtrDist) {
+    auto [It, Inserted] = Instrs.emplace(PtrDist, InstrIdx);
+    return Inserted ? std::nullopt : std::optional<unsigned>(It->second);
+  }
+
+  /// The index of the Base instruction, i.e. the one with a 0 pointer distance.
+  unsigned BaseInstrIdx;
+
+  /// Maps a pointer distance from \p BaseInstrIdx to an instruction index.
+  using DistToInstMap = std::map<int, unsigned>;
+  DistToInstMap Instrs;
+};
+
+} // end anonymous namespace
+
 bool SLPVectorizerPass::vectorizeStores(
     ArrayRef<StoreInst *> Stores, BoUpSLP &R,
     DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
@@ -20331,31 +20406,22 @@ bool SLPVectorizerPass::vectorizeStores(
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  struct StoreDistCompare {
-    bool operator()(const std::pair<unsigned, int> &Op1,
-                    const std::pair<unsigned, int> &Op2) const {
-      return Op1.second < Op2.second;
-    }
-  };
-  // A set of pairs (index of store in Stores array ref, Distance of the store
-  // address relative to base store address in units).
-  using StoreIndexToDistSet =
-      std::set<std::pair<unsigned, int>, StoreDistCompare>;
-  auto TryToVectorize = [&](const StoreIndexToDistSet &Set) {
+  auto TryToVectorize = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
     int PrevDist = -1;
     BoUpSLP::ValueList Operands;
     // Collect the chain into a list.
-    for (auto [Idx, Data] : enumerate(Set)) {
-      if (Operands.empty() || Data.second - PrevDist == 1) {
-        Operands.push_back(Stores[Data.first]);
-        PrevDist = Data.second;
-        if (Idx != Set.size() - 1)
+    for (auto [Idx, Data] : enumerate(StoreSeq)) {
+      auto &[Dist, InstIdx] = Data;
+      if (Operands.empty() || Dist - PrevDist == 1) {
+        Operands.push_back(Stores[InstIdx]);
+        PrevDist = Dist;
+        if (Idx != StoreSeq.size() - 1)
           continue;
       }
-      auto E = make_scope_exit([&, &DataVar = Data]() {
+      auto E = make_scope_exit([&, &Dist = Dist, &InstIdx = InstIdx]() {
         Operands.clear();
-        Operands.push_back(Stores[DataVar.first]);
-        PrevDist = DataVar.second;
+        Operands.push_back(Stores[InstIdx]);
+        PrevDist = Dist;
       });
 
       if (Operands.size() <= 1 ||
@@ -20622,7 +20688,8 @@ bool SLPVectorizerPass::vectorizeStores(
   // Need to store the index of the very first store separately, since the set
   // may be reordered after the insertion and the first store may be moved. This
   // container allows to reduce number of calls of getPointersDiff() function.
-  SmallVector<std::pair<unsigned, StoreIndexToDistSet>> SortedStores;
+  SmallVector<RelatedStoreInsts> SortedStores;
+
   // Inserts the specified store SI with the given index Idx to the set of the
   // stores. If the store with the same distance is found already - stop
   // insertion, try to vectorize already found stores. If some stores from this
@@ -20656,56 +20723,52 @@ bool SLPVectorizerPass::vectorizeStores(
   // dependencies and no need to waste compile time to try to vectorize them.
   // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
   auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
-    for (std::pair<unsigned, StoreIndexToDistSet> &Set : SortedStores) {
+    for (RelatedStoreInsts &StoreSeq : SortedStores) {
       std::optional<int> Diff = getPointersDiff(
-          Stores[Set.first]->getValueOperand()->getType(),
-          Stores[Set.first]->getPointerOperand(),
+          Stores[StoreSeq.BaseInstrIdx]->getValueOperand()->getType(),
+          Stores[StoreSeq.BaseInstrIdx]->getPointerOperand(),
           SI->getValueOperand()->getType(), SI->getPointerOperand(), *DL, *SE,
           /*StrictCheck=*/true);
       if (!Diff)
         continue;
-      auto It = Set.second.find(std::make_pair(Idx, *Diff));
-      if (It == Set.second.end()) {
-        Set.second.emplace(Idx, *Diff);
+      std::optional<unsigned> PrevInst =
+          StoreSeq.insertOrLookup(/*InstrIdx=*/Idx, /*PtrDist=*/*Diff);
+      if (!PrevInst) {
+        // No store was associated to that distance. Keep collecting.
         return;
       }
       // Try to vectorize the first found set to avoid duplicate analysis.
-      TryToVectorize(Set.second);
-      unsigned ItIdx = It->first;
-      int ItDist = It->second;
-      StoreIndexToDistSet PrevSet;
-      copy_if(Set.second, std::inserter(PrevSet, PrevSet.end()),
-              [&](const std::pair<unsigned, int> &Pair) {
-                return Pair.first > ItIdx;
+      TryToVectorize(StoreSeq.Instrs);
+      RelatedStoreInsts::DistToInstMap PrevSet;
+      copy_if(StoreSeq.Instrs, std::inserter(PrevSet, PrevSet.end()),
+              [&](const std::pair<int, unsigned> &DistAndIdx) {
+                return DistAndIdx.second > *PrevInst;
               });
-      Set.second.clear();
-      Set.first = Idx;
-      Set.second.emplace(Idx, 0);
+      StoreSeq.reset(Idx);
       // Insert stores that followed previous match to try to vectorize them
       // with this store.
-      unsigned StartIdx = ItIdx + 1;
+      unsigned StartIdx = *PrevInst + 1;
       SmallBitVector UsedStores(Idx - StartIdx);
       // Distances to previously found dup store (or this store, since they
       // store to the same addresses).
       SmallVector<int> Dists(Idx - StartIdx, 0);
-      for (const std::pair<unsigned, int> &Pair : reverse(PrevSet)) {
+      for (auto [PtrDist, InstIdx] : reverse(PrevSet)) {
         // Do not try to vectorize sequences, we already tried.
-        if (VectorizedStores.contains(Stores[Pair.first]))
+        if (VectorizedStores.contains(Stores[InstIdx]))
           break;
-        unsigned BI = Pair.first - StartIdx;
+        unsigned BI = InstIdx - StartIdx;
         UsedStores.set(BI);
-        Dists[BI] = Pair.second - ItDist;
+        Dists[BI] = PtrDist - *Diff;
       }
       for (unsigned I = StartIdx; I < Idx; ++I) {
         unsigned BI = I - StartIdx;
         if (UsedStores.test(BI))
-          Set.second.emplace(I, Dists[BI]);
+          StoreSeq.insertOrLookup(I, Dists[BI]);
       }
       return;
     }
-    auto &Res = SortedStores.emplace_back();
-    Res.first = Idx;
-    Res.second.emplace(Idx, 0);
+    // We did not find a comparable store, start a new sequence.
+    SortedStores.emplace_back(Idx);
   };
   Type *PrevValTy = nullptr;
   for (auto [I, SI] : enumerate(Stores)) {
@@ -20715,8 +20778,8 @@ bool SLPVectorizerPass::vectorizeStores(
       PrevValTy = SI->getValueOperand()->getType();
     // Check that we do not try to vectorize stores of different types.
     if (PrevValTy != SI->getValueOperand()->getType()) {
-      for (auto &Set : SortedStores)
-        TryToVectorize(Set.second);
+      for (RelatedStoreInsts &StoreSeq : SortedStores)
+        TryToVectorize(StoreSeq.Instrs);
       SortedStores.clear();
       PrevValTy = SI->getValueOperand()->getType();
     }
@@ -20724,8 +20787,8 @@ bool SLPVectorizerPass::vectorizeStores(
   }
 
   // Final vectorization attempt.
-  for (auto &Set : SortedStores)
-    TryToVectorize(Set.second);
+  for (RelatedStoreInsts &StoreSeq : SortedStores)
+    TryToVectorize(StoreSeq.Instrs);
 
   return Changed;
 }

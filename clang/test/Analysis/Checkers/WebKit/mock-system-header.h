@@ -16,6 +16,8 @@ struct MemberVariable {
     T* obj { nullptr };
 };
 
+typedef struct sqlite3 sqlite3;
+
 typedef unsigned char uint8_t;
 
 enum os_log_type_t : uint8_t {

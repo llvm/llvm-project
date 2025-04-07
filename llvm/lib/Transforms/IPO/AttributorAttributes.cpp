@@ -643,6 +643,10 @@ static void followUsesInContext(AAType &AA, Attributor &A,
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
                              Instruction &CtxI) {
+  const Value &Val = AA.getIRPosition().getAssociatedValue();
+  if (isa<ConstantData>(Val))
+    return;
+
   MustBeExecutedContextExplorer *Explorer =
       A.getInfoCache().getMustBeExecutedContextExplorer();
   if (!Explorer)
@@ -650,7 +654,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
 
   // Container for (transitive) uses of the associated value.
   SetVector<const Use *> Uses;
-  for (const Use &U : AA.getIRPosition().getAssociatedValue().uses())
+  for (const Use &U : Val.uses())
     Uses.insert(&U);
 
   followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Uses, S);
@@ -5283,6 +5287,9 @@ struct AAAlignImpl : AAAlign {
 
     // Check for users that allow alignment annotations.
     Value &AssociatedValue = getAssociatedValue();
+    if (isa<ConstantData>(AssociatedValue))
+      return ChangeStatus::UNCHANGED;
+
     for (const Use &U : AssociatedValue.uses()) {
       if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
         if (SI->getPointerOperand() == &AssociatedValue)

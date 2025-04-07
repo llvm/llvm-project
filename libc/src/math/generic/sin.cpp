@@ -158,7 +158,7 @@ LLVM_LIBC_FUNCTION(double, sin, (double x)) {
   Float128 sin_k_f128 = get_sin_k(k);
   Float128 cos_k_f128 = get_sin_k(k + 64);
 
-  // sin(x) = sin((k * pi/128 + u)
+  // sin(x) = sin(k * pi/128 + u)
   //        = sin(u) * cos(k*pi/128) + cos(u) * sin(k*pi/128)
   Float128 r = fputil::quick_add(fputil::quick_mul(sin_k_f128, cos_u),
                                  fputil::quick_mul(cos_k_f128, sin_u));

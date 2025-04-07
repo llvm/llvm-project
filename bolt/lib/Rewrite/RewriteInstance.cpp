@@ -2827,9 +2827,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (SymbolAddress == 0)
       ReferencedSymbol = BC->registerNameAtAddress(SymbolName, 0, 0, 0);
 
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                      << ReferencedSymbol->getName() << " with addend "
-                      << Addend << '\n');
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+               << (ReferencedSymbol ? ReferencedSymbol->getName() : "<none>")
+               << " with addend " << Addend << '\n');
   } else if (ReferencedBF) {
     ReferencedSymbol = ReferencedBF->getSymbol();
     uint64_t RefFunctionOffset = 0;

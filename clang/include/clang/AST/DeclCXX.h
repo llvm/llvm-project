@@ -2878,7 +2878,7 @@ public:
   static CXXDestructorDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   void setOperatorDelete(FunctionDecl *OD, Expr *ThisArg);
-  void setOperatorArrayDelete(FunctionDecl *OD, Expr *ThisArg);
+  void setOperatorArrayDelete(FunctionDecl *OD);
 
   const FunctionDecl *getOperatorDelete() const {
     return getCanonicalDecl()->OperatorDelete;

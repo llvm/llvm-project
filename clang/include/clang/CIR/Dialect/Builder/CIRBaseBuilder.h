@@ -121,6 +121,11 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  mlir::Value createNot(mlir::Value value) {
+    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Not, value);
+  }
+
   /// Create a do-while operation.
   cir::DoWhileOp createDoWhile(
       mlir::Location loc,
@@ -144,6 +149,16 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
+  /// Create a break operation.
+  cir::BreakOp createBreak(mlir::Location loc) {
+    return create<cir::BreakOp>(loc);
+  }
+
+  /// Create a continue operation.
+  cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<cir::ContinueOp>(loc);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {

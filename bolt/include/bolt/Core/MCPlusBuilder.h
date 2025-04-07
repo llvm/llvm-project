@@ -587,6 +587,41 @@ public:
     return getNoRegister();
   }
 
+  /// Returns the register containing an address safely materialized by `Inst`
+  /// under the Pointer Authentication threat model.
+  ///
+  /// Returns the register `Inst` writes to if:
+  /// 1. the register is a materialized address, and
+  /// 2. the register has been materialized safely, i.e. cannot be attacker-
+  ///    controlled, under the Pointer Authentication threat model.
+  ///
+  /// If the instruction does not write to any register satisfying the above
+  /// two conditions, NoRegister is returned.
+  ///
+  /// The Pointer Authentication threat model assumes an attacker is able to
+  /// modify any writable memory, but not executable code (due to W^X).
+  virtual MCPhysReg
+  getMaterializedAddressRegForPtrAuth(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  /// Analyzes if this instruction can safely perform address arithmetics
+  /// under Pointer Authentication threat model.
+  ///
+  /// If an (OutReg, InReg) pair is returned, then after Inst is executed,
+  /// OutReg is as trusted as InReg is.
+  ///
+  /// The arithmetic instruction is considered safe if OutReg is not attacker-
+  /// controlled, provided InReg and executable code are not. Please note that
+  /// registers other than InReg as well as the contents of memory which is
+  /// writable by the process should be considered attacker-controlled.
+  virtual std::optional<std::pair<MCPhysReg, MCPhysReg>>
+  analyzeAddressArithmeticsForPtrAuth(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return std::make_pair(getNoRegister(), getNoRegister());
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
