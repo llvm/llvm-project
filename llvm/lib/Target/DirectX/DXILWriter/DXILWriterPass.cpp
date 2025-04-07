@@ -65,10 +65,10 @@ public:
     std::string Data;
     llvm::raw_string_ostream OS(Data);
 
-    const std::string OriginalTriple = M.getTargetTriple();
+    Triple OriginalTriple = M.getTargetTriple();
     // Set to DXIL triple when write to bitcode.
     // Only the output bitcode need to be DXIL triple.
-    M.setTargetTriple("dxil-ms-dx");
+    M.setTargetTriple(Triple("dxil-ms-dx"));
 
     WriteDXILToFile(M, OS);
 

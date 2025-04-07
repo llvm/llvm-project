@@ -106,9 +106,9 @@ extern "C" int d2(int arg);
 inline int d3(int arg) noexcept(true);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}inline auto d3(int arg) noexcept(true) -> int;{{$}}
-inline int d4(int arg) try { } catch(...) { }
+inline int d4(int arg) try { return 0; } catch(...) { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: {{^}}inline auto d4(int arg) -> int try { } catch(...) { }{{$}}
+// CHECK-FIXES: {{^}}inline auto d4(int arg) -> int try { return 0; } catch(...) { return 0; }{{$}}
 int d5(int arg) throw();
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}auto d5(int arg) throw() -> int;{{$}}
@@ -167,9 +167,9 @@ namespace N {
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:9: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}    auto e1() -> int;{{$}}
-int N::e1() {}
+int N::e1() { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: {{^}}auto N::e1() -> int {}{{$}}
+// CHECK-FIXES: {{^}}auto N::e1() -> int { return 0; }{{$}}
 
 //
 // Functions with unsupported return types
@@ -260,14 +260,14 @@ struct B {
     B& operator=(const B&);
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}    auto operator=(const B&) -> B&;{{$}}
-    
+
     double base1(int, bool b);
 // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}    auto base1(int, bool b) -> double;{{$}}
 
-    virtual double base2(int, bool b) {}
+    virtual double base2(int, bool b) { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: {{^}}    virtual auto base2(int, bool b) -> double {}{{$}}
+// CHECK-FIXES: {{^}}    virtual auto base2(int, bool b) -> double { return 0; }{{$}}
 
     virtual float base3() const = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
@@ -298,9 +298,9 @@ struct B {
 // CHECK-FIXES: {{^}}    virtual auto base9() const noexcept -> const char * { return ""; }{{$}}
 };
 
-double B::base1(int, bool b) {}
+double B::base1(int, bool b) { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: {{^}}auto B::base1(int, bool b) -> double {}{{$}}
+// CHECK-FIXES: {{^}}auto B::base1(int, bool b) -> double { return 0; }{{$}}
 
 struct D : B {
     virtual double f1(int, bool b) final;
@@ -311,9 +311,9 @@ struct D : B {
 // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
 // CHECK-FIXES: {{^}}    virtual auto base2(int, bool b) -> double override;{{$}}
 
-    virtual float base3() const override final { }
+    virtual float base3() const override final { return 0; }
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
-// CHECK-FIXES: {{^}}    virtual auto base3() const -> float override final { }{{$}}
+// CHECK-FIXES: {{^}}    virtual auto base3() const -> float override final { return 0; }{{$}}
 
     const char * base9() const noexcept override { return ""; }
 // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use a trailing return type for this function [modernize-use-trailing-return-type]
@@ -586,13 +586,13 @@ void c(int arg) { return; }
 struct D2 : B {
     D2();
     virtual ~D2();
-    
+
     virtual auto f1(int, bool b) -> double final;
     virtual auto base2(int, bool b) -> double override;
-    virtual auto base3() const -> float override final { }
+    virtual auto base3() const -> float override final { return 0;  }
 
     operator double();
 };
 
 auto l1 = [](int arg) {};
-auto l2 = [](int arg) -> double {};
+auto l2 = [](int arg) -> double { return 0; };

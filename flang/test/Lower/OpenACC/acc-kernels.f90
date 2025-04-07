@@ -174,7 +174,7 @@ subroutine acc_kernels
   !$acc kernels self(ifCondition)
   !$acc end kernels
 
-! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#1 : (!fir.ref<!fir.logical<4>>) -> i1
+! CHECK:      %[[SELF2:.*]] = fir.convert %[[DECLIFCONDITION]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 ! CHECK:      acc.kernels self(%[[SELF2]]) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
@@ -253,6 +253,9 @@ subroutine acc_kernels
 ! CHECK:      acc.kernels dataOperands(%[[NO_CREATE_A]], %[[NO_CREATE_B]], %[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
+! CHECK: acc.delete accPtr(%[[CREATE_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "c"}
+! CHECK: acc.delete accPtr(%[[NO_CREATE_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "a"}
+! CHECK: acc.delete accPtr(%[[NO_CREATE_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_no_create>, name = "b"}
 
   !$acc kernels present(a, b, c)
   !$acc end kernels
@@ -263,6 +266,9 @@ subroutine acc_kernels
 ! CHECK:      acc.kernels dataOperands(%[[PRESENT_A]], %[[PRESENT_B]], %[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>, !fir.ref<!fir.array<10x10xf32>>) {
 ! CHECK:        acc.terminator
 ! CHECK-NEXT: }{{$}}
+! CHECK: acc.delete accPtr(%[[PRESENT_A]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "a"}
+! CHECK: acc.delete accPtr(%[[PRESENT_B]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "b"}
+! CHECK: acc.delete accPtr(%[[PRESENT_C]] : !fir.ref<!fir.array<10x10xf32>>) {dataClause = #acc<data_clause acc_present>, name = "c"}
 
   !$acc kernels deviceptr(a) deviceptr(c)
   !$acc end kernels

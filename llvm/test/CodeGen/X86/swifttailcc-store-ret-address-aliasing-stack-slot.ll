@@ -24,9 +24,9 @@ define swifttailcc void @test(ptr %0, ptr swiftasync %1, i64 %2, i64 %3, ptr %4,
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
 ; CHECK-NEXT:    callq _foo
 ; CHECK-NEXT:    movq %r14, (%rax)
+; CHECK-NEXT:    movl [[OFF:[0-9]+]](%rsp), %edx
 ; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
-; CHECK-NEXT:    movq %rcx, [[OFF:[0-9]+]](%rsp)
-; CHECK-NEXT:    movl [[OFF]](%rsp), %edx
+; CHECK-NEXT:    movq %rcx, [[OFF]](%rsp)
 ; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    movq %r15, %rsi

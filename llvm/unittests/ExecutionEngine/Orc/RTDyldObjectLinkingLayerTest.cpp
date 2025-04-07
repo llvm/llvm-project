@@ -73,7 +73,7 @@ static bool testSetProcessAllSections(std::unique_ptr<MemoryBuffer> Obj,
 TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   LLVMContext Context;
   auto M = std::make_unique<Module>("", Context);
-  M->setTargetTriple("x86_64-unknown-linux-gnu");
+  M->setTargetTriple(Triple("x86_64-unknown-linux-gnu"));
 
   // These values are only here to ensure that the module is non-empty.
   // They are no longer relevant to the test.
@@ -88,7 +88,7 @@ TEST(RTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
   // to try to build a TM.
   OrcNativeTarget::initialize();
   std::unique_ptr<TargetMachine> TM(EngineBuilder().selectTarget(
-      Triple(M->getTargetTriple()), "", "", SmallVector<std::string, 1>()));
+      M->getTargetTriple(), "", "", SmallVector<std::string, 1>()));
   if (!TM)
     GTEST_SKIP();
 

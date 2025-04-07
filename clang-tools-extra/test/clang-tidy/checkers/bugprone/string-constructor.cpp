@@ -11,6 +11,7 @@ struct basic_string {
   basic_string(const C*, unsigned int size);
   basic_string(const C *, const A &allocator = A());
   basic_string(unsigned int size, C c);
+  basic_string(const C*, unsigned int pos, unsigned int size);
 };
 typedef basic_string<char> string;
 typedef basic_string<wchar_t> wstring;
@@ -61,6 +62,21 @@ void Test() {
   // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructing string from nullptr is undefined behaviour
   std::string q7 = 0;
   // CHECK-MESSAGES: [[@LINE-1]]:20: warning: constructing string from nullptr is undefined behaviour
+
+  std::string r1("test", 1, 0);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
+  std::string r2("test", 0, -4);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as length parameter
+  std::string r3("test", -4, 1); 
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: negative value used as position of the first character parameter
+  std::string r4("test", 0, 0x1000000);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+  std::string r5("test", 0, 5);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
+  std::string r6("test", 3, 2);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than remaining string literal size
+  std::string r7("test", 4, 1);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: position of the first character parameter is bigger than string literal character range
 }
 
 void TestView() {
@@ -82,6 +98,17 @@ void TestView() {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: constructing string from nullptr is undefined behaviour
 }
 
+void TestUnsignedArguments() {
+  std::string s0("test", 0u);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: constructor creating an empty string
+  std::string s1(0x1000000ull, 'x');
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: suspicious large length parameter
+  std::string s2("test", 3ull, 2u);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than remaining string literal size
+  std::string s3("test", 0u, 5ll);
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: length is bigger than string literal size
+}
+
 std::string StringFromZero() {
   return 0;
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: constructing string from nullptr is undefined behaviour
@@ -101,6 +128,9 @@ void Valid() {
   std::string s3("test");
   std::string s4("test\000", 5);
   std::string s6("te" "st", 4);
+  std::string s7("test", 0, 4);
+  std::string s8("test", 3, 1);
+  std::string s9("te" "st", 1, 2);
 
   std::string_view emptyv();
   std::string_view sv1("test", 4);

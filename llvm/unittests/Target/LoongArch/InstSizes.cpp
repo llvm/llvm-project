@@ -14,7 +14,7 @@ using namespace llvm;
 
 namespace {
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("loongarch64--"));
+  Triple TT("loongarch64--");
   std::string CPU("generic-la64");
   std::string FS("+64bit");
 
@@ -70,7 +70,7 @@ void runChecks(
   std::unique_ptr<Module> M = MParser->parseIRModule();
   ASSERT_TRUE(M);
 
-  M->setTargetTriple(TM->getTargetTriple().getTriple());
+  M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
 
   MachineModuleInfo MMI(TM);

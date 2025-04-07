@@ -39,6 +39,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTOBackend.h"
 #include "llvm/Linker/Linker.h"
@@ -1032,7 +1033,7 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
     // linker using merged object file.
     if (!Bm) {
       auto M = std::make_unique<llvm::Module>("empty", *VMContext);
-      M->setTargetTriple(CI.getTargetOpts().Triple);
+      M->setTargetTriple(Triple(CI.getTargetOpts().Triple));
       return M;
     }
     Expected<std::unique_ptr<llvm::Module>> MOrErr =
@@ -1048,8 +1049,17 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
 
   // Handle textual IR and bitcode file with one single module.
   llvm::SMDiagnostic Err;
-  if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext))
+  if (std::unique_ptr<llvm::Module> M = parseIR(MBRef, Err, *VMContext)) {
+    // For LLVM IR files, always verify the input and report the error in a way
+    // that does not ask people to report an issue for it.
+    std::string VerifierErr;
+    raw_string_ostream VerifierErrStream(VerifierErr);
+    if (llvm::verifyModule(*M, &VerifierErrStream)) {
+      CI.getDiagnostics().Report(diag::err_invalid_llvm_ir) << VerifierErr;
+      return {};
+    }
     return M;
+  }
 
   // If MBRef is a bitcode with multiple modules (e.g., -fsplit-lto-unit
   // output), place the extra modules (actually only one, a regular LTO module)
@@ -1123,10 +1133,10 @@ void CodeGenAction::ExecuteAction() {
     return;
 
   const TargetOptions &TargetOpts = CI.getTargetOpts();
-  if (TheModule->getTargetTriple() != TargetOpts.Triple) {
+  if (TheModule->getTargetTriple().str() != TargetOpts.Triple) {
     Diagnostics.Report(SourceLocation(), diag::warn_fe_override_module)
         << TargetOpts.Triple;
-    TheModule->setTargetTriple(TargetOpts.Triple);
+    TheModule->setTargetTriple(Triple(TargetOpts.Triple));
   }
 
   EmbedObject(TheModule.get(), CodeGenOpts, Diagnostics);
