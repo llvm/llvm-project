@@ -4,12 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// NVIDIA_COPYRIGHT_BEGIN
-//
-// Copyright (c) 2023-2025, NVIDIA CORPORATION.  All rights reserved.
-//
-// NVIDIA_COPYRIGHT_END
-//
 //===----------------------------------------------------------------------===//
 //
 // This pass replaces occurrences of __nvvm_reflect("foo") and llvm.nvvm.reflect
