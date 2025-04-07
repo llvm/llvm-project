@@ -527,7 +527,7 @@ CancellationConstructType
 make(const parser::OmpClause::CancellationConstructType &inp,
      semantics::SemanticsContext &semaCtx) {
   auto name = std::get<parser::OmpDirectiveName>(inp.v.t);
-  CLAUSET_ENUM_CONVERT( //
+  CLAUSET_ENUM_CONVERT(
       convert, llvm::omp::Directive, llvm::omp::CancellationConstructType,
       // clang-format off
       MS(OMPD_parallel, OMP_CANCELLATION_CONSTRUCT_Parallel)
