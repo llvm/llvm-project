@@ -186,10 +186,10 @@ class LASX2RI10_Load<bits<32> op, Operand ImmOpnd = simm10_lsl2>
 class LASX2RI11_Load<bits<32> op, Operand ImmOpnd = simm11_lsl1>
     : Fmt2RI11_XRI<op, (outs LASX256:$xd), (ins GPR:$rj, ImmOpnd:$imm11),
                   "$xd, $rj, $imm11">;
-class LASX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12>
+class LASX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_XRI<op, (outs LASX256:$xd), (ins GPR:$rj, ImmOpnd:$imm12),
                   "$xd, $rj, $imm12">;
-class LASX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12>
+class LASX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_XRI<op, (outs), (ins LASX256:$xd, GPR:$rj, ImmOpnd:$imm12),
                   "$xd, $rj, $imm12">;
 

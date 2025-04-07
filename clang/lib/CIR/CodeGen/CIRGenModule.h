@@ -91,6 +91,8 @@ public:
 
   void emitTopLevelDecl(clang::Decl *decl);
 
+  bool verifyModule() const;
+
   /// Return the address of the given function. If funcType is non-null, then
   /// this function will use the specified type if it has to create it.
   // TODO: this is a bit weird as `GetAddr` given we give back a FuncOp?
@@ -110,6 +112,10 @@ public:
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  /// Return the result of value-initializing the given type, i.e. a null
+  /// expression of the given type.
+  mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,

@@ -2036,6 +2036,22 @@ LogicalResult ModuleTranslation::createCommandlineMetadata() {
   return success();
 }
 
+LogicalResult ModuleTranslation::createDependentLibrariesMetadata() {
+  if (auto dependentLibrariesAttr = mlirModule->getDiscardableAttr(
+          LLVM::LLVMDialect::getDependentLibrariesAttrName())) {
+    auto *nmd =
+        llvmModule->getOrInsertNamedMetadata("llvm.dependent-libraries");
+    llvm::LLVMContext &ctx = llvmModule->getContext();
+    for (auto libAttr :
+         cast<ArrayAttr>(dependentLibrariesAttr).getAsRange<StringAttr>()) {
+      auto *md =
+          llvm::MDNode::get(ctx, llvm::MDString::get(ctx, libAttr.getValue()));
+      nmd->addOperand(md);
+    }
+  }
+  return success();
+}
+
 void ModuleTranslation::setLoopMetadata(Operation *op,
                                         llvm::Instruction *inst) {
   LoopAnnotationAttr attr =
@@ -2201,6 +2217,8 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.createCommandlineMetadata()))
     return nullptr;
+  if (failed(translator.createDependentLibrariesMetadata()))
+    return nullptr;
 
   // Convert other top-level operations if possible.
   for (Operation &o : getModuleBody(module).getOperations()) {
@@ -2222,6 +2240,10 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // it to use the debug info format desired by LLVM.
   // See https://llvm.org/docs/RemoveDIsDebugInfo.html
   translator.llvmModule->setIsNewDbgInfoFormat(UseNewDbgInfoFormat);
+
+  // Add the necessary debug info module flags, if they were not encoded in MLIR
+  // beforehand.
+  translator.debugTranslation->addModuleFlagsIfNotPresent();
 
   if (!disableVerification &&
       llvm::verifyModule(*translator.llvmModule, &llvm::errs()))

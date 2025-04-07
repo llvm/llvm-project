@@ -102,6 +102,12 @@ MachineInstr *AArch64CondBrTuning::convertToFlagSetting(MachineInstr &MI,
 
   MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
                                     TII->get(NewOpc), NewDestReg);
+
+  // If the MI has a debug instruction number, preserve that in the new Machine
+  // Instruction that is created.
+  if (MI.peekDebugInstrNum() != 0)
+    MIB->setDebugInstrNum(MI.peekDebugInstrNum());
+
   for (const MachineOperand &MO : llvm::drop_begin(MI.operands()))
     MIB.add(MO);
 

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/X86MCExpr.h"
 #include "X86.h"
 #include "X86CallingConv.h"
 #include "X86FrameLowering.h"
@@ -471,8 +472,7 @@ X86TargetLowering::LowerCustomJumpTableEntry(const MachineJumpTableInfo *MJTI,
   assert(isPositionIndependent() && Subtarget.isPICStyleGOT());
   // In 32-bit ELF systems, our jump table entries are formed with @GOTOFF
   // entries.
-  return MCSymbolRefExpr::create(MBB->getSymbol(),
-                                 MCSymbolRefExpr::VK_GOTOFF, Ctx);
+  return MCSymbolRefExpr::create(MBB->getSymbol(), X86MCExpr::VK_GOTOFF, Ctx);
 }
 
 /// Returns relocation base for the given PIC jumptable.
@@ -2034,11 +2034,17 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   X86MachineFunctionInfo *X86Info = MF.getInfo<X86MachineFunctionInfo>();
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
-  bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
   bool IsCFICall = IsIndirectCall && CLI.CFIType;
   const Module *M = MF.getFunction().getParent();
-  Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+
+  // If the indirect call target has the nocf_check attribute, the call needs
+  // the NOTRACK prefix. For simplicity just disable tail calls as there are
+  // so many variants.
+  bool IsNoTrackIndirectCall = IsIndirectCall && CB->doesNoCfCheck() &&
+                               M->getModuleFlag("cf-protection-branch");
+  if (IsNoTrackIndirectCall)
+    isTailCall = false;
 
   MachineFunction::CallSiteInfo CSInfo;
   if (CallConv == CallingConv::X86_INTR)
@@ -2549,7 +2555,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Returns a chain & a glue for retval copy to use.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  if (HasNoCfCheck && IsCFProtectionSupported && IsIndirectCall) {
+  if (IsNoTrackIndirectCall) {
     Chain = DAG.getNode(X86ISD::NT_CALL, dl, NodeTys, Ops);
   } else if (CLI.CB && objcarc::hasAttachedCallOpBundle(CLI.CB)) {
     // Calls with a "clang.arc.attachedcall" bundle are special. They should be

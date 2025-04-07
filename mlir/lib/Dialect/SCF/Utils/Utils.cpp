@@ -1310,10 +1310,8 @@ SmallVector<Loops, 8> mlir::tile(ArrayRef<scf::ForOp> forOps,
 Loops mlir::tile(ArrayRef<scf::ForOp> forOps, ArrayRef<Value> sizes,
                  scf::ForOp target) {
   SmallVector<scf::ForOp, 8> res;
-  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target))) {
-    assert(loops.size() == 1);
-    res.push_back(loops[0]);
-  }
+  for (auto loops : tile(forOps, sizes, ArrayRef<scf::ForOp>(target)))
+    res.push_back(llvm::getSingleElement(loops));
   return res;
 }
 

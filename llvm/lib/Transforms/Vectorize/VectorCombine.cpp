@@ -33,6 +33,7 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
 #include <queue>
+#include <set>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -995,8 +996,8 @@ bool VectorCombine::scalarizeVPIntrinsic(Instruction &I) {
   // scalarizing it.
   bool SafeToSpeculate;
   if (ScalarIntrID)
-    SafeToSpeculate = Intrinsic::getAttributes(I.getContext(), *ScalarIntrID)
-                          .hasFnAttr(Attribute::AttrKind::Speculatable);
+    SafeToSpeculate = Intrinsic::getFnAttributes(I.getContext(), *ScalarIntrID)
+                          .hasAttribute(Attribute::AttrKind::Speculatable);
   else
     SafeToSpeculate = isSafeToSpeculativelyExecuteWithOpcode(
         *FunctionalOpcode, &VPI, nullptr, &AC, &DT);

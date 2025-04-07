@@ -1214,6 +1214,17 @@ def LLVM_UndefAttr : LLVM_Attr<"Undef", "undef">;
 def LLVM_PoisonAttr : LLVM_Attr<"Poison", "poison">;
 
 //===----------------------------------------------------------------------===//
+// DSOLocalEquivalentAttr
+//===----------------------------------------------------------------------===//
+
+/// Folded into from LLVM::DSOLocalEquivalentOp.
+def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
+                                            "dso_local_equivalent"> {
+  let parameters = (ins "FlatSymbolRefAttr":$sym);
+  let assemblyFormat = "$sym";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 
@@ -1289,6 +1300,50 @@ def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
   let parameters = (ins "uint64_t":$bytes,
                         DefaultValuedParameter<"bool", "false">:$mayBeNull);
   let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// ModuleFlagAttr
+//===----------------------------------------------------------------------===//
+
+def ModuleFlagAttr
+    : LLVM_Attr<"ModuleFlag", "mlir.module_flag"> {
+  let summary = "LLVM module flag metadata";
+  let description = [{
+    Represents a single entry of llvm.module.flags metadata
+    (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
+    flag described by `ModFlagBehaviorAttr`, the second is a string ID
+    and third is the value of the flag (currently only integer constants
+    are supported).
+
+    Example:
+    ```mlir
+      #llvm.mlir.module_flag<error, "wchar_size", 4>
+    ```
+  }];
+  let parameters = (ins "ModFlagBehavior":$behavior,
+                        "StringAttr":$key,
+                        "uint32_t":$value);
+  let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// LLVM_DependentLibrariesAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DependentLibrariesAttr
+    : LLVM_Attr<"DependentLibraries", "dependent_libraries"> {
+  let summary = "LLVM dependent libraries attribute";
+  let description = [{
+    Represents the list of dependent libraries for the current module.
+    This attribute is used to specify the libraries that the module depends
+    on, and it can be used for linking purposes.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dependent-libs-named-metadata
+  }];
+  let parameters = (ins OptionalArrayRefParameter<"StringAttr">:$libs);
+  let assemblyFormat = "`<` $libs `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

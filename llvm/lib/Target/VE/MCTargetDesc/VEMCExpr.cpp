@@ -25,73 +25,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "vemcexpr"
 
-const VEMCExpr *VEMCExpr::create(VariantKind Kind, const MCExpr *Expr,
+const VEMCExpr *VEMCExpr::create(Specifier Kind, const MCExpr *Expr,
                                  MCContext &Ctx) {
   return new (Ctx) VEMCExpr(Kind, Expr);
 }
 
 void VEMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
-  bool closeParen = printVariantKind(OS, Kind);
-
   const MCExpr *Expr = getSubExpr();
   Expr->print(OS, MAI);
-
-  if (closeParen)
-    OS << ')';
-  if (Kind != VK_None && Kind != VK_REFLONG)
-    OS << '@' << MAI->getVariantKindName(Kind);
+  if (specifier != VK_None && specifier != VK_REFLONG)
+    OS << '@' << MAI->getSpecifierName(specifier);
 }
 
-bool VEMCExpr::printVariantKind(raw_ostream &OS, VariantKind Kind) {
-  switch (Kind) {
-  case VK_None:
-  case VK_REFLONG:
-    return false;
-
-  case VK_HI32:
-  case VK_LO32:
-  case VK_PC_HI32:
-  case VK_PC_LO32:
-  case VK_GOT_HI32:
-  case VK_GOT_LO32:
-  case VK_GOTOFF_HI32:
-  case VK_GOTOFF_LO32:
-  case VK_PLT_HI32:
-  case VK_PLT_LO32:
-  case VK_TLS_GD_HI32:
-  case VK_TLS_GD_LO32:
-  case VK_TPOFF_HI32:
-  case VK_TPOFF_LO32:
-    // Use suffix for these variant kinds
-    return false;
-  }
-  return true;
-}
-
-VEMCExpr::VariantKind VEMCExpr::parseVariantKind(StringRef name) {
-  return StringSwitch<VEMCExpr::VariantKind>(name)
-      .Case("hi", VK_HI32)
-      .Case("lo", VK_LO32)
-      .Case("pc_hi", VK_PC_HI32)
-      .Case("pc_lo", VK_PC_LO32)
-      .Case("got_hi", VK_GOT_HI32)
-      .Case("got_lo", VK_GOT_LO32)
-      .Case("gotoff_hi", VK_GOTOFF_HI32)
-      .Case("gotoff_lo", VK_GOTOFF_LO32)
-      .Case("plt_hi", VK_PLT_HI32)
-      .Case("plt_lo", VK_PLT_LO32)
-      .Case("tls_gd_hi", VK_TLS_GD_HI32)
-      .Case("tls_gd_lo", VK_TLS_GD_LO32)
-      .Case("tpoff_hi", VK_TPOFF_HI32)
-      .Case("tpoff_lo", VK_TPOFF_LO32)
-      .Default(VK_None);
-}
-
-VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
-  switch (Kind) {
+VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::Specifier S) {
+  switch (S) {
   default:
-    llvm_unreachable("Unhandled VEMCExpr::VariantKind");
+    llvm_unreachable("Unhandled VEMCExpr::Specifier");
   case VK_REFLONG:
     return VE::fixup_ve_reflong;
   case VK_HI32:
@@ -125,60 +75,14 @@ VE::Fixups VEMCExpr::getFixupKind(VEMCExpr::VariantKind Kind) {
   }
 }
 
-bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                         const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+bool VEMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
-
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());
-
+  Res.setSpecifier(specifier);
   return true;
-}
-
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expr!");
-    break;
-
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
 }
 
 void VEMCExpr::visitUsedExpr(MCStreamer &Streamer) const {
   Streamer.visitUsedExpr(*getSubExpr());
-}
-
-void VEMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getKind()) {
-  default:
-    return;
-  case VK_TLS_GD_HI32:
-  case VK_TLS_GD_LO32:
-  case VK_TPOFF_HI32:
-  case VK_TPOFF_LO32:
-    break;
-  }
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }

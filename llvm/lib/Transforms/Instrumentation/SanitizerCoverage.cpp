@@ -745,7 +745,7 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
   if (TargetTriple.supportsCOMDAT() &&
-      (TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
+      (F.hasComdat() || TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
     if (auto Comdat = getOrCreateFunctionComdat(F, TargetTriple))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
