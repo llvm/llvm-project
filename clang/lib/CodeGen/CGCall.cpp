@@ -744,10 +744,10 @@ CodeGenTypes::arrangeSYCLKernelCallerDeclaration(QualType resultType,
                                                  const FunctionArgList &args) {
   auto argTypes = getArgTypesForDeclaration(Context, args);
 
-  return arrangeLLVMFunctionInfo(
-      GetReturnType(resultType), FnInfoOpts::None, argTypes,
-      FunctionType::ExtInfo(CC_OpenCLKernel), /*paramInfos=*/{},
-      RequiredArgs::All);
+  return arrangeLLVMFunctionInfo(GetReturnType(resultType), FnInfoOpts::None,
+                                 argTypes,
+                                 FunctionType::ExtInfo(CC_OpenCLKernel),
+                                 /*paramInfos=*/{}, RequiredArgs::All);
 }
 
 /// Arrange a call to a C++ method, passing the given arguments.
