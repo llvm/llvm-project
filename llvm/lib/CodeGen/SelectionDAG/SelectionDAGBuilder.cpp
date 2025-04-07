@@ -8005,6 +8005,65 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
+  case Intrinsic::ptrauth_sign: {
+    Value *Ptr = I.getOperand(0);
+    Value *Disc = I.getOperand(2);
+
+    if (auto *PtrToInt = dyn_cast<PtrToIntOperator>(Ptr))
+      Ptr = PtrToInt->getOperand(0);
+
+    APInt PtrOff(DAG.getDataLayout().getPointerSizeInBits(), 0);
+    Ptr = Ptr->stripAndAccumulateConstantOffsets(DAG.getDataLayout(), PtrOff,
+                                                 /*AllowNonInbounds=*/true);
+
+    // We found that the raw pointer is a pointer constant + constant offset:
+    // we can turn it into the (hardened) signed constant pointer
+    // materialization sequence, via PtrAuthGlobalAddress.
+    // Otherwise, let it be handled as a plain raw intrinsic.
+    if (!isa<GlobalValue>(Ptr)) {
+      visitTargetIntrinsic(I, Intrinsic);
+      return;
+    }
+
+    auto *DiscC = dyn_cast<ConstantInt>(Disc);
+    Value *AddrDisc = nullptr;
+
+    auto *BlendInt = dyn_cast<IntrinsicInst>(Disc);
+    if (BlendInt && BlendInt->getIntrinsicID() == Intrinsic::ptrauth_blend) {
+      DiscC = dyn_cast<ConstantInt>(BlendInt->getOperand(1));
+      AddrDisc = BlendInt->getOperand(0);
+    }
+    // If we can't isolate the constant discriminator, treat the whole thing
+    // as a variable address discriminator.
+    if (!DiscC)
+      AddrDisc = Disc;
+
+    // We're extracting the addr-disc from a blend intrinsic, which could be
+    // in another block: make sure it isn't, because it might not have gotten
+    // exported to this block via a vreg.
+    // The blends should be sunk into the same block by CGP already.
+    // Ideally, to guarantee this, we should make ptrauth.sign have both
+    // address-discriminator and integer discriminator, and do the blend itself.
+    if (auto *AddrDiscInst = dyn_cast_or_null<Instruction>(AddrDisc)) {
+      if (AddrDiscInst->getParent() != I.getParent()) {
+        visitTargetIntrinsic(I, Intrinsic);
+        return;
+      }
+    }
+
+    SDValue NullPtr = DAG.getIntPtrConstant(0, getCurSDLoc());
+    SDValue DiscVal = DiscC ? getValue(DiscC) : NullPtr;
+    SDValue AddrDiscVal = AddrDisc ? getValue(AddrDisc) : NullPtr;
+
+    setValue(&I, DAG.getNode(ISD::PtrAuthGlobalAddress, getCurSDLoc(),
+                             NullPtr.getValueType(),
+                             DAG.getGlobalAddress(
+                                 cast<GlobalValue>(Ptr), getCurSDLoc(),
+                                 NullPtr.getValueType(), PtrOff.getSExtValue()),
+                             getValue(I.getOperand(1)), AddrDiscVal, DiscVal));
+    return;
+  }
+
   case Intrinsic::threadlocal_address: {
     setValue(&I, getValue(I.getOperand(0)));
     return;
