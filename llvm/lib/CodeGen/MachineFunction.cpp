@@ -620,11 +620,15 @@ const char *MachineFunction::createExternalSymbolName(StringRef Name) {
 }
 
 uint32_t *MachineFunction::allocateRegMask() {
+  return allocateRegMaskArray().data();
+}
+
+MutableArrayRef<uint32_t> MachineFunction::allocateRegMaskArray() {
   unsigned NumRegs = getSubtarget().getRegisterInfo()->getNumRegs();
   unsigned Size = MachineOperand::getRegMaskSize(NumRegs);
   uint32_t *Mask = Allocator.Allocate<uint32_t>(Size);
   memset(Mask, 0, Size * sizeof(Mask[0]));
-  return Mask;
+  return {Mask, Size};
 }
 
 ArrayRef<int> MachineFunction::allocateShuffleMask(ArrayRef<int> Mask) {
