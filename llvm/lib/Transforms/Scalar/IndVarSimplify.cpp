@@ -1096,10 +1096,15 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
+  bool IterMoved = false;
   BasicBlock::iterator InsertPt = ExitBlock->getFirstInsertionPt();
   BasicBlock::iterator I(Preheader->getTerminator());
   while (I != Preheader->begin()) {
-    --I;
+    if (IterMoved) {
+      IterMoved = false;
+    } else {
+      --I;
+    }
     // New instructions were inserted at the end of the preheader.
     if (isa<PHINode>(I))
       break;
@@ -1157,6 +1162,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
       // Skip debug info intrinsics.
       do {
         --I;
+        IterMoved = true;
       } while (I->isDebugOrPseudoInst() && I != Preheader->begin());
 
       if (I->isDebugOrPseudoInst() && I == Preheader->begin())
