@@ -39,8 +39,7 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
 
   // Find the SYCLKernelCallStmt.
   SYCLKernelCallStmt *KernelCallStmt =
-      dyn_cast<SYCLKernelCallStmt>(KernelEntryPointFn->getBody());
-  assert(KernelCallStmt && "SYCLKernelCallStmt not found");
+      cast<SYCLKernelCallStmt>(KernelEntryPointFn->getBody());
 
   // Retrieve the SYCL kernel caller parameters from the OutlinedFunctionDecl.
   FunctionArgList Args;
