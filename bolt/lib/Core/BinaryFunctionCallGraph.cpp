@@ -252,7 +252,8 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
 
         for (MCInst &Inst : *BB) {
           // Find call instructions and extract target symbols from each one.
-          if (BC.MIB->isCall(Inst)) {
+          if (BC.MIB->isCall(Inst) ||
+              BC.MIB->hasAnnotation(Inst, "CallProfile")) {
             const CallInfoTy CallInfo = getCallInfo(BB, Inst);
 
             if (!CallInfo.empty()) {
