@@ -273,6 +273,14 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [](const VPWidenCastRecipe *R) { return R->getResultType(); })
           .Case<VPScalarCastRecipe>(
               [](const VPScalarCastRecipe *R) { return R->getResultType(); })
+          .Case<VPExtendedReductionRecipe>(
+              [](const VPExtendedReductionRecipe *R) {
+                return R->getResultType();
+              })
+          .Case<VPMulAccumulateReductionRecipe>(
+              [](const VPMulAccumulateReductionRecipe *R) {
+                return R->getResultType();
+              })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })

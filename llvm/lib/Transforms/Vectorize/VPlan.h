@@ -3797,7 +3797,7 @@ public:
     VFs.insert(VF);
   }
 
-  void clearVF() { VFs.clear(); }
+  void removeVF(ElementCount VF) { VFs.remove(VF); }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
   bool hasScalableVF() const {

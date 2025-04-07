@@ -9469,13 +9469,17 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                              CostCtx, Range);
   }
 
-  // Update VF after convertToAbstractRecipes. Cannot set the VF here since
+  // Update VF after `convertToAbstractRecipes`. Cannot set the VF here since
   // `handleUncountableEarlyExit` will check the VF of the plan, need to set
   // before it and update.
   // TODO: Use a better method that only set the VF for plan once.
-  Plan->clearVF();
-  for (ElementCount VF : Range)
-    Plan->addVF(VF);
+  SmallVector<ElementCount, 2> VFToRemove;
+  for (ElementCount VF : Plan->vectorFactors())
+    if (!Range.contains(VF))
+      VFToRemove.push_back(VF);
+
+  for (ElementCount VF : VFToRemove)
+    Plan->removeVF(VF);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
