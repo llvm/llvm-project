@@ -2010,7 +2010,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     break;
   }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
-    // For undef elements, we don't know anything about the common state of
+    // For undefined elements, we don't know anything about the common state of
     // the shuffle result.
     GShuffleVector &Shuf = cast<GShuffleVector>(MI);
     APInt DemandedLHS, DemandedRHS;
