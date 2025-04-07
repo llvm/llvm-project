@@ -3862,8 +3862,10 @@ LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
 }
 
 BlockTagOp BlockAddressOp::getBlockTagOp() {
-  auto funcOp = cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
+  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
       parentLLVMModule(*this), getBlockAddr().getFunction()));
+  if (!funcOp)
+    return nullptr;
 
   BlockTagOp blockTagOp = nullptr;
   funcOp.walk([&](LLVM::BlockTagOp labelOp) {

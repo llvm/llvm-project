@@ -148,8 +148,8 @@ public:
   /// Maps a blockaddress operation to its corresponding placeholder LLVM
   /// value.
   void mapBlockTag(BlockAddressAttr attr, BlockTagOp blockTag) {
-    // Attempts to map already mapped block labels are fine given labels are
-    // verified to be unique.
+    // Attempts to map already mapped block labels which is fine if the given
+    // labels are verified to be unique.
     blockTagMapping[attr] = blockTag;
   }
 

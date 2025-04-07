@@ -731,8 +731,9 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    // The inliner cannot handle variadic function arguments nor blocktag
-    // operations.
+    // The inliner cannot handle variadic function arguments and blocktag
+    // operations prevent inlining since they the blockaddress operations
+    // reference them via the callee symbol.
     return !(isa<LLVM::VaStartOp>(op) || isa<LLVM::BlockTagOp>(op));
   }
 

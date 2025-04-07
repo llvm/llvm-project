@@ -14,8 +14,8 @@ llvm.func @fn() {
 
 // CHECK: @g = private global ptr blockaddress(@fn, %1)
 // CHECK: define void @fn() {
-// CHECK:   br label %1
-// CHECK: 1:
+// CHECK:   br label %[[RET:.*]]
+// CHECK: [[RET]]:
 // CHECK:   ret void
 // CHECK: }
 
@@ -30,7 +30,7 @@ llvm.func @blockaddr0() -> !llvm.ptr {
 }
 
 // CHECK: define ptr @blockaddr0() {
-// CHECK:   br label %1
-// CHECK: 1:
+// CHECK:   br label %[[RET:.*]]
+// CHECK: [[RET]]:
 // CHECK:   ret ptr blockaddress(@blockaddr0, %1)
 // CHECK: }

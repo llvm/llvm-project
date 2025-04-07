@@ -700,11 +700,12 @@ func.func @func(%arg0 : i32) -> i32  {
   llvm.blocktag <id = 1>
   llvm.return %arg0 : i32
 }
+
 // CHECK-LABEL: @llvm_ret
-// CHECK-NOT: llvm.blocktag
-// CHECK: %[[R:.*]] = call
-// CHECK: return %[[R]]
 func.func @llvm_ret(%arg0 : i32) -> i32 {
+  // CHECK-NOT: llvm.blocktag
+  // CHECK: %[[R:.*]] = call
   %res = call @func(%arg0) : (i32) -> (i32)
+  // CHECK: return %[[R]]
   return %res : i32
 }
