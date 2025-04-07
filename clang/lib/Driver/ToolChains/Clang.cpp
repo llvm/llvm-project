@@ -4924,6 +4924,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   if (EmitDwarfForAMDGCN)
     CmdArgs.append({"-mllvm", "-amdgpu-spill-cfi-saved-regs"});
   if (Arg *A = Args.getLastArg(options::OPT_gheterogeneous_dwarf_EQ)) {
+    if (StringRef(A->getValue()) == "diexpr")
+      D.Diag(clang::diag::err_drv_unsupported_opt_with_suggestion)
+          << A->getAsString(Args) << "-gheterogeneous-dwarf=diexpression";
     A->render(Args, CmdArgs);
   } else if (EmitDwarfForAMDGCN) {
 #ifndef NDEBUG
