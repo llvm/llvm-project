@@ -64,6 +64,12 @@ MPFRNumber MPFRNumber::acos() const {
   return result;
 }
 
+MPFRNumber MPFRNumber::acospi() const {
+  MPFRNumber result(*this);
+  mpfr_acospi(result.value, value, mpfr_rounding);
+  return result;
+}
+
 MPFRNumber MPFRNumber::acosh() const {
   MPFRNumber result(*this);
   mpfr_acosh(result.value, value, mpfr_rounding);
