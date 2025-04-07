@@ -28,8 +28,8 @@ define void @crash_when_lowering_extract_shuffle(ptr %dst, i1 %cond) vscale_rang
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    tbnz w1, #0, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %vector.body
-; CHECK-NEXT:    mov z0.b, #0 // =0x0
-; CHECK-NEXT:    mov z1.b, #0 // =0x0
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    umov w8, v0.b[8]
 ; CHECK-NEXT:    mov v1.b[1], v0.b[1]

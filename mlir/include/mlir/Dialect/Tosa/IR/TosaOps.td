@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the operation set for the TOSA dialect as defined in
-// the TOSA specfication (https://developer.mlplatform.org/w/tosa/).
+// the TOSA specfication (https://www.mlplatform.org/tosa/tosa_spec.html).
 //
 //===----------------------------------------------------------------------===//
 
@@ -972,11 +972,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
-}
-
-def MulOperandsAndResultElementType :
-  NativeOpTrait<"MulOperandsAndResultElementType"> {
-  let cppNamespace = "mlir::OpTrait::tosa";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2251,7 +2246,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
   let description = [{
     Casts a tensor from one data type to another.
     * This table is showing the supported conversions from the TOSA Specification.
-    * The MLIR dialect here can be used to represent other conversions. 
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|

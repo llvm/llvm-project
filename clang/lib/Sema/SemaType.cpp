@@ -9685,7 +9685,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
-  std::optional<int64_t> Index;
+  UnsignedOrNone Index = std::nullopt;
   if (FullySubstituted && !IndexExpr->isValueDependent() &&
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
@@ -9693,20 +9693,18 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
         IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
     if (!Res.isUsable())
       return QualType();
-    Index = Value.getExtValue();
     IndexExpr = Res.get();
-  }
-
-  if (FullySubstituted && Index) {
-    if (*Index < 0 || *Index >= int64_t(Expansions.size())) {
+    int64_t V = Value.getExtValue();
+    if (FullySubstituted && (V < 0 || V >= int64_t(Expansions.size()))) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
-          << *Index << Pattern << Expansions.size();
+          << V << Pattern << Expansions.size();
       return QualType();
     }
+    Index = static_cast<unsigned>(V);
   }
 
   return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
-                                     Expansions, Index.value_or(-1));
+                                     Expansions, Index);
 }
 
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,

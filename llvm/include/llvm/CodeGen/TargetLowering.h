@@ -4989,11 +4989,6 @@ public:
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
 
-#ifndef NDEBUG
-  /// Check the given SDNode.  Aborts if it is invalid.
-  virtual void verifyTargetSDNode(const SDNode *N) const {};
-#endif
-
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks
   //
