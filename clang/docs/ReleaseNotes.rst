@@ -39,8 +39,8 @@ Potentially Breaking Changes
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
 - For ARM targets, when using cc1as, the features included in the selected CPU or
-  Arch's FPU are now loaded and utilized. If you wish not to use a specific feature,
-  this will need appending to the command line used.
+  Architecture's FPU are now loaded and utilized. If you wish not to use a specific feature,
+  the relevant ``+no`` option will need to be amended to the command line option.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
