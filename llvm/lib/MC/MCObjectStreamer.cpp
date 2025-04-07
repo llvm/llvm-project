@@ -464,6 +464,22 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                          Label, PointerSize);
     return;
   }
+
+  // If the two labels are within the same fragment and it's a plain data
+  // fragment, then the address-offset is already a fixed constant and is not
+  // relaxable. Emit the advance-line-addr data immediately to save time and
+  // memory.
+  MCFragment *LastFrag = LastLabel->getFragment();
+  if (LastFrag->getKind() == MCFragment::FT_Data &&
+      Label->getFragment() == LastFrag) {
+    uint64_t AddrDelta = Label->getOffset() - LastLabel->getOffset();
+    SmallString<16> Tmp;
+    MCDwarfLineAddr::encode(getContext(), Assembler->getDWARFLinetableParams(),
+                            LineDelta, AddrDelta, Tmp);
+    emitBytes(Tmp);
+    return;
+  }
+
   const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
   insert(getContext().allocFragment<MCDwarfLineAddrFragment>(LineDelta,
                                                              *AddrDelta));
