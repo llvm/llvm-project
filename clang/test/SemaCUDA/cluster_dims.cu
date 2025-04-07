@@ -20,7 +20,7 @@ __global__ void __cluster_dims__(4) test_literal_1d() {} //NS-error {{__cluster_
 // CHECK: __attribute__((global)) __attribute__((cluster_dims(constint, constint / 4, 1))) void test_constant()
 __global__ void __cluster_dims__(constint, constint / 4, 1) test_constant() {} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
-// CHECK: template <int x, int y, int z> void test_template() __attribute__((cluster_dims(x, y, z))) 
+// CHECK: template <int x, int y, int z> void test_template() __attribute__((cluster_dims(x, y, z)))
 template <int x, int y, int z>  void test_template(void) __cluster_dims__(x, y, z){} //NS-error {{__cluster_dims__ is not supported for this GPU architecture}}
 
 // CHECK: template <int x, int y, int z> void test_template_expr() __attribute__((cluster_dims(x + constint, y, z)))
@@ -43,6 +43,13 @@ __global__ void __cluster_dims__(8, none_const_int / 2, 4) test_non_constant_1()
 
 //NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
 __global__ void __cluster_dims__(8, 2, none_const_int / 4) test_non_constant_2() {} // common-error {{'cluster_dims' attribute requires parameter 2 to be an integer constant}}
+
+//NS-error@+1 {{__no_cluster__ is not supported for this GPU architecture}}
+__global__ void __no_cluster__ test_no_cluster() {}
+
+//NS-error@+2 {{__no_cluster__ is not supported for this GPU architecture}}
+//NS-error@+1 {{__cluster_dims__ is not supported for this GPU architecture}}
+__global__ void __no_cluster__ __cluster_dims__(2,2,2) test_have_both() {} // common-error {{'cluster_dims' and 'no_cluster' attributes are not compatible}} common-note {{conflicting attribute is here}}
 
 template <int... args>
 __cluster_dims__(args) void test_template_variadic_args(void) {} // all-error {{expression contains unexpanded parameter pack 'args'}}
