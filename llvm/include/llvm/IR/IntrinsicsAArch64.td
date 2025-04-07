@@ -3031,11 +3031,11 @@ let TargetPrefix = "aarch64" in {
 
   def int_aarch64_sme_write_lane_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrNoMem, IntrHasSideEffects]>;
+            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly]>;
 
   def int_aarch64_sme_write_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty],
-            [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem]>;
 
 
   def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>]>;
@@ -3851,50 +3851,50 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
 
   class SME_LDR_STR_ZT_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_ptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
   def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
   def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
 
   //
   //  Zero ZT0
   //
-  def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrWriteMem]>;
+  def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem]>;
 
   //
   // Lookup table expand one register
   //
   def int_aarch64_sme_luti2_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
   def int_aarch64_sme_luti4_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
                             
   // Lookup table expand two registers
   //
   def int_aarch64_sme_luti2_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
   def int_aarch64_sme_luti4_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
-
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            
   //
   // Lookup table expand four registers
   //
   def int_aarch64_sme_luti2_lane_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
   def int_aarch64_sme_luti4_lane_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
 
   def int_aarch64_sme_luti4_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+                            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem]>;
 
   
   //
