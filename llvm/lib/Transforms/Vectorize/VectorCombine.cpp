@@ -243,15 +243,6 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
   if (!canWidenLoad(Load, TTI))
     return false;
 
-  auto MaxCommonDivisor = [](int n) {
-    if (n % 4 == 0)
-      return 4;
-    if (n % 2 == 0)
-      return 2;
-    else
-      return 1;
-  };
-
   Type *ScalarTy = Scalar->getType();
   uint64_t ScalarSize = ScalarTy->getPrimitiveSizeInBits();
   unsigned MinVectorSize = TTI.getMinVectorRegisterBitWidth();
@@ -295,7 +286,7 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       uint64_t OldScalarSizeInBytes = ScalarSizeInBytes;
       // Assign the greatest common divisor between UnalignedBytes and Offset to
       // ScalarSizeInBytes
-      ScalarSizeInBytes = MaxCommonDivisor(UnalignedBytes);
+      ScalarSizeInBytes = std::gcd(ScalarSizeInBytes, UnalignedBytes);
       ScalarSize = ScalarSizeInBytes * 8;
       VectorRange = OldScalarSizeInBytes / ScalarSizeInBytes;
       MinVecNumElts = MinVectorSize / ScalarSize;
