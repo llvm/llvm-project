@@ -198,8 +198,8 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
   auto CacheEntry = ComputeKnownBitsCache.find(R);
   if (CacheEntry != ComputeKnownBitsCache.end()) {
     Known = CacheEntry->second;
-    LLVM_DEBUG(dbgs() << "Cache hit at ");
-    LLVM_DEBUG(dumpKnownBitsResult(MI, Known, Depth));
+    LLVM_DEBUG(dbgs() << "Cache hit at ";
+               dumpKnownBitsResult(MI, Known, Depth););
     assert(Known.getBitWidth() == BitWidth && "Cache entry size doesn't match");
     return;
   }
