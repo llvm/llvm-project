@@ -1159,7 +1159,7 @@ public:
 
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI explicit map(const allocator_type& __a) : __tree_(typename __base::allocator_type(__a)) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit map(const allocator_type& __a) : __tree_(typename __base::allocator_type(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 map(const map& __m, const allocator_type& __a)
       : __tree_(__m.__tree_.value_comp(), typename __base::allocator_type(__a)) {
