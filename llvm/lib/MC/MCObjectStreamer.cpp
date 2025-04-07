@@ -469,8 +469,10 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
   // fragment, then the address-offset is already a fixed constant and is not
   // relaxable. Emit the advance-line-addr data immediately to save time and
   // memory.
+  // As per commit bbea64250f6548, RISCV always desires symbolic relocations.
   MCFragment *LastFrag = LastLabel->getFragment();
-  if (LastFrag->getKind() == MCFragment::FT_Data &&
+  if (!getAssembler().getContext().getTargetTriple().isRISCV() &&
+      LastFrag->getKind() == MCFragment::FT_Data &&
       Label->getFragment() == LastFrag) {
     uint64_t AddrDelta = Label->getOffset() - LastLabel->getOffset();
     SmallString<16> Tmp;
