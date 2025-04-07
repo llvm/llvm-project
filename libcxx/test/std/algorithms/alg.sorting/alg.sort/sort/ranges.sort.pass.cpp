@@ -115,6 +115,10 @@ constexpr void test_iterators() {
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
+#if __cpp_consteval >= 202211L // TODO: Remove this guard when MSVC implements P2564R3.
+  test_iterators_1<consteval_random_access_iterator<int*>>();
+  test_iterators_1<consteval_contiguous_iterator<int*>>();
+#endif
 }
 
 constexpr bool test() {
@@ -187,8 +191,6 @@ constexpr bool test() {
     [[maybe_unused]] std::same_as<std::ranges::dangling> decltype(auto) result = std::ranges::sort(std::array{1, 2, 3});
   }
 
-  // TODO: Enable the tests once the implementation switched to use iter_move/iter_swap
-  /*
   { // ProxyIterator
     {
       std::array in = {2, 1, 3};
@@ -205,7 +207,6 @@ constexpr bool test() {
       assert((in == std::array{1, 2, 3}));
     }
   }
-  */
 
   return true;
 }
