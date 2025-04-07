@@ -451,9 +451,17 @@ static std::string normalizeProgramName(llvm::StringRef Argv0) {
   return ProgName;
 }
 
-static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos) {
+static const DriverSuffix *parseDriverSuffix(StringRef ProgName, size_t &Pos, bool &FlangNew) {
   // Try to infer frontend type and default target from the program name by
   // comparing it against DriverSuffixes in order.
+
+  // Part I: Warn if invocation happens with flang-new (for Flang); this is for
+  // the time being and should be removed once AMD Classic Flang has been
+  // removed from ROCm.
+  FlangNew = false;
+  if (ProgName.ends_with("flang-new")) {
+    FlangNew = true;
+  }
 
   // If there is a match, the function tries to identify a target as prefix.
   // E.g. "x86_64-linux-clang" as interpreted as suffix "clang" with target
@@ -488,7 +496,22 @@ ParsedClangName
 ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   std::string ProgName = normalizeProgramName(PN);
   size_t SuffixPos;
-  const DriverSuffix *DS = parseDriverSuffix(ProgName, SuffixPos);
+  bool FlangNew = false;
+  const DriverSuffix *DS = parseDriverSuffix(ProgName, SuffixPos, FlangNew);
+
+  // Part II: Warn if invocation happens with flang-new (for Flang); this is for
+  // the time being and should be removed once AMD Classic Flang has been
+  // removed from ROCm.
+  if (FlangNew) {
+    if (!::getenv("AMD_NOWARN_FLANG_NEW")) {
+      // The solution with "llvm::errs()" is not ideal, but the driver object
+      // is not been constructed yet, so we cannot use the Diag() infrastructure
+      // for this.
+      llvm::errs() << "warning: the 'amdflang-new' and 'flang-new' commmands "
+                      "have been deprecated; please use 'amdflang' instead\n";
+    }
+  }
+
   if (!DS)
     return {};
   size_t SuffixEnd = SuffixPos + strlen(DS->Suffix);
