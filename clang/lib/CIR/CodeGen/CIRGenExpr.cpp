@@ -342,6 +342,8 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     Address addr = emitPointerWithAlignment(e->getSubExpr());
 
     // Tag 'load' with deref attribute.
+    // FIXME: This misses some derefence cases and has problematic interactions
+    // with other operators.
     if (auto loadOp =
             dyn_cast<cir::LoadOp>(addr.getPointer().getDefiningOp())) {
       loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
