@@ -3780,6 +3780,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
   IRBuilder<> Builder(BB);
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
   Type *Float32 = Type::getFloatTy(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(Float32);
@@ -3790,7 +3793,7 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Float32, false, false};
   OpenMPIRBuilder::AtomicOpValue V = {VVal, Float32, false, false};
 
-  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO));
+  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO, AllocaIP));
 
   IntegerType *IntCastTy =
       IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
@@ -3820,6 +3823,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
   IRBuilder<> Builder(BB);
 
   OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+  BasicBlock *EntryBB = BB;
+  OpenMPIRBuilder::InsertPointTy AllocaIP(EntryBB,
+                                          EntryBB->getFirstInsertionPt());
 
   IntegerType *Int32 = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
@@ -3830,9 +3836,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Int32, false, false};
   OpenMPIRBuilder::AtomicOpValue V = {VVal, Int32, false, false};
 
-  BasicBlock *EntryBB = BB;
+  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO, AllocaIP));
 
-  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO));
   LoadInst *AtomicLoad = nullptr;
   StoreInst *StoreofAtomic = nullptr;
 
