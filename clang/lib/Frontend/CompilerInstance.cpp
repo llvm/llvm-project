@@ -1257,37 +1257,15 @@ static std::unique_ptr<CompilerInstance> createCompilerInstanceForModuleCompile(
 /// Compile a module file for the given module, using the options
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
-static bool
-compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
-                  StringRef ModuleName, FrontendInputFile Input,
-                  StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-                  llvm::function_ref<void(CompilerInstance &)> PreBuildStep =
-                      [](CompilerInstance &) {},
-                  llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
-                      [](CompilerInstance &) {}) {
+static bool compileModuleImpl(CompilerInstance &ImportingInstance,
+                              SourceLocation ImportLoc, StringRef ModuleName,
+                              StringRef ModuleFileName,
+                              CompilerInstance &Instance) {
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
-
-  // Never compile a module that's already finalized - this would cause the
-  // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
-        << ModuleName;
-    return false;
-  }
-
-  std::unique_ptr<CompilerInstance> InstancePtr =
-      createCompilerInstanceForModuleCompile(
-          ImportingInstance, ImportLoc, ModuleName, Input,
-          OriginalModuleMapFile, ModuleFileName);
-  CompilerInstance &Instance = *InstancePtr;
 
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build)
     << ModuleName << ModuleFileName;
-
-  PreBuildStep(Instance);
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
@@ -1297,8 +1275,6 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
         Instance.ExecuteAction(Action);
       },
       DesiredStackSize);
-
-  PostBuildStep(Instance);
 
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build_done)
@@ -1343,6 +1319,18 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
 static bool compileModule(CompilerInstance &ImportingInstance,
                           SourceLocation ImportLoc, Module *Module,
                           StringRef ModuleFileName) {
+  StringRef ModuleName = Module->getTopLevelModuleName();
+
+  // Never compile a module that's already finalized - this would cause the
+  // existing module to be freed, causing crashes if it is later referenced
+  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
+          ModuleFileName)) {
+    ImportingInstance.getDiagnostics().Report(
+        ImportLoc, diag::err_module_rebuild_finalized)
+        << ModuleName;
+    return false;
+  }
+
   InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
                InputKind::ModuleMap);
 
@@ -1350,7 +1338,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
   ModuleMap &ModMap
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
   SourceManager &SourceMgr = ImportingInstance.getSourceManager();
-  bool Result;
+
+  std::unique_ptr<CompilerInstance> Instance;
   if (FileID ModuleMapFID = ModMap.getContainingModuleMapFileID(Module);
       ModuleMapFID.isValid()) {
     // We want to use the top-level module map. If we don't, the compiling
@@ -1384,8 +1373,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
 
     // Use the module map where this module resides.
-    Result = compileModuleImpl(
-        ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
+    Instance = createCompilerInstanceForModuleCompile(
+        ImportingInstance, ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
   } else {
@@ -1400,20 +1389,21 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     llvm::raw_string_ostream OS(InferredModuleMapContent);
     Module->print(OS);
 
-    Result = compileModuleImpl(
-        ImportingInstance, ImportLoc, Module->getTopLevelModuleName(),
+    Instance = createCompilerInstanceForModuleCompile(
+        ImportingInstance, ImportLoc, ModuleName,
         FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(),
-        ModuleFileName,
-        [&](CompilerInstance &Instance) {
-      std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
-          llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
-      FileEntryRef ModuleMapFile = Instance.getFileManager().getVirtualFileRef(
-          FakeModuleMapFile, InferredModuleMapContent.size(), 0);
-      Instance.getSourceManager().overrideFileContents(
-          ModuleMapFile, std::move(ModuleMapBuffer));
-    });
+        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+
+    std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
+        llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
+    FileEntryRef ModuleMapFile = Instance->getFileManager().getVirtualFileRef(
+        FakeModuleMapFile, InferredModuleMapContent.size(), 0);
+    Instance->getSourceManager().overrideFileContents(
+        ModuleMapFile, std::move(ModuleMapBuffer));
   }
+
+  bool Success = compileModuleImpl(ImportingInstance, ImportLoc, ModuleName,
+                                   ModuleFileName, *Instance);
 
   // We've rebuilt a module. If we're allowed to generate or update the global
   // module index, record that fact in the importing compiler instance.
@@ -1421,7 +1411,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     ImportingInstance.setBuildGlobalModuleIndex(true);
   }
 
-  return Result;
+  return Success;
 }
 
 /// Read the AST right after compiling the module.
@@ -2248,25 +2238,26 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   std::string NullTerminatedSource(Source.str());
 
-  auto PreBuildStep = [&](CompilerInstance &Other) {
-    // Create a virtual file containing our desired source.
-    // FIXME: We shouldn't need to do this.
-    FileEntryRef ModuleMapFile = Other.getFileManager().getVirtualFileRef(
-        ModuleMapFileName, NullTerminatedSource.size(), 0);
-    Other.getSourceManager().overrideFileContents(
-        ModuleMapFile, llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource));
+  auto Other = createCompilerInstanceForModuleCompile(
+      *this, ImportLoc, ModuleName, Input, StringRef(), ModuleFileName);
 
-    Other.BuiltModules = std::move(BuiltModules);
-    Other.DeleteBuiltModules = false;
-  };
+  // Create a virtual file containing our desired source.
+  // FIXME: We shouldn't need to do this.
+  FileEntryRef ModuleMapFile = Other->getFileManager().getVirtualFileRef(
+      ModuleMapFileName, NullTerminatedSource.size(), 0);
+  Other->getSourceManager().overrideFileContents(
+      ModuleMapFile, llvm::MemoryBuffer::getMemBuffer(NullTerminatedSource));
 
-  auto PostBuildStep = [this](CompilerInstance &Other) {
-    BuiltModules = std::move(Other.BuiltModules);
-  };
+  Other->BuiltModules = std::move(BuiltModules);
+  Other->DeleteBuiltModules = false;
 
   // Build the module, inheriting any modules that we've built locally.
-  if (compileModuleImpl(*this, ImportLoc, ModuleName, Input, StringRef(),
-                        ModuleFileName, PreBuildStep, PostBuildStep)) {
+  bool Success =
+      compileModuleImpl(*this, ImportLoc, ModuleName, ModuleFileName, *Other);
+
+  BuiltModules = std::move(Other->BuiltModules);
+
+  if (Success) {
     BuiltModules[std::string(ModuleName)] = std::string(ModuleFileName);
     llvm::sys::RemoveFileOnSignal(ModuleFileName);
   }
