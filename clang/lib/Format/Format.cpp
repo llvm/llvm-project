@@ -4010,7 +4010,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
 
   switch (Style.Language) {
   case FormatStyle::LK_C:
-    LangOpts.C17 = 1;
+    LangOpts.C11 = 1;
     break;
   case FormatStyle::LK_Cpp:
   case FormatStyle::LK_ObjC:
