@@ -783,10 +783,7 @@ struct ClassifyOp_match {
 
     FPClassTest TmpClass =
         static_cast<FPClassTest>(TmpMI->getOperand(2).getImm());
-    if (T.match(MRI, TmpClass))
-      return true;
-
-    return false;
+    return T.match(MRI, TmpClass);
   }
 };
 
