@@ -98,19 +98,14 @@ void PlainCFGBuilder::fixHeaderPhis() {
     auto *VPPhi = cast<VPWidenPHIRecipe>(VPVal);
     assert(VPPhi->getNumOperands() == 0 &&
            "Expected VPInstruction with no operands.");
-
-    Loop *L = LI->getLoopFor(Phi->getParent());
-    assert(isHeaderBB(Phi->getParent(), L));
+    assert(isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent())));
     // For header phis, make sure the incoming value from the loop
     // predecessor is the first operand of the recipe.
     assert(Phi->getNumOperands() == 2 &&
            "header phi must have exactly 2 operands");
-    BasicBlock *LoopPred = L->getLoopPredecessor();
-    VPPhi->addOperand(
-        getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopPred)));
-    BasicBlock *LoopLatch = L->getLoopLatch();
-    VPPhi->addOperand(
-        getOrCreateVPOperand(Phi->getIncomingValueForBlock(LoopLatch)));
+    for (BasicBlock *Pred : predecessors(Phi->getParent()))
+      VPPhi->addOperand(
+          getOrCreateVPOperand(Phi->getIncomingValueForBlock(Pred)));
   }
 }
 
@@ -344,8 +339,8 @@ void PlainCFGBuilder::buildPlainCFG(
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
 
-    // Don't connect any blocks outside the current loop except the latch, which
-    // is handled below.
+    // Don't connect any blocks outside the current loop except the latches for
+    // inner loops.
     if (LoopForBB &&
         (LoopForBB == TheLoop || BB != LoopForBB->getLoopLatch())) {
       if (!LoopForBB->contains(IRSucc0)) {
