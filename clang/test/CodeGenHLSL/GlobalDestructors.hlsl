@@ -88,9 +88,7 @@ void main(unsigned GI : SV_GroupIndex) {
 // NOINLINE-SPIRV-NEXT: entry:
 // NOINLINE-SPIRV-NEXT:   %0 = call token @llvm.experimental.convergence.entry()
 // NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN4TailD1Ev(ptr addrspacecast (ptr addrspace(1) @_ZZ3WagvE1T to ptr)) [ "convergencectrl"(token %0) ]
-
-// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN6PupperD1Ev(ptr addrspacecast (ptr addrspace(1) @GlobalPup to ptr)) [ "convergencectrl"(token %0) ] 
-
+// NOINLINE-SPIRV-NEXT:   call spir_func void @_ZN6PupperD1Ev(ptr addrspacecast (ptr addrspace(1) @GlobalPup to ptr)) [ "convergencectrl"(token %0) ]
 // NOINLINE-SPIRV-NEXT:   ret void
 
 // NOINLINE: attributes [[IntAttr]] = {{.*}} alwaysinline
