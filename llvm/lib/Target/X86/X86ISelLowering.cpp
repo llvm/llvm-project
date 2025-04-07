@@ -41115,9 +41115,9 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
-  // Peek through vector widenings and set out of bounds mask indices to undef.
-  // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
   for (auto [I, Op] : enumerate(Ops)) {
+    // Peek through vector widenings + set out of bounds mask indices to undef.
+    // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
     if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
         isNullConstant(Op.getOperand(2))) {
       Op = Op.getOperand(1);
@@ -41130,10 +41130,8 @@ static SDValue combineX86ShufflesRecursively(
           M = SM_SentinelUndef;
       }
     }
-  }
 
-  // Peek through any free bitcasts/extract_subvector nodes back to root size.
-  for (SDValue &Op : Ops){
+    // Peek through any free bitcasts/extract_subvector nodes back to root size.
     SDValue BC = Op;
     if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse())
       BC = peekThroughOneUseBitcasts(BC);
