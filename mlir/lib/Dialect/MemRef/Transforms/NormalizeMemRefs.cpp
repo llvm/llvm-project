@@ -165,7 +165,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
     return true;
 
   if (funcOp
-          .walk([&](memref::AllocOp allocOp) -> WalkResult {
+          .walk([&](AllocOp allocOp) -> WalkResult {
             Value oldMemRef = allocOp.getResult();
             if (!allocOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
@@ -176,7 +176,7 @@ bool NormalizeMemRefs::areMemRefsNormalizable(func::FuncOp funcOp) {
     return false;
 
   if (funcOp
-          .walk([&](memref::AllocaOp allocaOp) -> WalkResult {
+          .walk([&](AllocaOp allocaOp) -> WalkResult {
             Value oldMemRef = allocaOp.getResult();
             if (!allocaOp.getType().getLayout().isIdentity() &&
                 !isMemRefNormalizable(oldMemRef.getUsers()))
@@ -353,23 +353,8 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
 void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               ModuleOp moduleOp) {
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
-<<<<<<< Updated upstream
-  // alloc/alloca ops first and then process since normalizeMemRef
-  // replaces/erases ops during memref rewriting.
-<<<<<<< Updated upstream
-  SmallVector<memref::AllocOp, 4> allocOps;
-  funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
-  for (memref::AllocOp allocOp : allocOps)
-    (void)normalizeMemRef(allocOp);
-
-  SmallVector<memref::AllocaOp> allocaOps;
-  funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
-  for (memref::AllocaOp allocaOp : allocaOps)
-=======
-=======
   // alloc, alloca ops and reinterpret_cast ops first and then process since
   // normalizeMemRef replaces/erases ops during memref rewriting.
->>>>>>> Stashed changes
   SmallVector<AllocOp, 4> allocOps;
   SmallVector<AllocaOp> allocaOps;
   SmallVector<ReinterpretCastOp> reinterpretCastOps;
@@ -384,7 +369,6 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
   for (AllocOp allocOp : allocOps)
     (void)normalizeMemRef(allocOp);
   for (AllocaOp allocaOp : allocaOps)
->>>>>>> Stashed changes
     (void)normalizeMemRef(allocaOp);
   for (ReinterpretCastOp reinterpretCastOp : reinterpretCastOps)
     (void)normalizeMemRef(reinterpretCastOp);
