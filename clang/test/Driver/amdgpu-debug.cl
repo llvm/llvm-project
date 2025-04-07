@@ -44,7 +44,7 @@
 
 // Specifically, check for failure with previously-valid value diexpr
 // RUN: not %clang -target amdgcn-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g -gheterogeneous-dwarf=diexpr %s 2>&1 | FileCheck -check-prefix=CHECK-DIEXPR %s
-// CHECK-DIEXPR: error: invalid value
+// CHECK-DIEXPR: error: unsupported option '-gheterogeneous-dwarf=diexpr'; did you mean '-gheterogeneous-dwarf=diexpression'?
 
 // Check that =diexpression is implied by -g + spirv
 // RUN: %clang -### -target spirv64-amd-amdhsa -x cl -c -nogpuinc -nogpulib  -emit-llvm -g %s 2>&1 | FileCheck -check-prefix=CHECK-SPIRV %s
