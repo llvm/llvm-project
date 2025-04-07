@@ -246,19 +246,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       if (IsPCRel)
         Value -= FixupAddress + (1 << Log2Size);
     } else if (Symbol->isVariable()) {
-      const MCExpr *Value = Symbol->getVariableValue();
-      int64_t Res;
-      bool isAbs =
-          Value->evaluateAsAbsolute(Res, Asm, Writer->getSectionAddressMap());
-      if (isAbs) {
-        FixedValue = Res;
-        return;
-      } else {
-        Asm.getContext().reportError(Fixup.getLoc(),
-                                     "unsupported relocation of variable '" +
-                                         Symbol->getName() + "'");
-        return;
-      }
+      FixedValue = Writer->getSymbolAddress(*Symbol, Asm);
+      return;
     } else {
       Asm.getContext().reportError(
           Fixup.getLoc(), "unsupported relocation of undefined symbol '" +
@@ -548,9 +537,17 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
 
     // Resolve constant variables.
     if (A->isVariable()) {
-      int64_t Res;
-      if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Asm, Writer->getSectionAddressMap())) {
+      MCValue Val;
+      bool Relocatable =
+          A->getVariableValue()->evaluateAsRelocatable(Val, &Asm);
+      int64_t Res = Val.getConstant();
+      bool isAbs = Val.isAbsolute();
+      if (Relocatable && Val.getAddSym() && Val.getSubSym()) {
+        Res += Writer->getSymbolAddress(*Val.getAddSym(), Asm) -
+               Writer->getSymbolAddress(*Val.getSubSym(), Asm);
+        isAbs = true;
+      }
+      if (isAbs) {
         FixedValue = Res;
         return;
       }
