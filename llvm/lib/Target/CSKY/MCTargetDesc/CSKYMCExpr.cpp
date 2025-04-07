@@ -72,5 +72,5 @@ bool CSKYMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
   Res.setSpecifier(specifier);
-  return !Res.getSymB();
+  return !Res.getSubSym();
 }

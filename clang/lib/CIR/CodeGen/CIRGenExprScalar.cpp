@@ -88,13 +88,11 @@ public:
   //===--------------------------------------------------------------------===//
 
   mlir::Value emitPromotedValue(mlir::Value result, QualType promotionType) {
-    cgf.cgm.errorNYI(result.getLoc(), "floating cast for promoted value");
-    return {};
+    return builder.createFloatingCast(result, cgf.convertType(promotionType));
   }
 
   mlir::Value emitUnPromotedValue(mlir::Value result, QualType exprType) {
-    cgf.cgm.errorNYI(result.getLoc(), "floating cast for unpromoted value");
-    return {};
+    return builder.createFloatingCast(result, cgf.convertType(exprType));
   }
 
   mlir::Value emitPromoted(const Expr *e, QualType promotionType);
@@ -446,37 +444,35 @@ public:
     llvm_unreachable("Unexpected signed overflow behavior kind");
   }
 
-  mlir::Value VisitUnaryPlus(const UnaryOperator *e,
-                             QualType promotionType = QualType()) {
-    if (!promotionType.isNull())
-      cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryPlus: promotionType");
-    assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
-    return result;
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
+    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
   }
 
-  mlir::Value VisitUnaryMinus(const UnaryOperator *e,
-                              QualType promotionType = QualType()) {
-    if (!promotionType.isNull())
-      cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryMinus: promotionType");
-    assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
-    return result;
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
+    return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
   }
 
   mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
                                    cir::UnaryOpKind kind) {
     ignoreResultAssign = false;
 
-    assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value operand = Visit(e->getSubExpr());
+    QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+
+    mlir::Value operand;
+    if (!promotionType.isNull())
+      operand = cgf.emitPromotedScalarExpr(e->getSubExpr(), promotionType);
+    else
+      operand = Visit(e->getSubExpr());
 
     bool nsw =
         kind == cir::UnaryOpKind::Minus && e->getType()->isSignedIntegerType();
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return emitUnaryOp(e, kind, operand, nsw);
+    mlir::Value result = emitUnaryOp(e, kind, operand, nsw);
+    if (result && !promotionType.isNull())
+      return emitUnPromotedValue(result, e->getType());
+    return result;
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
@@ -491,6 +487,8 @@ public:
     mlir::Value op = Visit(e->getSubExpr());
     return emitUnaryOp(e, cir::UnaryOpKind::Not, op);
   }
+
+  mlir::Value VisitUnaryLNot(const UnaryOperator *e);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
@@ -1319,7 +1317,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                      "fixed point casts");
       return {};
     }
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(), "fp options");
+    assert(!cir::MissingFeatures::cgFPOptionsRAII());
     return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
                                 ce->getExprLoc());
   }
@@ -1355,6 +1353,33 @@ mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
          "Invalid scalar expression to emit");
   return ScalarExprEmitter(*this, builder)
       .emitScalarConversion(src, srcTy, dstTy, loc);
+}
+
+mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
+  // Perform vector logical not on comparison with zero vector.
+  if (e->getType()->isVectorType() &&
+      e->getType()->castAs<VectorType>()->getVectorKind() ==
+          VectorKind::Generic) {
+    assert(!cir::MissingFeatures::vectorType());
+    cgf.cgm.errorNYI(e->getSourceRange(), "vector logical not");
+    return {};
+  }
+
+  // Compare operand to zero.
+  mlir::Value boolVal = cgf.evaluateExprAsBool(e->getSubExpr());
+
+  // Invert value.
+  boolVal = builder.createNot(boolVal);
+
+  // ZExt result to the expr type.
+  mlir::Type dstTy = cgf.convertType(e->getType());
+  if (mlir::isa<cir::IntType>(dstTy))
+    return builder.createBoolToInt(boolVal, dstTy);
+  if (mlir::isa<cir::BoolType>(dstTy))
+    return boolVal;
+
+  cgf.cgm.errorNYI("destination type for logical-not unary operator is NYI");
+  return {};
 }
 
 /// Return the size or alignment of the type of argument of the sizeof

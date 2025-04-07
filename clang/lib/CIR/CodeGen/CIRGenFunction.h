@@ -110,6 +110,8 @@ private:
 public:
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
+  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
+
 private:
   // Track current variable initialization (if there's one)
   const clang::VarDecl *currVarDecl = nullptr;
@@ -377,6 +379,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
@@ -395,6 +399,8 @@ public:
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
+  mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+  mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)

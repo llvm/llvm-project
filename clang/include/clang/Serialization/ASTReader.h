@@ -2659,7 +2659,7 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
 
 /// Calculate a hash value for the primary module name of the given module.
 /// \returns std::nullopt if M is not a C++ standard module.
-std::optional<unsigned> getPrimaryModuleHash(const Module *M);
+UnsignedOrNone getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 
