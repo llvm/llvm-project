@@ -107,7 +107,6 @@ add_clang_library(clangCodeGen
   ConstantInitBuilder.cpp
   CoverageMappingGen.cpp
   ItaniumCXXABI.cpp
-  HLSLBufferLayoutBuilder.cpp
   LinkInModulesPass.cpp
   MacroPPCallbacks.cpp
   MicrosoftCXXABI.cpp
@@ -116,43 +115,7 @@ add_clang_library(clangCodeGen
   PatternInit.cpp
   SanitizerMetadata.cpp
   SwiftCallingConv.cpp
-  TargetBuiltins/ARM.cpp
-  TargetBuiltins/AMDGPU.cpp
-  TargetBuiltins/Hexagon.cpp
-  TargetBuiltins/NVPTX.cpp
-  TargetBuiltins/PPC.cpp
-  TargetBuiltins/RISCV.cpp
-  TargetBuiltins/SPIR.cpp
-  TargetBuiltins/SystemZ.cpp
-  TargetBuiltins/WebAssembly.cpp
-  TargetBuiltins/X86.cpp
   TargetInfo.cpp
-  Targets/AArch64.cpp
-  Targets/AMDGPU.cpp
-  Targets/ARC.cpp
-  Targets/ARM.cpp
-  Targets/AVR.cpp
-  Targets/BPF.cpp
-  Targets/CSKY.cpp
-  Targets/DirectX.cpp
-  Targets/Hexagon.cpp
-  Targets/Lanai.cpp
-  Targets/LoongArch.cpp
-  Targets/M68k.cpp
-  Targets/MSP430.cpp
-  Targets/Mips.cpp
-  Targets/NVPTX.cpp
-  Targets/PNaCl.cpp
-  Targets/PPC.cpp
-  Targets/RISCV.cpp
-  Targets/SPIR.cpp
-  Targets/Sparc.cpp
-  Targets/SystemZ.cpp
-  Targets/TCE.cpp
-  Targets/VE.cpp
-  Targets/WebAssembly.cpp
-  Targets/X86.cpp
-  Targets/XCore.cpp
   VarBypassDetector.cpp
 
   DEPENDS
@@ -170,4 +133,16 @@ add_clang_library(clangCodeGen
   clangFrontend
   clangLex
   clangSerialization
+  clangCodeGenTargetBuiltins
+  clangCodeGenTargets
   )
+
+  target_include_directories(clangCodeGen
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/TargetBuiltins
+    ${CMAKE_CURRENT_SOURCE_DIR}/Targets
+  )
+  
+  add_subdirectory(TargetBuiltins)
+  add_subdirectory(Targets)
