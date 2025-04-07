@@ -75,8 +75,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   auto I = serialize::emitInfo(D, getComment(D, D->getASTContext()),
-                               getDeclLocation(D), File,
-                               IsFileInRootDir, CDCtx.PublicOnly);
+                               getDeclLocation(D), CDCtx.PublicOnly);
 
   // A null in place of I indicates that the serializer is skipping this decl
   // for some reason (e.g. we're only reporting public decls).
