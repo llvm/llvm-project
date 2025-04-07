@@ -2230,6 +2230,7 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
   CurrentPackingBits.addBit((bool)E->getPackIndex());
   if (auto PackIndex = E->getPackIndex())
     Record.push_back(*PackIndex + 1);
+  CurrentPackingBits.addBit(E->getFinal());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
