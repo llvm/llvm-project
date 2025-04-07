@@ -17,6 +17,7 @@ using namespace mlir;
 using namespace mlir::link;
 
 using Linkage = LLVM::Linkage;
+using Visibility = LLVM::Visibility;
 
 static Linkage getLinkage(Operation *op) {
   if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
@@ -76,6 +77,38 @@ static bool isLocalLinkage(Linkage linkage) {
 
 static bool isExternalWeakLinkage(Linkage linkage) {
   return linkage == Linkage::ExternWeak;
+}
+
+static Visibility getVisibility(Operation *op) {
+  if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
+    return gv.getVisibility_();
+  if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op))
+    return fn.getVisibility_();
+  llvm_unreachable("unexpected operation");
+}
+
+static void setVisibility(Operation *op, Visibility visibility) {
+  if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
+    return gv.setVisibility_(visibility);
+  if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op))
+    return fn.setVisibility_(visibility);
+  llvm_unreachable("unexpected operation");
+}
+
+static bool isHiddenVisibility(Visibility visibility) {
+  return visibility == Visibility::Hidden;
+}
+
+static bool isProtectedVisibility(Visibility visibility) {
+  return visibility == Visibility::Protected;
+}
+
+static Visibility getMinVisibility(Visibility lhs, Visibility rhs) {
+  if (isHiddenVisibility(lhs) || isHiddenVisibility(rhs))
+    return Visibility::Hidden;
+  if (isProtectedVisibility(lhs) || isProtectedVisibility(rhs))
+    return Visibility::Protected;
+  return Visibility::Default;
 }
 
 LLVM_ATTRIBUTE_UNUSED static bool isCommonLinkage(Linkage linkage) {
@@ -244,6 +277,11 @@ public:
 
     Linkage srcLinkage = getLinkage(pair.src);
     Linkage dstLinkage = getLinkage(pair.dst);
+
+    Visibility visibility =
+        getMinVisibility(getVisibility(pair.src), getVisibility(pair.dst));
+    setVisibility(pair.src, visibility);
+    setVisibility(pair.dst, visibility);
 
     const bool srcIsDeclaration = isDeclarationForLinker(pair.src);
     const bool dstIsDeclaration = isDeclarationForLinker(pair.dst);
