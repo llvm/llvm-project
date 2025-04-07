@@ -15412,12 +15412,20 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   if (E->State == TreeEntry::SplitVectorize) {
     Res = FindLastInst();
+    if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
+      for (auto *E : Entries) {
+        auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
+        if (!I)
+          I = &getLastInstructionInBundle(E);
+        if (Res->comesBefore(I))
+          Res = I;
+      }
+    }
     return *Res;
   }
 
   // Set insertpoint for gathered loads to the very first load.
-  if (E->State != TreeEntry::SplitVectorize &&
-      GatheredLoadsEntriesFirst.has_value() &&
+  if (GatheredLoadsEntriesFirst.has_value() &&
       E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
       E->getOpcode() == Instruction::Load) {
     Res = FindFirstInst();
