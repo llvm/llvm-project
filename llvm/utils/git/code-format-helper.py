@@ -391,7 +391,9 @@ You can test this locally with the following command:
             else:
                 undef_regex = r"UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+](?!\s*#\s*).*(" + undef_regex + r")", file, re.MULTILINE):
+            if re.search(
+                r"^[+](?!\s*#\s*).*(" + undef_regex + r")", file, re.MULTILINE
+            ):
                 files.append(filename)
 
         if not files:
