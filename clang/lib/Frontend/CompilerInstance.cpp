@@ -1150,29 +1150,10 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
   return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 
-/// Compile a module file for the given module, using the options
-/// provided by the importing compiler instance. Returns true if the module
-/// was built without errors.
-static bool
-compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
-                  StringRef ModuleName, FrontendInputFile Input,
-                  StringRef OriginalModuleMapFile, StringRef ModuleFileName,
-                  llvm::function_ref<void(CompilerInstance &)> PreBuildStep =
-                      [](CompilerInstance &) {},
-                  llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
-                      [](CompilerInstance &) {}) {
-  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
-
-  // Never compile a module that's already finalized - this would cause the
-  // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
-        << ModuleName;
-    return false;
-  }
-
+static std::unique_ptr<CompilerInstance> createCompilerInstanceForModuleCompile(
+    CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
+    StringRef ModuleName, FrontendInputFile Input,
+    StringRef OriginalModuleMapFile, StringRef ModuleFileName) {
   // Construct a compiler invocation for creating this module.
   auto Invocation =
       std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
@@ -1226,8 +1207,11 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // module.  Since we're sharing an in-memory module cache,
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
-  CompilerInstance Instance(ImportingInstance.getPCHContainerOperations(),
-                            &ImportingInstance.getModuleCache());
+  auto InstancePtr = std::make_unique<CompilerInstance>(
+      ImportingInstance.getPCHContainerOperations(),
+      &ImportingInstance.getModuleCache());
+  auto &Instance = *InstancePtr;
+
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
@@ -1267,6 +1251,38 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   Instance.setModuleDepCollector(ImportingInstance.getModuleDepCollector());
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
+  return InstancePtr;
+}
+
+/// Compile a module file for the given module, using the options
+/// provided by the importing compiler instance. Returns true if the module
+/// was built without errors.
+static bool
+compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
+                  StringRef ModuleName, FrontendInputFile Input,
+                  StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+                  llvm::function_ref<void(CompilerInstance &)> PreBuildStep =
+                      [](CompilerInstance &) {},
+                  llvm::function_ref<void(CompilerInstance &)> PostBuildStep =
+                      [](CompilerInstance &) {}) {
+  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+
+  // Never compile a module that's already finalized - this would cause the
+  // existing module to be freed, causing crashes if it is later referenced
+  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
+          ModuleFileName)) {
+    ImportingInstance.getDiagnostics().Report(
+        ImportLoc, diag::err_module_rebuild_finalized)
+        << ModuleName;
+    return false;
+  }
+
+  std::unique_ptr<CompilerInstance> InstancePtr =
+      createCompilerInstanceForModuleCompile(
+          ImportingInstance, ImportLoc, ModuleName, Input,
+          OriginalModuleMapFile, ModuleFileName);
+  CompilerInstance &Instance = *InstancePtr;
+
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build)
     << ModuleName << ModuleFileName;
@@ -1289,7 +1305,7 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
     << ModuleName;
 
   // Propagate the statistics to the parent FileManager.
-  if (!FrontendOpts.ModulesShareFileManager)
+  if (ImportingInstance.getFileManagerPtr() != Instance.getFileManagerPtr())
     ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
