@@ -447,6 +447,9 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     OS << X << ',' << Y << ',' << Z;
     F->addFnAttr("amdgpu-cluster-dims", AttrVal.str());
   }
+
+  if (FD->getAttr<CUDANoClusterAttr>())
+    F->addFnAttr("amdgpu-cluster-dims", "0,0,0");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(

@@ -760,11 +760,12 @@ void MetadataStreamerMsgPackV6::emitKernelAttrs(const AMDGPUTargetMachine &TM,
   MetadataStreamerMsgPackV5::emitKernelAttrs(TM, MF, Kern);
 
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  if (std::optional<std::array<unsigned, 3>> Dims = MFI.getClusterDims()) {
+  ClusterDimsAttr Attr = MFI.getClusterDims();
+  if (Attr.isFixedDims()) {
     msgpack::ArrayDocNode ClusterDimsNode = HSAMetadataDoc->getArrayNode();
-    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[0]));
-    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[1]));
-    ClusterDimsNode.push_back(HSAMetadataDoc->getNode((*Dims)[2]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[0]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[1]));
+    ClusterDimsNode.push_back(HSAMetadataDoc->getNode(Attr.getDims()[2]));
     Kern[".cluster_dims"] = ClusterDimsNode;
   }
 }

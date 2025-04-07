@@ -4500,29 +4500,40 @@ bool AMDGPULegalizerInfo::legalizeWorkGroupId(
                                 B.buildMul(S32, ClusterIdXYZ, ClusterSizeXYZ));
 
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
-  if (ClusterDims.has_value()) {
+
+  switch (MFI->getClusterDims().getKind()) {
+  case AMDGPU::ClusterDimsAttr::Kind::FixedDims:
+  case AMDGPU::ClusterDimsAttr::Kind::VariableDims: {
     B.buildCopy(DstReg, GlobalIdXYZ);
     MI.eraseFromParent();
     return true;
   }
+  case AMDGPU::ClusterDimsAttr::Kind::NoCluster: {
+    B.buildCopy(DstReg, ClusterIdXYZ);
+    MI.eraseFromParent();
+    return true;
+  }
+  case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
+    using namespace AMDGPU::Hwreg;
+    unsigned ClusterIdField =
+        AMDGPU::isGFX1250Only(ST)
+            ? HwregEncoding::encode(ID_IB_STS2, 6, 4)
+            : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4);
+    Register ClusterId = MRI.createGenericVirtualRegister(S32);
+    MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
+    B.buildInstr(AMDGPU::S_GETREG_B32_const)
+        .addDef(ClusterId)
+        .addImm(ClusterIdField);
+    auto Zero = B.buildConstant(S32, 0);
+    auto NoClusters =
+        B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), ClusterId, Zero);
+    B.buildSelect(DstReg, NoClusters, ClusterIdXYZ, GlobalIdXYZ);
+    MI.eraseFromParent();
+    return true;
+  }
+  }
 
-  using namespace AMDGPU::Hwreg;
-  unsigned ClusterIdField =
-      AMDGPU::isGFX1250Only(ST)
-          ? HwregEncoding::encode(ID_IB_STS2, 6, 4)
-          : HwregEncoding::encode(ID_WAVE_GROUP_INFO, 0, 4);
-  Register ClusterId = MRI.createGenericVirtualRegister(S32);
-  MRI.setRegClass(ClusterId, &AMDGPU::SReg_32RegClass);
-  B.buildInstr(AMDGPU::S_GETREG_B32_const)
-      .addDef(ClusterId)
-      .addImm(ClusterIdField);
-  auto Zero = B.buildConstant(S32, 0);
-  auto NoClusters =
-      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), ClusterId, Zero);
-  B.buildSelect(DstReg, NoClusters, ClusterIdXYZ, GlobalIdXYZ);
-  MI.eraseFromParent();
-  return true;
+  llvm_unreachable("nothing should reach here");
 }
 
 bool AMDGPULegalizerInfo::loadInputValue(
@@ -4566,7 +4577,9 @@ bool AMDGPULegalizerInfo::loadInputValue(
 
   if (ST.hasArchitectedSGPRs() &&
       (AMDGPU::isCompute(CC) || CC == CallingConv::AMDGPU_Gfx)) {
-    std::optional<std::array<unsigned, 3>> ClusterDims = MFI->getClusterDims();
+    AMDGPU::ClusterDimsAttr ClusterDims = MFI->getClusterDims();
+    bool HasFixedDims = ClusterDims.isFixedDims();
+
     switch (ArgType) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       Arg = &WorkGroupIDX;
@@ -4584,43 +4597,43 @@ bool AMDGPULegalizerInfo::loadInputValue(
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X:
-      if (ClusterDims && (*ClusterDims)[0] == 1)
+      if (HasFixedDims && ClusterDims.getDims()[0] == 1)
         return LoadConstant(0);
       Arg = &ClusterWorkGroupIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y:
-      if (ClusterDims && (*ClusterDims)[1] == 1)
+      if (HasFixedDims && ClusterDims.getDims()[1] == 1)
         return LoadConstant(0);
       Arg = &ClusterWorkGroupIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z:
-      if (ClusterDims && (*ClusterDims)[2] == 1)
+      if (HasFixedDims && ClusterDims.getDims()[2] == 1)
         return LoadConstant(0);
       Arg = &ClusterWorkGroupIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X:
-      if (ClusterDims)
-        return LoadConstant((*ClusterDims)[0] - 1);
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[0] - 1);
       Arg = &ClusterWorkGroupMaxIDX;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y:
-      if (ClusterDims)
-        return LoadConstant((*ClusterDims)[1] - 1);
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[1] - 1);
       Arg = &ClusterWorkGroupMaxIDY;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z:
-      if (ClusterDims)
-        return LoadConstant((*ClusterDims)[2] - 1);
+      if (HasFixedDims)
+        return LoadConstant(ClusterDims.getDims()[2] - 1);
       Arg = &ClusterWorkGroupMaxIDZ;
       ArgRC = &AMDGPU::SReg_32RegClass;
       ArgTy = LLT::scalar(32);

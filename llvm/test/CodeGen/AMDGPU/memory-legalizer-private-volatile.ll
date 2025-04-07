@@ -520,8 +520,6 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 scope:SCOPE_SYS
@@ -714,8 +712,6 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_wait_samplecnt 0x0
-; GFX1250-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    scratch_store_b32 v1, v0, s0 scale_offset scope:SCOPE_SYS

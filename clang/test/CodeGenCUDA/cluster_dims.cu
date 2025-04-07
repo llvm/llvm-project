@@ -18,3 +18,6 @@ __global__ void __cluster_dims__(4) test_literal_1d() {}
 
 // CHECK: "amdgpu-cluster-dims"="4,2,1"
 __global__ void __cluster_dims__(constint, constint / 2, 1) test_constant() {}
+
+// CHECK: "amdgpu-cluster-dims"="0,0,0"
+__global__ void __no_cluster__ test_no_cluster() {}
