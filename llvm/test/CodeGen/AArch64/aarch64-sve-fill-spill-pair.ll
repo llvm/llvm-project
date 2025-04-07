@@ -5,7 +5,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve,stp-aligned-only -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 < %s | FileCheck %s --check-prefixes=CHECK-STPALIGNEDONLY
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s --check-prefixes=CHECK-OFF
 ; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=256 -aarch64-sve-vector-bits-max=256 < %s | FileCheck %s --check-prefixes=CHECK-OFF
-; RUN: llc -verify-machineinstrs -mtriple=aarch64-linux-gnu -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -aarch64-disable-sve-fill-spill-pairing=1 < %s | FileCheck %s --check-prefixes=CHECK-OFF
 
 define void @nxv16i8(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: nxv16i8:
