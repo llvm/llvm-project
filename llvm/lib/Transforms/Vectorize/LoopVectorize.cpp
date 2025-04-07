@@ -9924,11 +9924,8 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       VPValue *Cmp = Select->getOperand(0);
       // If the compare is checking the reduction PHI node, adjust it to check
       // the start value.
-      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe()) {
-        for (unsigned I = 0; I != CmpR->getNumOperands(); ++I)
-          if (CmpR->getOperand(I) == PhiR)
-            CmpR->setOperand(I, PhiR->getStartValue());
-      }
+      if (VPRecipeBase *CmpR = Cmp->getDefiningRecipe())
+        CmpR->replaceUsesOfWith(PhiR, PhiR->getStartValue());
       Builder.setInsertPoint(Select);
 
       // If the true value of the select is the reduction phi, the new value is
