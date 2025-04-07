@@ -278,10 +278,10 @@ static bool isCallerPreservedOrConstPhysReg(MCRegister Reg,
          (MRI.reservedRegsFrozen() && MRI.isConstantPhysReg(Reg));
 }
 
-/// hasLivePhysRegDefUses - Return true if the specified instruction read/write
-/// physical registers (except for dead defs of physical registers). It also
-/// returns the physical register def by reference if it's the only one and the
-/// instruction does not uses a physical register.
+/// hasLivePhysRegDefUses - Return true if the specified instruction
+/// reads/writes physical registers (except for dead defs of physical
+/// registers). It also returns the physical register def by reference if it's
+/// the only one and the instruction does not use a physical register.
 bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
                                            const MachineBasicBlock *MBB,
                                            SmallSet<MCRegister, 8> &PhysRefs,
