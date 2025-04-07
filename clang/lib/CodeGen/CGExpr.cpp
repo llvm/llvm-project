@@ -2480,8 +2480,9 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       llvm::Instruction *Load = Builder.CreateLoad(Dst.getMatrixAddress());
       llvm::Value *Vec =
           Builder.CreateInsertElement(Load, Src.getScalarVal(), Idx, "matins");
-      Builder.CreateStore(Vec, Dst.getMatrixAddress(),
-                          Dst.isVolatileQualified());
+      auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
+                                    Dst.isVolatileQualified());
+      addInstToCurrentSourceAtom(I, Vec);
       return;
     }
 
