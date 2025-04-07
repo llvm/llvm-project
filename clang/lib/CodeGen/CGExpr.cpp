@@ -2614,7 +2614,8 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
   }
 
   // Write the new value back out.
-  Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  auto *I = Builder.CreateStore(SrcVal, Ptr, Dst.isVolatileQualified());
+  addInstToCurrentSourceAtom(I, SrcVal);
 
   // Return the new value of the bit-field, if requested.
   if (Result) {
