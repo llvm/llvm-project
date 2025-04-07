@@ -1477,7 +1477,14 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
   if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
     BoolCondVal = emitCondLikelihoodViaExpectIntrinsic(
         BoolCondVal, Stmt::getLikelihood(S.getBody()));
-  Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  auto *I = Builder.CreateCondBr(BoolCondVal, ForBody, ExitBlock, Weights);
+  // Key Instructions: Emit the condition and branch as separate atoms to
+  // match existing loop stepping behaviour. FIXME: We could have the branch as
+  // the backup location for the condition, which would probably be a better
+  // experience.
+  if (auto *I = dyn_cast<llvm::Instruction>(BoolCondVal))
+    addInstToNewSourceAtom(I, nullptr);
+  addInstToNewSourceAtom(I, nullptr);
 
   if (ExitBlock != LoopExit.getBlock()) {
     EmitBlock(ExitBlock);
@@ -1526,6 +1533,10 @@ CodeGenFunction::EmitCXXForRangeStmt(const CXXForRangeStmt &S,
 
   if (CGM.shouldEmitConvergenceTokens())
     ConvergenceTokenStack.pop_back();
+
+  // We want the for closing brace to be step-able on to match existing
+  // behaviour. 
+  addInstToNewSourceAtom(ForBody->getTerminator(), nullptr);
 }
 
 void CodeGenFunction::EmitReturnOfRValue(RValue RV, QualType Ty) {
