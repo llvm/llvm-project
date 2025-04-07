@@ -472,8 +472,13 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
                      !cast<Instruction>(V)->mayHaveSideEffects() &&
                      !cast<Instruction>(V)->isTerminator())) {
        EphValues.insert(V);
-       if (const User *U = dyn_cast<User>(V))
-         append_range(WorkSet, U->operands());
+
+       if (const User *U = dyn_cast<User>(V)) {
+         for (const Use &U : U->operands()) {
+           if (!isa<Constant>(U))
+             WorkSet.push_back(U.get());
+         }
+       }
       }
     }
   }
