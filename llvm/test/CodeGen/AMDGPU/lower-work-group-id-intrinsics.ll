@@ -121,7 +121,7 @@ define amdgpu_cs void @_amdgpu_cs_main() {
   ret void
 }
 
-define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-cluster-dims"="1,1,1" {
+define amdgpu_cs void @workgroup_id_no_clusters() "amdgpu-cluster-dims"="0,0,0" {
 ; GFX9-SDAG-LABEL: workgroup_id_no_clusters:
 ; GFX9-SDAG:       ; %bb.0: ; %.entry
 ; GFX9-SDAG-NEXT:    s_lshr_b32 s0, ttmp7, 16
