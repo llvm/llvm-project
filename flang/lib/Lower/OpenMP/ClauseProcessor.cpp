@@ -227,7 +227,7 @@ bool ClauseProcessor::processCancelDirectiveName(
   mlir::MLIRContext *context = &converter.getMLIRContext();
 
   ConstructType directive;
-  if (auto *clause = findUniqueClause<omp::CancellationConstructType>())
+  if (auto *clause = findUniqueClause<omp::CancellationConstructType>()) {
     switch (clause->v) {
     case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Parallel:
       directive = mlir::omp::ClauseCancellationConstructType::Parallel;
@@ -245,8 +245,9 @@ bool ClauseProcessor::processCancelDirectiveName(
       llvm_unreachable("OMP_CANCELLATION_CONSTRUCT_None");
       break;
     }
-  else
+  } else {
     llvm_unreachable("cancel construct missing cancellation construct type");
+  }
 
   result.cancelDirective =
       mlir::omp::ClauseCancellationConstructTypeAttr::get(context, directive);
