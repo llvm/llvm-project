@@ -347,9 +347,13 @@ void salvageDebugInfoForDbgValues(Instruction &I,
 ///   Return = %a
 ///   Ops = llvm::dwarf::DW_OP_LLVM_arg0 llvm::dwarf::DW_OP_add
 ///   AdditionalValues = %b
+///
+/// \param KeepType If enabled, only perform salvage that does not modify
+///                 the type of the value.
 Value *salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
                             SmallVectorImpl<uint64_t> &Ops,
-                            SmallVectorImpl<Value *> &AdditionalValues);
+                            SmallVectorImpl<Value *> &AdditionalValues,
+                            bool KeepType = false);
 
 /// Point debug users of \p From to \p To or salvage them. Use this function
 /// only when replacing all uses of \p From with \p To, with a guarantee that

@@ -2398,7 +2398,8 @@ void llvm::salvageDebugInfoForDbgValues(
       SmallVector<uint64_t, 16> Ops;
       unsigned LocNo = std::distance(DVRLocation.begin(), LocItr);
       uint64_t CurrentLocOps = SalvagedExpr->getNumLocationOperands();
-      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues);
+      Op0 = salvageDebugInfoImpl(I, CurrentLocOps, Ops, AdditionalValues,
+                                 DVR->isDbgDeclare());
       if (!Op0)
         break;
       SalvagedExpr =
@@ -2600,11 +2601,15 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
 
 Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
                                   SmallVectorImpl<uint64_t> &Ops,
-                                  SmallVectorImpl<Value *> &AdditionalValues) {
+                                  SmallVectorImpl<Value *> &AdditionalValues,
+                                  bool KeepType) {
   auto &M = *I.getModule();
   auto &DL = M.getDataLayout();
 
   if (auto *CI = dyn_cast<CastInst>(&I)) {
+    if (KeepType)
+      return nullptr;
+
     Value *FromValue = CI->getOperand(0);
     // No-op casts are irrelevant for debug info.
     if (CI->isNoopCast(DL)) {
