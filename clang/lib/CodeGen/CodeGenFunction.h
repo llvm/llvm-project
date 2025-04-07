@@ -1768,6 +1768,16 @@ public:
       DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
   }
 
+  /// Add \p KeyInstruction and an optional \p Backup instruction to a new atom
+  /// group (See ApplyAtomGroup for more info).
+  void addInstToNewSourceAtom(llvm::Instruction *KeyInstruction,
+                              llvm::Value *Backup) {
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      ApplyAtomGroup Grp(getDebugInfo());
+      DI->addInstToCurrentSourceAtom(KeyInstruction, Backup);
+    }
+  }
+
   /// See CGDebugInfo::addRetToOverrideOrNewSourceAtom.
   void addRetToOverrideOrNewSourceAtom(llvm::ReturnInst *Ret,
                                        llvm::Value *Backup) {

@@ -2099,6 +2099,8 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
 
   llvm::Instruction *BrInst = Builder.CreateCondBr(CondV, TrueBlock, FalseBlock,
                                                    Weights, Unpredictable);
+  addInstToNewSourceAtom(BrInst, CondV);
+
   switch (HLSLControlFlowAttr) {
   case HLSLControlFlowHintAttr::Microsoft_branch:
   case HLSLControlFlowHintAttr::Microsoft_flatten: {
