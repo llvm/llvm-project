@@ -159,12 +159,12 @@ void NVVMReflect::handleReflectFunction(Function *F) {
   // to dig deeper to find its initializer with the string we'll use for lookup.
 
   for (User *U : make_early_inc_range(F->users())) {
-    assert(isa<CallInst>(U) && "Only a call instruction can use _reflect");
+    if (!isa<CallInst>(U))
+      report_fatal_error("__nvvm_reflect can only be used in a call instruction");
     CallInst *Call = cast<CallInst>(U);
 
-    // FIXME: Improve error handling here and elsewhere in this pass.
-    assert(Call->getNumOperands() == 2 &&
-           "Wrong number of operands to __nvvm_reflect function");
+    if (Call->getNumOperands() != 2)
+      report_fatal_error("__nvvm_reflect requires exactly one argument");
 
     // In cuda 6.5 and earlier, we will have an extra constant-to-generic
     // conversion of the string.
@@ -172,33 +172,39 @@ void NVVMReflect::handleReflectFunction(Function *F) {
     if (const CallInst *ConvCall = dyn_cast<CallInst>(Str)) {
       // Verify this is the constant-to-generic intrinsic
       Function *Callee = ConvCall->getCalledFunction();
-      assert(Callee && Callee->isIntrinsic() && 
-             Callee->getName().starts_with("llvm.nvvm.ptr.constant.to.gen") &&
-             "Expected llvm.nvvm.ptr.constant.to.gen intrinsic");
-      assert(ConvCall->getNumOperands() == 2 && "Expected one argument for ptr conversion");
+      if (!Callee || !Callee->isIntrinsic() || 
+          !Callee->getName().starts_with("llvm.nvvm.ptr.constant.to.gen"))
+        report_fatal_error("Expected llvm.nvvm.ptr.constant.to.gen intrinsic");
+      if (ConvCall->getNumOperands() != 2)
+        report_fatal_error("Expected one argument for ptr conversion");
       Str = ConvCall->getArgOperand(0);
     }
     // Pre opaque pointers we have a constant expression wrapping the constant
     Str = Str->stripPointerCasts();
-    assert(isa<Constant>(Str) && "Format of __nvvm_reflect function not recognized");
+    if (!isa<Constant>(Str))
+      report_fatal_error("__nvvm_reflect argument must be a constant string");
 
     const Value *Operand = cast<Constant>(Str)->getOperand(0);
     if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Operand)) {
       // For CUDA-7.0 style __nvvm_reflect calls, we need to find the operand's
       // initializer.
-      assert(GV->hasInitializer() && "Format of _reflect function not recognized");
+      if (!GV->hasInitializer())
+        report_fatal_error("__nvvm_reflect string must have an initializer");
       const Constant *Initializer = GV->getInitializer();
       Operand = Initializer;
     }
 
-    assert(isa<ConstantDataSequential>(Operand) &&
-           "Format of _reflect function not recognized");
-    assert(cast<ConstantDataSequential>(Operand)->isCString() &&
-           "Format of _reflect function not recognized");
+    if (!isa<ConstantDataSequential>(Operand))
+      report_fatal_error("__nvvm_reflect argument must be a string constant");
+    if (!cast<ConstantDataSequential>(Operand)->isCString())
+      report_fatal_error("__nvvm_reflect argument must be a null-terminated string");
 
     StringRef ReflectArg = cast<ConstantDataSequential>(Operand)->getAsString();
     // Remove the null terminator from the string
     ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
+
+    if (ReflectArg.empty())
+      report_fatal_error("__nvvm_reflect argument cannot be empty");
 
     int ReflectVal = 0; // The default value is 0
     if (VarMap.contains(ReflectArg)) {
