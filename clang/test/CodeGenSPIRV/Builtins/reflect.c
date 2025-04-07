@@ -9,6 +9,7 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define spir_func <2 x float> @test_reflect_float2(
 // CHECK-SAME: <2 x float> noundef [[X:%.*]], <2 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_REFLECT:%.*]] = tail call <2 x float> @llvm.spv.reflect.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
 // CHECK-NEXT:    ret <2 x float> [[SPV_REFLECT]]
 //
@@ -17,6 +18,7 @@ float2 test_reflect_float2(float2 X, float2 Y) { return __builtin_spirv_reflect(
 // CHECK-LABEL: define spir_func <3 x float> @test_reflect_float3(
 // CHECK-SAME: <3 x float> noundef [[X:%.*]], <3 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_REFLECT:%.*]] = tail call <3 x float> @llvm.spv.reflect.v3f32(<3 x float> [[X]], <3 x float> [[Y]])
 // CHECK-NEXT:    ret <3 x float> [[SPV_REFLECT]]
 //
@@ -25,6 +27,7 @@ float3 test_reflect_float3(float3 X, float3 Y) { return __builtin_spirv_reflect(
 // CHECK-LABEL: define spir_func <4 x float> @test_reflect_float4(
 // CHECK-SAME: <4 x float> noundef [[X:%.*]], <4 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_REFLECT:%.*]] = tail call <4 x float> @llvm.spv.reflect.v4f32(<4 x float> [[X]], <4 x float> [[Y]])
 // CHECK-NEXT:    ret <4 x float> [[SPV_REFLECT]]
 //

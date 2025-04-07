@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -O3 -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple spirv-vulkan-compute -x hlsl -emit-llvm -O3 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple spirv-vulkan-compute -x hlsl -emit-llvm -O3 -o - %s | FileCheck %s --check-prefixes=CHECK,SPIRV
 
 // All referenced to an unused resource should be removed by optimizations.
 RWBuffer<float> Buf : register(u5, space3);
@@ -10,6 +10,7 @@ void main() {
 // CHECK-NOT: resource.handlefrombinding
 // CHECK: define void @main()
 // CHECK-NEXT: entry:
+// SPIRV-NEXT: %0 = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT: ret void
 // CHECK-NOT: resource.handlefrombinding
 }

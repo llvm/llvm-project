@@ -9,6 +9,7 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define spir_func float @test_length_float2(
 // CHECK-SAME: <2 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_LENGTH:%.*]] = tail call float @llvm.spv.length.v2f32(<2 x float> [[X]])
 // CHECK-NEXT:    ret float [[SPV_LENGTH]]
 //
@@ -17,6 +18,7 @@ float test_length_float2(float2 X) { return __builtin_spirv_length(X); }
 // CHECK-LABEL: define spir_func float @test_length_float3(
 // CHECK-SAME: <3 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_LENGTH:%.*]] = tail call float @llvm.spv.length.v3f32(<3 x float> [[X]])
 // CHECK-NEXT:    ret float [[SPV_LENGTH]]
 //
@@ -25,6 +27,7 @@ float test_length_float3(float3 X) { return __builtin_spirv_length(X); }
 // CHECK-LABEL: define spir_func float @test_length_float4(
 // CHECK-SAME: <4 x float> noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_LENGTH:%.*]] = tail call float @llvm.spv.length.v4f32(<4 x float> [[X]])
 // CHECK-NEXT:    ret float [[SPV_LENGTH]]
 //

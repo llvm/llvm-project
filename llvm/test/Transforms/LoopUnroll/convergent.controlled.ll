@@ -431,6 +431,7 @@ define i32 @extended_inner_loop_2(i32 %n, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L3:%.*]]
 ; CHECK:       l3:
+; CHECK-NEXT:    [[TOK_LOOP:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[TOK_L2:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -438,6 +439,7 @@ define i32 @extended_inner_loop_2(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[L2]], label [[LATCH:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2]]) ]
+; CHECK-NEXT:    [[TOK_LOOP_1:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_1:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.1:
 ; CHECK-NEXT:    [[TOK_L2_1:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -445,6 +447,7 @@ define i32 @extended_inner_loop_2(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2_1]], label [[LATCH_1:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       latch.1:
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2_1]]) ]
+; CHECK-NEXT:    [[TOK_LOOP_2:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_2:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.2:
 ; CHECK-NEXT:    [[TOK_L2_2:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -452,6 +455,7 @@ define i32 @extended_inner_loop_2(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2_2]], label [[LATCH_2:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       latch.2:
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2_2]]) ]
+; CHECK-NEXT:    [[TOK_LOOP_3:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_3:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.3:
 ; CHECK-NEXT:    [[TOK_L2_3:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -491,6 +495,7 @@ define i32 @unroll_nest(i32 %n, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[L3:%.*]]
 ; CHECK:       l3:
+; CHECK-NEXT:    [[TOK_LOOP:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    [[TOK_L2:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -501,6 +506,7 @@ define i32 @unroll_nest(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2_1]]) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2]], label [[LATCH]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       latch:
+; CHECK-NEXT:    [[TOK_LOOP_1:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_12:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.12:
 ; CHECK-NEXT:    [[TOK_L2_11:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -511,6 +517,7 @@ define i32 @unroll_nest(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2_1_1]]) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2_12]], label [[LATCH_1]], !llvm.loop [[LOOP9]]
 ; CHECK:       latch.1:
+; CHECK-NEXT:    [[TOK_LOOP_2:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_2:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.2:
 ; CHECK-NEXT:    [[TOK_L2_2:%.*]] = call token @llvm.experimental.convergence.anchor()
@@ -521,6 +528,7 @@ define i32 @unroll_nest(i32 %n, i1 %cond) {
 ; CHECK-NEXT:    call void @f() [ "convergencectrl"(token [[TOK_L2_1_2]]) ]
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2_2]], label [[LATCH_2]], !llvm.loop [[LOOP9]]
 ; CHECK:       latch.2:
+; CHECK-NEXT:    [[TOK_LOOP_3:%.*]] = call token @llvm.experimental.convergence.anchor()
 ; CHECK-NEXT:    br label [[L2_3:%.*]], !llvm.loop [[LOOP4]]
 ; CHECK:       l2.3:
 ; CHECK-NEXT:    [[TOK_L2_3:%.*]] = call token @llvm.experimental.convergence.anchor()
