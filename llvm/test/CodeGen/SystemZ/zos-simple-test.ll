@@ -5,10 +5,10 @@
 @a = global i32 0, align 4
 
 define signext i32 @main() {
+; CHECK: <stdin>#C CSECT
 ; CHECK: C_CODE64 CATTR
-; CHECK: #C XATTR
 ; CHECK: main:
-; CHECK: a CSECT
+; CHECK: <stdin>#C CSECT
 ; CHECK: C_WSA64 CATTR
 ; CHECK: a XATTR
 entry:

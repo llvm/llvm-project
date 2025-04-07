@@ -66,6 +66,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2779,12 +2780,15 @@ TargetLoweringObjectFileGOFF::TargetLoweringObjectFileGOFF() = default;
 
 void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   // Construct the default names for the root SD and the ADA PR symbol.
-  DefaultRootSDName = Twine(M.getSourceFileName()).concat("#C").str();
-  DefaultADAPRName = Twine(M.getSourceFileName()).concat("#S").str();
+  StringRef FileName = sys::path::stem(M.getSourceFileName());
+  DefaultRootSDName = Twine(FileName).concat("#C").str();
+  DefaultADAPRName = Twine(FileName).concat("#S").str();
   MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(RootSDSection);
-  MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADAPRSection);
+  MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
+  // The length of the ADA needs to be adjusted in case it is 0.
+  ADAPR->setRequiresNonZeroLength();
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));

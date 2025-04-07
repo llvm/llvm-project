@@ -31,6 +31,7 @@ void MCGOFFStreamer::initSections(bool /*NoExecStack*/,
                                   const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   // Emit the text section.
+  switchSection(Ctx.getObjectFileInfo()->getADASection());
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
 }
 
@@ -41,7 +42,7 @@ void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
     return;
   if (Section->getParent())
     registerSectionHierarchy(Asm, Section->getParent());
-  registerSectionHierarchy(Asm, Section);
+  Asm.registerSection(*Section);
 }
 } // namespace
 

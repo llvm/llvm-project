@@ -743,10 +743,9 @@ MCContext::getGOFFSection(SectionKind Kind, GOFF::ESDSymbolType SymbolType,
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
-                                         GOFF::SDAttr SDAttributes,
-                                         MCSection *Parent) {
+                                         GOFF::SDAttr SDAttributes) {
   return getGOFFSection(Kind, GOFF::ESD_ST_SectionDefinition, Name,
-                        SDAttributes, GOFF::EDAttr{}, GOFF::PRAttr{}, Parent);
+                        SDAttributes, GOFF::EDAttr{}, GOFF::PRAttr{}, nullptr);
 }
 
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
@@ -759,8 +758,8 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
 MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          GOFF::PRAttr PRAttributes,
                                          MCSection *Parent) {
-  return getGOFFSection(Kind, GOFF::ESD_ST_SectionDefinition, Name,
-                        GOFF::SDAttr{}, GOFF::EDAttr{}, PRAttributes, Parent);
+  return getGOFFSection(Kind, GOFF::ESD_ST_PartReference, Name, GOFF::SDAttr{},
+                        GOFF::EDAttr{}, PRAttributes, Parent);
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

@@ -16,8 +16,6 @@ namespace llvm {
 class GOFFObjectWriter;
 
 class MCGOFFStreamer : public MCObjectStreamer {
-  std::string RootSDName;
-  std::string ADAPRName;
 
 public:
   MCGOFFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> MAB,

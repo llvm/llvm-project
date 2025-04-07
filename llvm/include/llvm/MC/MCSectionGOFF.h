@@ -37,11 +37,9 @@ class MCSectionGOFF final : public MCSection {
   // The type of this section.
   GOFF::ESDSymbolType SymbolType;
 
-  // Indicates that the ED symbol needs to set the length of the section.
-  unsigned RequiresLength : 1;
-
   // Indicates that the PR symbol needs to set the length of the section to a
-  // non-zero value.
+  // non-zero value. This is only a problem with the ADA PR - the binder will
+  // generate an error in this case.
   unsigned RequiresNonZeroLength : 1;
 
   friend class MCContext;
@@ -55,16 +53,17 @@ class MCSectionGOFF final : public MCSection {
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
-                            uint32_t /*Subsection*/) const override {
-    ;
+                            uint32_t Subsection) const override {
     switch (SymbolType) {
     case GOFF::ESD_ST_SectionDefinition:
       OS << Name << " CSECT\n";
       break;
     case GOFF::ESD_ST_ElementDefinition:
+      getParent()->printSwitchToSection(MAI, T, OS, Subsection);
       OS << Name << " CATTR\n";
       break;
     case GOFF::ESD_ST_PartReference:
+      getParent()->printSwitchToSection(MAI, T, OS, Subsection);
       OS << Name << " XATTR\n";
       break;
     default:
@@ -101,7 +100,7 @@ public:
     return PRAttributes;
   }
 
-  bool requiresLength() const { return RequiresLength; }
+  void setRequiresNonZeroLength() { RequiresNonZeroLength = true; }
   bool requiresNonZeroLength() const { return RequiresNonZeroLength; }
 
   void setName(StringRef SectionName) { Name = SectionName; }
