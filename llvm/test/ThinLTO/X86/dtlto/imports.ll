@@ -2,7 +2,7 @@
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-; Compile bitcode.
+; Generate ThinLTO bitcode files.
 RUN: opt -thinlto-bc 0.ll -o 0.bc -O2
 RUN: opt -thinlto-bc 1.ll -o 1.bc -O2
 
@@ -10,8 +10,7 @@ RUN: opt -thinlto-bc 1.ll -o 1.bc -O2
 ; of validate.py will cause a failure as it does not create output files.
 DEFINE: %{command} = llvm-lto2 run 0.bc 1.bc -o t.o \
 DEFINE:    -dtlto-distributor=%python \
-DEFINE:    -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py,0.bc,1.bc \
-DEFINE:    -thinlto-emit-indexes \
+DEFINE:    -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
 DEFINE:    -r=0.bc,g,px \
 DEFINE:    -r=1.bc,f,px \
 DEFINE:    -r=1.bc,g
@@ -38,7 +37,7 @@ INPUTS-NEXT: ]
 ERR: failed: DTLTO backend compilation: cannot open native object file:
 
 ; Check that imports files are not created even if -save-temps is active.
-RUN: not %{command} -save-temps 2>&1 \ 
+RUN: not %{command} -save-temps 2>&1 \
 RUN:   | FileCheck %s --check-prefixes=ERR
 RUN: ls | FileCheck %s --check-prefix=NOIMPORTFILES
 NOIMPORTFILES-NOT: imports

@@ -1,7 +1,7 @@
 ; Check that DTLTO creates identical summary index shard files as are created
 ; for an equivalent ThinLTO link.
 
- RUN: rm -rf %t && split-file %s %t && cd %t
+RUN: rm -rf %t && split-file %s %t && cd %t
 
 ; Generate ThinLTO bitcode files.
 RUN: opt -thinlto-bc t1.ll -o t1.bc
