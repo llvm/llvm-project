@@ -224,6 +224,11 @@ public:
   Error putImpl(ArrayRef<uint8_t> ResolvedKey, const CASID &Result,
                 bool Globally) final;
 
+  Error validate() const final {
+    // Not supported yet. Always return success.
+    return Error::success();
+  }
+
 private:
   std::unique_ptr<remote::KeyValueDBClient> KVDB;
 };
