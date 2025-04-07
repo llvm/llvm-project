@@ -9,9 +9,12 @@
 ; RUN: llvm-mc -filetype=obj %t.S -triple=aarch64-linux-android31 -o %t.o
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=CHECK-RELOCS
 
-; RUN: obj2yaml %t.o -o %t.yaml
-; RUN: FileCheck %s --input-file=%t.yaml --check-prefix=CHECK-YAML
+; RUN: obj2yaml %t.o -o %t.o.yaml
+; RUN: FileCheck %s --input-file=%t.o.yaml --check-prefix=CHECK-OYAML
 ; RUN: llvm-readelf -r %t.o | FileCheck %s --check-prefix=CHECK-RELOCS
+; RUN: ld.lld %t.o -o %t.so
+; RUN: obj2yaml %t.so -o %t.so.yaml
+; RUN: FileCheck %s --input-file=%t.so.yaml --check-prefix=CHECK-SOYAML
 
 ;; Check we don't create relocations referencing a section symbol for sanitize_memtag globals.
 ; CHECK-RELOCS:      Relocation section '.rela.text' {{.*}} contains 4 entries:
@@ -27,19 +30,34 @@
 ; CHECK-RELOCS:     R_AARCH64_NONE {{.*}} huge
 ; CHECK-RELOCS-NOT: specialcaselisted
 
-; CHECK-YAML:      Sections:
-; CHECK-YAML:      - Name: .rela.memtag.globals.static
-; CHECK-YAML-NOT:  - Name:
-; CHECK-YAML:      Relocations:
-; CHECK-YAML-NEXT: - Symbol: internal_four
-; CHECK-YAML-NEXT: Type: R_AARCH64_NONE
-; CHECK-YAML-NEXT: - Symbol: four
-; CHECK-YAML-NEXT: Type: R_AARCH64_NONE
-; CHECK-YAML-NEXT: - Symbol: sixteen
-; CHECK-YAML-NEXT: Type: R_AARCH64_NONE
-; CHECK-YAML-NEXT: - Symbol: huge
-; CHECK-YAML-NEXT: Type: R_AARCH64_NONE
-; CHECK-YAML-NEXT: -
+; CHECK-OYAML:      Sections:
+; CHECK-OYAML:      - Name: .rela.memtag.globals.static
+; CHECK-OYAML-NOT:  - Name:
+; CHECK-OYAML:      Relocations:
+; CHECK-OYAML-NEXT: - Symbol: internal_four
+; CHECK-OYAML-NEXT: Type: R_AARCH64_NONE
+; CHECK-OYAML-NEXT: - Symbol: four
+; CHECK-OYAML-NEXT: Type: R_AARCH64_NONE
+; CHECK-OYAML-NEXT: - Symbol: sixteen
+; CHECK-OYAML-NEXT: Type: R_AARCH64_NONE
+; CHECK-OYAML-NEXT: - Symbol: huge
+; CHECK-OYAML-NEXT: Type: R_AARCH64_NONE
+; CHECK-OYAML-NEXT: -
+
+;; Value: 0x{{.*}}0 checks for 16-alignment of address
+; CHECK-SOYAML: Symbols:
+; CHECK-SOYAML:  - Name: internal_four
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
+; CHECK-SOYAML:  - Name: four
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
+; CHECK-SOYAML:  - Name: sixteen
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
+; CHECK-SOYAML:  - Name: huge
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
+;; At least as currently laid out, specialcaselisted gets put adjacient to a
+;; tagged global, so it also has to be aligned to the next granule.
+; CHECK-SOYAML:  - Name: specialcaselisted
+; CHECK-SOYAML:    Value: 0x{{.*}}0{{$}}
 
 ; CHECK-ASM: .memtag internal_four
 ; CHECK-ASM .p2align        4
