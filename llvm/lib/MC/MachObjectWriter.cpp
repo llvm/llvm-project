@@ -120,7 +120,7 @@ uint64_t MachObjectWriter::getSymbolAddress(const MCSymbol &S,
     if (Target.getAddSym())
       Address += getSymbolAddress(*Target.getAddSym(), Asm);
     if (Target.getSubSym())
-      Address += getSymbolAddress(*Target.getSubSym(), Asm);
+      Address -= getSymbolAddress(*Target.getSubSym(), Asm);
     return Address;
   }
 
