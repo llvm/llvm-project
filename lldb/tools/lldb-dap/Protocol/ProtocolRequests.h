@@ -118,6 +118,81 @@ bool fromJSON(const llvm::json::Value &, InitializeRequestArguments &,
 /// Response to `initialize` request. The capabilities of this debug adapter.
 using InitializeResponseBody = std::optional<Capabilities>;
 
+/// DAP Launch and Attach common configurations.
+struct Configuration {
+  /// Specify a working directory to use when launching `lldb-dap`. If the debug
+  /// information in your executable contains relative paths, this option can be
+  /// used so that `lldb-dap` can find source files and object files that have
+  /// relative paths.
+  std::optional<std::string> debuggerRoot;
+
+  /// Enable auto generated summaries for variables when no summaries exist for
+  /// a given type. This feature can cause performance delays in large projects
+  /// when viewing variables.
+  bool enableAutoVariableSummaries = false;
+
+  /// If a variable is displayed using a synthetic children, also display the
+  /// actual contents of the variable at the end under a [raw] entry. This is
+  /// useful when creating sythetic child plug-ins as it lets you see the actual
+  /// contents of the variable.
+  bool enableSyntheticChildDebugging = false;
+
+  /// Enable language specific extended backtraces.
+  bool displayExtendedBacktrace = false;
+
+  /// The escape prefix to use for executing regular LLDB commands in the Debug
+  /// Console, instead of printing variables. Defaults to a backtick. If it's an
+  /// empty string, then all expression in the Debug Console are treated as
+  /// regular LLDB commands.
+  std::string commandEscapePrefix = "`";
+
+  /// If non-empty, stack frames will have descriptions generated based on the
+  /// provided format. See https://lldb.llvm.org/use/formatting.html for an
+  /// explanation on format strings for frames. If the format string contains
+  /// errors, an error message will be displayed on the Debug Console and the
+  /// default frame names will be used. This might come with a performance cost
+  /// because debug information might need to be processed to generate the
+  /// description.
+  std::optional<std::string> customFrameFormat;
+
+  /// Same as `customFrameFormat`, but for threads instead of stack frames.
+  std::optional<std::string> customThreadFormat;
+
+  /// Specify a source path to remap "./" to allow full paths to be used when
+  /// setting breakpoints in binaries that have relative source paths.
+  std::optional<std::string> sourcePath;
+
+  /// Specify an array of path re-mappings. Each element in the array must be a
+  /// two element array containing a source and destination pathname. Overrides
+  /// sourcePath.
+  std::vector<std::pair<std::string, std::string>> sourceMap;
+
+  /// LLDB commands executed upon debugger startup prior to creating the LLDB
+  /// target.
+  std::vector<std::string> preInitCommands;
+
+  /// LLDB commands executed upon debugger startup prior to creating the LLDB
+  /// target.
+  std::vector<std::string> initCommands;
+
+  /// LLDB commands executed just before launching/attaching, after the LLDB
+  /// target has been created.
+  std::vector<std::string> preRunCommands;
+
+  /// LLDB commands executed just after launching/attaching, after the LLDB
+  /// target has been created.
+  std::vector<std::string> postRunCommands;
+
+  /// LLDB commands executed just after each stop.
+  std::vector<std::string> stopCommands;
+
+  /// LLDB commands executed when the program exits.
+  std::vector<std::string> exitCommands;
+
+  /// LLDB commands executed when the debugging session ends.
+  std::vector<std::string> terminateCommands;
+};
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or
