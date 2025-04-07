@@ -87,9 +87,10 @@ static cl::opt<unsigned> LdStConstLimit("aarch64-load-store-const-scan-limit",
 static cl::opt<bool> EnableRenaming("aarch64-load-store-renaming",
                                     cl::init(true), cl::Hidden);
 
-// Enable SVE fill/spill pairing for VLS 128.
-static cl::opt<bool> EnableSVEFillSpillPairing("aarch64-sve-fill-spill-pairing",
-                                               cl::init(true), cl::Hidden);
+// Disable SVE fill/spill pairing for VLS 128.
+static cl::opt<bool>
+    DisableSVEFillSpillPairing("aarch64-disable-sve-fill-spill-pairing",
+                               cl::init(false), cl::Hidden);
 
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
@@ -2815,7 +2816,8 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
-  bool const CanPairFillSpill = EnableSVEFillSpillPairing &&
+  bool const CanPairFillSpill = !DisableSVEFillSpillPairing &&
+                                Subtarget->isLittleEndian() &&
                                 Subtarget->isSVEorStreamingSVEAvailable() &&
                                 Subtarget->getSVEVectorSizeInBits() == 128;
 
