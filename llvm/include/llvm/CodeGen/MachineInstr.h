@@ -1408,8 +1408,8 @@ public:
            getOpcode() == TargetOpcode::G_PHI;
   }
   bool isKill() const { return getOpcode() == TargetOpcode::KILL; }
-  bool isImplicitDef() const { return getOpcode()==TargetOpcode::IMPLICIT_DEF; }
-  bool isInitUndef() const { return getOpcode()==TargetOpcode::INIT_UNDEF; }
+  bool isImplicitDef() const { return getOpcode() == TargetOpcode::IMPLICIT_DEF; }
+  bool isInitUndef() const { return getOpcode() == TargetOpcode::INIT_UNDEF; }
   bool isInlineAsm() const {
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
