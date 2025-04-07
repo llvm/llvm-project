@@ -228,7 +228,7 @@ void Value::dropDroppableUse(Use &U) {
     return;
   }
 
-  llvm_unreachable("unkown droppable use");
+  llvm_unreachable("unknown droppable use");
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {
