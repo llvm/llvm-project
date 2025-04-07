@@ -481,3 +481,25 @@ for.end.loopexit:
   %or0 = or <4 x i16> %phi1, zeroinitializer
   ret void
 }
+
+define i32 @test15() {
+entry:
+  %0 = getelementptr i8, ptr null, i64 512
+  %1 = getelementptr i8, ptr null, i64 528
+  %2 = getelementptr i8, ptr null, i64 480
+  %3 = getelementptr i8, ptr null, i64 496
+  %4 = getelementptr i8, ptr null, i64 160
+  %5 = load <4 x float>, ptr %4, align 16
+  %6 = getelementptr i8, ptr null, i64 176
+  %7 = load <4 x float>, ptr %6, align 16
+  store <4 x float> %5, ptr null, align 16
+  %8 = fadd <4 x float> zeroinitializer, %5
+  %9 = fadd <4 x float> zeroinitializer, %7
+  store <4 x float> %8, ptr %2, align 16
+  store <4 x float> %9, ptr %3, align 16
+  %10 = fadd <4 x float> zeroinitializer, zeroinitializer
+  %11 = fadd <4 x float> zeroinitializer, zeroinitializer
+  store <4 x float> %10, ptr %0, align 16
+  store <4 x float> %11, ptr %1, align 16
+  ret i32 0
+}
