@@ -2798,15 +2798,15 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
 
   MCValue Res;
   if (Expr->evaluateAsRelocatable(Res, nullptr))
-    return Res.getRefKind() == RISCVMCExpr::VK_None;
+    return Res.getSpecifier() == RISCVMCExpr::VK_None;
   return false;
 }
 
 bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
   MCValue Res;
   if (Expr->evaluateAsRelocatable(Res, nullptr)) {
-    return Res.getRefKind() == RISCVMCExpr::VK_None && Res.getSymA() &&
-           Res.getSymB();
+    return Res.getSpecifier() == RISCVMCExpr::VK_None && Res.getAddSym() &&
+           Res.getSubSym();
   }
   return false;
 }

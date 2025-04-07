@@ -229,13 +229,6 @@ public:
     return E->getSpecifier() == VK_AUTH || E->getSpecifier() == VK_AUTHADDR;
   }
 };
-
-// Getter for the legacy representation that encodes the relocation specifier in
-// MCSymbolRefExpr::SubclassData.
-static inline AArch64MCExpr::Specifier
-getSpecifier(const MCSymbolRefExpr *SRE) {
-  return AArch64MCExpr::Specifier(SRE->getKind());
-}
 } // end namespace llvm
 
 #endif
