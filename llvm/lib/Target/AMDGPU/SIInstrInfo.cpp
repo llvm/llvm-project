@@ -147,16 +147,17 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.
-static bool resultDependsOnExec(const MachineInstr &MI) {
+bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   // Ignore comparisons which are only used masked with exec.
   // This allows some hoisting/sinking of VALU comparisons.
   if (MI.isCompare()) {
     const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-    const MachineOperand &Dst = MI.getOperand(0);
-    if (!Dst.isReg() || !Dst.isDef() || MI.getNumExplicitDefs() > 1)
-      return false;
+    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst);
 
-    Register DstReg = Dst.getReg();
+    if(!Dst)
+      return true;
+
+    Register DstReg = Dst->getReg();
     if (!DstReg.isVirtual())
       return true;
     for (MachineInstr &Use : MRI.use_nodbg_instructions(DstReg)) {
