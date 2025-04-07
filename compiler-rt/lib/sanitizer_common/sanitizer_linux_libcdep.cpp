@@ -840,7 +840,11 @@ u32 GetNumberOfCPUs() {
   int req[2];
   uptr len = sizeof(ncpu);
   req[0] = CTL_HW;
+#    ifdef HW_NCPUONLINE
+  req[1] = HW_NCPUONLINE;
+#    else
   req[1] = HW_NCPU;
+#    endif
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
 #  elif SANITIZER_SOLARIS
