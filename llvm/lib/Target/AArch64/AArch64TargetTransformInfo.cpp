@@ -4590,14 +4590,11 @@ static bool shouldUnrollLoopWithInstruction(Instruction &I,
 //  2. Has a valid cost,
 //  3. Has a cost within the supplied budget.
 // Otherwise it returns false.
-static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
-                                   InstructionCost Budget,
-                                   unsigned *FinalSize) {
+static bool canUnrollLoopWithinBudget(Loop *L, AArch64TTIImpl &TTI,
+                                      InstructionCost Budget,
+                                      unsigned *FinalSize) {
   // Estimate the size of the loop.
   InstructionCost LoopCost = 0;
-
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return false;
 
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
@@ -4638,8 +4635,11 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
   if (MaxTC > 0 && MaxTC <= 32)
     return false;
 
+  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+    return false;
+
   // Estimate the size of the loop.
-  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
+  if (!canUnrollLoopWithinBudget(L, TTI, 5, nullptr))
     return false;
 
   // Small search loops with multiple exits can be highly beneficial to unroll.
@@ -4696,7 +4696,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
     unsigned Size;
-    if (!isLoopSizeWithinBudget(L, TTI, 8, &Size))
+    if (!canUnrollLoopWithinBudget(L, TTI, 8, &Size))
       return;
 
     SmallPtrSet<Value *, 8> LoadedValues;
@@ -4809,6 +4809,8 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     break;
   }
 
+  // If this is a small, multi-exit loop similar to something like std::find,
+  // then there is typically a performance improvement achieved by unrolling.
   if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
