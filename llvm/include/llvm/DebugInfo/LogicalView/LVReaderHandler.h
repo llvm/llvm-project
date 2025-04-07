@@ -30,9 +30,9 @@ namespace logicalview {
 
 using LVReaders = std::vector<std::unique_ptr<LVReader>>;
 using ArgVector = std::vector<std::string>;
-using PdbOrObjOrIr = PointerUnion<object::ObjectFile *, pdb::PDBFile *,
-                                  object::IRObjectFile *, MemoryBufferRef *,
-                                  StringRef *>;
+using PdbOrObjOrIr =
+    PointerUnion<object::ObjectFile *, pdb::PDBFile *, object::IRObjectFile *,
+                 MemoryBufferRef *, StringRef *>;
 
 // This class performs the following tasks:
 // - Creates a logical reader for every binary file in the command line,

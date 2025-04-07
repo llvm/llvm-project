@@ -1923,7 +1923,7 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
       SeenVars.push_back(DVA);
     }
 
-    // Skip undef values.
+    // Skip Undefined values.
     if (!DbgVar->isKillLocation())
       getOrCreateVariable(DbgVar->getVariable(), DbgVar->getDebugLoc().get());
 
@@ -1966,7 +1966,7 @@ void LVIRReader::processBasicBlocks(Function &F, const DISubprogram *SP) {
     DbgValueRanges->printValues(DVA, dbgs());
     DILocalVariable *LV = const_cast<DILocalVariable *>(DVA.getVariable());
     LVSymbol *Symbol = getSymbolForSeenMD(LV);
-    // Undef only value, ignore.
+    // Undefined only value, ignore.
     if (!Symbol)
       continue;
 
