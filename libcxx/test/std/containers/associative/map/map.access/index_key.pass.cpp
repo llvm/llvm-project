@@ -81,6 +81,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     using Key               = Container::key_type;
     using MappedType        = Container::mapped_type;
     ConstructController* cc = getConstructController();
+    ConstructController ci;
+    ConstructController* cc = &ci;
     cc->reset();
     {
       Container c;

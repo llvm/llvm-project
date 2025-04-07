@@ -89,8 +89,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(8) == 8.5);
     assert(m.size() == 7);
   }
-// #if TEST_STD_VER >= 11
-#ifdef VINAY_DISABLE_FOR_NOW
+#if TEST_STD_VER >= 11
+// #ifdef VINAY_DISABLE_FOR_NOW
   {
     typedef std::pair<const int, double> V;
     V ar[] = {
@@ -111,13 +111,14 @@ TEST_CONSTEXPR_CXX26 bool test() {
     static_assert(std::is_base_of_v<Base, Derived>);
 
 
-    using BaseP = min_pointer<Base>;
-    using DerivedP = min_pointer<Derived>;
+    // using BaseP = min_pointer<Base>;
+    // using DerivedP = min_pointer<Derived>;
     // static_assert(std::is_base_of_v<BaseP, DerivedP>);
-    DerivedP dp(nullptr);
+    // DerivedP dp(nullptr);
+    // (void)dp;
 
-    BaseP bp =static_cast<BaseP>(dp); 
-    (void)bp;
+    // BaseP bp =static_cast<BaseP>(dp); 
+    // (void)bp;
 
 
 
@@ -131,11 +132,15 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
+
+// throwing is not allowed in constexpr
+#   if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
+#   endif
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
@@ -160,11 +165,14 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(4) == 4.5);
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
+// throwing is not allowed in constexpr
+#   if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
+#   endif
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
