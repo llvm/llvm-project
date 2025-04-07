@@ -37,8 +37,8 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // cuda_device
     0, // cuda_constant
     0, // cuda_shared
-    // SYCL address space values for this map are dummy
-    0, // sycl_global
+    // Most SYCL address space values for this map are dummy
+    1, // sycl_global
     0, // sycl_global_device
     0, // sycl_global_host
     0, // sycl_local
@@ -373,6 +373,11 @@ public:
 
   const llvm::omp::GV &getGridValue() const override {
     return llvm::omp::SPIRVGridValues;
+  }
+
+  std::optional<LangAS> getConstantAddressSpace() const override {
+    // opencl_constant will map to UniformConstant in SPIR-V
+    return LangAS::opencl_constant;
   }
 };
 

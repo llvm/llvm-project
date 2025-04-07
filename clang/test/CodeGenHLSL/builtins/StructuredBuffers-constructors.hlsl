@@ -22,8 +22,10 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-SPIRV: %"class.hlsl::RWStructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x float], 12, 1) }
 
 
-// CHECK: @_ZL3Buf = internal global %"class.hlsl::StructuredBuffer" poison
-// CHECK: @_ZL4Buf2 = internal global %"class.hlsl::RWStructuredBuffer" poison
+// CHECK-SPIRV: @_ZL3Buf = internal addrspace(1) global %"class.hlsl::StructuredBuffer" poison
+// CHECK-SPIRV: @_ZL4Buf2 = internal addrspace(1) global %"class.hlsl::RWStructuredBuffer" poison
+// CHECK-DXIL: @_ZL3Buf = internal{{.*}}global %"class.hlsl::StructuredBuffer" poison
+// CHECK-DXIL: @_ZL4Buf2 = internal{{.*}}global %"class.hlsl::RWStructuredBuffer" poison
 // CHECK-DXIL: @_ZL4Buf3 = internal global %"class.hlsl::AppendStructuredBuffer" poison, align 4
 // CHECK-DXIL: @_ZL4Buf4 = internal global %"class.hlsl::ConsumeStructuredBuffer" poison, align 4
 // CHECK-DXIL: @_ZL4Buf5 = internal global %"class.hlsl::RasterizerOrderedStructuredBuffer" poison, align 4
@@ -32,13 +34,13 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-DXIL: [[H:%.*]] = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(i32 0, i32 10, i32 1, i32 0, i1 false)
 // CHECK-DXIL: store target("dx.RawBuffer", float, 0, 0) [[H]], ptr @_ZL3Buf, align 4
 // CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_0t(i32 0, i32 10, i32 1, i32 0, i1 false)
-// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 0) [[H]], ptr @_ZL3Buf, align 8
+// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 0) [[H]], ptr addrspace(1) @_ZL3Buf, align 8
 
 // CHECK: define internal void @_init_resource__ZL4Buf2()
 // CHECK-DXIL: [[H:%.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 5, i32 1, i32 0, i1 false)
 // CHECK-DXIL: store target("dx.RawBuffer", float, 1, 0) [[H]], ptr @_ZL4Buf2, align 4
 // CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_1t(i32 1, i32 5, i32 1, i32 0, i1 false)
-// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 1) [[H]], ptr @_ZL4Buf2, align 8
+// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 1) [[H]], ptr addrspace(1) @_ZL4Buf2, align 8
 
 // CHECK-DXIL: define internal void @_init_resource__ZL4Buf3()
 // CHECK-DXIL: [[H:%.*]] = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 0, i32 3, i32 1, i32 0, i1 false)

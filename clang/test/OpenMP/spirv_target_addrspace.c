@@ -5,7 +5,7 @@ extern int printf(char[]);
 
 #pragma omp declare target
 // CHECK: @global = addrspace(1) global i32 0, align 4
-// CHECK: @.str = private unnamed_addr addrspace(2) constant [4 x i8] c"foo\00", align 1
+// CHECK: @.str = private unnamed_addr addrspace(2) constant [4 x i8] c"foo\00", align 1f
 int global = 0;
 #pragma omp end declare target
 int main() {
