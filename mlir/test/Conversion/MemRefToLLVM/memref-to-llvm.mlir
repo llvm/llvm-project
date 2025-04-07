@@ -665,3 +665,22 @@ func.func @alloca_unconvertable_memory_space() {
   %alloca = memref.alloca() : memref<1x32x33xi32, #spirv.storage_class<StorageBuffer>>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: @alloc_unconvertable_memory_space
+func.func @alloc_unconvertable_memory_space() {
+  // CHECK: memref.alloc
+  %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64> 
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @bad_address_space
+func.func @bad_address_space(%a: memref<2xindex, "foo">) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.store
+  memref.store %c0, %a[%c0] : memref<2xindex, "foo">
+  return
+}

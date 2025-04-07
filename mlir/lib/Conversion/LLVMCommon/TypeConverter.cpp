@@ -485,27 +485,16 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) const {
-  if (!type.isStrided()) {
-    emitError(
-        UnknownLoc::get(type.getContext()),
-        "conversion to strided form failed either due to non-strided layout "
-        "maps (which should have been normalized away) or other reasons");
+  if (!type.isStrided())
     return {};
-  }
 
   Type elementType = convertType(type.getElementType());
   if (!elementType)
     return {};
 
   FailureOr<unsigned> addressSpace = getMemRefAddressSpace(type);
-  if (failed(addressSpace)) {
-    emitError(UnknownLoc::get(type.getContext()),
-              "conversion of memref memory space ")
-        << type.getMemorySpace()
-        << " to integer address space "
-           "failed. Consider adding memory space conversions.";
+  if (failed(addressSpace))
     return {};
-  }
   auto ptrTy = LLVM::LLVMPointerType::get(type.getContext(), *addressSpace);
 
   auto indexTy = getIndexType();
