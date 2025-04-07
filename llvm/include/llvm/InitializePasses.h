@@ -84,7 +84,7 @@ void initializeDAHPass(PassRegistry &);
 void initializeDCELegacyPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPrinterPass(PassRegistry &);
-void initializeDXILResourceBindingWrapperPassPass(PassRegistry &);
+void initializeDXILResourceWrapperPassPass(PassRegistry &);
 void initializeDXILResourceTypeWrapperPassPass(PassRegistry &);
 void initializeDeadMachineInstructionElimPass(PassRegistry &);
 void initializeDebugifyMachineModulePass(PassRegistry &);

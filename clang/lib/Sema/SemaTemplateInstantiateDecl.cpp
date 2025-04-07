@@ -1186,22 +1186,24 @@ void OpenACCDeclClauseInstantiator::VisitVectorClause(
 void OpenACCDeclClauseInstantiator::VisitCopyClause(
     const OpenACCCopyClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 C.getModifierList());
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.getVarList(), ParsedClause.getEndLoc());
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
 }
 
 void OpenACCDeclClauseInstantiator::VisitLinkClause(
     const OpenACCLinkClause &C) {
   ParsedClause.setVarListDetails(
       SemaRef.OpenACC().CheckLinkClauseVarList(VisitVarList(C.getVarList())),
-      /*IsReadOnly=*/false, /*IsZero=*/false);
+      OpenACCModifierKind::Invalid);
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
 
   NewClause = OpenACCLinkClause::Create(
@@ -1213,8 +1215,9 @@ void OpenACCDeclClauseInstantiator::VisitLinkClause(
 void OpenACCDeclClauseInstantiator::VisitDeviceResidentClause(
     const OpenACCDeviceResidentClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCDeviceResidentClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
@@ -1224,48 +1227,49 @@ void OpenACCDeclClauseInstantiator::VisitDeviceResidentClause(
 
 void OpenACCDeclClauseInstantiator::VisitCopyInClause(
     const OpenACCCopyInClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()), C.isReadOnly(),
-                                 /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyInClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isReadOnly(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitCopyOutClause(
     const OpenACCCopyOutClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCopyOutClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitCreateClause(
     const OpenACCCreateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause, C.getModifierList()))
     return;
   NewClause = OpenACCCreateClause::Create(
       SemaRef.getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 void OpenACCDeclClauseInstantiator::VisitPresentClause(
     const OpenACCPresentClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+                                 OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCPresentClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
@@ -1282,9 +1286,9 @@ void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
                                      OpenACCClauseKind::DevicePtr, E);
                                }),
                 VarList.end());
-  ParsedClause.setVarListDetails(VarList,
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
-  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause))
+  ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
+  if (SemaRef.OpenACC().CheckDeclareClause(ParsedClause,
+                                           OpenACCModifierKind::Invalid))
     return;
   NewClause = OpenACCDevicePtrClause::Create(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
