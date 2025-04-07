@@ -27094,19 +27094,15 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::x86_avx512_vp2intersect_d_512:
   case Intrinsic::x86_avx512_vp2intersect_d_256:
   case Intrinsic::x86_avx512_vp2intersect_d_128: {
-    MVT MaskVT = Op.getSimpleValueType();
-
-    SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
     SDLoc DL(Op);
-
-    SDValue Operation =
-        DAG.getNode(X86ISD::VP2INTERSECT, DL, VTs,
-                    Op->getOperand(1), Op->getOperand(2));
-
-    SDValue Result0 = DAG.getTargetExtractSubreg(X86::sub_mask_0, DL,
-                                                 MaskVT, Operation);
-    SDValue Result1 = DAG.getTargetExtractSubreg(X86::sub_mask_1, DL,
-                                                 MaskVT, Operation);
+    MVT MaskVT = Op.getSimpleValueType();
+    SDVTList VTs = DAG.getVTList(MVT::Untyped, MVT::Other);
+    SDValue Operation = DAG.getNode(X86ISD::VP2INTERSECT, DL, VTs,
+                                    Op.getOperand(1), Op.getOperand(2));
+    SDValue Result0 =
+        DAG.getTargetExtractSubreg(X86::sub_mask_0, DL, MaskVT, Operation);
+    SDValue Result1 =
+        DAG.getTargetExtractSubreg(X86::sub_mask_1, DL, MaskVT, Operation);
     return DAG.getMergeValues({Result0, Result1}, DL);
   }
   case Intrinsic::x86_mmx_pslli_w:
