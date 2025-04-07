@@ -646,8 +646,8 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -655,8 +655,8 @@ llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}) 
 // -----
 // CHECK: define ptx_kernel void @kernel_func
 // CHECK: !nvvm.annotations =
-// CHECK: !1 = !{ptr @kernel_func, !"grid_constant", !2}
-// CHECK: !2 = !{i32 1, i32 3}
+// CHECK: !{{.*}} = !{ptr @kernel_func, !"grid_constant", ![[ID:[[:alnum:]]+]]}
+// CHECK: ![[ID]] = !{i32 1, i32 3}
 llvm.func @kernel_func(%arg0: !llvm.ptr {llvm.byval = i32, nvvm.grid_constant}, %arg1: f32, %arg2: !llvm.ptr {llvm.byval = f32, nvvm.grid_constant}) attributes {nvvm.kernel} {
   llvm.return
 }
@@ -808,5 +808,18 @@ llvm.func @nvvm_redux_sync_f32(%value: f32, %offset: i32) {
   %6 = nvvm.redux.sync fmax %value, %offset {nan = true}: f32 -> f32
   // CHECK: call float @llvm.nvvm.redux.sync.fmax.abs.NaN(float %{{.*}}, i32 %{{.*}})
   %7 = nvvm.redux.sync fmax %value, %offset {abs = true, nan = true}: f32 -> f32
+  llvm.return
+}
+
+// CHECK-LABEL: @nvvm_match_sync
+llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i32(i32 %{{.*}}, i32 %{{.*}})
+  %0 = nvvm.match.sync any %mask, %val32 : i32 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i32p(i32 %{{.*}}, i32 %{{.*}})
+  %1 = nvvm.match.sync all %mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: call i32 @llvm.nvvm.match.any.sync.i64(i32 %{{.*}}, i64 %{{.*}})
+  %2 = nvvm.match.sync any %mask, %val64 : i64 -> i32
+  // CHECK: call { i32, i1 } @llvm.nvvm.match.all.sync.i64p(i32 %{{.*}}, i64 %{{.*}})
+  %3 = nvvm.match.sync all %mask, %val64 : i64 -> !llvm.struct<(i32, i1)>
   llvm.return
 }

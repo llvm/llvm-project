@@ -1,4 +1,5 @@
-- Guid: 123
-  Counters: [1, 2]
-  Callsites: - Guid: 1
+Contexts:
+  - Guid: 123
+    Counters: [1, 2]
+    Callsites: - Guid: 1
 

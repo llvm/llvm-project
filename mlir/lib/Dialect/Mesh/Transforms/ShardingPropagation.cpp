@@ -369,7 +369,7 @@ struct ShardingPropagation
     OpBuilder builder(ctx);
     if (!region.hasOneBlock()) {
       funcOp.emitOpError() << "only one block is supported!";
-      signalPassFailure();
+      return signalPassFailure();
     }
     Block &block = region.front();
 

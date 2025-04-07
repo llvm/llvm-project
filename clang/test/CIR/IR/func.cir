@@ -1,5 +1,10 @@
 // RUN: cir-opt %s | FileCheck %s
 
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u32i = !cir.int<u, 32>
+!u64i = !cir.int<u, 64>
+
 module {
 // void empty() { }
 cir.func @empty() {
@@ -18,13 +23,13 @@ cir.func @voidret() {
 // CHECK: }
 
 // int intfunc() { return 42; }
-cir.func @intfunc() -> !cir.int<s, 32> {
-  %0 = cir.const #cir.int<42> : !cir.int<s, 32>
-  cir.return %0 : !cir.int<s, 32>
+cir.func @intfunc() -> !s32i {
+  %0 = cir.const #cir.int<42> : !s32i
+  cir.return %0 : !s32i
 }
-// CHECK: cir.func @intfunc() -> !cir.int<s, 32> {
-// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !cir.int<s, 32>
-// CHECK:   cir.return %[[VAL]] : !cir.int<s, 32>
+// CHECK: cir.func @intfunc() -> !s32i {
+// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !s32i
+// CHECK:   cir.return %[[VAL]] : !s32i
 // CHECK: }
 
 // int scopes() {
@@ -34,52 +39,52 @@ cir.func @intfunc() -> !cir.int<s, 32> {
 //    }
 //  }
 //}
-cir.func @scopes() -> !cir.int<s, 32> {
+cir.func @scopes() -> !s32i {
   cir.scope {
     cir.scope {
-      %0 = cir.const #cir.int<99> : !cir.int<s, 32>
-      cir.return %0 : !cir.int<s, 32>
+      %0 = cir.const #cir.int<99> : !s32i
+      cir.return %0 : !s32i
     }
   }
   cir.trap
 }
-// CHECK: cir.func @scopes() -> !cir.int<s, 32> {
+// CHECK: cir.func @scopes() -> !s32i {
 // CHECK:   cir.scope {
 // CHECK:     cir.scope {
-// CHECK:       %[[VAL:.*]] = cir.const #cir.int<99> : !cir.int<s, 32>
-// CHECK:       cir.return %[[VAL]] : !cir.int<s, 32>
+// CHECK:       %[[VAL:.*]] = cir.const #cir.int<99> : !s32i
+// CHECK:       cir.return %[[VAL]] : !s32i
 // CHECK:     }
 // CHECK:   }
 // CHECK:   cir.trap
 // CHECK: }
 
 // long longfunc() { return 42l; }
-cir.func @longfunc() -> !cir.int<s, 64> {
-  %0 = cir.const #cir.int<42> : !cir.int<s, 64>
-  cir.return %0 : !cir.int<s, 64>
+cir.func @longfunc() -> !s64i {
+  %0 = cir.const #cir.int<42> : !s64i
+  cir.return %0 : !s64i
 }
-// CHECK: cir.func @longfunc() -> !cir.int<s, 64>
-// CHECK:   %0 = cir.const #cir.int<42> : !cir.int<s, 64>
-// CHECK:   cir.return %0 : !cir.int<s, 64>
+// CHECK: cir.func @longfunc() -> !s64i
+// CHECK:   %0 = cir.const #cir.int<42> : !s64i
+// CHECK:   cir.return %0 : !s64i
 // CHECK: }
 
 // unsigned unsignedfunc() { return 42u; }
-cir.func @unsignedfunc() -> !cir.int<u, 32> {
-  %0 = cir.const #cir.int<42> : !cir.int<u, 32>
-  cir.return %0 : !cir.int<u, 32>
+cir.func @unsignedfunc() -> !u32i {
+  %0 = cir.const #cir.int<42> : !u32i
+  cir.return %0 : !u32i
 }
-// CHECK: cir.func @unsignedfunc() -> !cir.int<u, 32>
-// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !cir.int<u, 32>
-// CHECK:   cir.return %[[VAL]] : !cir.int<u, 32>
+// CHECK: cir.func @unsignedfunc() -> !u32i
+// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u32i
+// CHECK:   cir.return %[[VAL]] : !u32i
 // CHECK: }
 
 // unsigned long long ullfunc() { return 42ull; }
-cir.func @ullfunc() -> !cir.int<u, 64> {
-  %0 = cir.const #cir.int<42> : !cir.int<u, 64>
-  cir.return %0 : !cir.int<u, 64>
+cir.func @ullfunc() -> !u64i {
+  %0 = cir.const #cir.int<42> : !u64i
+  cir.return %0 : !u64i
 }
-// CHECK: cir.func @ullfunc() -> !cir.int<u, 64>
-// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !cir.int<u, 64>
-// CHECK:   cir.return %[[VAL:.*]] : !cir.int<u, 64>
+// CHECK: cir.func @ullfunc() -> !u64i
+// CHECK:   %[[VAL:.*]] = cir.const #cir.int<42> : !u64i
+// CHECK:   cir.return %[[VAL:.*]] : !u64i
 // CHECK: }
 }

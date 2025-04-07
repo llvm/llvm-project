@@ -144,7 +144,7 @@ public:
     operator=(RHS);
   }
 
-  const EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
+  EquivalenceClasses &operator=(const EquivalenceClasses &RHS) {
     TheMapping.clear();
     for (iterator I = RHS.begin(), E = RHS.end(); I != E; ++I)
       if (I->isLeader()) {

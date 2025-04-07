@@ -206,7 +206,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
                                   function_info.valid_range_offset_end -
                                       function_info.valid_range_offset_start,
                                   sl);
-          unwind_plan.SetPlanValidAddressRange(func_range);
+          unwind_plan.SetPlanValidAddressRanges({func_range});
         }
       }
 
@@ -744,21 +744,20 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
   unwind_plan.SetLSDAAddress(function_info.lsda_address);
   unwind_plan.SetPersonalityFunctionPtr(function_info.personality_ptr_address);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int wordsize = 8;
   int mode = function_info.encoding & UNWIND_X86_64_MODE_MASK;
   switch (mode) {
   case UNWIND_X86_64_MODE_RBP_FRAME: {
-    row->GetCFAValue().SetIsRegisterPlusOffset(
+    row.GetCFAValue().SetIsRegisterPlusOffset(
         translate_to_eh_frame_regnum_x86_64(UNWIND_X86_64_REG_RBP),
         2 * wordsize);
-    row->SetOffset(0);
-    row->SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rbp,
-                                              wordsize * -2, true);
-    row->SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rip,
-                                              wordsize * -1, true);
-    row->SetRegisterLocationToIsCFAPlusOffset(x86_64_eh_regnum::rsp, 0, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rbp,
+                                             wordsize * -2, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rip,
+                                             wordsize * -1, true);
+    row.SetRegisterLocationToIsCFAPlusOffset(x86_64_eh_regnum::rsp, 0, true);
 
     uint32_t saved_registers_offset =
         EXTRACT_BITS(function_info.encoding, UNWIND_X86_64_RBP_FRAME_OFFSET);
@@ -778,7 +777,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
       case UNWIND_X86_64_REG_R13:
       case UNWIND_X86_64_REG_R14:
       case UNWIND_X86_64_REG_R15:
-        row->SetRegisterLocationToAtCFAPlusOffset(
+        row.SetRegisterLocationToAtCFAPlusOffset(
             translate_to_eh_frame_regnum_x86_64(regnum),
             wordsize * -saved_registers_offset, true);
         break;
@@ -786,7 +785,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
       saved_registers_offset--;
       saved_registers_locations >>= 3;
     }
-    unwind_plan.AppendRow(row);
+    unwind_plan.AppendRow(std::move(row));
     return true;
   } break;
 
@@ -841,12 +840,11 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
     int32_t offset = mode == UNWIND_X86_64_MODE_STACK_IND
                          ? stack_size
                          : stack_size * wordsize;
-    row->GetCFAValue().SetIsRegisterPlusOffset(x86_64_eh_regnum::rsp, offset);
+    row.GetCFAValue().SetIsRegisterPlusOffset(x86_64_eh_regnum::rsp, offset);
 
-    row->SetOffset(0);
-    row->SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rip,
-                                              wordsize * -1, true);
-    row->SetRegisterLocationToIsCFAPlusOffset(x86_64_eh_regnum::rsp, 0, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(x86_64_eh_regnum::rip,
+                                             wordsize * -1, true);
+    row.SetRegisterLocationToIsCFAPlusOffset(x86_64_eh_regnum::rsp, 0, true);
 
     if (register_count > 0) {
 
@@ -946,7 +944,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
         case UNWIND_X86_64_REG_R14:
         case UNWIND_X86_64_REG_R15:
         case UNWIND_X86_64_REG_RBP:
-          row->SetRegisterLocationToAtCFAPlusOffset(
+          row.SetRegisterLocationToAtCFAPlusOffset(
               translate_to_eh_frame_regnum_x86_64(registers[i]),
               wordsize * -saved_registers_offset, true);
           saved_registers_offset++;
@@ -954,7 +952,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_x86_64(Target &target,
         }
       }
     }
-    unwind_plan.AppendRow(row);
+    unwind_plan.AppendRow(std::move(row));
     return true;
   } break;
 
@@ -1016,20 +1014,19 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
   unwind_plan.SetLSDAAddress(function_info.lsda_address);
   unwind_plan.SetPersonalityFunctionPtr(function_info.personality_ptr_address);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int wordsize = 4;
   int mode = function_info.encoding & UNWIND_X86_MODE_MASK;
   switch (mode) {
   case UNWIND_X86_MODE_EBP_FRAME: {
-    row->GetCFAValue().SetIsRegisterPlusOffset(
+    row.GetCFAValue().SetIsRegisterPlusOffset(
         translate_to_eh_frame_regnum_i386(UNWIND_X86_REG_EBP), 2 * wordsize);
-    row->SetOffset(0);
-    row->SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::ebp,
-                                              wordsize * -2, true);
-    row->SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::eip,
-                                              wordsize * -1, true);
-    row->SetRegisterLocationToIsCFAPlusOffset(i386_eh_regnum::esp, 0, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::ebp, wordsize * -2,
+                                             true);
+    row.SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::eip, wordsize * -1,
+                                             true);
+    row.SetRegisterLocationToIsCFAPlusOffset(i386_eh_regnum::esp, 0, true);
 
     uint32_t saved_registers_offset =
         EXTRACT_BITS(function_info.encoding, UNWIND_X86_EBP_FRAME_OFFSET);
@@ -1049,7 +1046,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
       case UNWIND_X86_REG_EDX:
       case UNWIND_X86_REG_EDI:
       case UNWIND_X86_REG_ESI:
-        row->SetRegisterLocationToAtCFAPlusOffset(
+        row.SetRegisterLocationToAtCFAPlusOffset(
             translate_to_eh_frame_regnum_i386(regnum),
             wordsize * -saved_registers_offset, true);
         break;
@@ -1057,7 +1054,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
       saved_registers_offset--;
       saved_registers_locations >>= 3;
     }
-    unwind_plan.AppendRow(row);
+    unwind_plan.AppendRow(std::move(row));
     return true;
   } break;
 
@@ -1105,11 +1102,10 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
 
     int32_t offset =
         mode == UNWIND_X86_MODE_STACK_IND ? stack_size : stack_size * wordsize;
-    row->GetCFAValue().SetIsRegisterPlusOffset(i386_eh_regnum::esp, offset);
-    row->SetOffset(0);
-    row->SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::eip,
-                                              wordsize * -1, true);
-    row->SetRegisterLocationToIsCFAPlusOffset(i386_eh_regnum::esp, 0, true);
+    row.GetCFAValue().SetIsRegisterPlusOffset(i386_eh_regnum::esp, offset);
+    row.SetRegisterLocationToAtCFAPlusOffset(i386_eh_regnum::eip, wordsize * -1,
+                                             true);
+    row.SetRegisterLocationToIsCFAPlusOffset(i386_eh_regnum::esp, 0, true);
 
     if (register_count > 0) {
 
@@ -1209,7 +1205,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
         case UNWIND_X86_REG_EDI:
         case UNWIND_X86_REG_ESI:
         case UNWIND_X86_REG_EBP:
-          row->SetRegisterLocationToAtCFAPlusOffset(
+          row.SetRegisterLocationToAtCFAPlusOffset(
               translate_to_eh_frame_regnum_i386(registers[i]),
               wordsize * -saved_registers_offset, true);
           saved_registers_offset++;
@@ -1218,7 +1214,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_i386(Target &target,
       }
     }
 
-    unwind_plan.AppendRow(row);
+    unwind_plan.AppendRow(std::move(row));
     return true;
   } break;
 
@@ -1313,7 +1309,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_arm64(Target &target,
   unwind_plan.SetLSDAAddress(function_info.lsda_address);
   unwind_plan.SetPersonalityFunctionPtr(function_info.personality_ptr_address);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int wordsize = 8;
   int mode = function_info.encoding & UNWIND_ARM64_MODE_MASK;
@@ -1322,21 +1318,19 @@ bool CompactUnwindInfo::CreateUnwindPlan_arm64(Target &target,
     return false;
 
   if (mode == UNWIND_ARM64_MODE_FRAMELESS) {
-    row->SetOffset(0);
-
     uint32_t stack_size =
         (EXTRACT_BITS(function_info.encoding,
                       UNWIND_ARM64_FRAMELESS_STACK_SIZE_MASK)) *
         16;
 
     // Our previous Call Frame Address is the stack pointer plus the stack size
-    row->GetCFAValue().SetIsRegisterPlusOffset(arm64_eh_regnum::sp, stack_size);
+    row.GetCFAValue().SetIsRegisterPlusOffset(arm64_eh_regnum::sp, stack_size);
 
     // Our previous PC is in the LR
-    row->SetRegisterLocationToRegister(arm64_eh_regnum::pc, arm64_eh_regnum::ra,
-                                       true);
+    row.SetRegisterLocationToRegister(arm64_eh_regnum::pc, arm64_eh_regnum::ra,
+                                      true);
 
-    unwind_plan.AppendRow(row);
+    unwind_plan.AppendRow(std::move(row));
     return true;
   }
 
@@ -1346,13 +1340,12 @@ bool CompactUnwindInfo::CreateUnwindPlan_arm64(Target &target,
 
   // mode == UNWIND_ARM64_MODE_FRAME
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_eh_regnum::fp, 2 * wordsize);
-  row->SetOffset(0);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::fp, wordsize * -2,
-                                            true);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::pc, wordsize * -1,
-                                            true);
-  row->SetRegisterLocationToIsCFAPlusOffset(arm64_eh_regnum::sp, 0, true);
+  row.GetCFAValue().SetIsRegisterPlusOffset(arm64_eh_regnum::fp, 2 * wordsize);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::fp, wordsize * -2,
+                                           true);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::pc, wordsize * -1,
+                                           true);
+  row.SetRegisterLocationToIsCFAPlusOffset(arm64_eh_regnum::sp, 0, true);
 
   int reg_pairs_saved_count = 1;
 
@@ -1361,55 +1354,55 @@ bool CompactUnwindInfo::CreateUnwindPlan_arm64(Target &target,
   if (saved_register_bits & UNWIND_ARM64_FRAME_X19_X20_PAIR) {
     int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x19, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x19, cfa_offset,
+                                             true);
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x20, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x20, cfa_offset,
+                                             true);
     reg_pairs_saved_count++;
   }
 
   if (saved_register_bits & UNWIND_ARM64_FRAME_X21_X22_PAIR) {
     int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x21, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x21, cfa_offset,
+                                             true);
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x22, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x22, cfa_offset,
+                                             true);
     reg_pairs_saved_count++;
   }
 
   if (saved_register_bits & UNWIND_ARM64_FRAME_X23_X24_PAIR) {
     int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x23, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x23, cfa_offset,
+                                             true);
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x24, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x24, cfa_offset,
+                                             true);
     reg_pairs_saved_count++;
   }
 
   if (saved_register_bits & UNWIND_ARM64_FRAME_X25_X26_PAIR) {
     int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x25, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x25, cfa_offset,
+                                             true);
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x26, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x26, cfa_offset,
+                                             true);
     reg_pairs_saved_count++;
   }
 
   if (saved_register_bits & UNWIND_ARM64_FRAME_X27_X28_PAIR) {
     int cfa_offset = reg_pairs_saved_count * -2 * wordsize;
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x27, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x27, cfa_offset,
+                                             true);
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x28, cfa_offset,
-                                              true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm64_eh_regnum::x28, cfa_offset,
+                                             true);
     reg_pairs_saved_count++;
   }
 
@@ -1430,7 +1423,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_arm64(Target &target,
     reg_pairs_saved_count++;
   }
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   return true;
 }
 
@@ -1447,7 +1440,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
   unwind_plan.SetLSDAAddress(function_info.lsda_address);
   unwind_plan.SetPersonalityFunctionPtr(function_info.personality_ptr_address);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   const int wordsize = 4;
   int mode = function_info.encoding & UNWIND_ARM_MODE_MASK;
@@ -1459,14 +1452,13 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
                                         UNWIND_ARM_FRAME_STACK_ADJUST_MASK)) *
                           wordsize;
 
-  row->GetCFAValue().SetIsRegisterPlusOffset(arm_r7,
-                                             (2 * wordsize) + stack_adjust);
-  row->SetOffset(0);
-  row->SetRegisterLocationToAtCFAPlusOffset(
+  row.GetCFAValue().SetIsRegisterPlusOffset(arm_r7,
+                                            (2 * wordsize) + stack_adjust);
+  row.SetRegisterLocationToAtCFAPlusOffset(
       arm_r7, (wordsize * -2) - stack_adjust, true);
-  row->SetRegisterLocationToAtCFAPlusOffset(
+  row.SetRegisterLocationToAtCFAPlusOffset(
       arm_pc, (wordsize * -1) - stack_adjust, true);
-  row->SetRegisterLocationToIsCFAPlusOffset(arm_sp, 0, true);
+  row.SetRegisterLocationToIsCFAPlusOffset(arm_sp, 0, true);
 
   int cfa_offset = -stack_adjust - (2 * wordsize);
 
@@ -1474,42 +1466,42 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
 
   if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R6) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r6, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r6, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R5) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r5, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r5, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_FIRST_PUSH_R4) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r4, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r4, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R12) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r12, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r12, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R11) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r11, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r11, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R10) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r10, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r10, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R9) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r9, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r9, cfa_offset, true);
   }
 
   if (saved_register_bits & UNWIND_ARM_FRAME_SECOND_PUSH_R8) {
     cfa_offset -= wordsize;
-    row->SetRegisterLocationToAtCFAPlusOffset(arm_r8, cfa_offset, true);
+    row.SetRegisterLocationToAtCFAPlusOffset(arm_r8, cfa_offset, true);
   }
 
   if (mode == UNWIND_ARM_MODE_FRAME_D) {
@@ -1519,26 +1511,26 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
     case 0:
       // vpush {d8}
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
       break;
     case 1:
       // vpush {d10}
       // vpush {d8}
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
       break;
     case 2:
       // vpush {d12}
       // vpush {d10}
       // vpush {d8}
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
       break;
     case 3:
       // vpush {d14}
@@ -1546,13 +1538,13 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
       // vpush {d10}
       // vpush {d8}
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d10, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d8, cfa_offset, true);
       break;
     case 4:
       // vpush {d14}
@@ -1560,9 +1552,9 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
       // sp = (sp - 24) & (-16);
       // vst   {d8, d9, d10}
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d12, cfa_offset, true);
 
       // FIXME we don't have a way to represent reg saves at an specific
       // alignment short of
@@ -1576,7 +1568,7 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
       // vst   {d12}
 
       cfa_offset -= 8;
-      row->SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
+      row.SetRegisterLocationToAtCFAPlusOffset(arm_d14, cfa_offset, true);
 
       // FIXME we don't have a way to represent reg saves at an specific
       // alignment short of
@@ -1606,6 +1598,6 @@ bool CompactUnwindInfo::CreateUnwindPlan_armv7(Target &target,
     }
   }
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   return true;
 }

@@ -786,6 +786,13 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
                                       path))
       searchPaths.push_back(saver().save(path));
   }
+
+  // Libraries specified by `/nodefaultlib:` may not be found in incomplete
+  // search paths before lld infers a machine type from input files.
+  std::set<std::string> noDefaultLibs;
+  for (const std::string &path : ctx.config.noDefaultLibs)
+    noDefaultLibs.insert(findLib(path).lower());
+  ctx.config.noDefaultLibs = noDefaultLibs;
 }
 
 // Parses LIB environment which contains a list of search paths.

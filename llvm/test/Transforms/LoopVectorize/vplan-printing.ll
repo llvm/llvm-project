@@ -234,7 +234,7 @@ define void @print_reduction_with_invariant_store(i64 %n, ptr noalias %y, ptr no
 ; CHECK-NEXT:   CLONE ir<%arrayidx> = getelementptr inbounds ir<%y>, vp<[[IV]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%arrayidx>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
-; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>) (with final reduction value stored in invariant address sank outside of loop)
+; CHECK-NEXT:   REDUCE ir<%red.next> = ir<%red> + fast reduce.fadd (ir<%lv>)
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT: No successors
@@ -800,7 +800,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.y>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd nnan ir<%lv>, ir<1.000000e+00>
-; CHECK-NEXT:   WIDEN ir<%mul> = fmul reassoc nnan ninf nsz arcp contract afn ir<%add>, ir<2.000000e+00>
+; CHECK-NEXT:   WIDEN ir<%mul> = fmul fast ir<%add>, ir<2.000000e+00>
 ; CHECK-NEXT:   WIDEN ir<%div> = fdiv reassoc nsz contract ir<%mul>, ir<2.000000e+00>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>
@@ -1224,8 +1224,8 @@ define void @print_select_with_fastmath_flags(ptr noalias %a, ptr noalias %b, pt
 ; CHECK-NEXT:     vp<[[PTR2:%.+]]> = vector-pointer ir<[[GEP2]]>
 ; CHECK-NEXT:     WIDEN ir<[[LD2:%.+]]> = load vp<[[PTR2]]>
 ; CHECK-NEXT:     WIDEN ir<[[FCMP:%.+]]> = fcmp ogt ir<[[LD1]]>, ir<[[LD2]]>
-; CHECK-NEXT:     WIDEN ir<[[FADD:%.+]]> = fadd reassoc nnan ninf nsz arcp contract afn ir<[[LD1]]>, ir<1.000000e+01>
-; CHECK-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select reassoc nnan ninf nsz arcp contract afn ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
+; CHECK-NEXT:     WIDEN ir<[[FADD:%.+]]> = fadd fast ir<[[LD1]]>, ir<1.000000e+01>
+; CHECK-NEXT:     WIDEN-SELECT ir<[[SELECT:%.+]]> = select fast ir<[[FCMP]]>, ir<[[FADD]]>, ir<[[LD2]]>
 ; CHECK-NEXT:     CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds nuw ir<%a>, vp<[[ST]]>
 ; CHECK-NEXT:     vp<[[PTR3:%.+]]> = vector-pointer ir<[[GEP3]]>
 ; CHECK-NEXT:     WIDEN store vp<[[PTR3]]>, ir<[[SELECT]]>

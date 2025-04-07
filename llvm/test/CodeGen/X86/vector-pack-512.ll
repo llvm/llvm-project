@@ -245,21 +245,12 @@ define <64 x i8> @concat_trunc_packuswb_512(<32 x i16> %a0, <32 x i16> %a1) noun
 }
 
 define <32 x i16> @concat_packsswd_int_2x256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
-; AVX512F-LABEL: concat_packsswd_int_2x256:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpackssdw %ymm3, %ymm2, %ymm1
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: concat_packsswd_int_2x256:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpackssdw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: concat_packsswd_int_2x256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpackssdw %ymm3, %ymm2, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
   %lo = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a0, <8 x i32> %a1)
   %hi = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> %a2, <8 x i32> %a3)
   %res = shufflevector <16 x i16> %lo, <16 x i16> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -268,21 +259,12 @@ define <32 x i16> @concat_packsswd_int_2x256(<8 x i32> %a0, <8 x i32> %a1, <8 x 
 declare <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32>, <8 x i32>)
 
 define <32 x i16> @concat_packuswd_int_2x256(<8 x i32> %a0, <8 x i32> %a1, <8 x i32> %a2, <8 x i32> %a3) {
-; AVX512F-LABEL: concat_packuswd_int_2x256:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
-; AVX512F-NEXT:    vpackusdw %ymm3, %ymm2, %ymm1
-; AVX512F-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512BW-LABEL: concat_packuswd_int_2x256:
-; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
-; AVX512BW-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpackusdw %zmm1, %zmm0, %zmm0
-; AVX512BW-NEXT:    retq
+; AVX512-LABEL: concat_packuswd_int_2x256:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpackusdw %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpackusdw %ymm3, %ymm2, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    retq
   %lo = tail call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> %a1)
   %hi = tail call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a2, <8 x i32> %a3)
   %res = shufflevector <16 x i16> %lo, <16 x i16> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>

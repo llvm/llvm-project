@@ -14,6 +14,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
+#include "PPCMCExpr.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -208,8 +209,7 @@ public:
   PPCTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : PPCTargetStreamer(S), OS(OS) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
       MCSymbolXCOFF *TCSym =
           cast<MCSectionXCOFF>(Streamer.getCurrentSectionOnly())
@@ -221,14 +221,11 @@ public:
       // variables. Finally for local-exec and initial-exec, we have a thread
       // pointer, in r13 for 64-bit mode and returned by .__get_tpointer for
       // 32-bit mode.
-      if (Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGDM ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSIE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLE ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
-          Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
+      if (Kind == PPCMCExpr::VK_AIX_TLSGD || Kind == PPCMCExpr::VK_AIX_TLSGDM ||
+          Kind == PPCMCExpr::VK_AIX_TLSIE || Kind == PPCMCExpr::VK_AIX_TLSLE ||
+          Kind == PPCMCExpr::VK_AIX_TLSLD || Kind == PPCMCExpr::VK_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << getContext().getAsmInfo()->getVariantKindName(Kind) << '\n';
+           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 
@@ -271,8 +268,7 @@ public:
     return static_cast<MCELFStreamer &>(Streamer);
   }
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     // Creates a R_PPC64_TOC relocation
     Streamer.emitValueToAlignment(Align(8));
     Streamer.emitSymbolValue(&S, 8);
@@ -376,8 +372,7 @@ class PPCTargetMachOStreamer : public PPCTargetStreamer {
 public:
   PPCTargetMachOStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     llvm_unreachable("Unknown pseudo-op: .tc");
   }
 
@@ -399,13 +394,14 @@ class PPCTargetXCOFFStreamer : public PPCTargetStreamer {
 public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
-  void emitTCEntry(const MCSymbol &S,
-                   MCSymbolRefExpr::VariantKind Kind) override {
+  void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
     const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
     const unsigned PointerSize = MAI->getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
-    Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
-                       PointerSize);
+    Streamer.emitValue(
+        MCSymbolRefExpr::create(&S, MCSymbolRefExpr::VariantKind(Kind),
+                                Streamer.getContext()),
+        PointerSize);
   }
 
   void emitMachine(StringRef CPU) override {

@@ -2,7 +2,7 @@
 "`P2497R0 <https://wg21.link/P2497R0>`__","Testing for success or failure of ``<charconv>`` functions","2023-06 (Varna)","|Complete|","18",""
 "`P2592R3 <https://wg21.link/P2592R3>`__","Hashing support for ``std::chrono`` value classes","2023-06 (Varna)","","",""
 "`P2587R3 <https://wg21.link/P2587R3>`__","``to_string`` or not ``to_string``","2023-06 (Varna)","","",""
-"`P2562R1 <https://wg21.link/P2562R1>`__","``constexpr`` Stable Sorting","2023-06 (Varna)","|Partial|","20",""
+"`P2562R1 <https://wg21.link/P2562R1>`__","``constexpr`` Stable Sorting","2023-06 (Varna)","|Complete|","21",""
 "`P2545R4 <https://wg21.link/P2545R4>`__","Read-Copy Update (RCU)","2023-06 (Varna)","","",""
 "`P2530R3 <https://wg21.link/P2530R3>`__","Hazard Pointers for C++26","2023-06 (Varna)","","",""
 "`P2538R1 <https://wg21.link/P2538R1>`__","ADL-proof ``std::projected``","2023-06 (Varna)","|Complete|","18",""

@@ -33,6 +33,7 @@ enum NodeType : unsigned {
   RET_GLUE,
   SRET_GLUE,
   MRET_GLUE,
+  QC_C_MILEAVERET_GLUE,
   CALL,
   TAIL,
   /// Select with condition operator - This selects between a true value and
@@ -1067,6 +1068,13 @@ private:
   /// RISC-V doesn't have flags so it's better to perform the and/or in a GPR.
   bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override {
     return false;
+  }
+
+  /// Disables storing and loading vectors by default when there are function
+  /// calls between the load and store, since these are more expensive than just
+  /// using scalars
+  bool shouldMergeStoreOfLoadsOverCall(EVT SrcVT, EVT MergedVT) const override {
+    return !MergedVT.isVector() || SrcVT.isVector();
   }
 
   /// For available scheduling models FDIV + two independent FMULs are much

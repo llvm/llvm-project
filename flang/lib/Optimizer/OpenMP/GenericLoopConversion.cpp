@@ -343,6 +343,115 @@ private:
   }
 };
 
+/// According to the spec (v5.2, p340, 36):
+///
+/// ```
+/// The effect of the reduction clause is as if it is applied to all leaf
+/// constructs that permit the clause, except for the following constructs:
+/// * ....
+/// * The teams construct, when combined with the loop construct.
+/// ```
+///
+/// Therefore, for a combined directive similar to: `!$omp teams loop
+/// reduction(...)`, the earlier stages of the compiler assign the `reduction`
+/// clauses only to the `loop` leaf and not to the `teams` leaf.
+///
+/// On the other hand, if we have a combined construct similar to: `!$omp teams
+/// distribute parallel do`, the `reduction` clauses are assigned both to the
+/// `teams` and the `do` leaves. We need to match this behavior when we convert
+/// `teams` op with a nested `loop` op since the target set of constructs/ops
+/// will be incorrect without moving the reductions up to the `teams` op as
+/// well.
+///
+/// This pattern does exactly this. Given the following input:
+/// ```
+/// omp.teams {
+///   omp.loop reduction(@red_sym %red_op -> %red_arg : !fir.ref<i32>) {
+///     omp.loop_nest ... {
+///       ...
+///     }
+///   }
+/// }
+/// ```
+/// this pattern updates the `omp.teams` op in-place to:
+/// ```
+/// omp.teams reduction(@red_sym %red_op -> %teams_red_arg : !fir.ref<i32>) {
+///   omp.loop reduction(@red_sym %teams_red_arg -> %red_arg : !fir.ref<i32>) {
+///     omp.loop_nest ... {
+///       ...
+///     }
+///   }
+/// }
+/// ```
+///
+/// Note the following:
+/// * The nested `omp.loop` is not rewritten by this pattern, this happens
+///   through `GenericLoopConversionPattern`.
+/// * The reduction info are cloned from the nested `omp.loop` op to the parent
+///   `omp.teams` op.
+/// * The reduction operand of the `omp.loop` op is updated to be the **new**
+///   reduction block argument of the `omp.teams` op.
+class ReductionsHoistingPattern
+    : public mlir::OpConversionPattern<mlir::omp::TeamsOp> {
+public:
+  using mlir::OpConversionPattern<mlir::omp::TeamsOp>::OpConversionPattern;
+
+  static mlir::omp::LoopOp
+  tryToFindNestedLoopWithReduction(mlir::omp::TeamsOp teamsOp) {
+    if (teamsOp.getRegion().getBlocks().size() != 1)
+      return nullptr;
+
+    mlir::Block &teamsBlock = *teamsOp.getRegion().begin();
+    auto loopOpIter = llvm::find_if(teamsBlock, [](mlir::Operation &op) {
+      auto nestedLoopOp = llvm::dyn_cast<mlir::omp::LoopOp>(&op);
+
+      if (!nestedLoopOp)
+        return false;
+
+      return !nestedLoopOp.getReductionVars().empty();
+    });
+
+    if (loopOpIter == teamsBlock.end())
+      return nullptr;
+
+    // TODO return error if more than one loop op is nested. We need to
+    // coalesce reductions in this case.
+    return llvm::cast<mlir::omp::LoopOp>(loopOpIter);
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::omp::TeamsOp teamsOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReduction(teamsOp);
+
+    rewriter.modifyOpInPlace(teamsOp, [&]() {
+      teamsOp.setReductionMod(nestedLoopOp.getReductionMod());
+      teamsOp.getReductionVarsMutable().assign(nestedLoopOp.getReductionVars());
+      teamsOp.setReductionByref(nestedLoopOp.getReductionByref());
+      teamsOp.setReductionSymsAttr(nestedLoopOp.getReductionSymsAttr());
+
+      auto blockArgIface =
+          llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*teamsOp);
+      unsigned reductionArgsStart = blockArgIface.getPrivateBlockArgsStart() +
+                                    blockArgIface.numPrivateBlockArgs();
+      llvm::SmallVector<mlir::Value> newLoopOpReductionOperands;
+
+      for (auto [idx, reductionVar] :
+           llvm::enumerate(nestedLoopOp.getReductionVars())) {
+        mlir::BlockArgument newTeamsOpReductionBlockArg =
+            teamsOp.getRegion().insertArgument(reductionArgsStart + idx,
+                                               reductionVar.getType(),
+                                               reductionVar.getLoc());
+        newLoopOpReductionOperands.push_back(newTeamsOpReductionBlockArg);
+      }
+
+      nestedLoopOp.getReductionVarsMutable().assign(newLoopOpReductionOperands);
+    });
+
+    return mlir::success();
+  }
+};
+
 class GenericLoopConversionPass
     : public flangomp::impl::GenericLoopConversionPassBase<
           GenericLoopConversionPass> {
@@ -357,11 +466,23 @@ public:
 
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<GenericLoopConversionPattern>(context);
+    patterns.insert<ReductionsHoistingPattern, GenericLoopConversionPattern>(
+        context);
     mlir::ConversionTarget target(*context);
 
     target.markUnknownOpDynamicallyLegal(
         [](mlir::Operation *) { return true; });
+
+    target.addDynamicallyLegalOp<mlir::omp::TeamsOp>(
+        [](mlir::omp::TeamsOp teamsOp) {
+          // If teamsOp's reductions are already populated, then the op is
+          // legal. Additionally, the op is legal if it does not nest a LoopOp
+          // with reductions.
+          return !teamsOp.getReductionVars().empty() ||
+                 ReductionsHoistingPattern::tryToFindNestedLoopWithReduction(
+                     teamsOp) == nullptr;
+        });
+
     target.addDynamicallyLegalOp<mlir::omp::LoopOp>(
         [](mlir::omp::LoopOp loopOp) {
           return mlir::failed(

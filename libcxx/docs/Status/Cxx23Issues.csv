@@ -137,7 +137,7 @@
 "`LWG3593 <https://wg21.link/LWG3593>`__","Several iterators' ``base() const &`` and ``lazy_split_view::outer-iterator::value_type::end()`` missing ``noexcept``","2021-10 (Virtual)","","",""
 "`LWG3595 <https://wg21.link/LWG3595>`__","Exposition-only classes proxy and postfix-proxy for ``common_iterator`` should be fully ``constexpr``","2021-10 (Virtual)","|Complete|","14",""
 "","","","","",""
-"`LWG3088 <https://wg21.link/LWG3088>`__","``forward_list::merge`` behaviour unclear when passed ``*this``","2022-02 (Virtual)","","",""
+"`LWG3088 <https://wg21.link/LWG3088>`__","``forward_list::merge`` behaviour unclear when passed ``*this``","2022-02 (Virtual)","|Complete|","Yes",""
 "`LWG3471 <https://wg21.link/LWG3471>`__","``polymorphic_allocator::allocate`` does not satisfy ``Cpp17Allocator`` requirements","2022-02 (Virtual)","","",""
 "`LWG3525 <https://wg21.link/LWG3525>`__","``uses_allocator_construction_args`` fails to handle types convertible to ``pair``","2022-02 (Virtual)","","",""
 "`LWG3598 <https://wg21.link/LWG3598>`__","``system_category().default_error_condition(0)`` is underspecified","2022-02 (Virtual)","","",""

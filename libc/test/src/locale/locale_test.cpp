@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/locale_macros.h"
 #include "src/locale/freelocale.h"
 #include "src/locale/newlocale.h"
 #include "src/locale/uselocale.h"
-
 #include "test/UnitTest/Test.h"
-
-#include "include/llvm-libc-macros/locale-macros.h"
 
 TEST(LlvmLibcLocale, DefaultLocale) {
   locale_t new_locale = LIBC_NAMESPACE::newlocale(LC_ALL, "C", nullptr);

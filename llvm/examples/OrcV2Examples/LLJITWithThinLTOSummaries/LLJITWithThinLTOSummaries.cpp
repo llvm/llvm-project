@@ -207,7 +207,7 @@ int main(int Argc, char *Argv[]) {
           ExitOnErr(JITTargetMachineBuilder::detectHost()));
     } else {
       Builder.setJITTargetMachineBuilder(
-          JITTargetMachineBuilder(Triple(M.getTargetTriple())));
+          JITTargetMachineBuilder(M.getTargetTriple()));
     }
     if (!M.getDataLayout().getStringRepresentation().empty())
       Builder.setDataLayout(M.getDataLayout());

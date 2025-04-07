@@ -60,6 +60,7 @@ static lto::Config createConfig() {
   c.CSIRProfile = std::string(config->csProfilePath);
   c.RunCSIRInstr = config->csProfileGenerate;
   c.PGOWarnMismatch = config->pgoWarnMismatch;
+  c.DisableVerify = config->disableVerify;
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
   if (config->saveTemps)

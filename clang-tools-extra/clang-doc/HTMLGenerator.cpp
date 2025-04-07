@@ -498,7 +498,7 @@ writeFileDefinition(const Location &L,
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
                             " of file " + L.Filename);
-  SmallString<128> FileURL(*RepositoryUrl);
+  SmallString<128> FileURL(RepositoryUrl.value_or(""));
   llvm::sys::path::append(
       FileURL, llvm::sys::path::Style::posix,
       // If we're on Windows, the file name will be in the wrong format, and

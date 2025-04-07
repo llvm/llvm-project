@@ -18,7 +18,7 @@ define amdgpu_kernel void @cube(ptr addrspace(1) %out, float %a, float %b, float
   %cubetc = call float @llvm.amdgcn.cubetc(float %a, float %b, float %c)
   %cubema = call float @llvm.amdgcn.cubema(float %a, float %b, float %c)
 
-  %vec0 = insertelement <4 x float> undef, float %cubeid, i32 0
+  %vec0 = insertelement <4 x float> poison, float %cubeid, i32 0
   %vec1 = insertelement <4 x float> %vec0, float %cubesc, i32 1
   %vec2 = insertelement <4 x float> %vec1, float %cubetc, i32 2
   %vec3 = insertelement <4 x float> %vec2, float %cubema, i32 3

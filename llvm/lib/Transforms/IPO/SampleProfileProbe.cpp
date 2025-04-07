@@ -148,8 +148,9 @@ void PseudoProbeVerifier::verifyProbeFactors(
   auto &PrevProbeFactors = FunctionProbeFactors[F->getName()];
   for (const auto &I : ProbeFactors) {
     float CurProbeFactor = I.second;
-    if (PrevProbeFactors.count(I.first)) {
-      float PrevProbeFactor = PrevProbeFactors[I.first];
+    auto [It, Inserted] = PrevProbeFactors.try_emplace(I.first);
+    if (!Inserted) {
+      float PrevProbeFactor = It->second;
       if (std::abs(CurProbeFactor - PrevProbeFactor) >
           DistributionFactorVariance) {
         if (!BannerPrinted) {
@@ -163,7 +164,7 @@ void PseudoProbeVerifier::verifyProbeFactors(
     }
 
     // Update
-    PrevProbeFactors[I.first] = I.second;
+    It->second = I.second;
   }
 }
 
@@ -198,8 +199,7 @@ void SampleProfileProber::computeBlocksToIgnore(
   computeEHOnlyBlocks(*F, BlocksAndCallsToIgnore);
   findUnreachableBlocks(BlocksAndCallsToIgnore);
 
-  BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
-                        BlocksAndCallsToIgnore.end());
+  BlocksToIgnore.insert_range(BlocksAndCallsToIgnore);
 
   // Handle the call-to-invoke conversion case: make sure that the probe id and
   // callsite id are consistent before and after the block split. For block

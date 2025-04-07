@@ -37,7 +37,8 @@ class Builtin_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
-    MemRefLayoutAttrInterface
+    MemRefLayoutAttrInterface,
+    OpAsmAttrInterface
   ]> {
   let summary = "An Attribute containing an AffineMap object";
   let description = [{
@@ -63,6 +64,16 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", "affine_map", [
   let extraClassDeclaration = [{
     using ValueType = AffineMap;
     AffineMap getAffineMap() const { return getValue(); }
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Get a name to use when generating an alias for this attribute.
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "map";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
   }];
   let skipDefaultBuilders = 1;
 }
@@ -755,7 +766,7 @@ def Builtin_IntegerAttr : Builtin_Attr<"Integer", "integer",
 // IntegerSetAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set"> {
+def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set", [OpAsmAttrInterface]> {
   let summary = "An Attribute containing an IntegerSet object";
   let description = [{
     Syntax:
@@ -776,7 +787,19 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet", "integer_set"> {
       return $_get(value.getContext(), value);
     }]>
   ];
-  let extraClassDeclaration = "using ValueType = IntegerSet;";
+  let extraClassDeclaration = [{
+    using ValueType = IntegerSet;
+
+    //===------------------------------------------------------------------===//
+    // OpAsmAttrInterface Methods
+    //===------------------------------------------------------------------===//
+
+    /// Get a name to use when generating an alias for this attribute.
+    ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const {
+      os << "set";
+      return ::mlir::OpAsmAliasResult::OverridableAlias;
+    }
+  }];
   let skipDefaultBuilders = 1;
 }
 

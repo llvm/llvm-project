@@ -50,6 +50,7 @@ struct CGPassBuilderOption {
   bool EnableGlobalMergeFunc = false;
   bool EnableMachineFunctionSplitter = false;
   bool EnableSinkAndFold = false;
+  bool EnableTailMerge = true;
   bool MISchedPostRA = false;
   bool EarlyLiveIntervals = false;
   bool GCEmptyBlocks = false;

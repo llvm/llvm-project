@@ -1661,7 +1661,7 @@ Intrinsic::DagEmitter::emitDagShuffle(const DagInit *DI) {
         }
       }
 
-      Elts.insert(Revved.begin(), Revved.end());
+      Elts.insert_range(Revved);
     }
   };
 
@@ -1809,12 +1809,11 @@ Intrinsic::DagEmitter::emitDagSaveTemp(const DagInit *DI) {
   assert_with_loc(!N.empty(),
                   "save_temp() expects a name as the first argument");
 
-  assert_with_loc(Intr.Variables.find(N) == Intr.Variables.end(),
-                  "Variable already defined!");
-  Intr.Variables[N] = Variable(A.first, N + Intr.VariablePostfix);
+  auto [It, Inserted] =
+      Intr.Variables.try_emplace(N, A.first, N + Intr.VariablePostfix);
+  assert_with_loc(Inserted, "Variable already defined!");
 
-  std::string S =
-      A.first.str() + " " + Intr.Variables[N].getName() + " = " + A.second;
+  std::string S = A.first.str() + " " + It->second.getName() + " = " + A.second;
 
   return std::make_pair(Type::getVoid(), S);
 }
@@ -2246,9 +2245,9 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
     // Sorted by immediate argument index
     ArrayRef<ImmCheck> Checks = Def->getImmChecks();
 
-    const auto it = Emitted.find(Def->getMangledName());
-    if (it != Emitted.end()) {
-      assert(areRangeChecksCompatible(Checks, it->second) &&
+    auto [It, Inserted] = Emitted.try_emplace(Def->getMangledName(), Checks);
+    if (!Inserted) {
+      assert(areRangeChecksCompatible(Checks, It->second) &&
              "Neon intrinsics with incompatible immediate range checks cannot "
              "share a builtin.");
       continue; // Ensure this is emitted only once
@@ -2262,7 +2261,6 @@ void NeonEmitter::genIntrinsicRangeCheckCode(
          << Check.getVecSizeInBits() << ");\n"
          << " break;\n";
     }
-    Emitted[Def->getMangledName()] = Checks;
   }
 
   OS << "#endif\n\n";

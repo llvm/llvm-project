@@ -1199,8 +1199,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
 
   // Emit "B .tmpN" instruction, which jumps over the nop sled to the actual
   // start of function
-  const MCExpr *TargetExpr = MCSymbolRefExpr::create(
-      Target, MCSymbolRefExpr::VariantKind::VK_None, OutContext);
+  const MCExpr *TargetExpr = MCSymbolRefExpr::create(Target, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(Mips::BEQ)
                                    .addReg(Mips::ZERO)
                                    .addReg(Mips::ZERO)
@@ -1246,7 +1245,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 // and value for debug thread local expression.
 void MipsAsmPrinter::emitDebugValue(const MCExpr *Value, unsigned Size) const {
   if (auto *MipsExpr = dyn_cast<MipsMCExpr>(Value)) {
-    if (MipsExpr && MipsExpr->getKind() == MipsMCExpr::MEK_DTPREL) {
+    if (MipsExpr && MipsExpr->getSpecifier() == MipsMCExpr::MEK_DTPREL) {
       switch (Size) {
       case 4:
         getTargetStreamer().emitDTPRel32Value(MipsExpr->getSubExpr());

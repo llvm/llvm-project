@@ -679,7 +679,7 @@ SetVector<int> IRNormalizer::getOutputFootprint(
         // Vector for outputs which use UI.
         SetVector<int> OutputsUsingUI = getOutputFootprint(UI, Visited);
         // Insert the indexes of outputs using UI.
-        Outputs.insert(OutputsUsingUI.begin(), OutputsUsingUI.end());
+        Outputs.insert_range(OutputsUsingUI);
       }
     }
   }

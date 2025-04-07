@@ -1105,9 +1105,13 @@ void Sema::ActOnStartOfTranslationUnit() {
 }
 
 void Sema::ActOnEndOfTranslationUnitFragment(TUFragmentKind Kind) {
-  // No explicit actions are required at the end of the global module fragment.
-  if (Kind == TUFragmentKind::Global)
+  if (Kind == TUFragmentKind::Global) {
+    // Perform Pending Instantiations at the end of global module fragment so
+    // that the module ownership of TU-level decls won't get messed.
+    llvm::TimeTraceScope TimeScope("PerformPendingInstantiations");
+    PerformPendingInstantiations();
     return;
+  }
 
   // Transfer late parsed template instantiations over to the pending template
   // instantiation list. During normal compilation, the late template parser

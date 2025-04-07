@@ -22,6 +22,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanning/InProcessModuleCache.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -315,9 +316,11 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps));
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheMutexes());
+    ScanInstanceStorage.emplace(std::move(PCHContainerOps), ModCache.get());
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setInvocation(std::move(Invocation));
+    ScanInstance.setBuildingModule(false);
 
     // Create the compiler's actual diagnostics engine.
     sanitizeDiagOpts(ScanInstance.getDiagnosticOpts());

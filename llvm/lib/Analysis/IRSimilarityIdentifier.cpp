@@ -728,11 +728,10 @@ bool IRSimilarityCandidate::compareAssignmentMapping(
     for (unsigned OtherVal : ValueMappingIt->second) {
       if (OtherVal == InstValB)
         continue;
-      if (!ValueNumberMappingA.contains(OtherVal))
+      auto OtherValIt = ValueNumberMappingA.find(OtherVal);
+      if (OtherValIt == ValueNumberMappingA.end())
         continue;
-      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
-        continue;
-      ValueNumberMappingA[OtherVal].erase(InstValA);
+      OtherValIt->second.erase(InstValA);
     }
     ValueNumberMappingA.erase(ValueMappingIt);
     std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(

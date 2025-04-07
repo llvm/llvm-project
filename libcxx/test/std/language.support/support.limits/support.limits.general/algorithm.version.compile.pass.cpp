@@ -18,6 +18,7 @@
 /*  Constant                                                Value
     __cpp_lib_clamp                                         201603L [C++17]
     __cpp_lib_constexpr_algorithms                          201806L [C++20]
+                                                            202306L [C++26]
     __cpp_lib_default_template_type_for_algorithm_values    202403L [C++26]
     __cpp_lib_freestanding_algorithm                        202311L [C++26]
     __cpp_lib_parallel_algorithm                            201603L [C++17]
@@ -380,8 +381,8 @@
 # ifndef __cpp_lib_constexpr_algorithms
 #   error "__cpp_lib_constexpr_algorithms should be defined in c++26"
 # endif
-# if __cpp_lib_constexpr_algorithms != 201806L
-#   error "__cpp_lib_constexpr_algorithms should have the value 201806L in c++26"
+# if __cpp_lib_constexpr_algorithms != 202306L
+#   error "__cpp_lib_constexpr_algorithms should have the value 202306L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

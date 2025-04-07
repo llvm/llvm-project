@@ -341,7 +341,7 @@ static DecodeStatus DecodeSimpleRegisterClass(MCInst &Inst, unsigned RegNo,
   if (RegNo > NumRegsInClass - 1)
     return Fail;
 
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[RegClassID].getRegister(RegNo + FirstReg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -355,7 +355,7 @@ DecodeGPR64x8ClassRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
   if (RegNo & 1)
     return Fail;
 
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::GPR64x8ClassRegClassID].getRegister(
           RegNo >> 1);
   Inst.addOperand(MCOperand::createReg(Register));
@@ -369,7 +369,7 @@ static DecodeStatus DecodeZPRMul2_MinMax(MCInst &Inst, unsigned RegNo,
   unsigned Reg = (RegNo * 2) + Min;
   if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::ZPRRegClassID].getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -383,7 +383,7 @@ static DecodeStatus DecodeZPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
   if (Reg < Min || Reg > Max || (Reg & 1))
     return Fail;
 
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::ZPR2RegClassID].getRegister(Reg);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -394,7 +394,7 @@ static DecodeStatus DecodeZK(MCInst &Inst, unsigned RegNo, uint64_t Address,
   if (RegNo > 7)
     return Fail;
 
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::ZPR_KRegClassID].getRegister(RegNo);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -405,7 +405,7 @@ static DecodeStatus DecodeZPR4Mul4RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 const void *Decoder) {
   if (RegNo * 4 > 28)
     return Fail;
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::ZPR4RegClassID].getRegister(RegNo * 4);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -449,7 +449,7 @@ static DecodeStatus DecodePPR2Mul2RegisterClass(MCInst &Inst, unsigned RegNo,
                                                 const void *Decoder) {
   if ((RegNo * 2) > 14)
     return Fail;
-  unsigned Register =
+  MCRegister Register =
       AArch64MCRegisterClasses[AArch64::PPR2RegClassID].getRegister(RegNo * 2);
   Inst.addOperand(MCOperand::createReg(Register));
   return Success;
@@ -1655,7 +1655,7 @@ DecodeGPRSeqPairsClassRegisterClass(MCInst &Inst, unsigned RegClassID,
   if (RegNo & 0x1)
     return Fail;
 
-  unsigned Reg = AArch64MCRegisterClasses[RegClassID].getRegister(RegNo / 2);
+  MCRegister Reg = AArch64MCRegisterClasses[RegClassID].getRegister(RegNo / 2);
   Inst.addOperand(MCOperand::createReg(Reg));
   return Success;
 }

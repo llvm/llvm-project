@@ -74,7 +74,7 @@ static bool ShouldSignWithBKey(const Function &F, const AArch64Subtarget &STI) {
 
 static bool hasELFSignedGOTHelper(const Function &F,
                                   const AArch64Subtarget *STI) {
-  if (!Triple(STI->getTargetTriple()).isOSBinFormatELF())
+  if (!STI->getTargetTriple().isOSBinFormatELF())
     return false;
   const Module *M = F.getParent();
   const auto *Flag = mdconst::extract_or_null<ConstantInt>(

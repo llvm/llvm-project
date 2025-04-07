@@ -120,6 +120,7 @@ class Region {
   void remove(Instruction *I);
   friend class Context; // The callbacks need to call add() and remove().
   friend class RegionInternalsAttorney; // For unit tests.
+  friend class RegionsFromBBs;          // For add().
 
   /// Set \p I as the \p Idx'th element in the auxiliary vector.
   /// NOTE: This is for internal use, it does not set the metadata.

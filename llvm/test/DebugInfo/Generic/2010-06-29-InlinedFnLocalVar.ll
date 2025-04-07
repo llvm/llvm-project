@@ -1,5 +1,4 @@
 ; RUN: %llc_dwarf -O2 %s -o - | FileCheck %s
-; RUN: %llc_dwarf --try-experimental-debuginfo-iterators -O2 %s -o - | FileCheck %s
 ; Check struct X for dead variable xyz from inlined function foo.
 
 ; CHECK: {{.section.*debug_info|.*dwinfo:}}

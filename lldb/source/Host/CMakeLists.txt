@@ -13,7 +13,6 @@ macro(add_host_subdirectory group)
 endmacro()
 
 add_host_subdirectory(common
-  common/Alarm.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -27,6 +26,7 @@ add_host_subdirectory(common
   common/LockFileBase.cpp
   common/LZMA.cpp
   common/MainLoopBase.cpp
+  common/MemoryMonitor.cpp
   common/MonitoringProcessLauncher.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -135,8 +135,9 @@ else()
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "AIX")
     add_host_subdirectory(aix
+      aix/Host.cpp
       aix/HostInfoAIX.cpp
-      )    
+      )
   endif()
 endif()
 

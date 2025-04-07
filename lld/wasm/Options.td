@@ -232,6 +232,9 @@ def import_table: FF<"import-table">,
 def initial_heap: JJ<"initial-heap=">,
   HelpText<"Initial size of the heap">;
 
+def page_size: JJ<"page-size=">,
+  HelpText<"The Wasm page size (Defaults to 65536)">;
+
 def initial_memory: JJ<"initial-memory=">,
   HelpText<"Initial size of the linear memory">;
 

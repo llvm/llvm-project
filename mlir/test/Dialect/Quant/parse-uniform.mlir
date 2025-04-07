@@ -154,3 +154,21 @@ func.func @parse() -> !qalias {
   %0 = "foo"() : () -> !qalias
   return %0 : !qalias
 }
+
+// -----
+// Sub-channel scales and zero points (mixed affine and fixedpoint)
+// CHECK: !quant.uniform<u8:f32:{0:1, 1:2}, {{\{}}{2.000000e+00:120, 3.000000e+00:127}, {4.000000e+00, 5.000000e+00}}>
+!qalias = !quant.uniform<u8:f32:{0:1, 1:2}, {{2.0:120,3.0:127}, {4.0,5.0}}>
+func.func @parse() -> !qalias {
+  %0 = "foo"() : () -> !qalias
+  return %0 : !qalias
+}
+
+// -----
+// Empty block-size information in sub-channel quantization
+// CHECK: !quant.uniform<u8:f32:{}, {{\{}}{2.000000e+00:120, 3.000000e+00:127}, {4.000000e+00, 5.000000e+00}}>
+!qalias = !quant.uniform<u8:f32:{}, {{2.0:120,3.0:127}, {4.0,5.0}}>
+func.func @parse() -> !qalias {
+  %0 = "foo"() : () -> !qalias
+  return %0 : !qalias
+}

@@ -759,8 +759,9 @@ unsigned TargetTransformInfo::getNumberOfRegisters(unsigned ClassID) const {
   return TTIImpl->getNumberOfRegisters(ClassID);
 }
 
-bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty) const {
-  return TTIImpl->hasConditionalLoadStoreForType(Ty);
+bool TargetTransformInfo::hasConditionalLoadStoreForType(Type *Ty,
+                                                         bool IsStore) const {
+  return TTIImpl->hasConditionalLoadStoreForType(Ty, IsStore);
 }
 
 unsigned TargetTransformInfo::getRegisterClassForType(bool Vector,
@@ -918,7 +919,7 @@ TargetTransformInfo::getOperandInfo(const Value *V) {
   } else if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
     OpInfo = OK_NonUniformConstantValue;
     bool AllPow2 = true, AllNegPow2 = true;
-    for (unsigned I = 0, E = CDS->getNumElements(); I != E; ++I) {
+    for (uint64_t I = 0, E = CDS->getNumElements(); I != E; ++I) {
       if (auto *CI = dyn_cast<ConstantInt>(CDS->getElementAsConstant(I))) {
         AllPow2 &= CI->getValue().isPowerOf2();
         AllNegPow2 &= CI->getValue().isNegatedPowerOf2();
@@ -1251,7 +1252,7 @@ InstructionCost TargetTransformInfo::getMinMaxReductionCost(
 
 InstructionCost TargetTransformInfo::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *Ty,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) const {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) const {
   return TTIImpl->getExtendedReductionCost(Opcode, IsUnsigned, ResTy, Ty, FMF,
                                            CostKind);
 }
@@ -1379,14 +1380,18 @@ bool TargetTransformInfo::preferFixedOverScalableIfEqualCost() const {
   return TTIImpl->preferFixedOverScalableIfEqualCost();
 }
 
-bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                                ReductionFlags Flags) const {
-  return TTIImpl->preferInLoopReduction(Opcode, Ty, Flags);
+bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode,
+                                                Type *Ty) const {
+  return TTIImpl->preferInLoopReduction(Opcode, Ty);
 }
 
-bool TargetTransformInfo::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, ReductionFlags Flags) const {
-  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty, Flags);
+bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
+  return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
+                                                          Type *Ty) const {
+  return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
 }
 
 bool TargetTransformInfo::preferEpilogueVectorization() const {
@@ -1476,6 +1481,7 @@ TargetIRAnalysis::TargetIRAnalysis(
 
 TargetIRAnalysis::Result TargetIRAnalysis::run(const Function &F,
                                                FunctionAnalysisManager &) {
+  assert(!F.isIntrinsic() && "Should not request TTI for intrinsics");
   return TTICallback(F);
 }
 

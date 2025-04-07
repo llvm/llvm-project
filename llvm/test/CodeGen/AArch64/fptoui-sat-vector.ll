@@ -367,22 +367,22 @@ define <5 x i32> @test_unsigned_v5f64_v5i32(<5 x double> %f) {
 ; CHECK-GI-NEXT:    fcvtzu v3.2d, v4.2d
 ; CHECK-GI-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-GI-NEXT:    fcvtzu v2.2d, v2.2d
+; CHECK-GI-NEXT:    cmhi v6.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    cmhi v4.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    cmhi v5.2d, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    bif v0.16b, v1.16b, v4.16b
 ; CHECK-GI-NEXT:    bif v2.16b, v1.16b, v5.16b
-; CHECK-GI-NEXT:    cmhi v4.2d, v1.2d, v3.2d
-; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v4.16b
+; CHECK-GI-NEXT:    bit v1.16b, v3.16b, v6.16b
 ; CHECK-GI-NEXT:    mov d3, v0.d[1]
 ; CHECK-GI-NEXT:    mov d4, v2.d[1]
+; CHECK-GI-NEXT:    fmov x4, d1
 ; CHECK-GI-NEXT:    fmov x0, d0
 ; CHECK-GI-NEXT:    fmov x2, d2
+; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
 ; CHECK-GI-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-GI-NEXT:    // kill: def $w2 killed $w2 killed $x2
-; CHECK-GI-NEXT:    fmov x4, d1
 ; CHECK-GI-NEXT:    fmov x1, d3
 ; CHECK-GI-NEXT:    fmov x3, d4
-; CHECK-GI-NEXT:    // kill: def $w4 killed $w4 killed $x4
 ; CHECK-GI-NEXT:    // kill: def $w1 killed $w1 killed $x1
 ; CHECK-GI-NEXT:    // kill: def $w3 killed $w3 killed $x3
 ; CHECK-GI-NEXT:    ret

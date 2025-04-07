@@ -394,8 +394,8 @@ llvm::Constant *CodeGenModule::getMemberFunctionPointer(llvm::Constant *Pointer,
 llvm::Constant *CodeGenModule::getMemberFunctionPointer(const FunctionDecl *FD,
                                                         llvm::Type *Ty) {
   QualType FT = FD->getType();
-  FT = getContext().getMemberPointerType(
-      FT, cast<CXXMethodDecl>(FD)->getParent()->getTypeForDecl());
+  FT = getContext().getMemberPointerType(FT, /*Qualifier=*/nullptr,
+                                         cast<CXXMethodDecl>(FD)->getParent());
   return getMemberFunctionPointer(getRawFunctionPointer(FD, Ty), FT);
 }
 

@@ -1304,7 +1304,7 @@ X86FrameLowering::calculateMaxStackAlign(const MachineFunction &MF) const {
 
 void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
-                                          const DebugLoc &DL, unsigned Reg,
+                                          const DebugLoc &DL, Register Reg,
                                           uint64_t MaxAlign) const {
   uint64_t Val = -MaxAlign;
   unsigned AndOp = getANDriOpcode(Uses64BitFramePtr, Val);
@@ -1768,7 +1768,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   int stackGrowth = -SlotSize;
 
   // Find the funclet establisher parameter
-  Register Establisher = X86::NoRegister;
+  MCRegister Establisher;
   if (IsClrFunclet)
     Establisher = Uses64BitFramePtr ? X86::RCX : X86::ECX;
   else if (IsFunclet)
@@ -2081,7 +2081,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   int SEHFrameOffset = 0;
-  unsigned SPOrEstablisher;
+  Register SPOrEstablisher;
   if (IsFunclet) {
     if (IsClrFunclet) {
       // The establisher parameter passed to a CLR funclet is actually a pointer
@@ -4447,7 +4447,7 @@ bool X86FrameLowering::skipSpillFPBP(
     // And later LCMPXCHG16B_SAVE_RBX is expanded to restore RBX from SaveRbx.
     // We should skip this instruction sequence.
     int FI;
-    unsigned Reg;
+    Register Reg;
     while (!(MI->getOpcode() == TargetOpcode::COPY &&
              MI->getOperand(1).getReg() == X86::RBX) &&
            !((Reg = TII.isStoreToStackSlot(*MI, FI)) && Reg == X86::RBX))

@@ -52,13 +52,14 @@ protected:
 
   void SetUp() override {
     std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("amdgcn--amdpal", Error);
+    Triple TargetTriple("amdgcn--amdpal");
+    const Target *T = TargetRegistry::lookupTarget(TargetTriple, Error);
     if (!T)
       GTEST_SKIP();
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "amdgcn--amdpal", "gfx1010", "", Options, std::nullopt));
+        TargetTriple, "gfx1010", "", Options, std::nullopt));
     if (!TM)
       GTEST_SKIP();
 

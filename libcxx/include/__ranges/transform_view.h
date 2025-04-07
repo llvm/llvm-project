@@ -136,22 +136,22 @@ transform_view(_Range&&, _Fn) -> transform_view<views::all_t<_Range>, _Fn>;
 
 template <class _View>
 struct __transform_view_iterator_concept {
-  using type = input_iterator_tag;
+  using type _LIBCPP_NODEBUG = input_iterator_tag;
 };
 
 template <random_access_range _View>
 struct __transform_view_iterator_concept<_View> {
-  using type = random_access_iterator_tag;
+  using type _LIBCPP_NODEBUG = random_access_iterator_tag;
 };
 
 template <bidirectional_range _View>
 struct __transform_view_iterator_concept<_View> {
-  using type = bidirectional_iterator_tag;
+  using type _LIBCPP_NODEBUG = bidirectional_iterator_tag;
 };
 
 template <forward_range _View>
 struct __transform_view_iterator_concept<_View> {
-  using type = forward_iterator_tag;
+  using type _LIBCPP_NODEBUG = forward_iterator_tag;
 };
 
 template <class, class>

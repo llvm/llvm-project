@@ -83,12 +83,12 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   modf(f,d);       modff(f,fp);      modfl(f,l);
 
-  // NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
-  // NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
-  // NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+  // NO__ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
+  // NO__ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
+  // HAS_ERRNO: declare { double, double } @llvm.modf.f64(double) [[READNONE_INTRINSIC]]
+  // HAS_ERRNO: declare { float, float } @llvm.modf.f32(float) [[READNONE_INTRINSIC]]
+  // HAS_ERRNO: declare { x86_fp80, x86_fp80 } @llvm.modf.f80(x86_fp80) [[READNONE_INTRINSIC]]
   // HAS_MAYTRAP: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
   // HAS_MAYTRAP: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]

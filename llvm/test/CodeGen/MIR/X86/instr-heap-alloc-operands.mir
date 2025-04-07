@@ -7,7 +7,7 @@
   define i32 @test(i32 %x) nounwind {
   entry:
     call ptr @f(i32 %x), !heapallocsite !2
-    ret i32 undef
+    ret i32 poison
   }
 
   !llvm.dbg.cu = !{!0}

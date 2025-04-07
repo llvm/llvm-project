@@ -13,7 +13,7 @@
 "`P0616R0 <https://wg21.link/P0616R0>`__","de-pessimize legacy <numeric> algorithms with std::move","2017-11 (Albuquerque)","|Complete|","12",""
 "`P0653R2 <https://wg21.link/P0653R2>`__","Utility to convert a pointer to a raw pointer","2017-11 (Albuquerque)","|Complete|","6",""
 "`P0718R2 <https://wg21.link/P0718R2>`__","Atomic shared_ptr","2017-11 (Albuquerque)","","",""
-"`P0767R1 <https://wg21.link/P0767R1>`__","Deprecate POD","2017-11 (Albuquerque)","|Complete|","7",""
+"`P0767R1 <https://wg21.link/P0767R1>`__","Deprecate POD","2017-11 (Albuquerque)","|Complete|","21","It was previously erroneously marked as complete in LLVM 7."
 "`P0768R1 <https://wg21.link/P0768R1>`__","Library Support for the Spaceship (Comparison) Operator","2017-11 (Albuquerque)","|Complete|","",""
 "`P0777R1 <https://wg21.link/P0777R1>`__","Treating Unnecessary ``decay``\ ","2017-11 (Albuquerque)","|Complete|","7",""
 "","","","","",""

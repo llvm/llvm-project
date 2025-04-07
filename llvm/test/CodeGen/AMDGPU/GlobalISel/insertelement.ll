@@ -870,14 +870,14 @@ define void @dyn_insertelement_v8f64_const_s_v_v(double %val, i32 %idx) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %insert = insertelement <8 x double> <double 1.0, double 2.0, double 3.0, double 4.0, double 5.0, double 6.0, double 7.0, double 8.0>, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1081,14 +1081,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_v(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1229,14 +1229,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_s(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1289,14 +1289,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_s(<8 x double> %vec, double i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1494,14 +1494,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_v_v(<8 x double> inreg %vec, do
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1617,14 +1617,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_s_v(<8 x double> %vec, double i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1677,14 +1677,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_s(<8 x double> %vec, double %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -1794,14 +1794,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v(<8 x double> %vec, double %
 ; GFX11-NEXT:    s_endpgm
 entry:
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -2401,14 +2401,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_s_s_s_add_1(<8 x double> inreg %v
 entry:
   %idx.add = add i32 %idx, 1
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx.add
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 
@@ -2525,14 +2525,14 @@ define amdgpu_ps void @dyn_insertelement_v8f64_v_v_v_add_1(<8 x double> %vec, do
 entry:
   %idx.add = add i32 %idx, 1
   %insert = insertelement <8 x double> %vec, double %val, i32 %idx.add
-  %vec.0 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 0, i32 1>
-  %vec.1 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 2, i32 3>
-  %vec.2 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 4, i32 5>
-  %vec.3 = shufflevector <8 x double> %insert, <8 x double> undef, <2 x i32> <i32 6, i32 7>
-  store volatile <2 x double> %vec.0, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.1, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.2, ptr addrspace(1) undef
-  store volatile <2 x double> %vec.3, ptr addrspace(1) undef
+  %vec.0 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 0, i32 1>
+  %vec.1 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 2, i32 3>
+  %vec.2 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 4, i32 5>
+  %vec.3 = shufflevector <8 x double> %insert, <8 x double> poison, <2 x i32> <i32 6, i32 7>
+  store volatile <2 x double> %vec.0, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.1, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.2, ptr addrspace(1) poison
+  store volatile <2 x double> %vec.3, ptr addrspace(1) poison
   ret void
 }
 

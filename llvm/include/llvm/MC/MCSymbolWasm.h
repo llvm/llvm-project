@@ -147,7 +147,7 @@ public:
                     uint8_t flags = wasm::WASM_LIMITS_FLAG_NONE) {
     // Declare a table with element type VT and no limits (min size 0, no max
     // size).
-    wasm::WasmLimits Limits = {flags, 0, 0};
+    wasm::WasmLimits Limits = {flags, 0, 0, 0};
     setTableType({VT, Limits});
   }
 };

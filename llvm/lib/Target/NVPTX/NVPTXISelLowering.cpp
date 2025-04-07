@@ -66,14 +66,13 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 #define DEBUG_TYPE "nvptx-lower"
 
 using namespace llvm;
-
-static std::atomic<unsigned> GlobalUniqueCallSite;
 
 static cl::opt<bool> sched4reg(
     "nvptx-sched4reg",
@@ -500,7 +499,7 @@ static SDValue MaybeBitcast(SelectionDAG &DAG, SDLoc DL, EVT VT,
 // NVPTXTargetLowering Constructor.
 NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                                          const NVPTXSubtarget &STI)
-    : TargetLowering(TM), nvTM(&TM), STI(STI) {
+    : TargetLowering(TM), nvTM(&TM), STI(STI), GlobalUniqueCallSite(0) {
   // always lower memset, memcpy, and memmove intrinsics to load/store
   // instructions, rather
   // then generating calls to memset, mempcy or memmove.
@@ -670,8 +669,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                      {MVT::i8, MVT::i16, MVT::v2i16, MVT::i32, MVT::i64},
                      Expand);
 
-  if (STI.hasHWROT32())
+  if (STI.hasHWROT32()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i32, Legal);
+    setOperationAction({ISD::ROTL, ISD::ROTR, ISD::FSHL, ISD::FSHR}, MVT::i64,
+                       Custom);
+  }
 
   setOperationAction(ISD::BSWAP, MVT::i16, Expand);
 
@@ -766,16 +768,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom handling for i8 intrinsics
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
-  for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::ABS,  Ty, Legal);
-    setOperationAction(ISD::SMIN, Ty, Legal);
-    setOperationAction(ISD::SMAX, Ty, Legal);
-    setOperationAction(ISD::UMIN, Ty, Legal);
-    setOperationAction(ISD::UMAX, Ty, Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
-    setOperationAction(ISD::CTPOP, Ty, Legal);
-    setOperationAction(ISD::CTLZ, Ty, Legal);
-  }
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+                     Promote);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -1061,6 +1060,8 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::StoreRetvalV2)
     MAKE_CASE(NVPTXISD::StoreRetvalV4)
     MAKE_CASE(NVPTXISD::PseudoUseParam)
+    MAKE_CASE(NVPTXISD::UNPACK_VECTOR)
+    MAKE_CASE(NVPTXISD::BUILD_VECTOR)
     MAKE_CASE(NVPTXISD::RETURN)
     MAKE_CASE(NVPTXISD::CallSeqBegin)
     MAKE_CASE(NVPTXISD::CallSeqEnd)
@@ -1474,7 +1475,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   unsigned FirstVAArg = CLI.NumFixedArgs; // position of the first variadic
   unsigned VAOffset = 0;                  // current offset in the param array
 
-  unsigned UniqueCallSite = GlobalUniqueCallSite.fetch_add(1);
+  const unsigned UniqueCallSite = GlobalUniqueCallSite++;
   SDValue TempChain = Chain;
   Chain = DAG.getCALLSEQ_START(Chain, UniqueCallSite, 0, dl);
   SDValue InGlue = Chain.getValue(1);
@@ -2750,6 +2751,74 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+// In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
+// Lower these into a node returning the correct type which is zero-extended
+// back to the correct size.
+static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  assert(V.getValueType() == MVT::i64 &&
+         "Unexpected CTLZ/CTPOP type to legalize");
+
+  SDLoc DL(Op);
+  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
+}
+
+static SDValue expandFSH64(SDValue A, SDValue B, SDValue ShiftAmount, SDLoc DL,
+                           unsigned Opcode, SelectionDAG &DAG) {
+  assert(A.getValueType() == MVT::i64 && B.getValueType() == MVT::i64);
+
+  const auto *AmtConst = dyn_cast<ConstantSDNode>(ShiftAmount);
+  if (!AmtConst)
+    return SDValue();
+  const auto Amt = AmtConst->getZExtValue() & 63;
+
+  SDValue UnpackA =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, A);
+  SDValue UnpackB =
+      DAG.getNode(NVPTXISD::UNPACK_VECTOR, DL, {MVT::i32, MVT::i32}, B);
+
+  // Arch is Little endiain: 0 = low bits, 1 = high bits
+  SDValue ALo = UnpackA.getValue(0);
+  SDValue AHi = UnpackA.getValue(1);
+  SDValue BLo = UnpackB.getValue(0);
+  SDValue BHi = UnpackB.getValue(1);
+
+  // The bitfeild consists of { AHi : ALo : BHi : BLo }
+  //
+  // * FSHL, Amt <  32 - The window will contain { AHi : ALo : BHi }
+  // * FSHL, Amt >= 32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt <  32 - The window will contain { ALo : BHi : BLo }
+  // * FSHR, Amt >= 32 - The window will contain { AHi : ALo : BHi }
+  //
+  // Note that Amt = 0 and Amt = 32 are special cases where 32-bit funnel shifts
+  // are not needed at all. Amt = 0 is a no-op producing either A or B depending
+  // on the direction. Amt = 32 can be implemented by a packing and unpacking
+  // move to select and arrange the 32bit values. For simplicity, these cases
+  // are not handled here explicitly and instead we rely on DAGCombiner to
+  // remove the no-op funnel shifts we insert.
+  auto [High, Mid, Low] = ((Opcode == ISD::FSHL) == (Amt < 32))
+                              ? std::make_tuple(AHi, ALo, BHi)
+                              : std::make_tuple(ALo, BHi, BLo);
+
+  SDValue NewAmt = DAG.getConstant(Amt & 31, DL, MVT::i32);
+  SDValue RHi = DAG.getNode(Opcode, DL, MVT::i32, {High, Mid, NewAmt});
+  SDValue RLo = DAG.getNode(Opcode, DL, MVT::i32, {Mid, Low, NewAmt});
+
+  return DAG.getNode(NVPTXISD::BUILD_VECTOR, DL, MVT::i64, {RLo, RHi});
+}
+
+static SDValue lowerFSH(SDValue Op, SelectionDAG &DAG) {
+  return expandFSH64(Op->getOperand(0), Op->getOperand(1), Op->getOperand(2),
+                     SDLoc(Op), Op->getOpcode(), DAG);
+}
+
+static SDValue lowerROT(SDValue Op, SelectionDAG &DAG) {
+  unsigned Opcode = Op->getOpcode() == ISD::ROTL ? ISD::FSHL : ISD::FSHR;
+  return expandFSH64(Op->getOperand(0), Op->getOperand(0), Op->getOperand(1),
+                     SDLoc(Op), Opcode, DAG);
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2810,6 +2879,12 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVAARG(Op, DAG);
   case ISD::VASTART:
     return LowerVASTART(Op, DAG);
+  case ISD::FSHL:
+  case ISD::FSHR:
+    return lowerFSH(Op, DAG);
+  case ISD::ROTL:
+  case ISD::ROTR:
+    return lowerROT(Op, DAG);
   case ISD::ABS:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -2835,6 +2910,9 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
+  case ISD::CTPOP:
+  case ISD::CTLZ:
+    return lowerCTLZCTPOP(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
@@ -3670,7 +3748,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row:
   case Intrinsic::nvvm_wmma_m16n16k8_load_b_tf32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v4i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3710,7 +3793,9 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col_stride:
   case Intrinsic::nvvm_wmma_m8n8k32_load_b_u4_col:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -3806,7 +3891,12 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row:
   case Intrinsic::nvvm_wmma_m8n8k32_load_c_s32_row_stride:
   case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16:
-  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16: {
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64:
+  case Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
     Info.ptrVal = I.getArgOperand(0);

@@ -147,7 +147,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
   Value *zx_xz = MulSub(op0_z, op0_x, op1_z, op1_x);
   Value *xy_yx = MulSub(op0_x, op0_y, op1_x, op1_y);
 
-  Value *cross = UndefValue::get(VT);
+  Value *cross = PoisonValue::get(VT);
   cross = Builder.CreateInsertElement(cross, yz_zy, (uint64_t)0);
   cross = Builder.CreateInsertElement(cross, zx_xz, 1);
   cross = Builder.CreateInsertElement(cross, xy_yx, 2);

@@ -37,8 +37,7 @@ class TargetLoweringObjectFileELF : public TargetLoweringObjectFile {
   SmallPtrSet<GlobalObject *, 2> Used;
 
 protected:
-  MCSymbolRefExpr::VariantKind PLTRelativeVariantKind =
-      MCSymbolRefExpr::VK_None;
+  uint8_t PLTRelativeSpecifier = 0;
 
 public:
   TargetLoweringObjectFileELF();
@@ -241,10 +240,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 };
 
 class TargetLoweringObjectFileXCOFF : public TargetLoweringObjectFile {
@@ -269,10 +264,6 @@ public:
                                   const MCSymbol *KeySym) const override;
   MCSection *getStaticDtorSection(unsigned Priority,
                                   const MCSymbol *KeySym) const override;
-
-  const MCExpr *lowerRelativeReference(const GlobalValue *LHS,
-                                       const GlobalValue *RHS,
-                                       const TargetMachine &TM) const override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;

@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,-unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-ALIGNED %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+unaligned-access-mode < %s | FileCheck -enable-var-scope -check-prefixes=GFX9,GFX9-UNALIGNED %s
 
-@lds = addrspace(3) global [512 x float] undef, align 4
-@lds.f64 = addrspace(3) global [512 x double] undef, align 8
+@lds = addrspace(3) global [512 x float] poison, align 4
+@lds.f64 = addrspace(3) global [512 x double] poison, align 8
 
 define amdgpu_kernel void @simple_write2_one_val_f32(ptr addrspace(1) %C, ptr addrspace(1) %in) #0 {
 ; CI-LABEL: simple_write2_one_val_f32:
@@ -548,7 +548,7 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
   %val1 = load float, ptr addrspace(1) %in1.gep, align 4
 
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
@@ -764,7 +764,7 @@ define amdgpu_kernel void @simple_write2_two_val_f64(ptr addrspace(1) %C, ptr ad
   ret void
 }
 
-@foo = addrspace(3) global [4 x i32] undef, align 4
+@foo = addrspace(3) global [4 x i32] poison, align 4
 
 define amdgpu_kernel void @store_constant_adjacent_offsets() {
 ; CI-LABEL: store_constant_adjacent_offsets:
@@ -808,7 +808,7 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
   ret void
 }
 
-@bar = addrspace(3) global [4 x i64] undef, align 4
+@bar = addrspace(3) global [4 x i64] poison, align 4
 
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 ; CI-LABEL: store_misaligned64_constant_offsets:
@@ -834,7 +834,7 @@ define amdgpu_kernel void @store_misaligned64_constant_offsets() {
   ret void
 }
 
-@bar.large = addrspace(3) global [4096 x i64] undef, align 4
+@bar.large = addrspace(3) global [4096 x i64] poison, align 4
 
 define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
 ; CI-LABEL: store_misaligned64_constant_large_offsets:
@@ -862,8 +862,8 @@ define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
   ret void
 }
 
-@sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] undef, align 4
-@sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] undef, align 4
+@sgemm.lA = internal unnamed_addr addrspace(3) global [264 x float] poison, align 4
+@sgemm.lB = internal unnamed_addr addrspace(3) global [776 x float] poison, align 4
 
 define amdgpu_kernel void @write2_sgemm_sequence(ptr addrspace(1) %C, i32 %lda, i32 %ldb, ptr addrspace(1) %in) #0 {
 ; CI-LABEL: write2_sgemm_sequence:
@@ -1000,7 +1000,7 @@ define amdgpu_kernel void @simple_write2_v4f32_superreg_align4(ptr addrspace(3) 
   ret void
 }
 
-@v2i32_align1 = internal addrspace(3) global [100 x <2 x i32>] undef, align 1
+@v2i32_align1 = internal addrspace(3) global [100 x <2 x i32>] poison, align 1
 
 define amdgpu_kernel void @write2_v2i32_align1_odd_offset() {
 ; CI-LABEL: write2_v2i32_align1_odd_offset:

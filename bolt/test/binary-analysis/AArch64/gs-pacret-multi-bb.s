@@ -15,9 +15,9 @@ f_crossbb1:
 1:
         ret
         .size f_crossbb1, .-f_crossbb1
-// CHECK-LABEL:     GS-PACRET: non-protected ret found in function f_crossbb1, basic block {{[^,]+}}, at address
-// CHECK-NEXT:  The return instruction is     {{[0-9a-f]+}}:       ret
-// CHECK-NEXT:  The 2 instructions that write to the return register after any authentication are:
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_crossbb1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:  The instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:  The 2 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:  1.     {{[0-9a-f]+}}:      ldp     x29, x30, [sp], #0x10
 // CHECK-NEXT:  2.     {{[0-9a-f]+}}:      autiasp
 
@@ -37,9 +37,9 @@ f_mergebb1:
 1:
         ret
         .size f_mergebb1, .-f_mergebb1
-// CHECK-LABEL: GS-PACRET: non-protected ret found in function f_mergebb1, basic block {{[^,]+}}, at address
-// CHECK-NEXT:    The return instruction is     {{[0-9a-f]+}}:       ret
-// CHECK-NEXT:    The 1 instructions that write to the return register after any authentication are:
+// CHECK-LABEL: GS-PAUTH: non-protected ret found in function f_mergebb1, basic block {{[^,]+}}, at address
+// CHECK-NEXT:    The instruction is     {{[0-9a-f]+}}:       ret
+// CHECK-NEXT:    The 1 instructions that write to the affected registers after any authentication are:
 // CHECK-NEXT:    1.     {{[0-9a-f]+}}:      ldp     x29, x30, [sp], #0x10
 
         .globl f_shrinkwrapping

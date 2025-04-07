@@ -361,11 +361,16 @@ void SPIRVModuleAnalysis::visitDecl(
   } else if (Opcode == SPIRV::OpFunction ||
              Opcode == SPIRV::OpFunctionParameter) {
     GReg = handleFunctionOrParameter(MF, MI, GlobalToGReg, IsFunDef);
-  } else if (Opcode == SPIRV::OpTypeStruct) {
+  } else if (Opcode == SPIRV::OpTypeStruct ||
+             Opcode == SPIRV::OpConstantComposite) {
     GReg = handleTypeDeclOrConstant(MI, SignatureToGReg);
     const MachineInstr *NextInstr = MI.getNextNode();
     while (NextInstr &&
-           NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) {
+           ((Opcode == SPIRV::OpTypeStruct &&
+             NextInstr->getOpcode() == SPIRV::OpTypeStructContinuedINTEL) ||
+            (Opcode == SPIRV::OpConstantComposite &&
+             NextInstr->getOpcode() ==
+                 SPIRV::OpConstantCompositeContinuedINTEL))) {
       MCRegister Tmp = handleTypeDeclOrConstant(*NextInstr, SignatureToGReg);
       MAI.setRegisterAlias(MF, NextInstr->getOperand(0).getReg(), Tmp);
       MAI.setSkipEmission(NextInstr);
@@ -399,11 +404,11 @@ MCRegister SPIRVModuleAnalysis::handleFunctionOrParameter(
     F = dyn_cast<Argument>(GObj)->getParent();
   assert(F && "Expected a reference to a function or an argument");
   IsFunDef = !F->isDeclaration();
-  auto It = GlobalToGReg.find(GObj);
-  if (It != GlobalToGReg.end())
+  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
+  if (!Inserted)
     return It->second;
   MCRegister GReg = MAI.getNextIDRegister();
-  GlobalToGReg[GObj] = GReg;
+  It->second = GReg;
   if (!IsFunDef)
     MAI.MS[SPIRV::MB_ExtFuncDecls].push_back(&MI);
   return GReg;
@@ -413,11 +418,11 @@ MCRegister
 SPIRVModuleAnalysis::handleTypeDeclOrConstant(const MachineInstr &MI,
                                               InstrGRegsMap &SignatureToGReg) {
   InstrSignature MISign = instrToSignature(MI, MAI, false);
-  auto It = SignatureToGReg.find(MISign);
-  if (It != SignatureToGReg.end())
+  auto [It, Inserted] = SignatureToGReg.try_emplace(MISign);
+  if (!Inserted)
     return It->second;
   MCRegister GReg = MAI.getNextIDRegister();
-  SignatureToGReg[MISign] = GReg;
+  It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   return GReg;
 }
@@ -428,11 +433,11 @@ MCRegister SPIRVModuleAnalysis::handleVariable(
   MAI.GlobalVarList.push_back(&MI);
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
-  auto It = GlobalToGReg.find(GObj);
-  if (It != GlobalToGReg.end())
+  auto [It, Inserted] = GlobalToGReg.try_emplace(GObj);
+  if (!Inserted)
     return It->second;
   MCRegister GReg = MAI.getNextIDRegister();
-  GlobalToGReg[GObj] = GReg;
+  It->second = GReg;
   MAI.MS[SPIRV::MB_TypeConstVars].push_back(&MI);
   return GReg;
 }
@@ -566,6 +571,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
+        } else if (TII->isAliasingInstr(MI)) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
@@ -605,8 +612,9 @@ void SPIRVModuleAnalysis::numberRegistersGlobally(const Module &M) {
         if (MI.getOpcode() != SPIRV::OpExtInst)
           continue;
         auto Set = MI.getOperand(2).getImm();
-        if (!MAI.ExtInstSetMap.contains(Set))
-          MAI.ExtInstSetMap[Set] = MAI.getNextIDRegister();
+        auto [It, Inserted] = MAI.ExtInstSetMap.try_emplace(Set);
+        if (Inserted)
+          It->second = MAI.getNextIDRegister();
       }
     }
   }
@@ -885,6 +893,9 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
     Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
+  } else if (Dec == SPIRV::Decoration::FPMaxErrorDecorationINTEL) {
+    Reqs.addRequirements(SPIRV::Capability::FPMaxErrorINTEL);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
   }
 }
 
@@ -1248,6 +1259,13 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
     }
+    break;
+  }
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing);
+    Reqs.addCapability(SPIRV::Capability::MemoryAccessAliasingINTEL);
     break;
   }
   case SPIRV::OpBitReverse:
