@@ -66,6 +66,20 @@ void TrackingOutputBuffer::finalizeArgumentEnd() {
   NameInfo.ArgumentsRange.second = getCurrentPosition();
 }
 
+void TrackingOutputBuffer::finalizeQualifiersStart() {
+  if (!canFinalize())
+    return;
+
+  NameInfo.QualifiersRange.first = getCurrentPosition();
+}
+
+void TrackingOutputBuffer::finalizeQualifiersEnd() {
+  if (!canFinalize())
+    return;
+
+  NameInfo.QualifiersRange.second = getCurrentPosition();
+}
+
 void TrackingOutputBuffer::finalizeStart() {
   if (!shouldTrack())
     return;
@@ -171,6 +185,8 @@ void TrackingOutputBuffer::printRightImpl(const FunctionEncoding &N) {
   if (Ret)
     printRight(*Ret);
 
+  finalizeQualifiersStart();
+
   auto CVQuals = N.getCVQuals();
   auto RefQual = N.getRefQual();
   auto *Attrs = N.getAttrs();
@@ -193,6 +209,7 @@ void TrackingOutputBuffer::printRightImpl(const FunctionEncoding &N) {
     Requires->print(*this);
   }
 
+  finalizeQualifiersEnd();
   finalizeEnd();
 }
 
