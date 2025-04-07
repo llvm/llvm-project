@@ -74,6 +74,26 @@ public:
       return gv.getType().getIntOrFloatBitWidth();
     llvm_unreachable("unexpected operation");
   }
+
+  static UnnamedAddr getUnnamedAddr(Operation *op) {
+    if (auto gv = dyn_cast<LLVM::GlobalOp>(op)) {
+      auto addr = gv.getUnnamedAddr();
+      return addr ? *addr : UnnamedAddr::Global;
+    }
+    if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op)) {
+      auto addr = fn.getUnnamedAddr();
+      return addr ? *addr : UnnamedAddr::Global;
+    }
+    llvm_unreachable("unexpected operation");
+  }
+
+  static void setUnnamedAddr(Operation *op, UnnamedAddr val) {
+    if (auto gv = dyn_cast<LLVM::GlobalOp>(op))
+      return gv.setUnnamedAddr(val);
+    if (auto fn = dyn_cast<LLVM::LLVMFuncOp>(op))
+      return fn.setUnnamedAddr(val);
+    llvm_unreachable("unexpected operation");
+  }
 };
 
 //===----------------------------------------------------------------------===//

@@ -112,6 +112,28 @@ static inline Visibility getMinVisibility(Visibility lhs, Visibility rhs) {
 }
 
 //===----------------------------------------------------------------------===//
+// Unnamed_addr helpers
+//===----------------------------------------------------------------------===//
+
+using UnnamedAddr = LLVM::UnnamedAddr;
+
+static bool isNoneUnnamedAddr(UnnamedAddr val) {
+  return val == UnnamedAddr::None;
+}
+
+static bool isLocalUnnamedAddr(UnnamedAddr val) {
+  return val == UnnamedAddr::Local;
+}
+
+static UnnamedAddr getMinUnnamedAddr(UnnamedAddr lhs, UnnamedAddr rhs) {
+  if (isNoneUnnamedAddr(lhs) || isNoneUnnamedAddr(rhs))
+    return UnnamedAddr::None;
+  if (isLocalUnnamedAddr(lhs) || isLocalUnnamedAddr(rhs))
+    return UnnamedAddr::Local;
+  return UnnamedAddr::Global;
+}
+
+//===----------------------------------------------------------------------===//
 // LLVMLinkerMixin
 //===----------------------------------------------------------------------===//
 
@@ -176,6 +198,29 @@ public:
              isAvailableExternallyLinkage(srcLinkage));
   }
 
+  LogicalResult verifyLinkageCompatibility(Conflict pair) {
+    const DerivedLinkerInterface &derived = getDerived();
+    assert(derived.canBeLinked(pair.src) && "expected linkable operation");
+    assert(derived.canBeLinked(pair.dst) && "expected linkable operation");
+
+    auto linkError = [&](const Twine &error) -> LogicalResult {
+        return pair.src->emitError(error) << " dst: " << pair.dst->getLoc();
+    };
+
+    Linkage srcLinkage = derived.getLinkage(pair.src);
+    Linkage dstLinkage = derived.getLinkage(pair.dst);
+
+    UnnamedAddr srcUnnamedAddr = derived.getUnnamedAddr(pair.src);
+    UnnamedAddr dstUnnamedAddr = derived.getUnnamedAddr(pair.dst);
+
+    if (isAppendingLinkage(srcLinkage) && isAppendingLinkage(dstLinkage)) {
+      if (srcUnnamedAddr != dstUnnamedAddr) {
+        return linkError("Appending variables with different unnamed_addr need to be linked");
+      }
+    }
+    return success();
+  }
+
   ConflictResolution resolveConflict(Conflict pair) {
     const DerivedLinkerInterface &derived = getDerived();
     assert(derived.canBeLinked(pair.src) && "expected linkable operation");
@@ -190,6 +235,13 @@ public:
 
     derived.setVisibility(pair.src, visibility);
     derived.setVisibility(pair.dst, visibility);
+
+    UnnamedAddr srcUnnamedAddr = derived.getUnnamedAddr(pair.src);
+    UnnamedAddr dstUnnamedAddr = derived.getUnnamedAddr(pair.dst);
+
+    UnnamedAddr unnamedAddr = getMinUnnamedAddr(srcUnnamedAddr, dstUnnamedAddr);
+    derived.setUnnamedAddr(pair.src, unnamedAddr);
+    derived.setUnnamedAddr(pair.dst, unnamedAddr);
 
     const bool srcIsDeclaration = isDeclarationForLinker(pair.src);
     const bool dstIsDeclaration = isDeclarationForLinker(pair.dst);
@@ -267,6 +319,8 @@ public:
   }
 
   LogicalResult resolveConflict(Conflict pair) override {
+    if (failed(LinkerMixin::verifyLinkageCompatibility(pair)))
+        return failure();
     ConflictResolution resolution = LinkerMixin::resolveConflict(pair);
 
     switch (resolution) {
