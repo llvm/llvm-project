@@ -730,6 +730,62 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
+  auto I = std::make_unique<RecordInfo>();
+  bool IsInAnonymousNamespace = false;
+  populateSymbolInfo(*I, D, FC, LineNumber, File, IsFileInRootDir,
+                     IsInAnonymousNamespace);
+  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
+    return {};
+
+  I->Path = getInfoRelativePath(I->Namespace);
+
+  PopulateTemplateParameters(I->Template, D);
+
+  // Full and partial specializations.
+  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
+    if (!I->Template)
+      I->Template.emplace();
+    I->Template->Specialization.emplace();
+    auto &Specialization = *I->Template->Specialization;
+
+    // What this is a specialization of.
+    auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
+    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTD);
+    else if (auto *CTPSD =
+                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
+      Specialization.SpecializationOf = getUSRForDecl(CTPSD);
+
+    // Parameters to the specilization. For partial specializations, get the
+    // parameters "as written" from the ClassTemplatePartialSpecializationDecl
+    // because the non-explicit template parameters will have generated internal
+    // placeholder names rather than the names the user typed that match the
+    // template parameters.
+    if (const ClassTemplatePartialSpecializationDecl *CTPSD =
+            dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
+      if (const ASTTemplateArgumentListInfo *AsWritten =
+              CTPSD->getTemplateArgsAsWritten()) {
+        for (unsigned i = 0; i < AsWritten->getNumTemplateArgs(); i++) {
+          Specialization.Params.emplace_back(
+              getSourceCode(D, (*AsWritten)[i].getSourceRange()));
+        }
+      }
+    } else {
+      for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
+        Specialization.Params.push_back(TemplateArgumentToInfo(D, Arg));
+      }
+    }
+  }
+
+  // Records are inserted into the parent by reference, so we need to return
+  // both the parent and the record itself.
+  auto Parent = MakeAndInsertIntoParent<const RecordInfo &>(*I);
+  return {std::move(I), std::move(Parent)};
+}
+
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
   FunctionInfo Func;
