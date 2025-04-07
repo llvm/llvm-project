@@ -151,7 +151,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
     const MCSymbol *B_Base = Writer->getAtom(*B);
 
     // Neither symbol can be modified.
-    if (Target.getSymSpecifier()) {
+    if (Target.getSpecifier()) {
       Asm.getContext().reportError(Fixup.getLoc(),
                                    "unsupported relocation of modified symbol");
       return;
@@ -246,19 +246,8 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       if (IsPCRel)
         Value -= FixupAddress + (1 << Log2Size);
     } else if (Symbol->isVariable()) {
-      const MCExpr *Value = Symbol->getVariableValue();
-      int64_t Res;
-      bool isAbs =
-          Value->evaluateAsAbsolute(Res, Asm, Writer->getSectionAddressMap());
-      if (isAbs) {
-        FixedValue = Res;
-        return;
-      } else {
-        Asm.getContext().reportError(Fixup.getLoc(),
-                                     "unsupported relocation of variable '" +
-                                         Symbol->getName() + "'");
-        return;
-      }
+      FixedValue = Writer->getSymbolAddress(*Symbol, Asm);
+      return;
     } else {
       Asm.getContext().reportError(
           Fixup.getLoc(), "unsupported relocation of undefined symbol '" +
@@ -266,7 +255,7 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    auto Specifier = Target.getSymSpecifier();
+    auto Specifier = Target.getSpecifier();
     if (IsPCRel) {
       if (IsRIPRel) {
         if (Specifier == X86MCExpr::VK_GOTPCREL) {
@@ -461,7 +450,7 @@ void X86MachObjectWriter::recordTLVPRelocation(MachObjectWriter *Writer,
                                                MCValue Target,
                                                uint64_t &FixedValue) {
   const MCSymbol *SymA = Target.getAddSym();
-  assert(Target.getSymSpecifier() == X86MCExpr::VK_TLVP && !is64Bit() &&
+  assert(Target.getSpecifier() == X86MCExpr::VK_TLVP && !is64Bit() &&
          "Should only be called with a 32-bit TLVP relocation!");
 
   unsigned Log2Size = getFixupKindLog2Size(Fixup.getKind());
@@ -503,7 +492,7 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
   const MCSymbol *A = Target.getAddSym();
 
   // If this is a 32-bit TLVP reloc it's handled a bit differently.
-  if (A && Target.getSymSpecifier() == X86MCExpr::VK_TLVP) {
+  if (A && Target.getSpecifier() == X86MCExpr::VK_TLVP) {
     recordTLVPRelocation(Writer, Asm, Fragment, Fixup, Target, FixedValue);
     return;
   }
@@ -548,9 +537,17 @@ void X86MachObjectWriter::RecordX86Relocation(MachObjectWriter *Writer,
 
     // Resolve constant variables.
     if (A->isVariable()) {
-      int64_t Res;
-      if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Asm, Writer->getSectionAddressMap())) {
+      MCValue Val;
+      bool Relocatable =
+          A->getVariableValue()->evaluateAsRelocatable(Val, &Asm);
+      int64_t Res = Val.getConstant();
+      bool isAbs = Val.isAbsolute();
+      if (Relocatable && Val.getAddSym() && Val.getSubSym()) {
+        Res += Writer->getSymbolAddress(*Val.getAddSym(), Asm) -
+               Writer->getSymbolAddress(*Val.getSubSym(), Asm);
+        isAbs = true;
+      }
+      if (isAbs) {
         FixedValue = Res;
         return;
       }

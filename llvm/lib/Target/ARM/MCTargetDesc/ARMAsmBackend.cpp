@@ -993,7 +993,7 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
               FixupKind == ARM::fixup_arm_uncondbl ||
               FixupKind == ARM::fixup_arm_condbl))
     return true;
-  return false;
+  return Target.getSpecifier();
 }
 
 /// getFixupKindNumBytes - The number of bytes the fixup may change.

@@ -59,7 +59,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(MCContext &Ctx,
     }
   }
 
-  auto Spec = Target.getAddSym() ? Target.getSymSpecifier() : 0;
+  auto Spec = Target.getSpecifier();
   if (Is64Bit) {
     switch (FixupKind) {
     case FK_PCRel_4:

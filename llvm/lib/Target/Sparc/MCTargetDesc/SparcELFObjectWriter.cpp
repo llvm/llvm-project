@@ -46,7 +46,7 @@ unsigned SparcELFObjectWriter::getRelocType(MCContext &Ctx,
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
 
-  switch (Target.getRefKind()) {
+  switch (Target.getSpecifier()) {
   case SparcMCExpr::VK_TLS_GD_HI22:
   case SparcMCExpr::VK_TLS_GD_LO10:
   case SparcMCExpr::VK_TLS_GD_ADD:
