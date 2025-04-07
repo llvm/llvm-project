@@ -283,6 +283,10 @@ const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
 /// This function returns a lighting coefficient vector (ambient, diffuse,
 /// specular, 1).
 
+#if __HLSL_VERSION >= __HLSL_202y
+template <typename T> const inline vector<T, 4> lit(T, T, T) = delete;
+#endif
+
 template <>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline vector<half, 4> lit<half>(half NDotL, half NDotH, half M) {
