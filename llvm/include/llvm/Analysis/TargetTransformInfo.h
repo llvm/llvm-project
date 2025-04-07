@@ -1778,7 +1778,8 @@ public:
   /// vectorization, false - otherwise.
   bool preferAlternateOpcodeVectorization() const;
 
-  /// \returns True if the target prefers reductions in loop.
+  /// \returns True if the target prefers reductions of \p Kind to be performed
+  /// in the loop.
   bool preferInLoopReduction(RecurKind Kind, Type *Ty) const;
 
   /// \returns True if the target prefers reductions select kept in the loop
