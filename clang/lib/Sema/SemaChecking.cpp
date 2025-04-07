@@ -4229,7 +4229,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     if (std::optional<llvm::APSInt> Result =
             Scope->getIntegerConstantExpr(Context)) {
       if (!ScopeModel->isValid(Result->getZExtValue()))
-        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_synch_scope)
+        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
             << Scope->getSourceRange();
     }
     SubExprs.push_back(Scope);
