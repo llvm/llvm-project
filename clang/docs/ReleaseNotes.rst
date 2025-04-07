@@ -319,6 +319,9 @@ Improvements to Clang's diagnostics
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
 
+- Now correctly diagnose a tentative definition of an array with static
+  storage duration in pedantic mode in C. (#GH50661)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -393,6 +396,7 @@ Bug Fixes to C++ Support
 - Improved fix for an issue with pack expansions of type constraints, where this
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
+- Fixes to partial ordering of non-type template parameter packs. (#GH132562)
 - Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
   a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)
