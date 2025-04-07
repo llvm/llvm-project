@@ -60,7 +60,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::Uniform:
   case SPIRV::StorageClass::PushConstant:
   case SPIRV::StorageClass::StorageBuffer:
-    // case SPIRV::StorageClass::PhysicalStorageBuffer:
+  case SPIRV::StorageClass::PhysicalStorageBufferEXT:
     return true;
   case SPIRV::StorageClass::UniformConstant:
   case SPIRV::StorageClass::Input:
@@ -1114,7 +1114,6 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
   auto SC = addressSpaceToStorageClass(AddrSpace, *ST);
   // Null pointer means we have a loop in type definitions, make and
   // return corresponding OpTypeForwardPointer.
-  // TODO: How can be this null?
   if (SpvElementType == nullptr) {
     auto [It, Inserted] = ForwardPointerTypes.try_emplace(Ty);
     if (Inserted)
@@ -1728,13 +1727,14 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVArrayType(
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
-    Type *BaseType, MachineInstr &I, SPIRV::StorageClass::StorageClass SC) {
+    const Type *BaseType, MachineInstr &I,
+    SPIRV::StorageClass::StorageClass SC) {
   MachineIRBuilder MIRBuilder(I);
   return getOrCreateSPIRVPointerType(BaseType, MIRBuilder, SC);
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
-    Type *BaseType, MachineIRBuilder &MIRBuilder,
+    const Type *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
   SPIRVType *SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
@@ -1755,7 +1755,7 @@ SPIRVType *SPIRVGlobalRegistry::changePointerStorageClass(
 SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRVType *BaseType, MachineIRBuilder &MIRBuilder,
     SPIRV::StorageClass::StorageClass SC) {
-  Type *LLVMType = const_cast<Type *>(getTypeForSPIRVType(BaseType));
+  const Type *LLVMType = getTypeForSPIRVType(BaseType);
   assert(!storageClassRequiresExplictLayout(SC));
   SPIRVType *R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
   assert(

@@ -3373,17 +3373,17 @@ Register SPIRVInstructionSelector::buildPointerToResource(
     const SPIRVType *SpirvResType, SPIRV::StorageClass::StorageClass SC,
     uint32_t Set, uint32_t Binding, uint32_t ArraySize, Register IndexReg,
     bool IsNonUniform, MachineIRBuilder MIRBuilder) const {
-  Type *ResType = const_cast<Type *>(GR.getTypeForSPIRVType(SpirvResType));
+  const Type *ResType = GR.getTypeForSPIRVType(SpirvResType);
   if (ArraySize == 1) {
-    SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
-        const_cast<Type *>(ResType), MIRBuilder, SC);
+    SPIRVType *PtrType =
+        GR.getOrCreateSPIRVPointerType(ResType, MIRBuilder, SC);
     assert(GR.getPointeeType(PtrType) == SpirvResType &&
            "SpirvResType did not have an explicit layout.");
     return GR.getOrCreateGlobalVariableWithBinding(PtrType, Set, Binding,
                                                    MIRBuilder);
   }
 
-  Type *VarType = ArrayType::get(ResType, ArraySize);
+  const Type *VarType = ArrayType::get(const_cast<Type *>(ResType), ArraySize);
   SPIRVType *VarPointerType =
       GR.getOrCreateSPIRVPointerType(VarType, MIRBuilder, SC);
   Register VarReg = GR.getOrCreateGlobalVariableWithBinding(
