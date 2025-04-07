@@ -10,7 +10,7 @@
 // RUN:   -check-prefix=CHECK-DBG %s
 
 // COM: Check that debuginfo SPIR-V flags are correctly extracted
-// CHECK-DBG: Driver Job Args: {{.*}} "-mllvm -amdgpu-spill-cfi-saved-regs"
+// CHECK-DBG: Driver Job Args: {{.*}} "-mllvm" "-amdgpu-spill-cfi-saved-regs"
 
 #include <cstdlib>
 
