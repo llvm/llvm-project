@@ -2718,7 +2718,8 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
 };
 
 /// A recipe for strided load operations, using the base address, stride, and an
-/// optional mask.
+/// optional mask. This recipe will generate an vp.strided.load intrinsic call
+/// to represent memory accesses with a fixed stride.
 struct VPWidenStridedLoadRecipe final : public VPWidenMemoryRecipe,
                                         public VPValue {
   VPWidenStridedLoadRecipe(LoadInst &Load, VPValue *Addr, VPValue *Stride,
