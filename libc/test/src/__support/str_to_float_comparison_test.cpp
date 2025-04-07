@@ -133,12 +133,13 @@ static void parseLine(char *line, ParseResult &parseResult, int32_t &curFails,
 }
 
 ParseStatus checkBuffer(ParseResult &parseResult) {
-  const char *lines[6] = {"3C00 3F800000 3FF0000000000000 1",
-                          "3D00 3FA00000 3FF4000000000000 1.25",
-                          "3D9A 3FB33333 3FF6666666666666 1.4",
-                          "57B7 42F6E979 405EDD2F1A9FBE77 123.456",
-                          "622A 44454000 4088A80000000000 789",
-                          "7C00 7F800000 7FF0000000000000 123.456e789"};
+  constexpr const char *lines[6] = {
+      "3C00 3F800000 3FF0000000000000 1",
+      "3D00 3FA00000 3FF4000000000000 1.25",
+      "3D9A 3FB33333 3FF6666666666666 1.4",
+      "57B7 42F6E979 405EDD2F1A9FBE77 123.456",
+      "622A 44454000 4088A80000000000 789",
+      "7C00 7F800000 7FF0000000000000 123.456e789"};
 
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
