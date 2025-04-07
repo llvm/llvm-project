@@ -462,7 +462,7 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction,
   SmallVector<unsigned> MaxNumWorkGroups = {0, 0, 0};
 
   // Requested cluster dimensions.
-  std::optional<std::array<unsigned, 3>> ClusterDims;
+  AMDGPU::ClusterDimsAttr ClusterDims;
 
 private:
   unsigned NumUserSGPRs = 0;
@@ -1185,10 +1185,7 @@ public:
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
 
-  /// \returns Requested cluster dimensions.
-  std::optional<std::array<unsigned, 3>> getClusterDims() const {
-    return ClusterDims;
-  }
+  AMDGPU::ClusterDimsAttr getClusterDims() const { return ClusterDims; }
 };
 
 } // end namespace llvm

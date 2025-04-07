@@ -1799,6 +1799,13 @@ The AMDGPU backend supports the following LLVM IR attributes.
 
      "amdgpu-promote-alloca-to-vector-vgpr-ratio"     Ratio of VGPRs to budget for promoting alloca to vectors.
 
+     "amdgpu-cluster-dims"="x,y,z"                    Specify the cluster workgroup dimensions. A value of "0,0,0" indicates that
+                                                      cluster is disabled. A value of "1024,1024,1024" indicates that cluster is enabled,
+                                                      but the dimensions cannot be determined at compile time. Any other value explicitly
+                                                      specifies the cluster dimensions.
+
+                                                      This is only relevant on targets with cluster support.
+
      ================================================ ==========================================================
 
 Calling Conventions
