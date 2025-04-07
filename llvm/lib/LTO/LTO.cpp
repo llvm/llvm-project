@@ -2300,10 +2300,6 @@ public:
   // additional input or output file dependencies must be communicated to the
   // distribution system, potentially by setting extra options on the
   // distributor program.
-  // TODO: If this strategy of deriving options proves insufficient, alternative
-  // approaches should be considered, such as:
-  //   - A serialization/deserialization format for LTO configuration.
-  //   - Modifying LLD to be the tool that performs the backend compilations.
   void buildCommonRemoteCompilerOptions() {
     const lto::Config &C = Conf;
     auto &Ops = CodegenOptions;
