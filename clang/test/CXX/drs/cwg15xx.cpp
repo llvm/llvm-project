@@ -140,13 +140,13 @@ namespace cwg1512 { // cwg1512: 4
     void(Wrap<nullptr_t>() == Wrap<nullptr_t>());
     void(Wrap<nullptr_t>() != Wrap<nullptr_t>());
     void(Wrap<nullptr_t>() < Wrap<nullptr_t>());
-    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>'))}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>')}}
     void(Wrap<nullptr_t>() > Wrap<nullptr_t>());
-    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>'))}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>')}}
     void(Wrap<nullptr_t>() <= Wrap<nullptr_t>());
-    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>'))}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>')}}
     void(Wrap<nullptr_t>() >= Wrap<nullptr_t>());
-    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>'))}}
+    // since-cxx11-error@-1 {{invalid operands to binary expression ('Wrap<nullptr_t>' (aka 'Wrap<std::nullptr_t>') and 'Wrap<nullptr_t>')}}
 
     // Under cwg1213, this is ill-formed: we select the builtin operator<(int*, int*)
     // but then only convert as far as 'nullptr_t', which we then can't convert to 'int*'.

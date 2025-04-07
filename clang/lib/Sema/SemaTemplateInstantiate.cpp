@@ -345,7 +345,7 @@ Response HandleFunctionTemplateDecl(Sema &SemaRef,
     while (const Type *Ty = NNS ? NNS->getAsType() : nullptr) {
       if (NNS->isInstantiationDependent()) {
         if (const auto *TSTy = Ty->getAs<TemplateSpecializationType>()) {
-          ArrayRef<TemplateArgument> Arguments = TSTy->template_arguments();
+          ArrayRef<TemplateArgument> Arguments = TSTy->getConvertedArguments();
           // Prefer template arguments from the injected-class-type if possible.
           // For example,
           // ```cpp

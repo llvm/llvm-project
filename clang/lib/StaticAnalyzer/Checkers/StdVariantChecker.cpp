@@ -95,7 +95,7 @@ getTemplateArgsFromVariant(const Type *VariantType) {
   if (!TempSpecType)
     return {};
 
-  return TempSpecType->template_arguments();
+  return TempSpecType->getSpecifiedArguments();
 }
 
 static std::optional<QualType>

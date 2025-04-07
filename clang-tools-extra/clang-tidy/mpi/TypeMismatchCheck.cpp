@@ -181,7 +181,7 @@ isCXXComplexTypeMatching(const TemplateSpecializationType *const Template,
   if (Template->getAsCXXRecordDecl()->getName() != "complex")
     return true;
 
-  const auto *Builtin = Template->template_arguments()[0]
+  const auto *Builtin = Template->getSpecifiedArguments()[0]
                             .getAsType()
                             .getTypePtr()
                             ->getAs<BuiltinType>();

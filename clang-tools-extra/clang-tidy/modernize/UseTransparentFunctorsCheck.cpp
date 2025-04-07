@@ -94,9 +94,9 @@ void UseTransparentFunctorsCheck::check(
   unsigned ArgNum = 0;
   const auto *FunctorParentType =
       FunctorParentLoc.getType()->castAs<TemplateSpecializationType>();
-  for (; ArgNum < FunctorParentType->template_arguments().size(); ++ArgNum) {
+  for (; ArgNum < FunctorParentType->getSpecifiedArguments().size(); ++ArgNum) {
     const TemplateArgument &Arg =
-        FunctorParentType->template_arguments()[ArgNum];
+        FunctorParentType->getSpecifiedArguments()[ArgNum];
     if (Arg.getKind() != TemplateArgument::Type)
       continue;
     QualType ParentArgType = Arg.getAsType();
@@ -106,7 +106,7 @@ void UseTransparentFunctorsCheck::check(
       break;
   }
   // Functor is a default template argument.
-  if (ArgNum == FunctorParentType->template_arguments().size())
+  if (ArgNum == FunctorParentType->getSpecifiedArguments().size())
     return;
   TemplateArgumentLoc FunctorLoc = FunctorParentLoc.getArgLoc(ArgNum);
   auto FunctorTypeLoc = getInnerTypeLocAs<TemplateSpecializationTypeLoc>(

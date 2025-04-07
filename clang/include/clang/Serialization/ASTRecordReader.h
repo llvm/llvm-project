@@ -247,6 +247,10 @@ public:
   void readTemplateArgumentList(SmallVectorImpl<TemplateArgument> &TemplArgs,
                                 bool Canonicalize = false);
 
+  /// Read a template argument list.
+  const TemplateArgumentList *
+  readTemplateArgumentList(bool Canonicalize = false);
+
   /// Read a UnresolvedSet structure, advancing Idx.
   void readUnresolvedSet(LazyASTUnresolvedSet &Set);
 
