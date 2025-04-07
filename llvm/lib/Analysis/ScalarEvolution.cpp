@@ -8225,7 +8225,7 @@ static unsigned getConstantTripCount(const SCEVConstant *ExitCount) {
   ConstantInt *ExitConst = ExitCount->getValue();
 
   // Guard against huge trip counts.
-  if (ExitConst->getValue().getActiveBits() > CHAR_BIT * sizeof(unsigned))
+  if (ExitConst->getValue().getActiveBits() > 32)
     return 0;
 
   // In case of integer overflow, this returns 0, which is correct.
