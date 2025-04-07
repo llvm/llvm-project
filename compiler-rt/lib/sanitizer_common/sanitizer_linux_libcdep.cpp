@@ -29,7 +29,13 @@
 #  include "sanitizer_solaris.h"
 
 #  if SANITIZER_NETBSD
-#    define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    include <sys/param.h>
+#    if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 1099001200)
+#      include <machine/lwp_private.h>
+#    else
+#      define _RTLD_SOURCE
+#    endif
 #  endif
 
 #  include <dlfcn.h>  // for dlsym()
