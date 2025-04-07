@@ -8,10 +8,17 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/LogicalResult.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace test;
@@ -1236,6 +1243,106 @@ void TestVersionedOpA::writeProperties(mlir::DialectBytecodeWriter &writer) {
     }
   }
   writer.writeAttribute(prop.modifier);
+}
+
+//===----------------------------------------------------------------------===//
+// TestVersionedOpD
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestVersionedOpD::readProperties(mlir::DialectBytecodeReader &reader,
+                                 mlir::OperationState &state) {
+  // Always fail so that this uses the fallback path.
+  return failure();
+}
+
+struct FallbackCompliantPropertiesEncoding {
+  int64_t version;
+  SmallVector<Attribute> requiredAttributes;
+  SmallVector<Attribute> optionalAttributes;
+
+  void writeProperties(DialectBytecodeWriter &writer) const {
+    // Write the op version.
+    writer.writeSignedVarInt(version);
+
+    // Write the required attributes.
+    writer.writeList(requiredAttributes,
+                     [&](Attribute attr) { writer.writeAttribute(attr); });
+
+    // Write the optional attributes.
+    writer.writeList(optionalAttributes, [&](Attribute attr) {
+      writer.writeOptionalAttribute(attr);
+    });
+  }
+
+  LogicalResult readProperties(DialectBytecodeReader &reader) {
+    // Read the op version.
+    if (failed(reader.readSignedVarInt(version)))
+      return failure();
+
+    // Read the required attributes.
+    if (failed(reader.readList(requiredAttributes, [&](Attribute &attr) {
+          return reader.readAttribute(attr);
+        })))
+      return failure();
+
+    // Read the optional attributes.
+    if (failed(reader.readList(optionalAttributes, [&](Attribute &attr) {
+          return reader.readOptionalAttribute(attr);
+        })))
+      return failure();
+
+    return success();
+  }
+};
+
+void TestVersionedOpD::writeProperties(mlir::DialectBytecodeWriter &writer) {
+  FallbackCompliantPropertiesEncoding encoding{
+      .version = 1,
+      .requiredAttributes = {getAttribute()},
+      .optionalAttributes = {}};
+  encoding.writeProperties(writer);
+}
+
+//===----------------------------------------------------------------------===//
+// TestBytecodeFallbackOp
+//===----------------------------------------------------------------------===//
+
+void TestBytecodeFallbackOp::setOriginalOperationName(const Twine &name,
+                                                      OperationState &state) {
+  state.getOrAddProperties<Properties>().setOpname(
+      StringAttr::get(state.getContext(), name));
+}
+
+StringRef TestBytecodeFallbackOp::getOriginalOperationName() {
+  return getProperties().getOpname().getValue();
+}
+
+LogicalResult
+TestBytecodeFallbackOp::readProperties(DialectBytecodeReader &reader,
+                                       OperationState &state) {
+  FallbackCompliantPropertiesEncoding encoding;
+  if (failed(encoding.readProperties(reader)))
+    return failure();
+
+  auto &props = state.getOrAddProperties<Properties>();
+  props.opversion = encoding.version;
+  props.encodedReqdAttributes =
+      ArrayAttr::get(state.getContext(), encoding.requiredAttributes);
+  props.encodedOptAttributes =
+      ArrayAttr::get(state.getContext(), encoding.optionalAttributes);
+
+  return success();
+}
+
+void TestBytecodeFallbackOp::writeProperties(DialectBytecodeWriter &writer) {
+  FallbackCompliantPropertiesEncoding encoding{
+      .version = getOpversion(),
+      .requiredAttributes =
+          llvm::to_vector(getEncodedReqdAttributes().getValue()),
+      .optionalAttributes =
+          llvm::to_vector(getEncodedOptAttributes().getValue())};
+  encoding.writeProperties(writer);
 }
 
 //===----------------------------------------------------------------------===//
