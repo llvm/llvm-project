@@ -46,9 +46,6 @@ public:
     return createMSP430ELFObjectWriter(OSABI);
   }
 
-  unsigned getNumFixupKinds() const override {
-    return MSP430::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {

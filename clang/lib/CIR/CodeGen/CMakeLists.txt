@@ -10,6 +10,7 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRGenDecl.cpp
   CIRGenExpr.cpp
+  CIRGenExprAggregate.cpp
   CIRGenExprConstant.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp

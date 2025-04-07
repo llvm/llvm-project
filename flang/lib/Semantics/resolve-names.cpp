@@ -719,6 +719,7 @@ protected:
   void NotePossibleBadForwardRef(const parser::Name &);
   std::optional<SourceName> HadForwardRef(const Symbol &) const;
   bool CheckPossibleBadForwardRef(const Symbol &);
+  bool ConvertToUseError(Symbol &, const SourceName &, const Symbol &used);
 
   bool inSpecificationPart_{false};
   bool deferImplicitTyping_{false};
@@ -1440,11 +1441,13 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
+  bool Pre(const parser::OmpMetadirectiveDirective &) {
+    ++metaLevel_;
     return true;
   }
-  bool Pre(const parser::OmpSimpleStandaloneDirective &x) {
+  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1656,6 +1659,7 @@ private:
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses);
+  int metaLevel_{0};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1801,19 +1805,23 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
-  // Since it contains directives and clauses, some semantic checks may
-  // not be applicable.
-  // Disable the semantic analysis for it for now to allow the compiler to
-  // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
-  auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
+  if (metaLevel_ == 0) {
+    // Not in METADIRECTIVE.
+    return true;
+  }
+
+  // If OmpDirectiveSpecification (which contains clauses) is a part of
+  // METADIRECTIVE, some semantic checks may not be applicable.
+  // Disable the semantic analysis for it in such cases to allow the compiler
+  // to parse METADIRECTIVE without flagging errors.
+  auto &maybeArgs{std::get<std::optional<parser::OmpArgumentList>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
   switch (x.DirId()) {
   case llvm::omp::Directive::OMPD_declare_mapper:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpMapperSpecifier>(&first.u)}) {
         ProcessMapperSpecifier(*spec, *maybeClauses);
       }
@@ -1821,7 +1829,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     break;
   case llvm::omp::Directive::OMPD_declare_reduction:
     if (maybeArgs && maybeClauses) {
-      const parser::OmpArgument &first{maybeArgs->front()};
+      const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
         ProcessReductionSpecifier(*spec, maybeClauses);
       }
@@ -3328,7 +3336,7 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
 
 // symbol must be either a Use or a Generic formed by merging two uses.
 // Convert it to a UseError with this additional location.
-static bool ConvertToUseError(
+bool ScopeHandler::ConvertToUseError(
     Symbol &symbol, const SourceName &location, const Symbol &used) {
   if (auto *ued{symbol.detailsIf<UseErrorDetails>()}) {
     ued->add_occurrence(location, used);
@@ -3346,9 +3354,25 @@ static bool ConvertToUseError(
     symbol.set_details(
         UseErrorDetails{*useDetails}.add_occurrence(location, used));
     return true;
-  } else {
-    return false;
   }
+  if (const auto *hostAssocDetails{symbol.detailsIf<HostAssocDetails>()};
+      hostAssocDetails && hostAssocDetails->symbol().has<SubprogramDetails>() &&
+      &symbol.owner() == &currScope() &&
+      &hostAssocDetails->symbol() == currScope().symbol()) {
+    // Handle USE-association of procedure FOO into function/subroutine FOO,
+    // replacing its place-holding HostAssocDetails symbol.
+    context().Warn(common::UsageWarning::UseAssociationIntoSameNameSubprogram,
+        location,
+        "'%s' is use-associated into a subprogram of the same name"_port_en_US,
+        used.name());
+    SourceName created{context().GetTempName(currScope())};
+    Symbol &tmpUse{MakeSymbol(created, Attrs(), UseDetails{location, used})};
+    UseErrorDetails useError{tmpUse.get<UseDetails>()};
+    useError.add_occurrence(location, hostAssocDetails->symbol());
+    symbol.set_details(std::move(useError));
+    return true;
+  }
+  return false;
 }
 
 // Two ultimate symbols are distinct, but they have the same name and come
@@ -9566,7 +9590,10 @@ void ResolveNamesVisitor::Post(const parser::AssignedGotoStmt &x) {
 void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
   if (std::holds_alternative<parser::CompilerDirective::VectorAlways>(x.u) ||
       std::holds_alternative<parser::CompilerDirective::Unroll>(x.u) ||
-      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u)) {
+      std::holds_alternative<parser::CompilerDirective::UnrollAndJam>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoVector>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnroll>(x.u) ||
+      std::holds_alternative<parser::CompilerDirective::NoUnrollAndJam>(x.u)) {
     return;
   }
   if (const auto *tkr{

@@ -313,7 +313,7 @@ int main(int argc, char **argv) {
       Materialize(*GVs[i]);
   } else {
     // Deleting. Materialize every GV that's *not* in GVs.
-    SmallPtrSet<GlobalValue *, 8> GVSet(GVs.begin(), GVs.end());
+    SmallPtrSet<GlobalValue *, 8> GVSet(llvm::from_range, GVs);
     for (auto &F : *M) {
       if (!GVSet.count(&F))
         Materialize(F);

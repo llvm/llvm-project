@@ -8384,14 +8384,14 @@ let Predicates = [HasSM3], Constraints = "$src1 = $dst" in {
   }
 
   multiclass VSM3RNDS2_Base {
-    def rr : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
+    def rri : Ii8<0xde, MRMSrcReg, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, VR128:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,
                (int_x86_vsm3rnds2 VR128:$src1,
                 VR128:$src2, VR128:$src3, timm:$src4))]>,
               Sched<[WriteVecIMul]>;
-    def rm : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
+    def rmi : Ii8<0xde, MRMSrcMem, (outs VR128:$dst),
               (ins VR128:$src1, VR128:$src2, i128mem:$src3, i32u8imm:$src4),
               "vsm3rnds2\t{$src4, $src3, $src2, $dst|$dst, $src2, $src3, $src4}",
               [(set VR128:$dst,

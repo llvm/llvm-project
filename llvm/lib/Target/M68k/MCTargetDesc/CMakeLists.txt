@@ -4,6 +4,7 @@ add_llvm_component_library(LLVMM68kDesc
   M68kInstPrinter.cpp
   M68kMCAsmInfo.cpp
   M68kMCCodeEmitter.cpp
+  M68kMCExpr.cpp
   M68kMCTargetDesc.cpp
 
   LINK_COMPONENTS
