@@ -1133,7 +1133,7 @@ public:
   /// - AltOp if \param I matches AltOp's opcode directly or can be converted to
   /// it
   /// - nullptr if \param I cannot be matched or converted to either opcode
-  Instruction *isOpcodeOrAlt(Instruction *I) const {
+  Instruction *getMatchingMainOpOrAltOp(Instruction *I) const {
     assert(MainOp && "MainOp cannot be nullptr.");
     if (I->getOpcode() == MainOp->getOpcode())
       return MainOp;
@@ -1191,7 +1191,7 @@ public:
 
 std::pair<Instruction *, SmallVector<Value *>>
 convertTo(Instruction *I, const InstructionsState &S) {
-  Instruction *SelectedOp = S.isOpcodeOrAlt(I);
+  Instruction *SelectedOp = S.getMatchingMainOpOrAltOp(I);
   assert(SelectedOp && "Cannot convert the instruction.");
   if (I->isBinaryOp()) {
     BinOpSameOpcodeHelper Converter(I);
@@ -1448,7 +1448,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   assert(all_of(VL,
                 [&](Value *V) {
                   return isa<PoisonValue>(V) ||
-                         S.isOpcodeOrAlt(cast<Instruction>(V));
+                         S.getMatchingMainOpOrAltOp(cast<Instruction>(V));
                 }) &&
          "Invalid InstructionsState.");
   return S;
@@ -3822,8 +3822,8 @@ private:
     /// Some of the instructions in the list have alternate opcodes.
     bool isAltShuffle() const { return S.isAltShuffle(); }
 
-    Instruction *isOpcodeOrAlt(Instruction *I) const {
-      return S.isOpcodeOrAlt(I);
+    Instruction *getMatchingMainOpOrAltOp(Instruction *I) const {
+      return S.getMatchingMainOpOrAltOp(I);
     }
 
     /// Chooses the correct key for scheduling data. If \p Op has the same (or
@@ -3831,7 +3831,7 @@ private:
     /// \p OpValue.
     Value *isOneOf(Value *Op) const {
       auto *I = dyn_cast<Instruction>(Op);
-      if (I && isOpcodeOrAlt(I))
+      if (I && getMatchingMainOpOrAltOp(I))
         return Op;
       return S.getMainOp();
     }
@@ -10309,7 +10309,7 @@ void BoUpSLP::TreeEntry::buildAltOpShuffleMask(
 static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp,
                               const TargetLibraryInfo &TLI) {
-  return InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) == MainOp;
+  return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == MainOp;
 }
 
 static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
@@ -10333,7 +10333,7 @@ static bool isAlternateInstruction(Instruction *I, Instruction *MainOp,
            "their swap.");
     return MainP != P && MainP != SwappedP;
   }
-  return InstructionsState(MainOp, AltOp).isOpcodeOrAlt(I) == AltOp;
+  return InstructionsState(MainOp, AltOp).getMatchingMainOpOrAltOp(I) == AltOp;
 }
 
 TTI::OperandValueInfo BoUpSLP::getOperandInfo(ArrayRef<Value *> Ops) {
@@ -13142,7 +13142,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         return InstructionCost(TTI::TCC_Free);
 
       auto *VI = cast<Instruction>(UniqueValues[Idx]);
-      assert(E->isOpcodeOrAlt(VI) && "Unexpected main/alternate opcode");
+      assert(E->getMatchingMainOpOrAltOp(VI) &&
+             "Unexpected main/alternate opcode");
       (void)E;
       return TTI->getInstructionCost(VI, CostKind);
     };
@@ -13210,7 +13211,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       SmallVector<int> Mask;
       E->buildAltOpShuffleMask(
           [&](Instruction *I) {
-            assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
+            assert(E->getMatchingMainOpOrAltOp(I) &&
+                   "Unexpected main/alternate opcode");
             return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
                                           *TLI);
           },
@@ -15323,7 +15325,8 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
                        !isa<GetElementPtrInst>(V))
                      return true;
                    auto *I = dyn_cast<Instruction>(V);
-                   return !I || !E->isOpcodeOrAlt(I) || I->getParent() == BB ||
+                   return !I || !E->getMatchingMainOpOrAltOp(I) ||
+                          I->getParent() == BB ||
                           isVectorLikeInstWithConstOps(I);
                  })) &&
          "Expected gathered loads or GEPs or instructions from same basic "
@@ -17821,7 +17824,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         SmallVector<int> Mask;
         E->buildAltOpShuffleMask(
             [E, this](Instruction *I) {
-              assert(E->isOpcodeOrAlt(I) && "Unexpected main/alternate opcode");
+              assert(E->getMatchingMainOpOrAltOp(I) &&
+                     "Unexpected main/alternate opcode");
               return isAlternateInstruction(I, E->getMainOp(), E->getAltOp(),
                                             *TLI);
             },
@@ -21573,7 +21577,7 @@ public:
         // Also check if the instruction was folded to constant/other value.
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || !S.isOpcodeOrAlt(Inst))) ||
+             (!S || !S.getMatchingMainOpOrAltOp(Inst))) ||
             (S && !Inst))
           continue;
         Candidates.push_back(RdxVal);
