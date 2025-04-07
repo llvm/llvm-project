@@ -4872,31 +4872,14 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   }
 }
 
-/// Estimate the register usage for \p Plan and vectorization factors in \p VFs.
-/// Returns the register usage for each VF in \p VFs.
+/// Estimate the register usage for \p Plan and vectorization factors in \p VFs
+/// by calculating the highest number of values that are live at a single
+/// location as a rough estimate. Returns the register usage for each VF in \p
+/// VFs.
 static SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
 calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
                        const TargetTransformInfo &TTI,
                        const SmallPtrSetImpl<const Value *> &ValuesToIgnore) {
-  // This function calculates the register usage by measuring the highest number
-  // of values that are alive at a single location. Obviously, this is a very
-  // rough estimation. We scan the loop in a topological order in order and
-  // assign a number to each recipe. We use RPO to ensure that defs are
-  // met before their users. We assume that each recipe that has in-loop
-  // users starts an interval. We record every time that an in-loop value is
-  // used, so we have a list of the first and last occurrences of each
-  // recipe. Next, we transpose this data structure into a multi map that
-  // holds the list of intervals that *end* at a specific location. This multi
-  // map allows us to perform a linear search. We scan the instructions linearly
-  // and record each time that a new interval starts, by placing it in a set.
-  // If we find this value in the multi-map then we remove it from the set.
-  // The max register usage is the maximum size of the set.
-  // We also search for instructions that are defined outside the loop, but are
-  // used inside the loop. We need this number separately from the max-interval
-  // usage number because when we unroll, loop-invariant values do not take
-  // more register.
-  LoopVectorizationCostModel::RegisterUsage RU;
-
   // Each 'key' in the map opens a new interval. The values
   // of the map are the index of the 'last seen' usage of the
   // recipe that is the key.
@@ -4914,6 +4897,11 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
   SmallSetVector<VPValue *, 8> LoopInvariants;
   LoopInvariants.insert(&Plan.getVectorTripCount());
 
+  // We scan the loop in a topological order in order and assign a number to
+  // each recipe. We use RPO to ensure that defs are met before their users. We
+  // assume that each recipe that has in-loop users starts an interval. We
+  // record every time that an in-loop value is used, so we have a list of the
+  // first and last occurrences of each recipe.
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
       Plan.getVectorLoopRegion());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
@@ -4961,7 +4949,8 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
   using RecipeList = SmallVector<VPRecipeBase *, 2>;
   SmallDenseMap<unsigned, RecipeList, 16> TransposeEnds;
 
-  // Transpose the EndPoints to a list of values that end at each index.
+  // Next, we transpose the EndPoints into a multi map that holds the list of
+  // intervals that *end* at a specific location.
   for (auto &Interval : EndPoint)
     TransposeEnds[Interval.second].push_back(Interval.first);
 
@@ -4982,10 +4971,14 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
     return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
   };
 
+  // We scan the instructions linearly and record each time that a new interval
+  // starts, by placing it in a set. If we find this value in TransposEnds then
+  // we remove it from the set. The max register usage is the maximum register
+  // usage of the recipes of the set.
   for (unsigned int Idx = 0, Sz = Idx2Recipe.size(); Idx < Sz; ++Idx) {
     VPRecipeBase *R = Idx2Recipe[Idx];
 
-    //  Remove all of the recipes that end at this location.
+    // Remove all of the recipes that end at this location.
     RecipeList &List = TransposeEnds[Idx];
     for (VPRecipeBase *ToRemove : List)
       OpenIntervals.erase(ToRemove);
@@ -5012,38 +5005,31 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
       // there is no previous entry for ClassID.
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
-      if (VFs[J].isScalar()) {
-        for (auto *Inst : OpenIntervals) {
-          for (VPValue *DefV : Inst->definedValues()) {
-            unsigned ClassID = TTI.getRegisterClassForType(
-                false, TypeInfo.inferScalarType(DefV));
-            // FIXME: The target might use more than one register for the type
-            // even in the scalar case.
-            RegUsage[ClassID] += 1;
-          }
-        }
-      } else {
-        for (auto *R : OpenIntervals) {
-          if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
-            continue;
-          if (isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                  VPScalarIVStepsRecipe>(R) ||
-              (isa<VPInstruction>(R) &&
-               all_of(cast<VPSingleDefRecipe>(R)->users(), [&](VPUser *U) {
-                 return cast<VPRecipeBase>(U)->usesScalars(
-                     R->getVPSingleValue());
-               }))) {
-            unsigned ClassID = TTI.getRegisterClassForType(
-                false, TypeInfo.inferScalarType(R->getVPSingleValue()));
-            // FIXME: The target might use more than one register for the type
-            // even in the scalar case.
-            RegUsage[ClassID] += 1;
-          } else {
-            for (VPValue *DefV : R->definedValues()) {
-              Type *ScalarTy = TypeInfo.inferScalarType(DefV);
-              unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-              RegUsage[ClassID] += GetRegUsage(ScalarTy, VFs[J]);
-            }
+      for (auto *R : OpenIntervals) {
+        // Skip recipes that weren't present in the original loop.
+        // TODO: Remove after removing the legacy
+        // LoopVectorizationCostModel::calculateRegisterUsage
+        if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
+                VPBranchOnMaskRecipe>(R))
+          continue;
+
+        if (VFs[J].isScalar() ||
+            isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
+                VPScalarIVStepsRecipe>(R) ||
+            (isa<VPInstruction>(R) &&
+             all_of(cast<VPSingleDefRecipe>(R)->users(), [&](VPUser *U) {
+               return cast<VPRecipeBase>(U)->usesScalars(R->getVPSingleValue());
+             }))) {
+          unsigned ClassID = TTI.getRegisterClassForType(
+              false, TypeInfo.inferScalarType(R->getVPSingleValue()));
+          // FIXME: The target might use more than one register for the type
+          // even in the scalar case.
+          RegUsage[ClassID] += 1;
+        } else {
+          for (VPValue *DefV : R->definedValues()) {
+            Type *ScalarTy = TypeInfo.inferScalarType(DefV);
+            unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
+            RegUsage[ClassID] += GetRegUsage(ScalarTy, VFs[J]);
           }
         }
       }
@@ -5061,6 +5047,11 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
     OpenIntervals.insert(R);
   }
 
+  // We also search for instructions that are defined outside the loop, but are
+  // used inside the loop. We need this number separately from the max-interval
+  // usage number because when we unroll, loop-invariant values do not take
+  // more register.
+  LoopVectorizationCostModel::RegisterUsage RU;
   for (unsigned Idx = 0, End = VFs.size(); Idx < End; ++Idx) {
     // Note that elements in this SmallMapVector will be default constructed
     // as 0. So we can use "Invariant[ClassID] += n" in the code below even if
