@@ -241,6 +241,13 @@ DependencyScanningWorkerFilesystem::computeAndStoreResult(
   llvm::ErrorOr<llvm::vfs::Status> Stat =
       getUnderlyingFS().status(OriginalFilename);
   if (!Stat) {
+    // rdar://148027982
+    // Negative caching directories can cause build failures.
+    // FIXME: we should remove the check below once we know
+    // the build failures' root causes.
+    if (llvm::sys::path::extension(OriginalFilename).empty())
+      return Stat.getError();
+
     const auto &Entry =
         getOrEmplaceSharedEntryForFilename(FilenameForLookup, Stat.getError());
     return insertLocalEntryForFilename(FilenameForLookup, Entry);
