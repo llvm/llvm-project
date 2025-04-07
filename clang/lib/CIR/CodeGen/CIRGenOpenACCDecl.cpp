@@ -29,5 +29,4 @@ void CIRGenModule::emitGlobalOpenACCDecl(const OpenACCConstructDecl *d) {
     errorNYI(d->getSourceRange(), "OpenACC Routine Construct");
   else if (isa<OpenACCDeclareDecl>(d))
     errorNYI(d->getSourceRange(), "OpenACC Declare Construct");
-
 }

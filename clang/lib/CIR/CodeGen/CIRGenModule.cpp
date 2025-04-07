@@ -16,8 +16,8 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/AST/GlobalDecl.h"
 #include "clang/AST/DeclOpenACC.h"
+#include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
