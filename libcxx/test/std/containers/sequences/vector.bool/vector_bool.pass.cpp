@@ -26,8 +26,8 @@ template <class VB>
 TEST_CONSTEXPR_CXX20 void test() {
   typedef std::hash<VB> H;
 #if TEST_STD_VER <= 14
-  static_assert((std::is_same<H::argument_type, VB>::value), "");
-  static_assert((std::is_same<H::result_type, std::size_t>::value), "");
+  static_assert((std::is_same<typename H::argument_type, VB>::value), "");
+  static_assert((std::is_same<typename H::result_type, std::size_t>::value), "");
 #endif
   ASSERT_NOEXCEPT(H()(VB()));
 
