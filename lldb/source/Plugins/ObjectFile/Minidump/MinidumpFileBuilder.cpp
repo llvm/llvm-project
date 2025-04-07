@@ -973,17 +973,18 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     lldb_private::DataBufferHeap &data_buffer,
     const lldb_private::CoreFileMemoryRange &range, uint64_t &bytes_read) {
 
+  const lldb::addr_t addr = range.range.start();
+  const lldb::addr_t size = range.range.size();
   Log *log = GetLog(LLDBLog::Object);
   Status addDataError;
   Process::ReadMemoryChunkCallback callback =
-      [&](Status &error, const void *buf, lldb::addr_t current_addr,
-          uint64_t bytes_to_read,
-          uint64_t bytes_read_for_chunk) -> lldb_private::IterationAction {
-    if (error.Fail() || bytes_read_for_chunk == 0) {
+      [&](Status &error, lldb::addr_t current_addr, const void *buf,
+          uint64_t bytes_read) -> lldb_private::IterationAction {
+    if (error.Fail() || bytes_read == 0) {
       LLDB_LOGF(log,
-                "Failed to read memory region at: %" PRIx64
-                ". Bytes read: %zu, error: %s",
-                current_addr, bytes_read_for_chunk, error.AsCString());
+                "Failed to read memory region at: 0x%" PRIx64
+                ". Bytes read: %" PRIx64 ", error: %s",
+                current_addr, bytes_read, error.AsCString());
 
       // If we failed in a memory read, we would normally want to skip
       // this entire region, if we had already written to the minidump
@@ -1000,16 +1001,19 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     // This error will be captured by the outer scope and is considered fatal.
     // If we get an error writing to disk we can't easily guarauntee that we
     // won't corrupt the minidump.
-    addDataError = AddData(buf, bytes_read_for_chunk);
+    addDataError = AddData(buf, bytes_read);
     if (addDataError.Fail())
       return lldb_private::IterationAction::Stop;
 
-    if (bytes_read_for_chunk != bytes_to_read) {
+    // If we have a partial read, report it, but only if the partial read
+    // didn't finish reading the entire region.
+    if (bytes_read != data_buffer.GetByteSize() &&
+        current_addr + bytes_read != size) {
       LLDB_LOGF(log,
-                "Memory region at: %" PRIx64 " partiall read %" PRIx64
+                "Memory region at: %" PRIx64 " partiall read 0x%" PRIx64
                 " bytes out of %" PRIx64 " bytes.",
-                current_addr, bytes_read_for_chunk,
-                bytes_to_read - bytes_read_for_chunk);
+                current_addr, bytes_read,
+                data_buffer.GetByteSize() - bytes_read);
 
       // If we've read some bytes, we stop trying to read more and return
       // this best effort attempt
@@ -1020,8 +1024,6 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     return lldb_private::IterationAction::Continue;
   };
 
-  const lldb::addr_t addr = range.range.start();
-  const lldb::addr_t size = range.range.size();
   bytes_read = m_process_sp->ReadMemoryInChunks(
       addr, data_buffer.GetBytes(), data_buffer.GetByteSize(), size, callback);
   return addDataError;
