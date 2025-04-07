@@ -157,13 +157,13 @@ static void BeforeFork() {
   // stuff we need.
   __lsan::LockThreads();
   __lsan::LockAllocator();
-  StackDepotLockBeforeFork();
   AcquirePoisonRecords();
+  StackDepotLockBeforeFork();
 }
 
 static void AfterFork(bool fork_child) {
-  ReleasePoisonRecords();
   StackDepotUnlockAfterFork(fork_child);
+  ReleasePoisonRecords();
   // `_lsan` functions defined regardless of `CAN_SANITIZE_LEAKS` and unlock
   // the stuff we need.
   __lsan::UnlockAllocator();
