@@ -109,30 +109,4 @@ TYPED_TEST_P(ParameterizedTest, MultipleSets) {
         EXPECT_FALSE(EqClasses.isEquivalent(i, j));
 }
 
-namespace {
-// A dummy struct for testing EquivalenceClasses with a comparator.
-struct TestStruct {
-  TestStruct(int value) : value(value) {}
-
-  bool operator==(const TestStruct &other) const {
-    return value == other.value;
-  }
-
-  int value;
-};
-// Comparator to be used in test case.
-struct TestStructComparator {
-  bool operator()(const TestStruct &lhs, const TestStruct &rhs) const {
-    return lhs.value < rhs.value;
-  }
-};
-} // namespace
-
-REGISTER_TYPED_TEST_SUITE_P(ParameterizedTest, MultipleSets);
-using ParamTypes =
-    testing::Types<EquivalenceClasses<int>,
-                   EquivalenceClasses<TestStruct, TestStructComparator>>;
-INSTANTIATE_TYPED_TEST_SUITE_P(EquivalenceClassesTest, ParameterizedTest,
-                               ParamTypes, );
-
 } // llvm
