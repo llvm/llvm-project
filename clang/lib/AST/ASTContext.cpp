@@ -7011,7 +7011,7 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
         getCanonicalTemplateArgument(subst->getArgumentPack());
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
-        subst->getFinal(), subst->getIndex());
+        subst->getIndex(), subst->getFinal());
   }
   case TemplateName::DeducedTemplate: {
     assert(IgnoreDeduced == false);

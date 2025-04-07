@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1494,6 +1495,17 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
                                                        BasicBlock *PredPredBB,
                                                        Value *V,
                                                        const DataLayout &DL) {
+  SmallPtrSet<Value *, 8> Visited;
+  return evaluateOnPredecessorEdge(BB, PredPredBB, V, DL, Visited);
+}
+
+Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
+    BasicBlock *BB, BasicBlock *PredPredBB, Value *V, const DataLayout &DL,
+    SmallPtrSet<Value *, 8> &Visited) {
+  if (!Visited.insert(V).second)
+    return nullptr;
+  auto _ = make_scope_exit([&Visited, V]() { Visited.erase(V); });
+
   BasicBlock *PredBB = BB->getSinglePredecessor();
   assert(PredBB && "Expected a single predecessor");
 
@@ -1515,12 +1527,16 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
   }
 
   // If we have a CmpInst, try to fold it for each incoming edge into PredBB.
+  // Note that during the execution of the pass, phi nodes may become constant
+  // and may be removed, which can lead to self-referencing instructions in
+  // code that becomes unreachable. Consequently, we need to handle those
+  // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 =
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL);
-      Constant *Op1 =
-          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL);
+      Constant *Op0 = evaluateOnPredecessorEdge(
+          BB, PredPredBB, CondCmp->getOperand(0), DL, Visited);
+      Constant *Op1 = evaluateOnPredecessorEdge(
+          BB, PredPredBB, CondCmp->getOperand(1), DL, Visited);
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);
