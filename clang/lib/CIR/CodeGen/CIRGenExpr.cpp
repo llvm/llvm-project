@@ -235,7 +235,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
 /// If the specified expr is a simple decay from an array to pointer,
 /// return the array subexpression.
-/// FIXME: this could be abstracted into a commeon AST helper.
+/// FIXME: this could be abstracted into a common AST helper.
 static const Expr *isSimpleArrayDecayOperand(const Expr *e) {
   // If this isn't just an array->pointer decay, bail out.
   const auto *castExpr = dyn_cast<CastExpr>(e);
