@@ -1436,7 +1436,8 @@ void CodeGenFunction::CreateCoercedStore(llvm::Value *Src, Address Dst,
         addInstToCurrentSourceAtom(I, Elt);
       }
     } else {
-      Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      auto * I = Builder.CreateStore(Src, Dst.withElementType(SrcTy), DstIsVolatile);
+      addInstToCurrentSourceAtom(I, Src);
     }
   } else if (SrcTy->isIntegerTy()) {
     // If the source is a simple integer, coerce it directly.
