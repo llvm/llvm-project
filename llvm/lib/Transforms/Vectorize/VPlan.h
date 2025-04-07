@@ -2671,8 +2671,8 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive loads operations only demand the first lane of their
-    // address.
+    // Widened, consecutive loads operations only demand the first lane of
+    // their address.
     return Op == getAddr() && isConsecutive();
   }
 };
@@ -2711,8 +2711,8 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened loads only demand the first lane of EVL and consecutive/strided
-    // loads only demand the first lane of their address.
+    // Widened loads only demand the first lane of EVL and consecutive loads
+    // only demand the first lane of their address.
     return Op == getEVL() || (Op == getAddr() && isConsecutive());
   }
 };
@@ -2799,8 +2799,8 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive stores only demand the first lane of their
-    // address, unless the same operand is also stored.
+    // Widened, consecutive stores only demand the first lane of their address,
+    // unless the same operand is also stored.
     return Op == getAddr() && isConsecutive() && Op != getStoredValue();
   }
 };
