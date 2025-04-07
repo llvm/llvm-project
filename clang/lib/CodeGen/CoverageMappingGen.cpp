@@ -2123,11 +2123,17 @@ struct CounterCoverageMappingBuilder
     Counter ParentCount = getRegion().getCounter();
     propagateCounts(ParentCount, S->getTryBlock());
 
+    bool TryHasTerminateStmt = HasTerminateStmt;
+
     for (unsigned I = 0, E = S->getNumHandlers(); I < E; ++I)
       Visit(S->getHandler(I));
 
-    Counter ExitCount = getRegionCounter(S);
-    pushRegion(ExitCount);
+    if (TryHasTerminateStmt) {
+      Counter ExitCount = getRegionCounter(S);
+      pushRegion(ExitCount);
+    }
+
+    HasTerminateStmt = TryHasTerminateStmt;
   }
 
   void VisitCXXCatchStmt(const CXXCatchStmt *S) {
