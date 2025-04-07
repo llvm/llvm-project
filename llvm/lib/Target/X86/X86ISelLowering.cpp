@@ -41117,8 +41117,7 @@ static SDValue combineX86ShufflesRecursively(
 
   // Peek through vector widenings and set out of bounds mask indices to undef.
   // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
-  for (unsigned I = 0, E = Ops.size(); I != E; ++I) {
-    SDValue &Op = Ops[I];
+  for (auto [I, Op] : enumerate(Ops)) {
     if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
         isNullConstant(Op.getOperand(2))) {
       Op = Op.getOperand(1);
