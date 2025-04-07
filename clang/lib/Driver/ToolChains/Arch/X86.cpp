@@ -252,7 +252,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         D.Diag(diag::warn_drv_deprecated_arg) << Name << 1 << Name.drop_back(4);
       else if (Width == "256")
         D.Diag(diag::warn_drv_deprecated_custom)
-            << Name << "because AVX10/256 is not supported and will be removed";
+            << Name
+            << "no alternative argument provided because "
+               "AVX10/256 is not supported and will be removed";
       else
         assert((Width == "256" || Width == "512") && "Invalid vector length.");
       Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
@@ -286,7 +288,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_mevex512) ||
         A->getOption().matches(options::OPT_mno_evex512))
       D.Diag(diag::warn_drv_deprecated_custom)
-          << Name << "because AVX10/256 is not supported and will be removed";
+          << Name
+          << "no alternative argument provided because "
+             "AVX10/256 is not supported and will be removed";
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {

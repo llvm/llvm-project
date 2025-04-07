@@ -6825,7 +6825,6 @@ defm real_8_real_10 : BooleanFFlag<"real-8-real-10">, Group<gfortran_Group>;
 defm real_8_real_16 : BooleanFFlag<"real-8-real-16">, Group<gfortran_Group>;
 defm real_8_real_4 : BooleanFFlag<"real-8-real-4">, Group<gfortran_Group>;
 defm recursive : BooleanFFlag<"recursive">, Group<gfortran_Group>;
-defm repack_arrays : BooleanFFlag<"repack-arrays">, Group<gfortran_Group>;
 defm second_underscore : BooleanFFlag<"second-underscore">, Group<gfortran_Group>;
 defm sign_zero : BooleanFFlag<"sign-zero">, Group<gfortran_Group>;
 defm whole_file : BooleanFFlag<"whole-file">, Group<gfortran_Group>;
@@ -6967,6 +6966,52 @@ defm unsigned : OptInFC1FFlag<"unsigned", "Enables UNSIGNED type">;
 def fno_automatic : Flag<["-"], "fno-automatic">, Group<f_Group>,
   HelpText<"Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE">;
 
+defm repack_arrays
+    : BoolOptionWithoutMarshalling<
+          "f", "repack-arrays", PosFlag<SetTrue, [], [], "Pack">,
+          NegFlag<SetFalse, [], [], "Do not pack">,
+          BothFlags<[], [],
+                    " non-contiguous assumed shape dummy arrays into "
+                    "contiguous memory">>,
+      DocBrief<[{Create temporary copies of non-contiguous assumed shape dummy
+arrays in subprogram prologues, and destroy them in subprogram epilogues.
+The temporary copy is initialized with values from the original array
+in the prologue, if needed. In the epilogue, the current values
+in the temporary array are copied into the original array, if needed.
+
+Accessing the contiguous temporary in the program code may result
+in faster execution comparing to accessing elements of the original array,
+when they are sparse in memory. At the same time, the overhead
+of copying values between the original and the temporary arrays
+may be significant, which may slow down some programs.
+
+Enabling array repacking may also change the behavior of certain
+programs:
+
+* The copy actions may introduce a data race in valid OpenACC/OpenMP programs.
+  For example, if different threads execute the same subprogram
+  with a non-contiguous assumed shape dummy array, and the different threads
+  access unrelated parts of the array, then the whole array copy
+  made in each thread will cause a data race.
+* OpenACC/OpenMP offload programs may behave incorrectly with regards
+  to the device data environment, due to the fact that the original
+  array and the temporary may have different presence status on the device.
+* ``IS_CONTIGUOUS`` intrinsic may return ``TRUE`` with the array repacking
+  enabled, whereas if would return ``FALSE`` with the repacking disabled.
+* The result of ``LOC`` intrinsic applied to an actual argument associated
+  with a non-contiguous assumed shape dummy array, may be different
+  from the result of ``LOC`` applied to the dummy array.}]>;
+
+def frepack_arrays_contiguity_EQ
+    : Joined<["-"], "frepack-arrays-contiguity=">,
+      Group<f_Group>,
+      Values<"whole,innermost">,
+      HelpText<
+          "When -frepack-arrays is in effect, 'whole' enables "
+          "repacking for arrays that are non-contiguous in any dimension, "
+          "'innermost' enables repacking for arrays that are non-contiguous "
+          "in the innermost dimension (the default)">;
+
 defm save_main_program : BoolOptionWithoutMarshalling<"f", "save-main-program",
   PosFlag<SetTrue, [], [],
     "Place all main program variables in static memory (otherwise scalars may be placed on the stack)">,
@@ -6979,6 +7024,22 @@ defm stack_arrays : BoolOptionWithoutMarshalling<"f", "stack-arrays",
 defm loop_versioning : BoolOptionWithoutMarshalling<"f", "version-loops-for-stride",
   PosFlag<SetTrue, [], [ClangOption], "Create unit-strided versions of loops">,
    NegFlag<SetFalse, [], [ClangOption], "Do not create unit-strided loops (default)">>;
+
+defm stack_repack_arrays
+    : BoolOptionWithoutMarshalling<
+          "f", "stack-repack-arrays",
+          PosFlag<SetTrue, [], [],
+                  "Attempt to allocate array temporaries created under "
+                  "-frepack-arrays on the stack">,
+          NegFlag<
+              SetFalse, [], [],
+              "Allocate -frepack-arrays temporaries on the heap (default)">>,
+      DocBrief<[{Controls whether the array temporaries created under
+**-frepack-arrays** are allocated on the stack or on the heap.
+
+By default, the heap is used. Allocations of polymorphic types
+are always done on the heap, though this may change in future releases.
+  }]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;

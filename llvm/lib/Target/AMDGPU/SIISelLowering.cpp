@@ -1096,12 +1096,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i1, Promote);
 
   if (Subtarget->hasBF16ConversionInsts()) {
-#if LLPC_BUILD_NPI
     setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
-#else /* LLPC_BUILD_NPI */
-    setOperationAction(ISD::FP_ROUND, MVT::v2bf16, Legal);
-    setOperationAction(ISD::FP_ROUND, MVT::bf16, Legal);
-#endif /* LLPC_BUILD_NPI */
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
@@ -1115,9 +1110,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasBF16TransInsts()) {
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
-
-  if (Subtarget->hasBF16ConversionInsts())
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
 
 #endif /* LLPC_BUILD_NPI */
   if (Subtarget->hasCvtPkF16F32Inst()) {
@@ -8003,30 +7995,13 @@ SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
 }
 
 SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  assert(Op.getValueType() == MVT::f16 &&
-         "Do not know how to custom lower FP_ROUND for non-f16 type");
-
-#endif /* LLPC_BUILD_NPI */
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
-#if LLPC_BUILD_NPI
   if (SrcVT.getScalarType() != MVT::f64)
-#else /* LLPC_BUILD_NPI */
-  if (SrcVT != MVT::f64)
     return Op;
 
-  // TODO: Handle strictfp
-  if (Op.getOpcode() != ISD::FP_ROUND)
-#endif /* LLPC_BUILD_NPI */
-    return Op;
-
-#if LLPC_BUILD_NPI
   EVT DstVT = Op.getValueType();
-#endif /* LLPC_BUILD_NPI */
   SDLoc DL(Op);
-#if LLPC_BUILD_NPI
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp
     if (Op.getOpcode() != ISD::FP_ROUND)
@@ -8036,24 +8011,18 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
-  assert (DstVT.getScalarType() == MVT::bf16 &&
-          "custom lower FP_ROUND for f16 or bf16");
-  assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
+  assert(DstVT.getScalarType() == MVT::bf16 &&
+         "custom lower FP_ROUND for f16 or bf16");
+  assert(Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
                                  MVT::f32;
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
-  return getFPExtOrFPRound(DAG, Rod, DL, DstVT);
-#else /* LLPC_BUILD_NPI */
-  SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
-  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
-  return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
-#endif /* LLPC_BUILD_NPI */
+  return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
+                     DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,
