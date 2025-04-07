@@ -843,12 +843,6 @@ static bool isMergeableIndexLdSt(MachineInstr &MI, int &Scale) {
   }
 }
 
-// Return true if MI is an SVE fill/spill instruction.
-static bool isPairableFillSpillInst(const MachineInstr &MI) {
-  auto const Opc = MI.getOpcode();
-  return Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI;
-}
-
 static bool isRewritableImplicitDef(unsigned Opc) {
   switch (Opc) {
   default:
@@ -1854,9 +1848,6 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
   Flags.clearRenameReg();
 
-  if (isPairableFillSpillInst(FirstMI))
-    Flags.setSVEFillSpillPair();
-
   // Track which register units have been modified and used between the first
   // insn (inclusive) and the second insn.
   ModifiedRegUnits.clear();
@@ -2675,6 +2666,11 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     MachineMemOperand *MemOp =
         MI.memoperands_empty() ? nullptr : MI.memoperands().front();
 
+    // If we are pairing SVE fill/spill, set the appropriate flag.
+    unsigned Opcode = MI.getOpcode();
+    if (Opcode == AArch64::LDR_ZXI || Opcode == AArch64::STR_ZXI)
+      Flags.setSVEFillSpillPair();
+
     // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
     // that the alignment of the source pointer is at least double the alignment
     // of the type.
@@ -2811,10 +2807,6 @@ bool AArch64LoadStoreOpt::tryToMergeIndexLdSt(MachineBasicBlock::iterator &MBBI,
 bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
                                         bool EnableNarrowZeroStOpt) {
   AArch64FunctionInfo &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
-  bool const CanPairFillSpill = Subtarget->isLittleEndian() &&
-                                Subtarget->isSVEorStreamingSVEAvailable() &&
-                                Subtarget->getSVEVectorSizeInBits() == 128;
-
   bool Modified = false;
   // Four tranformations to do here:
   // 1) Find loads that directly read from stores and promote them by
@@ -2878,9 +2870,6 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     // searching for a rename register on demand.
     updateDefinedRegisters(*MBBI, DefinedInBB, TRI);
     if (TII->isPairableLdStInst(*MBBI) && tryToPairLdStInst(MBBI))
-      Modified = true;
-    else if (CanPairFillSpill && isPairableFillSpillInst(*MBBI) &&
-             tryToPairLdStInst(MBBI))
       Modified = true;
     else
       ++MBBI;
