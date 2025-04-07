@@ -1440,12 +1440,14 @@ TEST_F(OpenMPIRBuilderTest, CanonicalLoopSimple) {
 
   EXPECT_EQ(&Loop->getAfter()->front(), RetInst);
 }
-void createScan(llvm::Value *scanVar, OpenMPIRBuilder &OMPBuilder,
-                IRBuilder<> &Builder, OpenMPIRBuilder::LocationDescription Loc,
+void createScan(llvm::Value *scanVar, llvm::Type *scanType,
+                OpenMPIRBuilder &OMPBuilder, IRBuilder<> &Builder,
+                OpenMPIRBuilder::LocationDescription Loc,
                 OpenMPIRBuilder::InsertPointTy &allocaIP) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
-  ASSERT_EXPECTED_INIT(InsertPointTy, retIp,
-                       OMPBuilder.createScan(Loc, allocaIP, {scanVar}, true));
+  ASSERT_EXPECTED_INIT(
+      InsertPointTy, retIp,
+      OMPBuilder.createScan(Loc, allocaIP, {scanVar}, {scanType}, true));
   Builder.restoreIP(retIp);
 }
 
@@ -5362,7 +5364,8 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   auto LoopBodyGenCB = [&](InsertPointTy CodeGenIP, llvm::Value *LC) {
     NumBodiesGenerated += 1;
     Builder.restoreIP(CodeGenIP);
-    createScan(scanVar, OMPBuilder, Builder, Loc, allocaIP);
+    createScan(scanVar, Builder.getFloatTy(), OMPBuilder, Builder, Loc,
+               allocaIP);
     return Error::success();
   };
   SmallVector<CanonicalLoopInfo *> Loops;

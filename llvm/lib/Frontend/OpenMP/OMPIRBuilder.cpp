@@ -3939,10 +3939,11 @@ OpenMPIRBuilder::emitNoUnwindRuntimeCall(llvm::FunctionCallee Callee,
 // inclusive scans now.
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
-    ArrayRef<llvm::Value *> ScanVars, bool IsInclusive) {
+    ArrayRef<llvm::Value *> ScanVars, ArrayRef<llvm::Type *> ScanVarsType,
+    bool IsInclusive) {
   if (ScanInfo.OMPFirstScanLoop) {
     Builder.restoreIP(AllocaIP);
-    emitScanBasedDirectiveDeclsIR(ScanVars);
+    emitScanBasedDirectiveDeclsIR(ScanVars, ScanVarsType);
   }
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -3951,11 +3952,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
 
   if (ScanInfo.OMPFirstScanLoop) {
     // Emit buffer[i] = red; at the end of the input phase.
-    for (Value *ScanVar : ScanVars) {
-      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVar];
-      Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+    for (int i = 0; i < ScanVars.size(); i++) {
+      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVars[i]];
+      Type *DestTy = ScanVarsType[i];
       Value *Val = Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
-      Value *Src = Builder.CreateLoad(DestTy, ScanVar);
+      Value *Src = Builder.CreateLoad(DestTy, ScanVars[i]);
       Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
           Val, DestTy->getPointerTo(defaultAS));
 
@@ -3968,10 +3969,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
   // Initialize the private reduction variable to 0 in each iteration.
   // It is used to copy intial values to scan buffer.
   ConstantInt *Zero = ConstantInt::get(Builder.getInt32Ty(), 0);
-  for (Value *ScanVar : ScanVars) {
-    Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+  for (int i = 0; i < ScanVars.size(); i++) {
+    Type *DestTy = ScanVarsType[i];
     Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        ScanVar, DestTy->getPointerTo(defaultAS));
+        ScanVars[i], DestTy->getPointerTo(defaultAS));
     Builder.CreateStore(Zero, Dest);
   }
 
@@ -3979,14 +3980,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
     IV = ScanInfo.IV;
     // Emit red = buffer[i]; at the entrance to the scan phase.
     // TODO: if exclusive scan, the red = buffer[i-1] needs to be updated.
-    for (Value *ScanVar : ScanVars) {
-      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVar];
-      Type *DestTy = Builder.getInt32Ty(); // ScanVars[i]->getType();
+    for (int i = 0; i < ScanVars.size(); i++) {
+      Value *Buff = ScanInfo.ReductionVarToScanBuffs[ScanVars[i]];
+      Type *DestTy = ScanVarsType[i];
       Value *SrcPtr =
           Builder.CreateInBoundsGEP(DestTy, Buff, IV, "arrayOffset");
       Value *Src = Builder.CreateLoad(DestTy, SrcPtr);
       Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ScanVar, DestTy->getPointerTo(defaultAS));
+          ScanVars[i], DestTy->getPointerTo(defaultAS));
 
       Builder.CreateStore(Src, Dest);
     }
@@ -4007,21 +4008,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createScan(
 }
 
 void OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
-    ArrayRef<Value *> ScanVars) {
+    ArrayRef<Value *> ScanVars, ArrayRef<Type *> ScanVarsType) {
 
   Value *AllocSpan = Builder.CreateAdd(ScanInfo.Span, Builder.getInt32(1));
-  for (Value *ScanVar : ScanVars) {
-    llvm::Value *Buff =
-        Builder.CreateAlloca(Builder.getInt32Ty(), AllocSpan, "vla");
-    ScanInfo.ReductionVarToScanBuffs[ScanVar] = Buff;
+  for (int i = 0; i < ScanVars.size(); i++) {
+    llvm::Value *Buff = Builder.CreateAlloca(ScanVarsType[i], AllocSpan, "vla");
+    ScanInfo.ReductionVarToScanBuffs[ScanVars[i]] = Buff;
   }
 }
 
 void OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
     SmallVector<ReductionInfo> ReductionInfos) {
-  llvm::Value *OMPLast = Builder.CreateNSWAdd(
-      ScanInfo.Span,
-      llvm::ConstantInt::get(ScanInfo.Span->getType(), 1, /*isSigned=*/false));
   unsigned int DefaultAS = M.getDataLayout().getProgramAddressSpace();
   for (ReductionInfo RedInfo : ReductionInfos) {
     Value *PrivateVar = RedInfo.PrivateVariable;
@@ -4029,7 +4026,8 @@ void OpenMPIRBuilder::emitScanBasedDirectiveFinalsIR(
     Value *Buff = ScanInfo.ReductionVarToScanBuffs[PrivateVar];
 
     Type *SrcTy = RedInfo.ElementType;
-    Value *Val = Builder.CreateInBoundsGEP(SrcTy, Buff, OMPLast, "arrayOffset");
+    Value *Val =
+        Builder.CreateInBoundsGEP(SrcTy, Buff, ScanInfo.Span, "arrayOffset");
     Value *Src = Builder.CreateLoad(SrcTy, Val);
     Value *Dest = Builder.CreatePointerBitCastOrAddrSpaceCast(
         OrigVar, SrcTy->getPointerTo(DefaultAS));
@@ -4057,7 +4055,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitScanReduction(
       (llvm::Intrinsic::ID)llvm::Intrinsic::log2, Builder.getDoubleTy());
   llvm::BasicBlock *InputBB = Builder.GetInsertBlock();
   ConstantInt *One = ConstantInt::get(Builder.getInt32Ty(), 1);
-  llvm::Value *span = Builder.CreateAdd(spanDiff, One);
+  llvm::Value *span = ScanInfo.Span; // Builder.CreateAdd(spanDiff, One);
   llvm::Value *Arg = Builder.CreateUIToFP(span, Builder.getDoubleTy());
   llvm::Value *LogVal = emitNoUnwindRuntimeCall(F, Arg, "");
   F = llvm::Intrinsic::getOrInsertDeclaration(
@@ -5393,7 +5391,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   // TODO: It would be sufficient to only sink them into body of the
   // corresponding tile loop.
   SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> InbetweenCode;
-  for (int i = 0; i < NumLoops - 1; ++i) {
+  for (size_t i = 0; i < NumLoops - 1; ++i) {
     CanonicalLoopInfo *Surrounding = Loops[i];
     CanonicalLoopInfo *Nested = Loops[i + 1];
 
@@ -5406,7 +5404,7 @@ OpenMPIRBuilder::tileLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
   Builder.SetCurrentDebugLocation(DL);
   Builder.restoreIP(OutermostLoop->getPreheaderIP());
   SmallVector<Value *, 4> FloorCount, FloorRems;
-  for (int i = 0; i < NumLoops; ++i) {
+  for (size_t i = 0; i < NumLoops; ++i) {
     Value *TileSize = TileSizes[i];
     Value *OrigTripCount = OrigTripCounts[i];
     Type *IVType = OrigTripCount->getType();

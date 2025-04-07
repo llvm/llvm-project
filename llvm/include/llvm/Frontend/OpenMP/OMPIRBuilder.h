@@ -1600,7 +1600,8 @@ private:
 
   /// Creates the buffer needed for scan reduction.
   /// \param ScanVars Scan Variables.
-  void emitScanBasedDirectiveDeclsIR(ArrayRef<llvm::Value *> ScanVars);
+  void emitScanBasedDirectiveDeclsIR(ArrayRef<llvm::Value *> ScanVars,
+                                     ArrayRef<llvm::Type *> ScanVarsType);
 
   /// Copies the result back to the reduction variable.
   /// \param ReductionInfos Array type containing the ReductionOps.
@@ -2714,6 +2715,7 @@ public:
   InsertPointOrErrorTy createScan(const LocationDescription &Loc,
                                   InsertPointTy AllocaIP,
                                   ArrayRef<llvm::Value *> ScanVars,
+                                  ArrayRef<llvm::Type *> ScanVarsType,
                                   bool IsInclusive);
   /// Generator for '#omp critical'
   ///

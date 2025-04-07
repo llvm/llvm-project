@@ -47,6 +47,7 @@
 
 using namespace mlir;
 
+llvm::SmallDenseMap<llvm::Value *, llvm::Type *> ReductionVarToType;
 namespace {
 static llvm::omp::ScheduleKind
 convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
@@ -1129,6 +1130,11 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
   // variables. Although this could be done after allocas, we don't want to mess
   // up with the alloca insertion point.
   for (unsigned i = 0; i < op.getNumReductionVars(); ++i) {
+
+    llvm::Type *reductionType =
+        moduleTranslation.convertType(reductionDecls[i].getType());
+    ReductionVarToType[privateReductionVariables[i]] = reductionType;
+
     SmallVector<llvm::Value *, 1> phis;
 
     // map block argument to initializer region
@@ -1202,9 +1208,11 @@ static void collectReductionInfo(
       atomicGen = owningAtomicReductionGens[i];
     llvm::Value *variable =
         moduleTranslation.lookupValue(loop.getReductionVars()[i]);
+    llvm::Type *reductionType =
+        moduleTranslation.convertType(reductionDecls[i].getType());
+    ReductionVarToType[privateReductionVariables[i]] = reductionType;
     reductionInfos.push_back(
-        {moduleTranslation.convertType(reductionDecls[i].getType()), variable,
-         privateReductionVariables[i],
+        {reductionType, variable, privateReductionVariables[i],
          /*EvaluationKind=*/llvm::OpenMPIRBuilder::EvalKind::Scalar,
          owningReductionGens[i],
          /*ReductionGenClang=*/nullptr, atomicGen});
@@ -2517,34 +2525,34 @@ convertOmpScan(Operation &opInst, llvm::IRBuilderBase &builder,
   auto scanOp = cast<omp::ScanOp>(opInst);
   bool isInclusive = scanOp.hasInclusiveVars();
   SmallVector<llvm::Value *> llvmScanVars;
+  SmallVector<llvm::Type *> llvmScanVarsType;
   mlir::OperandRange mlirScanVars = scanOp.getInclusiveVars();
   if (!isInclusive)
     mlirScanVars = scanOp.getExclusiveVars();
   for (auto val : mlirScanVars) {
     llvm::Value *llvmVal = moduleTranslation.lookupValue(val);
-
     llvmScanVars.push_back(llvmVal);
+    llvmScanVarsType.push_back(ReductionVarToType[llvmVal]);
   }
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createScan(
-          ompLoc, allocaIP, llvmScanVars, isInclusive);
+          ompLoc, allocaIP, llvmScanVars, llvmScanVarsType, isInclusive);
   if (failed(handleError(afterIP, opInst)))
     return failure();
 
   builder.restoreIP(*afterIP);
 
   // TODO: The argument of LoopnestOp is stored into the index variable and this
-  // variable is used
-  //  across scan operation. However that makes the mlir
-  //  invalid.(`Intra-iteration dependences from a statement in the structured
-  //  block sequence that precede a scan directive to a statement in the
-  //  structured block sequence that follows a scan directive must not exist,
-  //  except for dependences for the list items specified in an inclusive or
-  //  exclusive clause.`). The argument of LoopNestOp need to be loaded again
-  //  after ScanOp again so mlir generated is valid.
+  // variable is used across scan operation. However that makes the mlir
+  // invalid.(`Intra-iteration dependences from a statement in the structured
+  // block sequence that precede a scan directive to a statement in the
+  // structured block sequence that follows a scan directive must not exist,
+  // except for dependences for the list items specified in an inclusive or
+  // exclusive clause.`). The argument of LoopNestOp need to be loaded again
+  // after ScanOp again so mlir generated is valid.
   auto parentOp = scanOp->getParentOp();
   auto loopOp = cast<omp::LoopNestOp>(parentOp);
   if (loopOp) {
