@@ -3,7 +3,7 @@
 ; CHECK-LABEL: .shader_functions:
 
 ; Make sure that .vgpr_count doesn't include the %inactive.vgpr registers.
-; The shader is free to use any of the VGPRs mapped to a %inactive.vpgr as long as it only touches its active lanes.
+; The shader is free to use any of the VGPRs mapped to a %inactive.vgpr as long as it only touches its active lanes.
 ; In that case, the VGPR should be included in the .vgpr_count
 ; CHECK-LABEL: _miss_1:
 ; CHECK: .vgpr_count:{{.*}}0xd{{$}}
