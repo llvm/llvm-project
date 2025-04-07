@@ -39,18 +39,12 @@ const char *
 ExegesisTarget::getIgnoredOpcodeReasonOrNull(const LLVMState &State,
                                              unsigned Opcode) const {
   const MCInstrDesc &InstrDesc = State.getIC().getInstr(Opcode).Description;
-  if (InstrDesc.isPseudo())
-    return "Unsupported opcode: isPseudo";
-  if (InstrDesc.usesCustomInsertionHook())
-    return "Unsupported opcode: usesCustomInserter";
-  if (InstrDesc.isBranch())
-    return "Unsupported opcode: isBranch";
-  if (InstrDesc.isIndirectBranch())
-    return "Unsupported opcode: isIndirectBranch";
-  if (InstrDesc.isCall())
-    return "Unsupported opcode: isCall";
-  if (InstrDesc.isReturn())
-    return "Unsupported opcode: isReturn";
+  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
+    return "Unsupported opcode: isPseudo/usesCustomInserter";
+  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
+    return "Unsupported opcode: isBranch/isIndirectBranch";
+  if (InstrDesc.isCall() || InstrDesc.isReturn())
+    return "Unsupported opcode: isCall/isReturn";
   return nullptr;
 }
 
@@ -119,8 +113,9 @@ ExegesisTarget::createBenchmarkRunner(
   case Benchmark::InverseThroughput:
     if (BenchmarkPhaseSelector == BenchmarkPhaseSelectorE::Measure &&
         !PfmCounters.CycleCounter) {
-      const char *ModeName =
-          Mode == Benchmark::Latency ? "latency" : "inverse_throughput";
+      const char *ModeName = Mode == Benchmark::Latency
+                                 ? "latency"
+                                 : "inverse_throughput";
       return make_error<Failure>(
           Twine("can't run '")
               .concat(ModeName)
@@ -153,8 +148,7 @@ std::unique_ptr<SnippetGenerator> ExegesisTarget::createSerialSnippetGenerator(
   return std::make_unique<SerialSnippetGenerator>(State, Opts);
 }
 
-std::unique_ptr<SnippetGenerator>
-ExegesisTarget::createParallelSnippetGenerator(
+std::unique_ptr<SnippetGenerator> ExegesisTarget::createParallelSnippetGenerator(
     const LLVMState &State, const SnippetGenerator::Options &Opts) const {
   return std::make_unique<ParallelSnippetGenerator>(State, Opts);
 }
