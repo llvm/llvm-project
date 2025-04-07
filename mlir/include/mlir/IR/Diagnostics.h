@@ -640,8 +640,8 @@ private:
   /// Process a single diagnostic.
   void process(Diagnostic &diag);
 
-  /// Process a FileLineColLoc diagnostic.
-  void process(FileLineColLoc loc, StringRef msg, DiagnosticSeverity kind);
+  /// Process a LocationAttr diagnostic.
+  void process(LocationAttr loc, StringRef msg, DiagnosticSeverity kind);
 
   std::unique_ptr<detail::SourceMgrDiagnosticVerifierHandlerImpl> impl;
 };
