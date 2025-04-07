@@ -73,9 +73,6 @@ jobs:
   - ${{ if ne(parameters.enableTelemetry, 'false') }}:
     - name: DOTNET_CLI_TELEMETRY_PROFILE
       value: '$(Build.Repository.Uri)'
-  - ${{ if eq(parameters.enableRichCodeNavigation, 'true') }}:
-    - name: EnableRichCodeNavigation
-      value: 'true'
   # Retry signature validation up to three times, waiting 2 seconds between attempts.
   # See https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu3028#retry-untrusted-root-failures
   - name: NUGET_EXPERIMENTAL_CHAIN_BUILD_RETRY_POLICY
@@ -146,16 +143,6 @@ jobs:
 
   - ${{ each step in parameters.steps }}:
     - ${{ step }}
-
-  - ${{ if eq(parameters.enableRichCodeNavigation, true) }}:
-    - task: RichCodeNavIndexer@0
-      displayName: RichCodeNav Upload
-      inputs:
-        languages: ${{ coalesce(parameters.richCodeNavigationLanguage, 'csharp') }}
-        environment: ${{ coalesce(parameters.richCodeNavigationEnvironment, 'internal') }}
-        richNavLogOutputDirectory: $(Build.SourcesDirectory)/artifacts/bin
-        uploadRichNavArtifacts: ${{ coalesce(parameters.richCodeNavigationUploadArtifacts, false) }}
-      continueOnError: true
 
   - ${{ each step in parameters.componentGovernanceSteps }}:
     - ${{ step }}
