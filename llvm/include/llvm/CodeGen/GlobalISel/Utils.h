@@ -183,10 +183,6 @@ std::optional<APInt> getIConstantVRegVal(Register VReg,
 std::optional<int64_t> getIConstantVRegSExtVal(Register VReg,
                                                const MachineRegisterInfo &MRI);
 
-/// If \p VReg is defined by a G_CONSTANT fits in uint64_t returns it.
-std::optional<uint64_t> getIConstantVRegZExtVal(Register VReg,
-                                                const MachineRegisterInfo &MRI);
-
 /// \p VReg is defined by a G_CONSTANT, return the corresponding value.
 const APInt &getIConstantFromReg(Register VReg, const MachineRegisterInfo &MRI);
 
@@ -441,17 +437,6 @@ std::optional<int64_t> getIConstantSplatSExtVal(const Register Reg,
 /// possible.
 std::optional<int64_t> getIConstantSplatSExtVal(const MachineInstr &MI,
                                                 const MachineRegisterInfo &MRI);
-
-/// \returns the scalar sign extended integral splat value of \p Reg if
-/// possible.
-std::optional<uint64_t>
-getIConstantSplatZExtVal(const Register Reg, const MachineRegisterInfo &MRI);
-
-/// \returns the scalar sign extended integral splat value defined by \p MI if
-/// possible.
-std::optional<uint64_t>
-getIConstantSplatZExtVal(const MachineInstr &MI,
-                         const MachineRegisterInfo &MRI);
 
 /// Returns a floating point scalar constant of a build vector splat if it
 /// exists. When \p AllowUndef == true some elements can be undef but not all.

@@ -318,14 +318,6 @@ llvm::getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI) {
   return std::nullopt;
 }
 
-std::optional<uint64_t>
-llvm::getIConstantVRegZExtVal(Register VReg, const MachineRegisterInfo &MRI) {
-  std::optional<APInt> Val = getIConstantVRegVal(VReg, MRI);
-  if (Val && Val->getBitWidth() <= 64)
-    return Val->getZExtValue();
-  return std::nullopt;
-}
-
 namespace {
 
 // This function is used in many places, and as such, it has some
@@ -1435,21 +1427,6 @@ std::optional<int64_t>
 llvm::getIConstantSplatSExtVal(const MachineInstr &MI,
                                const MachineRegisterInfo &MRI) {
   return getIConstantSplatSExtVal(MI.getOperand(0).getReg(), MRI);
-}
-
-std::optional<uint64_t>
-llvm::getIConstantSplatZExtVal(const Register Reg,
-                               const MachineRegisterInfo &MRI) {
-  if (auto SplatValAndReg =
-          getAnyConstantSplat(Reg, MRI, /* AllowUndef */ false))
-    return getIConstantVRegSExtVal(SplatValAndReg->VReg, MRI);
-  return std::nullopt;
-}
-
-std::optional<uint64_t>
-llvm::getIConstantSplatZExtVal(const MachineInstr &MI,
-                               const MachineRegisterInfo &MRI) {
-  return getIConstantSplatZExtVal(MI.getOperand(0).getReg(), MRI);
 }
 
 std::optional<FPValueAndVReg>
