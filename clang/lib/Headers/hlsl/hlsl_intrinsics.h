@@ -176,6 +176,21 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// dot2add builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn float dot2add(half2 A, half2 B, float C)
+/// \brief Dot product of 2 vector of type half and add a float scalar value.
+/// \param A The first input value to dot product.
+/// \param B The second input value to dot product.
+/// \param C The input value added to the dot product.
+
+_HLSL_AVAILABILITY(shadermodel, 6.4)
+const inline float dot2add(half2 A, half2 B, float C) {
+  return __detail::dot2add_impl(A, B, C);
+}
+
+//===----------------------------------------------------------------------===//
 // dst builtins
 //===----------------------------------------------------------------------===//
 
@@ -189,33 +204,16 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 /// Return the computed distance vector contain {1, d, d*d, 1/d}
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline vector<half, 4> dst(vector<half, 4> Src0, vector<half, 4> Src1) {
+const inline half4 dst(half4 Src0, half4 Src1) {
   return __detail::dst_impl(Src0, Src1);
 }
 
-const inline vector<float, 4> dst(vector<float, 4> Src0,
-                                  vector<float, 4> Src1) {
+const inline float4 dst(float4 Src0, float4 Src1) {
   return __detail::dst_impl(Src0, Src1);
 }
 
-const inline vector<double, 4> dst(vector<double, 4> Src0,
-                                   vector<double, 4> Src1) {
+const inline double4 dst(double4 Src0, double4 Src1) {
   return __detail::dst_impl(Src0, Src1);
-}
-
-//===----------------------------------------------------------------------===//
-// dot2add builtins
-//===----------------------------------------------------------------------===//
-
-/// \fn float dot2add(half2 A, half2 B, float C)
-/// \brief Dot product of 2 vector of type half and add a float scalar value.
-/// \param A The first input value to dot product.
-/// \param B The second input value to dot product.
-/// \param C The input value added to the dot product.
-
-_HLSL_AVAILABILITY(shadermodel, 6.4)
-const inline float dot2add(half2 A, half2 B, float C) {
-  return __detail::dot2add_impl(A, B, C);
 }
 
 //===----------------------------------------------------------------------===//
