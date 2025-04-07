@@ -1117,7 +1117,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
   if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
       LangOpts.HIPStdParInterposeAlloc)
-  MPM.addPass(HipStdParAllocationInterpositionPass());
+    MPM.addPass(HipStdParAllocationInterpositionPass());
 
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in
