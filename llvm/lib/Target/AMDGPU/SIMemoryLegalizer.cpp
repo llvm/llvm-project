@@ -2586,12 +2586,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
 
   // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
   // space.
-  // TODO: move the attribute check into the TII hook.
-  if (!MI->getMF()->getFunction().hasFnAttribute(
-          "amdgpu-no-flat-scratch-init")) {
-    if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
-      return setScope(MI, CPol::SCOPE_SE);
-  }
+  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
+    return setScope(MI, CPol::SCOPE_SE);
 
   // TODO: Introduce a target feature to always enforce SCOPE_SE.
 

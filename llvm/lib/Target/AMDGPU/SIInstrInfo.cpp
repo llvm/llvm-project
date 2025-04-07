@@ -4317,6 +4317,10 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   if (!isFLAT(MI) || isFLATGlobal(MI))
     return false;
 
+  // If scratch is not initialized, we can never access it.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
+
   // SCRATCH instructions always access scratch.
   if (isFLATScratch(MI))
     return true;
