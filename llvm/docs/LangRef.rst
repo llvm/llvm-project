@@ -1704,7 +1704,7 @@ Currently, only the following parameter attributes are defined:
        "initialized".
      * If the byte is stored with a volatile or atomic write, the behavior is
        undefined.
-     * If the byte is loaded, return an undef value.
+     * If the byte is loaded, return a poison value.
 
     Additionally, if the function returns normally, write an undef value to all
     bytes that are part of the range and have not been marked as "initialized".
