@@ -12,14 +12,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; This RUN command sets `-data-sections=true -unique-section-names=true` so data
 ; sections are uniqufied by numbers.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -data-sections=true \
-; RUN:     -unique-section-names=true -relocation-model=pic \
+; RUN:     -partition-static-data-sections -data-sections \
+; RUN:     -unique-section-names -relocation-model=pic \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=SYM,COMMON --dump-input=always
 
 ; This RUN command sets `-data-sections=true -unique-section-names=false` so
 ; data sections are uniqufied by variable names.
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -data-sections=true \
+; RUN:     -partition-static-data-sections -data-sections \
 ; RUN:     -unique-section-names=false -relocation-model=pic \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=UNIQ,COMMON --dump-input=always
 
@@ -96,15 +96,15 @@ target triple = "x86_64-unknown-linux-gnu"
 ; and prune the unlikely list.
 ; For @bss2
 ; COMMON:      .type bss2,@object
-; SYM-NEXT:    .section	.bss.unlikely.bss2,"aw",@nobits
-; UNIQ-NEXT:   .section	.bss.unlikely.,"aw",@nobits,unique,9
-; AGG-NEXT:    .section	.bss.unlikely.,"aw",@nobits
+; SYM-NEXT:    .section	.bss.hot.bss2,"aw",@nobits
+; UNIQ-NEXT:   .section	.bss.hot.,"aw",@nobits,unique,9
+; AGG-NEXT:    .section	.bss.hot.,"aw",@nobits
 
 ; For @data3
 ; COMMON:      .type data3,@object
-; SYM-NEXT:    .section	.data.unlikely.data3,"aw",@progbits
-; UNIQ-NEXT:   .section	.data.unlikely.,"aw",@progbits,unique,10
-; AGG-NEXT:    .section	.data.unlikely.,"aw",@progbits
+; SYM-NEXT:    .section	.data.hot.data3,"aw",@progbits
+; UNIQ-NEXT:   .section	.data.hot.,"aw",@progbits,unique,10
+; AGG-NEXT:    .section	.data.hot.,"aw",@progbits
 
 ; For @data_with_unknown_hotness
 ; SYM: 	       .type	.Ldata_with_unknown_hotness,@object          # @data_with_unknown_hotness

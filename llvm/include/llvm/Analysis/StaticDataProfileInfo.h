@@ -9,6 +9,12 @@
 
 namespace llvm {
 
+enum class DataHotness {
+  kCold,
+  kUnknown,
+  kHot,
+};
+
 /// A class that holds the constants that represent static data and their
 /// profile information and provides methods to operate on them.
 class StaticDataProfileInfo {
@@ -44,6 +50,11 @@ public:
   ///     string.
   StringRef getConstantSectionPrefix(const Constant *C,
                                      const ProfileSummaryInfo *PSI) const;
+
+  DataHotness getConstantHotness(const Constant *C,
+                                 const ProfileSummaryInfo *PSI) const;
+
+  static StringRef hotnessToStr(DataHotness hotness);
 };
 
 /// This wraps the StaticDataProfileInfo object as an immutable pass, for a
