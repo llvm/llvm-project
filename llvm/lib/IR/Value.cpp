@@ -221,7 +221,7 @@ void Value::dropDroppableUse(Use &U) {
     if (OpNo == 0)
       U.set(ConstantInt::getTrue(Assume->getContext()));
     else {
-      U.set(UndefValue::get(U.get()->getType()));
+      U.set(PoisonValue::get(U.get()->getType()));
       CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
       BOI.Tag = Assume->getContext().pImpl->getOrInsertBundleTag("ignore");
     }
