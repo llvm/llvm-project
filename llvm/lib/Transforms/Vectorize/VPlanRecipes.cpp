@@ -801,7 +801,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
   case VPInstruction::BranchOnCond: {
-
     // BranchOnCond is free since the branch cost is already
     // calculated by VPBB.
     if (vputils::onlyFirstLaneUsed(getOperand(0)))
@@ -814,6 +813,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
         cast<VectorType>(
             toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF)),
         Ctx.CostKind, 0, nullptr, nullptr);
+  }
   case VPInstruction::FirstActiveLane: {
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
@@ -846,7 +846,6 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
                                   I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
->>>>>>> main
   }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has

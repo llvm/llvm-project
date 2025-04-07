@@ -664,12 +664,12 @@ exit:
 define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-LABEL: define void @multiple_exit_conditions(
 ; DEFAULT-SAME: ptr [[SRC:%.*]], ptr noalias [[DST:%.*]]) #[[ATTR2:[0-9]+]] {
-; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:  [[ENTRY:.*]]:
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP7]], 8
 ; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 257, [[TMP9]]
-; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
-; DEFAULT:       vector.ph:
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 8
 ; DEFAULT-NEXT:    [[N_MOD_VF:%.*]] = urem i64 257, [[TMP3]]
@@ -679,9 +679,9 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 8
 ; DEFAULT-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
 ; DEFAULT-NEXT:    [[TMP8:%.*]] = mul i64 [[N_VEC]], 2
-; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
-; DEFAULT:       vector.body:
-; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; DEFAULT-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; DEFAULT-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
@@ -712,19 +712,17 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    store <vscale x 2 x double> [[TMP18]], ptr [[TMP28]], align 8
 ; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; DEFAULT-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[TMP29]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
-; DEFAULT:       middle.block:
+; DEFAULT-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
 ; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 257, [[N_VEC]]
-; DEFAULT-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
-; DEFAULT:       scalar.ph:
-; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[DST]], [[ENTRY:%.*]] ]
-; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP8]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY]] ]
-; DEFAULT-NEXT:    br label [[LOOP:%.*]]
-; DEFAULT:       vector.scevcheck:
-; DEFAULT-NEXT:    unreachable
-; DEFAULT:       loop:
-; DEFAULT-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; DEFAULT:       [[SCALAR_PH]]:
+; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[IND_END]], %[[MIDDLE_BLOCK]] ], [ [[DST]], %[[ENTRY]] ]
+; DEFAULT-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ [[TMP8]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; DEFAULT-NEXT:    br label %[[LOOP:.*]]
+; DEFAULT:       [[LOOP]]:
+; DEFAULT-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; DEFAULT-NEXT:    [[L:%.*]] = load i16, ptr [[SRC]], align 2
 ; DEFAULT-NEXT:    [[O:%.*]] = or i16 [[L]], 1
 ; DEFAULT-NEXT:    [[CONV:%.*]] = uitofp i16 [[O]] to double
