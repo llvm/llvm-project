@@ -73,6 +73,14 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
+  /// Initialize lattice anchor equivalence class from the provided top-level
+  /// operation.
+  ///
+  /// This function will union lattice anchor to same equivalent class if the
+  /// analysis can determine the lattice content of lattice anchor is
+  /// necessarily identical under the corrensponding lattice type.
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
+
   /// Visit a program point that modifies the state of the program. If the
   /// program point is at the beginning of a block, then the state is propagated
   /// from control-flow predecessors or callsites.  If the operation before
@@ -113,6 +121,11 @@ protected:
   /// control-flow or the callgraph. Otherwise, this function invokes the
   /// operation transfer function.
   virtual LogicalResult processOperation(Operation *op);
+
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
 
   /// Propagate the dense lattice forward along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
@@ -310,6 +323,14 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
+  /// Initialize lattice anchor equivalence class from the provided top-level
+  /// operation.
+  ///
+  /// This function will union lattice anchor to same equivalent class if the
+  /// analysis can determine the lattice content of lattice anchor is
+  /// necessarily identical under the corrensponding lattice type.
+  virtual void initializeEquivalentLatticeAnchor(Operation *top) override;
+
   /// Visit a program point that modifies the state of the program. The state is
   /// propagated along control flow directions for branch-, region- and
   /// call-based control flow using the respective interfaces. For other
@@ -352,6 +373,11 @@ protected:
   /// control-flow operations. Otherwise, this function invokes the operation
   /// transfer function.
   virtual LogicalResult processOperation(Operation *op);
+
+  /// Visit an operation. If this analysis can confirm that lattice content
+  /// of lattice anchors around operation are necessarily identical, join
+  /// them into the same equivalent class.
+  virtual void buildOperationEquivalentLatticeAnchor(Operation *op) { return; }
 
   /// Propagate the dense lattice backwards along the control flow edge from
   /// `regionFrom` to `regionTo` regions of the `branch` operation. `nullopt`
