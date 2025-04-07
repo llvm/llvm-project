@@ -174,14 +174,17 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
                             __detail::HLSL_FIXED_VECTOR<float, N> Y) {
   return __detail::distance_vec_impl(X, Y);
 }
+
 //===----------------------------------------------------------------------===//
 // dst builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn fvector dst( fvector, fvector)
-/// \brief Returns the length of a vector
-/// \param Src0 [in] The first vector contain {_, d*d, d*d, _}
-/// \param Src1 [in] The second vector contain {_, 1/d, _, 1/d}
+/// \fn fvector dst(fvector, fvector)
+/// \brief Calculates a distance vector.
+/// \param Src0 [in] The first vector contains the squared distance represented
+/// as {_, d*d, d*d, _}
+/// \param Src1 [in] The second vector contains the reciprocal distance
+/// represented as  {_, 1/d, _, 1/d}
 ///
 /// Return the computed distance vector contain {1, d, d*d, 1/d}
 
