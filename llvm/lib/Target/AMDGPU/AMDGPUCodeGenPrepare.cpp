@@ -1567,10 +1567,8 @@ Type *findSmallestLegalBits(Instruction *I, int OrigBit, int MaxBitsNeeded,
     return nullptr;
 
   Type *NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
-  unsigned ISDOpc = TLI->InstructionOpcodeToISD(I->getOpcode());
   while (OrigBit > MaxBitsNeeded) {
-    if (TLI->isOperationLegalOrCustom(ISDOpc,
-                                      TLI->getValueType(DL, NewType, true)))
+    if (TLI->isTypeLegal(TLI->getValueType(DL, NewType, true)))
       return NewType;
 
     MaxBitsNeeded *= 2;
