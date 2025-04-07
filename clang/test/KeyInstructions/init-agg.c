@@ -1,5 +1,8 @@
 
-// RUN: %clang -gkey-instructions %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: %clang -gkey-instructions -x c++ %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
+// RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
+
+// RUN: %clang -gkey-instructions -x c %s -gmlt -gno-column-info -S -emit-llvm -o - -ftrivial-auto-var-init=pattern \
 // RUN: | FileCheck %s --implicit-check-not atomGroup --implicit-check-not atomRank
 
 // The implicit-check-not is important; we don't want the GEPs created for the
@@ -7,7 +10,6 @@
 
 int g;
 void a() {
-// CHECK: _Z1av()
 // CHECK: call void @llvm.memcpy{{.*}}, !dbg [[G1R1:!.*]]
     int A[] = { 1, 2, 3 };
 
