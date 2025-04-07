@@ -48,9 +48,20 @@ struct DemangledNameInfo {
   /// \endcode
   std::pair<size_t, size_t> ArgumentsRange;
 
+  /// Indicates the [start, end) of the function qualifiers
+  /// (e.g., CV-qualifiers, reference qualifiers, requires clauses).
+  ///
+  /// E.g.,
+  /// \code{.cpp}
+  ///    void foo::bar<int>::qux<float>(int) const &&
+  ///                                       ^        ^
+  ///                                     start     end
+  /// \endcode
+  std::pair<size_t, size_t> QualifiersRange;
+
   /// Returns \c true if this object holds a valid basename range.
   bool hasBasename() const {
-    return BasenameRange.first != BasenameRange.second &&
+    return BasenameRange.second > BasenameRange.first &&
            BasenameRange.second > 0;
   }
 
@@ -139,6 +150,8 @@ private:
   void finalizeArgumentEnd();
   void finalizeStart();
   void finalizeEnd();
+  void finalizeQualifiersStart();
+  void finalizeQualifiersEnd();
 
   /// Helper used in the finalize APIs.
   bool canFinalize() const;

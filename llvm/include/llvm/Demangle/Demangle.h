@@ -93,6 +93,13 @@ struct ItaniumPartialDemangler {
   /// second and third parameters to __cxa_demangle.
   char *finishDemangle(char *Buf, size_t *N) const;
 
+  /// See \ref finishDemangle
+  ///
+  /// \param[in] OB A llvm::itanium_demangle::OutputBuffer that the demangled
+  /// name will be printed into.
+  ///
+  char *finishDemangle(void *OB) const;
+
   /// Get the base name of a function. This doesn't include trailing template
   /// arguments, ie for "a::b<int>" this function returns "b".
   char *getFunctionBaseName(char *Buf, size_t *N) const;
