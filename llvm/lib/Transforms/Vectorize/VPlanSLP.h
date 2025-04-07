@@ -48,8 +48,6 @@ class VPInterleavedAccessInfo {
 
 public:
   VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
-  VPInterleavedAccessInfo(const VPInterleavedAccessInfo &) = delete;
-  VPInterleavedAccessInfo &operator=(const VPInterleavedAccessInfo &) = delete;
 
   ~VPInterleavedAccessInfo() {
     // Avoid releasing a pointer twice.
