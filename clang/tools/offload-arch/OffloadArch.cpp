@@ -62,8 +62,8 @@ int main(int argc, char *argv[]) {
   }
 
   // If this was invoked from the legacy symlinks provide the same behavior.
-  bool AMDGPUOnly = AMDGPU || sys::path::filename(argv[0]) == "amdgpu-arch";
-  bool NVIDIAOnly = NVPTX || sys::path::filename(argv[0]) == "nvptx-arch";
+  bool AMDGPUOnly = AMDGPU || sys::path::stem(argv[0]) == "amdgpu-arch";
+  bool NVIDIAOnly = NVPTX || sys::path::stem(argv[0]) == "nvptx-arch";
 
   int NVIDIAResult = 0;
   if (!AMDGPUOnly)
