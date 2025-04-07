@@ -1680,19 +1680,19 @@ bool CallAnalyzer::visitGetElementPtr(GetElementPtrInst &I) {
   return isGEPFree(I);
 }
 
-/// Simplify \p Cmp if RHS is const and we can ValueTrack LHS,
-// This handles the case when the Cmp instruction is guarded a recursive call
-// that will cause the Cmp to fail/succeed for the next iteration.
+// Simplify \p Cmp if RHS is const and we can ValueTrack LHS.
+// This handles the case when the Cmp instruction is guarding a recursive call
+// that will cause the Cmp to fail/succeed for the recursive call.
 bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
-  // Bail out if the RHS is NOT const:
-  if (!isa<Constant>(Cmp.getOperand(1)))
+  // Bail out if LHS is not a function argument or RHS is NOT const:
+  if (!isa<Argument>(Cmp.getOperand(0)) || !isa<Constant>(Cmp.getOperand(1)))
     return false;
   auto *CmpOp = Cmp.getOperand(0);
   // Iterate over the users of the function to check if it's a recursive
   // function:
   for (auto *U : F->users()) {
     CallInst *Call = dyn_cast<CallInst>(U);
-    if (!Call || Call->getFunction() != F)
+    if (!Call || Call->getFunction() != F || Call->getCalledFunction() != F)
       continue;
     auto *CallBB = Call->getParent();
     auto *Predecessor = CallBB->getSinglePredecessor();
@@ -1704,8 +1704,7 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
     if (!Br || Br->isUnconditional())
       continue;
     // Check if the Br condition is the same Cmp instr we are investigating:
-    auto *CmpInstr = dyn_cast<CmpInst>(Br->getCondition());
-    if (!CmpInstr || CmpInstr != &Cmp)
+    if (Br->getCondition() != &Cmp)
       continue;
     // Check if there are any arg of the recursive callsite is affecting the cmp
     // instr:
@@ -1715,7 +1714,7 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
          ArgNum < F->arg_size() && ArgNum < Call->arg_size(); ArgNum++) {
       FuncArg = F->getArg(ArgNum);
       CallArg = Call->getArgOperand(ArgNum);
-      if ((FuncArg == CmpOp) && (CallArg != CmpOp)) {
+      if (FuncArg == CmpOp && CallArg != CmpOp) {
         ArgFound = true;
         break;
       }
@@ -1737,16 +1736,16 @@ bool CallAnalyzer::simplifyCmpInst(Function *F, CmpInst &Cmp) {
       DT.recalculate(*F);
     }
     SQ.DT = &DT;
-    Value *simplifiedInstruction = llvm::simplifyInstructionWithOperands(
-        CmpInstr, {CallArg, Cmp.getOperand(1)}, SQ);
-    if (!simplifiedInstruction)
+    Value *SimplifiedInstruction = llvm::simplifyInstructionWithOperands(
+        cast<CmpInst>(&Cmp), {CallArg, Cmp.getOperand(1)}, SQ);
+    if (!SimplifiedInstruction)
       continue;
-    if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(simplifiedInstruction)) {
-      bool isTrueSuccessor = CallBB == Br->getSuccessor(0);
+    if (auto *ConstVal = dyn_cast<llvm::ConstantInt>(SimplifiedInstruction)) {
+      bool IsTrueSuccessor = CallBB == Br->getSuccessor(0);
       SimplifiedValues[&Cmp] = ConstVal;
       if (ConstVal->isOne())
-        return !isTrueSuccessor;
-      return isTrueSuccessor;
+        return !IsTrueSuccessor;
+      return IsTrueSuccessor;
     }
   }
   return false;
