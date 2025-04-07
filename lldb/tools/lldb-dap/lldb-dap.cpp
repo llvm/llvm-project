@@ -44,7 +44,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
-#include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -289,8 +288,7 @@ validateConnection(llvm::StringRef conn) {
 
 static llvm::Error
 serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
-                Log *log, llvm::StringRef program_path,
-                const ReplMode default_repl_mode,
+                Log *log, const ReplMode default_repl_mode,
                 const std::vector<std::string> &pre_init_commands) {
   Status status;
   static std::unique_ptr<Socket> listener = Socket::Create(protocol, status);
@@ -335,8 +333,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                         &dap_sessions]() {
       llvm::set_thread_name(client_name + ".runloop");
       Transport transport(client_name, log, io, io);
-      DAP dap(program_path, log, default_repl_mode, pre_init_commands,
-              transport);
+      DAP dap(log, default_repl_mode, pre_init_commands, transport);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -417,6 +414,7 @@ int main(int argc, char *argv[]) {
 
   llvm::SmallString<256> program_path(argv[0]);
   llvm::sys::fs::make_absolute(program_path);
+  DAP::debug_adapter_path = program_path;
 
   LLDBDAPOptTable T;
   unsigned MAI, MAC;
@@ -553,8 +551,8 @@ int main(int argc, char *argv[]) {
     Socket::SocketProtocol protocol;
     std::string name;
     std::tie(protocol, name) = *maybeProtoclAndName;
-    if (auto Err = serveConnection(protocol, name, log.get(), program_path,
-                                   default_repl_mode, pre_init_commands)) {
+    if (auto Err = serveConnection(protocol, name, log.get(), default_repl_mode,
+                                   pre_init_commands)) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
                                   "Connection failed: ");
       return EXIT_FAILURE;
@@ -589,8 +587,7 @@ int main(int argc, char *argv[]) {
 
   constexpr llvm::StringLiteral client_name = "stdin/stdout";
   Transport transport(client_name, log.get(), input, output);
-  DAP dap(program_path, log.get(), default_repl_mode, pre_init_commands,
-          transport);
+  DAP dap(log.get(), default_repl_mode, pre_init_commands, transport);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {

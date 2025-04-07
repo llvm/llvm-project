@@ -1092,6 +1092,12 @@ enum MatrixScale : unsigned {
   MATRIX_SCALE_ROW0 = 0,
   MATRIX_SCALE_ROW1 = 1,
 };
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
+};
 } // namespace WMMA
 
 namespace VOP3PEncoding {

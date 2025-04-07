@@ -1570,6 +1570,42 @@ void AMDGPUInstPrinter::printMatrixBScale(const MCInst *MI, unsigned OpNo,
   printMatrixScale(MI, OpNo, STI, O, 'b');
 }
 
+void AMDGPUInstPrinter::printMatrixScaleFmt(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O, char AorB) {
+  auto Imm = MI->getOperand(OpNo).getImm() & 3;
+  if (Imm == 0)
+    return;
+
+  O << " matrix_" << AorB << "_scale_fmt:";
+  switch (Imm) {
+  default:
+    O << Imm;
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E8:
+    O << "MATRIX_SCALE_FMT_E8";
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E5M3:
+    O << "MATRIX_SCALE_FMT_E5M3";
+    break;
+  case WMMA::MatrixScaleFmt::MATRIX_SCALE_FMT_E4M3:
+    O << "MATRIX_SCALE_FMT_E4M3";
+    break;
+  }
+}
+
+void AMDGPUInstPrinter::printMatrixAScaleFmt(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  printMatrixScaleFmt(MI, OpNo, STI, O, 'a');
+}
+
+void AMDGPUInstPrinter::printMatrixBScaleFmt(const MCInst *MI, unsigned OpNo,
+                                             const MCSubtargetInfo &STI,
+                                             raw_ostream &O) {
+  printMatrixScaleFmt(MI, OpNo, STI, O, 'b');
+}
+
 void AMDGPUInstPrinter::printInterpSlot(const MCInst *MI, unsigned OpNum,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {

@@ -1060,9 +1060,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::FEXP2, ISD::FLOG2, ISD::FSQRT}, MVT::bf16, Legal);
   }
 
-  if (Subtarget->hasBF16ConversionInsts())
-    setOperationAction(ISD::FP_ROUND, {MVT::bf16, MVT::v2bf16}, Custom);
-
   if (Subtarget->hasCvtPkF16F32Inst()) {
     setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
   }
@@ -7813,16 +7810,17 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
 
-  assert (DstVT.getScalarType() == MVT::bf16 &&
-          "custom lower FP_ROUND for f16 or bf16");
-  assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
+  assert(DstVT.getScalarType() == MVT::bf16 &&
+         "custom lower FP_ROUND for f16 or bf16");
+  assert(Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");
 
   // Round-inexact-to-odd f64 to f32, then do the final rounding using the
   // hardware f32 -> bf16 instruction.
   EVT F32VT = SrcVT.isVector() ? SrcVT.changeVectorElementType(MVT::f32) :
                                  MVT::f32;
   SDValue Rod = expandRoundInexactToOdd(F32VT, Src, DL, DAG);
-  return getFPExtOrFPRound(DAG, Rod, DL, DstVT);
+  return DAG.getNode(ISD::FP_ROUND, DL, DstVT, Rod,
+                     DAG.getTargetConstant(0, DL, MVT::i32));
 }
 
 SDValue SITargetLowering::lowerFMINNUM_FMAXNUM(SDValue Op,

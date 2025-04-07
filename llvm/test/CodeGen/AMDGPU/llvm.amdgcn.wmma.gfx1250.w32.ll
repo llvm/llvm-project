@@ -287,13 +287,13 @@ bb:
 }
 
 define amdgpu_ps void @test_wmma_f32_16x16x32_f16(<16 x half> %A, <16 x half> %B, <8 x float> %C, ptr addrspace(1) %out) {
-; GFX1251-LABEL: test_wmma_f32_16x16x32_f16:
-; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
-; GFX1251-NEXT:    s_clause 0x1
-; GFX1251-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
-; GFX1251-NEXT:    global_store_b128 v[24:25], v[16:19], off
-; GFX1251-NEXT:    s_endpgm
+; GFX1250-LABEL: test_wmma_f32_16x16x32_f16:
+; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[0:7], v[8:15], v[16:23]
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
+; GFX1250-NEXT:    global_store_b128 v[24:25], v[16:19], off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f32_16x16x32_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -309,11 +309,11 @@ bb:
 }
 
 define amdgpu_ps void @test_wmma_f16_16x16x32_f16(<16 x half> %A, <16 x half> %B, <8 x half> %C, ptr addrspace(1) %out) {
-; GFX1251-LABEL: test_wmma_f16_16x16x32_f16:
-; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
-; GFX1251-NEXT:    global_store_b128 v[20:21], v[16:19], off
-; GFX1251-NEXT:    s_endpgm
+; GFX1250-LABEL: test_wmma_f16_16x16x32_f16:
+; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    v_wmma_f16_16x16x32_f16 v[16:19], v[0:7], v[8:15], v[16:19]
+; GFX1250-NEXT:    global_store_b128 v[20:21], v[16:19], off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_wmma_f16_16x16x32_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -365,7 +365,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4(<16 x i32> %A, <16 x
 ; GISEL-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 1, i32 %scale_src0, i32 1, i32 %scale_src1, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 1, i32 0, i32 %scale_src0, i32 1, i32 0, i32 %scale_src1, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -373,7 +373,7 @@ bb:
 define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, i32 inreg %scale_src0, i32 inreg %scale_src1, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_ss:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -381,13 +381,13 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, <1
 ;
 ; GISEL-LABEL: test_wmma_scale_f32_16x16x128_f8f6f4_ss:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, s1 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 2, i32 %scale_src0, i32 1, i32 %scale_src1, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 2, i32 1, i32 %scale_src0, i32 1, i32 2, i32 %scale_src1, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -397,7 +397,7 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_si_scale(<16 x i32> 
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    v_mov_b32_e32 v42, 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GFX1250-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -407,13 +407,13 @@ define amdgpu_ps void @test_wmma_scale_f32_16x16x128_f8f6f4_si_scale(<16 x i32> 
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_mov_b32_e32 v42, 0x64
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GISEL-NEXT:    v_wmma_scale_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s0, v42 matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 3, i32 %scale_src0, i32 0, i32 100, i1 false, i1 true)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 3, i32 2, i32 %scale_src0, i32 0, i32 1, i32 100, i1 false, i1 true)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -435,7 +435,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4(<16 x i32> %A, <16
 ; GISEL-NEXT:    global_store_b128 v[44:45], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 1, i64 %scale_src0, i32 1, i64 %scale_src1, i1 false, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 1, i32 0, i64 %scale_src0, i32 1, i32 0, i64 %scale_src1, i1 false, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -443,7 +443,7 @@ bb:
 define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, i64 inreg %scale_src0, i64 inreg %scale_src1, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_wmma_scale16_f32_16x16x128_f8f6f4_ss:
 ; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_a_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -451,13 +451,13 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_ss(<16 x i32> %A, 
 ;
 ; GISEL-LABEL: test_wmma_scale16_f32_16x16x128_f8f6f4_ss:
 ; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_reuse
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], s[2:3] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_b_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_a_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 2, i64 %scale_src0, i32 1, i64 %scale_src1, i1 true, i1 false)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 2, i32 1, i64 %scale_src0, i32 1, i32 2, i64 %scale_src1, i1 true, i1 false)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -467,7 +467,7 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_si_scale(<16 x i32
 ; GFX1250:       ; %bb.0: ; %bb
 ; GFX1250-NEXT:    v_mov_b64_e32 v[42:43], 0x64
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GFX1250-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
 ; GFX1250-NEXT:    s_clause 0x1
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1250-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -477,13 +477,13 @@ define amdgpu_ps void @test_wmma_scale16_f32_16x16x128_f8f6f4_si_scale(<16 x i32
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    v_mov_b64_e32 v[42:43], 0x64
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_b_reuse
+; GISEL-NEXT:    v_wmma_scale16_f32_16x16x128_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], s[0:1], v[42:43] matrix_a_fmt:MATRIX_FMT_BF8 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_ROW1 matrix_a_scale_fmt:MATRIX_SCALE_FMT_E4M3 matrix_b_scale_fmt:MATRIX_SCALE_FMT_E5M3 matrix_b_reuse
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[32:35], off
 ; GISEL-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GISEL-NEXT:    s_endpgm
 bb:
-  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 3, i64 %scale_src0, i32 0, i64 100, i1 false, i1 true)
+  %res = call <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32 1, <16 x i32> %A, i32 2, <16 x i32> %B, i16 0, <8 x float> %C, i32 3, i32 2, i64 %scale_src0, i32 0, i32 1, i64 100, i1 false, i1 true)
   store <8 x float> %res, ptr addrspace(1) %out
   ret void
 }
@@ -781,14 +781,14 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1251-LABEL: test_swmmac_f32_16x16x64_f16:
-; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32
-; GFX1251-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GFX1251-NEXT:    s_clause 0x1
-; GFX1251-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GFX1251-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1251-NEXT:    s_endpgm
+; GFX1250-LABEL: test_swmmac_f32_16x16x64_f16:
+; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32
+; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-NEXT:    s_clause 0x1
+; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -805,12 +805,12 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1251-LABEL: test_swmmac_f16_16x16x64_f16:
-; GFX1251:       ; %bb.0: ; %bb
-; GFX1251-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28
-; GFX1251-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
-; GFX1251-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GFX1251-NEXT:    s_endpgm
+; GFX1250-LABEL: test_swmmac_f16_16x16x64_f16:
+; GFX1250:       ; %bb.0: ; %bb
+; GFX1250-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28
+; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -841,8 +841,8 @@ declare <8 x i32> @llvm.amdgcn.wmma.i32.16x16x128.iu4.v8i32.v8i32(i1 immarg, <8 
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x32.f16.v8f32.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x float>)
 declare <8 x half> @llvm.amdgcn.wmma.f16.16x16x32.f16.v8f16.v16f16(i1, <16 x half>, i1, <16 x half>, i16, <8 x half>)
 declare <8 x float> @llvm.amdgcn.wmma.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>)
-declare <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i32, i32, i1, i1)
-declare <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i64, i32, i64, i1, i1)
+declare <8 x float> @llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i32, i32, i32, i32, i1, i1)
+declare <8 x float> @llvm.amdgcn.wmma.scale16.f32.16x16x128.f8f6f4.v8f32.v16i32(i32, <16 x i32>, i32, <16 x i32>, i16, <8 x float>, i32, i32, i64, i32, i32, i64, i1, i1)
 
 declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i16(i1, <16 x bfloat>, i1, <32 x bfloat>, <8 x float>, i16)
 declare <8 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v8bf16.v16bf16.v32bf16.i16(i1, <16 x bfloat>, i1, <32 x bfloat>, <8 x bfloat>, i16)
