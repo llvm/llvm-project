@@ -50,7 +50,7 @@ struct CBufferRowIntrin {
       break;
     default:
       llvm_unreachable("Only 16, 32, and 64 bit types supported");
-  }
+    }
   }
 };
 } // namespace
@@ -190,9 +190,7 @@ PreservedAnalyses DXILCBufferAccess::run(Module &M, ModuleAnalysisManager &AM) {
 namespace {
 class DXILCBufferAccessLegacy : public ModulePass {
 public:
-  bool runOnModule(Module &M) override {
-    return replaceCBufferAccesses(M);
-  }
+  bool runOnModule(Module &M) override { return replaceCBufferAccesses(M); }
   StringRef getPassName() const override { return "DXIL CBuffer Access"; }
   DXILCBufferAccessLegacy() : ModulePass(ID) {}
 

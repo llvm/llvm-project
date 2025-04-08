@@ -57,7 +57,6 @@ std::optional<CBufferMetadata> CBufferMetadata::get(Module &M) {
   return Result;
 }
 
-
 void CBufferMetadata::eraseFromModule() {
   // Remove the cbs named metadata
   MD->eraseFromParent();
