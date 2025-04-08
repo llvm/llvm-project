@@ -441,12 +441,11 @@ static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                          mlir::Location beginLoc,
                                          mlir::Location endLoc, mlir::Value ptr,
                                          mlir::Type eltTy, mlir::Value idx,
-                                         bool inbounds, bool shouldDecay) {
+                                         bool shouldDecay) {
   CIRGenModule &cgm = cgf.getCIRGenModule();
   // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
   // that would enhance tracking this later in CIR?
-  if (inbounds)
-    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP() && "NYI");
+  assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
   return cgm.getBuilder().getArrayElement(beginLoc, endLoc, ptr, eltTy, idx,
                                           shouldDecay);
 }
@@ -455,8 +454,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
                                      mlir::Location beginLoc,
                                      mlir::Location endLoc, Address addr,
                                      QualType eltType, mlir::Value idx,
-                                     bool inbounds, mlir::Location loc,
-                                     bool shouldDecay) {
+                                     mlir::Location loc, bool shouldDecay) {
 
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
@@ -475,8 +473,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   if (!index) {
     assert(!cir::MissingFeatures::preservedAccessIndexRegion());
     eltPtr = emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
-                                   addr.getElementType(), idx, inbounds,
-                                   shouldDecay);
+                                   addr.getElementType(), idx, shouldDecay);
   } else {
     cgf.cgm.errorNYI("emitArraySubscriptExpr: Non Constant Index");
   }
@@ -524,8 +521,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
     // Propagate the alignment from the array itself to the result.
     const Address addr = emitArraySubscriptPtr(
         *this, cgm.getLoc(array->getBeginLoc()), cgm.getLoc(array->getEndLoc()),
-        arrayLV.getAddress(), e->getType(), idx,
-        !getLangOpts().isSignedOverflowDefined(), cgm.getLoc(e->getExprLoc()),
+        arrayLV.getAddress(), e->getType(), idx, cgm.getLoc(e->getExprLoc()),
         /*shouldDecay=*/true);
 
     return LValue::makeAddr(addr, e->getType());
