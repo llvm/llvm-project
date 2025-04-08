@@ -179,7 +179,7 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
     if (ReflectArg.empty())
       report_fatal_error("__nvvm_reflect argument cannot be empty");
     // Now that we have extracted the string argument, we can look it up in the
-    // VarMap
+    // ReflectMap
     int ReflectVal = 0; // The default value is 0
     if (ReflectMap.contains(ReflectArg))
       ReflectVal = ReflectMap[ReflectArg];
