@@ -2,7 +2,7 @@
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -xc++ -fmodules -fmodule-name=foo -fmodule-map-file=%t/foo.cppmap -emit-module %t/foo.cppmap -o %t/foo.pcm
-// RUN: %clang_cc1 -xc++ -fmodules -dump-deserialized-declaration-ranges=%t/decls -fmodule-file=%t/foo.pcm %t/foo.cpp -o %t/foo.o
+// RUN: %clang_cc1 -xc++ -fmodules -dump-minimization-hints=%t/decls -fmodule-file=%t/foo.pcm %t/foo.cpp -o %t/foo.o
 // RUN: cat %t/decls
 // RUN: cat %t/decls | FileCheck -check-prefix=RANGE %s
 // RANGE:{
