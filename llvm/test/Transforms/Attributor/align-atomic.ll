@@ -16,7 +16,7 @@ define i32 @atomicrmw_add_no_op(ptr align 4 %ptr, i32 %val) {
 define i32 @atomicrmw_add_propagate(ptr align 8 %ptr, i32 %val) {
 ; CHECK-LABEL: define i32 @atomicrmw_add_propagate(
 ; CHECK-SAME: ptr nofree noundef nonnull align 8 captures(none) dereferenceable(4) [[PTR:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw add ptr [[PTR]], i32 [[VAL]] seq_cst, align 2
+; CHECK-NEXT:    [[RESULT:%.*]] = atomicrmw add ptr [[PTR]], i32 [[VAL]] seq_cst, align 8
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %result = atomicrmw add ptr %ptr, i32 %val seq_cst, align 2
