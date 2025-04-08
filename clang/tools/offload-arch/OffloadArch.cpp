@@ -17,14 +17,21 @@ static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 // Mark all our options with this category.
 static cl::OptionCategory OffloadArchCategory("amdgpu-arch options");
 
-static cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
-                             cl::init(false), cl::cat(OffloadArchCategory));
+enum VendorName {
+  all,
+  amdgpu,
+  nvptx,
+};
 
-static cl::opt<bool> AMDGPU("amdgpu-only", cl::desc("Print only AMD GPUs"),
-                            cl::init(false), cl::cat(OffloadArchCategory));
+static cl::opt<VendorName>
+    Only("only", cl::desc("Restrict to vendor:"), cl::cat(OffloadArchCategory),
+         cl::init(all),
+         cl::values(clEnumVal(all, "Print all GPUs (default)"),
+                    clEnumVal(amdgpu, "Only print AMD GPUs"),
+                    clEnumVal(nvptx, "Only print NVIDIA GPUs")));
 
-static cl::opt<bool> NVPTX("nvptx-only", cl::desc("Print only NVIDIA GPUs"),
-                           cl::init(false), cl::cat(OffloadArchCategory));
+cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
+                      cl::init(false), cl::cat(OffloadArchCategory));
 
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("offload-arch") << '\n';
@@ -62,9 +69,10 @@ int main(int argc, char *argv[]) {
   }
 
   // If this was invoked from the legacy symlinks provide the same behavior.
-  bool AMDGPUOnly =
-      AMDGPU || sys::path::stem(argv[0]).starts_with("amdgpu-arch");
-  bool NVIDIAOnly = NVPTX || sys::path::stem(argv[0]).starts_with("nvptx-arch");
+  bool AMDGPUOnly = Only == VendorName::amdgpu ||
+                    sys::path::stem(argv[0]).starts_with("amdgpu-arch");
+  bool NVIDIAOnly = Only == VendorName::nvptx ||
+                    sys::path::stem(argv[0]).starts_with("nvptx-arch");
 
   int NVIDIAResult = 0;
   if (!AMDGPUOnly)
