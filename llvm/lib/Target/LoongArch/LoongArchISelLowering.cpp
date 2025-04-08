@@ -1614,6 +1614,10 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   SmallVector<int> NewMask(Mask);
   canonicalizeShuffleVectorByLane(DL, NewMask, VT, V1, V2, DAG);
 
+  APInt KnownUndef, KnownZero;
+  computeZeroableShuffleElements(NewMask, V1, V2, KnownUndef, KnownZero);
+  APInt Zeroable = KnownUndef | KnownZero;
+
   SDValue Result;
   // TODO: Add more comparison patterns.
   if (V2.isUndef()) {
@@ -1640,6 +1644,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKEV(DL, NewMask, VT, V1, V2, DAG)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVPICKOD(DL, NewMask, VT, V1, V2, DAG)))
+    return Result;
+  if ((Result =
+           lowerVECTOR_SHUFFLEAsShift(DL, NewMask, VT, V1, V2, DAG, Zeroable)))
     return Result;
   if ((Result = lowerVECTOR_SHUFFLE_XVSHUF(DL, NewMask, VT, V1, V2, DAG)))
     return Result;

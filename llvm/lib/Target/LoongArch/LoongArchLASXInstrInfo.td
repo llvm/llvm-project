@@ -1187,7 +1187,7 @@ multiclass PatShiftXrXr<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, LASX256:$xk)>;
 }
 
-multiclass PatShiftXrUimm<SDPatternOperator OpNode, string Inst> {
+multiclass PatShiftXrSplatUimm<SDPatternOperator OpNode, string Inst> {
   def : Pat<(OpNode (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm3 uimm3:$imm))),
             (!cast<LAInst>(Inst#"_B") LASX256:$xj, uimm3:$imm)>;
   def : Pat<(OpNode (v16i16 LASX256:$xj), (v16i16 (SplatPat_uimm4 uimm4:$imm))),
@@ -1196,6 +1196,17 @@ multiclass PatShiftXrUimm<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_W") LASX256:$xj, uimm5:$imm)>;
   def : Pat<(OpNode (v4i64 LASX256:$xj), (v4i64 (SplatPat_uimm6 uimm6:$imm))),
             (!cast<LAInst>(Inst#"_D") LASX256:$xj, uimm6:$imm)>;
+}
+
+multiclass PatShiftXrUimm<SDPatternOperator OpNode, string Inst> {
+  def : Pat<(OpNode(v32i8 LASX256:$vj), uimm3:$imm),
+            (!cast<LAInst>(Inst#"_B") LASX256:$vj, uimm3:$imm)>;
+  def : Pat<(OpNode(v16i16 LASX256:$vj), uimm4:$imm),
+            (!cast<LAInst>(Inst#"_H") LASX256:$vj, uimm4:$imm)>;
+  def : Pat<(OpNode(v8i32 LASX256:$vj), uimm5:$imm),
+            (!cast<LAInst>(Inst#"_W") LASX256:$vj, uimm5:$imm)>;
+  def : Pat<(OpNode(v4i64 LASX256:$vj), uimm6:$imm),
+            (!cast<LAInst>(Inst#"_D") LASX256:$vj, uimm6:$imm)>;
 }
 
 multiclass PatCCXrSimm5<CondCode CC, string Inst> {
@@ -1335,20 +1346,32 @@ def : Pat<(or (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
 def : Pat<(xor (v32i8 LASX256:$xj), (v32i8 (SplatPat_uimm8 uimm8:$imm))),
           (XVXORI_B LASX256:$xj, uimm8:$imm)>;
 
+// XVBSLL_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32,
+              v4f64] in def : Pat<(loongarch_vbsll(vt LASX256:$xj), uimm5:$imm),
+                                  (XVBSLL_V LASX256:$xj, uimm5:$imm)>;
+
+// XVBSRL_V
+foreach vt = [v32i8, v16i16, v8i32, v4i64, v8f32,
+              v4f64] in def : Pat<(loongarch_vbsrl(vt LASX256:$xj), uimm5:$imm),
+                                  (XVBSRL_V LASX256:$xj, uimm5:$imm)>;
+
 // XVSLL[I]_{B/H/W/D}
 defm : PatXrXr<shl, "XVSLL">;
 defm : PatShiftXrXr<shl, "XVSLL">;
-defm : PatShiftXrUimm<shl, "XVSLLI">;
+defm : PatShiftXrSplatUimm<shl, "XVSLLI">;
+defm : PatShiftXrUimm<loongarch_vslli, "XVSLLI">;
 
 // XVSRL[I]_{B/H/W/D}
 defm : PatXrXr<srl, "XVSRL">;
 defm : PatShiftXrXr<srl, "XVSRL">;
-defm : PatShiftXrUimm<srl, "XVSRLI">;
+defm : PatShiftXrSplatUimm<srl, "XVSRLI">;
+defm : PatShiftXrUimm<loongarch_vsrli, "XVSRLI">;
 
 // XVSRA[I]_{B/H/W/D}
 defm : PatXrXr<sra, "XVSRA">;
 defm : PatShiftXrXr<sra, "XVSRA">;
-defm : PatShiftXrUimm<sra, "XVSRAI">;
+defm : PatShiftXrSplatUimm<sra, "XVSRAI">;
 
 // XVCLZ_{B/H/W/D}
 defm : PatXr<ctlz, "XVCLZ">;
