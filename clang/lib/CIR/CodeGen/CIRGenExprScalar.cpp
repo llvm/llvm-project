@@ -161,6 +161,11 @@ public:
     return VisitCastExpr(e);
   }
 
+  mlir::Value VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *e) {
+    return cgf.cgm.emitNullConstant(e->getType(),
+                                    cgf.getLoc(e->getSourceRange()));
+  }
+
   /// Perform a pointer to boolean conversion.
   mlir::Value emitPointerToBoolConversion(mlir::Value v, QualType qt) {
     // TODO(cir): comparing the ptr to null is done when lowering CIR to LLVM.
@@ -442,6 +447,22 @@ public:
       return {};
     }
     llvm_unreachable("Unexpected signed overflow behavior kind");
+  }
+
+  mlir::Value VisitUnaryAddrOf(const UnaryOperator *e) {
+    if (llvm::isa<MemberPointerType>(e->getType())) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Address of member pointer");
+      return builder.getNullPtr(cgf.convertType(e->getType()),
+                                cgf.getLoc(e->getExprLoc()));
+    }
+
+    return cgf.emitLValue(e->getSubExpr()).getPointer();
+  }
+
+  mlir::Value VisitUnaryDeref(const UnaryOperator *e) {
+    if (e->getType()->isVoidType())
+      return Visit(e->getSubExpr()); // the actual value should be unused
+    return emitLoadOfLValue(e);
   }
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
@@ -937,9 +958,11 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
 }
 
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
-  // If a null pointer expression's type is the C++0x nullptr_t, then
-  // it's not necessarily a simple constant and it must be evaluated
+  // If a null pointer expression's type is the C++0x nullptr_t and
+  // the expression is not a simple literal, it must be evaluated
   // for its potential side effects.
+  if (isa<IntegerLiteral>(e) || isa<CXXNullPtrLiteralExpr>(e))
+    return false;
   return e->getType()->isNullPtrType();
 }
 

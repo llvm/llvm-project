@@ -222,6 +222,17 @@ public:
     // TODO: Add symbol table support
   }
 
+  /// Construct an address with the natural alignment of T. If a pointer to T
+  /// is expected to be signed, the pointer passed to this function must have
+  /// been signed, and the returned Address will have the pointer authentication
+  /// information needed to authenticate the signed pointer.
+  Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
+                                       CharUnits alignment) {
+    if (alignment.isZero())
+      alignment = cgm.getNaturalTypeAlignment(t);
+    return Address(ptr, convertTypeForMem(t), alignment);
+  }
+
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -467,6 +478,18 @@ public:
   /// of the expression.
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
+
+  /// Given an expression with a pointer type, emit the value and compute our
+  /// best estimate of the alignment of the pointee.
+  ///
+  /// One reasonable way to use this information is when there's a language
+  /// guarantee that the pointer must be aligned to some stricter value, and
+  /// we're simply trying to ensure that sufficiently obvious uses of under-
+  /// aligned objects don't get miscompiled; for example, a placement new
+  /// into the address of a local variable.  In such a case, it's quite
+  /// reasonable to just ignore the returned alignment when it isn't from an
+  /// explicit source.
+  Address emitPointerWithAlignment(const clang::Expr *expr);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
