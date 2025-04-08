@@ -58,7 +58,6 @@ void initializeNVVMReflectLegacyPassPass(PassRegistry &);
 
 namespace {
 class NVVMReflect {
-private:
   // Map from reflect function call arguments to the value to replace the call
   // with. Should include __CUDA_FTZ and __CUDA_ARCH values.
   StringMap<int> ReflectMap;
@@ -73,11 +72,8 @@ public:
       : ReflectMap({{CUDA_ARCH_NAME, SmVersion * 10}}) {}
   bool runOnModule(Module &M);
 };
-} // namespace
 
-namespace {
 class NVVMReflectLegacyPass : public ModulePass {
-private:
   NVVMReflect Impl;
 
 public:
@@ -122,15 +118,15 @@ void NVVMReflect::populateReflectMap(Module &M) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
     auto [Name, Val] = Option.split('=');
     if (Name.empty())
-      report_fatal_error("Empty name in nvvm-reflect-list option '" + Option +
+      report_fatal_error("Empty name in nvvm-reflect-add option '" + Option +
                          "'");
     if (Val.empty())
-      report_fatal_error("Missing value in nvvm-reflect- option '" + Option +
+      report_fatal_error("Missing value in nvvm-reflect-add option '" + Option +
                          "'");
     int ValInt;
     if (!to_integer(Val.trim(), ValInt, 10))
       report_fatal_error(
-          "integer value expected in nvvm-reflect-list option '" + Option +
+          "integer value expected in nvvm-reflect-add option '" + Option +
           "'");
     ReflectMap[Name] = ValInt;
   }
@@ -154,10 +150,10 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
     // c"__CUDA_ARCH\00" call i32 @__nvvm_reflect(ptr addrspacecast (ptr
     // addrspace(1) @arch to ptr)) We need to extract the string argument from
     // the call (i.e. "__CUDA_ARCH")
-    if (!isa<CallInst>(U))
+    CallInst *Call = dyn_cast<CallInst>(U);
+    if (!Call)
       report_fatal_error(
           "__nvvm_reflect can only be used in a call instruction");
-    CallInst *Call = cast<CallInst>(U);
     if (Call->getNumOperands() != 2)
       report_fatal_error("__nvvm_reflect requires exactly one argument");
 
@@ -173,9 +169,7 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
           "__nvvm_reflect argument must be a null-terminated string");
 
     StringRef ReflectArg =
-        cast<ConstantDataSequential>(ConstantStr)->getAsString();
-    // Remove the null terminator from the string
-    ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
+        cast<ConstantDataSequential>(ConstantStr)->getAsString().drop_back();
     if (ReflectArg.empty())
       report_fatal_error("__nvvm_reflect argument cannot be empty");
     // Now that we have extracted the string argument, we can look it up in the
@@ -202,19 +196,18 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
   // Replace an instruction with a constant and add all users of the instruction
   // to the worklist
   auto ReplaceInstructionWithConst = [&](Instruction *I, Constant *C) {
-    for (User *U : I->users()) {
+    for (User *U : I->users())
       if (Instruction *UI = dyn_cast<Instruction>(U))
         Worklist.push_back(UI);
-    }
     I->replaceAllUsesWith(C);
   };
 
   ReplaceInstructionWithConst(Call, NewValue);
 
+  auto DL = Call->getModule()->getDataLayout();
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (Constant *C =
-            ConstantFoldInstruction(I, Call->getModule()->getDataLayout())) {
+    if (Constant *C = ConstantFoldInstruction(I, DL)) {
       ReplaceInstructionWithConst(I, C);
       if (isInstructionTriviallyDead(I))
         I->eraseFromParent();
