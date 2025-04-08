@@ -2908,9 +2908,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   PriorityAdvisor = PriorityProvider->getAdvisor(*MF, *this, *Indexes);
 
   VRAI = std::make_unique<VirtRegAuxInfo>(*MF, *LIS, *VRM, *Loops, *MBFI);
-  SpillerInstance.reset(
-      createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF, *VRM, *VRAI,
-                          Matrix));
+  SpillerInstance.reset(createInlineSpiller({*LIS, *LSS, *DomTree, *MBFI}, *MF,
+                                            *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
 
