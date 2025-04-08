@@ -523,17 +523,6 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                                                  var_sp, error);
 }
 
-ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
-    llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error, bool use_DIL) {
-  if (use_DIL)
-    return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                var_sp, error);
-
-  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                 var_sp, error);
-}
-
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
