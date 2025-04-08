@@ -1240,6 +1240,7 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
            AArch64::ZPRRegClass.contains(MOp1.getReg()) && "Invalid register.");
     MOp0.setReg(AArch64::Q0 + (MOp0.getReg() - AArch64::Z0));
     MOp1.setReg(AArch64::Q0 + (MOp1.getReg() - AArch64::Z0));
+    LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   } else {
     LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   }

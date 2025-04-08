@@ -2921,8 +2921,9 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
     break;
   case AArch64::LDR_ZXI:
   case AArch64::STR_ZXI:
-    return Subtarget.isLittleEndian() &&
-           Subtarget.getSVEVectorSizeInBits() == 128;
+    if (!Subtarget.isLittleEndian() ||
+        Subtarget.getSVEVectorSizeInBits() != 128)
+      return false;
   }
 
   // Check if this load/store has a hint to avoid pair formation.
