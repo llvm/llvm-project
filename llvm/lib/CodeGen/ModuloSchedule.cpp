@@ -2566,7 +2566,8 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
 
   // The interval of OrigReg has been modified and should be recalculated when
   // LiveInterval::getInterval() is called.
-  LIS.removeInterval(OrigReg);
+  if (LIS.hasInterval(OrigReg))
+    LIS.removeInterval(OrigReg);
 }
 
 void ModuloScheduleExpanderMVE::generateProlog(
