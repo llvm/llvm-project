@@ -23,7 +23,7 @@ void acc_serial(void) {
   // CHECK-NEXT: }
   // cir.scope end:
   // CHECK-NEXT: }
-  // CHECK-NEXT:acc.terminator
+  // CHECK-NEXT:acc.yield
   // CHECK-NEXT:}
 
   // CHECK-NEXT: cir.return
