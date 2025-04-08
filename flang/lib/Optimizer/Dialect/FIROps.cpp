@@ -859,8 +859,7 @@ void fir::ArrayLoadOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -951,8 +950,7 @@ void fir::ArrayMergeStoreOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Write::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -2665,8 +2663,7 @@ void fir::LoadOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
