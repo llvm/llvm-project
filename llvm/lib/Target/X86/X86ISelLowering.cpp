@@ -51899,42 +51899,16 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     if (sd_match(N, m_Or(m_Shl(m_Value(B), m_ConstInt(ShlConst)),
                          m_And(m_Value(A), m_ConstInt(MaskConst))))) {
       uint64_t ShiftValue = ShlConst.getZExtValue();
-      // Check if the mask is a valid bit mask of the given shift value and both
-      // inputs come from registers
-      if (MaskConst.isMask(ShiftValue) && (A.getOpcode() == ISD::CopyFromReg) &&
-          (B.getOpcode() == ISD::CopyFromReg)) {
+      // Check if the mask is a valid bit mask of the given shift value
+      if (MaskConst.isMask(ShiftValue)) {
         unsigned NumBits = B.getScalarValueSizeInBits();
         unsigned NewShift = NumBits - ShiftValue;
-        // Prefers `LEA` instead of `SHL` for power-of-2 shifts, so only
-        // transform non-power-of-2 shifts
-        if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
-            ShiftValue != 32 && ShiftValue != 64) {
-          SDValue NewSHL =
-              DAG.getNode(ISD::SHL, dl, VT, A,
-                          DAG.getShiftAmountConstant(NewShift, VT, dl));
-          SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
-                                  DAG.getShiftAmountConstant(NewShift, VT, dl));
-          return R;
-        }
-      }
 
-      // Handle the case where A and B are truncated values from registers
-      if (MaskConst.isMask(ShiftValue) &&
-          (A.getOpcode() == ISD::TRUNCATE &&
-           A.getOperand(0).getOpcode() == ISD::CopyFromReg) &&
-          (B.getOpcode() == ISD::TRUNCATE &&
-           B.getOperand(0).getOpcode() == ISD::CopyFromReg)) {
-        unsigned NumBits = B.getScalarValueSizeInBits();
-        unsigned NewShift = NumBits - ShiftValue;
-        if (ShiftValue > 4 && ShiftValue != 8 && ShiftValue != 16 &&
-            ShiftValue != 32 && ShiftValue != 64) {
-          SDValue NewSHL =
-              DAG.getNode(ISD::SHL, dl, VT, A,
-                          DAG.getShiftAmountConstant(NewShift, VT, dl));
-          SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
-                                  DAG.getShiftAmountConstant(NewShift, VT, dl));
-          return R;
-        }
+        SDValue NewSHL = DAG.getNode(
+            ISD::SHL, dl, VT, A, DAG.getShiftAmountConstant(NewShift, VT, dl));
+        SDValue R = DAG.getNode(ISD::FSHR, dl, VT, B, NewSHL,
+                                DAG.getShiftAmountConstant(NewShift, VT, dl));
+        return R;
       }
     }
   }
