@@ -1705,6 +1705,65 @@ def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
   let hasVerifier = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// IndirectBrOp
+//===----------------------------------------------------------------------===//
+
+def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
+    [SameVariadicOperandSize, DeclareOpInterfaceMethods<BranchOpInterface>,
+     Pure]> {
+  let description = [{
+    Transfer control flow to address in `$addr`. A list of possible target
+    blocks in `$successors` can be provided and maybe used as a hint in LLVM:
+
+    ```mlir
+    ...
+    llvm.func @g(...
+      %dest = llvm.blockaddress <function = @g, tag = <id = 0>> : !llvm.ptr
+      llvm.indirectbr %dest : !llvm.ptr, [
+        ^head
+      ]
+    ^head:
+      llvm.blocktag <id = 0>
+      llvm.return %arg0 : i32
+      ...
+    ```
+
+    It also supports a list of operands that can be passed to a target block:
+
+    ```mlir
+      llvm.indirectbr %dest : !llvm.ptr, [
+      ^head(%arg0 : i32),
+      ^tail(%arg1 : i32)
+      ]
+    ^head(%r0 : i32):
+      llvm.return %r0 : i32
+    ^tail(%r1 : i32):
+      llvm.return %r1 : i32
+
+    ```
+  }];
+  let arguments = (ins LLVM_AnyPointer:$addr,
+    VariadicOfVariadic<AnyType, "indbr_operand_segments">:$succOperands,
+    DenseI32ArrayAttr:$indbr_operand_segments
+  );
+  let successors = (successor VariadicSuccessor<AnySuccessor>:$successors);
+  let assemblyFormat = [{
+    $addr `:` type($addr) `,`
+      custom<IndirectBrOpSucessors>(ref(type($addr)),
+                                    $successors,
+                                    $succOperands,
+                                    type($succOperands))
+    attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "Value":$addr,
+      CArg<"BlockRange", "{}">:$successors,
+      CArg<"ArrayRef<ValueRange>", "{}">:$succOperands)>
+  ];
+}
+
 def LLVM_ComdatSelectorOp : LLVM_Op<"comdat_selector", [Symbol]> {
   let arguments = (ins
     SymbolNameAttr:$sym_name,
