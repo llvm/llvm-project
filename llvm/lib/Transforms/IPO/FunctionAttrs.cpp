@@ -319,8 +319,8 @@ static FunctionSummary *calculatePrevailingSummary(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
 
-  if (auto It = CachedPrevailingSummary.find(VI);
-      It != CachedPrevailingSummary.end())
+  auto [It, Inserted] = CachedPrevailingSummary.try_emplace(VI);
+  if (!Inserted)
     return It->second;
 
   /// At this point, prevailing symbols have been resolved. The following leads
@@ -363,7 +363,6 @@ static FunctionSummary *calculatePrevailingSummary(
   ///      future this can be revisited.
   ///   5. Otherwise, go conservative.
 
-  CachedPrevailingSummary[VI] = nullptr;
   FunctionSummary *Local = nullptr;
   FunctionSummary *Prevailing = nullptr;
 
@@ -764,12 +763,12 @@ ArgumentUsesSummary collectArgumentUsesPerBlock(Argument &A, Function &F) {
   auto UpdateUseInfo = [&Result](Instruction *I, ArgumentAccessInfo Info) {
     auto *BB = I->getParent();
     auto &BBInfo = Result.UsesPerBlock[BB];
-    bool AlreadyVisitedInst = BBInfo.Insts.contains(I);
-    auto &IInfo = BBInfo.Insts[I];
+    auto [It, Inserted] = BBInfo.Insts.try_emplace(I);
+    auto &IInfo = It->second;
 
     // Instructions that have more than one use of the argument are considered
     // as clobbers.
-    if (AlreadyVisitedInst) {
+    if (!Inserted) {
       IInfo = {ArgumentAccessInfo::AccessType::Unknown, {}};
       BBInfo.HasUnknownAccess = true;
       return false;
@@ -1468,8 +1467,7 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
       }
       case Instruction::PHI: {
         PHINode *PN = cast<PHINode>(RVI);
-        for (Value *IncValue : PN->incoming_values())
-          FlowsToReturn.insert(IncValue);
+        FlowsToReturn.insert_range(PN->incoming_values());
         continue;
       }
 

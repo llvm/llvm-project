@@ -61,6 +61,17 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+
+  /// This node is similar to ISD::BUILD_VECTOR except that the output may be
+  /// implicitly bitcast to a scalar. This allows for the representation of
+  /// packing move instructions for vector types which are not legal i.e. v2i32
+  BUILD_VECTOR,
+
+  /// This node is the inverse of NVPTX::BUILD_VECTOR. It takes a single value
+  /// which may be a scalar and unpacks it into multiple values by implicitly
+  /// converting it to a vector.
+  UNPACK_VECTOR,
+
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   STACKRESTORE,

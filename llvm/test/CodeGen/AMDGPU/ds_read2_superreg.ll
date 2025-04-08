@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt,-enable-ds128 < %s | FileCheck --check-prefix=CI %s
 
-@lds = addrspace(3) global [512 x float] undef, align 4
-@lds.v2 = addrspace(3) global [512 x <2 x float>] undef, align 4
-@lds.v3 = addrspace(3) global [512 x <3 x float>] undef, align 4
-@lds.v4 = addrspace(3) global [512 x <4 x float>] undef, align 4
-@lds.v8 = addrspace(3) global [512 x <8 x float>] undef, align 4
-@lds.v16 = addrspace(3) global [512 x <16 x float>] undef, align 4
+@lds = addrspace(3) global [512 x float] poison, align 4
+@lds.v2 = addrspace(3) global [512 x <2 x float>] poison, align 4
+@lds.v3 = addrspace(3) global [512 x <3 x float>] poison, align 4
+@lds.v4 = addrspace(3) global [512 x <4 x float>] poison, align 4
+@lds.v8 = addrspace(3) global [512 x <8 x float>] poison, align 4
+@lds.v16 = addrspace(3) global [512 x <16 x float>] poison, align 4
 
 ; CI-LABEL: {{^}}simple_read2_v2f32_superreg_align4:
 ; CI: ds_read2_b32 [[RESULT:v\[[0-9]+:[0-9]+\]]], v{{[0-9]+}} offset1:1{{$}}

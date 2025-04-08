@@ -35,10 +35,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVPrepareFunctionsPass(PassRegistry &);
-}
-
 namespace {
 
 class SPIRVPrepareFunctions : public ModulePass {
@@ -48,9 +44,8 @@ class SPIRVPrepareFunctions : public ModulePass {
 
 public:
   static char ID;
-  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM) : ModulePass(ID), TM(TM) {
-    initializeSPIRVPrepareFunctionsPass(*PassRegistry::getPassRegistry());
-  }
+  SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
+      : ModulePass(ID), TM(TM) {}
 
   bool runOnModule(Module &M) override;
 
@@ -68,7 +63,7 @@ char SPIRVPrepareFunctions::ID = 0;
 INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
                 "SPIRV prepare functions", false, false)
 
-std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
+static std::string lowerLLVMIntrinsicName(IntrinsicInst *II) {
   Function *IntrinsicFunc = II->getCalledFunction();
   assert(IntrinsicFunc && "Missing function");
   std::string FuncName = IntrinsicFunc->getName().str();

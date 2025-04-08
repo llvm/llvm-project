@@ -388,12 +388,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, 1.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v9, v[0:1]
 ; GFX12-GISEL-NEXT:    flat_load_b32 v10, v[2:3]
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -421,7 +421,7 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -536,12 +536,12 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    s_mov_b32 s0, 0
 ; GFX12-GISEL-NEXT:    s_mov_b32 s1, 1.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v4
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v2, vcc_lo, v2, v4
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, 0, v3, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v6, v[0:1]
 ; GFX12-GISEL-NEXT:    flat_load_b32 v7, v[2:3]
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -569,7 +569,7 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -704,9 +704,9 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v5, s10 :: v_dual_mov_b32 v0, s6
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v11, v[0:1]
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -730,7 +730,7 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 
@@ -854,9 +854,9 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
 ; GFX12-GISEL-NEXT:    s_mov_b32 s6, 2.0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX12-GISEL-NEXT:    flat_load_b32 v8, v[0:1]
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s4 :: v_dual_mov_b32 v1, s5
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffe
@@ -880,7 +880,7 @@ main_body:
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
-  store <4 x i32> %v, ptr undef
+  store <4 x i32> %v, ptr poison
   ret void
 }
 

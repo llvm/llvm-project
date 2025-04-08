@@ -5753,7 +5753,7 @@ define float @v_log_f32_undef() {
 ; CM:       ; %bb.0:
 ; CM-NEXT:    CF_END
 ; CM-NEXT:    PAD
-  %result = call float @llvm.log.f32(float undef)
+  %result = call float @llvm.log.f32(float poison)
   ret float %result
 }
 

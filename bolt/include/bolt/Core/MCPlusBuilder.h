@@ -473,7 +473,7 @@ public:
   ///
   /// For X86, they might be used in scanExternalRefs when we want to skip
   /// a function but still patch references inside it.
-  virtual bool shouldRecordCodeRelocation(uint64_t RelType) const {
+  virtual bool shouldRecordCodeRelocation(uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -551,6 +551,16 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  /// Returns the registers that are trusted at function entry.
+  ///
+  /// Each register should be treated as if a successfully authenticated
+  /// pointer was written to it before entering the function (i.e. the
+  /// pointer is safe to jump to as well as to be signed).
+  virtual SmallVector<MCPhysReg> getTrustedLiveInRegs() const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
   virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
@@ -563,6 +573,16 @@ public:
   }
 
   virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  /// Returns the register used as call destination, or no-register, if not
+  /// an indirect call. Sets IsAuthenticatedInternally if the instruction
+  /// accepts a signed pointer as its operand and authenticates it internally.
+  virtual MCPhysReg
+  getRegUsedAsCallDest(const MCInst &Inst,
+                       bool &IsAuthenticatedInternally) const {
     llvm_unreachable("not implemented");
     return getNoRegister();
   }
@@ -633,6 +653,16 @@ public:
   }
 
   virtual bool isADR(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isAddXri(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual bool isMOVW(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1074,7 +1104,7 @@ public:
   /// MCExpr referencing \p Symbol + \p Addend.
   virtual bool setOperandToSymbolRef(MCInst &Inst, int OpNum,
                                      const MCSymbol *Symbol, int64_t Addend,
-                                     MCContext *Ctx, uint64_t RelType) const;
+                                     MCContext *Ctx, uint32_t RelType) const;
 
   /// Replace an immediate operand in the instruction \p Inst with a reference
   /// of the passed \p Symbol plus \p Addend. If the instruction does not have
@@ -1082,7 +1112,7 @@ public:
   /// return true.
   virtual bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                        int64_t Addend, MCContext *Ctx,
-                                       int64_t &Value, uint64_t RelType) const {
+                                       int64_t &Value, uint32_t RelType) const {
     llvm_unreachable("not implemented");
     return false;
   }
@@ -1244,9 +1274,16 @@ public:
     return nullptr;
   }
 
-  /// Return MCSymbol extracted from a target expression
+  /// Return MCSymbol extracted from the expression.
   virtual const MCSymbol *getTargetSymbol(const MCExpr *Expr) const {
-    return &cast<const MCSymbolRefExpr>(Expr)->getSymbol();
+    if (auto *BinaryExpr = dyn_cast<const MCBinaryExpr>(Expr))
+      return getTargetSymbol(BinaryExpr->getLHS());
+
+    auto *SymbolRefExpr = dyn_cast<const MCSymbolRefExpr>(Expr);
+    if (SymbolRefExpr && SymbolRefExpr->getKind() == MCSymbolRefExpr::VK_None)
+      return &SymbolRefExpr->getSymbol();
+
+    return nullptr;
   }
 
   /// Return addend that represents an offset from MCSymbol target
@@ -1287,7 +1324,7 @@ public:
   /// Return the MCExpr used for absolute references in this target
   virtual const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                          MCContext &Ctx,
-                                         uint64_t RelType) const {
+                                         uint32_t RelType) const {
     return Expr;
   }
 
@@ -1710,6 +1747,15 @@ public:
   virtual InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
                                           const MCSymbol *Target,
                                           MCContext *Ctx) const {
+    llvm_unreachable("not implemented");
+    return {};
+  }
+
+  /// Create a sequence of instructions to compare contents of a register
+  /// \p RegNo to immediate \Imm and jump to \p Target if they are different.
+  virtual InstructionListType createCmpJNE(MCPhysReg RegNo, int64_t Imm,
+                                           const MCSymbol *Target,
+                                           MCContext *Ctx) const {
     llvm_unreachable("not implemented");
     return {};
   }

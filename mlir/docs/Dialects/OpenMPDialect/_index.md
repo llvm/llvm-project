@@ -372,6 +372,8 @@ accessed:
   should be located.
   - `get<ClauseName>BlockArgs()`: Returns the list of entry block arguments
   defined by the given clause.
+  - `numClauseBlockArgs()`: Returns the total number of entry block arguments
+  defined by all clauses.
   - `getBlockArgsPairs()`: Returns a list of pairs where the first element is
   the outside value, or operand, and the second element is the corresponding
   entry block argument.

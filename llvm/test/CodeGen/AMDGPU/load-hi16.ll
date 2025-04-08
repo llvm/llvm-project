@@ -330,7 +330,7 @@ entry:
   %load = load i16, ptr addrspace(3) %in
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -461,7 +461,7 @@ entry:
   %load = load half, ptr addrspace(3) %in
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -511,7 +511,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -561,7 +561,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -613,7 +613,7 @@ entry:
 
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -665,7 +665,7 @@ entry:
 
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -716,7 +716,7 @@ entry:
   %load = load i16, ptr addrspace(1) %gep
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -767,7 +767,7 @@ entry:
   %load = load half, ptr addrspace(1) %gep
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -819,7 +819,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -871,7 +871,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -924,7 +924,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -977,7 +977,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1025,7 +1025,7 @@ entry:
   %load = load i16, ptr %in
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1073,7 +1073,7 @@ entry:
   %load = load half, ptr %in
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1122,7 +1122,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1171,7 +1171,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1221,7 +1221,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1271,7 +1271,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1320,7 +1320,7 @@ entry:
   %load = load i16, ptr addrspace(5) %gep
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1369,7 +1369,7 @@ entry:
   %load = load half, ptr addrspace(5) %gep
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1418,7 +1418,7 @@ entry:
   %load = load volatile i16, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1467,7 +1467,7 @@ entry:
   %load = load volatile half, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1517,7 +1517,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1568,7 +1568,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1619,7 +1619,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1669,7 +1669,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1719,7 +1719,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1769,7 +1769,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1820,7 +1820,7 @@ entry:
   %bc.ext = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bc.ext, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1871,7 +1871,7 @@ entry:
   %load = load i16, ptr addrspace(4) %gep
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1922,7 +1922,7 @@ entry:
   %load = load half, ptr addrspace(4) %gep
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -1975,7 +1975,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -2028,7 +2028,7 @@ entry:
   %bitcast = bitcast i16 %ext to half
   %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
-  store <2 x half> %build1, ptr addrspace(1) undef
+  store <2 x half> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -2094,7 +2094,7 @@ entry:
   %load = load i16, ptr addrspace(5) %gep
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -2158,7 +2158,7 @@ entry:
   %ext = sext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 
@@ -2222,7 +2222,7 @@ entry:
   %ext = zext i8 %load to i16
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }
 

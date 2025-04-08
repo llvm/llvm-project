@@ -137,11 +137,19 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
     !foreach(clause, clauses, clause.blockArgsMethod),
     [
       InterfaceMethod<
+        "Get the total number of clause-defined entry block arguments",
+        "unsigned", "numClauseBlockArgs", (ins),
+        "return " # !interleave(
+          !foreach(clause, clauses, "$_op." # clause.numArgsMethod.name # "()"),
+          " + ") # ";"
+      >,
+      InterfaceMethod<
         "Populate a vector of pairs representing the matching between operands "
         "and entry block arguments.", "void", "getBlockArgsPairs",
         (ins "::llvm::SmallVectorImpl<std::pair<::mlir::Value, ::mlir::BlockArgument>> &" : $pairs),
         [{
           auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+          pairs.reserve(pairs.size() + iface.numClauseBlockArgs());
         }] # !interleave(!foreach(clause, clauses, [{
         }] # "if (iface." # clause.numArgsMethod.name # "() > 0) {" # [{
         }] # "  for (auto [var, arg] : ::llvm::zip_equal(" #
@@ -155,11 +163,7 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
 
   let verify = [{
     auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>($_op);
-  }] # "unsigned expectedArgs = "
-     # !interleave(
-         !foreach(clause, clauses, "iface." # clause.numArgsMethod.name # "()"),
-         " + "
-       ) # ";" # [{
+    unsigned expectedArgs = iface.numClauseBlockArgs();
     if ($_op->getRegion(0).getNumArguments() < expectedArgs)
       return $_op->emitOpError() << "expected at least " << expectedArgs
                                  << " entry block argument(s)";
@@ -208,22 +212,6 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
       (ins "::mlir::Value":$map), [{
          return std::distance($_op.getMapVars().begin(),
                               llvm::find($_op.getMapVars(), map));
-      }]>,
-  ];
-}
-
-def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
-  let description = [{
-    OpenMP operations that support reduction clause have this interface.
-  }];
-
-  let cppNamespace = "::mlir::omp";
-
-  let methods = [
-    InterfaceMethod<
-      "Get reduction vars", "::mlir::SmallVector<::mlir::Value>",
-      "getAllReductionVars", (ins), [{}], [{
-        return $_op.getReductionVars();
       }]>,
   ];
 }

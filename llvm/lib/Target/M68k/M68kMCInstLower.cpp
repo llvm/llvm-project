@@ -18,6 +18,7 @@
 #include "M68kInstrInfo.h"
 
 #include "MCTargetDesc/M68kBaseInfo.h"
+#include "MCTargetDesc/M68kMCExpr.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -32,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "m68k-mc-inst-lower"
 
 M68kMCInstLower::M68kMCInstLower(MachineFunction &MF, M68kAsmPrinter &AP)
-    : Ctx(MF.getContext()), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
+    : Ctx(AP.OutContext), MF(MF), TM(MF.getTarget()), MAI(*TM.getMCAsmInfo()),
       AsmPrinter(AP) {}
 
 MCSymbol *
@@ -75,7 +76,7 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   // FIXME We would like an efficient form for this, so we don't have to do a
   // lot of extra uniquing. This fixme is originally from X86
   const MCExpr *Expr = nullptr;
-  MCSymbolRefExpr::VariantKind RefKind = MCSymbolRefExpr::VK_None;
+  M68kMCExpr::Specifier RefKind = M68kMCExpr::VK_None;
 
   switch (MO.getTargetFlags()) {
   default:
@@ -85,31 +86,31 @@ MCOperand M68kMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   case M68kII::MO_PC_RELATIVE_ADDRESS:
     break;
   case M68kII::MO_GOTPCREL:
-    RefKind = MCSymbolRefExpr::VK_GOTPCREL;
+    RefKind = M68kMCExpr::VK_GOTPCREL;
     break;
   case M68kII::MO_GOT:
-    RefKind = MCSymbolRefExpr::VK_GOT;
+    RefKind = M68kMCExpr::VK_GOT;
     break;
   case M68kII::MO_GOTOFF:
-    RefKind = MCSymbolRefExpr::VK_GOTOFF;
+    RefKind = M68kMCExpr::VK_GOTOFF;
     break;
   case M68kII::MO_PLT:
-    RefKind = MCSymbolRefExpr::VK_PLT;
+    RefKind = M68kMCExpr::VK_PLT;
     break;
   case M68kII::MO_TLSGD:
-    RefKind = MCSymbolRefExpr::VK_TLSGD;
+    RefKind = M68kMCExpr::VK_TLSGD;
     break;
   case M68kII::MO_TLSLD:
-    RefKind = MCSymbolRefExpr::VK_TLSLD;
+    RefKind = M68kMCExpr::VK_TLSLD;
     break;
   case M68kII::MO_TLSLDM:
-    RefKind = MCSymbolRefExpr::VK_TLSLDM;
+    RefKind = M68kMCExpr::VK_TLSLDM;
     break;
   case M68kII::MO_TLSIE:
-    RefKind = MCSymbolRefExpr::VK_GOTTPOFF;
+    RefKind = M68kMCExpr::VK_GOTTPOFF;
     break;
   case M68kII::MO_TLSLE:
-    RefKind = MCSymbolRefExpr::VK_TPOFF;
+    RefKind = M68kMCExpr::VK_TPOFF;
     break;
   }
 

@@ -39,6 +39,7 @@ void SIProgramInfo::reset(const MachineFunction &MF) {
   IEEEMode = 0;
   WgpMode = 0;
   MemOrdered = 0;
+  FwdProgress = 0;
   RrWgMode = 0;
   ScratchSize = ZeroExpr;
 
@@ -91,6 +92,10 @@ static uint64_t getComputePGMRSrc1Reg(const SIProgramInfo &ProgInfo,
 
   if (ST.hasIEEEMode())
     Reg |= S_00B848_IEEE_MODE(ProgInfo.IEEEMode);
+
+  // TODO: in the long run we will want to enable this unconditionally.
+  if (ST.getTargetTriple().getOS() == Triple::OSType::AMDHSA)
+    Reg |= S_00B848_FWD_PROGRESS(ProgInfo.FwdProgress);
 
   if (ST.hasRrWGMode())
     Reg |= S_00B848_RR_WG_MODE(ProgInfo.RrWgMode);
