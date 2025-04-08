@@ -17,7 +17,7 @@ define void @mulvl123_addressing(ptr %src, ptr %dst, i64 %count) #0 {
 ; COMMON-NEXT:    ldr z1, [x0, #1, mul vl]
 ; COMMON-NEXT:    ldr z2, [x0, #2, mul vl]
 ; COMMON-NEXT:    ldr z3, [x0, #3, mul vl]
-; COMMON-NEXT:    incb x0, all, mul #5
+; COMMON-NEXT:    addvl x0, x0, #5
 ; COMMON-NEXT:    umax z0.b, p0/m, z0.b, z1.b
 ; COMMON-NEXT:    movprfx z1, z2
 ; COMMON-NEXT:    umax z1.b, p0/m, z1.b, z3.b

@@ -264,7 +264,7 @@ define i32 @incb_scalar_i32(i32 %a) {
 ; CHECK-LABEL: incb_scalar_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    incb x0, all, mul #3
+; CHECK-NEXT:    addvl x0, x0, #3
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
 

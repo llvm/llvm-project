@@ -101,8 +101,8 @@ define <vscale x 2 x i64> @test_svld1udq_i64_si(<vscale x 1 x i1> %pred, ptr %ba
 define <vscale x 2 x i64> @test_svld1udq_i64_out_of_bound(<vscale x 1 x i1> %pred, ptr %base) {
 ; CHECK-LABEL: test_svld1udq_i64_out_of_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    decb x0, all, mul #5
-; CHECK-NEXT:    ld1d { z0.q }, p0/z, [x0]
+; CHECK-NEXT:    addvl x8, x0, #-5
+; CHECK-NEXT:    ld1d { z0.q }, p0/z, [x8]
 ; CHECK-NEXT:    ret
   %gep = getelementptr inbounds <vscale x 1 x i64>, ptr %base, i64 -10
   %res = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1udq.nxv2i64(<vscale x 1 x i1> %pred, ptr %gep)
