@@ -55,7 +55,7 @@ enum class HashFlags : uint32_t {
 };
 
 struct ShaderHash {
-  uint32_t Flags; // dxbc::HashFlags
+  uint32_t Flags; // HashFlags
   uint8_t Digest[16];
 
   bool isPopulated();
@@ -573,8 +573,8 @@ struct RootConstants {
 };
 
 struct RootParameterHeader {
-  dxbc::RootParameterType ParameterType;
-  dxbc::ShaderVisibility ShaderVisibility;
+  RootParameterType ParameterType;
+  ShaderVisibility ShaderVisibility;
   uint32_t ParameterOffset;
 
   void swapBytes() {

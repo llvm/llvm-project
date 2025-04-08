@@ -86,8 +86,6 @@ struct RootParameterYamlDesc {
   dxbc::ShaderVisibility Visibility;
   uint32_t Offset;
 
-  RootParameterYamlDesc() = default;
-
   union {
     RootConstantsYaml Constants;
   };

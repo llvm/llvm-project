@@ -32,19 +32,7 @@ struct RootSignatureDesc {
 
   void write(raw_ostream &OS) const;
 
-  size_t getSize() const {
-    size_t size = sizeof(dxbc::RootSignatureHeader);
-
-    for (const auto &P : Parameters) {
-      switch (P.Header.ParameterType) {
-
-      case dxbc::RootParameterType::Constants32Bit:
-        size += sizeof(dxbc::RootConstants);
-        break;
-      }
-    }
-    return size;
-  }
+  size_t getSize() const;
 };
 } // namespace mcdxbc
 } // namespace llvm

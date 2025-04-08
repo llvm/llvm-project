@@ -29,6 +29,20 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
   Stream.pwrite(reinterpret_cast<const char *>(&Value), sizeof(Value), Offset);
 }
 
+size_t RootSignatureDesc::getSize() const {
+  size_t Size = sizeof(dxbc::RootSignatureHeader);
+
+  for (const auto &P : Parameters) {
+    Size += sizeof(P.Header);
+    switch (P.Header.ParameterType) {
+    case dxbc::RootParameterType::Constants32Bit:
+      Size += sizeof(dxbc::RootConstants);
+      break;
+    }
+  }
+  return Size;
+}
+
 void RootSignatureDesc::write(raw_ostream &OS) const {
   SmallString<256> Storage;
   raw_svector_ostream BOS(Storage);
@@ -38,11 +52,8 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
 
   support::endian::write(BOS, Header.Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
-
-  // Root Parameters offset should always start after the
   support::endian::write(BOS, (uint32_t)sizeof(dxbc::RootSignatureHeader),
                          llvm::endianness::little);
-
   support::endian::write(BOS, Zero, llvm::endianness::little);
   support::endian::write(BOS, Zero, llvm::endianness::little);
   support::endian::write(BOS, Header.Flags, llvm::endianness::little);

@@ -138,7 +138,7 @@ struct RootParameterView {
 
   template <typename T> Expected<T> readParameter() {
     T Struct;
-    if (sizeof(T) > ParamData.size())
+    if (sizeof(T) != ParamData.size())
       return make_error<GenericBinaryError>(
           "Reading structure out of file bounds", object_error::parse_failed);
 

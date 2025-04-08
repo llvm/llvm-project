@@ -40,7 +40,7 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
   uint32_t Flags = Data.getFlags();
   for (const auto &PH : Data.param_header()) {
 
-    auto NewP = RootParameterYamlDesc();
+    RootParameterYamlDesc NewP;
     NewP.Offset = PH.ParameterOffset;
     NewP.Type = PH.ParameterType;
     NewP.Visibility = PH.ShaderVisibility;

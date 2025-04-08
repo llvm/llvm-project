@@ -287,7 +287,7 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   ParameterSpaceOffset =
       RootParametersOffset + NumParameters * sizeof(dxbc::RootParameterHeader);
   size_t ParameterSpaceEnd =
-      Data.size() - ((NumStaticSamplers == 0) ? 0 : StaticSamplersOffset);
+      (NumStaticSamplers == 0) ? Data.size() : StaticSamplersOffset;
 
   ParameterSpace = Data.substr(ParameterSpaceOffset,
                                ParameterSpaceEnd - ParameterSpaceOffset);
