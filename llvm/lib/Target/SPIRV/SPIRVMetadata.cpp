@@ -12,6 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVMetadata.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -80,6 +85,27 @@ MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
       F.getCallingConv() == CallingConv::SPIR_KERNEL &&
       "Kernel attributes are attached/belong only to OpenCL kernel functions");
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
+}
+int64_t processKernelArgBufferLocation(
+    const Function &F, MDNode *Node, int i,
+    llvm::ArrayRef<llvm::ArrayRef<llvm::Register>> VRegs, int64_t BufferLoc) {
+
+  if (Node) {
+    // Check if the kernel argument is a pointer type.
+    if (!F.getFunctionType()->getParamType(i)->isPointerTy()) {
+      return -1;
+    }
+
+    if (static_cast<unsigned>(i) < Node->getNumOperands()) {
+      if (ConstantAsMetadata *CMD =
+              dyn_cast<ConstantAsMetadata>(Node->getOperand(i))) {
+        if (ConstantInt *CI = dyn_cast<ConstantInt>(CMD->getValue())) {
+          BufferLoc = CI->getSExtValue();
+        }
+      }
+    }
+  }
+  return BufferLoc;
 }
 
 } // namespace llvm
