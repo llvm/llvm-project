@@ -661,10 +661,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   };
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
-    // f16, f32 and f64 use SSE.
+    // f16, bf16, f32 and f64 use SSE.
     // Set up the FP register classes.
     addRegisterClass(MVT::f16, Subtarget.hasAVX512() ? &X86::FR16XRegClass
                                                      : &X86::FR16RegClass);
+    addRegisterClass(MVT::bf16, Subtarget.hasAVX512() ? &X86::FR16XRegClass
+                                                      : &X86::FR16RegClass);
     addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
                                                      : &X86::FR32RegClass);
     addRegisterClass(MVT::f64, Subtarget.hasAVX512() ? &X86::FR64XRegClass
@@ -675,6 +677,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // case instead of needing to emit 2 instructions for extload in the
     // non-optsize case.
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
+
+    // Set the operation action Custom for bitcast to do the customization
+    // later.
+    setOperationAction(ISD::BITCAST, MVT::bf16, Custom);
 
     for (auto VT : { MVT::f32, MVT::f64 }) {
       // Use ANDPD to simulate FABS.
@@ -32150,6 +32156,10 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
     V = getPMOVMSKB(DL, V, DAG, Subtarget);
     return DAG.getZExtOrTrunc(V, DL, DstVT);
   }
+
+  // Bitcasts between f16 and bf16 should be legal.
+  if (DstVT == MVT::f16 || DstVT == MVT::bf16)
+    return Op;
 
   assert((SrcVT == MVT::v2i32 || SrcVT == MVT::v4i16 || SrcVT == MVT::v8i8 ||
           SrcVT == MVT::i64) && "Unexpected VT!");

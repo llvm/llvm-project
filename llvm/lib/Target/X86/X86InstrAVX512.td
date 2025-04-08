@@ -2456,6 +2456,11 @@ let Predicates = [HasFP16] in {
             (VCMPSHZrmi FR16X:$src1, addr:$src2, (X86cmpm_imm_commute timm:$cc))>;
 }
 
+let Predicates = [HasAVX512, HasBF16] in {
+  def : Pat<(f16 (bitconvert (bf16 FR16X:$src))), (f16 FR16X:$src)>;
+  def : Pat<(bf16 (bitconvert (f16 FR16X:$src))), (bf16 FR16X:$src)>;
+}
+
 // ----------------------------------------------------------------
 // FPClass
 
