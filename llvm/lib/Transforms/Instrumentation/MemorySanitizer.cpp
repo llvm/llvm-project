@@ -6278,7 +6278,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
   Value *VAArgSize = nullptr;
 
   VarArgPowerPC64Helper(Function &F, MemorySanitizer &MS,
-                      MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
+                        MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
       : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
@@ -6430,7 +6430,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
   Value *VAArgSize = nullptr;
 
   VarArgPowerPC32Helper(Function &F, MemorySanitizer &MS,
-                      MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
+                        MemorySanitizerVisitor &MSV, unsigned VAListTagSize)
       : VarArgHelperBase(F, MS, MSV, VAListTagSize) {}
 
   void visitCallBase(CallBase &CB, IRBuilder<> &IRB) override {
