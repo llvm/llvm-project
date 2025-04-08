@@ -12,5 +12,32 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.include.fcntl
     libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  setitimer
+  SRCS
+    setitimer.cpp
+  HDRS
+    ../setitimer.h
+  DEPENDS
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common 
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  getitimer
+  SRCS
+    getitimer.cpp
+  HDRS
+    ../getitimer.h
+  DEPENDS
+    libc.hdr.types.struct_itimerval
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common 
     libc.src.errno.errno
 )

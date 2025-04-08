@@ -19,3 +19,29 @@ add_libc_unittest(
     libc.src.sys.stat.stat
     libc.test.UnitTest.ErrnoCheckingTest
 )
+
+add_libc_unittest(
+  setitimer_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    setitimer_test.cpp
+  DEPENDS
+    libc.src.sys.time.setitimer
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_unittest(
+  getitimer_test
+  SUITE
+    libc_sys_time_unittests
+  SRCS
+    getitimer_test.cpp
+  DEPENDS
+    libc.src.sys.time.getitimer
+    libc.src.__support.common
+    libc.src.errno.errno
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
