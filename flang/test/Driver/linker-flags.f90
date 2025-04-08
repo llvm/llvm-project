@@ -33,33 +33,34 @@
 ! SOLARIS-F128NONE-NOT: flang_rt.quadmath
 ! UNIX-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "-z" "ignore" "-lquadmath" "-z" "record"
-! UNIX-SAME: "-lflang_rt.runtime" "-lm"
+! UNIX-SAME:   "{{.*}}{{\\|/}}libflang_rt.runtime.so"
+! UNIX-SAME:   "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 
 ! BSD-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! BSD-SAME: "[[object_file]]"
 ! BSD-F128NONE-NOT: flang_rt.quadmath
 ! BSD-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
-! BSD-SAME: -lflang_rt.runtime
-! BSD-SAME: -lexecinfo
+! BSD-SAME: "{{.*}}{{\\|/}}libflang_rt.runtime.so"
+! BSD-SAME: "-lexecinfo"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"
 ! DARWIN-F128NONE-NOT: libflang_rt.quadmath
 ! DARWIN-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
-! DARWIN-SAME: -lflang_rt.runtime
+! DARWIN-SAME: "{{.*}}{{\\|/}}libclang_rt.runtime_osx_dynamic.dylib"
 
 ! HAIKU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! HAIKU-SAME: "[[object_file]]"
 ! HAIKU-F128NONE-NOT: libflang_rt.quadmath
 ! HAIKU-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
-! HAIKU-SAME: "-lflang_rt.runtime"
+! HAIKU-SAME: "{{.*}}{{\\|/}}libflang_rt.runtime.so"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! MINGW-SAME: "[[object_file]]"
 ! MINGW-F128NONE-NOT: libflang_rt.quadmath
 ! MINGW-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
-! MINGW-SAME: -lflang_rt.runtime
+! MINGW-SAME: "{{.*}}{{\\|/}}libflang_rt.runtime.dll.a"
 
 ! NOTE: This also matches lld-link (when CLANG_DEFAULT_LINKER=lld) and
 !       any .exe suffix that is added when resolving to the full path of
