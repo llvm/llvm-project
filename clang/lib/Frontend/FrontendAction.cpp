@@ -307,7 +307,7 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
 
   std::vector<std::unique_ptr<ASTConsumer>> Consumers;
   llvm::StringRef DumpDeserializedDeclarationRangesPath =
-      CI.getFrontendOpts().DumpDeserializedDeclarationRangesPath;
+      CI.getFrontendOpts().DumpMinimizationHintsPath;
   if (!DumpDeserializedDeclarationRangesPath.empty()) {
     std::error_code ErrorCode;
     auto FileStream = std::make_unique<llvm::raw_fd_ostream>(
