@@ -1002,6 +1002,47 @@ def ForOp : LoopOpBase<"for"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+def CmpOpKind_LT : I32EnumAttrCase<"lt", 1>;
+def CmpOpKind_LE : I32EnumAttrCase<"le", 2>;
+def CmpOpKind_GT : I32EnumAttrCase<"gt", 3>;
+def CmpOpKind_GE : I32EnumAttrCase<"ge", 4>;
+def CmpOpKind_EQ : I32EnumAttrCase<"eq", 5>;
+def CmpOpKind_NE : I32EnumAttrCase<"ne", 6>;
+
+def CmpOpKind : I32EnumAttr<
+    "CmpOpKind",
+    "compare operation kind",
+    [CmpOpKind_LT, CmpOpKind_LE, CmpOpKind_GT,
+     CmpOpKind_GE, CmpOpKind_EQ, CmpOpKind_NE]> {
+  let cppNamespace = "::cir";
+}
+
+def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare values two values and produce a boolean result";
+  let description = [{
+    `cir.cmp` compares two input operands of the same type and produces a
+    `cir.bool` result. The kinds of comparison available are:
+    [lt,gt,ge,eq,ne]
+
+    ```mlir
+    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind,
+                       CIR_AnyType:$lhs, CIR_AnyType:$rhs);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BinOp
 //===----------------------------------------------------------------------===//
 
