@@ -60,7 +60,7 @@ static bool fillLineInfoFromLocation(const SourceLocation &Location,
   return true;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
                                      DILineInfoSpecifier Specifier) {
   if (Address.SectionIndex != object::SectionedAddress::UndefSection)
@@ -95,12 +95,12 @@ GsymDIContext::getLineInfoForAddress(object::SectionedAddress Address,
   return LineInfo;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 GsymDIContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   // TODO:
   // We can't implement this, there's no such information in the GSYM file.
 
-  return DILineInfo();
+  return {};
 }
 
 DILineInfoTable

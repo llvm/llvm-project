@@ -40,10 +40,10 @@ public:
 
   void dump(raw_ostream &OS, DIDumpOptions DIDumpOpts) override;
 
-  DILineInfo getLineInfoForAddress(
+  std::optional<DILineInfo> getLineInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
-  DILineInfo
+  std::optional<DILineInfo>
   getLineInfoForDataAddress(object::SectionedAddress Address) override;
   DILineInfoTable getLineInfoForAddressRange(
       object::SectionedAddress Address, uint64_t Size,
