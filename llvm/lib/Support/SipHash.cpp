@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SipHash.h"
+#include "siphash/SipHash.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
-#include "siphash/SipHash.h"
 #include <cstdint>
 
 using namespace llvm;

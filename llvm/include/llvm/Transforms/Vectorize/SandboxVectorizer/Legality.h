@@ -43,8 +43,7 @@ public:
   static ShuffleMask getIdentity(unsigned Sz) {
     IndicesVecT Indices;
     Indices.reserve(Sz);
-    for (auto Idx : seq<int>(0, (int)Sz))
-      Indices.push_back(Idx);
+    llvm::append_range(Indices, seq<int>(0, (int)Sz));
     return ShuffleMask(std::move(Indices));
   }
   /// \Returns true if the mask is a perfect identity mask with consecutive
