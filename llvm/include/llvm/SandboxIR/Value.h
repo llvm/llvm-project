@@ -170,6 +170,7 @@ protected:
   // expose metadata in sandboxir.
   friend class Region;
   friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
+  friend class ConstantDataArray; // For `Val`
 
   /// All values point to the context.
   Context &Ctx;
