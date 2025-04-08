@@ -36,8 +36,11 @@
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <deque>
+#include <functional>
 
 using namespace llvm;
+
+#define DEBUG_TYPE "ctx_prof_flatten"
 
 namespace {
 
@@ -414,6 +417,57 @@ void removeInstrumentation(Function &F) {
         I.eraseFromParent();
 }
 
+void annotateIndirectCall(
+    Module &M, CallBase &CB,
+    const DenseMap<uint32_t, FlatIndirectTargets> &FlatProf,
+    const InstrProfCallsite &Ins) {
+  auto Idx = Ins.getIndex()->getZExtValue();
+  auto FIt = FlatProf.find(Idx);
+  if (FIt == FlatProf.end())
+    return;
+  const auto &Targets = FIt->second;
+  SmallVector<InstrProfValueData, 2> Data;
+  uint64_t Sum = 0;
+  for (auto &[Guid, Count] : Targets) {
+    Data.push_back({/*.Value=*/Guid, /*.Count=*/Count});
+    Sum += Count;
+  }
+
+  llvm::sort(Data,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Count > B.Count;
+             });
+  llvm::annotateValueSite(M, CB, Data, Sum,
+                          InstrProfValueKind::IPVK_IndirectCallTarget,
+                          Data.size());
+  LLVM_DEBUG(dbgs() << "[ctxprof] flat indirect call prof: " << CB
+                    << CB.getMetadata(LLVMContext::MD_prof) << "\n");
+}
+
+// We normally return a "Changed" bool, but the calling pass' run assumes
+// something will change - some profile will be added - so this won't add much
+// by returning false when applicable.
+void annotateIndirectCalls(Module &M, const CtxProfAnalysis::Result &CtxProf) {
+  const auto FlatIndCalls = CtxProf.flattenVirtCalls();
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    auto FlatProfIter = FlatIndCalls.find(AssignGUIDPass::getGUID(F));
+    if (FlatProfIter == FlatIndCalls.end())
+      continue;
+    const auto &FlatProf = FlatProfIter->second;
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto *CB = dyn_cast<CallBase>(&I);
+        if (!CB || !CB->isIndirectCall())
+          continue;
+        if (auto *Ins = CtxProfAnalysis::getCallsiteInstrumentation(*CB))
+          annotateIndirectCall(M, *CB, FlatProf, *Ins);
+      }
+    }
+  }
+}
+
 } // namespace
 
 PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
@@ -437,6 +491,8 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
   if (!IsPreThinlink && !CtxProf.isInSpecializedModule())
     return PreservedAnalyses::none();
 
+  if (IsPreThinlink)
+    annotateIndirectCalls(M, CtxProf);
   const auto FlattenedProfile = CtxProf.flatten();
 
   for (auto &F : M) {
