@@ -1138,22 +1138,16 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
-/// Determine the appropriate source input kind based on language
-/// options.
-static Language getLanguageFromOptions(const LangOptions &LangOpts) {
-  if (LangOpts.OpenCL)
-    return Language::OpenCL;
-  if (LangOpts.CUDA)
-    return Language::CUDA;
-  if (LangOpts.ObjC)
-    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
-  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
-}
-
-static std::unique_ptr<CompilerInstance> createCompilerInstanceForModuleCompile(
-    CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
-    StringRef ModuleName, FrontendInputFile Input,
-    StringRef OriginalModuleMapFile, StringRef ModuleFileName) {
+/// Creates a \c CompilerInstance for compiling a module.
+///
+/// This expects a properly initialized \c FrontendInputFile.
+static std::unique_ptr<CompilerInstance>
+createCompilerInstanceForModuleCompileImpl(CompilerInstance &ImportingInstance,
+                                           SourceLocation ImportLoc,
+                                           StringRef ModuleName,
+                                           FrontendInputFile Input,
+                                           StringRef OriginalModuleMapFile,
+                                           StringRef ModuleFileName) {
   // Construct a compiler invocation for creating this module.
   auto Invocation =
       std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
@@ -1254,6 +1248,114 @@ static std::unique_ptr<CompilerInstance> createCompilerInstanceForModuleCompile(
   return InstancePtr;
 }
 
+/// Determine the appropriate source input kind based on language
+/// options.
+static Language getLanguageFromOptions(const LangOptions &LangOpts) {
+  if (LangOpts.OpenCL)
+    return Language::OpenCL;
+  if (LangOpts.CUDA)
+    return Language::CUDA;
+  if (LangOpts.ObjC)
+    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
+}
+
+static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
+                                               FileManager &FileMgr) {
+  StringRef Filename = llvm::sys::path::filename(File.getName());
+  SmallString<128> PublicFilename(File.getDir().getName());
+  if (Filename == "module_private.map")
+    llvm::sys::path::append(PublicFilename, "module.map");
+  else if (Filename == "module.private.modulemap")
+    llvm::sys::path::append(PublicFilename, "module.modulemap");
+  else
+    return std::nullopt;
+  return FileMgr.getOptionalFileRef(PublicFilename);
+}
+
+/// Creates a \c CompilerInstance for compiling a module.
+///
+/// This takes care of creating appropriate \c FrontendInputFile for
+/// public/private frameworks, inferred modules and such.
+static std::unique_ptr<CompilerInstance>
+createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
+                                       SourceLocation ImportLoc, Module *Module,
+                                       StringRef ModuleFileName) {
+  StringRef ModuleName = Module->getTopLevelModuleName();
+
+  InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
+               InputKind::ModuleMap);
+
+  // Get or create the module map that we'll use to build this module.
+  ModuleMap &ModMap =
+      ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  SourceManager &SourceMgr = ImportingInstance.getSourceManager();
+
+  if (FileID ModuleMapFID = ModMap.getContainingModuleMapFileID(Module);
+      ModuleMapFID.isValid()) {
+    // We want to use the top-level module map. If we don't, the compiling
+    // instance may think the containing module map is a top-level one, while
+    // the importing instance knows it's included from a parent module map via
+    // the extern directive. This mismatch could bite us later.
+    SourceLocation Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
+    while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
+      ModuleMapFID = SourceMgr.getFileID(Loc);
+      Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
+    }
+
+    OptionalFileEntryRef ModuleMapFile =
+        SourceMgr.getFileEntryRefForID(ModuleMapFID);
+    assert(ModuleMapFile && "Top-level module map with no FileID");
+
+    // Canonicalize compilation to start with the public module map. This is
+    // vital for submodules declarations in the private module maps to be
+    // correctly parsed when depending on a top level module in the public one.
+    if (OptionalFileEntryRef PublicMMFile = getPublicModuleMap(
+            *ModuleMapFile, ImportingInstance.getFileManager()))
+      ModuleMapFile = PublicMMFile;
+
+    StringRef ModuleMapFilePath = ModuleMapFile->getNameAsRequested();
+
+    // Use the systemness of the module map as parsed instead of using the
+    // IsSystem attribute of the module. If the module has [system] but the
+    // module map is not in a system path, then this would incorrectly parse
+    // any other modules in that module map as system too.
+    const SrcMgr::SLocEntry &SLoc = SourceMgr.getSLocEntry(ModuleMapFID);
+    bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
+
+    // Use the module map where this module resides.
+    return createCompilerInstanceForModuleCompileImpl(
+        ImportingInstance, ImportLoc, ModuleName,
+        FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
+        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+  }
+
+  // FIXME: We only need to fake up an input file here as a way of
+  // transporting the module's directory to the module map parser. We should
+  // be able to do that more directly, and parse from a memory buffer without
+  // inventing this file.
+  SmallString<128> FakeModuleMapFile(Module->Directory->getName());
+  llvm::sys::path::append(FakeModuleMapFile, "__inferred_module.map");
+
+  std::string InferredModuleMapContent;
+  llvm::raw_string_ostream OS(InferredModuleMapContent);
+  Module->print(OS);
+
+  auto Instance = createCompilerInstanceForModuleCompileImpl(
+      ImportingInstance, ImportLoc, ModuleName,
+      FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
+      ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
+
+  std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
+      llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
+  FileEntryRef ModuleMapFile = Instance->getFileManager().getVirtualFileRef(
+      FakeModuleMapFile, InferredModuleMapContent.size(), 0);
+  Instance->getSourceManager().overrideFileContents(ModuleMapFile,
+                                                    std::move(ModuleMapBuffer));
+
+  return Instance;
+}
+
 /// Compile a module file for the given module, using the options
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
@@ -1300,19 +1402,6 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
          Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
-static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
-                                               FileManager &FileMgr) {
-  StringRef Filename = llvm::sys::path::filename(File.getName());
-  SmallString<128> PublicFilename(File.getDir().getName());
-  if (Filename == "module_private.map")
-    llvm::sys::path::append(PublicFilename, "module.map");
-  else if (Filename == "module.private.modulemap")
-    llvm::sys::path::append(PublicFilename, "module.modulemap");
-  else
-    return std::nullopt;
-  return FileMgr.getOptionalFileRef(PublicFilename);
-}
-
 /// Compile a module file for the given module in a separate compiler instance,
 /// using the options provided by the importing compiler instance. Returns true
 /// if the module was built without errors.
@@ -1331,76 +1420,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     return false;
   }
 
-  InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
-               InputKind::ModuleMap);
-
-  // Get or create the module map that we'll use to build this module.
-  ModuleMap &ModMap
-    = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-  SourceManager &SourceMgr = ImportingInstance.getSourceManager();
-
-  std::unique_ptr<CompilerInstance> Instance;
-  if (FileID ModuleMapFID = ModMap.getContainingModuleMapFileID(Module);
-      ModuleMapFID.isValid()) {
-    // We want to use the top-level module map. If we don't, the compiling
-    // instance may think the containing module map is a top-level one, while
-    // the importing instance knows it's included from a parent module map via
-    // the extern directive. This mismatch could bite us later.
-    SourceLocation Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
-    while (Loc.isValid() && isModuleMap(SourceMgr.getFileCharacteristic(Loc))) {
-      ModuleMapFID = SourceMgr.getFileID(Loc);
-      Loc = SourceMgr.getIncludeLoc(ModuleMapFID);
-    }
-
-    OptionalFileEntryRef ModuleMapFile =
-        SourceMgr.getFileEntryRefForID(ModuleMapFID);
-    assert(ModuleMapFile && "Top-level module map with no FileID");
-
-    // Canonicalize compilation to start with the public module map. This is
-    // vital for submodules declarations in the private module maps to be
-    // correctly parsed when depending on a top level module in the public one.
-    if (OptionalFileEntryRef PublicMMFile = getPublicModuleMap(
-            *ModuleMapFile, ImportingInstance.getFileManager()))
-      ModuleMapFile = PublicMMFile;
-
-    StringRef ModuleMapFilePath = ModuleMapFile->getNameAsRequested();
-
-    // Use the systemness of the module map as parsed instead of using the
-    // IsSystem attribute of the module. If the module has [system] but the
-    // module map is not in a system path, then this would incorrectly parse
-    // any other modules in that module map as system too.
-    const SrcMgr::SLocEntry &SLoc = SourceMgr.getSLocEntry(ModuleMapFID);
-    bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
-
-    // Use the module map where this module resides.
-    Instance = createCompilerInstanceForModuleCompile(
-        ImportingInstance, ImportLoc, ModuleName,
-        FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
-  } else {
-    // FIXME: We only need to fake up an input file here as a way of
-    // transporting the module's directory to the module map parser. We should
-    // be able to do that more directly, and parse from a memory buffer without
-    // inventing this file.
-    SmallString<128> FakeModuleMapFile(Module->Directory->getName());
-    llvm::sys::path::append(FakeModuleMapFile, "__inferred_module.map");
-
-    std::string InferredModuleMapContent;
-    llvm::raw_string_ostream OS(InferredModuleMapContent);
-    Module->print(OS);
-
-    Instance = createCompilerInstanceForModuleCompile(
-        ImportingInstance, ImportLoc, ModuleName,
-        FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
-        ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
-
-    std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
-        llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
-    FileEntryRef ModuleMapFile = Instance->getFileManager().getVirtualFileRef(
-        FakeModuleMapFile, InferredModuleMapContent.size(), 0);
-    Instance->getSourceManager().overrideFileContents(
-        ModuleMapFile, std::move(ModuleMapBuffer));
-  }
+  auto Instance = createCompilerInstanceForModuleCompile(
+      ImportingInstance, ImportLoc, Module, ModuleFileName);
 
   bool Success = compileModuleImpl(ImportingInstance, ImportLoc, ModuleName,
                                    ModuleFileName, *Instance);
@@ -2238,7 +2259,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   std::string NullTerminatedSource(Source.str());
 
-  auto Other = createCompilerInstanceForModuleCompile(
+  auto Other = createCompilerInstanceForModuleCompileImpl(
       *this, ImportLoc, ModuleName, Input, StringRef(), ModuleFileName);
 
   // Create a virtual file containing our desired source.
