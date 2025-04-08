@@ -26,13 +26,7 @@ float2 builtin_rsqrt_int2_to_float2_promotion(int2 p1) {
   // expected-error@-1 {{passing 'int2' (aka 'vector<int, 2>') to parameter of incompatible type '__attribute__((__vector_size__(2 * sizeof(float)))) float' (vector of 2 'float' values)}}
 }
 
-// builtins are variadic functions and so are subject to DefaultVariadicArgumentPromotion
-half builtin_rsqrt_half_scalar (half p0) {
-  return __builtin_hlsl_elementwise_rsqrt (p0);
-  // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
-}
-
-float builtin_rsqrt_float_scalar ( float p0) {
-  return __builtin_hlsl_elementwise_rsqrt (p0);
+double builtin_rsqrt_double(double p0) {
+  return __builtin_hlsl_elementwise_rsqrt(p0);
   // expected-error@-1 {{passing 'double' to parameter of incompatible type 'float'}}
 }
