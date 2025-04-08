@@ -87,7 +87,7 @@ enum class ThinOrFullLTOPhase {
 };
 
 #ifndef NDEBUG
-static inline const char *to_string(ThinOrFullLTOPhase Phase) {
+constexpr const char *to_string(ThinOrFullLTOPhase Phase) {
   switch (Phase) {
   case ThinOrFullLTOPhase::None:
     return "None";
