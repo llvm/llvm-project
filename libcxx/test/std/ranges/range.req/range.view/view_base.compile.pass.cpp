@@ -16,7 +16,8 @@
 #include <type_traits>
 
 static_assert(std::is_empty_v<std::ranges::view_base>);
-static_assert(std::is_trivial_v<std::ranges::view_base>);
+static_assert(std::is_trivially_copyable_v<std::ranges::view_base>);
+static_assert(std::is_trivially_default_constructible_v<std::ranges::view_base>);
 
 // Make sure we can inherit from it, as it's intended (that wouldn't be the
 // case if e.g. it was marked as final).
