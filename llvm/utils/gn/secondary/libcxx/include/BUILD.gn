@@ -2087,6 +2087,7 @@ if (current_toolchain == default_toolchain) {
       "fenv.h",
       "filesystem",
       "flat_map",
+      "flat_set",
       "float.h",
       "format",
       "forward_list",
