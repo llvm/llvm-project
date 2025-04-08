@@ -128,7 +128,7 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512-NEXT:    vpternlogq $226, %xmm2, %xmm0, %xmm1
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm1 = xmm2 ^ (xmm0 & (xmm1 ^ xmm2))
 ; AVX512-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -283,7 +283,7 @@ define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i6
 ; AVX512-LABEL: vselect_concat_split_v16i8:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpcmpgtb %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vpternlogq $216, %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm0 ^ (ymm2 & (ymm0 ^ ymm1))
 ; AVX512-NEXT:    retq
   %a.bc = bitcast <4 x i64> %a to <32 x i8>
   %b.bc = bitcast <4 x i64> %b to <32 x i8>
@@ -373,18 +373,18 @@ define void @vselect_concat_splat() {
 ; AVX512:       ## %bb.0: ## %entry
 ; AVX512-NEXT:    vmovups (%rax), %ymm0
 ; AVX512-NEXT:    vmovups (%rax), %xmm1
-; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
 ; AVX512-NEXT:    vmovaps %ymm2, %ymm3
 ; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm3
 ; AVX512-NEXT:    vmovups 32, %xmm4
-; AVX512-NEXT:    vmovups 0, %ymm5
-; AVX512-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX512-NEXT:    vcmpneqps %xmm6, %xmm3, %k0
+; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512-NEXT:    vcmpneqps %xmm5, %xmm3, %k0
 ; AVX512-NEXT:    kshiftlw $4, %k0, %k1
 ; AVX512-NEXT:    korw %k1, %k0, %k1
-; AVX512-NEXT:    vpermt2ps %ymm4, %ymm2, %ymm5
 ; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
-; AVX512-NEXT:    vmovaps %ymm5, %ymm0 {%k1}
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [8,11,14,1,9,12,15,2]
+; AVX512-NEXT:    vpermi2ps 0, %ymm4, %ymm1
+; AVX512-NEXT:    vmovaps %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    vmovups %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

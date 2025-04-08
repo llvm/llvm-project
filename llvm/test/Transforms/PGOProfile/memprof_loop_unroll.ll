@@ -10,7 +10,9 @@
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -S %S/Inputs/memprof_loop_unroll_b.cc -emit-llvm
 
 ; RUN: llvm-profdata merge %S/Inputs/memprof_loop_unroll.memprofraw --profiled-binary %S/Inputs/memprof_loop_unroll.exe -o %t.memprofdata
-; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-report-hinted-sizes 2>&1 | FileCheck %s
+;; Set the minimum lifetime threshold to 0 to ensure that one context is
+;; considered cold (the other will be notcold).
+; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S -memprof-report-hinted-sizes -memprof-ave-lifetime-cold-threshold=0 2>&1 | FileCheck %s
 
 ;; Conservatively annotate as not cold. We get two messages as there are two
 ;; unrolled copies of the allocation.

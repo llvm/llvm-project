@@ -40,7 +40,7 @@ void fir::runtime::genLbound(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }
 
 /// Generate call to `Ubound` runtime routine.  Calls to UBOUND with a DIM
@@ -57,7 +57,7 @@ void fir::runtime::genUbound(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   auto args = fir::runtime::createArguments(builder, loc, fTy, resultBox, array,
                                             kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, uboundFunc, args).getResult(0);
+  builder.create<fir::CallOp>(loc, uboundFunc, args);
 }
 
 /// Generate call to `Size` runtime routine. This routine is a version when
@@ -91,7 +91,7 @@ mlir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
   return builder.create<fir::CallOp>(loc, sizeFunc, args).getResult(0);
 }
 
-/// Generate call to `Is_contiguous` runtime routine.
+/// Generate call to `IsContiguous` runtime routine.
 mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
                                           mlir::Location loc,
                                           mlir::Value array) {
@@ -99,6 +99,18 @@ mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
       fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
   auto fTy = isContiguousFunc.getFunctionType();
   auto args = fir::runtime::createArguments(builder, loc, fTy, array);
+  return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
+}
+
+/// Generate call to `IsContiguousUpTo` runtime routine.
+mlir::Value fir::runtime::genIsContiguousUpTo(fir::FirOpBuilder &builder,
+                                              mlir::Location loc,
+                                              mlir::Value array,
+                                              mlir::Value dim) {
+  mlir::func::FuncOp isContiguousFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(IsContiguousUpTo)>(loc, builder);
+  auto fTy = isContiguousFunc.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, array, dim);
   return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
 }
 
@@ -113,5 +125,5 @@ void fir::runtime::genShape(fir::FirOpBuilder &builder, mlir::Location loc,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(4));
   auto args = fir::runtime::createArguments(
       builder, loc, fTy, resultAddr, array, kind, sourceFile, sourceLine);
-  builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  builder.create<fir::CallOp>(loc, func, args);
 }

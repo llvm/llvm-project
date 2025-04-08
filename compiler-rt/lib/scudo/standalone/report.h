@@ -12,7 +12,6 @@
 #include "internal_defs.h"
 
 namespace scudo {
-
 // Reports are *fatal* unless stated otherwise.
 
 // Generic error, adds newline to end of message.
@@ -25,7 +24,7 @@ void NORETURN reportRawError(const char *Message);
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value);
 
 // Chunk header related errors.
-void NORETURN reportHeaderCorruption(void *Ptr);
+void NORETURN reportHeaderCorruption(void *Header, void *Ptr);
 
 // Sanity checks related error.
 void NORETURN reportSanityCheckError(const char *Field);

@@ -1,6 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S | FileCheck %s -check-prefix DEBUGLOC
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test makes sure we don't duplicate the loop vectorizer's metadata
@@ -34,8 +33,8 @@ for.end:                                          ; preds = %for.body
 define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
 ; DEBUGLOC: vector.body:
+; DEBUGLOC-NEXT: = phi i64
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC:[0-9]+]]
-; DEBUGLOC: = phi i64
 ;
 ; DEBUGLOC: loop:
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC]]
@@ -91,7 +90,7 @@ define void @scalar_cast_dbg(ptr nocapture %a, i32 %start, i64 %k) {
 ; DEBUGLOC:   = trunc i64 %index to i32, !dbg [[CASTLOC:![0-9]+]]
 ;
 ; DEBUGLOC: loop:
-; DEBUGLOC-NOT:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
+; DEBUGLOC:   %trunc.iv = trunc i64 %iv to i32, !dbg [[CASTLOC]]
 ;
 entry:
   br label %loop
@@ -109,6 +108,31 @@ exit:
   ret void
 }
 
+define void @widen_intrinsic_dbg(i64 %n, ptr %y, ptr %x) {
+; DEBUGLOC-LABEL: define void @widen_intrinsic_dbg(
+; DEBUGLOC: vector.body:
+; DEBUGLOC:   = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %{{.+}}), !dbg ![[INTRINSIC_LOC:[0-9]+]]
+; DEBUGLOC: loop:
+; DEBUGLOC:   = call float @llvm.sqrt.f32(float %{{.+}}), !dbg ![[INTRINSIC_LOC]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.y = getelementptr inbounds float, ptr %y, i64 %iv
+  %load = load float, ptr %gep.y, align 4
+  %call = call float @llvm.sqrt.f32(float %load)
+  %gep.x = getelementptr inbounds float, ptr %x, i64 %iv
+  store float %call, ptr %gep.x, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 ; CHECK-NOT: !{metadata !"llvm.loop.vectorize.width", i32 4}
@@ -116,3 +140,4 @@ exit:
 
 ; DEBUGLOC: ![[RESUMELOC]] = !DILocation(line: 2
 ; DEBUGLOC: ![[PTRIVLOC]] = !DILocation(line: 12
+; DEBUGLOC: ![[INTRINSIC_LOC]] = !DILocation(line: 44

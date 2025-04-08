@@ -78,7 +78,6 @@ struct OpenMPCounterVisitor {
   void Post(const OmpMapType::Value &c);
   void Post(const OmpScheduleClause::Kind &c);
   void Post(const OmpDirectiveNameModifier &c);
-  void Post(const OmpCancelType::Type &c);
   void Post(const OmpClause &c);
   void PostClauseCommon(const ClauseInfo &ci);
 

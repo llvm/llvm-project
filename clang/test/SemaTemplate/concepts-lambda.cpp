@@ -294,3 +294,49 @@ void foo() {
 }
 
 } // namespace GH110721
+
+namespace GH123441 {
+
+void test() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y)
+      requires true
+    {};
+  };
+  L(0, 1)(1, 2);
+}
+
+}
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}
+
+namespace GH133719 {
+
+template <class T>
+constexpr auto f{[] (auto arg) {
+  return [a{arg}] {
+      [] () requires true {}();
+  };
+}};
+
+void foo() {
+  f<int>(0);
+}
+
+}

@@ -69,11 +69,9 @@ public:
       return false;
     }
     if (auto recTy = mlir::dyn_cast<RecordType>(ty)) {
-      auto visited = visitedTypes.find(ty);
-      if (visited != visitedTypes.end())
+      auto [visited, inserted] = visitedTypes.try_emplace(ty, false);
+      if (!inserted)
         return visited->second;
-      [[maybe_unused]] auto newIt = visitedTypes.try_emplace(ty, false);
-      assert(newIt.second && "expected ty to not be in the map");
       bool wasAlreadyVisitingRecordType = needConversionIsVisitingRecordType;
       needConversionIsVisitingRecordType = true;
       bool result = false;
@@ -167,12 +165,12 @@ public:
           cs.emplace_back(t.first, t.second);
       }
       rec.finalize(ps, cs);
+      rec.pack(ty.isPacked());
       return rec;
     });
     addConversion([&](TypeDescType ty) {
       return TypeDescType::get(convertType(ty.getOfTy()));
     });
-    addArgumentMaterialization(materializeProcedure);
     addSourceMaterialization(materializeProcedure);
     addTargetMaterialization(materializeProcedure);
   }
@@ -272,10 +270,18 @@ public:
             // Create the thunk.
             auto module = embox->getParentOfType<mlir::ModuleOp>();
             FirOpBuilder builder(rewriter, module);
+            const auto triple{fir::getTargetTriple(module)};
             auto loc = embox.getLoc();
             mlir::Type i8Ty = builder.getI8Type();
             mlir::Type i8Ptr = builder.getRefType(i8Ty);
-            mlir::Type buffTy = SequenceType::get({32}, i8Ty);
+            // For AArch64, PPC32 and PPC64, the thunk is populated by a call to
+            // __trampoline_setup, which is defined in
+            // compiler-rt/lib/builtins/trampoline_setup.c and requires the
+            // thunk size greater than 32 bytes.  For RISCV and x86_64, the
+            // thunk setup doesn't go through __trampoline_setup and fits in 32
+            // bytes.
+            fir::SequenceType::Extent thunkSize = triple.getTrampolineSize();
+            mlir::Type buffTy = SequenceType::get({thunkSize}, i8Ty);
             auto buffer = builder.create<AllocaOp>(loc, buffTy);
             mlir::Value closure =
                 builder.createConvert(loc, i8Ptr, embox.getHost());
@@ -342,8 +348,9 @@ public:
             rewriter.setInsertionPoint(coor);
             auto toTy = typeConverter.convertType(ty);
             auto toBaseTy = typeConverter.convertType(baseTy);
-            rewriter.replaceOpWithNewOp<CoordinateOp>(coor, toTy, coor.getRef(),
-                                                      coor.getCoor(), toBaseTy);
+            rewriter.replaceOpWithNewOp<CoordinateOp>(
+                coor, toTy, coor.getRef(), coor.getCoor(), toBaseTy,
+                coor.getFieldIndicesAttr());
             opIsValid = false;
           }
         } else if (auto index = mlir::dyn_cast<FieldIndexOp>(op)) {

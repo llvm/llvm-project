@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
@@ -76,8 +77,7 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(srcTy, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
@@ -105,7 +105,7 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
                    Operation::operand_range offsets) {
   MemRefType srcTy = src.getType();
-  auto [strides, offset] = getStridesAndOffset(srcTy);
+  auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
@@ -180,10 +180,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad &&
         elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
       return rewriter.notifyMatchFailure(
-          readOp, "Unsupported data type for tranposition");
+          readOp, "Unsupported data type for transposition");
 
     // If load is transposed, get the base shape for the tensor descriptor.
-    SmallVector<int64_t> descShape{vecTy.getShape()};
+    SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
@@ -313,6 +313,48 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
   }
 };
 
+struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = contractOp.getLoc();
+
+    if (contractOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects add combining kind");
+
+    TypedValue<Type> acc = contractOp.getAcc();
+    VectorType accType = dyn_cast<VectorType>(acc.getType());
+    if (!accType || accType.getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
+
+    // Accept only plain 2D data layout.
+    // VNNI packing is applied to DPAS as a separate lowering step.
+    TypedValue<VectorType> lhs = contractOp.getLhs();
+    TypedValue<VectorType> rhs = contractOp.getRhs();
+    if (lhs.getType().getRank() != 2 || rhs.getType().getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects lhs and rhs 2D vectors");
+
+    if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
+      return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
+
+    // TODO: Update shape validation to be target aware.
+    auto accShape = accType.getShape();
+    int64_t dimN = accShape[1];
+    if (dimN != 8 && dimN != 16)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Invalid operand dimensions");
+
+    auto dpasOp = rewriter.create<xegpu::DpasOp>(
+        loc, TypeRange{contractOp.getResultType()}, ValueRange{lhs, rhs, acc});
+    rewriter.replaceOp(contractOp, dpasOp);
+
+    return success();
+  }
+};
+
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
@@ -328,9 +370,5 @@ struct ConvertVectorToXeGPUPass
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-               StoreLowering>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
+               StoreLowering, ContractionLowering>(patterns.getContext());
 }

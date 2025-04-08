@@ -8,16 +8,20 @@ add_flang_library(HLFIRDialect
   CUFAttrsIncGen
   FIRDialect
   HLFIROpsIncGen
-  ${dialect_libs}
 
   LINK_LIBS
   CUFAttrs
   FIRDialect
-  MLIRIR
-  ${dialect_libs}
 
   LINK_COMPONENTS
   AsmParser
   AsmPrinter
   Remarks
+
+  MLIR_DEPS
+  ${dialect_libs}
+
+  MLIR_LIBS
+  MLIRIR
+  ${dialect_libs}
 )

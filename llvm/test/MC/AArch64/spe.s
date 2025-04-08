@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple aarch64 -mattr +spe-eef -show-encoding %s 2>%t | FileCheck %s
-// RUN: llvm-mc -triple aarch64 -mattr +v8.7a -show-encoding %s 2>%t | FileCheck %s
+// RUN: not llvm-mc -triple aarch64 -mattr +v8.7a %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SPE-EEF-ERR %s
 // RUN: not llvm-mc -triple aarch64 < %s 2>&1 | FileCheck --check-prefix=CHECK-NO-SPE-EEF-ERR %s
 
 msr PMSNEVFR_EL1, x0

@@ -858,18 +858,51 @@ inline bind_ty<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
   return V;
 }
 
+// TODO: Remove once UseConstant{Int,FP}ForScalableSplat is enabled by default,
+// and use m_Unless(m_ConstantExpr).
+struct immconstant_ty {
+  template <typename ITy> static bool isImmConstant(ITy *V) {
+    if (auto *CV = dyn_cast<Constant>(V)) {
+      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
+        return true;
+
+      if (CV->getType()->isVectorTy()) {
+        if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
+          if (!isa<ConstantExpr>(Splat) &&
+              !Splat->containsConstantExpression()) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+};
+
+struct match_immconstant_ty : immconstant_ty {
+  template <typename ITy> bool match(ITy *V) { return isImmConstant(V); }
+};
+
 /// Match an arbitrary immediate Constant and ignore it.
-inline match_combine_and<class_match<Constant>,
-                         match_unless<constantexpr_match>>
-m_ImmConstant() {
-  return m_CombineAnd(m_Constant(), m_Unless(m_ConstantExpr()));
-}
+inline match_immconstant_ty m_ImmConstant() { return match_immconstant_ty(); }
+
+struct bind_immconstant_ty : immconstant_ty {
+  Constant *&VR;
+
+  bind_immconstant_ty(Constant *&V) : VR(V) {}
+
+  template <typename ITy> bool match(ITy *V) {
+    if (isImmConstant(V)) {
+      VR = cast<Constant>(V);
+      return true;
+    }
+    return false;
+  }
+};
 
 /// Match an immediate Constant, capturing the value if we match.
-inline match_combine_and<bind_ty<Constant>,
-                         match_unless<constantexpr_match>>
-m_ImmConstant(Constant *&C) {
-  return m_CombineAnd(m_Constant(C), m_Unless(m_ConstantExpr()));
+inline bind_immconstant_ty m_ImmConstant(Constant *&C) {
+  return bind_immconstant_ty(C);
 }
 
 /// Match a specified Value*.
@@ -1430,6 +1463,34 @@ m_NUWAddLike(const LHS &L, const RHS &R) {
   return m_CombineOr(m_NUWAdd(L, R), m_DisjointOr(L, R));
 }
 
+template <typename LHS, typename RHS>
+struct XorLike_match {
+  LHS L;
+  RHS R;
+
+  XorLike_match(const LHS &L, const RHS &R) : L(L), R(R) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *Op = dyn_cast<BinaryOperator>(V)) {
+      if (Op->getOpcode() == Instruction::Sub && Op->hasNoUnsignedWrap() &&
+          PatternMatch::match(Op->getOperand(0), m_LowBitMask()))
+		  ; // Pass
+      else if (Op->getOpcode() != Instruction::Xor)
+        return false;
+      return (L.match(Op->getOperand(0)) && R.match(Op->getOperand(1))) ||
+             (L.match(Op->getOperand(1)) && R.match(Op->getOperand(0)));
+    }
+    return false;
+  }
+};
+
+/// Match either `(xor L, R)`, `(xor R, L)` or `(sub nuw R, L)` iff `R.isMask()`
+/// Only commutative matcher as the `sub` will need to swap the L and R.
+template <typename LHS, typename RHS>
+inline auto m_c_XorLike(const LHS &L, const RHS &R) {
+  return XorLike_match<LHS, RHS>(L, R);
+}
+
 //===----------------------------------------------------------------------===//
 // Class that matches a group of binary opcodes.
 //
@@ -1844,9 +1905,9 @@ struct m_ZeroMask {
 };
 
 struct m_SpecificMask {
-  ArrayRef<int> &MaskRef;
-  m_SpecificMask(ArrayRef<int> &MaskRef) : MaskRef(MaskRef) {}
-  bool match(ArrayRef<int> Mask) { return MaskRef == Mask; }
+  ArrayRef<int> Val;
+  m_SpecificMask(ArrayRef<int> Val) : Val(Val) {}
+  bool match(ArrayRef<int> Mask) { return Val == Mask; }
 };
 
 struct m_SplatOrPoisonMask {
@@ -2870,7 +2931,7 @@ template <typename Opnd_t> struct Signum_match {
       return false;
 
     unsigned ShiftWidth = TypeSize - 1;
-    Value *OpL = nullptr, *OpR = nullptr;
+    Value *Op;
 
     // This is the representation of signum we match:
     //
@@ -2882,11 +2943,11 @@ template <typename Opnd_t> struct Signum_match {
     //
     // for i1 values.
 
-    auto LHS = m_AShr(m_Value(OpL), m_SpecificInt(ShiftWidth));
-    auto RHS = m_LShr(m_Neg(m_Value(OpR)), m_SpecificInt(ShiftWidth));
-    auto Signum = m_Or(LHS, RHS);
+    auto LHS = m_AShr(m_Value(Op), m_SpecificInt(ShiftWidth));
+    auto RHS = m_LShr(m_Neg(m_Deferred(Op)), m_SpecificInt(ShiftWidth));
+    auto Signum = m_c_Or(LHS, RHS);
 
-    return Signum.match(V) && OpL == OpR && Val.match(OpL);
+    return Signum.match(V) && Val.match(Op);
   }
 };
 

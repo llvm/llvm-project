@@ -25,8 +25,10 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/RecordOps.h"
+#include "clang/Analysis/FlowSensitive/SmartPointerAccessorCaching.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
@@ -549,66 +551,92 @@ void transferCallReturningOptional(const CallExpr *E,
   setHasValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
 }
 
-void handleConstMemberCall(const CallExpr *CE,
+// Returns true if the const accessor is handled by caching.
+// Returns false if we could not cache. We should perform default handling
+// in that case.
+bool handleConstMemberCall(const CallExpr *CE,
                            dataflow::RecordStorageLocation *RecordLoc,
                            const MatchFinder::MatchResult &Result,
                            LatticeTransferState &State) {
-  // If the const method returns an optional or reference to an optional.
-  if (RecordLoc != nullptr && isSupportedOptionalType(CE->getType())) {
-    StorageLocation *Loc =
-        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
-            *RecordLoc, CE, State.Env, [&](StorageLocation &Loc) {
-              setHasValue(cast<RecordStorageLocation>(Loc),
-                          State.Env.makeAtomicBoolValue(), State.Env);
-            });
-    if (Loc == nullptr)
-      return;
-    if (CE->isGLValue()) {
-      // If the call to the const method returns a reference to an optional,
-      // link the call expression to the cached StorageLocation.
-      State.Env.setStorageLocation(*CE, *Loc);
-    } else {
-      // If the call to the const method returns an optional by value, we
-      // need to use CopyRecord to link the optional to the result object
-      // of the call expression.
-      auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
-      copyRecord(*cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
-    }
-    return;
-  }
+  if (RecordLoc == nullptr)
+    return false;
 
-  // Cache if the const method returns a boolean or pointer type.
-  // We may decide to cache other return types in the future.
-  if (RecordLoc != nullptr &&
-      (CE->getType()->isBooleanType() || CE->getType()->isPointerType())) {
+  // Cache if the const method returns a reference.
+  if (CE->isGLValue()) {
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return false;
+
+    // Initialize the optional's "has_value" property to true if the type is
+    // optional, otherwise no-op. If we want to support const ref to pointers or
+    // bools we should initialize their values here too.
+    auto Init = [&](StorageLocation &Loc) {
+      if (isSupportedOptionalType(CE->getType()))
+        setHasValue(cast<RecordStorageLocation>(Loc),
+                    State.Env.makeAtomicBoolValue(), State.Env);
+    };
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, Init);
+
+    State.Env.setStorageLocation(*CE, Loc);
+    return true;
+  }
+  // PRValue cases:
+  if (CE->getType()->isBooleanType() || CE->getType()->isPointerType()) {
+    // If the const method returns a boolean or pointer type.
     Value *Val = State.Lattice.getOrCreateConstMethodReturnValue(*RecordLoc, CE,
                                                                  State.Env);
     if (Val == nullptr)
-      return;
+      return false;
     State.Env.setValue(*CE, *Val);
-    return;
+    return true;
+  }
+  if (isSupportedOptionalType(CE->getType())) {
+    // If the const method returns an optional by value.
+    const FunctionDecl *DirectCallee = CE->getDirectCallee();
+    if (DirectCallee == nullptr)
+      return false;
+    StorageLocation &Loc =
+        State.Lattice.getOrCreateConstMethodReturnStorageLocation(
+            *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
+              setHasValue(cast<RecordStorageLocation>(Loc),
+                          State.Env.makeAtomicBoolValue(), State.Env);
+            });
+    // Use copyRecord to link the optional to the result object of the call
+    // expression.
+    auto &ResultLoc = State.Env.getResultObjectLocation(*CE);
+    copyRecord(cast<RecordStorageLocation>(Loc), ResultLoc, State.Env);
+    return true;
   }
 
-  // Perform default handling if the call returns an optional
-  // but wasn't handled above (if RecordLoc is nullptr).
-  if (isSupportedOptionalType(CE->getType())) {
-    transferCallReturningOptional(CE, Result, State);
-  }
+  return false;
 }
 
-void transferValue_ConstMemberCall(const CXXMemberCallExpr *MCE,
-                                   const MatchFinder::MatchResult &Result,
-                                   LatticeTransferState &State) {
-  handleConstMemberCall(
+void handleConstMemberCallWithFallbacks(
+    const CallExpr *CE, dataflow::RecordStorageLocation *RecordLoc,
+    const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
+  if (handleConstMemberCall(CE, RecordLoc, Result, State))
+    return;
+  // Perform default handling if the call returns an optional, but wasn't
+  // handled by caching.
+  if (isSupportedOptionalType(CE->getType()))
+    transferCallReturningOptional(CE, Result, State);
+}
+
+void transferConstMemberCall(const CXXMemberCallExpr *MCE,
+                             const MatchFinder::MatchResult &Result,
+                             LatticeTransferState &State) {
+  handleConstMemberCallWithFallbacks(
       MCE, dataflow::getImplicitObjectLocation(*MCE, State.Env), Result, State);
 }
 
-void transferValue_ConstMemberOperatorCall(
-    const CXXOperatorCallExpr *OCE, const MatchFinder::MatchResult &Result,
-    LatticeTransferState &State) {
+void transferConstMemberOperatorCall(const CXXOperatorCallExpr *OCE,
+                                     const MatchFinder::MatchResult &Result,
+                                     LatticeTransferState &State) {
   auto *RecordLoc = cast_or_null<dataflow::RecordStorageLocation>(
       State.Env.getStorageLocation(*OCE->getArg(0)));
-  handleConstMemberCall(OCE, RecordLoc, Result, State);
+  handleConstMemberCallWithFallbacks(OCE, RecordLoc, Result, State);
 }
 
 void handleNonConstMemberCall(const CallExpr *CE,
@@ -1031,11 +1059,53 @@ auto buildTransferMatchSwitch() {
             transferOptionalAndValueCmp(Cmp, Cmp->getArg(1), State.Env);
           })
 
+      // Smart-pointer-like operator* and operator-> calls that may look like
+      // const accessors (below) but need special handling to allow mixing
+      // the accessor calls.
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorStar(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          isSmartPointerLikeOperatorArrow(),
+          [](const CXXOperatorCallExpr *E,
+             const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E,
+                dyn_cast_or_null<RecordStorageLocation>(
+                    getLocBehindPossiblePointer(*E->getArg(0), State.Env)),
+                State, [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeValueMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedDeref(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isSmartPointerLikeGetMethodCall(),
+          [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &Result,
+             LatticeTransferState &State) {
+            transferSmartPointerLikeCachedGet(
+                E, getImplicitObjectLocation(*E, State.Env), State,
+                [](StorageLocation &Loc) {});
+          })
+
       // const accessor calls
       .CaseOfCFGStmt<CXXMemberCallExpr>(isZeroParamConstMemberCall(),
-                                        transferValue_ConstMemberCall)
+                                        transferConstMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(isZeroParamConstMemberOperatorCall(),
-                                          transferValue_ConstMemberOperatorCall)
+                                          transferConstMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferValue_NonConstMemberCall)
@@ -1050,8 +1120,8 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
-                                                     const Environment &Env) {
+llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
+diagnoseUnwrapCall(const Expr *ObjectExpr, const Environment &Env) {
   if (auto *OptionalLoc = cast_or_null<RecordStorageLocation>(
           getLocBehindPossiblePointer(*ObjectExpr, Env))) {
     auto *Prop = Env.getValue(locForHasValue(*OptionalLoc));
@@ -1062,9 +1132,9 @@ llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
   }
 
   // Record that this unwrap is *not* provably safe.
-  // FIXME: include either the name of the optional (if applicable) or a source
-  // range of the access for easier interpretation of the result.
-  return {ObjectExpr->getBeginLoc()};
+  // FIXME: include the name of the optional (if applicable).
+  auto Range = CharSourceRange::getTokenRange(ObjectExpr->getSourceRange());
+  return {UncheckedOptionalAccessDiagnostic{Range}};
 }
 
 auto buildDiagnoseMatchSwitch(
@@ -1073,8 +1143,9 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment,
-                               llvm::SmallVector<SourceLocation>>()
+  return CFGMatchSwitchBuilder<
+             const Environment,
+             llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
       // optional::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),

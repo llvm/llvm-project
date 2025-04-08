@@ -245,7 +245,7 @@ isAsmClobberable(const MachineFunction &MF, MCRegister PhysReg) const {
 }
 
 bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                                 unsigned PhysReg) const {
+                                                 MCRegister PhysReg) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
@@ -256,7 +256,7 @@ bool ARMBaseRegisterInfo::isInlineAsmReadOnlyReg(const MachineFunction &MF,
   if (hasBasePointer(MF))
     markSuperRegs(Reserved, BasePtr);
   assert(checkAllSuperRegsMarked(Reserved));
-  return Reserved.test(PhysReg);
+  return Reserved.test(PhysReg.id());
 }
 
 const TargetRegisterClass *
@@ -334,12 +334,12 @@ ARMBaseRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
 }
 
 // Get the other register in a GPRPair.
-static MCPhysReg getPairedGPR(MCPhysReg Reg, bool Odd,
-                              const MCRegisterInfo *RI) {
+static MCRegister getPairedGPR(MCRegister Reg, bool Odd,
+                               const MCRegisterInfo *RI) {
   for (MCPhysReg Super : RI->superregs(Reg))
     if (ARM::GPRPairRegClass.contains(Super))
       return RI->getSubReg(Super, Odd ? ARM::gsub_1 : ARM::gsub_0);
-  return 0;
+  return MCRegister();
 }
 
 // Resolve the RegPairEven / RegPairOdd register allocator hints.
@@ -390,7 +390,7 @@ bool ARMBaseRegisterInfo::getRegAllocationHints(
     if (Reg == PairedPhys || (getEncodingValue(Reg) & 1) != Odd)
       continue;
     // Don't provide hints that are paired to a reserved register.
-    MCPhysReg Paired = getPairedGPR(Reg, !Odd, this);
+    MCRegister Paired = getPairedGPR(Reg, !Odd, this);
     if (!Paired || MRI.isReserved(Paired))
       continue;
     Hints.push_back(Reg);

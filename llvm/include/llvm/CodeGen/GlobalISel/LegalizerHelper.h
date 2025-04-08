@@ -21,7 +21,8 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
-#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -57,7 +58,7 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
-  GISelKnownBits *KB;
+  GISelValueTracking *VT;
 
 public:
   enum LegalizeResult {
@@ -76,13 +77,13 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
   const TargetLowering &getTargetLowering() const { return TLI; }
-  GISelKnownBits *getKnownBits() const { return KB; }
+  GISelValueTracking *getValueTracking() const { return VT; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
   LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
                   GISelChangeObserver &Observer, MachineIRBuilder &B,
-                  GISelKnownBits *KB = nullptr);
+                  GISelValueTracking *VT = nullptr);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -296,6 +297,13 @@ public:
   /// Create a stack temporary based on the size in bytes and the alignment
   MachineInstrBuilder createStackTemporary(TypeSize Bytes, Align Alignment,
                                            MachinePointerInfo &PtrInfo);
+
+  /// Create a store of \p Val to a stack temporary and return a load as the
+  /// same type as \p Res.
+  MachineInstrBuilder createStackStoreLoad(const DstOp &Res, const SrcOp &Val);
+
+  /// Given a store of a boolean vector, scalarize it.
+  LegalizeResult scalarizeVectorBooleanStore(GStore &MI);
 
   /// Get a pointer to vector element \p Index located in memory for a vector of
   /// type \p VecTy starting at a base address of \p VecPtr. If \p Index is out

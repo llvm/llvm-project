@@ -38,6 +38,8 @@ const char *getEdgeKindName(Edge::Kind R) {
   switch (R) {
   case Pointer64:
     return "Pointer64";
+  case Pointer64Authenticated:
+    return "Pointer64Authenticated";
   case Pointer32:
     return "Pointer32";
   case Delta64:
@@ -202,6 +204,26 @@ static Error writeStoreRegSeq(AppendFtor &Append, unsigned DstLocReg,
   return Append(Instr);
 }
 
+void GOTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : GOTSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 1 &&
+           "GOT block edge count != 1");
+    registerPreExistingEntry(EntrySym->getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
+void PLTTableManager::registerExistingEntries() {
+  for (auto *EntrySym : StubsSection->symbols()) {
+    assert(EntrySym->getBlock().edges_size() == 2 &&
+           "PLT block edge count != 2");
+    auto &GOTSym = EntrySym->getBlock().edges().begin()->getTarget();
+    assert(GOTSym.getBlock().edges_size() == 1 && "GOT block edge count != 1");
+    registerPreExistingEntry(GOTSym.getBlock().edges().begin()->getTarget(),
+                             *EntrySym);
+  }
+}
+
 const char *getPointerSigningFunctionSectionName() { return "$__ptrauth_sign"; }
 
 /// Creates a pointer signing function section, block, and symbol to reserve
@@ -218,10 +240,20 @@ Error createEmptyPointerSigningFunction(LinkGraph &G) {
   // info encoded in the addend -- the only actually unknown quantity is the
   // fixup location, and we can probably put constraints even on that.
   size_t NumPtrAuthFixupLocations = 0;
-  for (auto *B : G.blocks())
-    for (auto &E : B->edges())
-      NumPtrAuthFixupLocations +=
-          E.getKind() == aarch64::Pointer64Authenticated;
+  for (auto &Sec : G.sections()) {
+
+    // No-alloc sections can't have ptrauth edges. We don't need to error out
+    // here: applyFixup will catch these edges if any make it to the fixup
+    // stage.
+    if (Sec.getMemLifetime() == orc::MemLifetime::NoAlloc)
+      continue;
+
+    for (auto *B : Sec.blocks()) {
+      for (auto &E : B->edges())
+        NumPtrAuthFixupLocations +=
+            E.getKind() == aarch64::Pointer64Authenticated;
+    }
+  }
 
   constexpr size_t MaxPtrSignSeqLength =
       4 + // To materialize the value to sign.
@@ -294,17 +326,31 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
     return InstrWriter.writeInteger(Instr);
   };
 
-  for (auto *B : G.blocks()) {
-    for (auto EI = B->edges().begin(); EI != B->edges().end();) {
-      auto &E = *EI;
-      if (E.getKind() == aarch64::Pointer64Authenticated) {
+  for (auto &Sec : G.sections()) {
+
+    if (Sec.getMemLifetime() == orc::MemLifetime::NoAlloc)
+      continue;
+
+    for (auto *B : Sec.blocks()) {
+      for (auto &E : B->edges()) {
+        // We're only concerned with Pointer64Authenticated edges here.
+        if (E.getKind() != aarch64::Pointer64Authenticated)
+          continue;
+
         uint64_t EncodedInfo = E.getAddend();
         int32_t RealAddend = (uint32_t)(EncodedInfo & 0xffffffff);
+        auto ValueToSign = E.getTarget().getAddress() + RealAddend;
+        if (!ValueToSign) {
+          LLVM_DEBUG(dbgs() << "  " << B->getFixupAddress(E) << " <- null\n");
+          E.setAddend(RealAddend);
+          E.setKind(aarch64::Pointer64);
+          continue;
+        }
+
         uint32_t InitialDiscriminator = (EncodedInfo >> 32) & 0xffff;
         bool AddressDiversify = (EncodedInfo >> 48) & 0x1;
         uint32_t Key = (EncodedInfo >> 49) & 0x3;
         uint32_t HighBits = EncodedInfo >> 51;
-        auto ValueToSign = E.getTarget().getAddress() + RealAddend;
 
         if (HighBits != 0x1000)
           return make_error<JITLinkError>(
@@ -312,10 +358,8 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
               formatv("{0:x}", B->getFixupAddress(E).getValue()) +
               " has invalid encoded addend  " + formatv("{0:x}", EncodedInfo));
 
-#ifndef NDEBUG
-        const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
-#endif // NDEBUG
         LLVM_DEBUG({
+          const char *const KeyNames[] = {"IA", "IB", "DA", "DB"};
           dbgs() << "  " << B->getFixupAddress(E) << " <- " << ValueToSign
                  << " : key = " << KeyNames[Key] << ", discriminator = "
                  << formatv("{0:x4}", InitialDiscriminator)
@@ -338,10 +382,9 @@ Error lowerPointer64AuthEdgesToSigningFunction(LinkGraph &G) {
         // Store signed pointer.
         cantFail(writeStoreRegSeq(AppendInstr, Reg2, Reg1));
 
-        // Remove this edge.
-        EI = B->removeEdge(EI);
-      } else
-        ++EI;
+        // Replace edge with a keep-alive to preserve dependence info.
+        E.setKind(Edge::KeepAlive);
+      }
     }
   }
 

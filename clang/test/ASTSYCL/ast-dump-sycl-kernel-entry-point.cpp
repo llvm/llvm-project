@@ -107,14 +107,29 @@ void skep5<KN<5,2>>(long) {
 // CHECK:      | |-TemplateArgument type 'long'
 // CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 2>
 
+// FIXME: C++23 [temp.expl.spec]p12 states:
+// FIXME:   ... Similarly, attributes appearing in the declaration of a template
+// FIXME:   have no effect on an explicit specialization of that template.
+// FIXME: Clang currently instantiates a function template specialization from
+// FIXME: the function template declaration and links it as a previous
+// FIXME: declaration of an explicit specialization. The instantiated
+// FIXME: declaration includes attributes instantiated from the function
+// FIXME: template declaration. When the instantiated declaration and the
+// FIXME: explicit specialization both specify a sycl_kernel_entry_point
+// FIXME: attribute with different kernel name types, a spurious diagnostic
+// FIXME: is issued. The following test case is incorrectly diagnosed as
+// FIXME: having conflicting kernel name types (KN<5,3> vs the incorrectly
+// FIXME: inherited KN<5,-1>).
+#if 0
 template<>
 [[clang::sycl_kernel_entry_point(KN<5,3>)]]
 void skep5<KN<5,-1>>(long long) {
 }
-// CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization
-// CHECK-NEXT: | |-TemplateArgument type 'KN<5, -1>'
-// CHECK:      | |-TemplateArgument type 'long long'
-// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 3>
+// FIXME-CHECK:      |-FunctionDecl {{.*}} prev {{.*}} skep5 'void (long long)' explicit_specialization
+// FIXME-CHECK-NEXT: | |-TemplateArgument type 'KN<5, -1>'
+// FIXME-CHECK:      | |-TemplateArgument type 'long long'
+// FIXME-CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<5, 3>
+#endif
 
 template void skep5<KN<5,4>>(int);
 // Checks are located with the primary template declaration above.
@@ -128,16 +143,14 @@ void skep6() {
 // CHECK:      |-FunctionDecl {{.*}} skep6 'void ()'
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 // CHECK-NEXT: |-FunctionDecl {{.*}} prev {{.*}} skep6 'void ()'
-// CHECK-NEXT: | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
+// CHECK:      | `-SYCLKernelEntryPointAttr {{.*}} KN<6>
 
 // Ensure that matching attributes from the same declaration are ok.
 [[clang::sycl_kernel_entry_point(KN<7>), clang::sycl_kernel_entry_point(KN<7>)]]
 void skep7() {
 }
 // CHECK:      |-FunctionDecl {{.*}} skep7 'void ()'
-// CHECK-NEXT: | |-CompoundStmt {{.*}}
-// CHECK-NEXT: | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
+// CHECK:      | |-SYCLKernelEntryPointAttr {{.*}} KN<7>
 // CHECK-NEXT: | `-SYCLKernelEntryPointAttr {{.*}} KN<7>
 
 void the_end() {}

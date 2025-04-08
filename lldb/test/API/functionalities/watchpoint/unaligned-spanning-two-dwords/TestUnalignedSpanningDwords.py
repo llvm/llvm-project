@@ -32,7 +32,6 @@ class UnalignedWatchpointTestCase(TestBase):
     # older debugservers will return the base address of the doubleword
     # which lldb doesn't understand, and will stop executing without a
     # proper stop reason.
-    @skipIfOutOfTreeDebugserver
     def test_unaligned_watchpoint(self):
         """Test a watchpoint that is handled by two hardware watchpoint registers."""
         self.build()

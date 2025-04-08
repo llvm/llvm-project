@@ -5,6 +5,7 @@ add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CodeGenOptions.cpp
+  ParserActions.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
@@ -18,17 +19,15 @@ add_flang_library(flangFrontend
   FIROptCodeGenPassIncGen
   FIROptTransformsPassIncGen
   HLFIRDialect
-  MLIRIR
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
   CUFDialect
   FortranParser
   FortranSemantics
   FortranEvaluate
-  FortranCommon
+  FortranSupport
   FortranLower
+  FortranSupport
   FIRDialect
   FIRDialectSupport
   FIRSupport
@@ -38,14 +37,8 @@ add_flang_library(flangFrontend
   HLFIRDialect
   HLFIRTransforms
   flangPasses
+  FIROpenACCSupport
   FlangOpenMPTransforms
-  MLIRTransforms
-  MLIRBuiltinToLLVMIRTranslation
-  MLIRLLVMToLLVMIRTranslation
-  MLIRSCFToControlFlow
-  MLIRTargetLLVMIRImport
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_COMPONENTS
   Passes
@@ -61,7 +54,29 @@ add_flang_library(flangFrontend
   FrontendOpenACC
   FrontendOpenMP
 
+  MLIR_DEPS
+  MLIRIR
+  ${dialect_libs}
+  ${extension_libs}
+
+  MLIR_LIBS
+  MLIRTransforms
+  MLIRBuiltinToLLVMIRTranslation
+  MLIRLLVMToLLVMIRTranslation
+  MLIRSCFToControlFlow
+  MLIRTargetLLVMIRImport
+  ${dialect_libs}
+  ${extension_libs}
+
   CLANG_LIBS
   clangBasic
   clangDriver
+)
+
+target_precompile_headers(flangFrontend PRIVATE
+  [["flang/Parser/parsing.h"]]
+  [["flang/Parser/parse-tree.h"]]
+  [["flang/Parser/dump-parse-tree.h"]]
+  [["flang/Lower/PFTBuilder.h"]]
+  [["flang/Lower/Bridge.h"]]
 )

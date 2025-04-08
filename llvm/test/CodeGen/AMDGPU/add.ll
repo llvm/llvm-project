@@ -474,44 +474,44 @@ define amdgpu_kernel void @s_add_v16i32(ptr addrspace(1) %out, <16 x i32> %a, <1
 ; GFX6-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_add_i32 s4, s11, s39
-; GFX6-NEXT:    s_add_i32 s5, s10, s38
-; GFX6-NEXT:    s_add_i32 s6, s9, s37
-; GFX6-NEXT:    s_add_i32 s7, s8, s36
-; GFX6-NEXT:    s_add_i32 s8, s15, s43
-; GFX6-NEXT:    s_add_i32 s9, s14, s42
-; GFX6-NEXT:    s_add_i32 s10, s13, s41
-; GFX6-NEXT:    s_add_i32 s11, s12, s40
-; GFX6-NEXT:    s_add_i32 s12, s19, s47
-; GFX6-NEXT:    s_add_i32 s13, s18, s46
-; GFX6-NEXT:    s_add_i32 s14, s17, s45
-; GFX6-NEXT:    s_add_i32 s15, s16, s44
-; GFX6-NEXT:    s_add_i32 s16, s23, s51
-; GFX6-NEXT:    s_add_i32 s17, s22, s50
-; GFX6-NEXT:    s_add_i32 s18, s21, s49
-; GFX6-NEXT:    s_add_i32 s19, s20, s48
-; GFX6-NEXT:    v_mov_b32_e32 v0, s19
-; GFX6-NEXT:    v_mov_b32_e32 v1, s18
-; GFX6-NEXT:    v_mov_b32_e32 v2, s17
-; GFX6-NEXT:    v_mov_b32_e32 v3, s16
+; GFX6-NEXT:    s_add_i32 s6, s11, s39
+; GFX6-NEXT:    s_add_i32 s7, s10, s38
+; GFX6-NEXT:    s_add_i32 s10, s15, s43
+; GFX6-NEXT:    s_add_i32 s11, s14, s42
+; GFX6-NEXT:    s_add_i32 s14, s19, s47
+; GFX6-NEXT:    s_add_i32 s15, s18, s46
+; GFX6-NEXT:    s_add_i32 s18, s23, s51
+; GFX6-NEXT:    s_add_i32 s19, s22, s50
+; GFX6-NEXT:    s_add_i32 s21, s21, s49
+; GFX6-NEXT:    s_add_i32 s20, s20, s48
+; GFX6-NEXT:    s_add_i32 s17, s17, s45
+; GFX6-NEXT:    s_add_i32 s16, s16, s44
+; GFX6-NEXT:    v_mov_b32_e32 v0, s20
+; GFX6-NEXT:    v_mov_b32_e32 v1, s21
+; GFX6-NEXT:    v_mov_b32_e32 v2, s19
+; GFX6-NEXT:    v_mov_b32_e32 v3, s18
+; GFX6-NEXT:    s_add_i32 s13, s13, s41
+; GFX6-NEXT:    s_add_i32 s12, s12, s40
 ; GFX6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:48
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v0, s15
-; GFX6-NEXT:    v_mov_b32_e32 v1, s14
-; GFX6-NEXT:    v_mov_b32_e32 v2, s13
-; GFX6-NEXT:    v_mov_b32_e32 v3, s12
+; GFX6-NEXT:    v_mov_b32_e32 v0, s16
+; GFX6-NEXT:    v_mov_b32_e32 v1, s17
+; GFX6-NEXT:    v_mov_b32_e32 v2, s15
+; GFX6-NEXT:    v_mov_b32_e32 v3, s14
+; GFX6-NEXT:    s_add_i32 s9, s9, s37
+; GFX6-NEXT:    s_add_i32 s8, s8, s36
 ; GFX6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:32
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v0, s11
-; GFX6-NEXT:    v_mov_b32_e32 v1, s10
-; GFX6-NEXT:    v_mov_b32_e32 v2, s9
-; GFX6-NEXT:    v_mov_b32_e32 v3, s8
+; GFX6-NEXT:    v_mov_b32_e32 v0, s12
+; GFX6-NEXT:    v_mov_b32_e32 v1, s13
+; GFX6-NEXT:    v_mov_b32_e32 v2, s11
+; GFX6-NEXT:    v_mov_b32_e32 v3, s10
 ; GFX6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
-; GFX6-NEXT:    v_mov_b32_e32 v0, s7
-; GFX6-NEXT:    v_mov_b32_e32 v1, s6
-; GFX6-NEXT:    v_mov_b32_e32 v2, s5
-; GFX6-NEXT:    v_mov_b32_e32 v3, s4
+; GFX6-NEXT:    v_mov_b32_e32 v0, s8
+; GFX6-NEXT:    v_mov_b32_e32 v1, s9
+; GFX6-NEXT:    v_mov_b32_e32 v2, s7
+; GFX6-NEXT:    v_mov_b32_e32 v3, s6
 ; GFX6-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -1389,7 +1389,7 @@ define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
 ; GFX12-NEXT:    s_endpgm
   %vcc = call i64 asm sideeffect "; def vcc", "={vcc}"()
   %sub = add i32 %v, %s
-  store i32 %sub, ptr addrspace(3) undef
+  store i32 %sub, ptr addrspace(3) poison
   call void asm sideeffect "; use vcc", "{vcc}"(i64 %vcc)
   ret void
 }

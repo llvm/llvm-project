@@ -98,11 +98,11 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
     static_assert(sizeof(_Tp) >= 0, "cannot allocate memory for an incomplete type");
     if (__n > allocator_traits<allocator>::max_size(*this))
-      __throw_bad_array_new_length();
+      std::__throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
       return static_cast<_Tp*>(::operator new(__n * sizeof(_Tp)));
     } else {
-      return static_cast<_Tp*>(std::__libcpp_allocate(__n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp)));
+      return std::__libcpp_allocate<_Tp>(__element_count(__n));
     }
   }
 
@@ -117,7 +117,7 @@ public:
     if (__libcpp_is_constant_evaluated()) {
       ::operator delete(__p);
     } else {
-      std::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), _LIBCPP_ALIGNOF(_Tp));
+      std::__libcpp_deallocate<_Tp>(__p, __element_count(__n));
     }
   }
 

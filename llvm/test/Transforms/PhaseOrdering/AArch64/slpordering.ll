@@ -12,7 +12,7 @@ target triple = "aarch64"
 ; Function Attrs: nounwind uwtable
 define i32 @slpordering(ptr noundef %p1, i32 noundef %ip1, ptr noundef %p2, i32 noundef %ip2) #0 {
 ; CHECK-LABEL: define range(i32 0, 65536) i32 @slpordering
-; CHECK-SAME: (ptr nocapture noundef readonly [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr nocapture noundef readonly [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr noundef readonly captures(none) [[P1:%.*]], i32 noundef [[IP1:%.*]], ptr noundef readonly captures(none) [[P2:%.*]], i32 noundef [[IP2:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[IP1]] to i64
 ; CHECK-NEXT:    [[IDX_EXT63:%.*]] = sext i32 [[IP2]] to i64

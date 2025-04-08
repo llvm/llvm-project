@@ -24,6 +24,38 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
              "This requires that the source filename has a unique name / "
              "path to avoid name collisions."));
 
+cl::list<GlobalValue::GUID> MoveSymbolGUID(
+    "thinlto-move-symbols",
+    cl::desc(
+        "Move the symbols with the given name. This will delete these symbols "
+        "wherever they are originally defined, and make sure their "
+        "linkage is External where they are imported. It is meant to be "
+        "used with the name of contextual profiling roots."),
+    cl::Hidden);
+
+FunctionImportGlobalProcessing::FunctionImportGlobalProcessing(
+    Module &M, const ModuleSummaryIndex &Index,
+    SetVector<GlobalValue *> *GlobalsToImport, bool ClearDSOLocalOnDeclarations)
+    : M(M), ImportIndex(Index), GlobalsToImport(GlobalsToImport),
+      ClearDSOLocalOnDeclarations(ClearDSOLocalOnDeclarations) {
+  // If we have a ModuleSummaryIndex but no function to import,
+  // then this is the primary module being compiled in a ThinLTO
+  // backend compilation, and we need to see if it has functions that
+  // may be exported to another backend compilation.
+  if (!GlobalsToImport)
+    HasExportedFunctions = ImportIndex.hasExportedFunctions(M);
+
+#ifndef NDEBUG
+  SmallVector<GlobalValue *, 4> Vec;
+  // First collect those in the llvm.used set.
+  collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/false);
+  // Next collect those in the llvm.compiler.used set.
+  collectUsedGlobalVariables(M, Vec, /*CompilerUsed=*/true);
+  Used = {llvm::from_range, Vec};
+#endif
+  SymbolsToMove.insert_range(MoveSymbolGUID);
+}
+
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
 bool FunctionImportGlobalProcessing::doImportAsDefinition(
@@ -147,7 +179,9 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // and/or optimization, but are turned into declarations later
     // during the EliminateAvailableExternally pass.
     if (doImportAsDefinition(SGV) && !isa<GlobalAlias>(SGV))
-      return GlobalValue::AvailableExternallyLinkage;
+      return SymbolsToMove.contains(SGV->getGUID())
+                 ? GlobalValue::ExternalLinkage
+                 : GlobalValue::AvailableExternallyLinkage;
     // An imported external declaration stays external.
     return SGV->getLinkage();
 
@@ -331,15 +365,12 @@ void FunctionImportGlobalProcessing::processGlobalsForThinLTO() {
       }
 }
 
-bool FunctionImportGlobalProcessing::run() {
-  processGlobalsForThinLTO();
-  return false;
-}
+void FunctionImportGlobalProcessing::run() { processGlobalsForThinLTO(); }
 
-bool llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
+void llvm::renameModuleForThinLTO(Module &M, const ModuleSummaryIndex &Index,
                                   bool ClearDSOLocalOnDeclarations,
                                   SetVector<GlobalValue *> *GlobalsToImport) {
   FunctionImportGlobalProcessing ThinLTOProcessing(M, Index, GlobalsToImport,
                                                    ClearDSOLocalOnDeclarations);
-  return ThinLTOProcessing.run();
+  ThinLTOProcessing.run();
 }

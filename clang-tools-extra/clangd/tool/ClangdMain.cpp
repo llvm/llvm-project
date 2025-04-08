@@ -242,28 +242,28 @@ opt<std::string> FallbackStyle{
     init(clang::format::DefaultFallbackStyle),
 };
 
-opt<int> EnableFunctionArgSnippets{
+opt<std::string> EnableFunctionArgSnippets{
     "function-arg-placeholders",
     cat(Features),
     desc("When disabled (0), completions contain only parentheses for "
          "function calls. When enabled (1), completions also contain "
          "placeholders for method parameters"),
-    init(-1),
+    init("-1"),
 };
 
-opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
+opt<Config::HeaderInsertionPolicy> HeaderInsertion{
     "header-insertion",
     cat(Features),
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
-        clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
+        clEnumValN(Config::HeaderInsertionPolicy::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
                    "header is already directly included or the symbol is "
                    "forward-declared"),
         clEnumValN(
-            CodeCompleteOptions::NeverInsert, "never",
+            Config::HeaderInsertionPolicy::NeverInsert, "never",
             "Never insert #include directives as part of code completion")),
 };
 
@@ -636,6 +636,22 @@ loadExternalIndex(const Config::ExternalIndexSpec &External,
   llvm_unreachable("Invalid ExternalIndexKind.");
 }
 
+std::optional<bool> shouldEnableFunctionArgSnippets() {
+  std::string Val = EnableFunctionArgSnippets;
+  // Accept the same values that a bool option parser would, but also accept
+  // -1 to indicate "unspecified", in which case the ArgumentListsPolicy
+  // config option will be respected.
+  if (Val == "1" || Val == "true" || Val == "True" || Val == "TRUE")
+    return true;
+  if (Val == "0" || Val == "false" || Val == "False" || Val == "FALSE")
+    return false;
+  if (Val != "-1")
+    elog("Value specified by --function-arg-placeholders is invalid. Provide a "
+         "boolean value or leave unspecified to use ArgumentListsPolicy from "
+         "config instead.");
+  return std::nullopt;
+}
+
 class FlagsConfigProvider : public config::Provider {
 private:
   config::CompiledFragment Frag;
@@ -652,6 +668,7 @@ public:
     std::optional<Config::ExternalIndexSpec> IndexSpec;
     std::optional<Config::BackgroundPolicy> BGPolicy;
     std::optional<Config::ArgumentListsPolicy> ArgumentLists;
+    std::optional<Config::HeaderInsertionPolicy> HeaderInsertionPolicy;
 
     // If --compile-commands-dir arg was invoked, check value and override
     // default path.
@@ -696,10 +713,14 @@ public:
       BGPolicy = Config::BackgroundPolicy::Skip;
     }
 
-    if (EnableFunctionArgSnippets >= 0) {
-      ArgumentLists = EnableFunctionArgSnippets
-                          ? Config::ArgumentListsPolicy::FullPlaceholders
-                          : Config::ArgumentListsPolicy::Delimiters;
+    // If CLI has set never, use that regardless of what the config files have
+    if (HeaderInsertion == Config::HeaderInsertionPolicy::NeverInsert) {
+      HeaderInsertionPolicy = Config::HeaderInsertionPolicy::NeverInsert;
+    }
+
+    if (std::optional<bool> Enable = shouldEnableFunctionArgSnippets()) {
+      ArgumentLists = *Enable ? Config::ArgumentListsPolicy::FullPlaceholders
+                              : Config::ArgumentListsPolicy::Delimiters;
     }
 
     Frag = [=](const config::Params &, Config &C) {
@@ -711,6 +732,8 @@ public:
         C.Index.Background = *BGPolicy;
       if (ArgumentLists)
         C.Completion.ArgumentLists = *ArgumentLists;
+      if (HeaderInsertionPolicy)
+        C.Completion.HeaderInsertion = *HeaderInsertionPolicy;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
 

@@ -124,9 +124,8 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i7(<vscale x 2 x i7> %va, <vscal
 ; ZVFH-LABEL: vuitofp_nxv2f16_nxv2i7:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    li a1, 127
-; ZVFH-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
-; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; ZVFH-NEXT:    vand.vx v9, v8, a1
 ; ZVFH-NEXT:    vfwcvt.f.xu.v v8, v9, v0.t
 ; ZVFH-NEXT:    ret
 ;
@@ -455,8 +454,8 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i32(<vscale x 2 x i32> %va, <v
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8, v0.t
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x double> %v
@@ -466,8 +465,8 @@ define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i32_unmasked(<vscale x 2 x i32
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x double> %v

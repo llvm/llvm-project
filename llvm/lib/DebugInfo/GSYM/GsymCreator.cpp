@@ -275,8 +275,9 @@ llvm::Error GsymCreator::finalize(OutputAggregator &Out) {
   // object.
   if (!IsSegment) {
     if (NumBefore > 1) {
-      // Sort function infos so we can emit sorted functions.
-      llvm::sort(Funcs);
+      // Sort function infos so we can emit sorted functions. Use stable sort to
+      // ensure determinism.
+      llvm::stable_sort(Funcs);
       std::vector<FunctionInfo> FinalizedFuncs;
       FinalizedFuncs.reserve(Funcs.size());
       FinalizedFuncs.emplace_back(std::move(Funcs.front()));

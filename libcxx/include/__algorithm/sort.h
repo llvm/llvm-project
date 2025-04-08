@@ -34,7 +34,6 @@
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/remove_cvref.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <climits>
@@ -52,8 +51,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Compare, class _Iter, class _Tp = typename iterator_traits<_Iter>::value_type>
 inline const bool __use_branchless_sort =
     __libcpp_is_contiguous_iterator<_Iter>::value && __is_cheap_to_copy<_Tp> && is_arithmetic<_Tp>::value &&
-    (__desugars_to_v<__less_tag, __remove_cvref_t<_Compare>, _Tp, _Tp> ||
-     __desugars_to_v<__greater_tag, __remove_cvref_t<_Compare>, _Tp, _Tp>);
+    (__desugars_to_v<__less_tag, _Compare, _Tp, _Tp> || __desugars_to_v<__greater_tag, _Compare, _Tp, _Tp>);
 
 namespace __detail {
 
@@ -240,7 +238,7 @@ __selection_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, 
 // Sort the iterator range [__first, __last) using the comparator __comp using
 // the insertion sort algorithm.
 template <class _AlgPolicy, class _Compare, class _BidirectionalIterator>
-_LIBCPP_HIDE_FROM_ABI void
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __last, _Compare __comp) {
   using _Ops = _IterOps<_AlgPolicy>;
 
@@ -890,10 +888,10 @@ __sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Co
 }
 
 template <class _Type, class... _Options>
-using __is_any_of = _Or<is_same<_Type, _Options>...>;
+using __is_any_of _LIBCPP_NODEBUG = _Or<is_same<_Type, _Options>...>;
 
 template <class _Type>
-using __sort_is_specialized_in_library = __is_any_of<
+using __sort_is_specialized_in_library _LIBCPP_NODEBUG = __is_any_of<
     _Type,
     char,
 #if _LIBCPP_HAS_WIDE_CHARACTERS

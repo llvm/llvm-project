@@ -240,7 +240,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
                 data = DataExtractor(data, offset, data.GetByteSize() - offset);
                 if (lo_pc != LLDB_INVALID_ADDRESS) {
                   assert(lo_pc >= cu->GetBaseAddress());
-                  DWARFExpression::ParseDWARFLocationList(cu, data, frame_base);
+                  cu->ParseDWARFLocationList(data, *frame_base);
                   frame_base->SetFuncFileAddress(lo_pc);
                 } else
                   set_frame_base_loclist_addr = true;
@@ -263,10 +263,9 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (set_frame_base_loclist_addr && !ranges.empty()) {
-    // TODO: Use the first range instead.
-    dw_addr_t lowest_range_pc = llvm::min_element(ranges)->LowPC;
-    assert(lowest_range_pc >= cu->GetBaseAddress());
-    frame_base->SetFuncFileAddress(lowest_range_pc);
+    dw_addr_t file_addr = ranges.begin()->LowPC;
+    assert(file_addr >= cu->GetBaseAddress());
+    frame_base->SetFuncFileAddress(file_addr);
   }
 
   if (ranges.empty() || name == nullptr || mangled == nullptr) {
@@ -281,22 +280,34 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   return !ranges.empty();
 }
 
-// Get all attribute values for a given DIE, including following any
-// specification or abstract origin attributes and including those in the
-// results. Any duplicate attributes will have the first instance take
-// precedence (this can happen for declaration attributes).
-void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
-                                        DWARFAttributes &attributes,
-                                        Recurse recurse,
-                                        uint32_t curr_depth) const {
-  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
-  if (!abbrevDecl) {
-    attributes.Clear();
-    return;
-  }
+/// Helper for the public \ref DWARFDebugInfoEntry::GetAttributes API.
+/// Adds all attributes of the DIE at the top of the \c worklist to the
+/// \c attributes list. Specifcations and abstract origins are added
+/// to the \c worklist if the referenced DIE has not been seen before.
+static bool GetAttributes(llvm::SmallVectorImpl<DWARFDIE> &worklist,
+                          llvm::SmallSet<DWARFDebugInfoEntry const *, 3> &seen,
+                          DWARFAttributes &attributes) {
+  assert(!worklist.empty() && "Need at least one DIE to visit.");
+  assert(seen.size() >= 1 &&
+         "Need to have seen at least the currently visited entry.");
+
+  DWARFDIE current = worklist.pop_back_val();
+
+  const auto *cu = current.GetCU();
+  assert(cu);
+
+  const auto *entry = current.GetDIE();
+  assert(entry);
+
+  const auto *abbrevDecl =
+      entry->GetAbbreviationDeclarationPtr(current.GetCU());
+  if (!abbrevDecl)
+    return false;
 
   const DWARFDataExtractor &data = cu->GetData();
-  lldb::offset_t offset = GetFirstAttributeOffset();
+  lldb::offset_t offset = current.GetDIE()->GetFirstAttributeOffset();
+
+  const bool is_first_die = seen.size() == 1;
 
   for (const auto &attribute : abbrevDecl->attributes()) {
     DWARFFormValue form_value(cu);
@@ -309,10 +320,10 @@ void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
     switch (attr) {
     case DW_AT_sibling:
     case DW_AT_declaration:
-      if (curr_depth > 0) {
+      if (!is_first_die) {
         // This attribute doesn't make sense when combined with the DIE that
         // references this DIE. We know a DIE is referencing this DIE because
-        // curr_depth is not zero
+        // we've visited more than one DIE already.
         break;
       }
       [[fallthrough]];
@@ -321,13 +332,12 @@ void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
       break;
     }
 
-    if (recurse == Recurse::yes &&
-        ((attr == DW_AT_specification) || (attr == DW_AT_abstract_origin))) {
+    if (attr == DW_AT_specification || attr == DW_AT_abstract_origin) {
       if (form_value.ExtractValue(data, &offset)) {
-        DWARFDIE spec_die = form_value.Reference();
-        if (spec_die)
-          spec_die.GetDIE()->GetAttributes(spec_die.GetCU(), attributes,
-                                           recurse, curr_depth + 1);
+        if (DWARFDIE spec_die = form_value.Reference()) {
+          if (seen.insert(spec_die.GetDIE()).second)
+            worklist.push_back(spec_die);
+        }
       }
     } else {
       const dw_form_t form = form_value.Form();
@@ -339,6 +349,34 @@ void DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
         DWARFFormValue::SkipValue(form, data, &offset, cu);
     }
   }
+
+  return true;
+}
+
+DWARFAttributes DWARFDebugInfoEntry::GetAttributes(const DWARFUnit *cu,
+                                                   Recurse recurse) const {
+  // FIXME: use ElaboratingDIEIterator to follow specifications/abstract origins
+  // instead of maintaining our own worklist/seen list.
+
+  DWARFAttributes attributes;
+
+  llvm::SmallVector<DWARFDIE, 3> worklist;
+  worklist.emplace_back(cu, this);
+
+  // Keep track if DIEs already seen to prevent infinite recursion.
+  // Value of '3' was picked for the same reason that
+  // DWARFDie::findRecursively does.
+  llvm::SmallSet<DWARFDebugInfoEntry const *, 3> seen;
+  seen.insert(this);
+
+  do {
+    if (!::GetAttributes(worklist, seen, attributes)) {
+      attributes.Clear();
+      break;
+    }
+  } while (!worklist.empty() && recurse == Recurse::yes);
+
+  return attributes;
 }
 
 // GetAttributeValue

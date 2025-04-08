@@ -56,7 +56,6 @@ public:
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;
-  std::vector<BitcodeFile *> bitcodeFileInstances;
 
   MergeChunk *mergeChunkInstances[Log2MaxSectionAlignment + 1] = {};
 

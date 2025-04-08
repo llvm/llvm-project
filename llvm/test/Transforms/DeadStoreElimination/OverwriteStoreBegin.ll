@@ -402,3 +402,33 @@ entry:
   store i64 1, ptr %p, align 1
   ret void
 }
+
+; Verify that we adjust/drop the dereferenceable attribute.
+define void @dereferenceable(ptr nocapture %p) {
+; CHECK-LABEL: @dereferenceable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP0]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.p0.i64(ptr dereferenceable(28) align 4 %p, i8 0, i64 28, i1 false)
+  store i32 1, ptr %p, align 4
+  ret void
+}
+
+; Verify that we adjust/drop the dereferenceable_or_null attribute.
+define void @dereferenceable_or_null(ptr nocapture %p) {
+; CHECK-LABEL: @dereferenceable_or_null(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP0]], i8 0, i64 20, i1 false)
+; CHECK-NEXT:    store i64 1, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @llvm.memset.p0.i64(ptr dereferenceable_or_null(28) align 4 %p, i8 0, i64 28, i1 false)
+  store i64 1, ptr %p, align 4
+  ret void
+}

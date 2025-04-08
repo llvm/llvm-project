@@ -16,7 +16,6 @@ add_flang_library(FortranLower
   ConvertType.cpp
   ConvertVariable.cpp
   CustomIntrinsicCall.cpp
-  DumpEvaluateExpr.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
   IO.cpp
@@ -29,10 +28,12 @@ add_flang_library(FortranLower
   OpenMP/DataSharingProcessor.cpp
   OpenMP/Decomposer.cpp
   OpenMP/OpenMP.cpp
+  OpenMP/PrivateReductionUtils.cpp
   OpenMP/ReductionProcessor.cpp
   OpenMP/Utils.cpp
   PFTBuilder.cpp
   Runtime.cpp
+  Support/Utils.cpp
   SymbolMap.cpp
   VectorSubscripts.cpp
   
@@ -42,8 +43,6 @@ add_flang_library(FortranLower
   FIRDialect
   FIRTransforms
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
 
   LINK_LIBS
   CUFAttrs
@@ -54,17 +53,23 @@ add_flang_library(FortranLower
   FIRSupport
   FIRTransforms
   HLFIRDialect
-  ${dialect_libs}
-  ${extension_libs}
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics
+
+  LINK_COMPONENTS
+  Support
+
+  MLIR_DEPS
+  ${dialect_libs}
+  ${extension_libs}
+
+  MLIR_LIBS
+  ${dialect_libs}
+  ${extension_libs}
   MLIRAffineToStandard
   MLIRFuncDialect
   MLIRLLVMDialect
   MLIRSCFToControlFlow
-
-  LINK_COMPONENTS
-  Support
 )

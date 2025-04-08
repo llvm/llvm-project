@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+sve2 -pass-remarks-analysis=sme -aarch64-stack-hazard-remark-size=64 -o /dev/null < %s 2>&1 | FileCheck %s --check-prefixes=CHECK
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+sve2 -pass-remarks-analysis=sme -aarch64-stack-hazard-size=1024 -o /dev/null < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-PADDING
+; RUN: llc < %s -mtriple=aarch64 -mattr=+sve2 -pass-remarks-analysis=sme -aarch64-enable-zpr-predicate-spills -aarch64-stack-hazard-remark-size=64 -o /dev/null < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ZPR-PRED-SPILLS
+; RUN: llc < %s -mtriple=aarch64 -mattr=+sve2 -pass-remarks-analysis=sme -aarch64-enable-zpr-predicate-spills -aarch64-stack-hazard-size=1024 -o /dev/null < %s 2>&1 | FileCheck %s --check-prefixes=CHECK-ZPR-PRED-SPILLS-WITH-PADDING
 
 ; Don't emit remarks for non-streaming functions.
 define float @csr_x20_stackargs_notsc(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i) {
@@ -66,13 +68,18 @@ entry:
 }
 
 ; SVE calling conventions
-; Predicate register spills end up in FP region, currently.
+; Predicate register spills end up in FP region, currently. This can be
+; mitigated with the -aarch64-enable-zpr-predicate-spills option.
 
 define i32 @svecc_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8> %P3, i16 %P4) #2 {
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at [SP-48-258 * vscale] is too close to FPR stack object at [SP-48-256 * vscale]
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_call': FPR stack object at [SP-48-16 * vscale] is too close to GPR stack object at [SP-48]
 ; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at [SP-1072-258 * vscale] is too close to FPR stack object at [SP-1072-256 * vscale]
 ; CHECK-PADDING-NOT: remark: <unknown>:0:0: stack hazard in 'svecc_call':
+; CHECK-ZPR-PRED-SPILLS-NOT: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at {{.*}} is too close to FPR stack object
+; CHECK-ZPR-PRED-SPILLS: <unknown>:0:0: stack hazard in 'svecc_call': FPR stack object at [SP-48-16 * vscale] is too close to GPR stack object at [SP-48]
+; CHECK-ZPR-PRED-SPILLS-WITH-PADDING-NOT: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at {{.*}} is too close to FPR stack object
+; CHECK-ZPR-PRED-SPILLS-WITH-PADDING-NOT: <unknown>:0:0: stack hazard in 'svecc_call': FPR stack object at {{.*}} is too close to GPR stack object
 entry:
   tail call void asm sideeffect "", "~{x0},~{x28},~{x27},~{x3}"() #2
   %call = call ptr @memset(ptr noundef nonnull %P1, i32 noundef 45, i32 noundef 37)
@@ -84,6 +91,10 @@ define i32 @svecc_alloca_call(<4 x i16> %P0, ptr %P1, i32 %P2, <vscale x 16 x i8
 ; CHECK: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call': FPR stack object at [SP-48-16 * vscale] is too close to GPR stack object at [SP-48]
 ; CHECK-PADDING: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call': PPR stack object at [SP-1072-258 * vscale] is too close to FPR stack object at [SP-1072-256 * vscale]
 ; CHECK-PADDING-NOT: remark: <unknown>:0:0: stack hazard in 'svecc_alloca_call':
+; CHECK-ZPR-PRED-SPILLS-NOT: <unknown>:0:0: stack hazard in 'svecc_call': PPR stack object at {{.*}} is too close to FPR stack object
+; CHECK-ZPR-PRED-SPILLS: <unknown>:0:0: stack hazard in 'svecc_alloca_call': FPR stack object at [SP-48-16 * vscale] is too close to GPR stack object at [SP-48]
+; CHECK-ZPR-PRED-SPILLS-WITH-PADDING-NOT: <unknown>:0:0: stack hazard in 'svecc_alloca_call': PPR stack object at {{.*}} is too close to FPR stack object
+; CHECK-ZPR-PRED-SPILLS-WITH-PADDING-NOT: <unknown>:0:0: stack hazard in 'svecc_alloca_call': FPR stack object at {{.*}} is too close to GPR stack object
 entry:
   tail call void asm sideeffect "", "~{x0},~{x28},~{x27},~{x3}"() #2
   %0 = alloca [37 x i8], align 16

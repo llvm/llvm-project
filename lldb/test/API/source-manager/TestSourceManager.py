@@ -35,7 +35,7 @@ class SourceManagerTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Find the line number to break inside main().
-        self.file = self.getBuildArtifact("main-copy.c")
+        self.file = os.path.realpath(self.getBuildArtifact("main-copy.c"))
         self.line = line_number("main.c", "// Set break point at this line.")
 
     def modify_content(self):
@@ -129,6 +129,7 @@ class SourceManagerTestCase(TestBase):
             stream.GetData(),
             "Source code displayed correctly:\n" + stream.GetData(),
             exe=False,
+            ordered=False,
             patterns=["=>", "%d.*Hello world" % self.line, needle_regex],
         )
 
@@ -256,7 +257,7 @@ class SourceManagerTestCase(TestBase):
         # of breakpoints for the current line, i.e., self.line.
         import re
 
-        m = re.search("^\[(\d+)\].*// Set break point at this line.", output)
+        m = re.search(r"^\[(\d+)\].*// Set break point at this line.", output)
         if not m:
             self.fail("Fail to display source level breakpoints")
         self.assertGreater(int(m.group(1)), 0)

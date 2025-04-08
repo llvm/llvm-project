@@ -25,7 +25,9 @@
 #include <vector>
 
 #include "almost_satisfies_types.h"
+#include "sized_allocator.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "type_algorithms.h"
 
 template <class In, class Out = In, class Sent = sentinel_wrapper<In>>
@@ -98,6 +100,28 @@ constexpr void test_iterators() {
   }
 }
 // clang-format on
+
+#if TEST_STD_VER >= 23
+constexpr bool test_vector_bool(std::size_t N) {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+
+  { // Test copy with aligned bytes
+    std::vector<bool> out(N);
+    std::ranges::copy(in, out.begin());
+    assert(in == out);
+  }
+  { // Test copy with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::ranges::copy(in, out.begin() + 4);
+    for (std::size_t i = 0; i < N; ++i)
+      assert(out[i + 4] == in[i]);
+  }
+
+  return true;
+}
+#endif
 
 constexpr bool test() {
   types::for_each(types::forward_iterator_list<int*>{}, []<class Out>() {
@@ -203,6 +227,165 @@ constexpr bool test() {
       assert(out[2].canCopy);
     }
   }
+
+#if TEST_STD_VER >= 23
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+  }
+
+  // Validate std::ranges::copy with std::vector<bool> iterators and custom storage types.
+  // Ensure that assigned bits hold the intended values, while unassigned bits stay unchanged.
+  // Related issue: https://github.com/llvm/llvm-project/issues/131692.
+  {
+    //// Tests for std::ranges::copy with aligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(8, false, Alloc(1));
+      std::vector<bool, Alloc> out(8, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 1, in.begin() + 2), out.begin() + 1); // out[1] = false
+      assert(out[1] == false);
+      for (std::size_t i = 0; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        if (i != 1)
+          assert(out[i] == true);
+    }
+    { // Test the last (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(8, false, Alloc(1));
+      std::vector<bool, Alloc> out(8, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.begin() + 1), out.begin()); // out[0] = false
+      assert(out[0] == false);
+      for (std::size_t i = 1; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        assert(out[i] == true);
+    }
+    { // Test middle (whole) words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(32, true, Alloc(1));
+      for (std::size_t i = 0; i < in.size(); i += 2)
+        in[i] = false;
+      std::vector<bool, Alloc> out(32, false, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 4, in.end() - 4), out.begin() + 4);
+      for (std::size_t i = 4; i < static_cast<std::size_t>(in.size() - 4); ++i)
+        assert(in[i] == out[i]);
+      for (std::size_t i = 0; i < 4; ++i)
+        assert(out[i] == false);
+      for (std::size_t i = 28; i < out.size(); ++i)
+        assert(out[i] == false);
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(16, false, Alloc(1));
+      std::vector<bool, Alloc> out(16, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 1, in.begin() + 3), out.begin() + 1); // out[1..2] = false
+      assert(out[1] == false);
+      assert(out[2] == false);
+      for (std::size_t i = 0; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        if (i != 1 && i != 2)
+          assert(out[i] == true);
+    }
+    { // Test the last (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(16, false, Alloc(1));
+      std::vector<bool, Alloc> out(16, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.begin() + 2), out.begin()); // out[0..1] = false
+      assert(out[0] == false);
+      assert(out[1] == false);
+      for (std::size_t i = 2; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        assert(out[i] == true);
+    }
+    { // Test middle (whole) words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(64, true, Alloc(1));
+      for (std::size_t i = 0; i < in.size(); i += 2)
+        in[i] = false;
+      std::vector<bool, Alloc> out(64, false, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 8, in.end() - 8), out.begin() + 8);
+      for (std::size_t i = 8; i < static_cast<std::size_t>(in.size() - 8); ++i)
+        assert(in[i] == out[i]);
+      for (std::size_t i = 0; i < 8; ++i)
+        assert(out[i] == false);
+      for (std::size_t i = static_cast<std::size_t>(out.size() - 8); i < out.size(); ++i)
+        assert(out[i] == false);
+    }
+
+    //// Tests for std::ranges::copy with unaligned bits
+
+    { // Test the first (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(8, false, Alloc(1));
+      std::vector<bool, Alloc> out(8, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 7, in.end()), out.begin()); // out[0] = false
+      assert(out[0] == false);
+      for (std::size_t i = 1; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        assert(out[i] == true);
+    }
+    { // Test the last (partial) word for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(8, false, Alloc(1));
+      std::vector<bool, Alloc> out(8, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.begin() + 1), out.begin() + 2); // out[2] = false
+      assert(out[2] == false);
+      for (std::size_t i = 1; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        if (i != 2)
+          assert(out[i] == true);
+    }
+    { // Test middle (whole) words for uint8_t
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(36, true, Alloc(1));
+      for (std::size_t i = 0; i < in.size(); i += 2)
+        in[i] = false;
+      std::vector<bool, Alloc> out(40, false, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.end()), out.begin() + 4);
+      for (std::size_t i = 0; i < in.size(); ++i)
+        assert(in[i] == out[i + 4]);
+      for (std::size_t i = 0; i < 4; ++i)
+        assert(out[i] == false);
+    }
+
+    { // Test the first (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(16, false, Alloc(1));
+      std::vector<bool, Alloc> out(16, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin() + 14, in.end()), out.begin()); // out[0..1] = false
+      assert(out[0] == false);
+      assert(out[1] == false);
+      for (std::size_t i = 2; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        assert(out[i] == true);
+    }
+    { // Test the last (partial) word for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(16, false, Alloc(1));
+      std::vector<bool, Alloc> out(16, true, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.begin() + 2), out.begin() + 1); // out[1..2] = false
+      assert(out[1] == false);
+      assert(out[2] == false);
+      for (std::size_t i = 0; i < out.size(); ++i) // Ensure that unassigned bits remain unchanged
+        if (i != 1 && i != 2)
+          assert(out[i] == true);
+    }
+    { // Test middle (whole) words for uint16_t
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(72, true, Alloc(1));
+      for (std::size_t i = 0; i < in.size(); i += 2)
+        in[i] = false;
+      std::vector<bool, Alloc> out(80, false, Alloc(1));
+      std::ranges::copy(std::ranges::subrange(in.begin(), in.end()), out.begin() + 4);
+      for (std::size_t i = 0; i < in.size(); ++i)
+        assert(in[i] == out[i + 4]);
+      for (std::size_t i = 0; i < 4; ++i)
+        assert(out[i] == false);
+      for (std::size_t i = in.size() + 4; i < out.size(); ++i)
+        assert(out[i] == false);
+    }
+  }
+#endif
 
   return true;
 }

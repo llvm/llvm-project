@@ -38,6 +38,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchTarget() {
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
 }
 
@@ -69,7 +70,7 @@ static CodeModel::Model
 getEffectiveLoongArchCodeModel(const Triple &TT,
                                std::optional<CodeModel::Model> CM) {
   if (!CM)
-    return CodeModel::Small;
+    return TT.isArch64Bit() ? CodeModel::Medium : CodeModel::Small;
 
   switch (*CM) {
   case CodeModel::Small:

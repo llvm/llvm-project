@@ -41,6 +41,10 @@ public:
   /// Query samesign information, for optimizations.
   bool hasSameSign() const { return HasSameSign; }
 
+  /// Drops samesign information. This is used when the samesign information
+  /// should be dropped explicitly.
+  CmpInst::Predicate dropSameSign() const { return Pred; }
+
   /// Compares two CmpPredicates taking samesign into account and returns the
   /// canonicalized CmpPredicate if they match. An alternative to operator==.
   ///
@@ -52,6 +56,12 @@ public:
   ///   ult + slt -> std::nullopt
   static std::optional<CmpPredicate> getMatching(CmpPredicate A,
                                                  CmpPredicate B);
+
+  /// Attempts to return a signed CmpInst::Predicate from the CmpPredicate. If
+  /// the CmpPredicate has samesign, return ICmpInst::getSignedPredicate,
+  /// dropping samesign information. Otherwise, return the predicate, dropping
+  /// samesign information.
+  CmpInst::Predicate getPreferredSignedPredicate() const;
 
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }

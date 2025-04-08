@@ -58,7 +58,7 @@ target triple = "nvptx64"
 ; CHECK-DISABLED: @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK-DISABLED: @__omp_outlined__1_wrapper.ID = private constant i8 undef
 ;.
-define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x, i64 %N) #0 {
+define weak ptx_kernel void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x, i64 %N) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6
 ; CHECK-SAME: (ptr [[DYN:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
@@ -84,9 +84,9 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; CHECK:       region.guarded:
-; CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META8:![0-9]+]]
-; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META8]]
-; CHECK-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr [[ARRAYIDX2_I]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META7:![0-9]+]]
+; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META7]]
+; CHECK-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr [[ARRAYIDX2_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
 ; CHECK:       region.guarded.end:
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
@@ -94,7 +94,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
-; CHECK-NEXT:    call void @usei8ptr(ptr nocapture [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK:       for.cond.i:
 ; CHECK-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[REGION_EXIT]] ], [ [[INC_I:%.*]], [[REGION_EXIT3:%.*]] ]
@@ -111,7 +111,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[REGION_GUARDED4:%.*]], label [[REGION_BARRIER2:%.*]]
 ; CHECK:       region.guarded4:
-; CHECK-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END1:%.*]]
 ; CHECK:       region.guarded.end1:
 ; CHECK-NEXT:    br label [[REGION_BARRIER2]]
@@ -120,10 +120,10 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    br label [[REGION_EXIT3]]
 ; CHECK:       region.exit3:
 ; CHECK-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
-; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       __omp_outlined__.exit:
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper, ptr null, i64 0)
-; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META8]]
+; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID10:%.*]]
@@ -132,7 +132,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[REGION_GUARDED9:%.*]], label [[REGION_BARRIER7:%.*]]
 ; CHECK:       region.guarded9:
-; CHECK-NEXT:    store i32 [[CALL_I]], ptr [[ARRAYIDX7_I]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 [[CALL_I]], ptr [[ARRAYIDX7_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END6:%.*]]
 ; CHECK:       region.guarded.end6:
 ; CHECK-NEXT:    br label [[REGION_BARRIER7]]
@@ -140,7 +140,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP6]])
 ; CHECK-NEXT:    br label [[REGION_EXIT8:%.*]]
 ; CHECK:       region.exit8:
-; CHECK-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM9_I:%.*]] = sext i32 [[CALL8_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX10_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM9_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID15:%.*]]
@@ -149,7 +149,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[REGION_GUARDED14:%.*]], label [[REGION_BARRIER12:%.*]]
 ; CHECK:       region.guarded14:
-; CHECK-NEXT:    store i32 [[CALL8_I]], ptr [[ARRAYIDX10_I]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 [[CALL8_I]], ptr [[ARRAYIDX10_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END11:%.*]]
 ; CHECK:       region.guarded.end11:
 ; CHECK-NEXT:    br label [[REGION_BARRIER12]]
@@ -157,7 +157,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP8]])
 ; CHECK-NEXT:    br label [[REGION_EXIT13:%.*]]
 ; CHECK:       region.exit13:
-; CHECK-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-NEXT:    [[IDXPROM12_I:%.*]] = sext i32 [[CALL11_I]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM12_I]]
 ; CHECK-NEXT:    br label [[REGION_CHECK_TID20:%.*]]
@@ -166,7 +166,7 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i32 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[REGION_GUARDED19:%.*]], label [[REGION_BARRIER17:%.*]]
 ; CHECK:       region.guarded19:
-; CHECK-NEXT:    store i32 [[CALL11_I]], ptr [[ARRAYIDX13_I]], align 4, !noalias [[META8]]
+; CHECK-NEXT:    store i32 [[CALL11_I]], ptr [[ARRAYIDX13_I]], align 4, !noalias [[META7]]
 ; CHECK-NEXT:    br label [[REGION_GUARDED_END16:%.*]]
 ; CHECK:       region.guarded.end16:
 ; CHECK-NEXT:    br label [[REGION_BARRIER17]]
@@ -174,9 +174,9 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP10]])
 ; CHECK-NEXT:    br label [[REGION_EXIT18:%.*]]
 ; CHECK:       region.exit18:
-; CHECK-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
-; CHECK-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
-; CHECK-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
+; CHECK-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
+; CHECK-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit() #[[ATTR6]]
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
@@ -230,14 +230,14 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-DISABLED-NEXT:    [[SELECT:%.*]] = select i1 [[C]], ptr [[AL32]], ptr addrspacecast (ptr addrspace(5) @LocGlob to ptr)
 ; CHECK-DISABLED-NEXT:    store ptr [[SELECT]], ptr [[LOC]], align 8
 ; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr nonnull @[[GLOB1]]) #[[ATTR6]]
-; CHECK-DISABLED-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META8:![0-9]+]]
+; CHECK-DISABLED-NEXT:    store i32 0, ptr [[X]], align 4, !noalias [[META7:![0-9]+]]
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
-; CHECK-DISABLED-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    store i32 1, ptr [[ARRAYIDX1_I]], align 4, !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[SEXT:%.*]] = shl i64 [[N]], 32
 ; CHECK-DISABLED-NEXT:    [[IDXPROM_I:%.*]] = ashr exact i64 [[SEXT]], 32
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX2_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM_I]]
-; CHECK-DISABLED-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr [[ARRAYIDX2_I]], align 4, !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr nocapture [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
+; CHECK-DISABLED-NEXT:    store i32 [[N_ADDR_SROA_0_0_EXTRACT_TRUNC]], ptr [[ARRAYIDX2_I]], align 4, !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    call void @usei8ptr(ptr captures(none) [[HEAP2STACK_H2S]]) #[[ATTR9:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I:%.*]]
 ; CHECK-DISABLED:       for.cond.i:
 ; CHECK-DISABLED-NEXT:    [[I_0_I:%.*]] = phi i32 [ 2, [[USER_CODE_ENTRY]] ], [ [[INC_I:%.*]], [[FOR_BODY_I:%.*]] ]
@@ -248,26 +248,26 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x
 ; CHECK-DISABLED-NEXT:    [[SUB3_I:%.*]] = add nsw i32 [[I_0_I]], -1
 ; CHECK-DISABLED-NEXT:    [[IDXPROM4_I:%.*]] = zext i32 [[I_0_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX5_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM4_I]]
-; CHECK-DISABLED-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    store i32 [[SUB3_I]], ptr [[ARRAYIDX5_I]], align 4, !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[INC_I]] = add nuw nsw i32 [[I_0_I]], 1
-; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK-DISABLED-NEXT:    br label [[FOR_COND_I]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-DISABLED:       __omp_outlined__.exit:
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__1, ptr @__omp_outlined__1_wrapper.ID, ptr null, i64 0)
-; CHECK-DISABLED-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    [[CALL_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10:[0-9]+]], !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[IDXPROM6_I:%.*]] = sext i32 [[CALL_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX7_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM6_I]]
-; CHECK-DISABLED-NEXT:    store i32 [[CALL_I]], ptr [[ARRAYIDX7_I]], align 4, !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    store i32 [[CALL_I]], ptr [[ARRAYIDX7_I]], align 4, !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[CALL8_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[IDXPROM9_I:%.*]] = sext i32 [[CALL8_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX10_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM9_I]]
-; CHECK-DISABLED-NEXT:    store i32 [[CALL8_I]], ptr [[ARRAYIDX10_I]], align 4, !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    store i32 [[CALL8_I]], ptr [[ARRAYIDX10_I]], align 4, !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[CALL11_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    [[IDXPROM12_I:%.*]] = sext i32 [[CALL11_I]] to i64
 ; CHECK-DISABLED-NEXT:    [[ARRAYIDX13_I:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 [[IDXPROM12_I]]
-; CHECK-DISABLED-NEXT:    store i32 [[CALL11_I]], ptr [[ARRAYIDX13_I]], align 4, !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
-; CHECK-DISABLED-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META8]]
+; CHECK-DISABLED-NEXT:    store i32 [[CALL11_I]], ptr [[ARRAYIDX13_I]], align 4, !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[CALL14_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[CALL15_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
+; CHECK-DISABLED-NEXT:    [[CALL16_I:%.*]] = call i32 @no_openmp(ptr nonnull [[X]]) #[[ATTR10]], !noalias [[META7]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit() #[[ATTR6]]
 ; CHECK-DISABLED-NEXT:    ret void
 ; CHECK-DISABLED:       worker.exit:
@@ -404,12 +404,10 @@ attributes #4 = { inaccessiblememonly nofree nosync nounwind willreturn }
 attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 
 !omp_offload.info = !{!0}
-!nvvm.annotations = !{!1}
 !llvm.module.flags = !{!2, !3, !4, !5, !6}
 !llvm.ident = !{!7}
 
 !0 = !{i32 0, i32 42, i32 16513658, !"sequential_loop", i32 6, i32 0}
-!1 = !{ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6, !"kernel", i32 1}
 !2 = !{i32 1, !"wchar_size", i32 4}
 !3 = !{i32 7, !"openmp", i32 50}
 !4 = !{i32 7, !"openmp-device", i32 50}
@@ -447,30 +445,28 @@ attributes #5 = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_ame
 ; CHECK-DISABLED: attributes #[[ATTR10]] = { convergent nounwind "llvm.assume"="omp_no_openmp,ompx_spmd_amenable" }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 42, i32 16513658, !"sequential_loop", i32 6, i32 0}
-; CHECK: [[META1:![0-9]+]] = !{ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6, !"kernel", i32 1}
-; CHECK: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-; CHECK: [[META8]] = !{[[META9:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK: [[META10]] = distinct !{[[META10]], !"__omp_outlined__"}
-; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = !{!"llvm.loop.mustprogress"}
+; CHECK: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK: [[META4:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
+; CHECK: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
+; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
 ; CHECK-DISABLED: [[META0:![0-9]+]] = !{i32 0, i32 42, i32 16513658, !"sequential_loop", i32 6, i32 0}
-; CHECK-DISABLED: [[META1:![0-9]+]] = !{ptr @__omp_offloading_2a_fbfa7a_sequential_loop_l6, !"kernel", i32 1}
-; CHECK-DISABLED: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-; CHECK-DISABLED: [[META3:![0-9]+]] = !{i32 7, !"openmp", i32 50}
-; CHECK-DISABLED: [[META4:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
-; CHECK-DISABLED: [[META5:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
-; CHECK-DISABLED: [[META6:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
-; CHECK-DISABLED: [[META7:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-; CHECK-DISABLED: [[META8]] = !{[[META9:![0-9]+]]}
-; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]], !"__omp_outlined__: %__context"}
-; CHECK-DISABLED: [[META10]] = distinct !{[[META10]], !"__omp_outlined__"}
-; CHECK-DISABLED: [[LOOP11]] = distinct !{[[LOOP11]], [[META12:![0-9]+]]}
-; CHECK-DISABLED: [[META12]] = !{!"llvm.loop.mustprogress"}
+; CHECK-DISABLED: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+; CHECK-DISABLED: [[META2:![0-9]+]] = !{i32 7, !"openmp", i32 50}
+; CHECK-DISABLED: [[META3:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
+; CHECK-DISABLED: [[META4:![0-9]+]] = !{i32 8, !"PIC Level", i32 2}
+; CHECK-DISABLED: [[META5:![0-9]+]] = !{i32 7, !"frame-pointer", i32 2}
+; CHECK-DISABLED: [[META6:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+; CHECK-DISABLED: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK-DISABLED: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]], !"__omp_outlined__: %__context"}
+; CHECK-DISABLED: [[META9]] = distinct !{[[META9]], !"__omp_outlined__"}
+; CHECK-DISABLED: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
+; CHECK-DISABLED: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.
