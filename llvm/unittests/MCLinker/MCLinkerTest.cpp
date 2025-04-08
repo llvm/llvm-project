@@ -185,14 +185,14 @@ TEST_F(MCLinkerTest, SplitModuleCompilerMCLink) {
 
   ASSERT_FALSE((!Binary));
 
-  llvm::object::ObjectFile *O =
+  llvm::object::ObjectFile *Obj =
       dyn_cast<llvm::object::ObjectFile>((*Binary).get());
-  ASSERT_TRUE(O != nullptr);
+  ASSERT_TRUE(Obj != nullptr);
 
-  if (!O->isELF())
+  if (!Obj->isELF())
     GTEST_SKIP();
 
-  auto *ELFO = dyn_cast<llvm::object::ELFObjectFileBase>(O);
+  auto *ELFO = dyn_cast<llvm::object::ELFObjectFileBase>(Obj);
 
   if (!ELFO)
     GTEST_SKIP();
