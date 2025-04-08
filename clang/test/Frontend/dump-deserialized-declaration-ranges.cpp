@@ -17,7 +17,7 @@
 // RANGE-NEXT:          },
 // RANGE-NEXT:          "to": {
 // RANGE-NEXT:            "line": 9,
-// RANGE-NEXT:            "column": 2
+// RANGE-NEXT:            "column": 3
 // RANGE-NEXT:          }
 // RANGE-NEXT:        },
 // RANGE-NEXT:        {
@@ -27,7 +27,7 @@
 // RANGE-NEXT:          },
 // RANGE-NEXT:          "to": {
 // RANGE-NEXT:            "line": 11,
-// RANGE-NEXT:            "column": 24
+// RANGE-NEXT:            "column": 25
 // RANGE-NEXT:          }
 // RANGE-NEXT:        },
 // RANGE-NEXT:        {

@@ -18,6 +18,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Stack.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
@@ -105,9 +106,34 @@ public:
       return Column < other.Column;
     }
 
-    static Position GetSpelling(const SourceManager &SM,
-                                const SourceLocation &SL) {
-      return {SM.getSpellingLineNumber(SL), SM.getSpellingColumnNumber(SL)};
+    static Position GetBeginSpelling(const SourceManager &SM,
+                                     const CharSourceRange &R) {
+      SourceLocation Begin = R.getBegin();
+      return {SM.getSpellingLineNumber(Begin),
+              SM.getSpellingColumnNumber(Begin)};
+    }
+    
+    static Position GetEndSpelling(const SourceManager &SM,
+                                   const CharSourceRange &R,
+                                   const LangOptions &LangOpts) {
+      SourceLocation End = R.getEnd();
+      if (R.isTokenRange()) {
+        // Compute end location for end character of the range.
+        // The returned location is exclusive.
+        End = Lexer::getLocForEndOfToken(End, 0, SM, LangOpts);
+      } else {
+        // If end already points at the last character in the range, advance one
+        // location, so that end location is exclusive.
+        End = End.getLocWithOffset(1);
+      }
+      // Relex the token past the end location of the last token in the source
+      // range. If it's a semicolon, advance the location by one token.
+      Token PossiblySemi;
+      Lexer::getRawToken(End, PossiblySemi, SM, LangOpts, true);
+      if (PossiblySemi.is(tok::semi))
+        End = Lexer::getLocForEndOfToken(PossiblySemi.getLocation(), 0, SM,
+                                         LangOpts);
+      return {SM.getSpellingLineNumber(End), SM.getSpellingColumnNumber(End)};
     }
   };
 
@@ -130,12 +156,8 @@ public:
       if (!R.isValid())
         continue;
 
-      SourceLocation End = R.getEnd();
-      if (R.isTokenRange())
-        End = Lexer::getLocForEndOfToken(End, 0, SM, D->getLangOpts());
-
       auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
-      if (F != SM.getFileEntryForID(SM.getFileID(End))) {
+      if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
         // Such cases are rare and difficult to handle.
         continue;
       }
@@ -143,8 +165,9 @@ public:
       auto &Data = FileToLines[F];
       if (!Data.Ref)
         Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
-      Data.FromTo.push_back({Position::GetSpelling(SM, R.getBegin()),
-                             Position::GetSpelling(SM, End)});
+      Data.FromTo.push_back(
+          {Position::GetBeginSpelling(SM, R),
+           Position::GetEndSpelling(SM, R, D->getLangOpts())});
     }
 
     // To simplify output, merge consecutive and intersecting ranges.
