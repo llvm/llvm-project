@@ -152,6 +152,11 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
 
 AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
                                                     VectorType vectorType) {
+  int64_t elementVectorRank = 0;
+  VectorType elementVectorType =
+      llvm::dyn_cast<VectorType>(shapedType.getElementType());
+  if (elementVectorType)
+    elementVectorRank += elementVectorType.getRank();
   // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
   // TODO: replace once we have 0-d vectors.
   if (shapedType.getRank() == 0 &&
@@ -159,15 +164,6 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
     return AffineMap::get(
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
-  int64_t elementVectorRank = 0;
-  VectorType elementVectorType =
-      llvm::dyn_cast<VectorType>(shapedType.getElementType());
-  if (elementVectorType)
-    elementVectorRank += elementVectorType.getRank();
-  if (shapedType.getRank() < vectorType.getRank() - elementVectorRank) {
-    // Not enough dimensions in the shaped type to form a minor identity map.
-    return AffineMap();
-  }
   return AffineMap::getMinorIdentityMap(
       shapedType.getRank(), vectorType.getRank() - elementVectorRank,
       shapedType.getContext());
@@ -4263,18 +4259,16 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
+    int64_t elementVectorRank = 0;
+    VectorType elementVectorType =
+        llvm::dyn_cast<VectorType>(shapedType.getElementType());
+    if (elementVectorType)
+      elementVectorRank += elementVectorType.getRank();
+    if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
+      return parser.emitError(typesLoc,
+                              "expected a custom permutation_map when "
+                              "rank(source) != rank(destination)");
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
-    if (!permMap) {
-      int64_t elementVectorRank = 0;
-      VectorType elementVectorType =
-          llvm::dyn_cast<VectorType>(shapedType.getElementType());
-      if (elementVectorType)
-        elementVectorRank += elementVectorType.getRank();
-      if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
-        return parser.emitError(typesLoc,
-                                "expected a custom permutation_map when source "
-                                "rank is less than required for vector rank");
-    }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
@@ -4682,18 +4676,16 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
+    int64_t elementVectorRank = 0;
+    VectorType elementVectorType =
+        llvm::dyn_cast<VectorType>(shapedType.getElementType());
+    if (elementVectorType)
+      elementVectorRank += elementVectorType.getRank();
+    if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
+      return parser.emitError(typesLoc,
+                              "expected a custom permutation_map when "
+                              "rank(source) != rank(destination)");
     permMap = getTransferMinorIdentityMap(shapedType, vectorType);
-    if (!permMap) {
-      int64_t elementVectorRank = 0;
-      VectorType elementVectorType =
-          llvm::dyn_cast<VectorType>(shapedType.getElementType());
-      if (elementVectorType)
-        elementVectorRank += elementVectorType.getRank();
-      if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
-        return parser.emitError(typesLoc,
-                                "expected a custom permutation_map when result "
-                                "rank is less than required for vector rank");
-    }
     result.attributes.set(permMapAttrName, AffineMapAttr::get(permMap));
   } else {
     permMap = llvm::cast<AffineMapAttr>(permMapAttr).getValue();
