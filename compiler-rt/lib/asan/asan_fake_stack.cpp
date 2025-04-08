@@ -27,6 +27,7 @@ static const u64 kAllocaRedzoneMask = 31UL;
 
 // For small size classes inline PoisonShadow for better performance.
 ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
+  CHECK(AddrIsAlignedByGranularity(ptr + size));
   u64 *shadow = reinterpret_cast<u64*>(MemToShadow(ptr));
   if (ASAN_SHADOW_SCALE == 3 && class_id <= 6) {
     // This code expects ASAN_SHADOW_SCALE=3.
@@ -107,12 +108,7 @@ FakeFrame *FakeStack::Allocate(uptr stack_size_log, uptr class_id,
     FakeFrame *res = reinterpret_cast<FakeFrame *>(
         GetFrame(stack_size_log, class_id, pos));
     res->real_stack = real_stack;
-    u8 **saved_flag_ptr = SavedFlagPtr(reinterpret_cast<uptr>(res), class_id);
-    *saved_flag_ptr = &flags[pos];
-
-    // Poison the last word of FakeFrame
-    u8 *shadow = reinterpret_cast<u8*>(MemToShadow(reinterpret_cast<uptr>(saved_flag_ptr)));
-    *shadow = kAsanStackRightRedzoneMagic;
+    *SavedFlagPtr(reinterpret_cast<uptr>(res), class_id) = &flags[pos];
     return res;
   }
   return nullptr; // We are out of fake stack.
@@ -236,6 +232,13 @@ static ALWAYS_INLINE uptr OnMalloc(uptr class_id, uptr size) {
     return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);
   SetShadow(ptr, size, class_id, 0);
+
+  // Poison everything beyond user size, use kNumberOfSizeClasses to prevent
+  // SetShadow from inlining PoisonShadow
+  SetShadow(reinterpret_cast<uptr>(ptr + size),
+            FakeStack::BytesInSizeClass(class_id) - size, kNumberOfSizeClasses,
+            kAsanStackRightRedzoneMagic);
+
   return ptr;
 }
 
@@ -249,6 +252,13 @@ static ALWAYS_INLINE uptr OnMallocAlways(uptr class_id, uptr size) {
     return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);
   SetShadow(ptr, size, class_id, 0);
+
+  // Poison everything beyond user size, use kNumberOfSizeClasses to prevent
+  // SetShadow from inlining PoisonShadow
+  SetShadow(reinterpret_cast<uptr>(ptr + size),
+            FakeStack::BytesInSizeClass(class_id) - size, kNumberOfSizeClasses,
+            kAsanStackRightRedzoneMagic);
+
   return ptr;
 }
 
