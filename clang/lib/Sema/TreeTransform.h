@@ -3981,7 +3981,7 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(Result.get(), Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get());
     }
 
     case TemplateArgument::Template:
@@ -7765,17 +7765,23 @@ QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
   NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
   NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
 
-  typedef TemplateArgumentLocContainerIterator<
-  DependentTemplateSpecializationTypeLoc> ArgIterator;
-  if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
-                                              ArgIterator(TL, TL.getNumArgs()),
-                                              NewTemplateArgs))
+  auto ArgsRange = llvm::make_range<TemplateArgumentLocContainerIterator<
+      DependentTemplateSpecializationTypeLoc>>({TL, 0}, {TL, TL.getNumArgs()});
+
+  if (getDerived().TransformTemplateArguments(ArgsRange.begin(),
+                                              ArgsRange.end(), NewTemplateArgs))
     return QualType();
+  bool TemplateArgumentsChanged = !llvm::equal(
+      ArgsRange, NewTemplateArgs.arguments(),
+      [](const TemplateArgumentLoc &A, const TemplateArgumentLoc &B) {
+        return A.getArgument().structurallyEquals(B.getArgument());
+      });
 
   const DependentTemplateStorage &DTN = T->getDependentTemplateName();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || SS.getScopeRep() != DTN.getQualifier()) {
+  if (getDerived().AlwaysRebuild() || SS.getScopeRep() != DTN.getQualifier() ||
+      TemplateArgumentsChanged) {
     TemplateName Name = getDerived().RebuildTemplateName(
         SS, TL.getTemplateKeywordLoc(), DTN.getName(), TL.getTemplateNameLoc(),
         /*ObjectType=*/QualType(), /*FirstQualifierInScope=*/nullptr,
@@ -16125,8 +16131,8 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = new (getSema().Context)
-            PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt);
+        ArgStorage = TemplateArgument(new (getSema().Context) PackExpansionExpr(
+            DRE.get(), E->getPackLoc(), std::nullopt));
       }
       PackArgs = ArgStorage;
     }
