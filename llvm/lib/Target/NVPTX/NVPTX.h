@@ -27,7 +27,14 @@ class NVPTXTargetMachine;
 class PassRegistry;
 
 namespace NVPTXCC {
-enum CondCodes { EQ, NE, LT, LE, GT, GE };
+enum CondCodes {
+  EQ,
+  NE,
+  LT,
+  LE,
+  GT,
+  GE
+};
 }
 
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
