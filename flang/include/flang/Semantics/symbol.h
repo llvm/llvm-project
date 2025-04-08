@@ -31,7 +31,7 @@ class raw_ostream;
 namespace Fortran::parser {
 struct Expr;
 struct OpenMPDeclareReductionConstruct;
-struct OmpDirectiveSpecification;
+struct OmpMetadirectiveDirective;
 }
 
 namespace Fortran::semantics {
@@ -737,7 +737,7 @@ class UserReductionDetails {
 public:
   using TypeVector = std::vector<const DeclTypeSpec *>;
   using DeclInfo = std::variant<const parser::OpenMPDeclareReductionConstruct *,
-      const parser::OmpDirectiveSpecification *>;
+      const parser::OmpMetadirectiveDirective *>;
   using DeclVector = std::vector<DeclInfo>;
 
   UserReductionDetails() = default;
