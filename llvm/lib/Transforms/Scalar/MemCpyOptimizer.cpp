@@ -1675,11 +1675,12 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // As this transformation can cause memory accesses that didn't previously
-  // alias to begin to alias one another, we remove !noalias, !tbaa
-  // and !tbaa_struct metadata from any uses of either alloca.
+  // alias to begin to alias one another, we remove !alias.scope, !noalias,
+  // !tbaa and !tbaa_struct metadata from any uses of either alloca.
   // This is conservative, but more precision doesn't seem worthwhile
   // right now.
   for (Instruction *I : AAMetadataInstrs) {
+    I->setMetadata(LLVMContext::MD_alias_scope, nullptr);
     I->setMetadata(LLVMContext::MD_noalias, nullptr);
     I->setMetadata(LLVMContext::MD_tbaa, nullptr);
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
