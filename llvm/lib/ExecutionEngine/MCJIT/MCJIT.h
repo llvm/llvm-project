@@ -168,7 +168,6 @@ class MCJIT : public ExecutionEngine {
   };
 
   std::unique_ptr<TargetMachine> TM;
-  MCContext *Ctx;
   std::shared_ptr<MCJITMemoryManager> MemMgr;
   LinkingSymbolResolver Resolver;
   RuntimeDyld Dyld;

@@ -46,8 +46,7 @@ Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
     raw_svector_ostream ObjStream(ObjBufferSV);
 
     legacy::PassManager PM;
-    MCContext *Ctx;
-    if (TM.addPassesToEmitMC(PM, Ctx, ObjStream))
+    if (TM.addPassesToEmitMC(PM, ObjStream))
       return make_error<StringError>("Target does not support MC emission",
                                      inconvertibleErrorCode());
     PM.run(M);

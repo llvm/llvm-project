@@ -121,15 +121,14 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
-      new MachineModuleInfoWrapperPass(Target.get()));
-  const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
-      ->Initialize(MMIWP.get()->getMMI().getContext(), *Target);
+
+  MachineModuleInfo MMI(Target.get());
+  Target->getObjFileLowering()->Initialize(MMI.getContext(), *Target);
 
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);
   if (Target->addPassesToEmitFile(PM, OutStream, nullptr,
-                                  CodeGenFileType::ObjectFile)) {
+                                  CodeGenFileType::ObjectFile, true, &MMI)) {
     ErrMsg = "Target machine cannot emit a file of this type";
     return false;
   }

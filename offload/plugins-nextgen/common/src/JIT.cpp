@@ -175,11 +175,11 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
+  MachineModuleInfo MMI(TM);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
-                          /*DisableVerify=*/false, MMIWP);
+                          /*DisableVerify=*/false, &MMI);
 
   PM.run(M);
 }

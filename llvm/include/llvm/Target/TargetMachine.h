@@ -38,7 +38,7 @@ using ModulePassManager = PassManager<Module>;
 
 class Function;
 class GlobalValue;
-class MachineModuleInfoWrapperPass;
+class MachineModuleInfo;
 struct MachineSchedContext;
 class Mangler;
 class MCAsmInfo;
@@ -401,27 +401,29 @@ public:
   virtual void registerDefaultAliasAnalyses(AAManager &) {}
 
   /// Add passes to the specified pass manager to get the specified file
-  /// emitted.  Typically this will involve several steps of code generation.
+  /// emitted. Typically, this will involve several steps of code generation.
   /// This method should return true if emission of this file type is not
   /// supported, or false on success.
-  /// \p MMIWP is an optional parameter that, if set to non-nullptr,
-  /// will be used to set the MachineModuloInfo for this PM.
-  virtual bool
-  addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
-                      raw_pwrite_stream *, CodeGenFileType,
-                      bool /*DisableVerify*/ = true,
-                      MachineModuleInfoWrapperPass *MMIWP = nullptr) {
+  /// For targets that utilize the target-independent code generator
+  /// (CodeGen), an externally-managed \c MachineModuleInfo can be provided
+  /// to ensure persistence of the generated machine code even after the pass
+  /// manager is destroyed
+  virtual bool addPassesToEmitFile(PassManagerBase &, raw_pwrite_stream &,
+                                   raw_pwrite_stream *, CodeGenFileType,
+                                   bool /*DisableVerify*/ = true,
+                                   MachineModuleInfo * = nullptr) {
     return true;
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with
-  /// the MCJIT. This method returns true if machine code is not supported. It
-  /// fills the MCContext Ctx pointer which can be used to build custom
-  /// MCStreamer.
-  ///
-  virtual bool addPassesToEmitMC(PassManagerBase &, MCContext *&,
-                                 raw_pwrite_stream &,
-                                 bool /*DisableVerify*/ = true) {
+  /// the MCJIT. This method returns true if machine code is not supported.
+  /// For targets that utilize the target-independent code generator
+  /// (CodeGen), an externally-managed \c MachineModuleInfo can be provided
+  /// to ensure persistence of the generated machine code even after the pass
+  /// manager is destroyed
+  virtual bool addPassesToEmitMC(PassManagerBase &, raw_pwrite_stream &,
+                                 bool /*DisableVerify*/ = true,
+                                 MachineModuleInfo * = nullptr) {
     return true;
   }
 

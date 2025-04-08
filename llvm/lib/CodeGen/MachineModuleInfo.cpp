@@ -37,17 +37,6 @@ void MachineModuleInfo::finalize() {
   ObjFileMMI = nullptr;
 }
 
-MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
-    : TM(std::move(MMI.TM)),
-      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
-              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
-      MachineFunctions(std::move(MMI.MachineFunctions)) {
-  Context.setObjectFileInfo(TM.getObjFileLowering());
-  ObjFileMMI = MMI.ObjFileMMI;
-  ExternalContext = MMI.ExternalContext;
-  TheModule = MMI.TheModule;
-}
-
 MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
@@ -150,15 +139,8 @@ FunctionPass *llvm::createFreeMachineFunctionPass() {
   return new FreeMachineFunction();
 }
 
-MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const TargetMachine *TM)
-    : ImmutablePass(ID), MMI(TM) {
-  initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
-
-MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
-    const TargetMachine *TM, MCContext *ExtContext)
-    : ImmutablePass(ID), MMI(TM, ExtContext) {
+MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass()
+    : ImmutablePass(ID) {
   initializeMachineModuleInfoWrapperPassPass(*PassRegistry::getPassRegistry());
 }
 
@@ -193,6 +175,7 @@ static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
 }
 
 bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
+  MachineModuleInfo &MMI = getMMI();
   MMI.initialize();
   MMI.TheModule = &M;
   LLVMContext &Ctx = M.getContext();
@@ -210,7 +193,7 @@ bool MachineModuleInfoWrapperPass::doInitialization(Module &M) {
 }
 
 bool MachineModuleInfoWrapperPass::doFinalization(Module &M) {
-  MMI.finalize();
+  getMMI().finalize();
   return false;
 }
 
