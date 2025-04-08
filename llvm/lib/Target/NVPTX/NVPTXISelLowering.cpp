@@ -6183,8 +6183,8 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // change the opcode when UINT is not legal and SINT is. UINT is preferred when
 // both are custom since unsigned CVT instructions can lead to slightly better
 // SASS code with fewer instructions.
-unsigned NVPTXTargetLowering::getFPToXIntOpcode(unsigned Op, EVT FromVT,
-                                                EVT ToVT) const {
+unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                                        EVT ToVT) const {
   if (isOperationLegal(Op, ToVT))
     return Op;
   switch (Op) {

@@ -3469,7 +3469,8 @@ public:
   // and if so, checks if FP_TO_SINT is legal or custom for use as a
   // replacement. If both UINT and SINT conversions are Custom, we choose SINT
   // by default because that's the right thing on PPC.
-  virtual unsigned getFPToXIntOpcode(unsigned Op, EVT FromVT, EVT ToVT) const {
+  virtual unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                             EVT ToVT) const {
     if (isOperationLegal(Op, ToVT))
       return Op;
     switch (Op) {
