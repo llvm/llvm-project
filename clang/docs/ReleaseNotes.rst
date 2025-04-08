@@ -190,8 +190,7 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
-- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets,
-  allowing the generation of binaries with executable-only code sections. (#GH125688)
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets. (#GH125688)
 
 Removed Compiler Flags
 -------------------------
@@ -473,6 +472,9 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- For AArch64, added support for generating executable-only code sections by using the
+  ``-mexecute-only`` or ``-mpure-code`` compiler flags. (#GH125688)
 
 Android Support
 ^^^^^^^^^^^^^^^
