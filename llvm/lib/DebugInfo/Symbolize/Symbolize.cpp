@@ -673,7 +673,7 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   // - Otherwise, if this is a COFF object containing PDB info, create a
   // PDBContext.
   // - Otherwise, create a DWARFContext.
-  const auto GsymFile = lookUpGsymFile(BinaryName);
+  const auto GsymFile = lookUpGsymFile(BinaryName.str());
   if (!GsymFile.empty()) {
     auto ReaderOrErr = gsym::GsymReader::openFile(GsymFile);
 
