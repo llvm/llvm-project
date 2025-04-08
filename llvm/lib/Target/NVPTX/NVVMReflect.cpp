@@ -73,16 +73,16 @@ public:
 };
 } // namespace
 
+namespace {
 class NVVMReflectLegacyPass : public ModulePass {
 private:
   NVVMReflect Impl;
 public:
   static char ID;
-    NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {
-    initializeNVVMReflectLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+    NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
   bool runOnModule(Module &M) override;
 };
+} // namespace
 
 ModulePass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
   LLVM_DEBUG(dbgs() << "Creating NVVMReflectPass with SM version " << SmVersion << "\n");
