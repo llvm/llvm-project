@@ -109,6 +109,7 @@ struct MissingFeatures {
   static bool metaDataNode() { return false; }
   static bool fastMathFlags() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
+  static bool preservedAccessIndexRegion() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

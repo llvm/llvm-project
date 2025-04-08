@@ -315,6 +315,7 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   mlir::Value eltPtr;
   const mlir::IntegerAttr index = getConstantIndexOrNull(idx);
   if (!index) {
+    assert(!cir::MissingFeatures::preservedAccessIndexRegion());
     eltPtr = emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
                                    addr.getElementType(), idx, inbounds,
                                    shouldDecay);
