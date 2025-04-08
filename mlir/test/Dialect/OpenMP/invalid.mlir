@@ -2404,22 +2404,6 @@ func.func @omp_distribute_nested_wrapper(%lb: index, %ub: index, %step: index) -
 // -----
 
 func.func @omp_distribute_nested_wrapper2(%lb: index, %ub: index, %step: index) -> () {
-  omp.parallel {
-    // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
-    omp.distribute {
-      "omp.wsloop"() ({
-        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
-          "omp.yield"() : () -> ()
-        }
-      }) {omp.composite} : () -> ()
-    } {omp.composite}
-    omp.terminator
-  }
-}
-
-// -----
-
-func.func @omp_distribute_nested_wrapper3(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{only supported nested wrappers are 'omp.simd' and 'omp.wsloop'}}
   omp.distribute {
     "omp.taskloop"() ({
@@ -2432,7 +2416,7 @@ func.func @omp_distribute_nested_wrapper3(%lb: index, %ub: index, %step: index) 
 
 // -----
 
-func.func @omp_distribute_nested_wrapper4(%lb: index, %ub: index, %step: index) -> () {
+func.func @omp_distribute_nested_wrapper3(%lb: index, %ub: index, %step: index) -> () {
   // expected-error @below {{'omp.composite' attribute missing from composite wrapper}}
   omp.distribute {
     "omp.simd"() ({
@@ -2440,6 +2424,22 @@ func.func @omp_distribute_nested_wrapper4(%lb: index, %ub: index, %step: index) 
         "omp.yield"() : () -> ()
       }
     }) {omp.composite} : () -> ()
+  }
+}
+
+// -----
+
+func.func @omp_distribute_nested_wrapper4(%lb: index, %ub: index, %step: index) -> () {
+  omp.parallel {
+    // expected-error @below {{an 'omp.wsloop' nested wrapper is only allowed when a composite 'omp.parallel' is the direct parent}}
+    omp.distribute {
+      "omp.wsloop"() ({
+        omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) {
+          "omp.yield"() : () -> ()
+        }
+      }) {omp.composite} : () -> ()
+    } {omp.composite}
+    omp.terminator
   }
 }
 
