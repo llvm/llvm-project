@@ -8,8 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/acospif16.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/macros/optimization.h"
