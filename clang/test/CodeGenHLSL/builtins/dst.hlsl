@@ -11,9 +11,7 @@
 // CHECK: [[VECINIT3:%.*]] = insertelement <4 x float> [[VECINIT]], float [[VECINIT2]], i32 2
 // CHECK: [[VECINIT4:%.*]] = extractelement <4 x float> [[QADDR3:%.*]], i32 3
 // CHECK: [[VECINIT5:%.*]] = insertelement <4 x float> [[VECINIT3]], float [[VECINIT4]], i32 3
-// CHECK-NEXT: store <4 x float> [[VECINIT5]], ptr [[DEST:%.*]], align 16
-// CHECK-NEXT: [[RES:%.*]] = load <4 x float>, ptr [[DEST]], align 16
-// CHECK-NEXT: ret <4 x float> [[RES]]
+// CHECK-NEXT: ret <4 x float> [[VECINIT5]]
 float4 dstWithFloat(float4 p1, float4 p2)
 {
     return dst(p1, p2);
@@ -29,9 +27,7 @@ float4 dstWithFloat(float4 p1, float4 p2)
 // CHECK: [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT]], half [[VECINIT2]], i32 2
 // CHECK: [[VECINIT4:%.*]] = extractelement <4 x half> [[QADDR3:%.*]], i32 3
 // CHECK: [[VECINIT5:%.*]] = insertelement <4 x half> [[VECINIT3]], half [[VECINIT4]], i32 3
-// CHECK-NEXT: store <4 x half> [[VECINIT5]], ptr [[DEST:%.*]], align 8
-// CHECK-NEXT: [[RES:%.*]] = load <4 x half>, ptr [[DEST]], align 8
-// CHECK-NEXT: ret <4 x half> [[RES]]
+// CHECK-NEXT: ret <4 x half> [[VECINIT5]]
 half4 dstwithHalf(half4 p1, half4 p2)
 {
     return dst(p1, p2);
@@ -47,9 +43,7 @@ half4 dstwithHalf(half4 p1, half4 p2)
 // CHECK: [[VECINIT3:%.*]] = insertelement <4 x double> [[VECINIT]], double [[VECINIT2]], i32 2
 // CHECK: [[VECINIT4:%.*]] = extractelement <4 x double> [[QADDR3:%.*]], i32 3
 // CHECK: [[VECINIT5:%.*]] = insertelement <4 x double> [[VECINIT3]], double [[VECINIT4]], i32 3
-// CHECK-NEXT: store <4 x double> [[VECINIT5]], ptr [[DEST:%.*]], align 32
-// CHECK-NEXT: [[RES:%.*]] = load <4 x double>, ptr [[DEST]], align 32
-// CHECK-NEXT: ret <4 x double> [[RES]]
+// CHECK-NEXT: ret <4 x double> [[VECINIT5]]
 double4 dstWithDouble(double4 p1, double4 p2)
 {
     return dst(p1, p2);

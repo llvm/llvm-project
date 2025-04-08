@@ -194,14 +194,12 @@ const inline float dot2add(half2 A, half2 B, float C) {
 // dst builtins
 //===----------------------------------------------------------------------===//
 
-/// \fn fvector dst(fvector, fvector)
+/// \fn vector<T, 4> dst(vector<T, 4>, vector<T, 4>)
 /// \brief Calculates a distance vector.
-/// \param Src0 [in] The first vector contains the squared distance represented
-/// as {_, d*d, d*d, _}
-/// \param Src1 [in] The second vector contains the reciprocal distance
-/// represented as  {_, 1/d, _, 1/d}
+/// \param Src0 [in] Contains the squared distance
+/// \param Src1 [in] Contains the reciprocal distance
 ///
-/// Return the computed distance vector contain {1, d, d*d, 1/d}
+/// Return the computed distance vector
 
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
 const inline half4 dst(half4 Src0, half4 Src1) {
