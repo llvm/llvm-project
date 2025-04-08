@@ -5163,9 +5163,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     455     1 bit   USES_CU_STORES                  GFX1250+: Whether the ``cu-stores`` target attribute is enabled.
+     456:455 2 bits                                  Reserved, must be 0.
+     457     1 bit   USES_CU_STORES                  GFX1250+: Whether the ``cu-stores`` target attribute is enabled.
                                                      If 0, then all stores are ``SCOPE_SE`` or higher.
-     457:456 2 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
