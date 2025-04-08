@@ -90,3 +90,18 @@ int f3(void) {
 // OGCG-NEXT:   store i32 3, ptr %[[I_PTR]], align 4
 // OGCG-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
 // OGCG-NEXT:   ret i32 %[[I]]
+
+// Verify null statement handling.
+void f4(void) {
+  ;
+}
+
+//      CIR: cir.func @f4()
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f4()
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f4()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   ret void

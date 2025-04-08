@@ -57,6 +57,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 
   switch (s->getStmtClass()) {
   case Stmt::BreakStmtClass:
+  case Stmt::NullStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:
   case Stmt::DeclStmtClass:
@@ -93,7 +94,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::SEHExceptStmtClass:
   case Stmt::SEHFinallyStmtClass:
   case Stmt::MSDependentExistsStmtClass:
-  case Stmt::NullStmtClass:
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
@@ -231,6 +231,11 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     break;
   case Stmt::ContinueStmtClass:
     return emitContinueStmt(cast<ContinueStmt>(*s));
+
+  // NullStmt doesn't need any handling, but we need to say we handled it.
+  case Stmt::NullStmtClass:
+    break;
+
   case Stmt::BreakStmtClass:
     return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
