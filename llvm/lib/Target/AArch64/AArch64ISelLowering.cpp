@@ -8712,6 +8712,8 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
       unsigned ArgNum = i - CallerF.arg_begin();
       if (!CLI.CB || CLI.CB->arg_size() <= ArgNum ||
           !CLI.CB->getParamAttr(ArgNum, Attribute::InReg).isValid() ||
+          !i->hasStructRetAttr() ||
+          !CLI.CB->getParamAttr(ArgNum, Attribute::StructRet).isValid() ||
           CLI.CB->getArgOperand(ArgNum) != i) {
         return false;
       }
