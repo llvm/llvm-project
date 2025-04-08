@@ -3262,6 +3262,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     return;
   case ISD::AssertSext:
   case ISD::AssertZext:
+  case ISD::AssertNoFPClass:
   case ISD::AssertAlign:
     ReplaceUses(SDValue(NodeToMatch, 0), NodeToMatch->getOperand(0));
     CurDAG->RemoveDeadNode(NodeToMatch);
