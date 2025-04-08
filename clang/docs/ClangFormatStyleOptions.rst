@@ -1905,12 +1905,16 @@ the configuration (without a prefix: ``Auto``).
   Dependent on the value, ``int f() { return 0; }`` can be put on a
   single line.
 
-  Possible values:
+  Nested configuration flags:
 
-  * ``SFS_None`` (in configuration: ``None``)
+  Different styles for merging short functions containing at most one
+  statement.
+
+  They can be read as a whole for compatibility. The choices are:
+  * ``None``
     Never merge functions into a single line.
 
-  * ``SFS_InlineOnly`` (in configuration: ``InlineOnly``)
+  * ``InlineOnly``
     Only merge functions defined inside a class. Same as ``inline``,
     except it does not implies ``empty``: i.e. top level empty functions
     are not merged either.
@@ -1926,7 +1930,7 @@ the configuration (without a prefix: ``Auto``).
       void f() {
       }
 
-  * ``SFS_Empty`` (in configuration: ``Empty``)
+  * ``Empty``
     Only merge empty functions.
 
     .. code-block:: c++
@@ -1936,7 +1940,7 @@ the configuration (without a prefix: ``Auto``).
         bar2();
       }
 
-  * ``SFS_Inline`` (in configuration: ``Inline``)
+  * ``Inline``
     Only merge functions defined inside a class. Implies ``empty``.
 
     .. code-block:: c++
@@ -1949,7 +1953,7 @@ the configuration (without a prefix: ``Auto``).
       }
       void f() {}
 
-  * ``SFS_All`` (in configuration: ``All``)
+  * ``All``
     Merge all functions fitting on a single line.
 
     .. code-block:: c++
@@ -1959,37 +1963,15 @@ the configuration (without a prefix: ``Auto``).
       };
       void f() { bar(); }
 
-  * ``SFS_Custom`` (in configuration: ``Custom``)
-    Configure merge behavior using AllowShortFunctionsOnASingleLineOptions
-
-
-
-.. _AllowShortFunctionsOnASingleLineOptions:
-
-**AllowShortFunctionsOnASingleLineOptions** (``ShortFunctionMergeFlags``) :versionbadge:`clang-format 21` :ref:`¶ <AllowShortFunctionsOnASingleLineOptions>`
-  Precise control over merging short functions
-
-  If ``AllowShortFunctionsOnASingleLine`` is set to ``Custom``, use this to
-  specify behavior in different situations.
-
-  .. code-block:: yaml
-
-    # Example of usage:
-    AllowShortFunctionsOnASingleLine: Custom
-    AllowShortFunctionsOnASingleLineOptions:
-      Empty: false
-      Inline: true
-      All: false
-
-  Nested configuration flags:
-
-  Precise control over merging short functions
+  Also can be specified as a nested configuration flag:
 
   .. code-block:: c++
 
-    # Should be declared this way:
-    AllowShortFunctionsOnASingleLine: Custom
-    AllowShortFunctionsOnASingleLineOptions:
+    # Example of usage:
+    AllowShortFunctionsOnASingleLine: InlineOnly
+
+    # or more granular control:
+    AllowShortFunctionsOnASingleLine:
       Empty: false
       Inline: true
       All: false
@@ -2018,7 +2000,8 @@ the configuration (without a prefix: ``Auto``).
       void f() {
       }
 
-  * ``bool Other`` Merge all functions fitting on a single line.
+  * ``bool Other`` Merge all functions fitting on a single line. Please note that this
+    control does not include Empty
 
     .. code-block:: c++
 

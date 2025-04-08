@@ -613,21 +613,35 @@ template <> struct ScalarEnumerationTraits<FormatStyle::ShortBlockStyle> {
   }
 };
 
-template <> struct ScalarEnumerationTraits<FormatStyle::ShortFunctionStyle> {
-  static void enumeration(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
-    IO.enumCase(Value, "None", FormatStyle::SFS_None);
-    IO.enumCase(Value, "false", FormatStyle::SFS_None);
-    IO.enumCase(Value, "All", FormatStyle::SFS_All);
-    IO.enumCase(Value, "true", FormatStyle::SFS_All);
-    IO.enumCase(Value, "Inline", FormatStyle::SFS_Inline);
-    IO.enumCase(Value, "InlineOnly", FormatStyle::SFS_InlineOnly);
-    IO.enumCase(Value, "Empty", FormatStyle::SFS_Empty);
-    IO.enumCase(Value, "Custom", FormatStyle::SFS_Custom);
-  }
-};
+template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
+  static void enumInput(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
+    IO.enumCase(Value, "None", FormatStyle::ShortFunctionStyle({}));
+    IO.enumCase(Value, "Empty",
+                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                                 /*Inline=*/false,
+                                                 /*Other=*/false}));
+    IO.enumCase(Value, "Inline",
+                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                                 /*Inline=*/true,
+                                                 /*Other=*/false}));
+    IO.enumCase(Value, "InlineOnly",
+                FormatStyle::ShortFunctionStyle({/*Empty=*/false,
+                                                 /*Inline=*/true,
+                                                 /*Other=*/false}));
+    IO.enumCase(Value, "All",
+                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                                 /*Inline=*/true,
+                                                 /*Other=*/true}));
 
-template <> struct MappingTraits<FormatStyle::ShortFunctionMergeFlags> {
-  static void mapping(IO &IO, FormatStyle::ShortFunctionMergeFlags &Value) {
+    // For backward compatibility.
+    IO.enumCase(Value, "true",
+                FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                                 /*Inline=*/true,
+                                                 /*Other=*/true}));
+    IO.enumCase(Value, "false", FormatStyle::ShortFunctionStyle({}));
+  }
+
+  static void mapping(IO &IO, FormatStyle::ShortFunctionStyle &Value) {
     IO.mapOptional("Empty", Value.Empty);
     IO.mapOptional("Inline", Value.Inline);
     IO.mapOptional("Other", Value.Other);
@@ -991,8 +1005,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.AllowShortEnumsOnASingleLine);
     IO.mapOptional("AllowShortFunctionsOnASingleLine",
                    Style.AllowShortFunctionsOnASingleLine);
-    IO.mapOptional("AllowShortFunctionsOnASingleLineOptions",
-                   Style.AllowShortFunctionsOnASingleLineOptions);
     IO.mapOptional("AllowShortIfStatementsOnASingleLine",
                    Style.AllowShortIfStatementsOnASingleLine);
     IO.mapOptional("AllowShortLambdasOnASingleLine",
@@ -1483,30 +1495,6 @@ static void expandPresetsSpacesInParens(FormatStyle &Expanded) {
   Expanded.SpacesInParensOptions = {};
 }
 
-static void expandPresetsShortFunctionsOnSingleLine(FormatStyle &Expanded) {
-  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Custom)
-    return;
-  // Reset all flags
-  Expanded.AllowShortFunctionsOnASingleLineOptions = {};
-
-  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_None)
-    return;
-
-  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Empty ||
-      Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Inline) {
-    Expanded.AllowShortFunctionsOnASingleLineOptions.Empty = true;
-  }
-
-  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_Inline ||
-      Expanded.AllowShortFunctionsOnASingleLine ==
-          FormatStyle::SFS_InlineOnly) {
-    Expanded.AllowShortFunctionsOnASingleLineOptions.Inline = true;
-  }
-
-  if (Expanded.AllowShortFunctionsOnASingleLine == FormatStyle::SFS_All)
-    Expanded.AllowShortFunctionsOnASingleLineOptions.Other = true;
-}
-
 FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   FormatStyle LLVMStyle;
   LLVMStyle.AccessModifierOffset = -2;
@@ -1535,9 +1523,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AllowShortCaseLabelsOnASingleLine = false;
   LLVMStyle.AllowShortCompoundRequirementOnASingleLine = true;
   LLVMStyle.AllowShortEnumsOnASingleLine = true;
-  LLVMStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_All;
-  LLVMStyle.AllowShortFunctionsOnASingleLineOptions = {};
-  LLVMStyle.AllowShortFunctionsOnASingleLineOptions.Other = true;
+  LLVMStyle.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/true});
   LLVMStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   LLVMStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_All;
   LLVMStyle.AllowShortLoopsOnASingleLine = false;
@@ -1824,9 +1813,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
     GoogleStyle.AlignTrailingComments = {};
     GoogleStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Never;
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions = {};
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+    GoogleStyle.AllowShortFunctionsOnASingleLine =
+        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                         /*Inline=*/false,
+                                         /*Other=*/false});
     GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     GoogleStyle.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
@@ -1836,9 +1826,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   } else if (Language == FormatStyle::LK_JavaScript) {
     GoogleStyle.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
     GoogleStyle.AlignOperands = FormatStyle::OAS_DontAlign;
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions = {};
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+    GoogleStyle.AllowShortFunctionsOnASingleLine =
+        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                         /*Inline=*/false,
+                                         /*Other=*/false});
     // TODO: still under discussion whether to switch to SLS_All.
     GoogleStyle.AllowShortLambdasOnASingleLine = FormatStyle::SLS_Empty;
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
@@ -1855,9 +1846,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.NamespaceIndentation = FormatStyle::NI_All;
     GoogleStyle.SpacesInContainerLiterals = false;
   } else if (Language == FormatStyle::LK_Proto) {
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions = {};
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+    GoogleStyle.AllowShortFunctionsOnASingleLine =
+        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                         /*Inline=*/false,
+                                         /*Other=*/false});
     GoogleStyle.AlwaysBreakBeforeMultilineStrings = false;
     // This affects protocol buffer options specifications and text protos.
     // Text protos are currently mostly formatted inside C++ raw string literals
@@ -1876,9 +1868,10 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
     GoogleStyle.IncludeStyle.IncludeBlocks =
         tooling::IncludeStyle::IBS_Preserve;
   } else if (Language == FormatStyle::LK_CSharp) {
-    GoogleStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Empty;
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions = {};
-    GoogleStyle.AllowShortFunctionsOnASingleLineOptions.Empty = true;
+    GoogleStyle.AllowShortFunctionsOnASingleLine =
+        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                         /*Inline=*/false,
+                                         /*Other=*/false});
     GoogleStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     GoogleStyle.BreakStringLiterals = false;
     GoogleStyle.ColumnLimit = 100;
@@ -1937,9 +1930,10 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
   } else {
     ChromiumStyle.AllowAllParametersOfDeclarationOnNextLine = false;
-    ChromiumStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
-    ChromiumStyle.AllowShortFunctionsOnASingleLineOptions = {};
-    ChromiumStyle.AllowShortFunctionsOnASingleLineOptions.Inline = true;
+    ChromiumStyle.AllowShortFunctionsOnASingleLine =
+        FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                         /*Inline=*/true,
+                                         /*Other=*/false});
     ChromiumStyle.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
     ChromiumStyle.AllowShortLoopsOnASingleLine = false;
     ChromiumStyle.BinPackParameters = FormatStyle::BPPS_OnePerLine;
@@ -1953,9 +1947,10 @@ FormatStyle getChromiumStyle(FormatStyle::LanguageKind Language) {
 FormatStyle getMozillaStyle() {
   FormatStyle MozillaStyle = getLLVMStyle();
   MozillaStyle.AllowAllParametersOfDeclarationOnNextLine = false;
-  MozillaStyle.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
-  MozillaStyle.AllowShortFunctionsOnASingleLineOptions = {};
-  MozillaStyle.AllowShortFunctionsOnASingleLineOptions.Inline = true;
+  MozillaStyle.AllowShortFunctionsOnASingleLine =
+      FormatStyle::ShortFunctionStyle({/*Empty=*/true,
+                                       /*Inline=*/true,
+                                       /*Other=*/false});
   MozillaStyle.AlwaysBreakAfterDefinitionReturnType =
       FormatStyle::DRTBS_TopLevel;
   MozillaStyle.BinPackArguments = false;
@@ -2037,8 +2032,7 @@ FormatStyle getMicrosoftStyle(FormatStyle::LanguageKind Language) {
   Style.BraceWrapping.BeforeWhile = false;
   Style.PenaltyReturnTypeOnItsOwnLine = 1000;
   Style.AllowShortEnumsOnASingleLine = false;
-  Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
-  Style.AllowShortFunctionsOnASingleLineOptions = {};
+  Style.AllowShortFunctionsOnASingleLine = FormatStyle::ShortFunctionStyle({});
   Style.AllowShortCaseLabelsOnASingleLine = false;
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_Never;
   Style.AllowShortLoopsOnASingleLine = false;
@@ -2210,7 +2204,6 @@ std::string configurationAsText(const FormatStyle &Style) {
   expandPresetsBraceWrapping(NonConstStyle);
   expandPresetsSpaceBeforeParens(NonConstStyle);
   expandPresetsSpacesInParens(NonConstStyle);
-  expandPresetsShortFunctionsOnSingleLine(NonConstStyle);
   Output << NonConstStyle;
 
   return Stream.str();
@@ -3773,7 +3766,6 @@ reformat(const FormatStyle &Style, StringRef Code,
   expandPresetsBraceWrapping(Expanded);
   expandPresetsSpaceBeforeParens(Expanded);
   expandPresetsSpacesInParens(Expanded);
-  expandPresetsShortFunctionsOnSingleLine(Expanded);
   Expanded.InsertBraces = false;
   Expanded.RemoveBracesLLVM = false;
   Expanded.RemoveParentheses = FormatStyle::RPS_Leave;
