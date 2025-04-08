@@ -222,38 +222,44 @@ public:
 
   /// erase - Erase a value from the union/find set, return if erase succeed.
   bool erase(const ElemTy &V) {
-    if (!TheMapping.contains(V)) return false;
-    const ECValue *cur = TheMapping[V];
-    const ECValue *next = cur->getNext();
-    if (cur->isLeader()) {
-      if (next) {
-        next->Leader = cur->Leader;
-        auto nn = next->Next;
-        next->Next = (const ECValue*)((intptr_t)nn | (intptr_t)1);
+    if (!TheMapping.contains(V))
+      return false;
+    const ECValue *Cur = TheMapping[V];
+    const ECValue *Next = Cur->getNext();
+    if (Cur->isLeader()) {
+      if (Next) {
+        Next->Leader = Cur->Leader;
+        Next->Next = (const ECValue *)((intptr_t)Next->Next | (intptr_t)1);
+        const ECValue *newLeader = Next;
+        while ((Next = Next->getNext())) {
+          Next->Leader = newLeader;
+        }
       }
     } else {
-      const ECValue *leader = findLeader(V).Node;
-      const ECValue *pre = leader;
-      while (pre->getNext() != cur) {
-        pre = pre->getNext();
+      const ECValue *Leader = findLeader(V).Node;
+      const ECValue *Pre = Leader;
+      while (Pre->getNext() != Cur) {
+        Pre = Pre->getNext();
       }
-      if (!next) {
-        pre->Next = nullptr;
-        leader->Leader = pre;
+      if (!Next) {
+        Pre->Next = nullptr;
+        Leader->Leader = Pre;
       } else {
-        pre->Next = (const ECValue*)((intptr_t)next | (intptr_t)pre->isLeader());
-        next->Leader = pre;
+        Pre->Next =
+            (const ECValue *)((intptr_t)Next | (intptr_t)Pre->isLeader());
+        Next->Leader = Pre;
       }
     }
     TheMapping.erase(V);
     for (auto I = Members.begin(); I != Members.end(); I++) {
-      if (*I == cur) {
+      if (*I == Cur) {
         Members.erase(I);
         break;
       }
     }
     return true;
   }
+
   /// findLeader - Given a value in the set, return a member iterator for the
   /// equivalence class it is in.  This does the path-compression part that
   /// makes union-find "union findy".  This returns an end iterator if the value
@@ -281,9 +287,7 @@ public:
     // Otherwise, this is a real union operation.  Set the end of the L1 list to
     // point to the L2 leader node.
     const ECValue &L1LV = *L1.Node, &L2LV = *L2.Node;
-    const ECValue *L1LastV = L1LV.getEndOfList();
-
-    L1LastV->setNext(&L2LV);
+    L1LV.getEndOfList()->setNext(&L2LV);
 
     // Update L1LV's end of list pointer.
     L1LV.Leader = L2LV.getEndOfList();
@@ -291,8 +295,8 @@ public:
     // Clear L2's leader flag:
     L2LV.Next = L2LV.getNext();
 
-    // L2's leader is now last value of L1.
-    L2LV.Leader = L1LastV;
+    // L2's leader is now L1.
+    L2LV.Leader = &L1LV;
     return L1;
   }
 
