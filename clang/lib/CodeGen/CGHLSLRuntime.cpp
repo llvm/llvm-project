@@ -512,20 +512,20 @@ static Value *createHandle(CGBuilderTy &Builder, CodeGenModule &CGM,
   return CreateHandle;
 }
 
-static void CreateAndStoreHandle(GlobalVariable *GV, unsigned int Slot,
-                                 unsigned int Space, uint32_t structIdx,
+static void createAndStoreHandle(GlobalVariable *GV, unsigned int Slot,
+                                 unsigned int Space, uint32_t StructIdx,
                                  CodeGenModule &CGM, CGBuilderTy &Builder) {
   llvm::Type *HandleTy = GV->getValueType();
-  assert((!HandleTy->isTargetExtTy() || structIdx == 0) &&
+  assert((!HandleTy->isTargetExtTy() || StructIdx == 0) &&
          "No struct to index into.");
   assert((HandleTy->isTargetExtTy() || HandleTy->isStructTy()) &&
          "Unexpected type.");
   assert((HandleTy->isTargetExtTy() ||
-          HandleTy->getStructElementType(structIdx)->isTargetExtTy()) &&
+          HandleTy->getStructElementType(StructIdx)->isTargetExtTy()) &&
          "Can not access handle.");
 
   if (!HandleTy->isTargetExtTy())
-    HandleTy = HandleTy->getStructElementType(structIdx);
+    HandleTy = HandleTy->getStructElementType(StructIdx);
 
   // FIXME: resource arrays are not yet implemented. Using size 1.
   // FIXME: NonUniformResourceIndex bit is not yet implemented. Using false;
@@ -533,7 +533,7 @@ static void CreateAndStoreHandle(GlobalVariable *GV, unsigned int Slot,
   Value *CreateHandle =
       createHandle(Builder, CGM, HandleTy, Space, Slot, 1, 0, false);
   CreateHandle->setName(Twine(GV->getName()).concat("_h"));
-  Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, structIdx);
+  Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, StructIdx);
   Builder.CreateAlignedStore(CreateHandle, HandleRef,
                              HandleRef->getPointerAlignment(DL));
 }
@@ -552,13 +552,13 @@ static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGBuilderTy Builder(CGM, Ctx);
   Builder.SetInsertPoint(EntryBB);
 
-  CreateAndStoreHandle(GV, Slot, Space, 0, CGM, Builder);
+  createAndStoreHandle(GV, Slot, Space, 0, CGM, Builder);
   StructType *ST = dyn_cast<StructType>(GV->getValueType());
   if (ST && ST->getNumElements() > 1) {
     // TODO(124561): This needs to be updated to get the correct slot for
     // SPIR-V. Using a placeholder value for now.
     uint32_t CounterSlot = (CGM.getTriple().isSPIRV() ? Slot + 1 : Slot);
-    CreateAndStoreHandle(GV, CounterSlot, Space, 1, CGM, Builder);
+    createAndStoreHandle(GV, CounterSlot, Space, 1, CGM, Builder);
   }
 
   Builder.CreateRetVoid();
