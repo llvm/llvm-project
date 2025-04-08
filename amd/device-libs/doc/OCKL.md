@@ -40,9 +40,9 @@ taken with no control flow overhead.  These functions all have the form (in C)
 The currently supported control are
   * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced
   * `unsafe_math_opt` - lower accuracy results may be produced with higher performance
-  * `correctly_rounded_sqrt32` - float square root must be correctly rounded
   * `ISA_version` - an integer representation of the ISA version of the target device
   * `daz_opt` - unused and deprecated. Will be removed in the future.
+  * `correctly_rounded_sqrt32` - unused and deprecated. Will be removed in the future.
 
 ### Versioning
 

@@ -19,9 +19,6 @@
 //    __constant bool __oclc_unsafe_math_opt
 //        - the application accepts optimizations that may lower the accuracy of the results
 //
-//    __constant bool __oclc_correctly_rounded_sqrt32(void)
-//        - the application is expecting sqrt(float) to produce a correctly rounded result
-//
 //    __constant bool __oclc_wavefrontsize64
 //        - the application is being compiled for a wavefront size of 64
 //
@@ -40,7 +37,6 @@
 
 extern const __constant bool __oclc_finite_only_opt;
 extern const __constant bool __oclc_unsafe_math_opt;
-extern const __constant bool __oclc_correctly_rounded_sqrt32;
 extern const __constant bool __oclc_wavefrontsize64;
 extern const __constant uint __oclc_wavefrontsize_log2;
 extern const __constant int __oclc_ISA_version;
