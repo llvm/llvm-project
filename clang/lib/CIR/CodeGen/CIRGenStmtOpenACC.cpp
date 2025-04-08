@@ -34,11 +34,6 @@ class OpenACCClauseCIREmitter final
 public:
   OpenACCClauseCIREmitter(CIRGenModule &cgm) : cgm(cgm) {}
 
-  void VisitClauseList(llvm::ArrayRef<const OpenACCClause *> clauses) {
-    for (auto *clause : clauses)
-      Visit(clause);
-  }
-
 #define VISIT_CLAUSE(CN)                                                       \
   void Visit##CN##Clause(const OpenACC##CN##Clause &clause) {                  \
     clauseNotImplemented(clause);                                              \
@@ -47,7 +42,7 @@ public:
 };
 } // namespace
 
-template <typename Op, typename Terminator>
+template <typename Op, typename TermOp>
 mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(
     mlir::Location start, mlir::Location end,
     llvm::ArrayRef<const OpenACCClause *> clauses,
@@ -55,6 +50,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(
   mlir::LogicalResult res = mlir::success();
 
   OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule());
+  clauseEmitter.VisitClauseList(clauses);
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
@@ -64,17 +60,17 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(
   mlir::OpBuilder::InsertionGuard guardCase(builder);
   builder.setInsertionPointToEnd(&block);
 
-  LexicalScope LS{*this, start, builder.getInsertionBlock()};
+  LexicalScope ls{*this, start, builder.getInsertionBlock()};
   res = emitStmt(structuredBlock, /*useCurrentScope=*/true);
 
-  builder.create<Terminator>(end);
+  builder.create<TermOp>(end);
   return res;
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
-  auto start = getLoc(s.getSourceRange().getEnd());
-  auto end = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::Parallel:
