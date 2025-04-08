@@ -429,11 +429,11 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator<(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
 
-#if _LIBCPP_STD_VER >= 20
+#  if _LIBCPP_STD_VER >= 20
   template <class _T1, three_way_comparable _OtherContainer>
   friend _LIBCPP_HIDE_FROM_ABI compare_three_way_result_t<_OtherContainer>
   operator<=>(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
-#endif
+#  endif
 };
 
 #  if _LIBCPP_STD_VER >= 17
