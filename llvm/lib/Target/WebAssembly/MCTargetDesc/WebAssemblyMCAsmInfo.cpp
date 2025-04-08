@@ -22,7 +22,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
 
-const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
     {WebAssembly::S_TYPEINDEX, "TYPEINDEX"},
     {WebAssembly::S_TBREL, "TBREL"},
     {WebAssembly::S_MBREL, "MBREL"},
@@ -65,5 +65,5 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
     ExceptionsType = ExceptionHandling::Wasm;
 
-  initializeVariantKinds(variantKindDescs);
+  initializeVariantKinds(atSpecifiers);
 }
