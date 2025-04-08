@@ -1381,9 +1381,18 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     return builder.create<LLVM::ZeroOp>(loc, targetExtType).getRes();
   }
 
+  if (auto *blockAddr = dyn_cast<llvm::BlockAddress>(constant)) {
+    auto fnSym =
+        FlatSymbolRefAttr::get(context, blockAddr->getFunction()->getName());
+    auto blockTag =
+        BlockTagAttr::get(context, blockAddr->getBasicBlock()->getNumber());
+    return builder
+        .create<BlockAddressOp>(loc, convertType(blockAddr->getType()),
+                                BlockAddressAttr::get(context, fnSym, blockTag))
+        .getRes();
+  }
+
   StringRef error = "";
-  if (isa<llvm::BlockAddress>(constant))
-    error = " since blockaddress(...) is unsupported";
 
   if (isa<llvm::ConstantPtrAuth>(constant))
     error = " since ptrauth(...) is unsupported";
@@ -2448,8 +2457,13 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   SmallVector<llvm::BasicBlock *> reachableBasicBlocks;
   for (llvm::BasicBlock &basicBlock : *func) {
     // Skip unreachable blocks.
-    if (!reachable.contains(&basicBlock))
+    if (!reachable.contains(&basicBlock)) {
+      if (basicBlock.hasAddressTaken())
+        return emitError(funcOp.getLoc())
+               << "unreachable block '" << basicBlock.getName()
+               << "' with address taken";
       continue;
+    }
     Region &body = funcOp.getBody();
     Block *block = builder.createBlock(&body, body.end());
     mapBlock(&basicBlock, block);
@@ -2605,6 +2619,13 @@ LogicalResult ModuleImport::processBasicBlock(llvm::BasicBlock *bb,
         emitWarning(loc) << "dropped instruction: " << diag(inst);
       }
     }
+  }
+
+  if (bb->hasAddressTaken()) {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(block);
+    builder.create<BlockTagOp>(block->getParentOp()->getLoc(),
+                               BlockTagAttr::get(context, bb->getNumber()));
   }
   return success();
 }
