@@ -9062,87 +9062,101 @@ getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
   return std::make_pair(MainOp, AltOp);
 }
 
+/// Checks that every instruction appears once in the list and if not, packs
+/// them, building \p ReuseShuffleIndices mask. The list of unique scalars is
+/// extended by poison values to the whole register size.
+static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
+                                SmallVectorImpl<int> &ReuseShuffleIndices,
+                                const TargetTransformInfo &TTI,
+                                const TargetLibraryInfo &TLI,
+                                const InstructionsState &S,
+                                const BoUpSLP::EdgeInfo &UserTreeIdx,
+                                bool DoNotFail) {
+  // Check that every instruction appears once in this bundle.
+  SmallVector<Value *> UniqueValues;
+  SmallVector<Value *> NonUniqueValueVL;
+  SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
+  for (Value *V : VL) {
+    if (isConstant(V)) {
+      ReuseShuffleIndices.emplace_back(
+          isa<PoisonValue>(V) ? PoisonMaskElem : UniqueValues.size());
+      UniqueValues.emplace_back(V);
+      continue;
+    }
+    auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+    ReuseShuffleIndices.emplace_back(Res.first->second);
+    if (Res.second)
+      UniqueValues.emplace_back(V);
+  }
+  size_t NumUniqueScalarValues = UniqueValues.size();
+  bool IsFullVectors = hasFullVectorsOrPowerOf2(
+      TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
+  if (NumUniqueScalarValues == VL.size() &&
+      (VectorizeNonPowerOf2 || IsFullVectors)) {
+    ReuseShuffleIndices.clear();
+  } else {
+    // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
+    if ((UserTreeIdx.UserTE &&
+         UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(TTI)) ||
+        !hasFullVectorsOrPowerOf2(TTI, getValueType(VL.front()), VL.size())) {
+      LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                           "for nodes with padding.\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
+    if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
+        (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
+           return isa<UndefValue>(V) || !isConstant(V);
+         }))) {
+      if (DoNotFail && UniquePositions.size() > 1 &&
+          NumUniqueScalarValues > 1 && S.getMainOp()->isSafeToRemove() &&
+          all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
+        // Find the number of elements, which forms full vectors.
+        unsigned PWSz = getFullVectorNumberOfElements(
+            TTI, UniqueValues.front()->getType(), UniqueValues.size());
+        PWSz = std::min<unsigned>(PWSz, VL.size());
+        if (PWSz == VL.size()) {
+          ReuseShuffleIndices.clear();
+        } else {
+          NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
+          NonUniqueValueVL.append(
+              PWSz - UniqueValues.size(),
+              PoisonValue::get(UniqueValues.front()->getType()));
+          // Check that extended with poisons operations are still valid for
+          // vectorization (div/rem are not allowed).
+          if (!getSameOpcode(NonUniqueValueVL, TLI).valid()) {
+            LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+            return false;
+          }
+          VL = NonUniqueValueVL;
+        }
+        return true;
+      }
+      LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+      return false;
+    }
+    VL = UniqueValues;
+  }
+  return true;
+}
+
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx,
                             unsigned InterleaveFactor) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
-  SmallVector<Value *> UniqueValues;
-  SmallVector<Value *> NonUniqueValueVL;
+  SmallVector<Value *> NonUniqueValueVL(VL.begin(), VL.end());
   auto TryToFindDuplicates = [&](const InstructionsState &S,
                                  bool DoNotFail = false) {
-    // Check that every instruction appears once in this bundle.
-    SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
-    for (Value *V : VL) {
-      if (isConstant(V)) {
-        ReuseShuffleIndices.emplace_back(
-            isa<PoisonValue>(V) ? PoisonMaskElem : UniqueValues.size());
-        UniqueValues.emplace_back(V);
-        continue;
-      }
-      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
-      ReuseShuffleIndices.emplace_back(Res.first->second);
-      if (Res.second)
-        UniqueValues.emplace_back(V);
+    if (tryToFindDuplicates(NonUniqueValueVL, ReuseShuffleIndices, *TTI, *TLI,
+                            S, UserTreeIdx, DoNotFail)) {
+      VL = NonUniqueValueVL;
+      return true;
     }
-    size_t NumUniqueScalarValues = UniqueValues.size();
-    bool IsFullVectors = hasFullVectorsOrPowerOf2(
-        *TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
-    if (NumUniqueScalarValues == VL.size() &&
-        (VectorizeNonPowerOf2 || IsFullVectors)) {
-      ReuseShuffleIndices.clear();
-    } else {
-      // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-      if ((UserTreeIdx.UserTE &&
-           UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()),
-                                    VL.size())) {
-        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
-                             "for nodes with padding.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return false;
-      }
-      LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-      if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
-          (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
-             return isa<UndefValue>(V) || !isConstant(V);
-           }))) {
-        if (DoNotFail && UniquePositions.size() > 1 &&
-            NumUniqueScalarValues > 1 && S.getMainOp()->isSafeToRemove() &&
-            all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
-          // Find the number of elements, which forms full vectors.
-          unsigned PWSz = getFullVectorNumberOfElements(
-              *TTI, UniqueValues.front()->getType(), UniqueValues.size());
-          PWSz = std::min<unsigned>(PWSz, VL.size());
-          if (PWSz == VL.size()) {
-            ReuseShuffleIndices.clear();
-          } else {
-            NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
-            NonUniqueValueVL.append(
-                PWSz - UniqueValues.size(),
-                PoisonValue::get(UniqueValues.front()->getType()));
-            // Check that extended with poisons operations are still valid for
-            // vectorization (div/rem are not allowed).
-            if (!getSameOpcode(NonUniqueValueVL, *TLI).valid()) {
-              LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-              auto Invalid = ScheduleBundle::invalid();
-              newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-              return false;
-            }
-            VL = NonUniqueValueVL;
-          }
-          return true;
-        }
-        LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return false;
-      }
-      VL = UniqueValues;
-    }
-    return true;
+    auto Invalid = ScheduleBundle::invalid();
+    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
+    return false;
   };
 
   InstructionsState S = getSameOpcode(VL, *TLI);
@@ -9610,8 +9624,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
+  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
   std::optional<ScheduleBundle *> BundlePtr =
-      BS.tryScheduleBundle(UniqueValues, this, S);
+      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
