@@ -6823,15 +6823,17 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
         return true;
     }
 
-    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, Loc))
-        return false;
-      if (!this->emitArrayElemPtrUint64(Loc))
-        return false;
-      if (!this->emitDestruction(ElemDesc, Loc))
-        return false;
-      if (!this->emitPopPtr(Loc))
-        return false;
+    if (size_t N = Desc->getNumElems()) {
+      for (ssize_t I = N - 1; I >= 0; --I) {
+        if (!this->emitConstUint64(I, Loc))
+          return false;
+        if (!this->emitArrayElemPtrUint64(Loc))
+          return false;
+        if (!this->emitDestruction(ElemDesc, Loc))
+          return false;
+        if (!this->emitPopPtr(Loc))
+          return false;
+      }
     }
     return true;
   }
