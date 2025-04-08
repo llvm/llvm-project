@@ -17,7 +17,8 @@
 ; CHECK: set edge L0 -> 1 successor probability to 0x33333333 / 0x80000000 = 40.00%
 ; CHECK: set edge L0 -> 2 successor probability to 0x1999999a / 0x80000000 = 20.00%
 ; CHECK: set edge L0 -> 3 successor probability to 0x1999999a / 0x80000000 = 20.00%
-
+; CHECK-NOT: !0 = !{!"branch_weights", i32 306783378, i32 613566757, i32 613566757, i32 613566757}
+; CHECK: !0 = !{!"branch_weights", i32 429496730, i32 858993459, i32 429496730, i32 429496730}
 define void @test_switch(i1 %cond, i8 %value) nounwind {
 entry:
   br i1 %cond, label %L0, label %L4
