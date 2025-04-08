@@ -509,6 +509,36 @@ public:
 public:
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name, bool insertIntoFnEntryBlock);
+
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult
+  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
+  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
+  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
+  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
+  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
+  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
+
+  void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
+  void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 };
 
 } // namespace clang::CIRGen

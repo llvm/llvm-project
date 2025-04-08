@@ -113,6 +113,8 @@ public:
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
 
+  void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.
   mlir::Value emitNullConstant(QualType t, mlir::Location loc);
