@@ -2630,7 +2630,7 @@ Fortran::lower::genPackArray(Fortran::lower::AbstractConverter &converter,
       });
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   const mlir::Location loc = genLocation(converter, sym);
-  bool stackAlloc = opts.getStackArrays();
+  bool stackAlloc = opts.getStackRepackArrays();
   // 1D arrays must always use 'whole' mode.
   bool isInnermostMode = !opts.getRepackArraysWhole() && sym.Rank() > 1;
   // Avoid copy-in for 'intent(out)' variable, unless this is a dummy
