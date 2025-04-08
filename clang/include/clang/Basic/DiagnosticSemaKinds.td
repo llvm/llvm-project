@@ -11746,9 +11746,9 @@ def err_omp_inscan_reduction_expected : Error<
 def note_omp_previous_inscan_reduction : Note<
   "'reduction' clause with 'inscan' modifier is used here">;
 def err_omp_multivar_xteam_scan_unsupported : Error<
-  "multiple list items are not yet supported with the 'inclusive' or the 'exclusive' clauses that appear with the 'scan' directive">;  
+  "multiple list items are not yet supported with the 'inclusive' or the 'exclusive' clauses that appear with the 'scan' directive">;
 def err_omp_xteam_scan_prohibited : Error<
-  "'scan' directive is not supported inside target regions. Use flag '-fopenmp-target-xteam-scan' to enable it">;  
+  "'scan' directive is not supported inside target regions. Use flag '-fopenmp-target-xteam-scan' to enable it">;
 def err_omp_expected_predefined_allocator : Error<
   "expected one of the predefined allocators for the variables with the static "
   "storage: 'omp_default_mem_alloc', 'omp_large_cap_mem_alloc', "
@@ -13066,4 +13066,14 @@ def err_acc_invalid_modifier
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_processor_is_arg_not_literal
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
+            "literal">;
+def err_amdgcn_processor_is_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
+            "AMDGCN processor identifier; '%0' is not valid">;
+def err_amdgcn_is_invocable_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
+            "target agnostic builtin or an AMDGCN target specific builtin; `%0`"
+            " is not valid">;
 } // end of sema component.
