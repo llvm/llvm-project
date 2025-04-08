@@ -2211,10 +2211,8 @@ class FeatureTestMacros:
         """Has the FTM `ftm` been implemented in the dialect `std`?"""
 
         # When a paper for C++20 has not been implemented in libc++, then there will be no
-        # FTM entry in implemented_ftms for C++23 and later.
-        #
-        # Typically standard_ftms is not used with invalid values in the code, but
-        # guard just in case.
+        # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
+        # has no entry in standard_ftms for e.g. C++11.
         if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
             return False
 
