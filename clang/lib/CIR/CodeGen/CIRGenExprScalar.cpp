@@ -755,7 +755,7 @@ public:
         cgf.cgm.errorNYI(loc, "fixed point comparisons");
         result = builder.getBool(false, loc);
       } else {
-        // Unsigned integers and pointers.
+        // integers and pointers
         if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
             mlir::isa<cir::PointerType>(lhs.getType()) &&
             mlir::isa<cir::PointerType>(rhs.getType())) {
