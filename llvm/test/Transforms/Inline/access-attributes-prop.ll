@@ -766,7 +766,7 @@ define void @foo_fp(float %x) {
 define void @prop_param_nofpclass(float %x) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_param_nofpclass
 ; CHECK-SAME: (float [[X:%.*]]) {
-; CHECK-NEXT:    call void @bar_fp(float [[X]])
+; CHECK-NEXT:    call void @bar_fp(float nofpclass(nan inf) [[X]])
 ; CHECK-NEXT:    ret void
 ;
   call void @foo_fp(float nofpclass(nan inf) %x)
@@ -788,7 +788,7 @@ define void @union_nofpclass(float %v) {
 define void @prop_nofpclass_union(float %v) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_nofpclass_union
 ; CHECK-SAME: (float [[V:%.*]]) {
-; CHECK-NEXT:    call void @func_fp(float nofpclass(inf) [[V]])
+; CHECK-NEXT:    call void @func_fp(float nofpclass(nan inf) [[V]])
 ; CHECK-NEXT:    ret void
 ;
   call void @union_nofpclass(float nofpclass(nan) %v)
