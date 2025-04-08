@@ -110,13 +110,14 @@ define i1 @widen_anyof_rdx(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[ENTRY]] ], [ [[TMP4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i8> [ zeroinitializer, [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[N:%.*]], [[IV]]
 ; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[X:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <vscale x 4 x i32> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP4]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[PHI]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1]] = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i8> [[TMP0]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i1>
 ; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[EVL_ZEXT]]
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp sge i64 [[IV_NEXT]], [[N]]
@@ -154,13 +155,14 @@ define i1 @widen_anyof_rdx_use_in_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[ENTRY]] ], [ [[REC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <vscale x 4 x i8> [ zeroinitializer, [[ENTRY]] ], [ [[TMP1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[N:%.*]], [[IV]]
 ; CHECK-NEXT:    [[EVL:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    [[X:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr [[GEP]], <vscale x 4 x i1> splat (i1 true), i32 [[EVL]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <vscale x 4 x i32> [[X]], zeroinitializer
-; CHECK-NEXT:    [[REC]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[PHI]], i32 [[EVL]])
+; CHECK-NEXT:    [[TMP1]] = call <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1> [[CMP]], <vscale x 4 x i8> splat (i8 1), <vscale x 4 x i8> [[TMP0]], i32 [[EVL]])
+; CHECK-NEXT:    [[REC:%.*]] = trunc <vscale x 4 x i8> [[TMP1]] to <vscale x 4 x i1>
 ; CHECK-NEXT:    store <vscale x 4 x i1> [[REC]], ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[EVL_ZEXT:%.*]] = zext i32 [[EVL]] to i64
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[EVL_ZEXT]]
