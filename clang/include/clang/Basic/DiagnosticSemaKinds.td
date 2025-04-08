@@ -167,9 +167,10 @@ def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
   InGroup<DiagGroup<"predefined-identifier-outside-function">>;
-def ext_init_from_predefined : ExtWarn<
-  "initializing an array from a '%0' predefined identifier is a Microsoft extension">,
-  InGroup<MicrosoftInitFromPredefined>;
+def ext_init_from_predefined
+    : ExtWarn<"initializing an array from a %0 predefined identifier is a "
+              "Microsoft extension">,
+      InGroup<MicrosoftInitFromPredefined>;
 def ext_string_literal_from_predefined : ExtWarn<
   "expansion of predefined identifier '%0' to a string literal is a Microsoft extension">,
   InGroup<MicrosoftStringLiteralFromPredefined>;
@@ -3021,14 +3022,14 @@ def note_substituted_constraint_expr_is_ill_formed : Note<
   "because substituted constraint expression is ill-formed%0">;
 def note_constraint_references_error
     : Note<"constraint depends on a previously diagnosed expression">;
-def note_atomic_constraint_evaluated_to_false : Note<
-  "%select{and|because}0 '%1' evaluated to false">;
-def note_concept_specialization_constraint_evaluated_to_false : Note<
-  "%select{and|because}0 '%1' evaluated to false">;
+def note_atomic_constraint_evaluated_to_false
+    : Note<"%select{and|because}0 %1 evaluated to false">;
+def note_concept_specialization_constraint_evaluated_to_false
+    : Note<"%select{and|because}0 %1 evaluated to false">;
 def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and|because}0 %1 does not satisfy %2">;
-def note_atomic_constraint_evaluated_to_false_elaborated : Note<
-  "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
+def note_atomic_constraint_evaluated_to_false_elaborated
+    : Note<"%select{and|because}0 %1 (%2 %3 %4) evaluated to false">;
 def note_is_deducible_constraint_evaluated_to_false : Note<
   "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
@@ -3048,14 +3049,14 @@ def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def note_expr_requirement_noexcept_not_met : Note<
-  "%select{and|because}0 '%1' may throw an exception">;
+def note_expr_requirement_noexcept_not_met
+    : Note<"%select{and|because}0 %1 may throw an exception">;
 def note_expr_requirement_type_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_type_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def note_expr_requirement_constraints_not_satisfied : Note<
-  "%select{and|because}0 type constraint '%1' was not satisfied:">;
+def note_expr_requirement_constraints_not_satisfied
+    : Note<"%select{and|because}0 type constraint %1 was not satisfied:">;
 def note_expr_requirement_constraints_not_satisfied_simple : Note<
   "%select{and|because}0 %1 does not satisfy %2:">;
 def note_type_requirement_substitution_error : Note<
@@ -4356,9 +4357,9 @@ def note_reference_is_return_value : Note<"%0 returns a reference">;
 
 def note_pointer_declared_here : Note<
   "pointer %0 declared here">;
-def warn_division_sizeof_ptr : Warning<
-  "'%0' will return the size of the pointer, not the array itself">,
-  InGroup<DiagGroup<"sizeof-pointer-div">>;
+def warn_division_sizeof_ptr
+    : Warning<"%0 will return the size of the pointer, not the array itself">,
+      InGroup<DiagGroup<"sizeof-pointer-div">>;
 def warn_division_sizeof_array : Warning<
   "expression does not compute the number of elements in this array; element "
   "type is %0, not %1">,
@@ -5581,8 +5582,9 @@ def note_function_member_spec_matched : Note<
 def err_template_recursion_depth_exceeded : Error<
   "recursive template instantiation exceeded maximum depth of %0">,
   DefaultFatal, NoSFINAE;
-def err_constraint_depends_on_self : Error<
-  "satisfaction of constraint '%0' depends on itself">, NoSFINAE;
+def err_constraint_depends_on_self
+    : Error<"satisfaction of constraint %0 depends on itself">,
+      NoSFINAE;
 def note_template_recursion_depth : Note<
   "use -ftemplate-depth=N to increase recursive template instantiation depth">;
 
@@ -7098,8 +7100,8 @@ def warn_precedence_bitwise_rel : Warning<
   InGroup<Parentheses>;
 def note_precedence_bitwise_first : Note<
   "place parentheses around the %0 expression to evaluate it first">;
-def note_precedence_silence : Note<
-  "place parentheses around the '%0' expression to silence this warning">;
+def note_precedence_silence : Note<"place parentheses around the %quoted0 "
+                                   "expression to silence this warning">;
 
 def warn_precedence_conditional : Warning<
   "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
@@ -7117,9 +7119,11 @@ def warn_consecutive_comparison : Warning<
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
-def warn_left_shift_in_bool_context : Warning<
-  "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
-  InGroup<IntInBoolContext>, DefaultIgnore;
+def warn_left_shift_in_bool_context
+    : Warning<"converting the result of '<<' to a boolean; did you mean to "
+              "compare with '0'?">,
+      InGroup<IntInBoolContext>,
+      DefaultIgnore;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;
@@ -10331,9 +10335,11 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
-def warn_dangling_reference_captured : Warning<
-   "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>;
+def warn_dangling_reference_captured
+    : Warning<"object whose reference is captured by %0 will be destroyed at "
+              "the end of "
+              "the full-expression">,
+      InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
@@ -13038,15 +13044,15 @@ def note_acc_atomic_too_many_stmts
 def note_acc_atomic_expected_binop : Note<"expected binary operation on right "
                                           "hand side of assignment operator">;
 def note_acc_atomic_mismatch_operand
-    : Note<"left hand side of assignment operation('%0') must match one side "
-           "of the sub-operation on the right hand side('%1' and '%2')">;
+    : Note<"left hand side of assignment operation(%0) must match one side "
+           "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
     : Note<"variable %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
-           "compound assignment|on left hand side of assignment}2('%3') must "
+           "compound assignment|on left hand side of assignment}2(%3) must "
            "match variable used %select{|in unary expression|on right hand "
            "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0('%1') from the first "
+           "assignment|on left hand side of assignment}0(%1) from the first "
            "statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
@@ -13066,9 +13072,9 @@ def err_acc_multiple_references
     : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
             "was already referenced">;
 def err_acc_routine_not_func
-    : Error<"OpenACC routine name '%0' does not name a function">;
+    : Error<"OpenACC routine name %0 does not name a function">;
 def err_acc_routine_overload_set
-    : Error<"OpenACC routine name '%0' names a set of overloads">;
+    : Error<"OpenACC routine name %0 names a set of overloads">;
 def err_acc_magic_static_in_routine
     : Error<"function static variables are not permitted in functions to which "
             "an OpenACC 'routine' directive applies">;
