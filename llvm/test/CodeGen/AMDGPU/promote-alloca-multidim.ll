@@ -294,6 +294,56 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset(ptr %out) {
   ret void
 }
 
+define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset_index(ptr %out) {
+; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_3_i64_offset_index(
+; CHECK-SAME: ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[X:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NEXT:    [[Y:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.y()
+; CHECK-NEXT:    [[C1:%.*]] = icmp uge i32 [[X]], 3
+; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; CHECK-NEXT:    [[SEL3:%.*]] = zext i32 [[SEL2]] to i64
+; CHECK-NEXT:    [[ALLOCA:%.*]] = freeze <6 x i64> poison
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <6 x i64> [[ALLOCA]], i64 0, i32 0
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <6 x i64> [[TMP11]], i64 1, i32 1
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <6 x i64> [[TMP12]], i64 2, i32 2
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <6 x i64> [[TMP13]], i64 3, i32 3
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <6 x i64> [[TMP14]], i64 4, i32 4
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <6 x i64> [[TMP15]], i64 5, i32 5
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[SEL3]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 6, [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <3 x i64> poison, i64 [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x i64> [[TMP4]], i64 [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP2]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <6 x i64> [[TMP16]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <3 x i64> [[TMP7]], i64 [[TMP9]], i64 2
+; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP10]], i32 2
+; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+  %x = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %y = tail call i32 @llvm.amdgcn.workitem.id.y()
+  %c1 = icmp uge i32 %x, 3
+  %c2 = icmp uge i32 %y, 3
+  %sel1 = select i1 %c1, i32 1, i32 2
+  %sel2 = select i1 %c2, i32 0, i32 %sel1
+  %sel3 = zext i32 %sel2 to i64
+  %alloca = alloca [2 x [3 x i64]], align 16, addrspace(5)
+  %gep.00 = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i32 0
+  %gep.01 = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i32 0, i32 1, i32 0
+  store <3 x i64> <i64 0, i64 1, i64 2>, ptr addrspace(5) %gep.00
+  store <3 x i64> <i64 3, i64 4, i64 5>, ptr addrspace(5) %gep.01
+  %gep = getelementptr inbounds [2 x [3 x i64]], ptr addrspace(5) %alloca, i64 1, i64 %sel3
+  %load = load <3 x i64>, ptr addrspace(5) %gep
+  %elem = extractelement <3 x i64> %load, i32 2
+  store i64 %elem, ptr %out
+  ret void
+}
+
 define amdgpu_kernel void @i64_2d_load_store_subvec_4(ptr %out) {
 ; CHECK-LABEL: define amdgpu_kernel void @i64_2d_load_store_subvec_4(
 ; CHECK-SAME: ptr [[OUT:%.*]]) {

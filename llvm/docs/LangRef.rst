@@ -3109,8 +3109,7 @@ as follows:
 ``S<size>``
     Specifies the natural alignment of the stack in bits. Alignment
     promotion of stack variables is limited to the natural stack
-    alignment to avoid dynamic stack realignment. The stack alignment
-    must be a multiple of 8-bits. If omitted, the natural stack
+    alignment to avoid dynamic stack realignment. If omitted, the natural stack
     alignment defaults to "unspecified", which does not prevent any
     alignment promotions.
 ``P<address space>``
@@ -3136,8 +3135,8 @@ as follows:
     Defaults to the default address space of 0.
 ``p[n]:<size>:<abi>[:<pref>][:<idx>]``
     This specifies the *size* of a pointer and its ``<abi>`` and
-    ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
-    and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
+    ``<pref>``\erred alignments for address space ``n``.
+    The fourth parameter ``<idx>`` is the size of the
     index that used for address calculation, which must be less than or equal
     to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
@@ -3147,23 +3146,21 @@ as follows:
 ``i<size>:<abi>[:<pref>]``
     This specifies the alignment for an integer type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
     For ``i8``, the ``<abi>`` value must equal 8,
     that is, ``i8`` must be naturally aligned.
 ``v<size>:<abi>[:<pref>]``
     This specifies the alignment for a vector type of a given bit
     ``<size>``. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``f<size>:<abi>[:<pref>]``
     This specifies the alignment for a floating-point type of a given bit
     ``<size>``. Only values of ``<size>`` that are supported by the target
     will work. 32 (float) and 64 (double) are supported on all targets; 80
     or 128 (different flavors of long double) are also supported on some
     targets. The value of ``<size>`` must be in the range [1,2^24).
-    ``<pref>`` is optional and defaults to ``<abi>``.
 ``a:<abi>[:<pref>]``
     This specifies the alignment for an object of aggregate type.
-    ``<pref>`` is optional and defaults to ``<abi>``.
+    In addition to the usual requirements for alignment values,
+    the value of ``<abi>`` can also be zero, which means one byte alignment.
 ``F<type><abi>``
     This specifies the alignment for function pointers.
     The options for ``<type>`` are:
@@ -3202,6 +3199,9 @@ as follows:
     as :ref:`Non-Integral Pointer Type <nointptrtype>` s.  The ``0``
     address space cannot be specified as non-integral.
 
+Unless explicitly stated otherwise, on every specification that specifies
+an alignment, the value of the alignment must be in the range [1,2^16)
+and must be a power of two times the width of a byte.
 On every specification that takes a ``<abi>:<pref>``, specifying the
 ``<pref>`` alignment is optional. If omitted, the preceding ``:``
 should be omitted too and ``<pref>`` will be equal to ``<abi>``.
@@ -3971,8 +3971,9 @@ output, given the original flags.
    for places where this can apply to LLVM's intrinsic math functions.
 
 ``reassoc``
-   Allow reassociation transformations for floating-point instructions.
-   This may dramatically change results in floating-point.
+   Allow algebraically equivalent transformations for floating-point
+   instructions such as reassociation transformations. This may dramatically
+   change results in floating-point.
 
 .. _uselistorder:
 
@@ -6212,6 +6213,35 @@ following:
   DW_ATE_unsigned      = 7
   DW_ATE_unsigned_char = 8
 
+.. _DIFixedPointType:
+
+DIFixedPointType
+""""""""""""""""
+
+``DIFixedPointType`` nodes represent fixed-point types.  A fixed-point
+type is conceptually an integer with a scale factor.
+``DIFixedPointType`` is derived from ``DIBasicType`` and inherits its
+attributes.  However, only certain encodings are accepted:
+
+.. code-block:: text
+
+  DW_ATE_signed_fixed   = 13
+  DW_ATE_unsigned_fixed = 14
+
+There are three kinds of fixed-point type: binary, where the scale
+factor is a power of 2; decimal, where the scale factor is a power of
+10; and rational, where the scale factor is an arbitrary rational
+number.
+
+.. code-block:: text
+
+    !0 = !DIFixedPointType(name: "decimal", size: 8, encoding: DW_ATE_signed_fixed,
+                           kind: Decimal, factor: -4)
+    !1 = !DIFixedPointType(name: "binary", size: 8, encoding: DW_ATE_unsigned_fixed,
+                           kind: Binary, factor: -16)
+    !2 = !DIFixedPointType(name: "rational", size: 8, encoding: DW_ATE_signed_fixed,
+                           kind: Rational, numerator: 1234, denominator: 5678)
+
 .. _DISubroutineType:
 
 DISubroutineType
@@ -6336,7 +6366,10 @@ array is currently associated.  The optional ``allocated`` is a
 DIExpression that describes whether the allocatable array is currently
 allocated.  The optional ``rank`` is a DIExpression that describes the
 rank (number of dimensions) of fortran assumed rank array (rank is
-known at runtime).
+known at runtime).  The optional ``bitStride`` is an unsigned constant
+that describes the number of bits occupied by an element of the array;
+this is only needed if it differs from the element type's natural
+size, and is normally used for packed arrays.
 
 For ``DW_TAG_enumeration_type``, the ``elements:`` should be :ref:`enumerator
 descriptors <DIEnumerator>`, each representing the definition of an enumeration
@@ -8217,6 +8250,14 @@ Example:
 
 Clang emits ``kcfi_type`` metadata nodes for address-taken functions with
 ``-fsanitize=kcfi``.
+
+'``pcsections``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``pcsections`` metadata can be attached to instructions and functions, for
+which addresses, viz. program counters (PCs), are to be emitted in specially
+encoded binary sections. More details can be found in the `PC Sections Metadata
+<PCSectionsMetadata.html>`_ documentation.
 
 .. _md_memprof:
 
@@ -13407,7 +13448,7 @@ an extra level of indentation. As an example:
   %inst2 = op2 %inst1, %c
 
 These debug records replace the prior :ref:`debug intrinsics<dbg_intrinsics>`.
-Debug records will be disabled if ``--write-experimental-debuginfo=false`` is
+Debug records will be disabled if ``--experimental-debuginfo-iterators=false`` is
 passed to LLVM; it is an error for both records and intrinsics to appear in the
 same module. More information about debug records can be found in the `LLVM
 Source Level Debugging <SourceLevelDebugging.html#format-common-intrinsics>`_
@@ -14562,6 +14603,33 @@ is lowered to a constant 0.
 Note that runtime support may be conditional on the privilege-level code is
 running at and the host platform.
 
+'``llvm.readsteadycounter``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i64 @llvm.readsteadycounter()
+
+Overview:
+"""""""""
+
+The '``llvm.readsteadycounter``' intrinsic provides access to the fixed
+frequency clock on targets that support it. Unlike '``llvm.readcyclecounter``',
+this clock is expected to tick at a constant rate, making it suitable for
+measuring elapsed time. The actual frequency of the clock is implementation
+defined.
+
+Semantics:
+""""""""""
+
+When directly supported, reading the steady counter should not modify any
+memory. Implementations are allowed to either return an application
+specific value or a system wide value. On backends without support, this
+is lowered to a constant 0.
+
 '``llvm.clear_cache``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -15640,8 +15708,8 @@ Syntax:
 """""""
 
 This is an overloaded intrinsic. You can use
-``llvm.experimental.memset.pattern`` on any integer bit width and for
-different address spaces. Not all targets support all bit widths however.
+``llvm.experimental.memset.pattern`` on any sized type and for different
+address spaces.
 
 ::
 
@@ -20050,7 +20118,7 @@ Arguments:
 
 The argument to this intrinsic must be a vector.
 
-'``llvm.vector.deinterleave2``' Intrinsic
+'``llvm.vector.deinterleave2/3/5/7``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20061,31 +20129,37 @@ This is an overloaded intrinsic.
 
       declare {<2 x double>, <2 x double>} @llvm.vector.deinterleave2.v4f64(<4 x double> %vec1)
       declare {<vscale x 4 x i32>, <vscale x 4 x i32>}  @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec1)
+      declare {<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>} @llvm.vector.deinterleave3.nxv6i8(<vscale x 6 x i8> %vec1)
+      declare {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave5.v10i32(<10 x i32> %vec1)
+      declare {<2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>} @llvm.vector.deinterleave7.v14i32(<14 x i32> %vec1)
 
 Overview:
 """""""""
 
-The '``llvm.vector.deinterleave2``' intrinsic constructs two
-vectors by deinterleaving the even and odd lanes of the input vector.
+The '``llvm.vector.deinterleave2/3/5/7``' intrinsics deinterleave adjacent lanes
+into 2, 3, 5, and 7 separate vectors, respectively, and return them as the
+result.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+factor of 2 on fixed-width vectors is still to use a shufflevector, as that
+may allow for more optimization opportunities.
 
 For example:
 
 .. code-block:: text
 
   {<2 x i64>, <2 x i64>} llvm.vector.deinterleave2.v4i64(<4 x i64> <i64 0, i64 1, i64 2, i64 3>); ==> {<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>}
+  {<2 x i32>, <2 x i32>, <2 x i32>} llvm.vector.deinterleave3.v6i32(<6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>)
+    ; ==> {<2 x i32> <i32 0, i32 3>, <2 x i32> <i32 1, i32 4>, <2 x i32> <i32 2, i32 5>}
 
 Arguments:
 """"""""""
 
 The argument is a vector whose type corresponds to the logical concatenation of
-the two result types.
+the aggregated result types.
 
-'``llvm.vector.interleave2``' Intrinsic
+'``llvm.vector.interleave2/3/5/7``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -20096,27 +20170,32 @@ This is an overloaded intrinsic.
 
       declare <4 x double> @llvm.vector.interleave2.v4f64(<2 x double> %vec1, <2 x double> %vec2)
       declare <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %vec1, <vscale x 4 x i32> %vec2)
+      declare <vscale x 6 x i8> @llvm.vector.interleave3.nxv6i8(<vscale x 2 x i8> %vec0, <vscale x 2 x i8> %vec1, <vscale x 2 x i8> %vec2)
+      declare <10 x i32> @llvm.vector.interleave5.v10i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4)
+      declare <14 x i32> @llvm.vector.interleave7.v14i32(<2 x i32> %vec0, <2 x i32> %vec1, <2 x i32> %vec2, <2 x i32> %vec3, <2 x i32> %vec4, <2 x i32> %vec5, <2 x i32> %vec6)
 
 Overview:
 """""""""
 
-The '``llvm.vector.interleave2``' intrinsic constructs a vector
-by interleaving two input vectors.
+The '``llvm.vector.interleave2/3/5/7``' intrinsic constructs a vector
+by interleaving all the input vectors.
 
 This intrinsic works for both fixed and scalable vectors. While this intrinsic
 supports all vector types the recommended way to express this operation for
-fixed-width vectors is still to use a shufflevector, as that may allow for more
-optimization opportunities.
+factor of 2 on fixed-width vectors is still to use a shufflevector, as that
+may allow for more optimization opportunities.
 
 For example:
 
 .. code-block:: text
 
    <4 x i64> llvm.vector.interleave2.v4i64(<2 x i64> <i64 0, i64 2>, <2 x i64> <i64 1, i64 3>); ==> <4 x i64> <i64 0, i64 1, i64 2, i64 3>
+   <6 x i32> llvm.vector.interleave3.v6i32(<2 x i32> <i32 0, i32 3>, <2 x i32> <i32 1, i32 4>, <2 x i32> <i32 2, i32 5>)
+    ; ==> <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5>
 
 Arguments:
 """"""""""
-Both arguments must be vectors of the same type whereby their logical
+All arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
 
 '``llvm.experimental.cttz.elts``' Intrinsic

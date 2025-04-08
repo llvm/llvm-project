@@ -65,8 +65,6 @@ static cl::opt<bool> AllowIncompleteIR(
 
 extern llvm::cl::opt<bool> UseNewDbgInfoFormat;
 extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-extern bool WriteNewDbgInfoFormatToBitcode;
-extern cl::opt<bool> WriteNewDbgInfoFormat;
 
 static std::string getTypeString(Type *T) {
   std::string Result;
@@ -213,8 +211,6 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
          "Mixed debug intrinsics/records seen without a parsing error?");
   if (PreserveInputDbgFormat == cl::boolOrDefault::BOU_TRUE) {
     UseNewDbgInfoFormat = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormatToBitcode = SeenNewDbgInfoFormat;
-    WriteNewDbgInfoFormat = SeenNewDbgInfoFormat;
     M->setNewDbgInfoFormatFlag(SeenNewDbgInfoFormat);
   }
 
@@ -942,7 +938,8 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
     return true;
 
   // If not a forward reference, just return it now.
-  if (auto It = NumberedMetadata.find(MID); It != NumberedMetadata.end()) {
+  auto [It, Inserted] = NumberedMetadata.try_emplace(MID);
+  if (!Inserted) {
     Result = It->second;
     return false;
   }
@@ -952,7 +949,7 @@ bool LLParser::parseMDNodeID(MDNode *&Result) {
   FwdRef = std::make_pair(MDTuple::getTemporary(Context, {}), IDLoc);
 
   Result = FwdRef.first.get();
-  NumberedMetadata[MID].reset(Result);
+  It->second.reset(Result);
   return false;
 }
 
@@ -4750,6 +4747,11 @@ struct EmissionKindField : public MDUnsignedField {
   EmissionKindField() : MDUnsignedField(0, DICompileUnit::LastEmissionKind) {}
 };
 
+struct FixedPointKindField : public MDUnsignedField {
+  FixedPointKindField()
+      : MDUnsignedField(0, DIFixedPointType::LastFixedPointKind) {}
+};
+
 struct NameTableKindField : public MDUnsignedField {
   NameTableKindField()
       : MDUnsignedField(
@@ -4988,6 +4990,25 @@ bool LLParser::parseMDField(LocTy Loc, StringRef Name,
     return tokError("invalid emission kind" + Twine(" '") + Lex.getStrVal() +
                     "'");
   assert(*Kind <= Result.Max && "Expected valid emission kind");
+  Result.assign(*Kind);
+  Lex.Lex();
+  return false;
+}
+
+template <>
+bool LLParser::parseMDField(LocTy Loc, StringRef Name,
+                            FixedPointKindField &Result) {
+  if (Lex.getKind() == lltok::APSInt)
+    return parseMDField(Loc, Name, static_cast<MDUnsignedField &>(Result));
+
+  if (Lex.getKind() != lltok::FixedPointKind)
+    return tokError("expected fixed-point kind");
+
+  auto Kind = DIFixedPointType::getFixedPointKind(Lex.getStrVal());
+  if (!Kind)
+    return tokError("invalid fixed-point kind" + Twine(" '") + Lex.getStrVal() +
+                    "'");
+  assert(*Kind <= Result.Max && "Expected valid fixed-point kind");
   Result.assign(*Kind);
   Lex.Lex();
   return false;
@@ -5515,6 +5536,33 @@ bool LLParser::parseDIBasicType(MDNode *&Result, bool IsDistinct) {
   return false;
 }
 
+/// parseDIFixedPointType:
+///   ::= !DIFixedPointType(tag: DW_TAG_base_type, name: "xyz", size: 32,
+///                         align: 32, encoding: DW_ATE_signed_fixed,
+///                         flags: 0, kind: Rational, factor: 3, numerator: 1,
+///                         denominator: 8)
+bool LLParser::parseDIFixedPointType(MDNode *&Result, bool IsDistinct) {
+#define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
+  OPTIONAL(tag, DwarfTagField, (dwarf::DW_TAG_base_type));                     \
+  OPTIONAL(name, MDStringField, );                                             \
+  OPTIONAL(size, MDUnsignedField, (0, UINT64_MAX));                            \
+  OPTIONAL(align, MDUnsignedField, (0, UINT32_MAX));                           \
+  OPTIONAL(encoding, DwarfAttEncodingField, );                                 \
+  OPTIONAL(flags, DIFlagField, );                                              \
+  OPTIONAL(kind, FixedPointKindField, );                                       \
+  OPTIONAL(factor, MDSignedField, );                                           \
+  OPTIONAL(numerator, MDAPSIntField, );                                        \
+  OPTIONAL(denominator, MDAPSIntField, );
+  PARSE_MD_FIELDS();
+#undef VISIT_MD_FIELDS
+
+  Result = GET_OR_DISTINCT(DIFixedPointType,
+                           (Context, tag.Val, name.Val, size.Val, align.Val,
+                            encoding.Val, flags.Val, kind.Val, factor.Val,
+                            numerator.Val, denominator.Val));
+  return false;
+}
+
 /// parseDIStringType:
 ///   ::= !DIStringType(name: "character(4)", size: 32, align: 32)
 bool LLParser::parseDIStringType(MDNode *&Result, bool IsDistinct) {
@@ -5612,7 +5660,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(rank, MDSignedOrMDField, );                                         \
   OPTIONAL(annotations, MDField, );                                            \
   OPTIONAL(num_extra_inhabitants, MDUnsignedField, (0, UINT32_MAX));           \
-  OPTIONAL(specification, MDField, );
+  OPTIONAL(specification, MDField, );                                          \
+  OPTIONAL(bitStride, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -5635,7 +5684,8 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
             specification.Val, num_extra_inhabitants.Val, flags.Val,
             elements.Val, runtimeLang.Val, EnumKind, vtableHolder.Val,
             templateParams.Val, discriminator.Val, dataLocation.Val,
-            associated.Val, allocated.Val, Rank, annotations.Val)) {
+            associated.Val, allocated.Val, Rank, annotations.Val,
+            bitStride.Val)) {
       Result = CT;
       return false;
     }
@@ -5649,7 +5699,7 @@ bool LLParser::parseDICompositeType(MDNode *&Result, bool IsDistinct) {
        runtimeLang.Val, EnumKind, vtableHolder.Val, templateParams.Val,
        identifier.Val, discriminator.Val, dataLocation.Val, associated.Val,
        allocated.Val, Rank, annotations.Val, specification.Val,
-       num_extra_inhabitants.Val));
+       num_extra_inhabitants.Val, bitStride.Val));
   return false;
 }
 

@@ -12,9 +12,9 @@ func.func @test_fft2d(%arg0: tensor<1x4x8xf32>, %arg1: tensor<1x4x8xf32>) -> (te
 }
 
 // -----
-func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
+func.func @test_variable_read_type(%arg0: tensor<2x4x8xi8>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.read' op illegal: requires [variable]}}
   %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
   return
@@ -23,7 +23,7 @@ func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
 // -----
 func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi8>
   // expected-error@+1 {{'tosa.variable.write' op illegal: requires [variable]}}
   tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
   return
@@ -165,11 +165,11 @@ func.func @test_depthwise_conv2d_non_const_input_zp(%arg0: tensor<1x4x4x4xi8>, %
 
 // -----
 
-func.func @test_transpose_conv2d_non_const_weight_zp(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<1x1x4x2xi8>, %arg2: tensor<8xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x4x8xi32> {
+func.func @test_transpose_conv2d_non_const_weight_zp(%arg0: tensor<1x4x4x4xi8>, %arg1: tensor<1x1x4x2xi8>, %arg2: tensor<8xi32>, %arg3: tensor<1xi8>) -> tensor<1x4x7x8xi32> {
   %input_zp = "tosa.const"() {values = dense<0> : tensor<1xi8> } : () -> tensor<1xi8>
   // expected-error@+1 {{'tosa.transpose_conv2d' op expected compile time resolvable constant, but got variable value for operand #4}}
-  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xi8>, tensor<1x1x4x2xi8>, tensor<8xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x4x8xi32>
-  return %0 : tensor<1x4x4x8xi32>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %arg3 {acc_type = i32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>} : (tensor<1x4x4x4xi8>, tensor<1x1x4x2xi8>, tensor<8xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x4x7x8xi32>
+  return %0 : tensor<1x4x7x8xi32>
 }
 
 // -----
@@ -191,10 +191,10 @@ func.func @test_matmul_non_const_b_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<
 
 // -----
 
-func.func @test_mul_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>, %shift: tensor<1xi8>) -> tensor<13x21x3xi8> {
+func.func @test_mul_non_const(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>, %shift: tensor<1xi8>) -> tensor<13x21x3xi32> {
   // expected-error@+1 {{'tosa.mul' op expected compile time resolvable constant, but got variable value for operand #2}}
-  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi8>
-  return %0 : tensor<13x21x3xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi32>
+  return %0 : tensor<13x21x3xi32>
 }
 
 // -----

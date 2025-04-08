@@ -47,6 +47,7 @@ class PDBASTParser;
 namespace clang {
 class FileManager;
 class HeaderSearch;
+class HeaderSearchOptions;
 class ModuleMap;
 } // namespace clang
 
@@ -1203,6 +1204,7 @@ private:
   std::unique_ptr<clang::IdentifierTable> m_identifier_table_up;
   std::unique_ptr<clang::SelectorTable> m_selector_table_up;
   std::unique_ptr<clang::Builtin::Context> m_builtins_up;
+  std::unique_ptr<clang::HeaderSearchOptions> m_header_search_opts_up;
   std::unique_ptr<clang::HeaderSearch> m_header_search_up;
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;

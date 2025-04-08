@@ -42,6 +42,9 @@ Implemented Papers
 - P0767R1: Deprecate POD (`Github <https://github.com/llvm/llvm-project/issues/104013>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
 - P2255R2: A type trait to detect reference binding to temporary (implemented the type traits only) (`Github <https://github.com/llvm/llvm-project/issues/105180>`__)
+- P2562R1: ``constexpr`` Stable Sorting (`Github <https://github.com/llvm/llvm-project/issues/105360>`__)
+- P0472R3: Put std::monostate in <utility> (`Github <https://github.com/llvm/llvm-project/issues/127874>`__)
+- P1222R4: A Standard ``flat_set`` (`Github <https://github.com/llvm/llvm-project/issues/105193>`__)
 
 Improvements and New Features
 -----------------------------
@@ -74,7 +77,10 @@ LLVM 22
 ABI Affecting Changes
 ---------------------
 
-- TODO
+- When using GCC, the ``std`` namespace is now annotated with ``[[gnu::visibility("default")]]``. This may cause more
+  symbols to be exported from shared libraries when building with ``-fvisibility=hidden``. This also fixes RTTI
+  comparison between shared libraries, since all RTTI has the correct visibility now. There is no behaviour change on
+  Clang.
 
 
 Build System Changes

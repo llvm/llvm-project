@@ -26,7 +26,7 @@ subroutine sub1()
 
   do i = 1, 2
 ! CHECK:    fir.store %[[C2]] to %[[TRIP]] : !fir.ref<i32>
-! CHECK:    fir.store %[[C1]] to %[[I]]#1 : !fir.ref<i32>
+! CHECK:    fir.store %[[C1]] to %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER:.*]]
 ! CHECK:  ^[[HEADER]]:
 ! CHECK:    %[[TMP2:.*]] = fir.load %[[TRIP]] : !fir.ref<i32>
@@ -39,9 +39,9 @@ subroutine sub1()
 ! CHECK:    %[[TMP4:.*]] = fir.load %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP5:.*]] = arith.subi %[[TMP4]], %[[C1]] : i32
 ! CHECK:    fir.store %[[TMP5]] to %[[TRIP]] : !fir.ref<i32>
-! CHECK:    %[[TMP6:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
+! CHECK:    %[[TMP6:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    %[[TMP7:.*]] = arith.addi %[[TMP6]], %[[C1]] overflow<nsw> : i32
-! CHECK:    fir.store %[[TMP7]] to %[[I]]#1 : !fir.ref<i32>
+! CHECK:    fir.store %[[TMP7]] to %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do
 end subroutine
@@ -89,7 +89,7 @@ subroutine sub2()
 ! CHECK:    %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[C_7]] : i32
 ! CHECK:    %[[TMP5:.*]] = arith.divsi %[[TMP4]], %[[STEP]] : i32
 ! CHECK:    fir.store %[[TMP5]] to %[[TRIP]] : !fir.ref<i32>
-! CHECK:    fir.store %[[C1]] to %[[I]]#1 : !fir.ref<i32>
+! CHECK:    fir.store %[[C1]] to %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER:.*]]
 ! CHECK:  ^[[HEADER]]:
 ! CHECK:    %[[TMP6:.*]] = fir.load %[[TRIP]] : !fir.ref<i32>
@@ -102,10 +102,10 @@ subroutine sub2()
 ! CHECK:    %[[TMP8:.*]] = fir.load %[[TRIP]] : !fir.ref<i32>
 ! CHECK:    %[[TMP9:.*]] = arith.subi %[[TMP8]], %[[C1]] : i32
 ! CHECK:    fir.store %[[TMP9]] to %[[TRIP]] : !fir.ref<i32>
-! CHECK:    %[[TMP10:.*]] = fir.load %[[I]]#1 : !fir.ref<i32>
+! CHECK:    %[[TMP10:.*]] = fir.load %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    %[[STEP_VAL:.*]] = fir.load %[[STEP_VAR]] : !fir.ref<i32>
 ! CHECK:    %[[TMP11:.*]] = arith.addi %[[TMP10]], %[[STEP_VAL]] overflow<nsw> : i32
-! CHECK:    fir.store %[[TMP11]] to %[[I]]#1 : !fir.ref<i32>
+! CHECK:    fir.store %[[TMP11]] to %[[I]]#0 : !fir.ref<i32>
 ! CHECK:    cf.br ^[[HEADER]]
   end do
 end subroutine
