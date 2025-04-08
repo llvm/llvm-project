@@ -762,8 +762,7 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   }
 
   // Throw away any left over nodes from the original expression.
-  for (BinaryOperator *BO : NodesToRewrite)
-    RedoInsts.insert(BO);
+  RedoInsts.insert_range(NodesToRewrite);
 }
 
 /// Insert instructions before the instruction pointed to by BI,
@@ -1087,13 +1086,15 @@ static unsigned FindInOperandList(const SmallVectorImpl<ValueEntry> &Ops,
 
 /// Emit a tree of add instructions, summing Ops together
 /// and returning the result.  Insert the tree before I.
-static Value *EmitAddTreeOfValues(BasicBlock::iterator It,
+static Value *EmitAddTreeOfValues(Instruction *I,
                                   SmallVectorImpl<WeakTrackingVH> &Ops) {
   if (Ops.size() == 1) return Ops.back();
 
   Value *V1 = Ops.pop_back_val();
-  Value *V2 = EmitAddTreeOfValues(It, Ops);
-  return CreateAdd(V2, V1, "reass.add", It, &*It);
+  Value *V2 = EmitAddTreeOfValues(I, Ops);
+  auto *NewAdd = CreateAdd(V2, V1, "reass.add", I->getIterator(), I);
+  NewAdd->setDebugLoc(I->getDebugLoc());
+  return NewAdd;
 }
 
 /// If V is an expression tree that is a multiplication sequence,
@@ -1683,7 +1684,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
     DummyInst->deleteValue();
 
     unsigned NumAddedValues = NewMulOps.size();
-    Value *V = EmitAddTreeOfValues(I->getIterator(), NewMulOps);
+    Value *V = EmitAddTreeOfValues(I, NewMulOps);
 
     // Now that we have inserted the add tree, optimize it. This allows us to
     // handle cases that require multiple factoring steps, such as this:
@@ -1695,6 +1696,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
 
     // Create the multiply.
     Instruction *V2 = CreateMul(V, MaxOccVal, "reass.mul", I->getIterator(), I);
+    V2->setDebugLoc(I->getDebugLoc());
 
     // Rerun associate on the multiply in case the inner expression turned into
     // a multiply.  We want to make sure that we keep things in canonical form.

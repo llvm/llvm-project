@@ -14,7 +14,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 32 # 32-byte Folded Spill
@@ -22,7 +23,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 1
@@ -31,7 +33,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 2
@@ -40,7 +43,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 3
@@ -49,7 +53,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 4
@@ -58,7 +63,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 5
@@ -67,7 +73,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 6
@@ -76,7 +83,8 @@ define <8 x float> @powi_v8f32(<8 x float> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
 ; CHECK-NEXT:    movgr2fr.w $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powisf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powisf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.w $xr0, $a0, 7
@@ -102,7 +110,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 0
 ; CHECK-NEXT:    xvst $xr0, $sp, 32 # 32-byte Folded Spill
@@ -110,7 +119,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 1
@@ -119,7 +129,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 2
@@ -128,7 +139,8 @@ define <4 x double> @powi_v4f64(<4 x double> %va, i32 %b) nounwind {
 ; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
 ; CHECK-NEXT:    movgr2fr.d $fa0, $a0
 ; CHECK-NEXT:    move $a0, $fp
-; CHECK-NEXT:    bl %plt(__powidf2)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(__powidf2)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    xvld $xr0, $sp, 32 # 32-byte Folded Reload
 ; CHECK-NEXT:    xvinsgr2vr.d $xr0, $a0, 3

@@ -10,6 +10,7 @@ group("default") {
     "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
+    "//compiler-rt/test/builtins",
     "//lld/test",
     "//lldb/test",
     "//llvm/test",
@@ -99,6 +100,9 @@ group("llvm-libtool-darwin") {
 }
 group("llvm-lipo") {
   deps = [ "//llvm/tools/llvm-lipo:symlinks" ]
+}
+group("llvm-ml") {
+  deps = [ "//llvm/tools/llvm-ml:symlinks" ]
 }
 group("llvm-objcopy") {
   deps = [ "//llvm/tools/llvm-objcopy:symlinks" ]

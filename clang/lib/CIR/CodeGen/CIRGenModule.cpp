@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenModule.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/ASTContext.h"
@@ -23,6 +24,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -54,6 +56,18 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   DoubleTy = cir::DoubleType::get(&getMLIRContext());
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
+
+  PointerAlignInBytes =
+      astContext
+          .toCharUnitsFromBits(
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
+
+  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
+  const unsigned sizeTypeSize =
+      astContext.getTypeSize(astContext.getSignedSizeType());
+  PtrDiffTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
 
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
@@ -127,7 +141,8 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  mlir::Type type = convertType(vd->getType());
+  const QualType astTy = vd->getType();
+  const mlir::Type type = convertType(vd->getType());
   if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
     auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
                                                identifier->getName(), type);
@@ -137,46 +152,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // certain constant expressions is implemented for now.
     const VarDecl *initDecl;
     const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    mlir::Attribute initializer;
     if (initExpr) {
-      mlir::Attribute initializer;
       if (APValue *value = initDecl->evaluateValue()) {
-        switch (value->getKind()) {
-        case APValue::Int: {
-          if (mlir::isa<cir::BoolType>(type))
-            initializer =
-                builder.getCIRBoolAttr(value->getInt().getZExtValue());
-          else
-            initializer = builder.getAttr<cir::IntAttr>(type, value->getInt());
-          break;
-        }
-        case APValue::Float: {
-          initializer = builder.getAttr<cir::FPAttr>(type, value->getFloat());
-          break;
-        }
-        case APValue::LValue: {
-          if (value->getLValueBase()) {
-            errorNYI(initExpr->getSourceRange(),
-                     "non-null pointer initialization");
-          } else {
-            if (auto ptrType = mlir::dyn_cast<cir::PointerType>(type)) {
-              initializer = builder.getConstPtrAttr(
-                  ptrType, value->getLValueOffset().getQuantity());
-            } else {
-              llvm_unreachable(
-                  "non-pointer variable initialized with a pointer");
-            }
-          }
-          break;
-        }
-        default:
-          errorNYI(initExpr->getSourceRange(), "unsupported initializer kind");
-          break;
-        }
+        ConstantEmitter emitter(*this);
+        initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
       } else {
         errorNYI(initExpr->getSourceRange(), "non-constant initializer");
       }
-      varOp.setInitialValueAttr(initializer);
+    } else {
+      initializer = builder.getZeroInitAttr(convertType(astTy));
     }
+
+    varOp.setInitialValueAttr(initializer);
 
     // Set CIR's linkage type as appropriate.
     cir::GlobalLinkageKind linkage =
@@ -486,6 +474,13 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
 mlir::Type CIRGenModule::convertType(QualType type) {
   return genTypes.convertType(type);
+}
+
+bool CIRGenModule::verifyModule() const {
+  // Verify the module after we have finished constructing it, this will
+  // check the structural properties of the IR and invoke any specific
+  // verifiers we have on the CIR operations.
+  return mlir::verify(theModule).succeeded();
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

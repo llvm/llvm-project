@@ -118,9 +118,21 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     // the latter as that's the variant exposed by CUDA API.
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
-  default:
-    llvm_unreachable("unknown match sync kind");
   }
+}
+
+static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
+  switch (kind) {
+  case NVVM::VoteSyncKind::any:
+    return llvm::Intrinsic::nvvm_vote_any_sync;
+  case NVVM::VoteSyncKind::all:
+    return llvm::Intrinsic::nvvm_vote_all_sync;
+  case NVVM::VoteSyncKind::ballot:
+    return llvm::Intrinsic::nvvm_vote_ballot_sync;
+  case NVVM::VoteSyncKind::uni:
+    return llvm::Intrinsic::nvvm_vote_uni_sync;
+  }
+  llvm_unreachable("unsupported vote kind");
 }
 
 /// Return the intrinsic ID associated with ldmatrix for the given paramters.
@@ -150,6 +162,15 @@ static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
       llvm_unreachable("unsupported number of matrix");
     }
   }
+}
+
+/// Return the intrinsic ID associated with st.bulk for the given address type.
+static llvm::Intrinsic::ID
+getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
+  bool isSharedMemory =
+      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
+                        : llvm::Intrinsic::nvvm_st_bulk;
 }
 
 static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,

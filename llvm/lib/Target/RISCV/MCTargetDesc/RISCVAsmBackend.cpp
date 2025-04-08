@@ -92,6 +92,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_tlsdesc_load_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_add_lo12", 20, 12, 0},
       {"fixup_riscv_tlsdesc_call", 0, 0, 0},
+      {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -165,14 +166,70 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
     // in the range [-2048, 2046].
     return Offset > 2046 || Offset < -2048;
   case RISCV::fixup_riscv_branch:
+  case RISCV::fixup_riscv_qc_e_branch:
     // For conditional branch instructions the immediate must be
     // in the range [-4096, 4095].
     return !isInt<13>(Offset);
   }
 }
 
+// Given a compressed control flow instruction this function returns
+// the expanded instruction.
+static unsigned getRelaxedOpcode(unsigned Op) {
+  switch (Op) {
+  default:
+    return Op;
+  case RISCV::C_BEQZ:
+    return RISCV::BEQ;
+  case RISCV::C_BNEZ:
+    return RISCV::BNE;
+  case RISCV::C_J:
+  case RISCV::C_JAL: // fall through.
+    return RISCV::JAL;
+  case RISCV::BEQ:
+    return RISCV::PseudoLongBEQ;
+  case RISCV::BNE:
+    return RISCV::PseudoLongBNE;
+  case RISCV::BLT:
+    return RISCV::PseudoLongBLT;
+  case RISCV::BGE:
+    return RISCV::PseudoLongBGE;
+  case RISCV::BLTU:
+    return RISCV::PseudoLongBLTU;
+  case RISCV::BGEU:
+    return RISCV::PseudoLongBGEU;
+  case RISCV::QC_BEQI:
+    return RISCV::PseudoLongQC_BEQI;
+  case RISCV::QC_BNEI:
+    return RISCV::PseudoLongQC_BNEI;
+  case RISCV::QC_BLTI:
+    return RISCV::PseudoLongQC_BLTI;
+  case RISCV::QC_BGEI:
+    return RISCV::PseudoLongQC_BGEI;
+  case RISCV::QC_BLTUI:
+    return RISCV::PseudoLongQC_BLTUI;
+  case RISCV::QC_BGEUI:
+    return RISCV::PseudoLongQC_BGEUI;
+  case RISCV::QC_E_BEQI:
+    return RISCV::PseudoLongQC_E_BEQI;
+  case RISCV::QC_E_BNEI:
+    return RISCV::PseudoLongQC_E_BNEI;
+  case RISCV::QC_E_BLTI:
+    return RISCV::PseudoLongQC_E_BLTI;
+  case RISCV::QC_E_BGEI:
+    return RISCV::PseudoLongQC_E_BGEI;
+  case RISCV::QC_E_BLTUI:
+    return RISCV::PseudoLongQC_E_BLTUI;
+  case RISCV::QC_E_BGEUI:
+    return RISCV::PseudoLongQC_E_BGEUI;
+  }
+}
+
 void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
                                        const MCSubtargetInfo &STI) const {
+  if (STI.hasFeature(RISCV::FeatureExactAssembly))
+    return;
+
   MCInst Res;
   switch (Inst.getOpcode()) {
   default:
@@ -191,6 +248,18 @@ void RISCVAsmBackend::relaxInstruction(MCInst &Inst,
   case RISCV::BGE:
   case RISCV::BLTU:
   case RISCV::BGEU:
+  case RISCV::QC_BEQI:
+  case RISCV::QC_BNEI:
+  case RISCV::QC_BLTI:
+  case RISCV::QC_BGEI:
+  case RISCV::QC_BLTUI:
+  case RISCV::QC_BGEUI:
+  case RISCV::QC_E_BEQI:
+  case RISCV::QC_E_BNEI:
+  case RISCV::QC_E_BLTI:
+  case RISCV::QC_E_BGEI:
+  case RISCV::QC_E_BLTUI:
+  case RISCV::QC_E_BGEUI:
     Res.setOpcode(getRelaxedOpcode(Inst.getOpcode()));
     Res.addOperand(Inst.getOperand(0));
     Res.addOperand(Inst.getOperand(1));
@@ -341,36 +410,14 @@ std::pair<bool, bool> RISCVAsmBackend::relaxLEB128(const MCAssembler &Asm,
   return std::make_pair(Expr.evaluateKnownAbsolute(Value, Asm), false);
 }
 
-// Given a compressed control flow instruction this function returns
-// the expanded instruction.
-unsigned RISCVAsmBackend::getRelaxedOpcode(unsigned Op) const {
-  switch (Op) {
-  default:
-    return Op;
-  case RISCV::C_BEQZ:
-    return RISCV::BEQ;
-  case RISCV::C_BNEZ:
-    return RISCV::BNE;
-  case RISCV::C_J:
-  case RISCV::C_JAL: // fall through.
-    return RISCV::JAL;
-  case RISCV::BEQ:
-    return RISCV::PseudoLongBEQ;
-  case RISCV::BNE:
-    return RISCV::PseudoLongBNE;
-  case RISCV::BLT:
-    return RISCV::PseudoLongBLT;
-  case RISCV::BGE:
-    return RISCV::PseudoLongBGE;
-  case RISCV::BLTU:
-    return RISCV::PseudoLongBLTU;
-  case RISCV::BGEU:
-    return RISCV::PseudoLongBGEU;
-  }
-}
-
 bool RISCVAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                                         const MCSubtargetInfo &STI) const {
+  // This function has access to two STIs, the member of the AsmBackend, and the
+  // one passed as an argument. The latter is more specific, so we query it for
+  // specific features.
+  if (STI.hasFeature(RISCV::FeatureExactAssembly))
+    return false;
+
   return getRelaxedOpcode(Inst.getOpcode()) != Inst.getOpcode();
 }
 
@@ -455,6 +502,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Sbit << 19) | (Lo10 << 9) | (Mid1 << 8) | Hi8;
     return Value;
   }
+  case RISCV::fixup_riscv_qc_e_branch:
   case RISCV::fixup_riscv_branch: {
     if (!isInt<13>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
@@ -551,12 +599,11 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   }
   }
 
-  if (!AUIPCTarget.getSymA() || AUIPCTarget.getSymB())
+  if (!AUIPCTarget.getAddSym())
     return false;
 
-  const MCSymbolRefExpr *A = AUIPCTarget.getSymA();
-  const MCSymbolELF &SA = cast<MCSymbolELF>(A->getSymbol());
-  if (A->getKind() != MCSymbolRefExpr::VK_None || SA.isUndefined())
+  const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
+  if (SA.isUndefined())
     return false;
 
   bool IsResolved = &SA.getSection() == AUIPCDF->getParent() &&
@@ -581,6 +628,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
                                               const MCFixup &Fixup,
                                               const MCValue &Target,
                                               uint64_t &FixedValue) const {
+  assert(Target.getSpecifier() == 0 &&
+         "relocatable SymA-SymB cannot have relocation specifier");
   uint64_t FixedValueA, FixedValueB;
   unsigned TA = 0, TB = 0;
   switch (Fixup.getKind()) {
@@ -607,8 +656,8 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   default:
     llvm_unreachable("unsupported fixup size");
   }
-  MCValue A = MCValue::get(Target.getSymA(), nullptr, Target.getConstant());
-  MCValue B = MCValue::get(Target.getSymB());
+  MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
+  MCValue B = MCValue::get(Target.getSubSym());
   auto FA = MCFixup::create(
       Fixup.getOffset(), nullptr,
       static_cast<MCFixupKind>(FirstLiteralRelocationKind + TA));

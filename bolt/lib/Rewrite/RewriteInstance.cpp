@@ -20,7 +20,7 @@
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/CacheMetrics.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
-#include "bolt/Passes/NonPacProtectedRetAnalysis.h"
+#include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Profile/BoltAddressTranslation.h"
 #include "bolt/Profile/DataAggregator.h"
@@ -247,12 +247,14 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::list<GadgetScannerKind>
-    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
-                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
-                                   clEnumValN(GS_ALL, "all", "all")),
-                        cl::ZeroOrMore, cl::CommaSeparated,
-                        cl::cat(BinaryAnalysisCategory));
+cl::bits<GadgetScannerKind> GadgetScannersToRun(
+    "scanners", cl::desc("which gadget scanners to run"),
+    cl::values(
+        clEnumValN(GS_PACRET, "pacret",
+                   "pac-ret: return address protection (subset of \"pauth\")"),
+        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 
@@ -2455,6 +2457,30 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
+    const uint64_t ReferencedAddress = SymbolAddress + Addend;
+    BinaryFunction *Func =
+        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
+
+    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
+      if (Func) {
+        if (!Func->isInConstantIsland(ReferencedAddress)) {
+          if (const uint64_t ReferenceOffset =
+                  ReferencedAddress - Func->getAddress()) {
+            Func->addEntryPointAtOffset(ReferenceOffset);
+          }
+        } else {
+          BC->errs() << "BOLT-ERROR: referenced address at 0x"
+                     << Twine::utohexstr(ReferencedAddress)
+                     << " is in constant island of function " << *Func << "\n";
+          exit(1);
+        }
+      }
+    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
+      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
+                    "relocation type\n";
+      exit(1);
+    }
+
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
   }
 }
@@ -2801,9 +2827,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (SymbolAddress == 0)
       ReferencedSymbol = BC->registerNameAtAddress(SymbolName, 0, 0, 0);
 
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                      << ReferencedSymbol->getName() << " with addend "
-                      << Addend << '\n');
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+               << (ReferencedSymbol ? ReferencedSymbol->getName() : "<none>")
+               << " with addend " << Addend << '\n');
   } else if (ReferencedBF) {
     ReferencedSymbol = ReferencedBF->getSymbol();
     uint64_t RefFunctionOffset = 0;
@@ -3515,13 +3542,18 @@ void RewriteInstance::runBinaryAnalyses() {
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
   using GSK = opts::GadgetScannerKind;
-  // if no command line option was given, act as if "all" was specified.
-  if (opts::GadgetScannersToRun.empty())
-    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
-  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
-    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(
-          std::make_unique<NonPacProtectedRetAnalysis::Analysis>());
+  using PAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // If no command line option was given, act as if "all" was specified.
+  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
+                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+
+  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
+  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());
@@ -5055,6 +5087,8 @@ void RewriteInstance::updateELFSymbolTable(
 
   // Add symbols of injected functions
   for (BinaryFunction *Function : BC->getInjectedBinaryFunctions()) {
+    if (Function->isAnonymous())
+      continue;
     ELFSymTy NewSymbol;
     BinarySection *OriginSection = Function->getOriginSection();
     NewSymbol.st_shndx =
@@ -5696,7 +5730,7 @@ uint64_t RewriteInstance::getNewFunctionOrDataAddress(uint64_t OldAddress) {
         for (const BinaryBasicBlock &BB : *BF)
           if (BB.isEntryPoint() &&
               (BF->getAddress() + BB.getOffset()) == OldAddress)
-            return BF->getOutputAddress() + BB.getOffset();
+            return BB.getOutputStartAddress();
       }
       BC->errs() << "BOLT-ERROR: unable to get new address corresponding to "
                     "input address 0x"
