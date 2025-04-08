@@ -21,9 +21,6 @@
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
-#define DEBUG_TYPE "flang-openmp-lowering"
-#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
-
 namespace Fortran {
 namespace lower {
 namespace omp {
@@ -1057,26 +1054,12 @@ void ClauseProcessor::processMapObjects(
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     std::optional<omp::Object> parentObj;
-    LLVM_DEBUG(LLVM_DEBUG(PDBGS() << "Sym = " << *object.sym() << "\n");
-               if (object.ref()) {
-                 PDBGS() << "Designator = ";
-                 object.ref().value().dump();
-                 PDBGS() << "\n";
-               } else PDBGS()
-               << "No Designator\n";);
     fir::factory::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
             converter, firOpBuilder, semaCtx, stmtCtx, *object.sym(),
             object.ref(), clauseLocation, asFortran, bounds,
             treatIndexAsSection);
-
-    LLVM_DEBUG(if (bounds.empty()) PDBGS() << "Bounds empty\n"; else {
-      PDBGS() << "Bounds:\n";
-      for (auto v : bounds) {
-        PDBGS() << v << "\n";
-      }
-    });
 
     mlir::Value baseOp = info.rawInput;
     if (object.sym()->owner().IsDerivedType()) {
@@ -1111,20 +1094,6 @@ void ClauseProcessor::processMapObjects(
     auto location = mlir::NameLoc::get(
         mlir::StringAttr::get(firOpBuilder.getContext(), asFortran.str()),
         baseOp.getLoc());
-    // mlir::Type idxTy = firOpBuilder.getIndexType();
-    // mlir::Value one = firOpBuilder.createIntegerConstant(location, idxTy, 1);
-    // mlir::Value zero = firOpBuilder.createIntegerConstant(location, idxTy,
-    // 0); auto normalizedLB = zero; auto ub =
-    // firOpBuilder.createIntegerConstant(location, idxTy, 7); auto extent =
-    // firOpBuilder.createIntegerConstant(location, idxTy, 8); auto stride =
-    // one; mlir::Type boundTy =
-    // firOpBuilder.getType<mlir::omp::MapBoundsType>(); mlir::Value boundsOp =
-    // firOpBuilder.create<mlir::omp::MapBoundsOp>(
-    //     location, boundTy, /*lower_bound=*/normalizedLB,
-    //     /*upper_bound=*/ub, /*extent=*/extent, /*stride=*/stride,
-    //     /*stride_in_bytes = */ true, /*start_idx=*/normalizedLB);
-    // bounds.push_back(boundsOp);
-    //    LLVM_DEBUG(PDBGS() << "Created bounds " << boundsOp << "\n");
     mlir::omp::MapInfoOp mapOp = createMapInfoOp(
         firOpBuilder, location, baseOp,
         /*varPtrPtr=*/mlir::Value{}, asFortran.str(), bounds,
