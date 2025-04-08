@@ -493,8 +493,8 @@ DeduceNullPtrTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                                                         : CK_NullToPointer)
                     .get();
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, DeducedTemplateArgument(Value), Value->getType(),
-      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP, TemplateArgument(Value), Value->getType(), Info,
+      PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
@@ -508,8 +508,8 @@ DeduceNonTypeTemplateArgument(Sema &S, TemplateParameterList *TemplateParams,
                               SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                               bool *HasDeducedAnyParam) {
   return DeduceNonTypeTemplateArgument(
-      S, TemplateParams, NTTP, DeducedTemplateArgument(Value), Value->getType(),
-      Info, PartialOrdering, Deduced, HasDeducedAnyParam);
+      S, TemplateParams, NTTP, TemplateArgument(Value), Value->getType(), Info,
+      PartialOrdering, Deduced, HasDeducedAnyParam);
 }
 
 /// Deduce the value of the given non-type template parameter
