@@ -1267,8 +1267,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   // Now populate the list of newly exposed call sites.
   if (InlinedCallSites) {
     InlinedCallSites->clear();
-    for (auto &I : IFI.InlinedCallSites)
-      InlinedCallSites->push_back(I);
+    llvm::append_range(*InlinedCallSites, IFI.InlinedCallSites);
   }
 
   if (FunctionSamples::ProfileIsCS)

@@ -48,11 +48,9 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
-  const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
-  if (!AUIPCSRE)
+  const MCSymbol *AUIPCSymbol = AUIPCLoc.getAddSym();
+  if (!AUIPCSymbol)
     return nullptr;
-
-  const MCSymbol *AUIPCSymbol = &AUIPCSRE->getSymbol();
   const auto *DF = dyn_cast_or_null<MCDataFragment>(AUIPCSymbol->getFragment());
 
   if (!DF)
@@ -94,7 +92,7 @@ bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   Res.setSpecifier(specifier);
 
   // Custom fixup types are not valid with symbol difference expressions.
-  return Res.getSymB() ? getSpecifier() == VK_None : true;
+  return !Res.getSubSym();
 }
 
 void RISCVMCExpr::visitUsedExpr(MCStreamer &Streamer) const {

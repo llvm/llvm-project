@@ -2239,7 +2239,7 @@ bool LowerTypeTestsModule::lower() {
     auto Ins = TypeIdUsers.insert({TypeId, {}});
     if (Ins.second) {
       // Add the type identifier to the equivalence class.
-      GlobalClassesTy::iterator GCI = GlobalClasses.insert(TypeId);
+      auto &GCI = GlobalClasses.insert(TypeId);
       GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
 
       // Add the referenced globals to the type identifier's equivalence class.
@@ -2339,43 +2339,23 @@ bool LowerTypeTestsModule::lower() {
   if (GlobalClasses.empty())
     return false;
 
-  // Build a list of disjoint sets ordered by their maximum global index for
-  // determinism.
-  std::vector<std::pair<GlobalClassesTy::iterator, unsigned>> Sets;
-  for (GlobalClassesTy::iterator I = GlobalClasses.begin(),
-                                 E = GlobalClasses.end();
-       I != E; ++I) {
-    if (!I->isLeader())
-      continue;
-    ++NumTypeIdDisjointSets;
-
-    unsigned MaxUniqueId = 0;
-    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (auto *MD = dyn_cast_if_present<Metadata *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
-      else if (auto *BF = dyn_cast_if_present<ICallBranchFunnel *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
-    }
-    Sets.emplace_back(I, MaxUniqueId);
-  }
-  llvm::sort(Sets, llvm::less_second());
-
   // For each disjoint set we found...
-  for (const auto &S : Sets) {
+  for (const auto &C : GlobalClasses) {
+    if (!C->isLeader())
+      continue;
+
+    ++NumTypeIdDisjointSets;
     // Build the list of type identifiers in this disjoint set.
     std::vector<Metadata *> TypeIds;
     std::vector<GlobalTypeMember *> Globals;
     std::vector<ICallBranchFunnel *> ICallBranchFunnels;
-    for (GlobalClassesTy::member_iterator MI =
-             GlobalClasses.member_begin(S.first);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (isa<Metadata *>(*MI))
-        TypeIds.push_back(cast<Metadata *>(*MI));
-      else if (isa<GlobalTypeMember *>(*MI))
-        Globals.push_back(cast<GlobalTypeMember *>(*MI));
+    for (auto M : GlobalClasses.members(*C)) {
+      if (isa<Metadata *>(M))
+        TypeIds.push_back(cast<Metadata *>(M));
+      else if (isa<GlobalTypeMember *>(M))
+        Globals.push_back(cast<GlobalTypeMember *>(M));
       else
-        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(*MI));
+        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(M));
     }
 
     // Order type identifiers by unique ID for determinism. This ordering is

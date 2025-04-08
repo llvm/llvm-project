@@ -94,6 +94,8 @@ def simm5nonzero : RISCVOp<XLenVT>,
 
 def simm11 : RISCVSImmLeafOp<11>;
 
+def simm16 : RISCVSImmOp<16>;
+
 def simm16nonzero : RISCVOp<XLenVT>,
                     ImmLeaf<XLenVT, [{return (Imm != 0) && isInt<16>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<16, "NonZero">;
@@ -138,6 +140,219 @@ def simm32_lsb0 : Operand<OtherVT> {
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
+
+
+class DirectiveInsnQC_EAI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EAI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<1> func1;
+
+  bits<5> rd;
+  bits<32> imm32;
+
+  let Inst{47-16} = imm32;
+  let Inst{15}    = func1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eai " # argstr;
+}
+
+class DirectiveInsnQC_EI<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EI> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rd;
+  bits<5> rs1;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-20} = imm26{9-0};
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = rd;
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ei " # argstr;
+}
+
+class DirectiveInsnQC_EB<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EB> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<5> func5;
+
+  bits<5> rs1;
+  bits<12> imm12; // This one is the PC-relative offset
+  bits<16> imm16;
+
+  let Inst{47-32} = imm16;
+  let Inst{31}    = imm12{11};
+  let Inst{30-25} = imm12{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm12{3-0};
+  let Inst{7}     = imm12{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.eb " # argstr;
+}
+
+class DirectiveInsnQC_EJ<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_EJ> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+  bits<5> func5;
+
+  bits<31> imm31;
+
+  let Inst{47-32} = imm31{30-15};
+  let Inst{31}    = imm31{11};
+  let Inst{30-25} = imm31{9-4};
+  let Inst{24-20} = func5;
+  let Inst{19-17} = imm31{14-12};
+  let Inst{16-15} = func2;
+  let Inst{14-12} = func3;
+  let Inst{11-8}  = imm31{3-0};
+  let Inst{7}     = imm31{10};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.ej " # argstr;
+}
+
+class DirectiveInsnQC_ES<dag outs, dag ins, string argstr>
+  : RVInst48<outs, ins, "", "", [], InstFormatQC_ES> {
+  bits<7> opcode;
+  bits<3> func3;
+  bits<2> func2;
+
+  bits<5> rs1;
+  bits<5> rs2;
+  bits<26> imm26;
+
+  let Inst{47-32} = imm26{25-10};
+  let Inst{31-30} = func2;
+  let Inst{29-25} = imm26{9-5};
+  let Inst{24-20} = rs2;
+  let Inst{19-15} = rs1;
+  let Inst{14-12} = func3;
+  let Inst{11-7}  = imm26{4-0};
+  let Inst{6-0}   = opcode;
+
+  let AsmString = ".insn qc.es " # argstr;
+}
+
+
+let isCodeGenOnly = true, hasSideEffects = true, mayLoad = true,
+    mayStore = true, hasNoSchedulingInfo = true, Predicates=[IsRV32] in {
+def InsnQC_EAI : DirectiveInsnQC_EAI<(outs AnyReg:$rd),
+                                     (ins uimm7_opcode:$opcode,
+                                          uimm3:$func3,
+                                          uimm1:$func1,
+                                          simm32:$imm32),
+                                     "$opcode, $func3, $func1, $rd, $imm32">;
+def InsnQC_EI : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rd, $rs1, $imm26">;
+def InsnQC_EI_Mem : DirectiveInsnQC_EI<(outs AnyReg:$rd),
+                                       (ins uimm7_opcode:$opcode,
+                                            uimm3:$func3,
+                                            uimm2:$func2,
+                                            AnyReg:$rs1,
+                                            simm26:$imm26),
+                                       "$opcode, $func3, $func2, $rd, ${imm26}(${rs1})">;
+def InsnQC_EB : DirectiveInsnQC_EB<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm5:$func5,
+                                        AnyReg:$rs1,
+                                        simm16:$imm16,
+                                        bare_simm13_lsb0:$imm12),
+                                   "$opcode, $func3, $func5, $rs1, $imm16, $imm12">;
+def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        uimm5:$func5,
+                                        simm32_lsb0:$imm31),
+                                   "$opcode, $func3, $func2, $func5, $imm31">;
+def InsnQC_ES : DirectiveInsnQC_ES<(outs),
+                                   (ins uimm7_opcode:$opcode,
+                                        uimm3:$func3,
+                                        uimm2:$func2,
+                                        AnyReg:$rs2,
+                                        AnyReg:$rs1,
+                                        simm26:$imm26),
+                                   "$opcode, $func3, $func2, $rs2, ${imm26}(${rs1})">;
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo, Predicates
+
+let EmitPriority = 0, Predicates = [IsRV32] in {
+def : InstAlias<".insn_qc.eai $opcode, $func3, $func1, $rd, $imm32",
+                (InsnQC_EAI AnyReg:$rd,
+                            uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm1:$func1,
+                            simm32:$imm32)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, $rs1, $imm26",
+                (InsnQC_EI AnyReg:$rd,
+                           uimm7_opcode:$opcode,
+                           uimm3:$func3,
+                           uimm2:$func2,
+                           AnyReg:$rs1,
+                           simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, ${imm26}(${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               simm26:$imm26)>;
+def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, (${rs1})",
+                (InsnQC_EI_Mem AnyReg:$rd,
+                               uimm7_opcode:$opcode,
+                               uimm3:$func3,
+                               uimm2:$func2,
+                               AnyReg:$rs1,
+                               0)>;
+def : InstAlias<".insn_qc.eb $opcode, $func3, $func5, $rs1, $imm16, $imm12",
+                 (InsnQC_EB uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm5:$func5,
+                            AnyReg:$rs1,
+                            simm16:$imm16,
+                            bare_simm13_lsb0:$imm12)>;
+def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
+                 (InsnQC_EJ uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            uimm5:$func5,
+                            simm32_lsb0:$imm31)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            simm26:$imm26)>;
+def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, (${rs1})",
+                 (InsnQC_ES uimm7_opcode:$opcode,
+                            uimm3:$func3,
+                            uimm2:$func2,
+                            AnyReg:$rs2,
+                            AnyReg:$rs1,
+                            0)>;
+} // EmitPriority = 0, Predicates = [IsRV32]
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -335,7 +550,7 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
     : RVInst48<(outs),
                (ins GPRNoX0:$rs1, InTyImm16:$imm16, bare_simm13_lsb0:$imm12),
-               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
+               opcodestr, "$rs1, $imm16, $imm12", [], InstFormatQC_EB> {
   bits<5> rs1;
   bits<16> imm16;
   bits<12> imm12;
@@ -584,15 +799,15 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_INSBPR : QCIRVInstRR<0b00010, GPR, "qc.insbpr">;
   def QC_INSBPRH : QCIRVInstRR<0b00011, GPR, "qc.insbprh">;
   def QC_EXTU : QCIBitManipRII<0b010, 0b00, GPRNoX0, "qc.extu">;
-  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPR, "qc.extdu">;
-  def QC_EXTDUR : QCIRVInstRR<0b00100, GPR, "qc.extdur">;
-  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPR, "qc.extdupr">;
-  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPR, "qc.extduprh">;
+  def QC_EXTDU : QCIBitManipRII<0b010, 0b10, GPRNoX31, "qc.extdu">;
+  def QC_EXTDUR : QCIRVInstRR<0b00100, GPRNoX31, "qc.extdur">;
+  def QC_EXTDUPR : QCIRVInstRR<0b00110, GPRNoX31, "qc.extdupr">;
+  def QC_EXTDUPRH : QCIRVInstRR<0b00111, GPRNoX31, "qc.extduprh">;
   def QC_EXT : QCIBitManipRII<0b010, 0b01, GPRNoX0, "qc.ext">;
-  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPR, "qc.extd">;
-  def QC_EXTDR : QCIRVInstRR<0b00101, GPR, "qc.extdr">;
-  def QC_EXTDPR : QCIRVInstRR<0b01000, GPR, "qc.extdpr">;
-  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPR, "qc.extdprh">;
+  def QC_EXTD : QCIBitManipRII<0b010, 0b11, GPRNoX31, "qc.extd">;
+  def QC_EXTDR : QCIRVInstRR<0b00101, GPRNoX31, "qc.extdr">;
+  def QC_EXTDPR : QCIRVInstRR<0b01000, GPRNoX31, "qc.extdpr">;
+  def QC_EXTDPRH : QCIRVInstRR<0b01001, GPRNoX31, "qc.extdprh">;
   def QC_COMPRESS2 : QCIRVInstI<0b0000, "qc.compress2">;
   def QC_COMPRESS3 : QCIRVInstI<0b0001, "qc.compress3">;
   def QC_EXPAND2 : QCIRVInstI<0b0010, "qc.expand2">;
@@ -937,6 +1152,39 @@ let EmitPriority = 0 in {
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilo, IsRV32]
 
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions
+//===----------------------------------------------------------------------===//
+
+class LongBcciPseudo<DAGOperand InTyImm, int size>
+    : Pseudo<(outs), (ins GPR:$rs1, InTyImm:$imm, simm21_lsb0_jal:$imm20), []>
+{
+  let Size = size;
+  let isBarrier = 1;
+  let isBranch = 1;
+  let hasSideEffects = 0;
+  let mayStore = 0;
+  let mayLoad = 0;
+  let isAsmParserOnly = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
+// This will be expanded into either:
+// QC.BXXX(4 bytes) + JAL(4 bytes)
+// or
+// QC.E.BXXX(6 bytes) + JAL(4 bytes)
+def PseudoLongQC_BEQI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BNEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BGEI : LongBcciPseudo<simm5nonzero, 8>;
+def PseudoLongQC_BLTUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_BGEUI : LongBcciPseudo<uimm5nonzero, 8>;
+def PseudoLongQC_E_BEQI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BNEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
+def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
+def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns

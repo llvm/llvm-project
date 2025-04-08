@@ -690,8 +690,7 @@ static unsigned getFixupKindSize(unsigned Kind) {
 }
 
 void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data,
+                               const MCValue &, MutableArrayRef<char> Data,
                                uint64_t Value, bool IsResolved,
                                const MCSubtargetInfo *STI) const {
   unsigned Kind = Fixup.getKind();
@@ -702,9 +701,8 @@ void X86AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
   assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
-  if ((Target.isAbsolute() || IsResolved) &&
-      getFixupKindInfo(Fixup.getKind()).Flags &
-      MCFixupKindInfo::FKF_IsPCRel) {
+  if (IsResolved &&
+      getFixupKindInfo(Fixup.getKind()).Flags & MCFixupKindInfo::FKF_IsPCRel) {
     // check that PC relative fixup fits into the fixup size.
     if (Size > 0 && !isIntN(Size * 8, SignedValue))
       Asm.getContext().reportError(
@@ -746,8 +744,7 @@ bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
   if (Fixup.getKind() == FK_Data_1) {
     MCValue Target;
     if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
-        Target.getSymA() &&
-        getSpecifier(Target.getSymA()) == X86MCExpr::VK_ABS8)
+        Target.getAddSym() && Target.getSpecifier() == X86MCExpr::VK_ABS8)
       return false;
   }
   return true;
