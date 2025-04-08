@@ -249,7 +249,6 @@ MAKE_EMPTY_CLASS(Weak, Weak);
 MAKE_EMPTY_CLASS(Write, Write);
 
 // Artificial clauses
-MAKE_EMPTY_CLASS(CancellationConstructType, CancellationConstructType);
 MAKE_EMPTY_CLASS(Depobj, Depobj);
 MAKE_EMPTY_CLASS(Flush, Flush);
 MAKE_EMPTY_CLASS(MemoryOrder, MemoryOrder);
@@ -524,7 +523,23 @@ Bind make(const parser::OmpClause::Bind &inp,
   return Bind{/*Binding=*/convert(inp.v.v)};
 }
 
-// CancellationConstructType: empty
+CancellationConstructType
+make(const parser::OmpClause::CancellationConstructType &inp,
+     semantics::SemanticsContext &semaCtx) {
+  auto name = std::get<parser::OmpDirectiveName>(inp.v.t);
+  CLAUSET_ENUM_CONVERT(
+      convert, llvm::omp::Directive, llvm::omp::CancellationConstructType,
+      // clang-format off
+      MS(OMPD_parallel, OMP_CANCELLATION_CONSTRUCT_Parallel)
+      MS(OMPD_do, OMP_CANCELLATION_CONSTRUCT_Loop)
+      MS(OMPD_sections, OMP_CANCELLATION_CONSTRUCT_Sections)
+      MS(OMPD_taskgroup, OMP_CANCELLATION_CONSTRUCT_Taskgroup)
+      // clang-format on
+  );
+
+  return CancellationConstructType{convert(name.v)};
+}
+
 // Capture: empty
 
 Collapse make(const parser::OmpClause::Collapse &inp,

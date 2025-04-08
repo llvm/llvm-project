@@ -114,7 +114,6 @@ kernel void KernelTwoMember(struct StructTwoMember u) {
 kernel void KernelLargeTwoMember(struct LargeStructTwoMember u) {
   FuncLargeTwoMember(u);
 }
-
 // AMDGCN-LABEL: define dso_local %struct.Mat4X4 @foo(
 // AMDGCN-SAME: [9 x i32] [[IN_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]

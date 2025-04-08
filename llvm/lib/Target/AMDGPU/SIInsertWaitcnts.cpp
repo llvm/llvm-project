@@ -387,8 +387,8 @@ public:
     return LDSDMAStores;
   }
 
-  void print(raw_ostream &);
-  void dump() { print(dbgs()); }
+  void print(raw_ostream &) const;
+  void dump() const { print(dbgs()); }
 
 private:
   struct MergeInfo {
@@ -645,9 +645,9 @@ public:
     (void)ForceVMCounter;
   }
 
-  bool shouldFlushVmCnt(MachineLoop *ML, WaitcntBrackets &Brackets);
+  bool shouldFlushVmCnt(MachineLoop *ML, const WaitcntBrackets &Brackets);
   bool isPreheaderToFlush(MachineBasicBlock &MBB,
-                          WaitcntBrackets &ScoreBrackets);
+                          const WaitcntBrackets &ScoreBrackets);
   bool isVMEMOrFlatVMEM(const MachineInstr &MI) const;
   bool run(MachineFunction &MF);
 
@@ -990,7 +990,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
   }
 }
 
-void WaitcntBrackets::print(raw_ostream &OS) {
+void WaitcntBrackets::print(raw_ostream &OS) const {
   OS << '\n';
   for (auto T : inst_counter_types(MaxCounter)) {
     unsigned SR = getScoreRange(T);
@@ -2390,8 +2390,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
 // Return true if the given machine basic block is a preheader of a loop in
 // which we want to flush the vmcnt counter, and false otherwise.
-bool SIInsertWaitcnts::isPreheaderToFlush(MachineBasicBlock &MBB,
-                                          WaitcntBrackets &ScoreBrackets) {
+bool SIInsertWaitcnts::isPreheaderToFlush(
+    MachineBasicBlock &MBB, const WaitcntBrackets &ScoreBrackets) {
   auto [Iterator, IsInserted] = PreheadersToFlush.try_emplace(&MBB, false);
   if (!IsInserted)
     return Iterator->second;
@@ -2427,7 +2427,7 @@ bool SIInsertWaitcnts::isVMEMOrFlatVMEM(const MachineInstr &MI) const {
 //    loop, and at least one use of a vgpr containing a value that is loaded
 //    outside of the loop.
 bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
-                                        WaitcntBrackets &Brackets) {
+                                        const WaitcntBrackets &Brackets) {
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
   bool UsesVgprLoadedOutside = false;

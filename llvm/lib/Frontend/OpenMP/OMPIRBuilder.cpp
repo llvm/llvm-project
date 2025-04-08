@@ -7193,12 +7193,13 @@ static Expected<Function *> createOutlinedFunction(
     // preceding mapped arguments that refer to the same global that may be
     // seperate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
-    if (llvm::isa<llvm::GlobalValue>(removeASCastIfPresent(Input)) ||
-        llvm::isa<llvm::GlobalObject>(removeASCastIfPresent(Input)) ||
-        llvm::isa<llvm::GlobalVariable>(removeASCastIfPresent(Input))) {
+    if (isa<GlobalValue>(Input)) {
       DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
       continue;
     }
+
+    if (isa<ConstantData>(Input))
+      continue;
 
     ReplaceValue(Input, InputCopy, Func);
   }
