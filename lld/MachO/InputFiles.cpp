@@ -2162,7 +2162,7 @@ void ArchiveFile::addLazySymbols() {
   if (file->isEmpty())
     return;
 
-  if (file->getNumberOfSymbols() == 0) {
+  if (!file->hasSymbolTable()) {
     // No index, treat each child as a lazy object file.
     Error e = Error::success();
     for (const object::Archive::Child &c : file->children(e)) {

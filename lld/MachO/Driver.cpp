@@ -360,7 +360,7 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                 ": Archive::children failed: " + toString(std::move(e)));
       }
     } else if (isCommandLineLoad && config->forceLoadObjC) {
-      if (file->getArchive().getNumberOfSymbols() > 0) {
+      if (file->getArchive().hasSymbolTable()) {
         for (const object::Archive::Symbol &sym : file->getArchive().symbols())
           if (sym.getName().starts_with(objc::symbol_names::klass))
             file->fetch(sym);
