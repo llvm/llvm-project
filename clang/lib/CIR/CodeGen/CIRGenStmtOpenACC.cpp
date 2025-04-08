@@ -25,28 +25,27 @@ using namespace mlir::acc;
 namespace {
 class OpenACCClauseCIREmitter final
     : public OpenACCClauseVisitor<OpenACCClauseCIREmitter> {
-      CIRGenModule &cgm;
+  CIRGenModule &cgm;
 
-      void clauseNotImplemented(const OpenACCClause &c) {
-        cgm.errorNYI(c.getSourceRange(), "OpenACC Clause",
-                     c.getClauseKind());
-      }
+  void clauseNotImplemented(const OpenACCClause &c) {
+    cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
+  }
 
-      public:
-      OpenACCClauseCIREmitter(CIRGenModule &cgm): cgm(cgm){}
+public:
+  OpenACCClauseCIREmitter(CIRGenModule &cgm) : cgm(cgm) {}
 
-      void VisitClauseList(llvm::ArrayRef<const OpenACCClause *> clauses) {
-        for (auto *clause : clauses)
-          Visit(clause);
-      }
+  void VisitClauseList(llvm::ArrayRef<const OpenACCClause *> clauses) {
+    for (auto *clause : clauses)
+      Visit(clause);
+  }
 
 #define VISIT_CLAUSE(CN)                                                       \
-      void Visit##CN##Clause(const OpenACC##CN##Clause &clause) {              \
-        clauseNotImplemented(clause);                                          \
-      }
+  void Visit##CN##Clause(const OpenACC##CN##Clause &clause) {                  \
+    clauseNotImplemented(clause);                                              \
+  }
 #include "clang/Basic/OpenACCClauses.def"
-    };
-}
+};
+} // namespace
 
 template <typename Op, typename Terminator>
 mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(

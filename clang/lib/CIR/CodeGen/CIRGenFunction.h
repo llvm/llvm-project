@@ -542,10 +542,10 @@ private:
   // other constructs, or at least be the base for construct emission.
   template <typename Op, typename Terminator>
   mlir::LogicalResult
-  emitOpenACCComputeOp(mlir::Location start,
-                       mlir::Location end,
+  emitOpenACCComputeOp(mlir::Location start, mlir::Location end,
                        llvm::ArrayRef<const OpenACCClause *> clauses,
                        const Stmt *structuredBlock);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
