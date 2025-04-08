@@ -25,7 +25,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/IR/DerivedTypes.h"
 
 #include <limits>
 #include <optional>
