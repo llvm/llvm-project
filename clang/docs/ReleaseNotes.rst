@@ -354,6 +354,14 @@ Bug Fixes in This Version
 - Defining an integer literal suffix (e.g., ``LL``) before including
   ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
   when using the ``INTn_C`` macros. (#GH85995)
+- Clang no longer accepts invalid integer constants which are too large to fit
+  into any (standard or extended) integer type when the constant is unevaluated.
+  Merely forming the token is sufficient to render the program invalid. Code
+  like this was previously accepted and is now rejected (#GH134658):
+  .. code-block:: c
+
+    #if 1 ? 1 : 999999999999999999999
+    #endif
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
