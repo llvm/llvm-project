@@ -3002,6 +3002,9 @@ Value *LibCallSimplifier::optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBa
     return nullptr;
 
   Value *Arg = CI->getArgOperand(0);
+  if (isa<ConstantData>(Arg))
+    return nullptr;
+
   SmallVector<CallInst *, 1> SinCalls;
   SmallVector<CallInst *, 1> CosCalls;
   SmallVector<CallInst *, 1> SinCosCalls;
