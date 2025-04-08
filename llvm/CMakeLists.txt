@@ -281,7 +281,8 @@ if(LLVM_CCACHE_BUILD)
     # ccache only supports passing options on the command line from version 4.8.0
     # use a workaround with ad-hoc environment variables for older versions
     if (CCACHE_VERSION VERSION_LESS "4.8.0")
-      set(LLVM_CCACHE_PARAMS CCACHE_CPP2=yes CCACHE_HASHDIR=yes)
+      set(LLVM_CCACHE_PARAMS "CCACHE_CPP2=yes;CCACHE_HASHDIR=yes"
+          CACHE STRING "Parameters to pass through to ccache")
 
       set(launcher_params ${LLVM_CCACHE_PARAMS})
       if (LLVM_CCACHE_MAXSIZE)
@@ -292,7 +293,8 @@ if(LLVM_CCACHE_BUILD)
       endif()
       set(launcher ${launcher_params} "${CCACHE_PROGRAM}")
     else()
-      set(LLVM_CCACHE_PARAMS run_second_cpp=true hash_dir=true)
+      set(LLVM_CCACHE_PARAMS "run_second_cpp=true;hash_dir=true"
+          CACHE STRING "Parameters to pass through to ccache")
 
       set(launcher_params ${LLVM_CCACHE_PARAMS})
       if (LLVM_CCACHE_MAXSIZE)
