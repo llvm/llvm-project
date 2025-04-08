@@ -1484,20 +1484,6 @@ mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   return {};
 }
 
-/// If the specified expression does not fold
-/// to a constant, or if it does but contains a label, return false.  If it
-/// constant folds return true and set the boolean result in Result.
-bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
-                                                  bool &resultBool,
-                                                  bool allowLabels) {
-  llvm::APSInt resultInt;
-  if (!constantFoldsToSimpleInteger(cond, resultInt, allowLabels))
-    return false;
-
-  resultBool = resultInt.getBoolValue();
-  return true;
-}
-
 /// Return the size or alignment of the type of argument of the sizeof
 /// expression as an integer.
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(

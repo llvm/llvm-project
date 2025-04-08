@@ -170,8 +170,8 @@ public:
   /// If the specified expression does not fold to a constant, or if it does but
   /// contains a label, return false.  If it constant folds return true and set
   /// the boolean result in Result.
-  bool constantFoldsToSimpleInteger(const clang::Expr *cond, bool &resultBool,
-                                    bool allowLabels = false);
+  bool constantFoldsToBool(const clang::Expr *cond, bool &resultBool,
+                           bool allowLabels = false);
   bool constantFoldsToSimpleInteger(const clang::Expr *cond,
                                     llvm::APSInt &resultInt,
                                     bool allowLabels = false);

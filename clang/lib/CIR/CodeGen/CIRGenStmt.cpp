@@ -311,8 +311,7 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
     // If the condition folds to a constant and this is an 'if constexpr',
     // we simplify it early in CIRGen to avoid emitting the full 'if'.
     bool condConstant;
-    if (constantFoldsToSimpleInteger(s.getCond(), condConstant,
-                                     s.isConstexpr())) {
+    if (constantFoldsToBool(s.getCond(), condConstant, s.isConstexpr())) {
       if (s.isConstexpr()) {
         // Handle "if constexpr" explicitly here to avoid generating some
         // ill-formed code since in CIR the "if" is no longer simplified

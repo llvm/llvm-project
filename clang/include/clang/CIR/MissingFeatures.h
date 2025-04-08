@@ -111,7 +111,6 @@ struct MissingFeatures {
   static bool lvalueBaseInfo() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool setNonGC() { return false; }
-  static bool constantFoldsToSimpleInteger() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
 

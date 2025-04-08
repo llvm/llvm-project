@@ -153,7 +153,10 @@ bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
   if (isa<SwitchCase>(s) && !ignoreCaseStmts)
     return true;
 
-  // If this is a switch statement, we want to ignore cases below it.
+  // If this is a switch statement, we want to ignore case statements when we
+  // recursively process the sub-statements of the switch. If we haven't
+  // encountered a switch statement, we treat case statements like labels, but
+  // if we are processing a switch statement, case statements are expected.
   if (isa<SwitchStmt>(s))
     ignoreCaseStmts = true;
 
@@ -162,6 +165,19 @@ bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
                      [=](const Stmt *subStmt) {
                        return containsLabel(subStmt, ignoreCaseStmts);
                      });
+}
+
+/// If the specified expression does not fold to a constant, or if it does but
+/// contains a label, return false.  If it constant folds return true and set
+/// the boolean result in Result.
+bool CIRGenFunction::constantFoldsToBool(const Expr *cond, bool &resultBool,
+                                         bool allowLabels) {
+  llvm::APSInt resultInt;
+  if (!constantFoldsToSimpleInteger(cond, resultInt, allowLabels))
+    return false;
+
+  resultBool = resultInt.getBoolValue();
+  return true;
 }
 
 /// If the specified expression does not fold to a constant, or if it does
