@@ -116,29 +116,32 @@ public:
     if (PrebuiltModuleFiles.insert({ModuleName.str(), Filename.str()}).second)
       NewModuleFiles.push_back(Filename.str());
 
-    if (PrebuiltModulesASTMap.try_emplace(Filename).second)
-      PrebuiltModulesASTMap[Filename].setInStableDir(!StableDirs.empty());
+    auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(Filename);
+    PrebuiltModuleASTAttrs &PrebuiltModule = PrebuiltMapEntry.first->second;
+    if (PrebuiltMapEntry.second)
+      PrebuiltModule.setInStableDir(!StableDirs.empty());
 
     if (auto It = PrebuiltModulesASTMap.find(CurrentFile);
         It != PrebuiltModulesASTMap.end() && CurrentFile != Filename)
-      PrebuiltModulesASTMap[Filename].addDependent(It->getKey());
+      PrebuiltModule.addDependent(It->getKey());
   }
 
   /// For each input file discovered, check whether it's external path is in a
   /// stable directory. Traversal is stopped if the current module is not
   /// considered stable.
-  bool visitInputFile(StringRef FilenameAsRequested, StringRef ExternalFilename,
+  bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
                       bool isSystem, bool isOverridden,
                       bool isExplicitModule) override {
     if (StableDirs.empty())
       return false;
-    if (!PrebuiltModulesASTMap.contains(CurrentFile) ||
-        !PrebuiltModulesASTMap[CurrentFile].isInStableDir())
+    auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
+    if ((PrebuiltEntryIt == PrebuiltModulesASTMap.end()) ||
+        (!PrebuiltEntryIt->second.isInStableDir()))
       return false;
 
-    PrebuiltModulesASTMap[CurrentFile].setInStableDir(
-        isPathInStableDir(StableDirs, ExternalFilename));
-    return PrebuiltModulesASTMap[CurrentFile].isInStableDir();
+    PrebuiltEntryIt->second.setInStableDir(
+        isPathInStableDir(StableDirs, Filename));
+    return PrebuiltEntryIt->second.isInStableDir();
   }
 
   /// Update which module that is being actively traversed.
@@ -146,9 +149,10 @@ public:
                        serialization::ModuleKind Kind) override {
     // If the CurrentFile is not
     // considered stable, update any of it's transitive dependents.
-    if (PrebuiltModulesASTMap.contains(CurrentFile) &&
-        !PrebuiltModulesASTMap[CurrentFile].isInStableDir())
-      PrebuiltModulesASTMap[CurrentFile].updateDependentsNotInStableDirs(
+    auto PrebuiltEntryIt = PrebuiltModulesASTMap.find(CurrentFile);
+    if ((PrebuiltEntryIt != PrebuiltModulesASTMap.end()) &&
+        !PrebuiltEntryIt->second.isInStableDir())
+      PrebuiltEntryIt->second.updateDependentsNotInStableDirs(
           PrebuiltModulesASTMap);
     CurrentFile = Filename;
   }
@@ -159,12 +163,14 @@ public:
                                StringRef ModuleFilename,
                                StringRef SpecificModuleCachePath,
                                bool Complain) override {
-    if (PrebuiltModulesASTMap.try_emplace(CurrentFile).second)
-      PrebuiltModulesASTMap[CurrentFile].setInStableDir(!StableDirs.empty());
 
-    if (PrebuiltModulesASTMap[CurrentFile].isInStableDir())
-      PrebuiltModulesASTMap[CurrentFile].setInStableDir(
-          areOptionsInStableDir(StableDirs, HSOpts));
+    auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);
+    PrebuiltModuleASTAttrs &PrebuiltModule = PrebuiltMapEntry.first->second;
+    if (PrebuiltMapEntry.second)
+      PrebuiltModule.setInStableDir(!StableDirs.empty());
+
+    if (PrebuiltModule.isInStableDir())
+      PrebuiltModule.setInStableDir(areOptionsInStableDir(StableDirs, HSOpts));
 
     return false;
   }
@@ -173,10 +179,12 @@ public:
   bool ReadHeaderSearchPaths(const HeaderSearchOptions &HSOpts,
                              bool Complain) override {
 
-    if (PrebuiltModulesASTMap.try_emplace(CurrentFile).second)
-      PrebuiltModulesASTMap[CurrentFile].setInStableDir(!StableDirs.empty());
+    auto PrebuiltMapEntry = PrebuiltModulesASTMap.try_emplace(CurrentFile);
+    PrebuiltModuleASTAttrs &PrebuiltModule = PrebuiltMapEntry.first->second;
+    if (PrebuiltMapEntry.second)
+      PrebuiltModule.setInStableDir(!StableDirs.empty());
 
-    PrebuiltModulesASTMap[CurrentFile].setVFS(
+    PrebuiltModule.setVFS(
         llvm::StringSet<>(llvm::from_range, HSOpts.VFSOverlayFiles));
 
     return checkHeaderSearchPaths(

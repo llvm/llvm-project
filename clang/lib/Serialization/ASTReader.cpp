@@ -2616,17 +2616,13 @@ bool ASTReader::shouldDisableValidationForFile(
   return false;
 }
 
-namespace {
-
-std::pair<StringRef, StringRef>
+static std::pair<StringRef, StringRef>
 getUnresolvedInputFilenames(const ASTReader::RecordData &Record,
                             const StringRef InputBlob) {
   uint16_t AsRequestedLength = Record[7];
   return {InputBlob.substr(0, AsRequestedLength),
           InputBlob.substr(AsRequestedLength)};
 }
-
-} // namespace
 
 InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   // If this ID is bogus, just return an empty input file.

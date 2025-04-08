@@ -238,13 +238,14 @@ public:
   }
 
   /// Overloaded member function of \c visitInputFile that should
-  /// be defined when the input file contains both the virtual and external
-  /// paths, for example when deserializing input files from AST files.
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
   ///
   /// \returns true to continue receiving the next input file, false to stop.
-  virtual bool visitInputFile(StringRef FilenameAsRequested,
-                              StringRef ExternalFilename, bool isSystem,
-                              bool isOverridden, bool isExplicitModule) {
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
     return true;
   }
 
