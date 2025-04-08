@@ -2543,6 +2543,11 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
 
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
+
+    // The interval of OrigReg is invalid and should be recalculated when
+    // LiveInterval::getInterval() is called.
+    if (LIS.hasInterval(OrigReg))
+      LIS.removeInterval(OrigReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the
@@ -2563,11 +2568,6 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
       replacePhiSrc(*Phi, InitReg, NewInit, NewPreheader);
     }
   }
-
-  // The interval of OrigReg has been modified and should be recalculated when
-  // LiveInterval::getInterval() is called.
-  if (LIS.hasInterval(OrigReg))
-    LIS.removeInterval(OrigReg);
 }
 
 void ModuloScheduleExpanderMVE::generateProlog(
