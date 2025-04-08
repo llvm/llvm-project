@@ -31,6 +31,7 @@ add_libc_unittest(
     libc.src.__support.common
     libc.src.errno.errno
     libc.test.UnitTest.ErrnoSetterMatcher
+    libc.include.signal
 )
 
 add_libc_unittest(

@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sys/time/getitimer.h"
 #include "hdr/types/struct_itimerval.h"
+#include "src/sys/time/getitimer.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
+#include <sys/time.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
@@ -21,7 +22,7 @@ TEST(LlvmLibcSysTimeGetitimerTest, SmokeTest) {
   timer.it_interval.tv_sec = -1;
   timer.it_interval.tv_usec = -1;
 
-  ASSERT_THAT(LIBC_NAMESPACE::getitimer(ITIMER_REAL, &timer),
+  ASSERT_THAT(LIBC_NAMESPACE::getitimer(0, &timer),
               returns(EQ(0)).with_errno(EQ(0)));
 
   ASSERT_TRUE(timer.it_value.tv_sec == 0);
