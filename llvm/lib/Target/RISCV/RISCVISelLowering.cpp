@@ -5401,7 +5401,7 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
 static bool isLocalRepeatingShuffle(ArrayRef<int> Mask, int Span) {
   // Require a prefix from the original mask until the consumer code
   // is adjusted to rewrite the mask instead of just taking a prefix.
-  SmallVector<int> LowSpan(Mask.take_front(Span));
+  ArrayRef<int> LowSpan = Mask.take_front(Span);
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
@@ -5426,7 +5426,7 @@ static bool isLowSourceShuffle(ArrayRef<int> Mask, int Span) {
 static bool isSpanSplatShuffle(ArrayRef<int> Mask, int Span) {
   // Require a prefix from the original mask until the consumer code
   // is adjusted to rewrite the mask instead of just taking a prefix.
-  SmallVector<int> LowSpan(Mask.take_front(Span));
+  ArrayRef<int> LowSpan = Mask.take_front(Span);
   for (auto [I, M] : enumerate(Mask)) {
     if (M == -1)
       continue;
