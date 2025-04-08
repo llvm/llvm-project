@@ -82,6 +82,8 @@ const char *getLldCommandArgs(
     const std::optional<std::string> OutputFilePrefix = std::nullopt);
 } // end namespace dlr
 
+void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
+                               llvm::opt::ArgStringList &CmdArgs);
 } // end namespace amdgpu
 } // end namespace tools
 
