@@ -364,6 +364,7 @@ Bug Fixes to C++ Support
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
 - Clang now issues an error when placement new is used to modify a const-qualified variable 
   in a ``constexpr`` function. (#GH131432)
+- Clang now correctly parses arbitrary order of ``[[]]``, ``__attribute__`` and ``alignas`` attributes for declarations (#GH133107)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

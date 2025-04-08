@@ -235,6 +235,10 @@ Retry:
   }
 
   default: {
+    if (getLangOpts().CPlusPlus &&
+        MaybeParseCXX11Attributes(CXX11Attrs, true))
+      goto Retry;
+
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
     auto IsStmtAttr = [](ParsedAttr &Attr) { return Attr.isStmtAttr(); };
     bool AllAttrsAreStmtAttrs = llvm::all_of(CXX11Attrs, IsStmtAttr) &&
@@ -293,11 +297,6 @@ Retry:
   case tok::kw___attribute: {
     GNUAttributeLoc = Tok.getLocation();
     ParseGNUAttributes(GNUAttrs);
-    goto Retry;
-  }
-
-  case tok::kw_alignas: {
-    ParseAlignmentSpecifier(CXX11Attrs);
     goto Retry;
   }
 

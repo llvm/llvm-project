@@ -3040,8 +3040,8 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
 
   while (MaybeParseCXX11Attributes(DeclAttrs) ||
          MaybeParseGNUAttributes(DeclSpecAttrs, &CommonLateParsedAttrs) ||
-         MaybeParseMicrosoftAttributes(DeclSpecAttrs)) {
-  }
+         MaybeParseMicrosoftAttributes(DeclSpecAttrs))
+    ;
 
   // decl-specifier-seq:
   // Parse the common declaration-specifiers piece.
