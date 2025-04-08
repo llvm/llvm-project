@@ -2696,6 +2696,15 @@ bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 
 } // namespace
 
+namespace llvm {
+
+namespace AMDGPU {
+bool isIGLPMutationOnly(unsigned Opcode) {
+  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+}
+
+} // end namespace AMDGPU
+
 /// \p Phase specifes whether or not this is a reentry into the
 /// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
 /// same scheduling region (e.g. pre and post-RA scheduling / multiple

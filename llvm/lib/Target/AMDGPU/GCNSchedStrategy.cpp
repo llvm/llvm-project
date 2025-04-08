@@ -188,12 +188,6 @@ static void getRegisterPressures(
   Pressure[AMDGPU::RegisterPressureSets::AGPR_32] = NewPressure.getAGPRNum();
 }
 
-// Return true if the instruction is mutually exclusive with all non-IGLP DAG
-// mutations, requiring all other mutations to be disabled.
-static bool isIGLPMutationOnly(unsigned Opcode) {
-  return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
-}
-
 void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
                                      const RegPressureTracker &RPTracker,
@@ -1163,7 +1157,7 @@ bool GCNSchedStage::initGCNRegion() {
       StageID == GCNSchedStageID::ILPInitialSchedule) {
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (isIGLPMutationOnly(I.getOpcode()))
+      if (AMDGPU::isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -2048,7 +2042,7 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
   return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    return isIGLPMutationOnly(MI->getOpcode());
+    return AMDGPU::isIGLPMutationOnly(MI->getOpcode());
   });
 }
 
