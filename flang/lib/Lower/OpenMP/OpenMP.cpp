@@ -274,38 +274,38 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                                             cloneBounds(v.getLBounds())));
           },
           [&](const fir::CharBoxValue &v) {
-            // In some cases, v.len could reference the input the hlfir.declare
-            // which is the corresponding v.addr. While, this isn't a big
-            // problem by itself, it is desirable to extract this out of v.addr
-            // itself since it's first result will be of type fir.boxchar<>. For
-            // example, consider the following
+            // In some cases, v.len could reference the input to the
+            // hlfir.declare which is the corresponding v.addr. While this isn't
+            // a big problem by itself, it is desirable to extract this out of
+            // v.addr itself since it's first result will be of type
+            // fir.boxchar<>. For example, consider the following
             //
             // func.func private @_QFPrealtest(%arg0: !fir.boxchar<1>)
             //  %2 = fir.dummy_scope : !fir.dscope
             //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
-            //  (!fir.ref<!fir.char<1,?>>, index) %4:2 = hlfir.declare %3#0
-            //  typeparams %3#1 dummy_scope %2 : (!fir.ref<!fir.char<1,?>>,
-            //  index,
-            //                            !fir.dscope) -> (!fir.boxchar<1>,
-            //                            !fir.ref<!fir.char<1,?>>)
+            //         (!fir.ref<!fir.char<1,?>>, index)
+            //  %4:2 = hlfir.declare (%3#0, %3#1, %2):(!fir.ref<!fir.char<1,?>>,
+            //                        index,!fir.dscope) ->
+            //                       (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 
             // In the case above,
             // v.addr is
-            //  %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %2 :
-            //  (!fir.ref<!fir.char<1,?>>, index,
-            //                            !fir.dscope) -> (!fir.boxchar<1>,
-            //                            !fir.ref<!fir.char<1,?>>)
+            //  %4:2 = hlfir.declare (%3#0, %3#1, %2):(!fir.ref<!fir.char<1,?>>,
+            //                        index,!fir.dscope) ->
+            //                       (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
             // v.len is
             //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
-            //  (!fir.ref<!fir.char<1,?>>, index)
+            //         (!fir.ref<!fir.char<1,?>>, index)
 
             // Mapping this to the target will create a use of %arg0 on the
-            // target. Since omp.target is IsolatedFromAbove, this will have to
+            // target. Since omp.target is IsolatedFromAbove, %arg0 will have to
             // be mapped. Presently, OpenMP lowering of target barfs when it has
             // to map a value that doesnt have a defining op. This can be fixed.
-            // Or we ensure that v.len = fir.unboxchar %4#0. Now if %4:2 is
-            // mapped to the target, there wont be any use of the block argument
-            // %arg0 on the target.
+            // Or we ensure that v.len is fir.unboxchar %4#0 which will
+            // cause %4#1 to be used on the target and consequently be
+            // mapped to the target. As such then, there wont be any use of the
+            // block argument %arg0 on the target.
+
             mlir::Value len = v.getLen();
             if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>()) {
               mlir::Value base = declareOp.getBase();
