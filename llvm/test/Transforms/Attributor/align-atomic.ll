@@ -37,7 +37,7 @@ define ptr @atomicrmw_non_ptr_op_no_propagate(ptr %ptr, ptr align 16 %val) {
 define i32 @cmpxchg_propagate(ptr align 8 %ptr, i32 %cmp, i32 %val) {
 ; CHECK-LABEL: define i32 @cmpxchg_propagate(
 ; CHECK-SAME: ptr nofree noundef nonnull align 8 captures(none) dereferenceable(4) [[PTR:%.*]], i32 [[CMP:%.*]], i32 [[VAL:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[PAIR:%.*]] = cmpxchg ptr [[PTR]], i32 [[CMP]], i32 [[VAL]] seq_cst monotonic, align 2
+; CHECK-NEXT:    [[PAIR:%.*]] = cmpxchg ptr [[PTR]], i32 [[CMP]], i32 [[VAL]] seq_cst monotonic, align 8
 ; CHECK-NEXT:    [[RESULT:%.*]] = extractvalue { i32, i1 } [[PAIR]], 0
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
