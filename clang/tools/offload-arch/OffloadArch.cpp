@@ -41,7 +41,7 @@ int printGPUsByKFD();
 int printGPUsByHIP();
 int printGPUsByCUDA();
 
-int printAMD() {
+static int printAMD() {
 #ifndef _WIN32
   if (!printGPUsByKFD())
     return 0;
@@ -50,7 +50,7 @@ int printAMD() {
   return printGPUsByHIP();
 }
 
-int printNVIDIA() { return printGPUsByCUDA(); }
+static int printNVIDIA() { return printGPUsByCUDA(); }
 
 int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions(OffloadArchCategory);
