@@ -731,7 +731,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %
 ; GFX11-SDAG-NEXT:    s_add_i32 s1, s1, 15
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_b32 s4, s1, -16
-; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
+; GFX11-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 2, 15 
 ; GFX11-SDAG-NEXT:    s_and_b32 s1, s3, 0xfffff800
 ; GFX11-SDAG-NEXT:    s_lshl_b32 s3, s4, 5
 ; GFX11-SDAG-NEXT:    s_add_i32 s32, s1, s3
@@ -787,7 +787,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %
 ; GFX11-GISEL-NEXT:    s_lshl2_add_u32 s1, s1, 15
 ; GFX11-GISEL-NEXT:    s_add_u32 s3, s32, 0x7ff
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s1, -16
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_lshl_b32 s4, s1, 5
 ; GFX11-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 2, 15
 ; GFX11-GISEL-NEXT:    s_and_b32 s1, s3, 0xfffff800
