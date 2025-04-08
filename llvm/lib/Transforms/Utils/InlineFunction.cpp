@@ -1381,7 +1381,8 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // behavior was just using a poison value.
   static const Attribute::AttrKind ExactAttrsToPropagate[] = {
       Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+      Attribute::NonNull,
+      Attribute::Alignment, Attribute::Range};
 
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
     ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
