@@ -1002,3 +1002,24 @@ llvm.func @intrinsic_call_arg_attrs_bundles(%arg0: i32) -> i32 {
   %0 = llvm.call_intrinsic "llvm.riscv.sha256sig0"(%arg0) ["adazdazd"()] {constant} : (i32 {llvm.signext}) -> (i32)
   llvm.return %0 : i32
 }
+
+llvm.mlir.global private @blockaddr_global() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
+  %0 = llvm.blockaddress <function = @blockaddr_fn, tag = <id = 0>> : !llvm.ptr
+  llvm.return %0 : !llvm.ptr
+}
+
+// CHECK: llvm.mlir.global private @blockaddr_global() {{.*}}
+// CHECK-NEXT:   %{{.*}} = llvm.blockaddress <function = @blockaddr_fn, tag = <id = 0>> : !llvm.ptr
+// CHECK-NEXT:   llvm.return %{{.*}} : !llvm.ptr
+
+llvm.func @blockaddr_fn() {
+  llvm.br ^bb1
+^bb1:
+  llvm.blocktag <id = 0>
+  llvm.return
+}
+
+// CHECK-LABEL: llvm.func @blockaddr_fn
+// CHECK-NEXT:  llvm.br ^bb1
+// CHECK-NEXT:^bb1:
+// CHECK-NEXT:  llvm.blocktag <id = 0>
