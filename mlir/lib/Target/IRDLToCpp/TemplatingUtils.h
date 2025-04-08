@@ -18,8 +18,15 @@
 
 namespace mlir::irdl::detail {
 
+/// A dictionary stores a mapping of template variables to their assigned
+/// variables
 using dictionary = llvm::StringMap<llvm::SmallString<8>>;
 
+/// Template Code as used by IRDL-to-Cpp.
+///
+/// For efficiency, produces a bytecode representation of an input string
+///   - LiteralToken: A contiguous stream of characters to be printed
+///   - ReplacementToken: A template variable that will be replaced
 class Template {
 public:
   Template(llvm::StringRef str) {
@@ -40,6 +47,8 @@ public:
     }
   }
 
+  // Render will apply a dictionary to the Template
+  // and send it to the specified output stream
   void render(llvm::raw_ostream &out, const dictionary &replacements) const {
     for (auto instruction : bytecode) {
       std::visit(

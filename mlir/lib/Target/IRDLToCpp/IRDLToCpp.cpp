@@ -30,6 +30,7 @@ constexpr char definitionMacroFlag[] = "GEN_DIALECT_DEF";
 
 namespace {
 
+/// The set of strings that can be generated from a Dialect declaraiton
 struct DialectStrings {
   std::string dialectName;
   std::string dialectCppName;
@@ -41,11 +42,13 @@ struct DialectStrings {
   std::string namespacePath;
 };
 
+/// The set of strings that can be generated from a Type declaraiton
 struct TypeStrings {
   StringRef typeName;
   std::string typeCppName;
 };
 
+/// The set of strings that can be generated from an Operation declaraiton
 struct OpStrings {
   StringRef opName;
   std::string opCppName;
@@ -61,16 +64,19 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
+/// Generates the C++ type name for a TypeOp
 static std::string typeToCppName(irdl::TypeOp type) {
   return llvm::formatv("{0}Type",
                        convertToCamelFromSnakeCase(type.getSymName(), true));
 }
 
+/// Generates the C++ class name for an OperationOp
 static std::string opToCppName(irdl::OperationOp op) {
   return llvm::formatv("{0}Op",
                        convertToCamelFromSnakeCase(op.getSymName(), true));
 }
 
+/// Generates TypeStrings from a TypeOp
 static TypeStrings getStrings(irdl::TypeOp type) {
   TypeStrings strings;
   strings.typeName = type.getSymName();
@@ -78,6 +84,7 @@ static TypeStrings getStrings(irdl::TypeOp type) {
   return strings;
 }
 
+/// Generates OpStrings from an OperatioOp
 static OpStrings getStrings(irdl::OperationOp op) {
   auto operandOp = op.getOp<irdl::OperandsOp>();
 
@@ -104,12 +111,14 @@ static OpStrings getStrings(irdl::OperationOp op) {
   return strings;
 }
 
+/// Fills a dictionary with values from TypeStrings
 static void fillDict(irdl::detail::dictionary &dict,
                      const TypeStrings &strings) {
   dict["TYPE_NAME"] = strings.typeName;
   dict["TYPE_CPP_NAME"] = strings.typeCppName;
 }
 
+/// Fills a dictionary with values from OpStrings
 static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
   const auto operandCount = strings.opOperandNames.size();
   const auto resultCount = strings.opResultNames.size();
@@ -124,6 +133,7 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
       resultCount ? joinNameList(strings.opResultNames) : "{\"\"}";
 }
 
+/// Fills a dictionary with values from DialectStrings
 static void fillDict(irdl::detail::dictionary &dict,
                      const DialectStrings &strings) {
   dict["DIALECT_NAME"] = strings.dialectName;
