@@ -20,6 +20,7 @@
 
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Constants.h"
@@ -38,7 +39,6 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/ADT/StringExtras.h"
 #define NVVM_REFLECT_FUNCTION "__nvvm_reflect"
 #define NVVM_REFLECT_OCL_FUNCTION "__nvvm_reflect_ocl"
 // Argument of reflect call to retrive arch number
@@ -54,21 +54,23 @@ using namespace llvm;
 
 namespace llvm {
 void initializeNVVMReflectLegacyPassPass(PassRegistry &);
-}
+} // namespace llvm
 
 namespace {
 class NVVMReflect {
 private:
-  // Map from reflect function call arguments to the value to replace the call with.
-  // Should include __CUDA_FTZ and __CUDA_ARCH values.
+  // Map from reflect function call arguments to the value to replace the call
+  // with. Should include __CUDA_FTZ and __CUDA_ARCH values.
   StringMap<int> ReflectMap;
   bool handleReflectFunction(Module &M, StringRef ReflectName);
   void populateReflectMap(Module &M);
   void foldReflectCall(CallInst *Call, Constant *NewValue);
+
 public:
   // __CUDA_FTZ is assigned in `runOnModule` by checking nvvm-reflect-ftz module
   // metadata.
-  explicit NVVMReflect(unsigned SmVersion) : ReflectMap({{CUDA_ARCH_NAME, SmVersion * 10}}) {}
+  explicit NVVMReflect(unsigned SmVersion)
+      : ReflectMap({{CUDA_ARCH_NAME, SmVersion * 10}}) {}
   bool runOnModule(Module &M);
 };
 } // namespace
@@ -77,15 +79,17 @@ namespace {
 class NVVMReflectLegacyPass : public ModulePass {
 private:
   NVVMReflect Impl;
+
 public:
   static char ID;
-    NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
+  NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
   bool runOnModule(Module &M) override;
 };
 } // namespace
 
 ModulePass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
-  LLVM_DEBUG(dbgs() << "Creating NVVMReflectPass with SM version " << SmVersion << "\n");
+  LLVM_DEBUG(dbgs() << "Creating NVVMReflectPass with SM version " << SmVersion
+                    << "\n");
   return new NVVMReflectLegacyPass(SmVersion);
 }
 
@@ -98,31 +102,36 @@ INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
                 "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
                 false)
 
-// Allow users to specify additional key/value pairs to reflect. These key/value pairs
-// are the last to be added to the VarMap, and therefore will take precedence over initial
-// values (i.e. __CUDA_FTZ from module medadata and __CUDA_ARCH from SmVersion).
-static cl::list<std::string>
-ReflectList("nvvm-reflect-add", cl::value_desc("name=<int>"), cl::Hidden,
-            cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
-            cl::ValueRequired);
+// Allow users to specify additional key/value pairs to reflect. These key/value
+// pairs are the last to be added to the VarMap, and therefore will take
+// precedence over initial values (i.e. __CUDA_FTZ from module medadata and
+// __CUDA_ARCH from SmVersion).
+static cl::list<std::string> ReflectList(
+    "nvvm-reflect-add", cl::value_desc("name=<int>"), cl::Hidden,
+    cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
+    cl::ValueRequired);
 
-// Set the VarMap with, first, the value of __CUDA_FTZ from module metadata, and then
-// the key/value pairs from the command line.
+// Set the VarMap with, first, the value of __CUDA_FTZ from module metadata, and
+// then the key/value pairs from the command line.
 void NVVMReflect::populateReflectMap(Module &M) {
   if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
-      M.getModuleFlag(CUDA_FTZ_MODULE_NAME)))
+          M.getModuleFlag(CUDA_FTZ_MODULE_NAME)))
     ReflectMap[CUDA_FTZ_NAME] = Flag->getSExtValue();
 
   for (StringRef Option : ReflectList) {
     LLVM_DEBUG(dbgs() << "ReflectOption : " << Option << "\n");
     auto [Name, Val] = Option.split('=');
     if (Name.empty())
-      report_fatal_error("Empty name in nvvm-reflect-list option '" + Option + "'");
-    if (Val.empty()) 
-      report_fatal_error("Missing value in nvvm-reflect- option '" + Option + "'");
+      report_fatal_error("Empty name in nvvm-reflect-list option '" + Option +
+                         "'");
+    if (Val.empty())
+      report_fatal_error("Missing value in nvvm-reflect- option '" + Option +
+                         "'");
     int ValInt;
     if (!to_integer(Val.trim(), ValInt, 10))
-      report_fatal_error("integer value expected in nvvm-reflect-list option '" + Option + "'");
+      report_fatal_error(
+          "integer value expected in nvvm-reflect-list option '" + Option +
+          "'");
     ReflectMap[Name] = ValInt;
   }
 }
@@ -135,16 +144,19 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
   if (!F)
     return false;
   assert(F->isDeclaration() && "_reflect function should not have a body");
-  assert(F->getReturnType()->isIntegerTy() && "_reflect's return type should be integer");
+  assert(F->getReturnType()->isIntegerTy() &&
+         "_reflect's return type should be integer");
 
   bool Changed = F->getNumUses() > 0;
   for (User *U : make_early_inc_range(F->users())) {
     // Reflect function calls look like:
-    // @arch = private unnamed_addr addrspace(1) constant [12 x i8] c"__CUDA_ARCH\00"
-    // call i32 @__nvvm_reflect(ptr addrspacecast (ptr addrspace(1) @arch to ptr))
-    // We need to extract the string argument from the call (i.e. "__CUDA_ARCH")
+    // @arch = private unnamed_addr addrspace(1) constant [12 x i8]
+    // c"__CUDA_ARCH\00" call i32 @__nvvm_reflect(ptr addrspacecast (ptr
+    // addrspace(1) @arch to ptr)) We need to extract the string argument from
+    // the call (i.e. "__CUDA_ARCH")
     if (!isa<CallInst>(U))
-      report_fatal_error("__nvvm_reflect can only be used in a call instruction");
+      report_fatal_error(
+          "__nvvm_reflect can only be used in a call instruction");
     CallInst *Call = cast<CallInst>(U);
     if (Call->getNumOperands() != 2)
       report_fatal_error("__nvvm_reflect requires exactly one argument");
@@ -157,19 +169,24 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
     if (!isa<ConstantDataSequential>(ConstantStr))
       report_fatal_error("__nvvm_reflect argument must be a string constant");
     if (!cast<ConstantDataSequential>(ConstantStr)->isCString())
-      report_fatal_error("__nvvm_reflect argument must be a null-terminated string");
+      report_fatal_error(
+          "__nvvm_reflect argument must be a null-terminated string");
 
-    StringRef ReflectArg = cast<ConstantDataSequential>(ConstantStr)->getAsString();
+    StringRef ReflectArg =
+        cast<ConstantDataSequential>(ConstantStr)->getAsString();
     // Remove the null terminator from the string
     ReflectArg = ReflectArg.substr(0, ReflectArg.size() - 1);
     if (ReflectArg.empty())
       report_fatal_error("__nvvm_reflect argument cannot be empty");
-    // Now that we have extracted the string argument, we can look it up in the VarMap
+    // Now that we have extracted the string argument, we can look it up in the
+    // VarMap
     int ReflectVal = 0; // The default value is 0
     if (ReflectMap.contains(ReflectArg))
       ReflectVal = ReflectMap[ReflectArg];
 
-    LLVM_DEBUG(dbgs() << "Replacing call of reflect function " << F->getName() << "(" << ReflectArg << ") with value " << ReflectVal << "\n");
+    LLVM_DEBUG(dbgs() << "Replacing call of reflect function " << F->getName()
+                      << "(" << ReflectArg << ") with value " << ReflectVal
+                      << "\n");
     Constant *NewValue = ConstantInt::get(Call->getType(), ReflectVal);
     foldReflectCall(Call, NewValue);
     Call->eraseFromParent();
@@ -181,8 +198,9 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
 }
 
 void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
-  SmallVector<Instruction*, 8> Worklist;
-  // Replace an instruction with a constant and add all users of the instruction to the worklist
+  SmallVector<Instruction *, 8> Worklist;
+  // Replace an instruction with a constant and add all users of the instruction
+  // to the worklist
   auto ReplaceInstructionWithConst = [&](Instruction *I, Constant *C) {
     for (User *U : I->users()) {
       if (Instruction *UI = dyn_cast<Instruction>(U))
@@ -195,7 +213,8 @@ void NVVMReflect::foldReflectCall(CallInst *Call, Constant *NewValue) {
 
   while (!Worklist.empty()) {
     Instruction *I = Worklist.pop_back_val();
-    if (Constant *C = ConstantFoldInstruction(I, Call->getModule()->getDataLayout())) {
+    if (Constant *C =
+            ConstantFoldInstruction(I, Call->getModule()->getDataLayout())) {
       ReplaceInstructionWithConst(I, C);
       if (isInstructionTriviallyDead(I))
         I->eraseFromParent();
@@ -220,8 +239,7 @@ bool NVVMReflectLegacyPass::runOnModule(Module &M) {
   return Impl.runOnModule(M);
 }
 
-PreservedAnalyses NVVMReflectPass::run(Module &M,
-                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses NVVMReflectPass::run(Module &M, ModuleAnalysisManager &AM) {
   return NVVMReflect(SmVersion).runOnModule(M) ? PreservedAnalyses::none()
-                                   : PreservedAnalyses::all();
+                                               : PreservedAnalyses::all();
 }
