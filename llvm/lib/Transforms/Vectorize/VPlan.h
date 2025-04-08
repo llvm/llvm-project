@@ -2033,6 +2033,7 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Get the factor that the VF of this recipe's output should be scaled by
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2103,6 +2104,7 @@ public:
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
 
+  /// Get the factor that the VF of this recipe's output should be scaled by
   unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
