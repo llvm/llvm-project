@@ -1623,33 +1623,33 @@ body:             |
 # CHECK-NEXT:  * Schedule table (BottomUp):
 # CHECK-NEXT:   i: issue
 # CHECK-NEXT:   x: resource booked
-# CHECK-NEXT: Cycle                | 17 | 16 | 15 | 14 | 13 | 12 | 11 | 10 | 9  | 8  | 7  | 6  | 5  | 4  | 3  |
-# CHECK-NEXT: SU(2)                | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:     CortexA55UnitALU | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(4)                |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    | x  | x  |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(1)                |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:     CortexA55UnitALU |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(0)                |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:     CortexA55UnitALU |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(3)                |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    | x  | x  |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(6)                |    |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    | x  | x  |    |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(5)                |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    |    |    | x  | x  |    |    |    |    |    |    |
-# CHECK-NEXT: SU(7)                |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    |    |    | x  |    |    |    |    |    |    |    |
-# CHECK-NEXT: SU(9)                |    |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    |    |    |    | x  |    |    |    |    |    |    |
-# CHECK-NEXT: SU(8)                |    |    |    |    |    |    |    |    |    | i  |    |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    |    |    |    |    | x  | x  |    |    |    |    |
-# CHECK-NEXT: SU(10)               |    |    |    |    |    |    |    |    |    |    | i  |    |    |    |    |
-# CHECK-NEXT:   CortexA55UnitFPALU |    |    |    |    |    |    |    |    |    |    | x  | x  |    |    |    |
-# CHECK-NEXT: SU(11)               |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
-# CHECK-NEXT:     CortexA55UnitALU |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
-# CHECK-NEXT: SU(12)               |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
-# CHECK-NEXT:     CortexA55UnitALU |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
+# CHECK-NEXT: Cycle              | 17 | 16 | 15 | 14 | 13 | 12 | 11 | 10 | 9  | 8  | 7  | 6  | 5  | 4  | 3  |
+# CHECK-NEXT: SU(2)              | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:   CortexA55UnitALU | x  |    |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(4)              |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    | x  | x  |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(1)              |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:   CortexA55UnitALU |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(0)              |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT:   CortexA55UnitALU |    |    |    | x  |    |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(3)              |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    | x  | x  |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(6)              |    |    |    |    |    | i  |    |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    | x  | x  |    |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(5)              |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    |    |    | x  | x  |    |    |    |    |    |    |
+# CHECK-NEXT: SU(7)              |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    |    |    | x  |    |    |    |    |    |    |    |
+# CHECK-NEXT: SU(9)              |    |    |    |    |    |    |    |    | i  |    |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    |    |    |    | x  |    |    |    |    |    |    |
+# CHECK-NEXT: SU(8)              |    |    |    |    |    |    |    |    |    | i  |    |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    |    |    |    |    | x  | x  |    |    |    |    |
+# CHECK-NEXT: SU(10)             |    |    |    |    |    |    |    |    |    |    | i  |    |    |    |    |
+# CHECK-NEXT: CortexA55UnitFPALU |    |    |    |    |    |    |    |    |    |    | x  | x  |    |    |    |
+# CHECK-NEXT: SU(11)             |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
+# CHECK-NEXT:   CortexA55UnitALU |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
+# CHECK-NEXT: SU(12)             |    |    |    |    |    |    |    |    |    |    |    |    |    |    | i  |
+# CHECK-NEXT:   CortexA55UnitALU |    |    |    |    |    |    |    |    |    |    |    |    |    |    | x  |
 # CHECK-NEXT: SU(2) [TopReadyCycle = 0, BottomReadyCycle = 17]:   %0:fpr128 = COPY $q0
 # CHECK-NEXT: SU(4) [TopReadyCycle = 0, BottomReadyCycle = 16]:   %6:fpr128 = MOVIv2d_ns 17
 # CHECK-NEXT: SU(1) [TopReadyCycle = 0, BottomReadyCycle = 15]:   %1:fpr128 = COPY $q1
