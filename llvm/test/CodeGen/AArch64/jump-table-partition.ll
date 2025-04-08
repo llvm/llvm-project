@@ -19,19 +19,24 @@
 ; DEFAULT: .section .rodata.bar_prefix.bar,"a",@progbits
 ; DEFAULT:   .LJTI2_0
 
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
+; Test that section names are uniqufied by numbers but not function names with
+; {-function-sections, -unique-section-names=false}. Specifically, @foo jump
+; tables are emitted in two sections, one with unique ID 2 and the other with
+; unique ID 3.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
-; RUN:     -unique-section-names=false %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
+; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=NUM,JT
 
-; Section names will optionally have `.<func>` if -function-sections is enabled.
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
+; Section names will optionally have `.<func>` with {-function-sections, -unique-section-names}.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2  \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNC,JT
 
-; RUN: llc -mtriple=aarch64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=false \
+; Test that section names won't have `.<func>` with -function-sections=false.
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections=false \
 ; RUN:     -aarch64-enable-atomic-cfg-tidy=false -aarch64-min-jump-table-entries=2 \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --check-prefixes=FUNCLESS,JT
 

@@ -2913,7 +2913,8 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
     OutStreamer->switchSection(JumpTableSection);
   }
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
+  const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
@@ -2952,7 +2953,7 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
     // before each jump table.  The first label is never referenced, but tells
     // the assembler and linker the extents of the jump table object.  The
     // second label is actually referenced by the code.
-    if (JTInDiffSection && MF->getDataLayout().hasLinkerPrivateGlobalPrefix())
+    if (JTInDiffSection && DL.hasLinkerPrivateGlobalPrefix())
       // FIXME: This doesn't have to have any specific name, just any randomly
       // named and numbered local label started with 'l' would work.  Simplify
       // GetJTISymbol.
