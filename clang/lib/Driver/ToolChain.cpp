@@ -746,7 +746,8 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
   case ToolChain::FT_Shared:
     Suffix = TT.isOSWindows()
                  ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-                 : ".so";
+             : TT.isOSAIX() ? ".a"
+                            : ".so";
     break;
   }
 
@@ -852,17 +853,14 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
 void ToolChain::addFlangRTLibPath(const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) const {
   // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
-  const char *Path;
-  if (getVFS().exists(Twine(Path = getCompilerRTArgString(
-                                Args, "runtime", ToolChain::FT_Static, true))))
-    CmdArgs.push_back(Path);
+  // On AIX, default to static flang-rt
+  if (Args.hasFlag(options::OPT_static_libflangrt,
+                   options::OPT_shared_libflangrt, getTriple().isOSAIX()))
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
   else {
-    if (getVFS().exists(
-            Twine(Path = getCompilerRTArgString(Args, "runtime",
-                                                ToolChain::FT_Shared, true))))
-      CmdArgs.push_back(Path);
-    else
-      CmdArgs.push_back("-lflang_rt.runtime");
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Shared, true));
     addArchSpecificRPath(*this, Args, CmdArgs);
   }
 }

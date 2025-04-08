@@ -6880,6 +6880,13 @@ let Flags = [TargetSpecific] in {
 defm android_pad_segment : BooleanFFlag<"android-pad-segment">, Group<f_Group>;
 } // let Flags = [TargetSpecific]
 
+def shared_libflangrt : Flag<["-"], "shared-libflangrt">,
+  HelpText<"Dynamically link the shared flang-rt">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+def static_libflangrt : Flag<["-"], "static-libflangrt">, 
+  HelpText<"Statically link the static flang-rt">, Group<Link_Group>,
+  Visibility<[FlangOption]>, Flags<[NoArgumentUnused]>;
+
 //===----------------------------------------------------------------------===//
 // FLangOption + NoXarchOption
 //===----------------------------------------------------------------------===//
