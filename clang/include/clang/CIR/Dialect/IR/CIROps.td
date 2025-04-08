@@ -400,7 +400,9 @@ def LoadOp : CIR_Op<"load", [
   let summary = "Load value from memory adddress";
   let description = [{
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
-    backed up by a `cir.ptr` type.
+    backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
+    mark the resulting value as used by another operation to dereference
+    a pointer.
 
     Example:
 
@@ -408,14 +410,19 @@ def LoadOp : CIR_Op<"load", [
 
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
+
+    // Load address from memory at address %0. %3 is used by at least one
+    // operation that dereferences a pointer.
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr);
+                           [MemRead]>:$addr, UnitAttr:$isDeref);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
+    (`deref` $isDeref^)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
