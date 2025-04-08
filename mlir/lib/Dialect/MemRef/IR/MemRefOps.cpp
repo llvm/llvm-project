@@ -1124,7 +1124,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
         }
       } // else dim.getIndex is a block argument to reshape->getBlock and
         // dominates reshape
-    }   // Check condition 2
+    } // Check condition 2
     else if (dim->getBlock() != reshape->getBlock() &&
              !dim.getIndex().getParentRegion()->isProperAncestor(
                  reshape->getParentRegion())) {
@@ -1948,6 +1948,27 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     if (auto prev = src.getDefiningOp<CastOp>())
       return prev.getSource();
 
+    // reinterpret_cast(extract_strided_metadata(x)) -> reinterpret_cast(x).
+    //
+    // We can always fold the input of a extract_strided_metadata operator
+    // to the input of a reinterpret_cast operator, because they point to
+    // the same memory. Note that the reinterpret_cast does not use the
+    // layout of its input memref, only its base memory pointer which is
+    // the same as the base pointer returned by the extract_strided_metadata
+    // operator and the base pointer of the extract_strided_metadata memref
+    // input. This folding is only profitable when the reinterpret_cast
+    // layout is constant, because the extract_strided_metadata gets
+    // eliminated by dead code elimination. For non-constant folding we don’t
+    // get the extract_strided_metadata node eliminated and one of the LLVM
+    // tests regress in performance because the folding gets in the way of
+    // another optimization. For this reason the folding is only done on
+    // constant layout.
+    if (auto prev = src.getDefiningOp<ExtractStridedMetadataOp>()) {
+      if (isLayoutConstant()) {
+        return prev.getSource();
+      }
+    }
+
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
@@ -1971,6 +1992,22 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
   }
 
   return nullptr;
+}
+
+bool ReinterpretCastOp::isLayoutConstant() {
+  if (llvm::all_of(
+          getOffsets(),
+          [](OpFoldResult val) { return isConstantIntValue(val, 0); }) &&
+      llvm::all_of(
+          getStrides(),
+          [](OpFoldResult val) { return isConstantIntValue(val, 0); }) &&
+      llvm::all_of(getSizes(), [](OpFoldResult val) {
+        return isConstantIntValue(val, 0);
+      })) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedSizes() {
