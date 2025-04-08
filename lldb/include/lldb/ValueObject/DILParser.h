@@ -50,7 +50,7 @@ public:
   }
 
   llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
-    return {m_detail};
+    return m_detail;
   }
 
   std::string message() const override { return m_detail.rendered; }
@@ -116,8 +116,10 @@ private:
 
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  bool m_fragile_ivar;
-  bool m_check_ptr_vs_member;
+  // The following are not currently used, but will be used as more
+  // functionality is added to DIL.
+  bool m_fragile_ivar __attribute__((unused));
+  bool m_check_ptr_vs_member __attribute__((unused));
 }; // class DILParser
 
 } // namespace lldb_private::dil
