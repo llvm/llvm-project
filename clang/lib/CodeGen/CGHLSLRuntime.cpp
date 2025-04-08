@@ -558,7 +558,7 @@ static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
     // TODO(124561): This needs to be updated to get the correct slot for
     // SPIR-V. Using a placeholder value for now.
     uint32_t CounterSlot = (CGM.getTriple().isSPIRV() ? Slot + 1 : Slot);
-    CreateAndStoreHandle(GV, CounterSlot, Space, 0, CGM, Builder);
+    CreateAndStoreHandle(GV, CounterSlot, Space, 1, CGM, Builder);
   }
 
   Builder.CreateRetVoid();

@@ -41,8 +41,8 @@ RasterizerOrderedStructuredBuffer<float> Buf5 : register(u1, space2);
 // CHECK-DXIL: store target("dx.RawBuffer", float, 1, 0) [[H]], ptr getelementptr inbounds nuw (%"class.hlsl::RWStructuredBuffer", ptr @_ZL4Buf2, i32 0, i32 1), align 1
 // CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_1t(i32 1, i32 5, i32 1, i32 0, i1 false)
 // CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 1) [[H]], ptr @_ZL4Buf2, align 8
-// CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", [0 x float], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_1t(i32 1, i32 6, i32 1, i32 0, i1 false)
-// CHECK-SPIRV: store target("spirv.VulkanBuffer", [0 x float], 12, 1) [[H]], ptr getelementptr inbounds nuw (%"class.hlsl::RWStructuredBuffer", ptr @_ZL4Buf2, i32 0, i32 1), align 1
+// CHECK-SPIRV: [[H:%.*]] = call target("spirv.VulkanBuffer", i32, 2, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0f32_12_1t(i32 1, i32 6, i32 1, i32 0, i1 false)
+// CHECK-SPIRV: store target("spirv.VulkanBuffer", i32, 2, 1) [[H]], ptr getelementptr inbounds nuw (%"class.hlsl::RWStructuredBuffer", ptr @_ZL4Buf2, i32 0, i32 1), align 1
 
 
 // CHECK-DXIL: define internal void @_init_resource__ZL4Buf3()
