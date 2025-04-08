@@ -204,9 +204,10 @@ public:
     auto type_info = m_reflection_ctx.getTypeInfo(&type_ref, provider);
     if (!type_info) {
       std::stringstream ss;
+      ss << "Could not find type info for ";
       type_ref.dump(ss);
-      return llvm::createStringError("Could not get type info for typeref: " +
-                                     ss.str());
+      ss << " in reflection metadata";
+      return llvm::createStringError(ss.str());
     }
 
     if (log && log->GetVerbose()) {
