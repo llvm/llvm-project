@@ -492,99 +492,60 @@ def SDTRVVVecReduce : SDTypeProfile<1, 6, [
   SDTCisVT<6, XLenVT>
 ]>;
 
-def riscv_add_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_add_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_sub_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_mul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                       node:$E),
-                                  (riscv_mul_vl node:$A, node:$B, node:$C,
-                                                node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+let HasOneUse = 1 in {
+  def riscv_add_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                          node:$E),
-                                    (riscv_vwmul_vl node:$A, node:$B, node:$C,
-                                                    node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vwmulu_vl node:$A, node:$B, node:$C,
-                                                      node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vwmulsu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                    (riscv_add_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_sub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                         node:$E),
+                                    (riscv_sub_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_mul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                         node:$E),
+                                    (riscv_mul_vl node:$A, node:$B, node:$C,
+                                                  node:$D, node:$E)>;
+  def riscv_vwmul_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
                                            node:$E),
-                                      (riscv_vwmulsu_vl node:$A, node:$B, node:$C,
-                                                        node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_sext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_zext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                          (riscv_ext_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
-                           (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
-  return N->hasOneUse();
-}]>;
+                                      (riscv_vwmul_vl node:$A, node:$B, node:$C,
+                                                      node:$D, node:$E)>;
+  def riscv_vwmulu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vwmulu_vl node:$A, node:$B, node:$C,
+                                                        node:$D, node:$E)>;
+  def riscv_vwmulsu_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vwmulsu_vl node:$A, node:$B, node:$C,
+                                                          node:$D, node:$E)>;
+  def riscv_sext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_sext_vl node:$A, node:$B, node:$C)>;
+  def riscv_zext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_zext_vl node:$A, node:$B, node:$C)>;
+  def riscv_ext_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                            (riscv_ext_vl node:$A, node:$B, node:$C)>;
+  def riscv_fpextend_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C),
+                             (riscv_fpextend_vl node:$A, node:$B, node:$C)>;
+  def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vfmadd_vl node:$A, node:$B,
+                                            node:$C, node:$D, node:$E)>;
+  def riscv_vfnmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vfnmadd_vl node:$A, node:$B,
+                                             node:$C, node:$D, node:$E)>;
+  def riscv_vfmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                            node:$E),
+                                       (riscv_vfmsub_vl node:$A, node:$B,
+                                            node:$C, node:$D, node:$E)>;
+  def riscv_vfnmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
+                                             node:$E),
+                                        (riscv_vfnmsub_vl node:$A, node:$B,
+                                             node:$C, node:$D, node:$E)>;
+} // HasOneUse = 1
 
 def riscv_fpextend_vl_sameuser : PatFrag<(ops node:$A, node:$B, node:$C),
                                  (riscv_fpextend_vl node:$A, node:$B, node:$C), [{
   return !N->use_empty() && all_equal(N->users());
-}]>;
-
-def riscv_vfmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vfmadd_vl node:$A, node:$B,
-                                          node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfnmadd_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                           node:$E),
-                                      (riscv_vfnmadd_vl node:$A, node:$B,
-                                           node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                          node:$E),
-                                     (riscv_vfmsub_vl node:$A, node:$B,
-                                          node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
-}]>;
-
-def riscv_vfnmsub_vl_oneuse : PatFrag<(ops node:$A, node:$B, node:$C, node:$D,
-                                           node:$E),
-                                      (riscv_vfnmsub_vl node:$A, node:$B,
-                                           node:$C, node:$D, node:$E), [{
-  return N->hasOneUse();
 }]>;
 
 foreach kind = ["ADD", "UMAX", "SMAX", "UMIN", "SMIN", "AND", "OR", "XOR",

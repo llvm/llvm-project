@@ -1353,6 +1353,11 @@ bool SeparateConstOffsetFromGEP::isLegalToSwapOperand(
 }
 
 bool SeparateConstOffsetFromGEP::hasMoreThanOneUseInLoop(Value *V, Loop *L) {
+  // TODO: Could look at uses of globals, but we need to make sure we are
+  // looking at the correct function.
+  if (isa<Constant>(V))
+    return false;
+
   int UsesInLoop = 0;
   for (User *U : V->users()) {
     if (Instruction *User = dyn_cast<Instruction>(U))
