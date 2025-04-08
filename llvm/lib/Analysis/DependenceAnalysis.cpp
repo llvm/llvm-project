@@ -206,6 +206,11 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
       }
     }
   }
+  SCEVUnionPredicate Assumptions = DA->getRuntimeAssumptions();
+  if (!Assumptions.isAlwaysTrue()) {
+    OS << "Runtime Assumptions:\n";
+    Assumptions.print(OS, 0);
+  }
 }
 
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
@@ -3569,6 +3574,10 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
+SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() {
+  return SCEVUnionPredicate(Assumptions, *SE);
+}
+
 // depends -
 // Returns NULL if there is no dependence.
 // Otherwise, return a Dependence with as many details as possible.
@@ -3644,12 +3653,11 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
 
   const SCEV *SrcEv = SE->getMinusSCEV(SrcSCEV, SrcBase);
   const SCEV *DstEv = SE->getMinusSCEV(DstSCEV, DstBase);
-  const SCEV *Param = nullptr;
 
   if (Src != Dst) {
     // Check that memory access offsets are multiples of element sizes.
-    if (!SE->isKnownMultipleOf(SrcEv, Param, EltSize) ||
-        !SE->isKnownMultipleOf(DstEv, Param, EltSize)) {
+    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assumptions) ||
+        !SE->isKnownMultipleOf(DstEv, EltSize, Assumptions)) {
       LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
       return std::make_unique<Dependence>(Src, Dst);
     }

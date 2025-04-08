@@ -23,3 +23,45 @@ entry:
   %0 = load i32, ptr %A, align 1
   ret i32 %0
 }
+
+define i32 @alias_with_parametric_offset(ptr nocapture %A, i64 %n) {
+; CHECK-LABEL: 'alias_with_parametric_offset'
+; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %A, align 1
+; CHECK-NEXT:    da analyze - flow [|<]!
+; CHECK-NEXT:  Src: %0 = load i32, ptr %A, align 1 --> Dst: %0 = load i32, ptr %A, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
+;
+entry:
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %n
+  store i32 2, ptr %arrayidx, align 1
+  %0 = load i32, ptr %A, align 1
+  ret i32 %0
+}
+
+define i32 @alias_with_parametric_expr(ptr nocapture %A, i64 %n, i64 %m) {
+; CHECK-LABEL: 'alias_with_parametric_expr'
+; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: store i32 2, ptr %arrayidx, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i32 2, ptr %arrayidx, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
+; CHECK-NEXT:    da analyze - flow [|<]!
+; CHECK-NEXT:  Src: %0 = load i32, ptr %arrayidx1, align 1 --> Dst: %0 = load i32, ptr %arrayidx1, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  Equal predicate: (zext i2 ((trunc i64 %m to i2) + (-2 * (trunc i64 %n to i2))) to i64) == 0
+; CHECK-NEXT:  Equal predicate: (zext i2 (-2 + (trunc i64 %m to i2)) to i64) == 0
+;
+entry:
+  %mul = mul nsw i64 %n, 10
+  %add = add nsw i64 %mul, %m
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %add
+  store i32 2, ptr %arrayidx, align 1
+
+  %add1 = add nsw i64 %m, 42
+  %arrayidx1 = getelementptr inbounds i8, ptr %A, i64 %add1
+  %0 = load i32, ptr %arrayidx1, align 1
+  ret i32 %0
+}
