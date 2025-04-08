@@ -60,7 +60,7 @@ namespace {
 class NVVMReflect {
   // Map from reflect function call arguments to the value to replace the call
   // with. Should include __CUDA_FTZ and __CUDA_ARCH values.
-  StringMap<int> ReflectMap;
+  StringMap<unsigned> ReflectMap;
   bool handleReflectFunction(Module &M, StringRef ReflectName);
   void populateReflectMap(Module &M);
   void foldReflectCall(CallInst *Call, Constant *NewValue);
@@ -83,7 +83,7 @@ public:
 };
 } // namespace
 
-ModulePass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
+ModulePass *llvm::createNVVMReflectPass(unsigned SmVersion) {
   LLVM_DEBUG(dbgs() << "Creating NVVMReflectPass with SM version " << SmVersion
                     << "\n");
   return new NVVMReflectLegacyPass(SmVersion);
@@ -123,7 +123,7 @@ void NVVMReflect::populateReflectMap(Module &M) {
     if (Val.empty())
       report_fatal_error("Missing value in nvvm-reflect-add option '" + Option +
                          "'");
-    int ValInt;
+    unsigned ValInt;
     if (!to_integer(Val.trim(), ValInt, 10))
       report_fatal_error("integer value expected in nvvm-reflect-add option '" +
                          Option + "'");
@@ -173,7 +173,7 @@ bool NVVMReflect::handleReflectFunction(Module &M, StringRef ReflectName) {
       report_fatal_error("__nvvm_reflect argument cannot be empty");
     // Now that we have extracted the string argument, we can look it up in the
     // ReflectMap
-    int ReflectVal = 0; // The default value is 0
+    unsigned ReflectVal = 0; // The default value is 0
     if (ReflectMap.contains(ReflectArg))
       ReflectVal = ReflectMap[ReflectArg];
 
