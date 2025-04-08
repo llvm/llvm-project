@@ -16080,11 +16080,9 @@ public:
         unsigned VF = std::max(CommonMask.size(), Mask.size());
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
           if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
-            CommonMask[Idx] =
-                V->getType() != V1->getType()
-                    ? Idx + VF
-                    : Mask[Idx] + cast<FixedVectorType>(V1->getType())
-                                      ->getNumElements();
+            CommonMask[Idx] = V->getType() != V1->getType()
+                                  ? Idx + VF
+                                  : Mask[Idx] + getVF(V1);
         if (V->getType() != V1->getType())
           V1 = createShuffle(V1, nullptr, Mask);
         InVectors.front() = V;
