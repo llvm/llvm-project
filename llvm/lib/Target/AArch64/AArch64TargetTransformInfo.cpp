@@ -4783,8 +4783,9 @@ void AArch64TTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
-                                                         Type *ExpectedType) {
+Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(
+    IntrinsicInst *Inst, Type *ExpectedType,
+    SmallVectorImpl<Instruction *> &NewInsts) {
   switch (Inst->getIntrinsicID()) {
   default:
     return nullptr;
@@ -4803,7 +4804,11 @@ Value *AArch64TTIImpl::getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
         return nullptr;
     }
     Value *Res = PoisonValue::get(ExpectedType);
-    IRBuilder<> Builder(Inst);
+    IRBuilder<ConstantFolder, IRBuilderCallbackInserter> Builder(
+        Inst->getContext(), ConstantFolder(),
+        IRBuilderCallbackInserter(
+            [&NewInsts](Instruction *I) { NewInsts.push_back(I); }));
+    Builder.SetInsertPoint(Inst);
     for (unsigned i = 0, e = NumElts; i != e; ++i) {
       Value *L = Inst->getArgOperand(i);
       Res = Builder.CreateInsertValue(Res, L, i);
