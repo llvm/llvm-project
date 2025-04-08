@@ -427,7 +427,7 @@ def TestTensorType : Test_Type<"TestTensor",
 }
 
 def TestMemrefType : Test_Type<"TestMemref",
-    [Bufferization_MemRefLikeTypeInterface, ShapedTypeInterface]> {
+    [Bufferization_BufferLikeTypeInterface, ShapedTypeInterface]> {
   let mnemonic = "test_memref";
   let parameters = (ins
     ArrayRefParameter<"int64_t">:$shape,

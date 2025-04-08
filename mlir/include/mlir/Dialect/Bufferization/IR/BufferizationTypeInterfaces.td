@@ -27,11 +27,11 @@ def Bufferization_TensorLikeTypeInterface
   }];
 }
 
-def Bufferization_MemRefLikeTypeInterface
-    : TypeInterface<"MemRefLikeType"> {
+def Bufferization_BufferLikeTypeInterface
+    : TypeInterface<"BufferLikeType"> {
   let cppNamespace = "::mlir::bufferization";
   let description = [{
-    Indicates that this type is a memref type (similarly to a MLIR builtin
+    Indicates that this type is a buffer type (similarly to a MLIR builtin
     memref) for bufferization purposes.
 
     The interface currently has no methods as it is used by types to opt into

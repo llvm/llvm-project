@@ -1,4 +1,4 @@
-//===- TestTensorLikeAndMemRefLike.cpp - Bufferization Test -----*- c++ -*-===//
+//===- TestTensorLikeAndBufferLike.cpp - Bufferization Test -----*- c++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -23,13 +23,13 @@ std::string getImplementationStatus(Type type) {
   if (isa<bufferization::TensorLikeType>(type)) {
     return "is_tensor_like";
   }
-  if (isa<bufferization::MemRefLikeType>(type)) {
-    return "is_memref_like";
+  if (isa<bufferization::BufferLikeType>(type)) {
+    return "is_buffer_like";
   }
   return {};
 }
 
-DictionaryAttr findAllImplementeesOfTensorOrMemRefLike(func::FuncOp funcOp) {
+DictionaryAttr findAllImplementeesOfTensorOrBufferLike(func::FuncOp funcOp) {
   llvm::SmallVector<NamedAttribute> attributes;
 
   const auto funcType = funcOp.getFunctionType();
@@ -60,30 +60,30 @@ DictionaryAttr findAllImplementeesOfTensorOrMemRefLike(func::FuncOp funcOp) {
 }
 
 /// This pass tests whether specified types implement TensorLike and (or)
-/// MemRefLike type interfaces defined in bufferization.
+/// BufferLike type interfaces defined in bufferization.
 ///
 /// The pass analyses operation signature. When the aforementioned interface
 /// implementation found, an attribute is added to the operation, signifying the
 /// associated operand / result.
-struct TestTensorLikeAndMemRefLikePass
-    : public PassWrapper<TestTensorLikeAndMemRefLikePass,
+struct TestTensorLikeAndBufferLikePass
+    : public PassWrapper<TestTensorLikeAndBufferLikePass,
                          OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTensorLikeAndMemRefLikePass)
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestTensorLikeAndBufferLikePass)
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect, test::TestDialect>();
   }
-  StringRef getArgument() const final { return "test-tensorlike-memreflike"; }
+  StringRef getArgument() const final { return "test-tensorlike-bufferlike"; }
   StringRef getDescription() const final {
     return "Module pass to test custom types that implement TensorLike / "
-           "MemRefLike interfaces";
+           "BufferLike interfaces";
   }
 
   void runOnOperation() override {
     auto op = getOperation();
 
     op.walk([](func::FuncOp funcOp) {
-      const auto dict = findAllImplementeesOfTensorOrMemRefLike(funcOp);
+      const auto dict = findAllImplementeesOfTensorOrBufferLike(funcOp);
       if (!dict.empty()) {
         funcOp->setAttr("found", dict);
       }
@@ -93,7 +93,7 @@ struct TestTensorLikeAndMemRefLikePass
 } // namespace
 
 namespace mlir::test {
-void registerTestTensorLikeAndMemRefLikePass() {
-  PassRegistration<TestTensorLikeAndMemRefLikePass>();
+void registerTestTensorLikeAndBufferLikePass() {
+  PassRegistration<TestTensorLikeAndBufferLikePass>();
 }
 } // namespace mlir::test
