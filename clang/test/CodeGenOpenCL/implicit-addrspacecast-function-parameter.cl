@@ -8,7 +8,6 @@ extern void private_ptr(__private int *);
 extern void local_ptr(__local int *);
 extern void generic_ptr(__generic int *);
 
-
 void use_of_private_var()
 {
     int x = 0 ;
@@ -16,13 +15,11 @@ void use_of_private_var()
     generic_ptr(&x);
 }
 
-
 void addr_of_arg(int x)
 {
     private_ptr(&x);
     generic_ptr(&x);
 }
-
 
 __kernel void use_of_local_var()
 {

@@ -3236,11 +3236,9 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
 
 // TODO: Fold into LoopVectorizationLegality::isMaskRequired.
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
-  // If predication is not needed, avoid it.
   // TODO: We can use the loop-preheader as context point here and get
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
-  if (!blockNeedsPredicationForAnyReason(I->getParent()) ||
-      isSafeToSpeculativelyExecute(I) ||
+  if (isSafeToSpeculativelyExecute(I) ||
       (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
       isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
@@ -3249,6 +3247,10 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // predication is needed with a mask whose lanes are all possibly inactive.
   if (Legal->blockNeedsPredication(I->getParent()))
     return true;
+
+  // If we're not folding the tail by masking, predication is unnecessary.
+  if (!foldTailByMasking())
+    return false;
 
   // All that remain are instructions with side-effects originally executed in
   // the loop unconditionally, but now execute under a tail-fold mask (only)
