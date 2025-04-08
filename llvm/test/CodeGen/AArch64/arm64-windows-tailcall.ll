@@ -32,7 +32,7 @@ define void @inreg_caller_1(ptr %a, ptr inreg sret(%class.C) %b) {
 }
 
 define void @inreg_caller_2(ptr %a, ptr inreg sret(%class.C) %b) {
-; The inreg attribute and value lines up between caller and callee, so it can
+; The inreg attribute and value line up between caller and callee, so it can
 ; be tail called.
 ; CHECK-LABEL: inreg_caller_2
 ; CHECK: b inreg_callee
