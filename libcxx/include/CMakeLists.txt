@@ -1669,7 +1669,9 @@ configure_file("${LIBCXX_ASSERTION_HANDLER_FILE}" "${LIBCXX_GENERATED_INCLUDE_DI
 # We generate the modulemap file so that we can include __config_site in it. For now, we don't know how to
 # make __config_site modular when per-target runtime directories are used.
 if (NOT LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
-  set(LIBCXX_CONFIG_SITE_MODULE_ENTRY "header \"__config_site\"")
+  set(LIBCXX_CONFIG_SITE_MODULE_ENTRY
+    "header \"__config_site\"
+     export *")
 endif()
 configure_file("module.modulemap.in" "${LIBCXX_GENERATED_INCLUDE_DIR}/module.modulemap" @ONLY)
 
