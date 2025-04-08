@@ -39,14 +39,6 @@ namespace clang::dataflow {
 
 class NullPointerAnalysisModel
     : public DataflowAnalysis<NullPointerAnalysisModel, NoopLattice> {
-public:
-  /// A transparent wrapper around the function arguments of transferBranch().
-  /// Does not outlive the call to transferBranch().
-  struct TransferArgs {
-    bool Branch;
-    Environment &Env;
-  };
-
 private:
   CFGMatchSwitch<Environment> TransferMatchSwitch;
 public:

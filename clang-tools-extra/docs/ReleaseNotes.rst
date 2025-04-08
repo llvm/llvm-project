@@ -103,17 +103,17 @@ New checks
   Finds lambda captures that capture the ``this`` pointer and store it as class
   members without handle the copy and move constructors and the assignments.
 
+- New :doc:`bugprone-null-check-after-dereference
+  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
+
+  Identifies redundant pointer null-checks, by finding cases where
+  the pointer cannot be null at the location of the null-check.
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
   Finds unintended character output from ``unsigned char`` and ``signed char``
   to an ``ostream``.
-
-- New :doc:`bugprone-null-check-after-dereference
-  <clang-tidy/checks/bugprone/null-check-after-dereference>` check.
-
-  This check identifies redundant pointer null-checks, by finding cases where
-  the pointer cannot be null at the location of the null-check.
 
 - New :doc:`readability-ambiguous-smartptr-reset-call
   <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.

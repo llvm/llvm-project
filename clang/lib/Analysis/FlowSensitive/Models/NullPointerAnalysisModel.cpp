@@ -163,25 +163,25 @@ SatisfiabilityResult computeSatisfiability(BoolValue *Val,
   return SR::Unknown;
 }
 
-inline BoolValue &getVal(llvm::StringRef Name, Value &RootValue) {
-  return *cast<BoolValue>(RootValue.getProperty(Name));
+inline BoolValue &getVal(llvm::StringRef Name, Value &PtrValue) {
+  return *cast<BoolValue>(PtrValue.getProperty(Name));
 }
 
 // Assigns initial pointer null- and nonnull-values to a given Value.
-void initializeRootValue(Value &RootValue, Environment &Env) {
+void initializeNullnessProperties(Value &PtrValue, Environment &Env) {
   Arena &A = Env.arena();
 
-  auto *IsNull = cast_or_null<BoolValue>(RootValue.getProperty(kIsNull));
-  auto *IsNonnull = cast_or_null<BoolValue>(RootValue.getProperty(kIsNonnull));
+  auto *IsNull = cast_or_null<BoolValue>(PtrValue.getProperty(kIsNull));
+  auto *IsNonnull = cast_or_null<BoolValue>(PtrValue.getProperty(kIsNonnull));
 
   if (!IsNull) {
     IsNull = &A.makeAtomValue();
-    RootValue.setProperty(kIsNull, *IsNull);
+    PtrValue.setProperty(kIsNull, *IsNull);
   }
 
   if (!IsNonnull) {
     IsNonnull = &A.makeAtomValue();
-    RootValue.setProperty(kIsNonnull, *IsNonnull);
+    PtrValue.setProperty(kIsNonnull, *IsNonnull);
   }
 
   // If the pointer cannot have either a null or nonnull value, the state is
@@ -217,7 +217,7 @@ Value *getValue(const Expr &Var, Environment &Env) {
   if (Value *EnvVal = Env.getValue(Var)) {
     // FIXME: The framework usually creates the values for us, but without the
     // null-properties.
-    initializeRootValue(*EnvVal, Env);
+    initializeNullnessProperties(*EnvVal, Env);
 
     return EnvVal;
   }
@@ -236,11 +236,11 @@ void matchDereferenceExpr(const Stmt *stmt,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  Value *RootValue = getValue(*Var, Env);
-  if (hasTopOrNullValue(RootValue, Env))
+  Value *PtrValue = getValue(*Var, Env);
+  if (hasTopOrNullValue(PtrValue, Env))
     return;
 
-  BoolValue &IsNull = getVal(kIsNull, *RootValue);
+  BoolValue &IsNull = getVal(kIsNull, *PtrValue);
 
   Env.assume(Env.arena().makeNot(IsNull.formula()));
 }
@@ -253,18 +253,18 @@ void matchNullCheckExpr(const Expr *NullCheck,
 
   // (bool)p or (p != nullptr)
   bool IsNonnullOp = true;
-  if (auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
+  if (const auto *BinOp = dyn_cast<BinaryOperator>(NullCheck);
       BinOp->getOpcode() == BO_EQ) {
     IsNonnullOp = false;
   }
 
-  Value *RootValue = getValue(*Var, Env);
-  if (hasTopOrNullValue(RootValue, Env))
+  Value *PtrValue = getValue(*Var, Env);
+  if (hasTopOrNullValue(PtrValue, Env))
     return;
 
   Arena &A = Env.arena();
-  BoolValue &IsNonnull = getVal(kIsNonnull, *RootValue);
-  BoolValue &IsNull = getVal(kIsNull, *RootValue);
+  BoolValue &IsNonnull = getVal(kIsNonnull, *PtrValue);
+  BoolValue &IsNull = getVal(kIsNull, *PtrValue);
 
   BoolValue *CondValue = cast_or_null<BoolValue>(Env.getValue(*NullCheck));
   if (!CondValue) {
@@ -327,15 +327,15 @@ void matchNullptrExpr(const Expr *expr, const MatchFinder::MatchResult &Result,
   const auto *PrVar = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(PrVar != nullptr);
 
-  Value *RootValue = Env.getValue(*PrVar);
-  if (!RootValue) {
-    RootValue = Env.createValue(PrVar->getType());
-    assert(RootValue && "Failed to create nullptr value");
-    Env.setValue(*PrVar, *RootValue);
+  Value *PtrValue = Env.getValue(*PrVar);
+  if (!PtrValue) {
+    PtrValue = Env.createValue(PrVar->getType());
+    assert(PtrValue && "Failed to create nullptr value");
+    Env.setValue(*PrVar, *PtrValue);
   }
 
-  RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(true));
-  RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(false));
+  PtrValue->setProperty(kIsNull, Env.getBoolLiteralValue(true));
+  PtrValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(false));
 }
 
 void matchAddressofExpr(const Expr *expr,
@@ -345,18 +345,18 @@ void matchAddressofExpr(const Expr *expr,
   assert(Var != nullptr);
 
   // FIXME: Use atoms or export to separate function
-  Value *RootValue = Env.getValue(*Var);
-  if (!RootValue) {
-    RootValue = Env.createValue(Var->getType());
+  Value *PtrValue = Env.getValue(*Var);
+  if (!PtrValue) {
+    PtrValue = Env.createValue(Var->getType());
 
-    if (!RootValue)
+    if (!PtrValue)
       return;
 
-    setUnknownValue(*Var, *RootValue, Env);
+    setUnknownValue(*Var, *PtrValue, Env);
   }
 
-  RootValue->setProperty(kIsNull, Env.getBoolLiteralValue(false));
-  RootValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
+  PtrValue->setProperty(kIsNull, Env.getBoolLiteralValue(false));
+  PtrValue->setProperty(kIsNonnull, Env.getBoolLiteralValue(true));
 }
 
 void matchPtrArgFunctionExpr(const CallExpr *fncall,
@@ -395,12 +395,12 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
 
   if (fncall->getCallReturnType(*Result.Context)->isPointerType() &&
       !Env.getValue(*fncall)) {
-    Value *RootValue = Env.createValue( 
+    Value *PtrValue = Env.createValue( 
         fncall->getCallReturnType(*Result.Context));
-    if (!RootValue)
+    if (!PtrValue)
       return;
 
-    setUnknownValue(*fncall, *RootValue, Env);
+    setUnknownValue(*fncall, *PtrValue, Env);
   }
 }
 
@@ -417,11 +417,11 @@ void matchAnyPointerExpr(const Expr *fncall,
   if (Env.getValue(*Var))
     return;
 
-  Value *RootValue = Env.createValue(Var->getType());
-  if (!RootValue)
+  Value *PtrValue = Env.createValue(Var->getType());
+  if (!PtrValue)
     return;
 
-  setUnknownValue(*Var, *RootValue, Env);
+  setUnknownValue(*Var, *PtrValue, Env);
 }
 
 Diagnoser::ResultType
@@ -432,13 +432,13 @@ diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  Value *RootValue = Env.getValue(*Var);
-  if (!RootValue)
+  Value *PtrValue = Env.getValue(*Var);
+  if (!PtrValue)
     return {};
 
   // Dereferences are always the highest priority when giving a single location
   // FIXME: Do not replace other dereferences, only other Expr's
-  auto It = ValToDerefLoc.try_emplace(RootValue, nullptr).first;
+  auto It = ValToDerefLoc.try_emplace(PtrValue, nullptr).first;
 
   It->second = Deref;
 
@@ -474,17 +474,17 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
-  if (Value *RootValue = Env.getValue(*Var)) {
+  if (Value *PtrValue = Env.getValue(*Var)) {
     // FIXME: The framework usually creates the values for us, but without the
     // nullability properties.
-    if (RootValue->getProperty(kIsNull) && RootValue->getProperty(kIsNonnull)) {
-      bool IsNull = Env.allows(getVal(kIsNull, *RootValue).formula());
-      bool IsNonnull = Env.allows(getVal(kIsNonnull, *RootValue).formula());
+    if (PtrValue->getProperty(kIsNull) && PtrValue->getProperty(kIsNonnull)) {
+      bool IsNull = Env.allows(getVal(kIsNull, *PtrValue).formula());
+      bool IsNonnull = Env.allows(getVal(kIsNonnull, *PtrValue).formula());
 
       if (!IsNull && IsNonnull) {
         // FIXME: Separate function
         bool Inserted =
-            WarningLocToVal.try_emplace(Var->getBeginLoc(), RootValue).second;
+            WarningLocToVal.try_emplace(Var->getBeginLoc(), PtrValue).second;
         assert(Inserted && "multiple warnings at the same source location");
         (void)Inserted;
 
@@ -493,7 +493,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
 
       if (IsNull && !IsNonnull) {
         bool Inserted =
-            WarningLocToVal.try_emplace(Var->getBeginLoc(), RootValue).second;
+            WarningLocToVal.try_emplace(Var->getBeginLoc(), PtrValue).second;
         assert(Inserted && "multiple warnings at the same source location");
         (void)Inserted;
 
@@ -502,7 +502,7 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
     }
 
     // If no matches are found, the null-check itself signals a special location
-    auto [It, Inserted] = ValToDerefLoc.try_emplace(RootValue, nullptr);
+    auto [It, Inserted] = ValToDerefLoc.try_emplace(PtrValue, nullptr);
 
     if (Inserted)
       It->second = NullCheck;

@@ -9,8 +9,8 @@ bugprone-null-check-after-dereference
    results. Therefore, it may be more resource intensive (RAM, CPU) than the
    average Clang-tidy check.
 
-This check identifies redundant pointer null-checks, by finding cases where the
-pointer cannot be null at the location of the null-check.
+Identifies redundant pointer null-checks, by finding cases where the pointer
+cannot be null at the location of the null-check.
 
 Redundant null-checks can signal faulty assumptions about the current value of
 a pointer at different points in the program. Either the null-check is

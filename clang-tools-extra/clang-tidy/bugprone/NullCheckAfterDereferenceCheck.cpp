@@ -65,12 +65,10 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
   NullPointerAnalysisModel Analysis(ASTCtx);
   Diagnoser Diagnoser;
 
-  Expected<Diagnoser::ResultType> Diagnostics =
-      dataflow::diagnoseFunction<NullPointerAnalysisModel, Diagnoser::DiagnosticEntry>(
-      FuncDecl, ASTCtx, Diagnoser);
-
+  Diagnoser::ResultType Diagnostics;
   
-  if (llvm::Error E = Diagnostics.takeError()) {
+  if (llvm::Error E = dataflow::diagnoseFunction<NullPointerAnalysisModel, Diagnoser::DiagnosticEntry>(
+    FuncDecl, ASTCtx, Diagnoser).moveInto(Diagnostics)) {
     llvm::dbgs() << "Dataflow analysis failed: " << llvm::toString(std::move(E))
                  << ".\n";
     return std::nullopt;
@@ -78,7 +76,7 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 
   ExpandedResultType ExpandedDiagnostics;
 
-  llvm::transform(*Diagnostics,
+  llvm::transform(Diagnostics,
                   std::back_inserter(ExpandedDiagnostics),
                   [&](Diagnoser::DiagnosticEntry Entry) -> ExpandedResult {
                     if (auto Val = Diagnoser.WarningLocToVal[Entry.Location];
