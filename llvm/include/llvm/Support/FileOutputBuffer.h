@@ -31,8 +31,7 @@ public:
     /// Set the 'x' bit on the resulting file.
     F_executable = 1,
 
-    /// Don't use mmap and instead write an in-memory buffer to a file when this
-    /// buffer is closed.
+    /// Use mmap for in-memory file buffer.
     F_mmap = 2,
   };
 
