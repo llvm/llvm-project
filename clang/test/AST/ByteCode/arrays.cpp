@@ -637,10 +637,92 @@ static_assert(get2() == same_entity_2, "failed to find previous decl");
 
 constexpr int zs[2][2][2][2] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 constexpr int fail(const int &p) {
-  return (&p)[64]; // both-note {{cannot refer to element 64 of array of 2 elements}}
+  return (&p)[64]; // both-note 2{{cannot refer to element 64 of array of 2 elements}} \
+                   // both-note {{cannot refer to element 65 of array of 2 elements}} \
+                   // both-note {{cannot refer to element 66 of array of 2 elements}}
 }
 static_assert(fail(*(&(&(*(*&(&zs[2] - 1)[0] + 2 - 2))[2])[-1][2] - 2)) == 11, ""); // both-error {{not an integral constant expression}} \
                                                                                     // both-note {{in call to}}
+
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][1][0][0])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 1)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 2 - 2)  /// int
+      ));
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][0][0][1])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 0)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 1)      /// int
+      ));
+
+static_assert(fail( // both-error {{not an integral constant expression}} \
+                    // both-note {{in call to 'fail(zs[1][0][0][2])'}}
+      *(*(*((*
+  (zs + 1))     /// int[2][2][2]
+      + 0)      /// int[2][2]
+      + 2 - 2)  /// int[2]
+      + 2)      /// int
+      ));
+
+namespace ZeroIndex {
+  constexpr char foo(const char *a) {
+    return a[0];
+  }
+  constexpr const char *f = "abc";
+  static_assert(foo(f + 1) == 'b', "");
+}
+
+namespace MultiDimArrayOffset {
+#define assert(x) (x ? void(0) : __builtin_abort())
+  struct R {
+    int a;
+  };
+
+  template<typename T>
+  class view {
+  public:
+    T* V;
+    T* current;
+
+    constexpr view(T*V) : V(V), current(V) {}
+
+    constexpr void operator+=(unsigned N) {
+      current += N;
+    }
+
+    constexpr auto operator*() {
+      return *current;
+    }
+
+  };
+
+  constexpr int foo() {
+    R buffer[2][4] = {{1, 2, 3, 4}, {5, 6, 7, 8}};
+
+    auto A = buffer;
+    A += 1;
+    assert((**A).a == 5);
+    assert(buffer == buffer + 1 - 1);
+
+    assert(--A+0 == buffer+0);
+
+    view V(buffer);
+    assert(*V == &buffer[0][0]);
+    V += 1;
+    assert(*V == &buffer[1][0]);
+    assert(*(V.current) == &buffer[1][0]);
+    return 1;
+  }
+  static_assert(foo() == 1, "");
+}
 
 namespace ZeroSizeTypes {
   constexpr int (*p1)[0] = 0, (*p2)[0] = 0;
