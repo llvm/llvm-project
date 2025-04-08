@@ -185,8 +185,10 @@ class TestDAP_memory(lldbdap_testcase.DAPTestCaseBase):
 
         # Verify that large memory writes fail if the range spans non-writable
         # or non -contiguous regions.
-        data = bytes([0xFF]*8192)
-        mem_response = self.writeMemory(memref, int.from_bytes(data, byteorder='little'), 0, False)
+        data = bytes([0xFF] * 8192)
+        mem_response = self.writeMemory(
+            memref, int.from_bytes(data, byteorder="little"), 0, False
+        )        
         self.assertEqual(mem_response["success"], False)
         self.assertRegex(
             mem_response["message"],
