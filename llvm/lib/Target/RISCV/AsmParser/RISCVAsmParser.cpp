@@ -551,6 +551,21 @@ public:
     return IsValid && VK == RISCVMCExpr::VK_None;
   }
 
+  // True if operand is a symbol with no modifiers, or a constant with no
+  // modifiers and isInt<N>(Op).
+  template <int N> bool isBareSimmN() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    if (evaluateConstantImm(getImm(), Imm))
+      return isInt<N>(fixImmediateForRV32(Imm, isRV64Imm()));
+
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_None;
+  }
+
   // Predicate methods for AsmOperands defined in RISCVInstrInfo.td
 
   bool isBareSymbol() const {
@@ -885,19 +900,6 @@ public:
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            VK == RISCVMCExpr::VK_QC_ABS20;
-  }
-
-  bool isSImm32() const {
-    if (!isImm())
-      return false;
-
-    int64_t Imm;
-    if (evaluateConstantImm(getImm(), Imm))
-      return isInt<32>(fixImmediateForRV32(Imm, isRV64Imm()));
-
-    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
-    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_None;
   }
 
   bool isUImm20LUI() const {
@@ -1584,7 +1586,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm26:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
                                       (1 << 25) - 1);
-  case Match_InvalidSImm32:
+  case Match_InvalidBareSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
