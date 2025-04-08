@@ -345,9 +345,7 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {
       // Overflow parsing integer literal.
-      if (ValueLive)
-        PP.Diag(PeekTok, diag::err_integer_literal_too_large)
-            << /* Unsigned */ 1;
+      PP.Diag(PeekTok, diag::err_integer_literal_too_large) << /* Unsigned */ 1;
       Result.Val.setIsUnsigned(true);
     } else {
       // Set the signedness of the result to match whether there was a U suffix
