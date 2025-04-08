@@ -515,30 +515,30 @@ public:
   //===--------------------------------------------------------------------===//
 public:
   mlir::LogicalResult
-  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &S);
-  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &S);
+  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
+  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
   mlir::LogicalResult
-  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &S);
-  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &S);
+  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
+  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
   mlir::LogicalResult
-  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &S);
+  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
   mlir::LogicalResult
-  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &S);
+  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
   mlir::LogicalResult
-  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &S);
-  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &S);
-  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &S);
+  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
+  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
   mlir::LogicalResult
-  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &S);
-  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &S);
+  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
+  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
   mlir::LogicalResult
-  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &S);
+  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
   mlir::LogicalResult
-  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &S);
-  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &S);
+  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
+  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
 
-  void emitOpenACCDeclare(const OpenACCDeclareDecl &D);
-  void emitOpenACCRoutine(const OpenACCRoutineDecl &D);
+  void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
+  void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 };
 
 } // namespace clang::CIRGen
