@@ -7,7 +7,7 @@
 // RANGE:{
 // RANGE-NEXT:  "required_ranges": [
 // RANGE-NEXT:    {
-// RANGE-NEXT:      "file": "{{.+}}/foo.h",
+// RANGE-NEXT:      "file": "{{.+}}foo.h",
 // RANGE-NEXT:      "range": [
 // RANGE-NEXT:        {
 // RANGE-NEXT:          "from": {
