@@ -119,13 +119,18 @@ UseDesignatedInitializersCheck::UseDesignatedInitializersCheck(
 void UseDesignatedInitializersCheck::registerMatchers(MatchFinder *Finder) {
   const auto HasBaseWithFields =
       hasAnyBase(hasType(cxxRecordDecl(has(fieldDecl()))));
+
+  // see #133715
+  const auto IsSTLArray =
+      hasType(qualType(hasDeclaration(recordDecl(hasName("::std::array")))));
+
   Finder->addMatcher(
       initListExpr(
           hasType(cxxRecordDecl(RestrictToPODTypes ? isPOD() : isAggregate(),
                                 unless(HasBaseWithFields))
                       .bind("type")),
           IgnoreSingleElementAggregates ? hasMoreThanOneElement() : anything(),
-          unless(isFullyDesignated()))
+          unless(anyOf(isFullyDesignated(), IsSTLArray)))
           .bind("init"),
       this);
 }
