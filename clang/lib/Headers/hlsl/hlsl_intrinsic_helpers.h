@@ -45,6 +45,14 @@ distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return length_vec_impl(X - Y);
 }
 
+constexpr float dot2add_impl(half2 a, half2 b, float c) {
+#if (__has_builtin(__builtin_dx_dot2add))
+  return __builtin_dx_dot2add(a, b, c);
+#else
+  return dot(a, b) + c;
+#endif
+}
+
 template <typename T> constexpr T reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }
@@ -78,6 +86,26 @@ constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
   vector<bool, N> ge = div >= 0;
   vector<T, N> frc = frac(abs(div));
   return select<T>(ge, frc, -frc) * Y;
+#endif
+}
+
+template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
+#if (__has_builtin(__builtin_spirv_smoothstep))
+  return __builtin_spirv_smoothstep(Min, Max, X);
+#else
+  T S = saturate((X - Min) / (Max - Min));
+  return (3 - 2 * S) * S * S;
+#endif
+}
+
+template <typename T, int N>
+constexpr vector<T, N> smoothstep_vec_impl(vector<T, N> Min, vector<T, N> Max,
+                                           vector<T, N> X) {
+#if (__has_builtin(__builtin_spirv_smoothstep))
+  return __builtin_spirv_smoothstep(Min, Max, X);
+#else
+  vector<T, N> S = saturate((X - Min) / (Max - Min));
+  return (3 - 2 * S) * S * S;
 #endif
 }
 

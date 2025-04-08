@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file implements Emulated PAC using SipHash_2_4 as the IMPDEF hashing
+//  This file implements Emulated PAC using SipHash_1_3 as the IMPDEF hashing
 //  scheme.
 //
 //===----------------------------------------------------------------------===//
@@ -18,7 +18,7 @@
 // EmuPAC implements runtime emulation of PAC instructions. If the current
 // CPU supports PAC, EmuPAC uses real PAC instructions. Otherwise, it uses the
 // emulation, which is effectively an implementation of PAC with an IMPDEF
-// hashing scheme based on SipHash_2_4.
+// hashing scheme based on SipHash_1_3.
 //
 // The purpose of the emulation is to allow programs to be built to be portable
 // to machines without PAC support, with some performance loss and increased
@@ -55,34 +55,33 @@ static bool pac_supported() {
 // may crash if an auth failure is detected and may be unwound past using a
 // frame pointer based unwinder.
 #ifdef __GCC_HAVE_DWARF2_CFI_ASM
-#define frame_pointer_wrap(sym) \
-  "stp x29, x30, [sp, #-16]!\n" \
-  ".cfi_def_cfa_offset 16\n" \
-  "mov x29, sp\n" \
-  ".cfi_def_cfa w29, 16\n" \
-  ".cfi_offset w30, -8\n" \
-  ".cfi_offset w29, -16\n" \
-  "bl " #sym "\n" \
-  ".cfi_def_cfa wsp, 16\n" \
-  "ldp x29, x30, [sp], #16\n" \
-  ".cfi_def_cfa_offset 0\n" \
-  ".cfi_restore w30\n" \
-  ".cfi_restore w29\n" \
-  "ret"
+#define CFI_INST(inst) inst
 #else
-#define frame_pointer_wrap(sym) \
-  "stp x29, x30, [sp, #-16]!\n" \
-  "mov x29, sp\n" \
-  "bl " #sym "\n" \
-  "ldp x29, x30, [sp], #16\n" \
-  "ret"
+#define CFI_INST(inst)
 #endif
+
+// clang-format off
+#define FRAME_POINTER_WRAP(sym) \
+  "stp x29, x30, [sp, #-16]!\n" \
+  CFI_INST(".cfi_def_cfa_offset 16\n") \
+  "mov x29, sp\n" \
+  CFI_INST(".cfi_def_cfa w29, 16\n") \
+  CFI_INST(".cfi_offset w30, -8\n") \
+  CFI_INST(".cfi_offset w29, -16\n") \
+  "bl " #sym "\n" \
+  CFI_INST(".cfi_def_cfa wsp, 16\n") \
+  "ldp x29, x30, [sp], #16\n" \
+  CFI_INST(".cfi_def_cfa_offset 0\n") \
+  CFI_INST(".cfi_restore w30\n") \
+  CFI_INST(".cfi_restore w29\n") \
+  "ret"
+// clang-format on
 
 static const uint8_t K[16] = {0xb5, 0xd4, 0xc9, 0xeb, 0x79, 0x10, 0x4a, 0x79,
                               0x6f, 0xec, 0x8b, 0x1b, 0x42, 0x87, 0x81, 0xd4};
 
-__attribute__((flatten))
-extern "C" uint64_t __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
+__attribute__((flatten)) extern "C" uint64_t
+__emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\npacda %0, %1"
                          : "+r"(ptr)
@@ -99,17 +98,18 @@ extern "C" uint64_t __emupac_pacda_impl(uint64_t ptr, uint64_t disc) {
     }
   }
   uint64_t hash;
-  siphash<2, 4>(reinterpret_cast<uint8_t *>(&ptr), 8, K,
-                *reinterpret_cast<uint8_t (*)[8]>(&hash));
+  siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr), 8, K,
+                *reinterpret_cast<uint8_t(*)[8]>(&hash));
   return (ptr & ~kPACMask) | (hash & kPACMask);
 }
 
-extern "C" __attribute__((naked)) uint64_t __emupac_pacda(uint64_t ptr, uint64_t disc) {
-  __asm__(frame_pointer_wrap(__emupac_pacda_impl));
+extern "C" __attribute__((naked)) uint64_t __emupac_pacda(uint64_t ptr,
+                                                          uint64_t disc) {
+  __asm__(FRAME_POINTER_WRAP(__emupac_pacda_impl));
 }
 
-__attribute__((flatten))
-extern "C" uint64_t __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
+__attribute__((flatten)) extern "C" uint64_t
+__emupac_autda_impl(uint64_t ptr, uint64_t disc) {
   if (pac_supported()) {
     __asm__ __volatile__(".arch_extension pauth\nautda %0, %1"
                          : "+r"(ptr)
@@ -119,14 +119,15 @@ extern "C" uint64_t __emupac_autda_impl(uint64_t ptr, uint64_t disc) {
   uint64_t ptr_without_pac =
       (ptr & kTTBR1Mask) ? (ptr | kPACMask) : (ptr & ~kPACMask);
   uint64_t hash;
-  siphash<2, 4>(reinterpret_cast<uint8_t *>(&ptr_without_pac), 8, K,
-                *reinterpret_cast<uint8_t (*)[8]>(&hash));
+  siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr_without_pac), 8, K,
+                *reinterpret_cast<uint8_t(*)[8]>(&hash));
   if (((ptr & ~kPACMask) | (hash & kPACMask)) != ptr) {
     __builtin_trap();
   }
   return ptr_without_pac;
 }
 
-extern "C" __attribute__((naked)) uint64_t __emupac_autda(uint64_t ptr, uint64_t disc) {
-  __asm__(frame_pointer_wrap(__emupac_autda_impl));
+extern "C" __attribute__((naked)) uint64_t __emupac_autda(uint64_t ptr,
+                                                          uint64_t disc) {
+  __asm__(FRAME_POINTER_WRAP(__emupac_autda_impl));
 }
