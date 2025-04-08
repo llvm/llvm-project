@@ -526,6 +526,7 @@ private:
   void mangleSourceName(const IdentifierInfo *II);
   void mangleRegCallName(const IdentifierInfo *II);
   void mangleDeviceStubName(const IdentifierInfo *II);
+  void mangleOCLDeviceStubName(const IdentifierInfo *II);
   void mangleSourceNameWithAbiTags(
       const NamedDecl *ND, const AbiTagList *AdditionalAbiTags = nullptr);
   void mangleLocalName(GlobalDecl GD,
@@ -1561,8 +1562,13 @@ void CXXNameMangler::mangleUnqualifiedName(
       bool IsDeviceStub =
           FD && FD->hasAttr<CUDAGlobalAttr>() &&
           GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+      bool IsOCLDeviceStub =
+          FD && FD->hasAttr<OpenCLKernelAttr>() &&
+          GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
       if (IsDeviceStub)
         mangleDeviceStubName(II);
+      else if (IsOCLDeviceStub)
+        mangleOCLDeviceStubName(II);
       else if (IsRegCall)
         mangleRegCallName(II);
       else
@@ -1778,6 +1784,15 @@ void CXXNameMangler::mangleDeviceStubName(const IdentifierInfo *II) {
   // <identifier> ::= <unqualified source code identifier>
   Out << II->getLength() + sizeof("__device_stub__") - 1 << "__device_stub__"
       << II->getName();
+}
+
+void CXXNameMangler::mangleOCLDeviceStubName(const IdentifierInfo *II) {
+  // <source-name> ::= <positive length number> __clang_ocl_kern_imp_
+  // <identifier> <number> ::= [n] <non-negative decimal integer> <identifier>
+  // ::= <unqualified source code identifier>
+  StringRef OCLDeviceStubNamePrefix = "__clang_ocl_kern_imp_";
+  Out << II->getLength() + OCLDeviceStubNamePrefix.size()
+      << OCLDeviceStubNamePrefix << II->getName();
 }
 
 void CXXNameMangler::mangleSourceName(const IdentifierInfo *II) {
