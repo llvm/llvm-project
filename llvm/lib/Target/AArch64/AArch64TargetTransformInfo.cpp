@@ -4586,21 +4586,17 @@ static bool shouldUnrollLoopWithInstruction(Instruction &I,
 }
 
 // This function returns true if the loop:
-//  1. Contains only those instructions that should be unrolled,
-//  2. Has a valid cost,
-//  3. Has a cost within the supplied budget.
+//  1. Has a valid cost, and
+//  2. Has a cost within the supplied budget.
 // Otherwise it returns false.
-static bool canUnrollLoopWithinBudget(Loop *L, AArch64TTIImpl &TTI,
-                                      InstructionCost Budget,
-                                      unsigned *FinalSize) {
+static bool isLoopSizeWithinBudget(Loop *L, AArch64TTIImpl &TTI,
+                                   InstructionCost Budget,
+                                   unsigned *FinalSize) {
   // Estimate the size of the loop.
   InstructionCost LoopCost = 0;
 
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      if (!shouldUnrollLoopWithInstruction(I, TTI))
-        return false;
-
       SmallVector<const Value *, 4> Operands(I.operand_values());
       InstructionCost Cost =
           TTI.getInstructionCost(&I, Operands, TTI::TCK_CodeSize);
@@ -4635,11 +4631,8 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
   if (MaxTC > 0 && MaxTC <= 32)
     return false;
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return false;
-
-  // Estimate the size of the loop.
-  if (!canUnrollLoopWithinBudget(L, TTI, 5, nullptr))
+  // Make sure the loop size is <= 5.
+  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
     return false;
 
   // Small search loops with multiple exits can be highly beneficial to unroll.
@@ -4671,7 +4664,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (!L->isInnermost() || L->getNumBlocks() > 8)
     return;
 
-  // This is handled by common code.
+  // Loops with multiple exits are handled by common code.
   if (!L->getExitBlock())
     return;
 
@@ -4696,7 +4689,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (Header == L->getLoopLatch()) {
     // Estimate the size of the loop.
     unsigned Size;
-    if (!canUnrollLoopWithinBudget(L, TTI, 8, &Size))
+    if (!isLoopSizeWithinBudget(L, TTI, 8, &Size))
       return;
 
     SmallPtrSet<Value *, 8> LoadedValues;
@@ -4793,6 +4786,16 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
+  // Scan the loop: don't unroll loops with calls as this could prevent
+  // inlining. Don't unroll vector loops either, as they don't benefit much from
+  // unrolling.
+  for (auto *BB : L->getBlocks()) {
+    for (auto &I : *BB) {
+      if (!shouldUnrollLoopWithInstruction(I, *this))
+        return;
+    }
+  }
+
   // Apply subtarget-specific unrolling preferences.
   switch (ST->getProcFamily()) {
   case AArch64Subtarget::AppleA14:
@@ -4820,16 +4823,6 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
     // with pointer inductions.
     UP.SCEVExpansionBudget = 5;
     return;
-  }
-
-  // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining. Don't unroll vector loops either, as they don't benefit much from
-  // unrolling.
-  for (auto *BB : L->getBlocks()) {
-    for (auto &I : *BB) {
-      if (!shouldUnrollLoopWithInstruction(I, *this))
-        return;
-    }
   }
 
   // Enable runtime unrolling for in-order models
