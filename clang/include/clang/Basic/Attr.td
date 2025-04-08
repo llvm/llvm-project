@@ -936,7 +936,8 @@ def PatchableFunctionEntry
            "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
-  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
+  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
+              StringArgument<"Section", /* optional */ 1>];
   let Documentation = [PatchableFunctionEntryDocs];
 }
 

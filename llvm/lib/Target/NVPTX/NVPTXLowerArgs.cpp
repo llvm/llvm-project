@@ -161,10 +161,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerArgsLegacyPassPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
@@ -678,11 +674,8 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
 
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
   for (Argument &Arg : F.args()) {
-    if (Arg.getType()->isPointerTy()) {
-      if (Arg.hasByValAttr())
-        handleByValParam(TM, &Arg);
-      else if (TM.getDrvInterface() == NVPTX::CUDA)
-        markPointerAsGlobal(&Arg);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
+      handleByValParam(TM, &Arg);
     } else if (Arg.getType()->isIntegerTy() &&
                TM.getDrvInterface() == NVPTX::CUDA) {
       HandleIntToPtr(Arg);
@@ -699,10 +692,9 @@ static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
       cast<NVPTXTargetLowering>(TM.getSubtargetImpl()->getTargetLowering());
 
   for (Argument &Arg : F.args())
-    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr()) {
-      markPointerAsAS(&Arg, ADDRESS_SPACE_LOCAL);
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
       adjustByValArgAlignment(&Arg, &Arg, TLI);
-    }
+
   return true;
 }
 

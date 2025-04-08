@@ -47,14 +47,16 @@ public:
   };
 
 private:
-  const Specifier specifier;
   const MCExpr *Expr;
+  const Specifier specifier;
 
-  explicit MipsMCExpr(Specifier S, const MCExpr *Expr)
-      : specifier(S), Expr(Expr) {}
+  explicit MipsMCExpr(const MCExpr *Expr, Specifier S)
+      : Expr(Expr), specifier(S) {}
 
 public:
   static const MipsMCExpr *create(Specifier S, const MCExpr *Expr,
+                                  MCContext &Ctx);
+  static const MipsMCExpr *create(const MCSymbol *Sym, Specifier S,
                                   MCContext &Ctx);
   static const MipsMCExpr *createGpOff(Specifier S, const MCExpr *Expr,
                                        MCContext &Ctx);
