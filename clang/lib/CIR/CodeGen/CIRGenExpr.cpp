@@ -25,6 +25,147 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
 
+/// Given an expression of pointer type, try to
+/// derive a more accurate bound on the alignment of the pointer.
+Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
+  // We allow this with ObjC object pointers because of fragile ABIs.
+  assert(expr->getType()->isPointerType() ||
+         expr->getType()->isObjCObjectPointerType());
+  expr = expr->IgnoreParens();
+
+  // Casts:
+  if (auto const *ce = dyn_cast<CastExpr>(expr)) {
+    if (auto const *ece = dyn_cast<ExplicitCastExpr>(ce)) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: explicit cast");
+      return Address::invalid();
+    }
+
+    switch (ce->getCastKind()) {
+    // Non-converting casts (but not C's implicit conversion from void*).
+    case CK_BitCast:
+    case CK_NoOp:
+    case CK_AddressSpaceConversion: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: noop cast");
+      return Address::invalid();
+    } break;
+
+    // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
+    case CK_ArrayToPointerDecay: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: array-to-pointer decay");
+      return Address::invalid();
+    }
+
+    case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: derived-to-base cast");
+      return Address::invalid();
+    }
+
+    case CK_AnyPointerToBlockPointerCast:
+    case CK_BaseToDerived:
+    case CK_BaseToDerivedMemberPointer:
+    case CK_BlockPointerToObjCPointerCast:
+    case CK_BuiltinFnToFnPtr:
+    case CK_CPointerToObjCPointerCast:
+    case CK_DerivedToBaseMemberPointer:
+    case CK_Dynamic:
+    case CK_FunctionToPointerDecay:
+    case CK_IntegralToPointer:
+    case CK_LValueToRValue:
+    case CK_LValueToRValueBitCast:
+    case CK_NullToMemberPointer:
+    case CK_NullToPointer:
+    case CK_ReinterpretMemberPointer:
+      // Common pointer conversions, nothing to do here.
+      // TODO: Is there any reason to treat base-to-derived conversions
+      // specially?
+      break;
+
+    case CK_ARCConsumeObject:
+    case CK_ARCExtendBlockObject:
+    case CK_ARCProduceObject:
+    case CK_ARCReclaimReturnedObject:
+    case CK_AtomicToNonAtomic:
+    case CK_BooleanToSignedIntegral:
+    case CK_ConstructorConversion:
+    case CK_CopyAndAutoreleaseBlockObject:
+    case CK_Dependent:
+    case CK_FixedPointCast:
+    case CK_FixedPointToBoolean:
+    case CK_FixedPointToFloating:
+    case CK_FixedPointToIntegral:
+    case CK_FloatingCast:
+    case CK_FloatingComplexCast:
+    case CK_FloatingComplexToBoolean:
+    case CK_FloatingComplexToIntegralComplex:
+    case CK_FloatingComplexToReal:
+    case CK_FloatingRealToComplex:
+    case CK_FloatingToBoolean:
+    case CK_FloatingToFixedPoint:
+    case CK_FloatingToIntegral:
+    case CK_HLSLAggregateSplatCast:
+    case CK_HLSLArrayRValue:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLVectorTruncation:
+    case CK_IntToOCLSampler:
+    case CK_IntegralCast:
+    case CK_IntegralComplexCast:
+    case CK_IntegralComplexToBoolean:
+    case CK_IntegralComplexToFloatingComplex:
+    case CK_IntegralComplexToReal:
+    case CK_IntegralRealToComplex:
+    case CK_IntegralToBoolean:
+    case CK_IntegralToFixedPoint:
+    case CK_IntegralToFloating:
+    case CK_LValueBitCast:
+    case CK_MatrixCast:
+    case CK_MemberPointerToBoolean:
+    case CK_NonAtomicToAtomic:
+    case CK_ObjCObjectLValueCast:
+    case CK_PointerToBoolean:
+    case CK_PointerToIntegral:
+    case CK_ToUnion:
+    case CK_ToVoid:
+    case CK_UserDefinedConversion:
+    case CK_VectorSplat:
+    case CK_ZeroToOCLOpaqueType:
+      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
+    }
+  }
+
+  // Unary &
+  if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
+    // TODO(cir): maybe we should use cir.unary for pointers here instead.
+    if (uo->getOpcode() == UO_AddrOf) {
+      cgm.errorNYI(expr->getSourceRange(), "emitPointerWithAlignment: unary &");
+      return Address::invalid();
+    }
+  }
+
+  // std::addressof and variants.
+  if (auto const *call = dyn_cast<CallExpr>(expr)) {
+    switch (call->getBuiltinCallee()) {
+    default:
+      break;
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: builtin addressof");
+      return Address::invalid();
+    }
+    }
+  }
+
+  // Otherwise, use the alignment of the type.
+  return makeNaturalAddressForPointer(
+      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits());
+}
+
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
                                             bool isInit) {
   if (!dst.isSimple()) {
@@ -193,8 +334,25 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
   switch (op) {
   case UO_Deref: {
-    cgm.errorNYI(e->getSourceRange(), "UnaryOp dereference");
-    return LValue();
+    QualType t = e->getSubExpr()->getType()->getPointeeType();
+    assert(!t.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
+
+    assert(!cir::MissingFeatures::lvalueBaseInfo());
+    assert(!cir::MissingFeatures::opTBAA());
+    Address addr = emitPointerWithAlignment(e->getSubExpr());
+
+    // Tag 'load' with deref attribute.
+    // FIXME: This misses some derefence cases and has problematic interactions
+    // with other operators.
+    if (auto loadOp =
+            dyn_cast<cir::LoadOp>(addr.getPointer().getDefiningOp())) {
+      loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
+    LValue lv = LValue::makeAddr(addr, t);
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::setNonGC());
+    return lv;
   }
   case UO_Real:
   case UO_Imag: {

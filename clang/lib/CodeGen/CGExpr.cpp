@@ -5752,6 +5752,12 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   return CGCallee::forDirect(CalleePtr, GD);
 }
 
+static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
+  if (FD->hasAttr<OpenCLKernelAttr>())
+    return GlobalDecl(FD, KernelReferenceKind::Stub);
+  return GlobalDecl(FD);
+}
+
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
@@ -5765,7 +5771,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return EmitDirectCallee(*this, FD);
+      return EmitDirectCallee(*this, getGlobalDeclForDirectCall(FD));
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
@@ -6133,6 +6139,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   }
 
   const auto *FnType = cast<FunctionType>(PointeeType);
+
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+      FD && FD->hasAttr<OpenCLKernelAttr>())
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.
