@@ -202,9 +202,9 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
       ```mlir
       #xegpu.layout<inst_data = [8, 16], lane_layout = [2, 8], lane_data = [2, 2]>
       ```
-      In this example, the original problem size is divided into smaller subproblems of size [8, 16],
-      which are further distributed across 16 work-items organized as [[0, 1, 2, ..., 7], [8, 9, ..., 15]].
-      Each work-item is assigned a contiguous 2x2 block.
+      In this example, the original problem size is partitioned into smaller subproblems of dimensions [8, 16],
+      which are then distributed among 16 work-items arranged as [[0, 1, 2, ..., 7], [8, 9, ..., 15]]. Each
+      work-item is assigned four 2x2 blocks in a round-robin manner.
 
       4. Workgroup level layout:
       ```mlir
