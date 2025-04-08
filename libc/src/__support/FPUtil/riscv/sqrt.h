@@ -24,7 +24,7 @@ namespace fputil {
 #ifdef LIBC_TARGET_CPU_HAS_FPU_FLOAT
 template <> LIBC_INLINE float sqrt<float>(float x) {
   float result;
-  __asm__ __volatile__("fsqrt.s %0, %1\n\t" : "=f"(result) : "f"(x));
+  asm("fsqrt.s %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
@@ -32,7 +32,7 @@ template <> LIBC_INLINE float sqrt<float>(float x) {
 #if LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 template <> LIBC_INLINE double sqrt<double>(double x) {
   double result;
-  __asm__ __volatile__("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
+  asm("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
   return result;
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
