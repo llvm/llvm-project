@@ -82,6 +82,10 @@ clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
 
+clang_tablegen(BuiltinsDirectX.inc -gen-clang-builtins
+  SOURCE BuiltinsDirectX.td
+  TARGET ClangBuiltinsDirectX)
+
 clang_tablegen(BuiltinsHexagon.inc -gen-clang-builtins
   SOURCE BuiltinsHexagon.td
   TARGET ClangBuiltinsHexagon)
