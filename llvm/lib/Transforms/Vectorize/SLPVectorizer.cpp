@@ -5401,13 +5401,12 @@ static InstructionCost getVectorInstrCost(
 
 /// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
 /// is a FixedVectorType, a vector will be extracted instead of a scalar.
-static InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
-                                                unsigned Opcode, Type *Dst,
-                                                VectorType *VecTy,
-                                                unsigned Index) {
+static InstructionCost getExtractWithExtendCost(
+    const TargetTransformInfo &TTI, unsigned Opcode, Type *Dst,
+    VectorType *VecTy, unsigned Index,
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
   if (auto *ScalarTy = dyn_cast<FixedVectorType>(Dst)) {
     assert(SLPReVec && "Only supported by REVEC.");
-    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto *SubTp =
         getWidenedType(VecTy->getElementType(), ScalarTy->getNumElements());
     return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
