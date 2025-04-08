@@ -14,6 +14,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolTypes.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -68,21 +69,20 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef path, std::ofstream *log,
-         const ReplMode default_repl_mode,
+llvm::StringRef DAP::debug_adapter_path = "";
+
+DAP::DAP(Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
-    : debug_adapter_path(path), log(log), transport(transport),
-      broadcaster("lldb-dap"), exception_breakpoints(),
-      pre_init_commands(std::move(pre_init_commands)),
-      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
-      enable_auto_variable_summaries(false),
-      enable_synthetic_child_debugging(false),
-      display_extended_backtrace(false),
+    : log(log), transport(transport), broadcaster("lldb-dap"),
+      exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
+      stop_at_entry(false), is_attach(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(default_repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode) {
+  configuration.preInitCommands = std::move(pre_init_commands);
+}
 
 DAP::~DAP() = default;
 
@@ -162,7 +162,7 @@ void DAP::PopulateExceptionBreakpoints() {
   });
 }
 
-ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
+ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
   // PopulateExceptionBreakpoints() is called after g_dap.debugger is created
   // in a request-initialize.
   //
@@ -181,7 +181,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.filter == filter)
+    if (bp.GetFilter() == filter)
       return &bp;
   }
   return nullptr;
@@ -192,7 +192,7 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   PopulateExceptionBreakpoints();
 
   for (auto &bp : *exception_breakpoints) {
-    if (bp.bp.GetID() == bp_id)
+    if (bp.GetID() == bp_id)
       return &bp;
   }
   return nullptr;
@@ -505,8 +505,9 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
   if (!expression.empty() &&
-      llvm::StringRef(expression).starts_with(command_escape_prefix)) {
-    expression = expression.substr(command_escape_prefix.size());
+      llvm::StringRef(expression)
+          .starts_with(configuration.commandEscapePrefix)) {
+    expression = expression.substr(configuration.commandEscapePrefix.size());
     return ReplMode::Command;
   }
 
@@ -546,7 +547,7 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
           << "Warning: Expression '" << term
           << "' is both an LLDB command and variable. It will be evaluated as "
              "a variable. To evaluate the expression as an LLDB command, use '"
-          << command_escape_prefix << "' as a prefix.\n";
+          << configuration.commandEscapePrefix << "' as a prefix.\n";
     }
 
     // Variables take preference to commands in auto, since commands can always
@@ -593,36 +594,38 @@ DAP::RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands) {
 }
 
 llvm::Error DAP::RunInitCommands() {
-  if (!RunLLDBCommands("Running initCommands:", init_commands))
+  if (!RunLLDBCommands("Running initCommands:", configuration.initCommands))
     return createRunLLDBCommandsErrorMessage("initCommands");
   return llvm::Error::success();
 }
 
 llvm::Error DAP::RunPreInitCommands() {
-  if (!RunLLDBCommands("Running preInitCommands:", pre_init_commands))
+  if (!RunLLDBCommands("Running preInitCommands:",
+                       configuration.preInitCommands))
     return createRunLLDBCommandsErrorMessage("preInitCommands");
   return llvm::Error::success();
 }
 
 llvm::Error DAP::RunPreRunCommands() {
-  if (!RunLLDBCommands("Running preRunCommands:", pre_run_commands))
+  if (!RunLLDBCommands("Running preRunCommands:", configuration.preRunCommands))
     return createRunLLDBCommandsErrorMessage("preRunCommands");
   return llvm::Error::success();
 }
 
 void DAP::RunPostRunCommands() {
-  RunLLDBCommands("Running postRunCommands:", post_run_commands);
+  RunLLDBCommands("Running postRunCommands:", configuration.postRunCommands);
 }
 void DAP::RunStopCommands() {
-  RunLLDBCommands("Running stopCommands:", stop_commands);
+  RunLLDBCommands("Running stopCommands:", configuration.stopCommands);
 }
 
 void DAP::RunExitCommands() {
-  RunLLDBCommands("Running exitCommands:", exit_commands);
+  RunLLDBCommands("Running exitCommands:", configuration.exitCommands);
 }
 
 void DAP::RunTerminateCommands() {
-  RunLLDBCommands("Running terminateCommands:", terminate_commands);
+  RunLLDBCommands("Running terminateCommands:",
+                  configuration.terminateCommands);
 }
 
 lldb::SBTarget
@@ -711,12 +714,12 @@ bool DAP::HandleObject(const protocol::Message &M) {
                            [](const std::string &message) -> llvm::StringRef {
                              return message;
                            },
-                           [](const protocol::Response::Message &message)
+                           [](const protocol::ResponseMessage &message)
                                -> llvm::StringRef {
                              switch (message) {
-                             case protocol::Response::Message::cancelled:
+                             case protocol::eResponseMessageCancelled:
                                return "cancelled";
-                             case protocol::Response::Message::notStopped:
+                             case protocol::eResponseMessageNotStopped:
                                return "notStopped";
                              }
                            }),
@@ -1066,7 +1069,7 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
-    if (bp.second.bp.GetID() == bp_id)
+    if (bp.second.GetID() == bp_id)
       return &bp.second;
   }
   return nullptr;
@@ -1143,6 +1146,44 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
     }
   }
   return variable;
+}
+
+protocol::Capabilities DAP::GetCapabilities() {
+  protocol::Capabilities capabilities;
+
+  // Supported capabilities that are not specific to a single request.
+  capabilities.supportedFeatures = {
+      protocol::eAdapterFeatureLogPoints,
+      protocol::eAdapterFeatureSteppingGranularity,
+      protocol::eAdapterFeatureValueFormattingOptions,
+  };
+
+  // Capabilities associated with specific requests.
+  for (auto &kv : request_handlers) {
+    llvm::SmallDenseSet<AdapterFeature, 1> features =
+        kv.second->GetSupportedFeatures();
+    capabilities.supportedFeatures.insert(features.begin(), features.end());
+  }
+
+  // Available filters or options for the setExceptionBreakpoints request.
+  std::vector<protocol::ExceptionBreakpointsFilter> filters;
+  for (const auto &exc_bp : *exception_breakpoints)
+    filters.emplace_back(CreateExceptionBreakpointFilter(exc_bp));
+  capabilities.exceptionBreakpointFilters = std::move(filters);
+
+  // FIXME: This should be registered based on the supported languages?
+  std::vector<std::string> completion_characters;
+  completion_characters.emplace_back(".");
+  // FIXME: I wonder if we should remove this key... its very aggressive
+  // triggering and accepting completions.
+  completion_characters.emplace_back(" ");
+  completion_characters.emplace_back("\t");
+  capabilities.completionTriggerCharacters = std::move(completion_characters);
+
+  // Put in non-DAP specification lldb specific information.
+  capabilities.lldbExtVersion = debugger.GetVersionString();
+
+  return capabilities;
 }
 
 } // namespace lldb_dap

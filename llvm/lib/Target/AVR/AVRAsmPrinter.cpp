@@ -59,7 +59,8 @@ public:
 
   void emitInstruction(const MachineInstr *MI) override;
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV,
+                              uint64_t Offset) override;
 
   void emitXXStructor(const DataLayout &DL, const Constant *CV) override;
 
@@ -199,7 +200,9 @@ void AVRAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, I);
 }
 
-const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV,
+                                           const Constant *BaseCV,
+                                           uint64_t Offset) {
   MCContext &Ctx = OutContext;
 
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
@@ -210,7 +213,7 @@ const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV) {
     }
   }
 
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
 void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {

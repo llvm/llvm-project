@@ -225,22 +225,19 @@ define void @mubuf_clause(ptr addrspace(5) noalias nocapture readonly %arg, ptr 
 ; GCN-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %tmp2 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg, i32 %tmp
-  %tmp3 = load <4 x i32>, ptr addrspace(5) %tmp2, align 16
-  %tmp4 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg1, i32 %tmp
-  %tmp5 = add nuw nsw i32 %tmp, 1
-  %tmp6 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg, i32 %tmp5
+  %base = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg, i32 %tmp
+  %tmp3 = load <4 x i32>, ptr addrspace(5) %base, align 16
+  %base1 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg1, i32 %tmp
+  %tmp6 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base, i32 1
   %tmp7 = load <4 x i32>, ptr addrspace(5) %tmp6, align 16
-  %tmp8 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg1, i32 %tmp5
-  %tmp9 = add nuw nsw i32 %tmp, 2
-  %tmp10 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg, i32 %tmp9
+  %tmp8 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base1, i32 1
+  %tmp10 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base, i32 2
   %tmp11 = load <4 x i32>, ptr addrspace(5) %tmp10, align 16
-  %tmp12 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg1, i32 %tmp9
-  %tmp13 = add nuw nsw i32 %tmp, 3
-  %tmp14 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg, i32 %tmp13
+  %tmp12 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base1, i32 2
+  %tmp14 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base, i32 3
   %tmp15 = load <4 x i32>, ptr addrspace(5) %tmp14, align 16
-  %tmp16 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %arg1, i32 %tmp13
-  store <4 x i32> %tmp3, ptr addrspace(5) %tmp4, align 16
+  %tmp16 = getelementptr inbounds <4 x i32>, ptr addrspace(5) %base1, i32 3
+  store <4 x i32> %tmp3, ptr addrspace(5) %base1, align 16
   store <4 x i32> %tmp7, ptr addrspace(5) %tmp8, align 16
   store <4 x i32> %tmp11, ptr addrspace(5) %tmp12, align 16
   store <4 x i32> %tmp15, ptr addrspace(5) %tmp16, align 16

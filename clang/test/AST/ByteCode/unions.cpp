@@ -570,4 +570,71 @@ namespace ActiveDestroy {
   static_assert(foo2());
 }
 
+namespace MoveOrAssignOp {
+  struct min_pointer {
+    int *ptr_;
+    constexpr min_pointer(int *p) : ptr_(p) {}
+    min_pointer() = default;
+  };
+
+  class F {
+    struct __long {
+      min_pointer __data_;
+    };
+    union __rep {
+      int __s;
+      __long __l;
+    } __rep_;
+
+  public:
+    constexpr F() {
+      __rep_ = __rep();
+      __rep_.__l.__data_ = nullptr;
+    }
+  };
+
+  constexpr bool foo() {
+    F f{};
+    return true;
+  }
+  static_assert(foo());
+}
 #endif
+
+namespace AddressComparison {
+  union {
+    int a;
+    int c;
+  } U;
+  static_assert(__builtin_addressof(U.a) == (void*)__builtin_addressof(U.c));
+  static_assert(&U.a == &U.c);
+
+
+  struct {
+    union {
+      struct {
+        int a;
+        int b;
+      } a;
+      struct {
+        int b;
+        int a;
+      }b;
+    } u;
+    int b;
+  } S;
+
+  static_assert(&S.u.a.a == &S.u.b.b);
+  static_assert(&S.u.a.b != &S.u.b.b);
+  static_assert(&S.u.a.b == &S.u.b.b); // both-error {{failed}}
+
+
+  union {
+    int a[2];
+    int b[2];
+  } U2;
+
+  static_assert(&U2.a[0] == &U2.b[0]);
+  static_assert(&U2.a[0] != &U2.b[1]);
+  static_assert(&U2.a[0] == &U2.b[1]); // both-error {{failed}}
+}

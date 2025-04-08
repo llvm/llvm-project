@@ -40,6 +40,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
       *mlirContext.get(), astContext, codeGenOpts, diags);
 }
 
+bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
+
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {

@@ -418,6 +418,7 @@ size_t detail::PassOptions::getOptionWidth() const {
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: OptionValue
+//===----------------------------------------------------------------------===//
 
 llvm::cl::OptionValue<OpPassManager>::OptionValue() = default;
 llvm::cl::OptionValue<OpPassManager>::OptionValue(
@@ -470,6 +471,7 @@ void llvm::cl::OptionValue<OpPassManager>::anchor() {}
 
 //===----------------------------------------------------------------------===//
 // OpPassManager: Parser
+//===----------------------------------------------------------------------===//
 
 namespace llvm {
 namespace cl {
@@ -1028,6 +1030,7 @@ LogicalResult PassPipelineCLParser::addToPipeline(
 
 //===----------------------------------------------------------------------===//
 // PassNameCLParser
+//===----------------------------------------------------------------------===//
 
 /// Construct a pass pipeline parser with the given command line description.
 PassNameCLParser::PassNameCLParser(StringRef arg, StringRef description)

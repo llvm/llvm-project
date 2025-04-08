@@ -129,7 +129,6 @@ public:
       : Style(Style), Line(Line), CurrentToken(Line.First), AutoFound(false),
         IsCpp(Style.isCpp()), LangOpts(getFormattingLangOpts(Style)),
         Keywords(Keywords), Scopes(Scopes), TemplateDeclarationDepth(0) {
-    assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
     Contexts.push_back(Context(tok::unknown, 1, /*IsExpression=*/false));
     resetTokenMetadata();
   }
@@ -253,8 +252,7 @@ private:
       // FIXME: This is getting out of hand, write a decent parser.
       if (MaybeAngles && InExpr && !Line.startsWith(tok::kw_template) &&
           Prev.is(TT_BinaryOperator) &&
-          (Prev.isOneOf(tok::pipepipe, tok::ampamp) ||
-           Prev.getPrecedence() == prec::Equality)) {
+          Prev.isOneOf(tok::pipepipe, tok::ampamp)) {
         MaybeAngles = false;
       }
       if (Prev.isOneOf(tok::question, tok::colon) && !Style.isProto())
@@ -1418,6 +1416,10 @@ private:
         }
       } else if (Contexts.back().ContextType == Context::C11GenericSelection) {
         Tok->setType(TT_GenericSelectionColon);
+        auto *Prev = Tok->getPreviousNonComment();
+        assert(Prev);
+        if (Prev->isPointerOrReference())
+          Prev->setFinalizedType(TT_PointerOrReference);
       } else if (CurrentToken && CurrentToken->is(tok::numeric_constant)) {
         Tok->setType(TT_BitFieldColon);
       } else if (Contexts.size() == 1 &&
@@ -3844,7 +3846,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
   };
 
   const auto *Next = Current.Next;
-  const bool IsCpp = LangOpts.CXXOperatorNames || LangOpts.C17;
+  const bool IsCpp = LangOpts.CXXOperatorNames || LangOpts.C11;
 
   // Find parentheses of parameter list.
   if (Current.is(tok::kw_operator)) {
@@ -4078,6 +4080,7 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
   }
 
   bool InFunctionDecl = Line.MightBeFunctionDecl;
+  bool InParameterList = false;
   for (auto *Current = First->Next; Current; Current = Current->Next) {
     const FormatToken *Prev = Current->Previous;
     if (Current->is(TT_LineComment)) {
@@ -4132,6 +4135,19 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
 
     Current->CanBreakBefore =
         Current->MustBreakBefore || canBreakBefore(Line, *Current);
+
+    if (Current->is(TT_FunctionDeclarationLParen)) {
+      InParameterList = true;
+    } else if (Current->is(tok::r_paren)) {
+      const auto *LParen = Current->MatchingParen;
+      if (LParen && LParen->is(TT_FunctionDeclarationLParen))
+        InParameterList = false;
+    } else if (InParameterList &&
+               Current->endsSequence(TT_AttributeMacro,
+                                     TT_PointerOrReference)) {
+      Current->CanBreakBefore = false;
+    }
+
     unsigned ChildSize = 0;
     if (Prev->Children.size() == 1) {
       FormatToken &LastOfChild = *Prev->Children[0]->Last;
