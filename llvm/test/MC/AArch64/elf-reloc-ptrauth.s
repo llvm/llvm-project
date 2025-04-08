@@ -41,8 +41,6 @@
 // RELOC-NEXT: 70 00000000 10000000
 //                         ^^^^ discriminator
 //                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
-// RELOC-NEXT: 80 04000000 00000000
-// Folded to constant 4 bytes difference between _g9 and _g8
 
 .section    .helper
 .local "_g 6"
@@ -91,25 +89,21 @@ _g9:
 .quad ("_g 7" + 7)@AUTH(ia,16)
 .quad 0
 
-// ASM:          .xword (_g9@AUTH(ia,42))-(_g8@AUTH(ia,42))
-.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
-.quad 0
-
 .ifdef ASMONLY
 
-// ASM:          .xword (_g10@AUTH(ia,42))+1
+// ASM:          .xword _g10@AUTH(ia,42)+1
 .quad _g10@AUTH(ia,42) + 1
 
-// ASM:          .xword 1+(_g11@AUTH(ia,42))
+// ASM:          .xword 1+_g11@AUTH(ia,42)
 .quad 1 + _g11@AUTH(ia,42)
 
-// ASM:          .xword (1+(_g12@AUTH(ia,42)))+1
+// ASM:          .xword 1+_g12@AUTH(ia,42)+1
 .quad 1 + _g12@AUTH(ia,42) + 1
 
-// ASM:          .xword (_g13@AUTH(ia,42))+(_g14@AUTH(ia,42))
+// ASM:          .xword _g13@AUTH(ia,42)+_g14@AUTH(ia,42)
 .quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
 
-// ASM:          .xword (_g9@AUTH(ia,42))-_g8
+// ASM:          .xword _g9@AUTH(ia,42)-_g8
 .quad _g9@AUTH(ia,42) - _g8
 .quad 0
 
@@ -171,15 +165,6 @@ _g9:
 // RUN:   FileCheck %s --check-prefix=ERROBJ
 
 // ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad sym@AUTH(ia,42) + 1
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad 1 + sym@AUTH(ia,42)
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad 1 + sym@AUTH(ia,42) + 1
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
 .quad sym@AUTH(ia,42) + sym@AUTH(ia,42)
 
 // TODO: do we really want to emit an error here? It might not be important
@@ -187,7 +172,17 @@ _g9:
 // distance remains the same. Leave it in such state as for now since it
 // makes code simpler: subtraction of a non-AUTH symbol and of a constant
 // are handled identically.
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+// ERROBJ: :[[#@LINE+1]]:7: error: Cannot represent a difference across sections
 .quad _g9@AUTH(ia,42) - _g8
+
+// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
+.quad 0
+
+// ERROBJ: :[[#@LINE+1]]:23: error: expected relocatable expression
+.quad sym@AUTH(ia,42) + 1
+
+// ERROBJ: :[[#@LINE+1]]:9: error: expected relocatable expression
+.quad 1 + sym@AUTH(ia,42)
 
 .endif // ERROBJ

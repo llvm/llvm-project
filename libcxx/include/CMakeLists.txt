@@ -64,6 +64,7 @@ set(files
   __algorithm/next_permutation.h
   __algorithm/none_of.h
   __algorithm/nth_element.h
+  __algorithm/out_value_result.h
   __algorithm/partial_sort.h
   __algorithm/partial_sort_copy.h
   __algorithm/partition.h
@@ -369,8 +370,10 @@ set(files
   __flat_map/sorted_equivalent.h
   __flat_map/sorted_unique.h
   __flat_map/utils.h
+  __flat_set/flat_multiset.h
   __flat_set/flat_set.h
   __flat_set/ra_iterator.h
+  __flat_set/utils.h
   __format/buffer.h
   __format/concepts.h
   __format/container_adaptor.h
@@ -615,6 +618,7 @@ set(files
   __numeric/midpoint.h
   __numeric/partial_sum.h
   __numeric/pstl.h
+  __numeric/ranges_iota.h
   __numeric/reduce.h
   __numeric/saturation_arithmetic.h
   __numeric/transform_exclusive_scan.h
