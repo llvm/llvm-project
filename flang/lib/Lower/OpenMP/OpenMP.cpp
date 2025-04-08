@@ -225,12 +225,12 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
     // them.
     auto cloneBound = [&](mlir::Value bound) {
       if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
-        if (auto unboxCharOp =
-                mlir::dyn_cast<fir::UnboxCharOp>(bound.getDefiningOp())) {
-          mlir::Operation *clonedOp = firOpBuilder.clone(*unboxCharOp);
+        mlir::Operation *definingOp = bound.getDefiningOp();
+        mlir::Operation *clonedOp = firOpBuilder.clone(*definingOp);
+        // Todo: Do we need to check for more operation types?
+        // For now, specializing only for fir::UnboxCharOp
+        if (auto unboxCharOp = mlir::dyn_cast<fir::UnboxCharOp>(definingOp))
           return clonedOp->getResult(1);
-        }
-        mlir::Operation *clonedOp = firOpBuilder.clone(*bound.getDefiningOp());
         return clonedOp->getResult(0);
       }
       TODO(converter.getCurrentLocation(),
@@ -274,24 +274,38 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                                             cloneBounds(v.getLBounds())));
           },
           [&](const fir::CharBoxValue &v) {
-            // PDB: THe problem here is that v is
-            // [flang-openmp-lowering]: Sym: a0, INTENT(IN) (OmpMapTo) size=24
-            // offset=0: ObjectEntity dummy type: CHARACTER(*,1)
-            // [flang-openmp-lowering]: Extended Value:
-            // boxchar { addr: %9:2 = "hlfir.declare"(%8#0, %8#1, %7)
-            // <{fortran_attrs = #fir.var_attrs<intent_in>, operandSegmentSizes
-            // = array<i32: 1, 0, 1, 1>, uniq_name = "_QFFrealtest_Ea0"}> :
-            // (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) ->
-            // (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>), len: %8:2 =
-            // "fir.unboxchar"(%arg0) : (!fir.boxchar<1>) ->
-            // (!fir.ref<!fir.char<1,?>>, index) } Porblem above is that "len:"
-            // references the input to the hlfir.declare. It could get it
-            // directly from the hlfir.declare. PDB: start thinking from here -
-            // it looks like we'll have to map %arg after all because getting
-            // the length will still need us to access the defining op of the
-            // len, which is the unboxchar. Maybe we should use val which could
-            // be the hlfir.declare for the symbol. Use the len from that
-            // instead of cloning the len from the extended value.
+            // In some cases, v.len could reference the input the hlfir.declare
+            // which is the corresponding v.addr. While, this isn't a big
+            // problem by itself, it is desirable to extract this out of v.addr
+            // itself since it's first result will be of type fir.boxchar<>. For
+            // example, consider the following
+            //
+            // func.func private @_QFPrealtest(%arg0: !fir.boxchar<1>)
+            //  %2 = fir.dummy_scope : !fir.dscope
+            //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
+            //  (!fir.ref<!fir.char<1,?>>, index) %4:2 = hlfir.declare %3#0
+            //  typeparams %3#1 dummy_scope %2 : (!fir.ref<!fir.char<1,?>>,
+            //  index,
+            //                            !fir.dscope) -> (!fir.boxchar<1>,
+            //                            !fir.ref<!fir.char<1,?>>)
+
+            // In the case above,
+            // v.addr is
+            //  %4:2 = hlfir.declare %3#0 typeparams %3#1 dummy_scope %2 :
+            //  (!fir.ref<!fir.char<1,?>>, index,
+            //                            !fir.dscope) -> (!fir.boxchar<1>,
+            //                            !fir.ref<!fir.char<1,?>>)
+            // v.len is
+            //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
+            //  (!fir.ref<!fir.char<1,?>>, index)
+
+            // Mapping this to the target will create a use of %arg0 on the
+            // target. Since omp.target is IsolatedFromAbove, this will have to
+            // be mapped. Presently, OpenMP lowering of target barfs when it has
+            // to map a value that doesnt have a defining op. This can be fixed.
+            // Or we ensure that v.len = fir.unboxchar %4#0. Now if %4:2 is
+            // mapped to the target, there wont be any use of the block argument
+            // %arg0 on the target.
             mlir::Value len = v.getLen();
             if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>()) {
               mlir::Value base = declareOp.getBase();
