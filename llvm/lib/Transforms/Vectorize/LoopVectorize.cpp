@@ -7551,9 +7551,6 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-      // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
-        ProfitableVFs.push_back(CurrentFactor);
 
       // Make sure that the VF doesn't use more than the number of available
       // registers
@@ -7568,6 +7565,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
         BestFactor = CurrentFactor;
+
+      // If profitable add it to ProfitableVF list.
+      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
+        ProfitableVFs.push_back(CurrentFactor);
     }
   }
 
