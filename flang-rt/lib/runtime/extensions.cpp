@@ -284,7 +284,7 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char* hn, int length) {
 
 #else
 
-  if (gethostname(hn, sizeof(length)) < 0) {
+  if (gethostname(hn, length) < 0) {
     status = errno;
   }
 
@@ -293,8 +293,8 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char* hn, int length) {
   if (status == 0) {
     // Find zero terminator and fill the string from the
     // zero terminator to the end with spaces
-    const char* str_end = hn + length;
-    const char* str_zero = std::find(hn, str_end, '\0');
+    char* str_end = hn + length;
+    char* str_zero = std::find(hn, str_end, '\0');
     std::fill(str_zero, str_end, ' ');
   }
 
