@@ -103,8 +103,10 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // ToDo: Remove this option after AMDGPU backend supports ISA-level linking.
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
-  if (IsThinLTO)
+  if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
+    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+  }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
     LldArgs.push_back(
