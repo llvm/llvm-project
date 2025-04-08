@@ -683,69 +683,39 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY90A-LABEL: test_mfma_f32_16x16x1f32:
 ; GREEDY90A:       ; %bb.0: ; %bb
 ; GREEDY90A-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GREEDY90A-NEXT:    v_mov_b32_e32 v16, 1.0
-; GREEDY90A-NEXT:    v_mov_b32_e32 v17, 2.0
+; GREEDY90A-NEXT:    v_mov_b32_e32 v0, 1.0
+; GREEDY90A-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GREEDY90A-NEXT:    s_waitcnt lgkmcnt(0)
 ; GREEDY90A-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GREEDY90A-NEXT:    s_waitcnt lgkmcnt(0)
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a31, s15
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a30, s14
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a29, s13
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a28, s12
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a27, s11
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a26, s10
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a25, s9
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a24, s8
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a23, s7
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a22, s6
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a21, s5
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a20, s4
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a19, s3
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a18, s2
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a17, s1
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a16, s0
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a33, s15
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a32, s14
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a31, s13
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a30, s12
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a29, s11
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a28, s10
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a27, s9
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a26, s8
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a25, s7
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a24, s6
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a23, s5
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a22, s4
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a21, s3
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a20, s2
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a19, s1
+; GREEDY90A-NEXT:    v_accvgpr_write_b32 a18, s0
 ; GREEDY90A-NEXT:    s_nop 1
-; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[16:31], v16, v17, a[16:31]
-; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v16, v17, a[16:31]
+; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[18:33], v0, v1, a[18:33]
+; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[2:17], v0, v1, a[18:33]
 ; GREEDY90A-NEXT:    s_nop 7
 ; GREEDY90A-NEXT:    s_nop 1
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v0, a16
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v1, a17
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v15, a13
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v14, a12
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v13, a11
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v12, a10
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v11, a9
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v10, a8
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v9, a7
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v8, a6
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v7, a5
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v6, a4
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v5, a3
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v4, a2
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v3, a1
-; GREEDY90A-NEXT:    v_accvgpr_read_b32 v2, a0
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a0, v0
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a1, v1
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a2, v2
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a3, v3
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a4, v4
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a5, v5
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a6, v6
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a7, v7
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a8, v8
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a9, v9
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a10, v10
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a11, v11
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a12, v12
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a13, v13
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a14, v14
-; GREEDY90A-NEXT:    v_accvgpr_write_b32 a15, v15
+; GREEDY90A-NEXT:    v_accvgpr_mov_b32 a1, a19
+; GREEDY90A-NEXT:    v_accvgpr_mov_b32 a0, a18
+; GREEDY90A-NEXT:    s_nop 1
+; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v0, v1, a[0:15]
 ; GREEDY90A-NEXT:    v_mov_b32_e32 v0, 0
-; GREEDY90A-NEXT:    s_nop 0
-; GREEDY90A-NEXT:    v_mfma_f32_16x16x1f32 a[0:15], v16, v17, a[0:15]
 ; GREEDY90A-NEXT:    s_nop 7
-; GREEDY90A-NEXT:    s_nop 2
+; GREEDY90A-NEXT:    s_nop 1
 ; GREEDY90A-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GREEDY90A-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
 ; GREEDY90A-NEXT:    global_store_dwordx4 v0, a[4:7], s[16:17] offset:16
@@ -755,69 +725,39 @@ define amdgpu_kernel void @test_mfma_f32_16x16x1f32(ptr addrspace(1) %arg) #0 {
 ; GREEDY942-LABEL: test_mfma_f32_16x16x1f32:
 ; GREEDY942:       ; %bb.0: ; %bb
 ; GREEDY942-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
-; GREEDY942-NEXT:    v_mov_b32_e32 v16, 1.0
-; GREEDY942-NEXT:    v_mov_b32_e32 v17, 2.0
+; GREEDY942-NEXT:    v_mov_b32_e32 v0, 1.0
+; GREEDY942-NEXT:    v_mov_b32_e32 v1, 2.0
 ; GREEDY942-NEXT:    s_waitcnt lgkmcnt(0)
 ; GREEDY942-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
 ; GREEDY942-NEXT:    s_waitcnt lgkmcnt(0)
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a31, s15
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a30, s14
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a29, s13
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a28, s12
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a27, s11
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a26, s10
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a25, s9
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a24, s8
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a23, s7
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a22, s6
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a21, s5
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a20, s4
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a19, s3
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a18, s2
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a17, s1
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a16, s0
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a33, s15
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a32, s14
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a31, s13
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a30, s12
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a29, s11
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a28, s10
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a27, s9
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a26, s8
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a25, s7
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a24, s6
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a23, s5
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a22, s4
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a21, s3
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a20, s2
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a19, s1
+; GREEDY942-NEXT:    v_accvgpr_write_b32 a18, s0
 ; GREEDY942-NEXT:    s_nop 1
-; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[16:31], v16, v17, a[16:31]
-; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v16, v17, a[16:31]
+; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[18:33], v0, v1, a[18:33]
+; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[2:17], v0, v1, a[18:33]
 ; GREEDY942-NEXT:    s_nop 7
 ; GREEDY942-NEXT:    s_nop 0
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v0, a16
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v1, a17
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v15, a13
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v14, a12
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v13, a11
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v12, a10
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v11, a9
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v10, a8
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v9, a7
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v8, a6
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v7, a5
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v6, a4
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v5, a3
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v4, a2
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v3, a1
-; GREEDY942-NEXT:    v_accvgpr_read_b32 v2, a0
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a0, v0
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a1, v1
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a2, v2
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a3, v3
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a4, v4
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a5, v5
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a6, v6
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a7, v7
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a8, v8
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a9, v9
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a10, v10
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a11, v11
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a12, v12
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a13, v13
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a14, v14
-; GREEDY942-NEXT:    v_accvgpr_write_b32 a15, v15
+; GREEDY942-NEXT:    v_accvgpr_mov_b32 a1, a19
+; GREEDY942-NEXT:    v_accvgpr_mov_b32 a0, a18
+; GREEDY942-NEXT:    s_nop 1
+; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v0, v1, a[0:15]
 ; GREEDY942-NEXT:    v_mov_b32_e32 v0, 0
-; GREEDY942-NEXT:    s_nop 0
-; GREEDY942-NEXT:    v_mfma_f32_16x16x1_4b_f32 a[0:15], v16, v17, a[0:15]
 ; GREEDY942-NEXT:    s_nop 7
-; GREEDY942-NEXT:    s_nop 1
+; GREEDY942-NEXT:    s_nop 0
 ; GREEDY942-NEXT:    global_store_dwordx4 v0, a[12:15], s[16:17] offset:48
 ; GREEDY942-NEXT:    global_store_dwordx4 v0, a[8:11], s[16:17] offset:32
 ; GREEDY942-NEXT:    global_store_dwordx4 v0, a[4:7], s[16:17] offset:16
@@ -1058,11 +998,13 @@ define amdgpu_kernel void @test_mfma_f32_4x4x1f32(ptr addrspace(1) %arg) #0 {
 ; FAST90A-NEXT:    v_accvgpr_write_b32 a2, s6
 ; FAST90A-NEXT:    v_accvgpr_write_b32 a3, s7
 ; FAST90A-NEXT:    s_nop 1
-; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v1, v2, a[0:3]
-; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[4:7], v1, v2, a[0:3]
-; FAST90A-NEXT:    s_nop 4
-; FAST90A-NEXT:    v_accvgpr_mov_b32 a2, a4
+; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[8:11], v1, v2, a[0:3]
+; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[4:7], v1, v2, a[8:11]
+; FAST90A-NEXT:    s_nop 3
+; FAST90A-NEXT:    v_accvgpr_mov_b32 a1, a9
+; FAST90A-NEXT:    v_accvgpr_mov_b32 a0, a8
 ; FAST90A-NEXT:    v_accvgpr_mov_b32 a3, a5
+; FAST90A-NEXT:    v_accvgpr_mov_b32 a2, a4
 ; FAST90A-NEXT:    s_nop 1
 ; FAST90A-NEXT:    v_mfma_f32_4x4x1f32 a[0:3], v1, v2, a[0:3]
 ; FAST90A-NEXT:    s_nop 4
