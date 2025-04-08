@@ -3,6 +3,7 @@
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -xc++ -fmodules -fmodule-name=foo -fmodule-map-file=%t/foo.cppmap -emit-module %t/foo.cppmap -o %t/foo.pcm
 // RUN: %clang_cc1 -xc++ -fmodules -dump-deserialized-declaration-ranges=%t/decls -fmodule-file=%t/foo.pcm %t/foo.cpp -o %t/foo.o
+// RUN: cat %t/decls
 // RUN: cat %t/decls | FileCheck -check-prefix=RANGE %s
 // RANGE:{
 // RANGE-NEXT:  "required_ranges": [
@@ -16,7 +17,7 @@
 // RANGE-NEXT:          },
 // RANGE-NEXT:          "to": {
 // RANGE-NEXT:            "line": 9,
-// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:            "column": 2
 // RANGE-NEXT:          }
 // RANGE-NEXT:        },
 // RANGE-NEXT:        {
@@ -26,7 +27,7 @@
 // RANGE-NEXT:          },
 // RANGE-NEXT:          "to": {
 // RANGE-NEXT:            "line": 11,
-// RANGE-NEXT:            "column": 12
+// RANGE-NEXT:            "column": 24
 // RANGE-NEXT:          }
 // RANGE-NEXT:        },
 // RANGE-NEXT:        {
@@ -36,7 +37,7 @@
 // RANGE-NEXT:          },
 // RANGE-NEXT:          "to": {
 // RANGE-NEXT:            "line": 15,
-// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:            "column": 2
 // RANGE-NEXT:          }
 // RANGE-NEXT:        }
 // RANGE-NEXT:      ]

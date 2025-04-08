@@ -130,8 +130,12 @@ public:
       if (!R.isValid())
         continue;
 
+      SourceLocation End = R.getEnd();
+      if (R.isTokenRange())
+        End = Lexer::getLocForEndOfToken(End, 0, SM, D->getLangOpts());
+
       auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
-      if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
+      if (F != SM.getFileEntryForID(SM.getFileID(End))) {
         // Such cases are rare and difficult to handle.
         continue;
       }
@@ -140,7 +144,7 @@ public:
       if (!Data.Ref)
         Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
       Data.FromTo.push_back({Position::GetSpelling(SM, R.getBegin()),
-                             Position::GetSpelling(SM, R.getEnd())});
+                             Position::GetSpelling(SM, End)});
     }
 
     // To simplify output, merge consecutive and intersecting ranges.
