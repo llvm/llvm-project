@@ -73,7 +73,7 @@ define void @test_extractvalue([2 x ptr] %Q.coerce) {
 ; Same as test_extractvalue with an escape of %P
 define void @test_extractvalue_escape([2 x ptr] %Q.coerce) {
   ; CHECK-LABEL: Function: test_extractvalue_escape:
-  ; CHECK: MayAlias:    i8* %P, i8* %Q
+  ; CHECK: NoAlias:    i8* %P, i8* %Q
   %P = alloca i8
   call void @escape(ptr %P)
   %Q = extractvalue [2 x ptr] %Q.coerce, 1
