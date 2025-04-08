@@ -58,5 +58,4 @@ add_llvm_external_project(tapi)
 # libclang may require clang-tidy in clang-tools-extra.
 add_clang_subdirectory(libclang)
 
-add_clang_subdirectory(amdgpu-arch)
-add_clang_subdirectory(nvptx-arch)
+add_clang_subdirectory(offload-arch)
