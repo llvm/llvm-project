@@ -222,6 +222,17 @@ public:
     // TODO: Add symbol table support
   }
 
+  /// Construct an address with the natural alignment of T. If a pointer to T
+  /// is expected to be signed, the pointer passed to this function must have
+  /// been signed, and the returned Address will have the pointer authentication
+  /// information needed to authenticate the signed pointer.
+  Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
+                                       CharUnits alignment) {
+    if (alignment.isZero())
+      alignment = cgm.getNaturalTypeAlignment(t);
+    return Address(ptr, convertTypeForMem(t), alignment);
+  }
+
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -468,6 +479,18 @@ public:
   /// FIXME: document this function better.
   LValue emitLValue(const clang::Expr *e);
 
+  /// Given an expression with a pointer type, emit the value and compute our
+  /// best estimate of the alignment of the pointee.
+  ///
+  /// One reasonable way to use this information is when there's a language
+  /// guarantee that the pointer must be aligned to some stricter value, and
+  /// we're simply trying to ensure that sufficiently obvious uses of under-
+  /// aligned objects don't get miscompiled; for example, a placement new
+  /// into the address of a local variable.  In such a case, it's quite
+  /// reasonable to just ignore the returned alignment when it isn't from an
+  /// explicit source.
+  Address emitPointerWithAlignment(const clang::Expr *expr);
+
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
   /// Emit a conversion from the specified type to the specified destination
@@ -509,6 +532,36 @@ public:
 public:
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name, bool insertIntoFnEntryBlock);
+
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult
+  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
+  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
+  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
+  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
+  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
+  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
+
+  void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
+  void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 };
 
 } // namespace clang::CIRGen
