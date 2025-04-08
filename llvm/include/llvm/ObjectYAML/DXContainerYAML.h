@@ -76,9 +76,9 @@ struct ShaderHash {
 #define ROOT_ELEMENT_FLAG(Num, Val) bool Val = false;
 
 struct RootConstantsYaml {
-  uint32_t Register;
-  uint32_t Space;
-  uint32_t NumOfConstants;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
 };
 
 struct RootParameterYamlDesc {

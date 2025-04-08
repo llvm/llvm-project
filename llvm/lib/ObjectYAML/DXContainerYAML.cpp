@@ -56,9 +56,9 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       if (!Constants)
         llvm::errs() << "Error: " << Constants.takeError() << "\n";
 
-      NewP.Constants.NumOfConstants = Constants->NumOfConstants;
-      NewP.Constants.Register = Constants->Register;
-      NewP.Constants.Space = Constants->Space;
+      NewP.Constants.Num32BitValues = Constants->Num32BitValues;
+      NewP.Constants.ShaderRegister = Constants->ShaderRegister;
+      NewP.Constants.RegisterSpace = Constants->RegisterSpace;
     }
     Parameters.push_back(NewP);
   }
@@ -247,9 +247,9 @@ void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
 
 void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
     IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
-  IO.mapRequired("Num32BitValues", C.NumOfConstants);
-  IO.mapRequired("RegisterSpace", C.Space);
-  IO.mapRequired("ShaderRegister", C.Register);
+  IO.mapRequired("Num32BitValues", C.Num32BitValues);
+  IO.mapRequired("RegisterSpace", C.RegisterSpace);
+  IO.mapRequired("ShaderRegister", C.ShaderRegister);
 }
 
 void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(

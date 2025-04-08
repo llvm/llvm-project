@@ -906,8 +906,8 @@ TEST(RootSignature, ParseRootConstant) {
 
     ASSERT_THAT_ERROR(Constants.takeError(), Succeeded());
 
-    ASSERT_EQ(Constants->Register, 15u);
-    ASSERT_EQ(Constants->Space, 14u);
-    ASSERT_EQ(Constants->NumOfConstants, 16u);
+    ASSERT_EQ(Constants->ShaderRegister, 15u);
+    ASSERT_EQ(Constants->RegisterSpace, 14u);
+    ASSERT_EQ(Constants->Num32BitValues, 16u);
   }
 }

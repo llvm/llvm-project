@@ -560,15 +560,17 @@ struct ProgramSignatureElement {
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
+// following dx12 naming
+// https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ns-d3d12-d3d12_root_constants
 struct RootConstants {
-  uint32_t Register;
-  uint32_t Space;
-  uint32_t NumOfConstants;
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
 
   void swapBytes() {
-    sys::swapByteOrder(Register);
-    sys::swapByteOrder(Space);
-    sys::swapByteOrder(NumOfConstants);
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
   }
 };
 

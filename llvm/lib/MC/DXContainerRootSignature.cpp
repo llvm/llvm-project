@@ -30,10 +30,10 @@ static void rewriteOffsetToCurrentByte(raw_svector_ostream &Stream,
 }
 
 size_t RootSignatureDesc::getSize() const {
-  size_t Size = sizeof(dxbc::RootSignatureHeader);
+  size_t Size = sizeof(dxbc::RootSignatureHeader) +
+                Parameters.size() * sizeof(dxbc::RootParameterHeader);
 
   for (const auto &P : Parameters) {
-    Size += sizeof(P.Header);
     switch (P.Header.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit:
       Size += sizeof(dxbc::RootConstants);
@@ -47,15 +47,17 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   SmallString<256> Storage;
   raw_svector_ostream BOS(Storage);
   BOS.reserveExtraSpace(getSize());
+
   const uint32_t NumParameters = Parameters.size();
-  const uint32_t Zero = 0u;
+  const uint32_t StaticSamplerOffset = 0u;
+  const uint32_t NumStaticSamplers = 0u;
 
   support::endian::write(BOS, Header.Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, (uint32_t)sizeof(dxbc::RootSignatureHeader),
                          llvm::endianness::little);
-  support::endian::write(BOS, Zero, llvm::endianness::little);
-  support::endian::write(BOS, Zero, llvm::endianness::little);
+  support::endian::write(BOS, StaticSamplerOffset, llvm::endianness::little);
+  support::endian::write(BOS, NumStaticSamplers, llvm::endianness::little);
   support::endian::write(BOS, Header.Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
@@ -75,14 +77,15 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
 
     switch (P.Header.ParameterType) {
     case dxbc::RootParameterType::Constants32Bit:
-      support::endian::write(BOS, P.Constants.Register,
+      support::endian::write(BOS, P.Constants.ShaderRegister,
                              llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.Space, llvm::endianness::little);
-      support::endian::write(BOS, P.Constants.NumOfConstants,
+      support::endian::write(BOS, P.Constants.RegisterSpace,
+                             llvm::endianness::little);
+      support::endian::write(BOS, P.Constants.Num32BitValues,
                              llvm::endianness::little);
       break;
     }
   }
-
+  assert(Storage.size() == getSize());
   OS.write(Storage.data(), Storage.size());
 }
