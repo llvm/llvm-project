@@ -159,8 +159,9 @@ public:
 
   mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
     if (e->getBase()->getType()->isVectorType()) {
-      assert(!cir::MissingFeatures::scalableVectors() &&
-             "NYI: index into scalable vector");
+      assert(!cir::MissingFeatures::scalableVectors());
+      cgf.getCIRGenModule().errorNYI("VisitArraySubscriptExpr: VectorType");
+      return {};
     }
     // Just load the lvalue formed by the subscript expression.
     return emitLoadOfLValue(e);

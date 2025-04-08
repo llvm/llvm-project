@@ -31,15 +31,21 @@ int f[5] = {1, 2};
 
 void func() {
   int arr[10];
-  int e = arr[1];
+  int e = arr[0];
+  int e2 = arr[1];
 }
 // CHECK: define void @func()
 // CHECK-NEXT: %[[ARR_ALLOCA:.*]] = alloca [10 x i32], i64 1, align 16
 // CHECK-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
+// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
+// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
 // CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
 // CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
-// CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
+// CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT_2]], align 4
 
 void func2() {
   int arr[2] = {5};
