@@ -3,12 +3,12 @@
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {
+; CHECK-NEXT: Live-in ir<[[VF:.+]]> = VF
 ; CHECK-NEXT: Live-in ir<[[VFxUF:.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<[[VTC:%.+]]> = vector-trip-count
-; CHECK-NEXT: vp<[[TC:%.+]]> = original trip-count
+; CHECK-NEXT: ir<%0> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT:   EMIT vp<[[TC]]> = EXPAND SCEV ((-1 * (ptrtoint ptr %start to i64)) + (ptrtoint ptr %end to i64))
 ; CHECK-NEXT: Successor(s): ir-bb<scalar.ph>, ir-bb<vector.ph>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<vector.ph>:
@@ -19,8 +19,8 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
 ; CHECK-NEXT:   vector.body:
-; CHECK-NEXT:     SCALAR-PHI vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = phi ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
+; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, ir<2>
 ; CHECK-NEXT:     EMIT vp<[[PTR:%.+]]> = ptradd ir<%start>, vp<[[STEPS]]>
 ; CHECK-NEXT:     vp<[[WIDE_PTR:%.+]]> = vector-pointer vp<[[PTR]]>
 ; CHECK-NEXT:     WIDEN ir<%l> = load vp<[[WIDE_PTR]]>
@@ -83,10 +83,10 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, ir<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): ir-bb<middle.block>
+; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
-; CHECK-NEXT: ir-bb<middle.block>:
-; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq vp<[[TC]]>, ir<[[VTC]]>
+; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   EMIT vp<[[MIDDLE_CMP:%.+]]> = icmp eq ir<%0>, ir<[[VTC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[MIDDLE_CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:

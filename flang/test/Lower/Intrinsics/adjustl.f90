@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
 
-! CHECK-LABLE: adjustl_test
+! CHECK-LABEL: adjustl_test
 subroutine adjustl_test
     character(len=12) :: adjust_str = '  0123456789'
   ! CHECK: %[[strBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>

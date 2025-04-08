@@ -3,7 +3,7 @@
 ; Check that BasicAA falls back to MayAlias (instead of PartialAlias) when none
 ; of its little tricks are applicable.
 
-; CHECK: MayAlias: float* %arrayidxA, float* %arrayidxB
+; CHECK: NoAlias: float* %arrayidxA, float* %arrayidxB
 
 define void @fallback_mayalias(ptr noalias nocapture %C, i64 %i, i64 %j) local_unnamed_addr {
 entry:

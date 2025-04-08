@@ -85,15 +85,16 @@ class MapsForPrivatizedSymbolsPass
         loc, varPtr.getType(), varPtr,
         TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
                           .getElementType()),
-        /*varPtrPtr=*/Value{},
-        /*members=*/SmallVector<Value>{},
-        /*member_index=*/mlir::ArrayAttr{},
-        /*bounds=*/ValueRange{},
         builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
                                mapTypeTo),
         builder.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
-        StringAttr(), builder.getBoolAttr(false));
+        /*varPtrPtr=*/Value{},
+        /*members=*/SmallVector<Value>{},
+        /*member_index=*/mlir::ArrayAttr{},
+        /*bounds=*/ValueRange{},
+        /*mapperId=*/mlir::FlatSymbolRefAttr(), /*name=*/StringAttr(),
+        builder.getBoolAttr(false));
   }
   void addMapInfoOp(omp::TargetOp targetOp, omp::MapInfoOp mapInfoOp) {
     auto argIface = llvm::cast<omp::BlockArgOpenMPOpInterface>(*targetOp);

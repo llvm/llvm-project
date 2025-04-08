@@ -99,9 +99,9 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
 // only support memrefs with identity maps.
 bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
     MemRefType type) const {
-  if (!typeConverter->convertType(type.getElementType()))
+  if (!type.getLayout().isIdentity())
     return false;
-  return type.getLayout().isIdentity();
+  return static_cast<bool>(typeConverter->convertType(type));
 }
 
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
@@ -218,7 +218,7 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
     ArrayRef<Value> sizes, ArrayRef<Value> strides,
     ConversionPatternRewriter &rewriter) const {
   auto structType = typeConverter->convertType(memRefType);
-  auto memRefDescriptor = MemRefDescriptor::undef(rewriter, loc, structType);
+  auto memRefDescriptor = MemRefDescriptor::poison(rewriter, loc, structType);
 
   // Field 1: Allocated pointer, used for malloc/free.
   memRefDescriptor.setAllocatedPtr(rewriter, loc, allocatedPtr);
@@ -319,7 +319,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     if (!descriptorType)
       return failure();
     auto updatedDesc =
-        UnrankedMemRefDescriptor::undef(builder, loc, descriptorType);
+        UnrankedMemRefDescriptor::poison(builder, loc, descriptorType);
     Value rank = desc.rank(builder, loc);
     updatedDesc.setRank(builder, loc, rank);
     updatedDesc.setMemRefDescPtr(builder, loc, memory);

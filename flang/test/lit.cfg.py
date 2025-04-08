@@ -163,28 +163,8 @@ else:
         ToolSubst("%not_todo_abort_cmd", command=FindTool("not"), unresolved="fatal")
     )
 
-# Define some variables to help us test that the flang runtime doesn't depend on
-# the C++ runtime libraries. For this we need a C compiler. If for some reason
-# we don't have one, we can just disable the test.
-if config.cc:
-    libruntime = os.path.join(config.flang_lib_dir, "libFortranRuntime.a")
-    libdecimal = os.path.join(config.flang_lib_dir, "libFortranDecimal.a")
-    include = os.path.join(config.flang_src_dir, "include")
-
-    if (
-        os.path.isfile(libruntime)
-        and os.path.isfile(libdecimal)
-        and os.path.isdir(include)
-    ):
-        config.available_features.add("c-compiler")
-        tools.append(
-            ToolSubst(
-                "%cc", command=config.cc, extra_args=isysroot_flag, unresolved="fatal"
-            )
-        )
-        tools.append(ToolSubst("%libruntime", command=libruntime, unresolved="fatal"))
-        tools.append(ToolSubst("%libdecimal", command=libdecimal, unresolved="fatal"))
-        tools.append(ToolSubst("%include", command=include, unresolved="fatal"))
+if config.flang_include_runtime:
+    config.available_features.add("flang-rt")
 
 # Add all the tools and their substitutions (if applicable). Use the search paths provided for
 # finding the tools.

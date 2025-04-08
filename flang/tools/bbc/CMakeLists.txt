@@ -29,11 +29,6 @@ target_link_libraries(bbc PRIVATE
   flangFrontend
   flangPasses
   FlangOpenMPTransforms
-  FortranCommon
-  FortranParser
-  FortranEvaluate
-  FortranSemantics
-  FortranLower
 )
 
 mlir_target_link_libraries(bbc PRIVATE
@@ -41,4 +36,9 @@ mlir_target_link_libraries(bbc PRIVATE
   ${extension_libs}
   MLIRAffineToStandard
   MLIRSCFToControlFlow
+  FortranSupport
+  FortranParser
+  FortranEvaluate
+  FortranSemantics
+  FortranLower
 )

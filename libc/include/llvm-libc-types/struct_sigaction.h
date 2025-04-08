@@ -25,6 +25,4 @@ struct sigaction {
 #endif
 };
 
-typedef void (*__sighandler_t)(int);
-
 #endif // LLVM_LIBC_TYPES_STRUCT_SIGACTION_H

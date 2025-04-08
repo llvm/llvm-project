@@ -1699,9 +1699,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
       if (IsExported) {
         if (IsJumpTableCanonical)
-          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDefs().emplace(F->getName());
         else
-          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDecls().emplace(F->getName());
       }
 
       if (!IsJumpTableCanonical) {
@@ -1847,6 +1847,9 @@ LowerTypeTestsModule::LowerTypeTestsModule(
     auto &FAM =
         AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
+      // Skip declarations since we should not query the TTI for them.
+      if (F.isDeclaration())
+        continue;
       auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
       if (TTI.hasArmWideBranch(false))
         CanUseArmJumpTable = true;
@@ -1863,8 +1866,7 @@ LowerTypeTestsModule::LowerTypeTestsModule(
   if (GlobalAnnotation && GlobalAnnotation->hasInitializer()) {
     const ConstantArray *CA =
         cast<ConstantArray>(GlobalAnnotation->getInitializer());
-    for (Value *Op : CA->operands())
-      FunctionAnnotations.insert(Op);
+    FunctionAnnotations.insert_range(CA->operands());
   }
 }
 
@@ -2204,9 +2206,9 @@ bool LowerTypeTestsModule::lower() {
     bool IsExported = false;
     if (Function *F = dyn_cast<Function>(&GO)) {
       IsJumpTableCanonical = isJumpTableCanonical(F);
-      if (ExportedFunctions.count(F->getName())) {
-        IsJumpTableCanonical |=
-            ExportedFunctions[F->getName()].Linkage == CFL_Definition;
+      if (auto It = ExportedFunctions.find(F->getName());
+          It != ExportedFunctions.end()) {
+        IsJumpTableCanonical |= It->second.Linkage == CFL_Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
@@ -2237,7 +2239,7 @@ bool LowerTypeTestsModule::lower() {
     auto Ins = TypeIdUsers.insert({TypeId, {}});
     if (Ins.second) {
       // Add the type identifier to the equivalence class.
-      GlobalClassesTy::iterator GCI = GlobalClasses.insert(TypeId);
+      auto &GCI = GlobalClasses.insert(TypeId);
       GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
 
       // Add the referenced globals to the type identifier's equivalence class.
@@ -2337,43 +2339,23 @@ bool LowerTypeTestsModule::lower() {
   if (GlobalClasses.empty())
     return false;
 
-  // Build a list of disjoint sets ordered by their maximum global index for
-  // determinism.
-  std::vector<std::pair<GlobalClassesTy::iterator, unsigned>> Sets;
-  for (GlobalClassesTy::iterator I = GlobalClasses.begin(),
-                                 E = GlobalClasses.end();
-       I != E; ++I) {
-    if (!I->isLeader())
-      continue;
-    ++NumTypeIdDisjointSets;
-
-    unsigned MaxUniqueId = 0;
-    for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (auto *MD = dyn_cast_if_present<Metadata *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, TypeIdInfo[MD].UniqueId);
-      else if (auto *BF = dyn_cast_if_present<ICallBranchFunnel *>(*MI))
-        MaxUniqueId = std::max(MaxUniqueId, BF->UniqueId);
-    }
-    Sets.emplace_back(I, MaxUniqueId);
-  }
-  llvm::sort(Sets, llvm::less_second());
-
   // For each disjoint set we found...
-  for (const auto &S : Sets) {
+  for (const auto &C : GlobalClasses) {
+    if (!C->isLeader())
+      continue;
+
+    ++NumTypeIdDisjointSets;
     // Build the list of type identifiers in this disjoint set.
     std::vector<Metadata *> TypeIds;
     std::vector<GlobalTypeMember *> Globals;
     std::vector<ICallBranchFunnel *> ICallBranchFunnels;
-    for (GlobalClassesTy::member_iterator MI =
-             GlobalClasses.member_begin(S.first);
-         MI != GlobalClasses.member_end(); ++MI) {
-      if (isa<Metadata *>(*MI))
-        TypeIds.push_back(cast<Metadata *>(*MI));
-      else if (isa<GlobalTypeMember *>(*MI))
-        Globals.push_back(cast<GlobalTypeMember *>(*MI));
+    for (auto M : GlobalClasses.members(*C)) {
+      if (isa<Metadata *>(M))
+        TypeIds.push_back(cast<Metadata *>(M));
+      else if (isa<GlobalTypeMember *>(M))
+        Globals.push_back(cast<GlobalTypeMember *>(M));
       else
-        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(*MI));
+        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(M));
     }
 
     // Order type identifiers by unique ID for determinism. This ordering is
@@ -2404,9 +2386,9 @@ bool LowerTypeTestsModule::lower() {
             cast<MDString>(AliasMD->getOperand(0))->getString();
         StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
 
-        if (!ExportedFunctions.count(Aliasee) ||
-            ExportedFunctions[Aliasee].Linkage != CFL_Definition ||
-            !M.getNamedAlias(Aliasee))
+        if (auto It = ExportedFunctions.find(Aliasee);
+            It == ExportedFunctions.end() ||
+            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
           continue;
 
         GlobalValue::VisibilityTypes Visibility =

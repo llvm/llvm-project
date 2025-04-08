@@ -66,6 +66,8 @@ def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
                              [SDNPHasChain]>;
@@ -125,6 +127,7 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let Name = "ImmZero";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "immediate must be zero";
 }
 
 // A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
@@ -156,6 +159,11 @@ class SImmAsmOperand<int width, string suffix = "">
 
 class UImmAsmOperand<int width, string suffix = "">
     : ImmAsmOperand<"U", width, suffix> {
+}
+
+class BareSImmNLsb0AsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, "Lsb0"> {
+  let PredicateMethod = "isBareSimmNLsb0<" # width # ">";
 }
 
 class RISCVOp<ValueType vt = XLenVT> : Operand<vt> {
@@ -268,8 +276,8 @@ def simm12_no6 : ImmLeaf<XLenVT, [{
   return isInt<12>(Imm) && !isInt<6>(Imm) && isInt<12>(-Imm);}]>;
 
 // A 13-bit signed immediate where the least significant bit is zero.
-def simm13_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
+def bare_simm13_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<13>;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
@@ -300,7 +308,7 @@ def uimm20_auipc : UImm20OperandMaybeSym {
 
 def uimm20 : RISCVUImmOp<20>;
 
-def Simm21Lsb0JALAsmOperand : SImmAsmOperand<21, "Lsb0JAL"> {
+def Simm21Lsb0JALAsmOperand : BareSImmNLsb0AsmOperand<21> {
   let ParserMethod = "parseJALOffset";
 }
 
@@ -323,6 +331,7 @@ def BareSymbol : AsmOperandClass {
   let Name = "BareSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidBareSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseBareSymbol";
 }
 
@@ -335,6 +344,7 @@ def CallSymbol : AsmOperandClass {
   let Name = "CallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidCallSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseCallSymbol";
 }
 
@@ -347,6 +357,7 @@ def PseudoJumpSymbol : AsmOperandClass {
   let Name = "PseudoJumpSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
   let ParserMethod = "parsePseudoJumpSymbol";
 }
 
@@ -359,7 +370,8 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tprel_add specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tprel_add variant.
@@ -511,19 +523,23 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrFormats.td"
+include "RISCVInstrFormatsC.td"
+include "RISCVInstrFormatsV.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
-              (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
+              (ins GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12),
               opcodestr, "$rs1, $rs2, $imm12">,
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -741,6 +757,7 @@ def ECALL : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ecall", "">, Sched<[Write
   let imm12 = 0;
 }
 
+let isTrap = 1 in
 def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
              Sched<[]> {
   let rs1 = 0;
@@ -751,6 +768,7 @@ def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", "">,
 // This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
 // instruction (i.e., it should always trap, if your implementation has invalid
 // instruction traps).
+let isTrap = 1 in
 def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", "">,
             Sched<[]> {
   let rs1 = 0;
@@ -946,30 +964,30 @@ def : InstAlias<"sgt $rd, $rs, $rt", (SLT GPR:$rd, GPR:$rt, GPR:$rs), 0>;
 def : InstAlias<"sgtu $rd, $rs, $rt", (SLTU GPR:$rd, GPR:$rt, GPR:$rs), 0>;
 
 def : InstAlias<"beqz $rs, $offset",
-                (BEQ GPR:$rs,      X0, simm13_lsb0:$offset)>;
+                (BEQ GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bnez $rs, $offset",
-                (BNE GPR:$rs,      X0, simm13_lsb0:$offset)>;
+                (BNE GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"blez $rs, $offset",
-                (BGE      X0, GPR:$rs, simm13_lsb0:$offset)>;
+                (BGE      X0, GPR:$rs, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bgez $rs, $offset",
-                (BGE GPR:$rs,      X0, simm13_lsb0:$offset)>;
+                (BGE GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bltz $rs, $offset",
-                (BLT GPR:$rs,      X0, simm13_lsb0:$offset)>;
+                (BLT GPR:$rs,      X0, bare_simm13_lsb0:$offset)>;
 def : InstAlias<"bgtz $rs, $offset",
-                (BLT      X0, GPR:$rs, simm13_lsb0:$offset)>;
+                (BLT      X0, GPR:$rs, bare_simm13_lsb0:$offset)>;
 
 // Always output the canonical mnemonic for the pseudo branch instructions.
 // The GNU tools emit the canonical mnemonic for the branch pseudo instructions
 // as well (e.g. "bgt" will be recognised by the assembler but never printed by
 // objdump). Match this behaviour by setting a zero weight.
 def : InstAlias<"bgt $rs, $rt, $offset",
-                (BLT  GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
+                (BLT  GPR:$rt, GPR:$rs, bare_simm13_lsb0:$offset), 0>;
 def : InstAlias<"ble $rs, $rt, $offset",
-                (BGE  GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
+                (BGE  GPR:$rt, GPR:$rs, bare_simm13_lsb0:$offset), 0>;
 def : InstAlias<"bgtu $rs, $rt, $offset",
-                (BLTU GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
+                (BLTU GPR:$rt, GPR:$rs, bare_simm13_lsb0:$offset), 0>;
 def : InstAlias<"bleu $rs, $rt, $offset",
-                (BGEU GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
+                (BGEU GPR:$rt, GPR:$rs, bare_simm13_lsb0:$offset), 0>;
 
 def : InstAlias<"j $offset",   (JAL X0, simm21_lsb0_jal:$offset)>;
 def : InstAlias<"jal $offset", (JAL X1, simm21_lsb0_jal:$offset)>;
@@ -1105,10 +1123,7 @@ def : MnemonicAlias<"move", "mv">;
 def : MnemonicAlias<"scall", "ecall">;
 def : MnemonicAlias<"sbreak", "ebreak">;
 
-// This alias was added to the spec in December 2020. Don't print it by default
-// to allow assembly we print to be compatible with versions of GNU assembler
-// that don't support this alias.
-def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF), 0>;
+def : InstAlias<"zext.b $rd, $rs", (ANDI GPR:$rd, GPR:$rs, 0xFF)>;
 
 let Predicates = [HasStdExtZicfilp] in {
 def : InstAlias<"lpad $imm20", (AUIPC X0, uimm20:$imm20)>;
@@ -1128,6 +1143,33 @@ def AnyReg : Operand<XLenVT> {
   let OperandType = "OPERAND_REGISTER";
   let ParserMatchClass = AnyRegOperand;
 }
+
+// isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
+let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
+    hasNoSchedulingInfo = 1 in {
+def Insn16 : RVInst16<(outs), (ins uimm16:$value), "", "", [], InstFormatOther> {
+  bits<16> value;
+
+  let Inst{15-0} = value;
+  let AsmString = ".insn 0x2, $value";
+}
+def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
+  bits<32> value;
+
+  let Inst{31-0} = value;
+  let AsmString = ".insn 0x4, $value";
+}
+def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
+  bits<48> value;
+  let Inst{47-0} = value;
+  let AsmString = ".insn 0x6, $value";
+}
+def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
+  bits<64> value;
+  let Inst{63-0} = value;
+  let AsmString = ".insn 0x8, $value";
+}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
 // isCodeGenOnly = 1 to hide them from the tablegened assembly parser.
 let isCodeGenOnly = 1, hasSideEffects = 1, mayLoad = 1, mayStore = 1,
@@ -1152,7 +1194,7 @@ def InsnI_Mem : DirectiveInsnI<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                "$opcode, $funct3, $rd, ${imm12}(${rs1})">;
 def InsnB : DirectiveInsnB<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs1, AnyReg:$rs2,
-                                        simm13_lsb0:$imm12),
+                                        bare_simm13_lsb0:$imm12),
                            "$opcode, $funct3, $rs1, $rs2, $imm12">;
 def InsnU : DirectiveInsnU<(outs AnyReg:$rd), (ins uimm7_opcode:$opcode,
                                                    uimm20_lui:$imm20),
@@ -1164,23 +1206,7 @@ def InsnS : DirectiveInsnS<(outs), (ins uimm7_opcode:$opcode, uimm3:$funct3,
                                         AnyReg:$rs2, AnyReg:$rs1,
                                         simm12:$imm12),
                            "$opcode, $funct3, $rs2, ${imm12}(${rs1})">;
-def Insn32 : RVInst<(outs), (ins uimm32:$value), "", "", [], InstFormatOther> {
-  bits<32> value;
-
-  let Inst{31-0} = value;
-  let AsmString = ".insn 0x4, $value";
-}
-def Insn48 : RVInst48<(outs), (ins uimm48:$value), "", "", [], InstFormatOther> {
-  bits<48> value;
-  let Inst{47-0} = value;
-  let AsmString = ".insn 0x6, $value";
-}
-def Insn64 : RVInst64<(outs), (ins uimm64:$value), "", "", [], InstFormatOther> {
-  bits<64> value;
-  let Inst{63-0} = value;
-  let AsmString = ".insn 0x8, $value";
-}
-}
+} // isCodeGenOnly, hasSideEffects, mayLoad, mayStore, hasNoSchedulingInfo
 
 // Use InstAliases to match these so that we can combine the insn and format
 // into a mnemonic to use as the key for the tablegened asm matcher table. The
@@ -1208,11 +1234,11 @@ def : InstAlias<".insn_i $opcode, $funct3, $rd, (${rs1})",
                            AnyReg:$rs1, 0)>;
 def : InstAlias<".insn_b $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
-                       AnyReg:$rs2, simm13_lsb0:$imm12)>;
+                       AnyReg:$rs2, bare_simm13_lsb0:$imm12)>;
 // Accept sb as an alias for b.
 def : InstAlias<".insn_sb $opcode, $funct3, $rs1, $rs2, $imm12",
                 (InsnB uimm7_opcode:$opcode, uimm3:$funct3, AnyReg:$rs1,
-                       AnyReg:$rs2, simm13_lsb0:$imm12)>;
+                       AnyReg:$rs2, bare_simm13_lsb0:$imm12)>;
 def : InstAlias<".insn_u $opcode, $rd, $imm20",
                 (InsnU AnyReg:$rd, uimm7_opcode:$opcode, uimm20_lui:$imm20)>;
 def : InstAlias<".insn_j $opcode, $rd, $imm20",
@@ -1284,9 +1310,9 @@ def ext : PatFrags<(ops node:$A), [(sext node:$A), (zext node:$A)]>;
 
 class binop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A, node:$B),
-              (operator node:$A, node:$B), [{
-  return N->hasOneUse();
-}]>;
+              (operator node:$A, node:$B)> {
+  let HasOneUse = 1;
+}
 
 def and_oneuse : binop_oneuse<and>;
 def mul_oneuse : binop_oneuse<mul>;
@@ -1300,9 +1326,9 @@ def mul_const_oneuse : PatFrag<(ops node:$A, node:$B),
 
 class unop_oneuse<SDPatternOperator operator>
     : PatFrag<(ops node:$A),
-              (operator node:$A), [{
-  return N->hasOneUse();
-}]>;
+              (operator node:$A)> {
+  let HasOneUse = 1;
+}
 
 def sext_oneuse   : unop_oneuse<sext>;
 def zext_oneuse   : unop_oneuse<zext>;
@@ -1558,10 +1584,10 @@ let Predicates = [HasStdExtC, OptForMinSize] in {
 // Match `riscv_brcc` and lower to the appropriate RISC-V branch instruction.
 multiclass BccPat<CondCode Cond, RVInstB Inst> {
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), GPR:$rs2, Cond, bb:$imm12),
-            (Inst GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, GPR:$rs2, bare_simm13_lsb0:$imm12)>;
   // Explicitly select 0 to X0. The register coalescer doesn't always do it.
   def : Pat<(riscv_brcc (XLenVT GPR:$rs1), 0, Cond, bb:$imm12),
-            (Inst GPR:$rs1, (XLenVT X0), simm13_lsb0:$imm12)>;
+            (Inst GPR:$rs1, (XLenVT X0), bare_simm13_lsb0:$imm12)>;
 }
 
 class BrccCompressOpt<CondCode Cond, RVInstB Inst>
@@ -1779,7 +1805,8 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
-  let ParserMethod = "parseOperandWithModifier";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call specifier";
+  let ParserMethod = "parseOperandWithSpecifier";
 }
 
 // A bare symbol with the %tlsdesc_call variant.
@@ -1822,8 +1849,8 @@ def PseudoZEXT_W : Pseudo<(outs GPR:$rd), (ins GPR:$rs), [], "zext.w", "$rd, $rs
 /// Loads
 
 class LdPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT>
-    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPR:$rs1), simm12:$imm12))),
-          (Inst GPR:$rs1, simm12:$imm12)>;
+    : Pat<(vt (LoadOp (AddrRegImm (XLenVT GPRMem:$rs1), simm12:$imm12))),
+          (Inst GPRMem:$rs1, simm12:$imm12)>;
 
 def : LdPat<sextloadi8, LB>;
 def : LdPat<extloadi8, LBU>; // Prefer unsigned due to no c.lb in Zcb.
@@ -1837,9 +1864,9 @@ def : LdPat<zextloadi16, LHU>;
 
 class StPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
             ValueType vt>
-    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPR:$rs1),
+    : Pat<(StoreOp (vt StTy:$rs2), (AddrRegImm (XLenVT GPRMem:$rs1),
                    simm12:$imm12)),
-          (Inst StTy:$rs2, GPR:$rs1, simm12:$imm12)>;
+          (Inst StTy:$rs2, GPRMem:$rs1, simm12:$imm12)>;
 
 def : StPat<truncstorei8, SB, GPR, XLenVT>;
 def : StPat<truncstorei16, SH, GPR, XLenVT>;
@@ -1949,15 +1976,19 @@ class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
   return hasAllHUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
+}
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
-    : PatFrag<(ops node:$lhs, node:$rhs),
-              (i64 (operator node:$lhs, node:$rhs)), [{
+    : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
+              [{
   return hasAllWUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
+}
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
@@ -2022,6 +2053,12 @@ def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
 def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
+
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads
 
@@ -2114,17 +2151,23 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
-
-// Compressed
-include "RISCVInstrInfoC.td"
-include "RISCVInstrInfoZc.td"
-include "RISCVInstrInfoZcmop.td"
+include "RISCVInstrInfoZvqdotq.td"
 
 // Integer
 include "RISCVInstrInfoZimop.td"
 include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZicfiss.td"
+include "RISCVInstrInfoZilsd.td"
+
+// Compressed
+include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+include "RISCVInstrInfoZclsd.td"
+
+// Short Forward Branch
+include "RISCVInstrInfoSFB.td"
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -2133,11 +2176,12 @@ include "RISCVInstrInfoZicfiss.td"
 include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
-include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
+include "RISCVInstrInfoXRivos.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

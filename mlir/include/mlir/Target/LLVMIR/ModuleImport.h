@@ -47,7 +47,8 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
+               bool preferUnregisteredIntrinsics);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -66,6 +67,9 @@ public:
 
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
+
+  /// Converts all aliases of the LLVM module to MLIR variables.
+  LogicalResult convertAliases();
 
   /// Converts the data layout of the LLVM module to an MLIR data layout
   /// specification.
@@ -215,12 +219,19 @@ public:
   /// LLVM dialect operation.
   LogicalResult convertLinkerOptionsMetadata();
 
+  /// Converts !llvm.module.flags metadata.
+  LogicalResult convertModuleFlagsMetadata();
+
   /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
   LogicalResult convertIdentMetadata();
 
   /// Converts !llvm.commandline metadata to the llvm.commandline LLVM ModuleOp
   /// attribute.
   LogicalResult convertCommandlineMetadata();
+
+  /// Converts !llvm.dependent-libraries metadata to llvm.dependent_libraries
+  /// LLVM ModuleOp attribute.
+  LogicalResult convertDependentLibrariesMetadata();
 
   /// Converts all LLVM metadata nodes that translate to attributes such as
   /// alias analysis or access group metadata, and builds a map from the
@@ -244,6 +255,13 @@ public:
   /// loop metadata `node`.
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
+
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
 
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
@@ -269,6 +287,17 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
+
+  /// Whether the importer should try to convert all intrinsics to
+  /// llvm.call_intrinsic instead of dialect supported operations.
+  bool useUnregisteredIntrinsicsOnly() const {
+    return preferUnregisteredIntrinsics;
+  }
+
 private:
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
@@ -288,6 +317,9 @@ private:
   LogicalResult convertGlobal(llvm::GlobalVariable *globalVar);
   /// Imports the magic globals "global_ctors" and "global_dtors".
   LogicalResult convertGlobalCtorsAndDtors(llvm::GlobalVariable *globalVar);
+  /// Converts an LLVM global alias variable into an MLIR LLVM dialect alias
+  /// operation if a conversion exists. Otherwise, returns failure.
+  LogicalResult convertAlias(llvm::GlobalAlias *alias);
   /// Returns personality of `func` as a FlatSymbolRefAttr.
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
@@ -335,14 +367,19 @@ private:
   FailureOr<LLVMFunctionType> convertFunctionType(llvm::CallBase *callInst);
   /// Returns the callee name, or an empty symbol if the call is not direct.
   FlatSymbolRefAttr convertCalleeName(llvm::CallBase *callInst);
-  /// Converts the parameter attributes attached to `func` and adds them to
-  /// the `funcOp`.
+  /// Converts the parameter and result attributes attached to `func` and adds
+  /// them to the `funcOp`.
   void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
                                   OpBuilder &builder);
   /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
   /// DictionaryAttr for the LLVM dialect.
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
+  /// Converts the parameter and result attributes attached to `call` and adds
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
+  void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
+                                  OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
   LogicalResult convertCallAttributes(llvm::CallInst *inst, CallOp op);
   /// Converts the attributes attached to `inst` and adds them to the `op`.
@@ -397,6 +434,10 @@ private:
   /// always requires a symbol name.
   FlatSymbolRefAttr
   getOrCreateNamelessSymbolName(llvm::GlobalVariable *globalVar);
+  /// Returns the global insertion point for the next global operation. If the
+  /// `globalInsertionOp` is set, the insertion point is placed after the
+  /// specified operation. Otherwise, it defaults to the start of the module.
+  OpBuilder::InsertionGuard setGlobalInsertionPoint();
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -454,6 +495,10 @@ private:
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
+
+  /// An option to control whether the importer should try to convert all
+  /// intrinsics to llvm.call_intrinsic instead of dialect supported operations.
+  bool preferUnregisteredIntrinsics;
 };
 
 } // namespace LLVM

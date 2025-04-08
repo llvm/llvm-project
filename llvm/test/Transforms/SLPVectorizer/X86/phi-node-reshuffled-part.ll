@@ -14,7 +14,7 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false, i1 false, i1 false, i1 false>, <4 x i1> [[TMP3]], i64 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <8 x i1> [[TMP4]], <8 x i64> zeroinitializer, <8 x i64> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.or.v8i64(<8 x i64> [[TMP5]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i64 [[TMP6]], 0
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i64 0, [[TMP6]]
 ; CHECK-NEXT:    store i64 [[OP_RDX]], ptr null, align 8
 ; CHECK-NEXT:    ret void
 ;

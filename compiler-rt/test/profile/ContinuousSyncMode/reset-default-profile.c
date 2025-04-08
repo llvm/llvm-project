@@ -4,7 +4,7 @@
 
 // Create & cd into a temporary directory.
 // RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
-// RUN: %clang -fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation=true -o %t.exe %s
+// RUN: %clang_profgen -fprofile-continuous -fcoverage-mapping -o %t.exe %s
 // RUN: env LLVM_PROFILE_FILE="incorrect-profile-name%m%c%c.profraw" %run %t.exe
 // RUN: ls -l | FileCheck %s
 

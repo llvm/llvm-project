@@ -849,7 +849,7 @@ define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm1
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; SSE-NEXT:    pandn %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    retq
@@ -858,7 +858,7 @@ define <8 x i16> @neg_scalar_broadcast_v8i16(i16 %a0, <8 x i16> %a1) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; AVX1-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;

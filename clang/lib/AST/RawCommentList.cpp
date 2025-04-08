@@ -287,13 +287,13 @@ void RawCommentList::addComment(const RawComment &RC,
 
   // If this is the first Doxygen comment, save it (because there isn't
   // anything to merge it with).
-  if (OrderedComments[CommentFile].empty()) {
-    OrderedComments[CommentFile][CommentOffset] =
-        new (Allocator) RawComment(RC);
+  auto &OC = OrderedComments[CommentFile];
+  if (OC.empty()) {
+    OC[CommentOffset] = new (Allocator) RawComment(RC);
     return;
   }
 
-  const RawComment &C1 = *OrderedComments[CommentFile].rbegin()->second;
+  const RawComment &C1 = *OC.rbegin()->second;
   const RawComment &C2 = RC;
 
   // Merge comments only if there is only whitespace between them.

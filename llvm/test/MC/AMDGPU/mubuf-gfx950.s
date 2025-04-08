@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -show-encoding %s | FileCheck -check-prefix=GFX950 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx940 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERR %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx942 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERR %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx803 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERR %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s 2>&1 | FileCheck -check-prefix=ERR %s
 
