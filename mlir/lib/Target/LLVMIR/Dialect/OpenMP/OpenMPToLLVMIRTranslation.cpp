@@ -4445,7 +4445,20 @@ createDeviceArgumentAccessor(MapInfoData &mapData, llvm::Argument &arg,
     llvm::LoadInst *loadInst = builder.CreateAlignedLoad(
         v->getType(), v,
         ompBuilder.M.getDataLayout().getPrefTypeAlign(v->getType()));
-    // Add information about alignment of objects that are mapped by reference
+    // CreateAlignedLoad function creates similar LLVM IR:
+    // %res = load ptr, ptr %input, align 8
+    // This LLVM IR does not contain information about alignment
+    // of the loaded value. We need to add !align metadata to unblock
+    // optimizer. The existence of the !align metadata on the instruction
+    // tells the optimizer that the value loaded is known to be aligned to
+    // a boundary specified by the integer value in the metadata node.
+    // Example:
+    // %res = load ptr, ptr %input, align 8, !align !align_md_node
+    //                                 ^         ^
+    //                                 |         |
+    //            alignment of %input address    |
+    //                                           |
+    //                                     alignment of %res object
     if (v->getType()->isPointerTy() && alignmentValue) {
       llvm::MDBuilder MDB(builder.getContext());
       loadInst->setMetadata(

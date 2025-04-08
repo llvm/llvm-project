@@ -248,6 +248,8 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
   return Result;
 }
 
+/// isAlignmentPreservedForAddrCast - Return true if the cast operation
+/// for specified target preserves original alignment
 static bool isAlignmentPreservedForAddrCast(const Triple &TargetTriple) {
   switch (TargetTriple.getArch()) {
   case Triple::ArchType::amdgcn:
@@ -1628,6 +1630,17 @@ void CodeExtractor::emitFunctionBody(
       LoadInst *LoadGEP =
           new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
                        "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      // If we load pointer, we can add optional !align metadata
+      // The existence of the !align metadata on the instruction tells
+      // the optimizer that the value loaded is known to be aligned to
+      // a boundary specified by the integer value in the metadata node.
+      // Example:
+      // %res = load ptr, ptr %input, align 8, !align !align_md_node
+      //                                 ^         ^
+      //                                 |         |
+      //            alignment of %input address    |
+      //                                           |
+      //                                     alignment of %res object
       if (StructArgTy->getElementType(aggIdx)->isPointerTy()) {
         unsigned AlignmentValue;
         const Triple &TargetTriple =
