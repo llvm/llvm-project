@@ -159,7 +159,7 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
-    unsigned NumExpansions;
+    UnsignedOrNone NumExpansions;
     void *Name;
   };
   struct TV {
@@ -232,7 +232,7 @@ public:
     TemplateArg.Kind = Template;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    TemplateArg.NumExpansions = 0;
+    TemplateArg.NumExpansions = std::nullopt;
   }
 
   /// Construct a template argument that is a template pack expansion.
@@ -249,15 +249,12 @@ public:
   ///
   /// \param IsDefaulted If 'true', implies that this TemplateArgument
   /// corresponds to a default template parameter
-  TemplateArgument(TemplateName Name, std::optional<unsigned> NumExpansions,
+  TemplateArgument(TemplateName Name, UnsignedOrNone NumExpansions,
                    bool IsDefaulted = false) {
     TemplateArg.Kind = TemplateExpansion;
     TemplateArg.IsDefaulted = IsDefaulted;
     TemplateArg.Name = Name.getAsVoidPointer();
-    if (NumExpansions)
-      TemplateArg.NumExpansions = *NumExpansions + 1;
-    else
-      TemplateArg.NumExpansions = 0;
+    TemplateArg.NumExpansions = NumExpansions;
   }
 
   /// Construct a template argument that is an expression.
@@ -265,7 +262,7 @@ public:
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
   /// occur in a non-dependent, canonical template argument list.
-  TemplateArgument(Expr *E, bool IsDefaulted = false) {
+  explicit TemplateArgument(Expr *E, bool IsDefaulted = false) {
     TypeOrValue.Kind = Expression;
     TypeOrValue.IsDefaulted = IsDefaulted;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
@@ -356,7 +353,7 @@ public:
 
   /// Retrieve the number of expansions that a template template argument
   /// expansion will produce, if known.
-  std::optional<unsigned> getNumTemplateExpansions() const;
+  UnsignedOrNone getNumTemplateExpansions() const;
 
   /// Retrieve the template argument as an integral value.
   // FIXME: Provide a way to read the integral data without copying the value.

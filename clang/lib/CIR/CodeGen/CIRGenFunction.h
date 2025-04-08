@@ -108,16 +108,9 @@ private:
                bool isParam = false);
 
 public:
-  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment,
-                         bool insertIntoFnEntryBlock,
-                         mlir::Value arraySize = nullptr);
-  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
-                         mlir::Location loc, clang::CharUnits alignment,
-                         mlir::OpBuilder::InsertPoint ip,
-                         mlir::Value arraySize = nullptr);
-
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+
+  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
 
 private:
   // Track current variable initialization (if there's one)
@@ -138,9 +131,6 @@ private:
     void restore() { p.currVarDecl = oldVal; }
     ~VarDeclContext() { restore(); }
   };
-
-  void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
-                              clang::CharUnits alignment);
 
 public:
   /// Use to track source locations across nested visitor traversals.
@@ -170,87 +160,11 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
-  /// Emit code to compute the specified expression which can have any type. The
-  /// result is returned as an RValue struct. If this is an aggregate
-  /// expression, the aggloc/agglocvolatile arguments indicate where the result
-  /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e);
-
   void finishFunction(SourceLocation endLoc);
-  mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
-
-  /// Build a debug stoppoint if we are emitting debug info.
-  void emitStopPoint(const Stmt *s);
-
-  // Build CIR for a statement. useCurrentScope should be true if no
-  // new scopes need be created when finding a compound statement.
-  mlir::LogicalResult
-  emitStmt(const clang::Stmt *s, bool useCurrentScope,
-           llvm::ArrayRef<const Attr *> attrs = std::nullopt);
-
-  mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
-                                     bool useCurrentScope);
-
-  mlir::LogicalResult emitForStmt(const clang::ForStmt &S);
-
-  void emitCompoundStmt(const clang::CompoundStmt &s);
-
-  void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
-
-  /// Emit code to compute the specified expression,
-  /// ignoring the result.
-  void emitIgnoredExpr(const clang::Expr *e);
-
-  mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
-
-  mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
-
-  /// Given an expression that represents a value lvalue, this method emits
-  /// the address of the lvalue, then loads the result as an rvalue,
-  /// returning the rvalue.
-  RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
-
-  /// EmitLoadOfScalar - Load a scalar value from an address, taking
-  /// care to appropriately convert from the memory representation to
-  /// the LLVM value representation.  The l-value must be a simple
-  /// l-value.
-  mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
-
-  /// Emit code to compute a designator that specifies the location
-  /// of the expression.
-  /// FIXME: document this function better.
-  LValue emitLValue(const clang::Expr *e);
-
-  void emitDecl(const clang::Decl &d);
-
-  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
-                      LValue lvalue, bool capturedByInit = false);
-
-  LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
-  LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
-  LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
   bool isTrivialInitializer(const Expr *init);
-
-  /// Emit an expression as an initializer for an object (variable, field, etc.)
-  /// at the given location.  The expression is not necessarily the normal
-  /// initializer for the object, and the address is not necessarily
-  /// its normal location.
-  ///
-  /// \param init the initializing expression
-  /// \param d the object to act as if we're initializing
-  /// \param lvalue the lvalue to initialize
-  /// \param capturedByInit true if \p d is a __block variable whose address is
-  /// potentially changed by the initializer
-  void emitExprAsInit(const clang::Expr *init, const clang::ValueDecl *d,
-                      LValue lvalue, bool capturedByInit = false);
-
-  /// Emit code and set up symbol table for a variable declaration with auto,
-  /// register, or no storage class specifier. These turn into simple stack
-  /// objects, globals depending on target.
-  void emitAutoVarDecl(const clang::VarDecl &d);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -297,30 +211,6 @@ public:
     }
   };
 
-  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
-  void emitAutoVarInit(const AutoVarEmission &emission);
-  void emitAutoVarCleanups(const AutoVarEmission &emission);
-
-  void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
-                         clang::QualType ty, bool isInit = false,
-                         bool isNontemporal = false);
-  void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
-
-  /// Given a value and its clang type, returns the value casted to its memory
-  /// representation.
-  /// Note: CIR defers most of the special casting to the final lowering passes
-  /// to conserve the high level information.
-  mlir::Value emitToMemory(mlir::Value Value, clang::QualType Ty);
-
-  /// Store the specified rvalue into the specified
-  /// lvalue, where both are guaranteed to the have the same type, and that type
-  /// is 'Ty'.
-  void emitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
-
-  /// This method handles emission of any variable declaration
-  /// inside a function, including static vars etc.
-  void emitVarDecl(const clang::VarDecl &d);
-
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
@@ -332,12 +222,17 @@ public:
     // TODO: Add symbol table support
   }
 
-  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
-                                      bool isInc, bool isPre);
+  /// Construct an address with the natural alignment of T. If a pointer to T
+  /// is expected to be signed, the pointer passed to this function must have
+  /// been signed, and the returned Address will have the pointer authentication
+  /// information needed to authenticate the signed pointer.
+  Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
+                                       CharUnits alignment) {
+    if (alignment.isZero())
+      alignment = cgm.getNaturalTypeAlignment(t);
+    return Address(ptr, convertTypeForMem(t), alignment);
+  }
 
-  /// Emit the computation of the specified expression of scalar type.
-  mlir::Value emitScalarExpr(const clang::Expr *e);
-  mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
@@ -352,12 +247,6 @@ public:
                      FunctionArgList args, clang::SourceLocation loc,
                      clang::SourceLocation startLoc);
 
-  /// Emit a conversion from the specified type to the specified destination
-  /// type, both of which are CIR scalar types.
-  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
-                                   clang::QualType dstType,
-                                   clang::SourceLocation loc);
-
   /// Represents a scope, including function bodies, compound statements, and
   /// the substatements of if/while/do/for/switch/try statements.  This class
   /// handles any automatic cleanup, along with the return value.
@@ -366,10 +255,6 @@ public:
     // TODO(CIR): This will live in the base class RunCleanupScope once that
     // class is upstreamed.
     CIRGenFunction &cgf;
-
-    // Block containing cleanup code for things initialized in this lexical
-    // context (scope).
-    mlir::Block *cleanupBlock = nullptr;
 
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
@@ -488,8 +373,195 @@ public:
 
   LexicalScope *curLexScope = nullptr;
 
+  /// ----------------------
+  /// CIR emit functions
+  /// ----------------------
+private:
+  void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
+                              clang::CharUnits alignment);
+
+public:
+  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
+                         mlir::Location loc, clang::CharUnits alignment,
+                         bool insertIntoFnEntryBlock,
+                         mlir::Value arraySize = nullptr);
+  mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
+                         mlir::Location loc, clang::CharUnits alignment,
+                         mlir::OpBuilder::InsertPoint ip,
+                         mlir::Value arraySize = nullptr);
+
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
+  /// Emit code to compute the specified expression which can have any type. The
+  /// result is returned as an RValue struct. If this is an aggregate
+  /// expression, the aggloc/agglocvolatile arguments indicate where the result
+  /// should be returned.
+  RValue emitAnyExpr(const clang::Expr *e);
+
+  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
+
+  /// Emit code and set up symbol table for a variable declaration with auto,
+  /// register, or no storage class specifier. These turn into simple stack
+  /// objects, globals depending on target.
+  void emitAutoVarDecl(const clang::VarDecl &d);
+
+  void emitAutoVarCleanups(const AutoVarEmission &emission);
+  void emitAutoVarInit(const AutoVarEmission &emission);
+
+  LValue emitBinaryOperatorLValue(const BinaryOperator *e);
+
+  mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+  mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
+
+  /// Emit an expression as an initializer for an object (variable, field, etc.)
+  /// at the given location.  The expression is not necessarily the normal
+  /// initializer for the object, and the address is not necessarily
+  /// its normal location.
+  ///
+  /// \param init the initializing expression
+  /// \param d the object to act as if we're initializing
+  /// \param lvalue the lvalue to initialize
+  /// \param capturedByInit true if \p d is a __block variable whose address is
+  /// potentially changed by the initializer
+  void emitExprAsInit(const clang::Expr *init, const clang::ValueDecl *d,
+                      LValue lvalue, bool capturedByInit = false);
+
+  mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
+
+  mlir::Value emitPromotedScalarExpr(const Expr *e, QualType promotionType);
+
+  /// Emit the computation of the specified expression of scalar type.
+  mlir::Value emitScalarExpr(const clang::Expr *e);
+
+  mlir::Value emitScalarPrePostIncDec(const UnaryOperator *e, LValue lv,
+                                      bool isInc, bool isPre);
+
+  /// Build a debug stoppoint if we are emitting debug info.
+  void emitStopPoint(const Stmt *s);
+
+  // Build CIR for a statement. useCurrentScope should be true if no
+  // new scopes need be created when finding a compound statement.
+  mlir::LogicalResult
+  emitStmt(const clang::Stmt *s, bool useCurrentScope,
+           llvm::ArrayRef<const Attr *> attrs = std::nullopt);
+
+  mlir::LogicalResult emitSimpleStmt(const clang::Stmt *s,
+                                     bool useCurrentScope);
+
+  mlir::LogicalResult emitForStmt(const clang::ForStmt &s);
+
+  void emitCompoundStmt(const clang::CompoundStmt &s);
+
+  void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
+
+  void emitDecl(const clang::Decl &d);
+  mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
+  LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+  /// Emit code to compute the specified expression,
+  /// ignoring the result.
+  void emitIgnoredExpr(const clang::Expr *e);
+
+  /// Given an expression that represents a value lvalue, this method emits
+  /// the address of the lvalue, then loads the result as an rvalue,
+  /// returning the rvalue.
+  RValue emitLoadOfLValue(LValue lv, SourceLocation loc);
+
+  /// EmitLoadOfScalar - Load a scalar value from an address, taking
+  /// care to appropriately convert from the memory representation to
+  /// the LLVM value representation.  The l-value must be a simple
+  /// l-value.
+  mlir::Value emitLoadOfScalar(LValue lvalue, SourceLocation loc);
+
+  /// Emit code to compute a designator that specifies the location
+  /// of the expression.
+  /// FIXME: document this function better.
+  LValue emitLValue(const clang::Expr *e);
+
+  /// Given an expression with a pointer type, emit the value and compute our
+  /// best estimate of the alignment of the pointee.
+  ///
+  /// One reasonable way to use this information is when there's a language
+  /// guarantee that the pointer must be aligned to some stricter value, and
+  /// we're simply trying to ensure that sufficiently obvious uses of under-
+  /// aligned objects don't get miscompiled; for example, a placement new
+  /// into the address of a local variable.  In such a case, it's quite
+  /// reasonable to just ignore the returned alignment when it isn't from an
+  /// explicit source.
+  Address emitPointerWithAlignment(const clang::Expr *expr);
+
+  mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
+
+  /// Emit a conversion from the specified type to the specified destination
+  /// type, both of which are CIR scalar types.
+  mlir::Value emitScalarConversion(mlir::Value src, clang::QualType srcType,
+                                   clang::QualType dstType,
+                                   clang::SourceLocation loc);
+
+  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
+                      LValue lvalue, bool capturedByInit = false);
+
+  void emitStoreOfScalar(mlir::Value value, Address addr, bool isVolatile,
+                         clang::QualType ty, bool isInit = false,
+                         bool isNontemporal = false);
+  void emitStoreOfScalar(mlir::Value value, LValue lvalue, bool isInit);
+
+  /// Store the specified rvalue into the specified
+  /// lvalue, where both are guaranteed to the have the same type, and that type
+  /// is 'Ty'.
+  void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
+
+  /// Given a value and its clang type, returns the value casted to its memory
+  /// representation.
+  /// Note: CIR defers most of the special casting to the final lowering passes
+  /// to conserve the high level information.
+  mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  LValue emitUnaryOpLValue(const clang::UnaryOperator *e);
+
+  /// This method handles emission of any variable declaration
+  /// inside a function, including static vars etc.
+  void emitVarDecl(const clang::VarDecl &d);
+
+  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  /// ----------------------
+  /// CIR build helpers
+  /// -----------------
+public:
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name, bool insertIntoFnEntryBlock);
+
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult
+  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
+  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
+  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
+  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
+  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
+  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
+
+  void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
+  void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 };
 
 } // namespace clang::CIRGen

@@ -319,6 +319,10 @@ public:
     return readInt();
   }
 
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
+  }
+
   /// Read a string, advancing Idx.
   std::string readString() {
     return Reader->ReadString(Record, Idx);

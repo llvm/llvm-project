@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
