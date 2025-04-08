@@ -265,7 +265,6 @@ int RTNAME(Chdir)(const char *name) {
 }
 
 int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
-
   std::int32_t status{0};
 
   if (!hn || length < 0) {
@@ -273,7 +272,6 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
   }
 
 #ifdef _WIN32
-
   DWORD dwSize{length};
 
   // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
@@ -281,13 +279,10 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
   if (!GetComputerNameExA(ComputerNameDnsHostname, hn, &dwSize)) {
     status = GetLastError();
   }
-
 #else
-
   if (gethostname(hn, length) < 0) {
     status = errno;
   }
-
 #endif
 
   if (status == 0) {
