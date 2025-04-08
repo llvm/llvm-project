@@ -98,7 +98,10 @@ public:
 };
 
 namespace NVPTX {
-enum DrvInterface { NVCL, CUDA };
+enum DrvInterface {
+  NVCL,
+  CUDA
+};
 
 // A field inside TSFlags needs a shift and a mask. The usage is
 // always as follows :
@@ -120,7 +123,10 @@ enum VecInstType {
   VecOther = 15
 };
 
-enum SimpleMove { SimpleMoveMask = 0x10, SimpleMoveShift = 4 };
+enum SimpleMove {
+  SimpleMoveMask = 0x10,
+  SimpleMoveShift = 4
+};
 enum LoadStore {
   isLoadMask = 0x20,
   isLoadShift = 5,
@@ -169,8 +175,17 @@ enum AddressSpace : AddressSpaceUnderlyingType {
 };
 
 namespace PTXLdStInstCode {
-enum FromType { Unsigned = 0, Signed, Float, Untyped };
-enum VecType { Scalar = 1, V2 = 2, V4 = 4 };
+enum FromType {
+  Unsigned = 0,
+  Signed,
+  Float,
+  Untyped
+};
+enum VecType {
+  Scalar = 1,
+  V2 = 2,
+  V4 = 4
+};
 } // namespace PTXLdStInstCode
 
 /// PTXCvtMode - Conversion code enumeration
@@ -233,7 +248,7 @@ enum PrmtMode {
   RC16,
 };
 }
-} // namespace NVPTX
+}
 void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 } // namespace llvm
 

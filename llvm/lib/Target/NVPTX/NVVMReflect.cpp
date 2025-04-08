@@ -125,9 +125,8 @@ void NVVMReflect::populateReflectMap(Module &M) {
                          "'");
     int ValInt;
     if (!to_integer(Val.trim(), ValInt, 10))
-      report_fatal_error(
-          "integer value expected in nvvm-reflect-add option '" + Option +
-          "'");
+      report_fatal_error("integer value expected in nvvm-reflect-add option '" +
+                         Option + "'");
     ReflectMap[Name] = ValInt;
   }
 }
@@ -224,7 +223,8 @@ bool NVVMReflect::runOnModule(Module &M) {
   bool Changed = true;
   Changed |= handleReflectFunction(M, NVVM_REFLECT_FUNCTION);
   Changed |= handleReflectFunction(M, NVVM_REFLECT_OCL_FUNCTION);
-  Changed |= handleReflectFunction(M, Intrinsic::getName(Intrinsic::nvvm_reflect));
+  Changed |=
+      handleReflectFunction(M, Intrinsic::getName(Intrinsic::nvvm_reflect));
   return Changed;
 }
 
