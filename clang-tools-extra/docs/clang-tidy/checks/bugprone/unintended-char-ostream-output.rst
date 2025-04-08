@@ -42,6 +42,14 @@ Or cast to char to explicitly indicate that output should be a character.
 Options
 -------
 
+.. option:: AllowedTypes
+
+  A semicolon-separated list of type names that will be treated as ``char``
+  type. It only contains the non canonical type names without the alias of type
+  names. Explicit casting to these types or use the variable defined with these
+  types will be ignored.
+  Default is `unsigned char;signed char`.
+
 .. option:: CastTypeName
 
   When `CastTypeName` is specified, the fix-it will use `CastTypeName` as the
