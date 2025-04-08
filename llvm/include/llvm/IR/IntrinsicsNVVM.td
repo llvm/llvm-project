@@ -124,6 +124,8 @@
 //   * llvm.nvvm.ldg.global.f        --> ibid.
 //   * llvm.nvvm.ldg.global.p        --> ibid.
 //   * llvm.nvvm.swap.lo.hi.b64      --> llvm.fshl(x, x, 32)
+//   * llvm.nvvm.atomic.load.inc.32  --> atomicrmw uinc_wrap
+//   * llvm.nvvm.atomic.load.dec.32  --> atomicrmw udec_wrap
 
 def llvm_global_ptr_ty  : LLVMQualPointerType<1>;  // (global)ptr
 def llvm_shared_ptr_ty  : LLVMQualPointerType<3>;  // (shared)ptr
@@ -1632,14 +1634,6 @@ let TargetPrefix = "nvvm" in {
   def int_nvvm_fns : ClangBuiltin<"__nvvm_fns">,
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
                 [IntrNoMem]>;
-
-// Atomics not available as llvm intrinsics.
-  def int_nvvm_atomic_load_inc_32 : Intrinsic<[llvm_i32_ty],
-          [llvm_anyptr_ty, llvm_i32_ty],
-                                      [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-  def int_nvvm_atomic_load_dec_32 : Intrinsic<[llvm_i32_ty],
-          [llvm_anyptr_ty, llvm_i32_ty],
-                                      [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
 
   class SCOPED_ATOMIC2_impl<LLVMType elty>
         : Intrinsic<[elty],
