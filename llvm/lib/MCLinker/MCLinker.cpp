@@ -34,8 +34,7 @@ MCInfo::MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
                std::unique_ptr<llvm::TargetMachine> &&TgtMachine,
                std::unique_ptr<llvm::MCContext> &&McContext,
                std::optional<int> SplitIdx)
-    : ModuleAndContext(std::move(MAndContext)),
-      McContext(std::move(McContext)),
+    : ModuleAndContext(std::move(MAndContext)), McContext(std::move(McContext)),
       MachineModuleInfo(std::move(MachineModuleInfo)),
       TgtMachine(std::move(TgtMachine)), SplitIdx(SplitIdx) {
   std::string BufStr;
@@ -43,8 +42,8 @@ MCInfo::MCInfo(std::unique_ptr<llvm::MachineModuleInfo> &&MachineModuleInfo,
   llvm::WriteBitcodeToFile(*ModuleAndContext, BufOS);
   ModuleBuf = WritableMemoryBuffer::getNewUninitMemBuffer(BufStr.size());
   memcpy(ModuleBuf->getBufferStart(), BufStr.c_str(), BufStr.size());
-  for(Function& F: ModuleAndContext->functions()) {
-    FnNameToFnPtr.insert( {F.getName(), &F});
+  for (Function &F : ModuleAndContext->functions()) {
+    FnNameToFnPtr.insert({F.getName(), &F});
   }
 }
 
@@ -253,15 +252,14 @@ MCLinker::linkAndPrint(StringRef ModuleName, llvm::CodeGenFileType CodegenType,
                                    inconvertibleErrorCode());
   }
 
-  std::unique_ptr<WritableMemoryBuffer> LinkedObj =
-      WritableMemoryBuffer::getNewUninitMemBuffer(Buf.size());
-  memcpy(LinkedObj->getBufferStart(), Buf.c_str(), Buf.size());
-
   const_cast<llvm::TargetLoweringObjectFile *>(
       LLVMTgtMachine.getObjFileLowering())
       ->Initialize(MachineModInfoPass->getMMI().getContext(), TgtMachine);
-
   PassMgr.run(*LinkedModule);
+
+  std::unique_ptr<WritableMemoryBuffer> LinkedObj =
+      WritableMemoryBuffer::getNewUninitMemBuffer(Buf.size());
+  memcpy(LinkedObj->getBufferStart(), Buf.c_str(), Buf.size());
 
   // Release some of the AsyncValue memory to avoid
   // wrong version of LLVMContext destructor being called due to

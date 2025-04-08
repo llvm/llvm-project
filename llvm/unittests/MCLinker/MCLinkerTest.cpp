@@ -27,6 +27,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Object/ELFObjectFile.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -86,19 +88,21 @@ protected:
     const char *FooStr = R""""(
       define void @foo() {
         call void @baz()
+        call void @boo()
         ret void
       }
 
-      define void @baz() {
+      define internal void @baz() {
         ret void
       }
 
       define void @bar() {
         call void @baz()
+        call void @boo()
         ret void
       }
 
-      define void @boo() {
+      define internal void @boo() {
         ret void
       }
     )"""";
@@ -144,33 +148,74 @@ TEST_F(MCLinkerTest, SplitModuleCompilerMCLink) {
         std::unique_ptr<MCContext> MCCtx = getMCContext(*TM);
         MachineModuleInfoWrapperPass *MMIWP = getMMIWP(*TM, *MCCtx);
 
+        // Create codegen pipeline.
         legacy::PassManager PassMgr;
         mclinker::addPassesToEmitMC(*TM, PassMgr, true, MMIWP,
                                     NumFunctionsBase);
+        // Generate code.
         if (!PassMgr.run(*SubModule))
           Failed = true;
 
+        // Put codegen result back.
         SMCInfo.McInfos.emplace_back(std::make_unique<MCInfo>(
             std::make_unique<MachineModuleInfo>(std::move(MMIWP->getMMI())),
             std::move(SubModule), std::move(TM), std::move(MCCtx), Idx));
       };
 
+  // Split the module into per-function submodules and run codegen pipeline for
+  // each submodule but stop before AsmPrint.
   splitPerFunction(std::move(M), OutputLambda, SMCInfo.SymbolLinkageTypes, 0);
 
+  // Create and run MCLinker.
   std::unique_ptr<TargetMachine> TMMCLink = getTargetMachine();
   SmallVector<SymbolAndMCInfo *> SMCInfos{&SMCInfo};
   llvm::StringMap<llvm::GlobalValue::LinkageTypes> SymbolLinkageTypes;
 
   MCLinker Linker(SMCInfos, *TMMCLink, SymbolLinkageTypes);
-
   Expected<std::unique_ptr<WritableMemoryBuffer>> LinkResult =
       Linker.linkAndPrint("SplitModuleCompilerMCLink",
-                          llvm::CodeGenFileType::AssemblyFile, true);
+                          llvm::CodeGenFileType::ObjectFile, true);
 
+  // Check MCLinker is successful.
   ASSERT_FALSE((!LinkResult));
-  llvm::dbgs() << "Size: " << (*LinkResult)->getBufferSize() << "\n";
 
-  llvm::dbgs() << StringRef((*LinkResult)->getBufferStart()) << "\n";
+  // Check the binary object output.
+  Expected<std::unique_ptr<llvm::object::Binary>> Binary =
+      llvm::object::createBinary((*LinkResult)->getMemBufferRef());
+
+  ASSERT_FALSE((!Binary));
+
+  llvm::object::ObjectFile *O =
+      dyn_cast<llvm::object::ObjectFile>((*Binary).get());
+  ASSERT_TRUE(O != nullptr);
+
+  if (!O->isELF())
+    GTEST_SKIP();
+
+  auto *ELFO = dyn_cast<llvm::object::ELFObjectFileBase>(O);
+
+  if (!ELFO)
+    GTEST_SKIP();
+
+  for (auto Sym : ELFO->symbols()) {
+    Expected<StringRef> Name = Sym.getName();
+    if (!Name)
+      GTEST_SKIP();
+
+    if (*Name == "foo") {
+      // foo is global
+      EXPECT_TRUE(Sym.getBinding() == 1);
+    } else if (*Name == "bar") {
+      // bar is global
+      EXPECT_TRUE(Sym.getBinding() == 1);
+    } else if (*Name == "baz") {
+      // baz is internal
+      EXPECT_TRUE(Sym.getBinding() == 0);
+    } else if (*Name == "boo") {
+      // boo is internal
+      EXPECT_TRUE(Sym.getBinding() == 0);
+    }
+  }
 }
 
 } // end anonymous namespace
