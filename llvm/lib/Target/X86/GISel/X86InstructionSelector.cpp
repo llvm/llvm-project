@@ -455,11 +455,17 @@ unsigned X86InstructionSelector::getPtrLoadStoreOp(const LLT &Ty,
                                                    unsigned Opc) const {
   assert((Opc == TargetOpcode::G_STORE || Opc == TargetOpcode::G_LOAD) &&
          "Only G_STORE and G_LOAD are expected for selection");
-  bool IsLoad = (Opc == TargetOpcode::G_LOAD);
-  if (Ty == LLT::pointer(0, 32) && X86::GPRRegBankID == RB.getID())
-    return IsLoad ? X86::MOV32rm : X86::MOV32mr;
-  if (Ty == LLT::pointer(0, 64) && X86::GPRRegBankID == RB.getID())
-    return IsLoad ? X86::MOV64rm : X86::MOV64mr;
+  if (Ty.isPointer() && X86::GPRRegBankID == RB.getID()) {
+    bool IsLoad = (Opc == TargetOpcode::G_LOAD);
+    switch (Ty.getSizeInBits()) {
+    default:
+      break;
+    case 32:
+      return IsLoad ? X86::MOV32rm : X86::MOV32mr;
+    case 64:
+      return IsLoad ? X86::MOV64rm : X86::MOV64mr;
+    }
+  }
   return Opc;
 }
 
