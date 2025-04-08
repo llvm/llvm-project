@@ -6214,6 +6214,33 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
   return nullptr;
 }
 
+// Rather than default to SINT when both UINT and SINT are custom, we only
+// change the opcode when UINT is not legal and SINT is. UINT is preferred when
+// both are custom since unsigned CVT instructions can lead to slightly better
+// SASS code with fewer instructions.
+unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                                        EVT ToVT) const {
+  if (isOperationLegal(Op, ToVT))
+    return Op;
+  switch (Op) {
+  case ISD::FP_TO_UINT:
+    if (isOperationLegal(ISD::FP_TO_SINT, ToVT))
+      return ISD::FP_TO_SINT;
+    break;
+  case ISD::STRICT_FP_TO_UINT:
+    if (isOperationLegal(ISD::STRICT_FP_TO_SINT, ToVT))
+      return ISD::STRICT_FP_TO_SINT;
+    break;
+  case ISD::VP_FP_TO_UINT:
+    if (isOperationLegal(ISD::VP_FP_TO_SINT, ToVT))
+      return ISD::VP_FP_TO_SINT;
+    break;
+  default:
+    break;
+  }
+  return Op;
+}
+
 // Pin NVPTXTargetObjectFile's vtables to this file.
 NVPTXTargetObjectFile::~NVPTXTargetObjectFile() = default;
 
