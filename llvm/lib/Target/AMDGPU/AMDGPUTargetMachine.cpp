@@ -489,6 +489,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeR600PacketizerPass(*PR);
   initializeR600ExpandSpecialInstrsPassPass(*PR);
   initializeR600VectorRegMergerPass(*PR);
+  initializeR600EmitClauseMarkersPass(*PR);
+  initializeR600MachineCFGStructurizerPass(*PR);
   initializeGlobalISel(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
@@ -2194,9 +2196,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
 
   addPass(SILateBranchLoweringPass());
 
-  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
-    // TODO: addPass(AMDGPUSetWavePriorityPass());
-  }
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less))
+    addPass(AMDGPUSetWavePriorityPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     // TODO: addPass(SIPreEmitPeepholePass());

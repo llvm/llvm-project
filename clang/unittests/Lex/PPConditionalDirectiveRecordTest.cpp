@@ -76,8 +76,8 @@ TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
   HeaderSearchOptions HSOpts;
   TrivialModuleLoader ModLoader;
   HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, Target.get());
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
+  PreprocessorOptions PPOpts;
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);

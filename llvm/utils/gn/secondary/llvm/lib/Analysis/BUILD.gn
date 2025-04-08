@@ -119,6 +119,7 @@ static_library("Analysis") {
     "ScopedNoAliasAA.cpp",
     "StackLifetime.cpp",
     "StackSafetyAnalysis.cpp",
+    "StaticDataProfileInfo.cpp",
     "StructuralHash.cpp",
     "SyntheticCountsUtils.cpp",
     "TFLiteUtils.cpp",

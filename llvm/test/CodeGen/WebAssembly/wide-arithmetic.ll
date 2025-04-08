@@ -130,3 +130,137 @@ define i64 @mul_i128_only_lo(i128 %a, i128 %b) {
   %d = trunc i128 %c to i64
   ret i64 %d
 }
+
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
+declare { i64, i1 } @llvm.uadd.with.overflow.i64(i64, i64)
+
+; This is a codegen test to see the effect of overflowing adds on signed
+; integers with wide-arithmetic enabled. At this time it doesn't actually
+; generate anything differently than without wide-arithmetic but this has also
+; been useful for evaluating the proposal.
+define { i64, i1 } @add_wide_s(i64 %a, i64 %b) {
+; CHECK-LABEL: add_wide_s:
+; CHECK:         .functype add_wide_s (i32, i64, i64) -> ()
+; CHECK-NEXT:    .local i64
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    local.tee 3
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.lt_s
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.lt_s
+; CHECK-NEXT:    i32.xor
+; CHECK-NEXT:    i32.store8 8
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %a, i64 %b)
+  ret { i64, i1 } %pair
+}
+
+define { i64, i1 } @add_wide_u(i64 %a, i64 %b) {
+; CHECK-LABEL: add_wide_u:
+; CHECK:         .functype add_wide_u (i32, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.add128
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.store8 8
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  ret { i64, i1 } %pair
+}
+
+; This is a model of a hypothetical `i64.add_wide3_u` instruction using LLVM
+; intrinsics. In theory this should optimize better (to the equivalent below)
+; but it doesn't currently.
+define { i64, i64 } @add_wide3_u_via_intrinsics(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: add_wide3_u_via_intrinsics:
+; CHECK:         .functype add_wide3_u_via_intrinsics (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.add128
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.add128
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.add
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    # fallthrough-return
+  %pair = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
+  %t0 = extractvalue { i64, i1 } %pair, 0
+  %carry1 = extractvalue { i64, i1 } %pair, 1
+
+  %pair2 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %t0, i64 %c)
+  %ret1 = extractvalue { i64, i1 } %pair2, 0
+  %carry2 = extractvalue { i64, i1 } %pair2, 1
+
+  %carry1_64 = zext i1 %carry1 to i64
+  %carry2_64 = zext i1 %carry2 to i64
+  %ret2 = add i64 %carry1_64, %carry2_64
+
+  %r0 = insertvalue { i64, i64 } poison, i64 %ret1, 0
+  %r1 = insertvalue { i64, i64 } %r0, i64 %ret2, 1
+  ret { i64, i64 } %r1
+}
+
+; This is a model of a hypothetical `i64.add_wide3_u` instruction using 128-bit
+; integer addition. This optimizes better than the above currently.
+define { i64, i64 } @add_wide3_u_via_i128(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: add_wide3_u_via_i128:
+; CHECK:         .functype add_wide3_u_via_i128 (i32, i64, i64, i64) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.add128
+; CHECK-NEXT:    local.get 3
+; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    i64.add128
+; CHECK-NEXT:    local.set 1
+; CHECK-NEXT:    local.set 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i64.store 8
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i64.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %a128 = zext i64 %a to i128
+  %b128 = zext i64 %b to i128
+  %c128 = zext i64 %c to i128
+  %t0 = add i128 %a128, %b128
+  %t1 = add i128 %t0, %c128
+  %result = trunc i128 %t1 to i64
+  %t2 = lshr i128 %t1, 64
+  %carry = trunc i128 %t2 to i64
+
+  %ret0 = insertvalue { i64, i64 } poison, i64 %result, 0
+  %ret1 = insertvalue { i64, i64 } %ret0, i64 %carry, 1
+  ret { i64, i64 } %ret1
+}

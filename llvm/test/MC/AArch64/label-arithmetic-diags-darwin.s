@@ -14,13 +14,9 @@ Lend:
   // CHECK-NEXT: ^
 
   add w0, w1, #(Lend - var@TLVPPAGEOFF)
+  // CHECK: [[#@LINE-1]]:3: error: expected relocatable expression
   cmp w0, #(Lend - var@TLVPPAGEOFF)
-  // CHECK: error: unsupported subtraction of qualified symbol
-  // CHECK-NEXT: add w0, w1, #(Lend - var@TLVPPAGEOFF)
-  // CHECK-NEXT: ^
-  // CHECK: error: unsupported subtraction of qualified symbol
-  // CHECK-NEXT: cmp w0, #(Lend - var@TLVPPAGEOFF)
-  // CHECK-NEXT: ^
+  // CHECK: [[#@LINE-1]]:3: error: expected relocatable expression
 
   add w0, w1, #(Lstart - Lend)
   cmp w0, #(Lstart - Lend)
