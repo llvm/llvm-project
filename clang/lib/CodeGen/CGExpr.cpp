@@ -4489,8 +4489,6 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                  E->getBase());
 
     if (SanOpts.has(SanitizerKind::ArrayBounds)) {
-      // FIXME: There *has* to be a better way to get the base GEP than
-      // crawling back through the LoadInst.
       const Expr *Base = E->getBase();
       while (true) {
         if (const auto *CE = dyn_cast<CastExpr>(Base)) {
@@ -4505,9 +4503,7 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
       }
 
       if (const auto *CE = dyn_cast<CastExpr>(Base);
-          CE && CE->getCastKind() == CK_LValueToRValue) {
-        // FIXME: This is a bit fragile. See if we can strengthen it a bit
-        // better.
+          CE && CE->getCastKind() == CK_LValueToRValue)
         if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
             ME && ME->getMemberDecl()->getType()->isCountAttributedType()) {
           LValue LV = EmitCheckedLValue(Base, TCK_MemberAccess);
@@ -4515,7 +4511,6 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                       E->getIdx()->getType(), ptrType, Accessed,
                                       /*FlexibleArray=*/false);
         }
-      }
     }
   }
 
