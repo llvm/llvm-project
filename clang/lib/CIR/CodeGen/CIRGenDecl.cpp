@@ -15,6 +15,7 @@
 #include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -251,7 +252,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
     return;
   }
   case cir::TEK_Aggregate:
-    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: aggregate type");
+    emitAggExpr(init, AggValueSlot::forLValue(lvalue));
     return;
   }
   llvm_unreachable("bad evaluation kind");
@@ -266,6 +267,12 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     emitVarDecl(vd);
     return;
   }
+  case Decl::OpenACCDeclare:
+    emitOpenACCDeclare(cast<OpenACCDeclareDecl>(d));
+    return;
+  case Decl::OpenACCRoutine:
+    emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
+    return;
   default:
     cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
   }

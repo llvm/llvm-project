@@ -2769,6 +2769,13 @@ namespace {
 
 } // end anonymous namespace
 
+StringRef AsmPrinter::getConstantSectionSuffix(const Constant *C) const {
+  if (TM.Options.EnableStaticDataPartitioning && C && SDPI && PSI)
+    return SDPI->getConstantSectionPrefix(C, PSI);
+
+  return "";
+}
+
 /// EmitConstantPool - Print to the current output stream assembly
 /// representations of the constants in the constant pool MCP. This is
 /// used to print out constants which have been "spilled to memory" by
@@ -2792,7 +2799,7 @@ void AsmPrinter::emitConstantPool() {
       C = CPE.Val.ConstVal;
 
     MCSection *S = getObjFileLowering().getSectionForConstant(
-        getDataLayout(), Kind, C, Alignment);
+        getDataLayout(), Kind, C, Alignment, getConstantSectionSuffix(C));
 
     // The number of sections are small, just do a linear search from the
     // last section to the first.
@@ -3876,12 +3883,11 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   MCValue MV;
   if (!(*ME)->evaluateAsRelocatable(MV, nullptr) || MV.isAbsolute())
     return;
-  const MCSymbolRefExpr *SymA = MV.getSymA();
-  if (!SymA)
+  const MCSymbol *GOTEquivSym = MV.getAddSym();
+  if (!GOTEquivSym)
     return;
 
   // Check that GOT equivalent symbol is cached.
-  const MCSymbol *GOTEquivSym = &SymA->getSymbol();
   if (!AP.GlobalGOTEquivs.count(GOTEquivSym))
     return;
 
@@ -4595,7 +4601,13 @@ void AsmPrinter::emitPatchableFunctionEntries() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC;
     const MCSymbolELF *LinkedToSym = nullptr;
-    StringRef GroupName;
+    StringRef GroupName, SectionName;
+
+    if (F.hasFnAttribute("patchable-function-entry-section"))
+      SectionName = F.getFnAttribute("patchable-function-entry-section")
+                        .getValueAsString();
+    if (SectionName.empty())
+      SectionName = "__patchable_function_entries";
 
     // GNU as < 2.35 did not support section flag 'o'. GNU ld < 2.36 did not
     // support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
@@ -4608,8 +4620,8 @@ void AsmPrinter::emitPatchableFunctionEntries() {
       LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
-        "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0, GroupName,
-        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym));
+        SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),
+        MCSection::NonUniqueID, LinkedToSym));
     emitAlignment(Align(PointerSize));
     OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }

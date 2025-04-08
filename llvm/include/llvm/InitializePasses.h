@@ -84,7 +84,7 @@ void initializeDAHPass(PassRegistry &);
 void initializeDCELegacyPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPassPass(PassRegistry &);
 void initializeDXILMetadataAnalysisWrapperPrinterPass(PassRegistry &);
-void initializeDXILResourceBindingWrapperPassPass(PassRegistry &);
+void initializeDXILResourceWrapperPassPass(PassRegistry &);
 void initializeDXILResourceTypeWrapperPassPass(PassRegistry &);
 void initializeDeadMachineInstructionElimPass(PassRegistry &);
 void initializeDebugifyMachineModulePass(PassRegistry &);
@@ -322,7 +322,7 @@ void initializeVirtRegRewriterPass(PassRegistry &);
 void initializeWasmEHPreparePass(PassRegistry &);
 void initializeWinEHPreparePass(PassRegistry &);
 void initializeWriteBitcodePassPass(PassRegistry &);
-void initializeXRayInstrumentationPass(PassRegistry &);
+void initializeXRayInstrumentationLegacyPass(PassRegistry &);
 
 } // end namespace llvm
 

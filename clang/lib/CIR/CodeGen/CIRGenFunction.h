@@ -110,6 +110,8 @@ private:
 public:
   mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
 
+  void emitNullInitialization(mlir::Location loc, Address destPtr, QualType ty);
+
 private:
   // Track current variable initialization (if there's one)
   const clang::VarDecl *currVarDecl = nullptr;
@@ -242,10 +244,6 @@ public:
     // TODO(CIR): This will live in the base class RunCleanupScope once that
     // class is upstreamed.
     CIRGenFunction &cgf;
-
-    // Block containing cleanup code for things initialized in this lexical
-    // context (scope).
-    mlir::Block *cleanupBlock = nullptr;
 
     // Points to the scope entry block. This is useful, for instance, for
     // helping to insert allocas before finalizing any recursive CodeGen from
@@ -381,6 +379,8 @@ public:
                          mlir::OpBuilder::InsertPoint ip,
                          mlir::Value arraySize = nullptr);
 
+  void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
   /// Emit code to compute the specified expression which can have any type. The
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
@@ -398,6 +398,10 @@ public:
   void emitAutoVarInit(const AutoVarEmission &emission);
 
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
+
+  mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+  mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
+  mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
   /// Emit an expression as an initializer for an object (variable, field, etc.)
   /// at the given location.  The expression is not necessarily the normal
@@ -497,12 +501,44 @@ public:
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
 
+  mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
   /// ----------------------
   /// CIR build helpers
   /// -----------------
 public:
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name, bool insertIntoFnEntryBlock);
+
+  //===--------------------------------------------------------------------===//
+  //                         OpenACC Emission
+  //===--------------------------------------------------------------------===//
+public:
+  mlir::LogicalResult
+  emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
+  mlir::LogicalResult emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCCombinedConstruct(const OpenACCCombinedConstruct &s);
+  mlir::LogicalResult emitOpenACCDataConstruct(const OpenACCDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCEnterDataConstruct(const OpenACCEnterDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCExitDataConstruct(const OpenACCExitDataConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCHostDataConstruct(const OpenACCHostDataConstruct &s);
+  mlir::LogicalResult emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s);
+  mlir::LogicalResult emitOpenACCInitConstruct(const OpenACCInitConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCShutdownConstruct(const OpenACCShutdownConstruct &s);
+  mlir::LogicalResult emitOpenACCSetConstruct(const OpenACCSetConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s);
+  mlir::LogicalResult
+  emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s);
+  mlir::LogicalResult emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s);
+
+  void emitOpenACCDeclare(const OpenACCDeclareDecl &d);
+  void emitOpenACCRoutine(const OpenACCRoutineDecl &d);
 };
 
 } // namespace clang::CIRGen
