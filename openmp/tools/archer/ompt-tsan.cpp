@@ -603,7 +603,7 @@ static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 static std::mutex LocksMutex;
 
 enum ArcherState { ACTIVE = 0, PAUSED, ENDED };
-static ArcherState archer_state{ACTIVE};
+static thread_local ArcherState archer_state{ACTIVE};
 
 static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
                                   void *arg, const void *codeptr_ra) {
