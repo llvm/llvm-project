@@ -190,6 +190,9 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
+- The ``-mexecute-only`` and ``-mpure-code`` flags are now accepted for AArch64 targets,
+  allowing the generation of binaries with executable-only code sections. (#GH125688)
+
 Removed Compiler Flags
 -------------------------
 
