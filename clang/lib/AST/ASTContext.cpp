@@ -980,7 +980,7 @@ ASTContext::getFeatureAvailInfo(Decl *D) const {
     llvm_unreachable("invalid feature kind");
   }
 
-  ASTContext::AvailabilityDomainInfo Info{Kind, nullptr};
+  ASTContext::AvailabilityDomainInfo Info{Kind, D, nullptr};
 
   if (Kind == FeatureAvailKind::Dynamic) {
     Expr *FnExpr = Init->getInit(1);
