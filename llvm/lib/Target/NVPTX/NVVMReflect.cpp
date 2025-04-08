@@ -229,9 +229,9 @@ bool NVVMReflect::runOnModule(Module &M) {
     return false;
   populateReflectMap(M);
   bool Changed = true;
-  handleReflectFunction(M, NVVM_REFLECT_FUNCTION);
-  handleReflectFunction(M, NVVM_REFLECT_OCL_FUNCTION);
-  handleReflectFunction(M, Intrinsic::getName(Intrinsic::nvvm_reflect));
+  Changed |= handleReflectFunction(M, NVVM_REFLECT_FUNCTION);
+  Changed |= handleReflectFunction(M, NVVM_REFLECT_OCL_FUNCTION);
+  Changed |= handleReflectFunction(M, Intrinsic::getName(Intrinsic::nvvm_reflect));
   return Changed;
 }
 
