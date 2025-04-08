@@ -3318,6 +3318,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 Loaded, StoredSize, StoredModTime,
                                 StoredSignature, Capabilities);
 
+      // Check the AST we just read from ImportedFile contains a different
+      // module than we expected (ImportedName). This can occur for C++20
+      // Modules when given a mismatch via -fmodule-file=<name>=<file>
+      if (IsImportingStdCXXModule) {
+        if (const auto *Imported =
+                getModuleManager().lookupByFileName(ImportedFile);
+            Imported != nullptr && Imported->ModuleName != ImportedName) {
+          Diag(diag::err_failed_to_find_module_file) << ImportedName;
+          Result = Missing;
+        }
+      }
+
       // If we diagnosed a problem, produce a backtrace.
       bool recompilingFinalized = Result == OutOfDate &&
                                   (Capabilities & ARR_OutOfDate) &&
