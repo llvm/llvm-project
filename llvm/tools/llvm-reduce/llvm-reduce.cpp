@@ -144,7 +144,11 @@ int main(int Argc, char **Argv) {
   PreserveInputDbgFormat = cl::boolOrDefault::BOU_TRUE;
 
   cl::HideUnrelatedOptions({&LLVMReduceOptions, &getColorCategory()});
-  cl::ParseCommandLineOptions(Argc, Argv, "LLVM automatic testcase reducer.\n");
+  cl::ParseCommandLineOptions(
+      Argc, Argv,
+      "LLVM automatic testcase reducer.\n"
+      "See https://llvm.org/docs/CommandGuide/llvm-reduce.html for more "
+      "information.\n");
 
   if (Argc == 1) {
     cl::PrintHelpMessage();
