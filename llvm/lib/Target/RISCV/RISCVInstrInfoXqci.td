@@ -1187,9 +1187,9 @@ def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
 def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
 // Load/Store predicates with QC.E.* Mnemonics. These expand to an AUIPC +
-// (Standard) Load/Store pairs, as this sequence can materialize all 32-bit
-// addresses, and is shorter than e.g. an AUIPC + Xqcilo Load/Store pair.
-// These pairs can be turned back into Xqcilo instructions using linker
+// (Standard) Load/Store sequence, as this can materialize all 32-bit addresses,
+// and is shorter than e.g. an AUIPC + Xqcilo Load/Store sequence. These
+// sequences can be turned back into a single Xqcilo instruction using linker
 // relaxation.
 let Predicates = [HasVendorXqcilo, IsRV32] in {
 def PseudoQC_E_LB : PseudoLoad<"qc.e.lb">;
