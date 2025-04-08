@@ -23,6 +23,7 @@ MODULE_ANALYSIS("dxil-root-signature-analysis", dxil::RootSignatureAnalysis())
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("dxil-cbuffer-access", DXILCBufferAccess())
 MODULE_PASS("dxil-data-scalarization", DXILDataScalarization())
 MODULE_PASS("dxil-flatten-arrays", DXILFlattenArrays())
 MODULE_PASS("dxil-intrinsic-expansion", DXILIntrinsicExpansion())
