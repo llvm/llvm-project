@@ -283,8 +283,7 @@ static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                          mlir::Location beginLoc,
                                          mlir::Location endLoc, mlir::Value ptr,
                                          mlir::Type eltTy, mlir::Value idx,
-                                         bool inbounds, bool signedIndices,
-                                         bool shouldDecay) {
+                                         bool inbounds, bool shouldDecay) {
   CIRGenModule &cgm = cgf.getCIRGenModule();
   // TODO(cir): LLVM codegen emits in bound gep check here, is there anything
   // that would enhance tracking this later in CIR?
@@ -294,11 +293,12 @@ static mlir::Value emitArraySubscriptPtr(CIRGenFunction &cgf,
                                           shouldDecay);
 }
 
-static Address
-emitArraySubscriptPtr(CIRGenFunction &cgf, mlir::Location beginLoc,
-                      mlir::Location endLoc, Address addr, QualType eltType,
-                      mlir::Value idx, bool inbounds, mlir::Location loc,
-                      bool shouldDecay, QualType *arrayType, const Expr *base) {
+static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
+                                     mlir::Location beginLoc,
+                                     mlir::Location endLoc, Address addr,
+                                     QualType eltType, mlir::Value idx,
+                                     bool inbounds, mlir::Location loc,
+                                     bool shouldDecay) {
 
   // Determine the element size of the statically-sized base.  This is
   // the thing that the indices are expressed in terms of.
@@ -315,9 +315,9 @@ emitArraySubscriptPtr(CIRGenFunction &cgf, mlir::Location beginLoc,
   mlir::Value eltPtr;
   const mlir::IntegerAttr index = getConstantIndexOrNull(idx);
   if (!index) {
-    eltPtr = emitArraySubscriptPtr(
-        cgf, beginLoc, endLoc, addr.getPointer(), addr.getElementType(), idx,
-        inbounds, idx.getType().isSignlessIntOrIndex(), shouldDecay);
+    eltPtr = emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
+                                   addr.getElementType(), idx, inbounds,
+                                   shouldDecay);
   } else {
     cgf.cgm.errorNYI("emitArraySubscriptExpr: Non Constant Index");
   }
@@ -363,12 +363,11 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
       arrayLV = emitLValue(array);
 
     // Propagate the alignment from the array itself to the result.
-    QualType arrayType = array->getType();
     const Address addr = emitArraySubscriptPtr(
         *this, cgm.getLoc(array->getBeginLoc()), cgm.getLoc(array->getEndLoc()),
         arrayLV.getAddress(), e->getType(), idx,
         !getLangOpts().isSignedOverflowDefined(), cgm.getLoc(e->getExprLoc()),
-        /*shouldDecay=*/true, &arrayType, e->getBase());
+        /*shouldDecay=*/true);
 
     return LValue::makeAddr(addr, e->getType());
   }
