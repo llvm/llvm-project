@@ -41,4 +41,36 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   fun(b, *body, op->getAttrs());
 }
 
+MLIR_CAPI_EXPORTED bool mlirLinalgIsContractionOp(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  return linalg::isaContractionOpInterface(linalgOp);
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
+mlirLinalgInferContractionDimensions(MlirOperation op) {
+  MlirLinalgContractionDimensions result{};
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return result;
+
+  auto maybeDims = linalg::inferContractionDims(linalgOp);
+  if (failed(maybeDims))
+    return result;
+
+  linalg::ContractionDimensions contractionDims = maybeDims.value();
+  MLIRContext *ctx = linalgOp.getContext();
+
+  auto toAttr = [&](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
+    SmallVector<int32_t> intVals(vals.begin(), vals.end());
+    return wrap(DenseI32ArrayAttr::get(ctx, intVals));
+  };
+
+  result.batch = toAttr(contractionDims.batch);
+  result.m = toAttr(contractionDims.m);
+  result.n = toAttr(contractionDims.n);
+  result.k = toAttr(contractionDims.k);
+
+  return result;
+}
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Linalg, linalg, LinalgDialect)
