@@ -97,9 +97,6 @@ using LdStPairFlags = struct LdStPairFlags {
   // a pair-wise insn, and false if the reverse is true.
   bool MergeForward = false;
 
-  // Set to true when pairing SVE fill/spill instructions.
-  bool SVEFillSpillPair = false;
-
   // SExtIdx gives the index of the result of the load pair that must be
   // extended. The value of SExtIdx assumes that the paired load produces the
   // value in this order: (I, returned iterator), i.e., -1 means no value has
@@ -115,9 +112,6 @@ using LdStPairFlags = struct LdStPairFlags {
 
   void setMergeForward(bool V = true) { MergeForward = V; }
   bool getMergeForward() const { return MergeForward; }
-
-  void setSVEFillSpillPair(bool V = true) { SVEFillSpillPair = V; }
-  bool getSVEFillSpillPair() const { return SVEFillSpillPair; }
 
   void setSExtIdx(int V) { SExtIdx = V; }
   int getSExtIdx() const { return SExtIdx; }
@@ -1237,8 +1231,8 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     (void)MIBSXTW;
     LLVM_DEBUG(dbgs() << "  Extend operand:\n    ");
     LLVM_DEBUG(((MachineInstr *)MIBSXTW)->print(dbgs()));
-  } else if (Flags.getSVEFillSpillPair()) {
-    // We are combining SVE fill/spill to LDP/STP, so we need to get the Q
+  } else if (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI) {
+    // We are combining SVE fill/spill to LDP/STP, so we need to use the Q
     // variant of the registers.
     MachineOperand &MOp0 = MIB->getOperand(0);
     MachineOperand &MOp1 = MIB->getOperand(1);
@@ -2665,11 +2659,6 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
     // combination.
     MachineMemOperand *MemOp =
         MI.memoperands_empty() ? nullptr : MI.memoperands().front();
-
-    // If we are pairing SVE fill/spill, set the appropriate flag.
-    unsigned Opcode = MI.getOpcode();
-    if (Opcode == AArch64::LDR_ZXI || Opcode == AArch64::STR_ZXI)
-      Flags.setSVEFillSpillPair();
 
     // If a load/store arrives and ldp/stp-aligned-only feature is opted, check
     // that the alignment of the source pointer is at least double the alignment
