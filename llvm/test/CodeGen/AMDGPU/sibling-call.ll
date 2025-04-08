@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 target datalayout = "A5"
 
-; needs to be autogen
-; XFAIL: *
-
 ; FIXME: Why is this commuted only sometimes?
 define fastcc i32 @i32_fastcc_i32_i32(i32 %arg0, i32 %arg1) #1 {
 ; FIJI-LABEL: i32_fastcc_i32_i32:

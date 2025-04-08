@@ -3,9 +3,6 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,HAWAII %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
-; needs to be autogen
-; XFAIL: *
-
 ; Test calls when called by other callable functions rather than
 ; kernels.
 
