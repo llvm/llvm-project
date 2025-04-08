@@ -1799,6 +1799,15 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
     break;
   }
+  case SPIRV::OpFPGARegINTEL: {
+    if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_fpga_reg))
+      report_fatal_error("Continued instructions require the "
+                         "following SPIR-V extension: SPV_INTEL_fpga_reg",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fpga_reg);
+    Reqs.addCapability(SPIRV::Capability::FPGARegINTEL);
+    break;
+  }
 
   default:
     break;
