@@ -1337,16 +1337,16 @@ func.func @invalid_bitcast_i64_to_ptr() {
 
 // -----
 
-func.func @invalid_bitcast_vec_to_ptr(%arg : !llvm.vec<4 x ptr>) {
+func.func @invalid_bitcast_vec_to_ptr(%arg : vector<4x!llvm.ptr>) {
   // expected-error@+1 {{cannot cast vector of pointers to pointer}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr> to !llvm.ptr
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr> to !llvm.ptr
 }
 
 // -----
 
 func.func @invalid_bitcast_ptr_to_vec(%arg : !llvm.ptr) {
   // expected-error@+1 {{cannot cast pointer to vector of pointers}}
-  %0 = llvm.bitcast %arg : !llvm.ptr to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : !llvm.ptr to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1358,9 +1358,9 @@ func.func @invalid_bitcast_addr_cast(%arg : !llvm.ptr<1>) {
 
 // -----
 
-func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
+func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr<1>> to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1779,4 +1779,26 @@ module {
   // expected-error@+2 {{expected integer value}}
   // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
+}
+
+// -----
+
+llvm.func @t0() -> !llvm.ptr {
+  %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
+  llvm.blocktag <id = 1>
+  llvm.br ^bb1
+^bb1:
+  // expected-error@+1 {{duplicate block tag '1' in the same function}}
+  llvm.blocktag <id = 1>
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @t1() -> !llvm.ptr {
+  // expected-error@+1 {{expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @t1, tag = <id = 1>> : !llvm.ptr
+  llvm.br ^bb1
+^bb1:
+  llvm.return %0 : !llvm.ptr
 }

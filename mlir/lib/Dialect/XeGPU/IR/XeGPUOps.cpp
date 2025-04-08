@@ -107,6 +107,12 @@ isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
                    << " for tensor descriptor " << tdescTy;
 }
 
+// Checks if the given shape is evenly distributed based on the layout
+// and data factors provided by the LayoutAttr. The function ensures that
+// each dimension of the shape can be evenly divided by the corresponding
+// data factor, and the resulting quotient can be evenly divided by the
+// layout factor. Returns `true` if the shape is evenly distributed,
+// otherwise `false`.
 static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
                               xegpu::LayoutAttr attr) {
   assert(attr && "Layout attribute is missing.");
@@ -121,9 +127,9 @@ static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
     auto lane_data = attr.getLaneData();
     data = lane_data ? lane_data.asArrayRef() : defaults;
   }
-  for (auto [s, d, l] : llvm::zip_equal(shape, data, layout)) {
-    // check s % (d * l) != 0
-    if (s % d != 0 || (s / d) % l != 0)
+  for (auto [dimSize, dataFactor, layoutFactor] :
+       llvm::zip_equal(shape, data, layout)) {
+    if (dimSize % dataFactor != 0 || (dimSize / dataFactor) % layoutFactor != 0)
       return false;
   }
   return true;
@@ -565,7 +571,7 @@ LogicalResult StoreScatterOp::verify() {
                           [&]() { return emitOpError(); });
 }
 
-//===---------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 // XeGPU_UpdateOffsetOp
 //===----------------------------------------------------------------------===//
 void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
@@ -604,17 +610,15 @@ LogicalResult DpasOp::verify() {
 
   // make sure the layout attribute is either set for every available
   // operand or simply not set at all. C is special, since ACC is optional.
-  // If they are all set, they also should be in the same scope.
-  auto isValidSet = [&]() {
+  auto hasValidLayoutAttrs = [&]() {
     bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
     if (hasAcc()) {
       result |= (aLayout != nullptr) ^ (cLayout != nullptr);
     }
-    result = !result;
-    return result;
+    return !result;
   };
 
-  if (!isValidSet())
+  if (!hasValidLayoutAttrs())
     return emitOpError(
         "layout attributes should be either set for all operands (for SIMT "
         "code) or not set at all (for SIMD code).");

@@ -200,7 +200,7 @@ LogicalResult mlir::eraseUnreachableBlocks(RewriterBase &rewriter,
       continue;
 
     // If this is a single block region, just collect the nested regions.
-    if (std::next(region->begin()) == region->end()) {
+    if (region->hasOneBlock()) {
       for (Operation &op : region->front())
         for (Region &region : op.getRegions())
           worklist.push_back(&region);

@@ -539,3 +539,123 @@ func.func @test_convert_layout_unmatch(%a: vector<32x64xf16>) {
                                 resMap = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} : vector<32x64xf16>
   gpu.return
 }
+
+// -----
+func.func @tensor_desc_invalid_layout_attr(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+         // expected-error@+1 {{expected at least one of sg_layout, inst_data or lane_layout}}
+         #xegpu.layout<sg_data = [16, 2], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout and lane_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout and inst_data to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected inst_data and lane_layout to have the same rank}}
+        #xegpu.layout<inst_data = [16, 2, 1], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected lane_data and lane_layout to have the same rank}}
+        #xegpu.layout<inst_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2, 1]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_data and sg_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2, 1], inst_data = [16, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      // expected-error@+1 {{expected layout rank to match tensor rank}}
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        #xegpu.layout<sg_layout = [1], sg_data = [32], inst_data = [16]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout being used with sg_data}}
+        #xegpu.layout<sg_data = [16, 2], lane_layout = [8, 1], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected lane_layout being used with lane_data}}
+        #xegpu.layout<inst_data = [16, 2], lane_data = [1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected sg_layout/lane_layout being used with order}}
+        #xegpu.layout<inst_data = [16, 2], order = [0, 1]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_rank_mismatch(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected order and sg_layout to have the same rank}}
+        #xegpu.layout<sg_layout = [1, 1], sg_data = [16, 2], order = [0, 1, 2]>>
+  return
+}
+
+// -----
+func.func @tensor_desc_invalid_sg_data(%src: ui64, %offsets: vector<16xindex>) {
+  %1 = xegpu.create_tdesc %src, %offsets : ui64, vector<16xindex> ->
+      !xegpu.tensor_desc<16x2xf32,
+        #xegpu.scatter_tdesc_attr<chunk_size = 2>,
+        // expected-error@+1 {{expected order and lane_layout to have the same rank}}
+        #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 2], order = [0, 1, 2]>>
+  return
+}

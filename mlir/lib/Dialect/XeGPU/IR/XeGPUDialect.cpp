@@ -81,13 +81,27 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
   // A valid layout must include at least one of sg_layout and lane_layout.
   // sg_layout is essential for Workgroup layout, while lane_layout is
   // required for Subgroup layout.
-  if (!sg_layout && !lane_layout) {
-    return emitError() << "expected at least one of sg_layout or lane_layout";
+  if (!sg_layout && !inst_data && !lane_layout) {
+    return emitError()
+           << "expected at least one of sg_layout, inst_data or lane_layout";
+  }
+
+  // generate code to check sg_laout, inst_data and lane_layout having the same
+  // rank if they are not null.
+
+  if (sg_layout && inst_data && sg_layout.size() != inst_data.size()) {
+    return emitError()
+           << "expected sg_layout and inst_data to have the same rank";
   }
 
   if (sg_layout && lane_layout && sg_layout.size() != lane_layout.size()) {
     return emitError()
-           << "expected sg_layout and lane_layout having the same rank";
+           << "expected sg_layout and lane_layout to have the same rank";
+  }
+
+  if (inst_data && lane_layout && inst_data.size() != lane_layout.size()) {
+    return emitError()
+           << "expected inst_data and lane_layout to have the same rank";
   }
 
   // sg_data is optional for Workgroup layout, but its presence requires
@@ -97,18 +111,7 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
       return emitError() << "expected sg_layout being used with sg_data";
     if (sg_data.size() != sg_layout.size())
       return emitError()
-
-             << "expected sg_data having the same rank as sg_layout";
-  }
-
-  // inst_data is optional for Subgroup layout, but its presence requires
-  // lane_layout.
-  if (inst_data) {
-    if (!lane_layout)
-      return emitError() << "expected lane_layout being used with inst_data";
-    if (inst_data.size() != lane_layout.size())
-      return emitError()
-             << "expected inst_data having the same rank as lane_layout";
+             << "expected sg_data and sg_layout to have the same rank";
   }
 
   // lane_data is optional for Subgroup layout, but its presence requires
@@ -118,16 +121,21 @@ LayoutAttr::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
       return emitError() << "expected lane_layout being used with lane_data";
     if (lane_data.size() != lane_layout.size())
       return emitError()
-             << "expected lane_data having the same rank as lane_layout";
+             << "expected lane_data and lane_layout to have the same rank";
   }
 
   if (order) {
     if (!sg_layout && !lane_layout)
       return emitError()
              << "expected sg_layout/lane_layout being used with order";
-    if (order.size() != sg_layout.size() && order.size() != lane_layout.size())
+
+    if (sg_layout && order.size() != sg_layout.size())
       return emitError()
-             << "expected order having the same rank as sg_layout/lane_layout";
+             << "expected order and sg_layout to have the same rank";
+
+    if (lane_layout && order.size() != lane_layout.size())
+      return emitError()
+             << "expected order and lane_layout to have the same rank";
   }
 
   return success();
@@ -292,15 +300,10 @@ LogicalResult TensorDescType::verify(
                               "contiguous elements";
     }
 
-    // For 1D tensor, pad the shape with an outer unit dimension to allow common
-    // validation logic.
-    SmallVector<int64_t> tensorShape(shape.begin(), shape.end());
-
-    size_t dims = tensorShape.size();
-    for (size_t i = 0; i < dims; ++i) {
+    for (size_t i = 0; i < shape.size(); ++i) {
       uint32_t numElemPerWi = laneLayout[i] * laneData[i];
-      if (tensorShape[i] < numElemPerWi || tensorShape[i] % numElemPerWi != 0)
-        return emitError() << "cannot distribute " << tensorShape[i] << " over "
+      if (shape[i] < numElemPerWi || shape[i] % numElemPerWi != 0)
+        return emitError() << "cannot distribute " << shape[i] << " over "
                            << laneLayout[i] << " work items with "
                            << laneData[i] << " elements each";
     }
@@ -344,9 +347,9 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   auto tdescShape = getShape();
 
   auto laneDataSize = 1, sgSize = 1;
-  for (auto [wiDim, laneDataDim] : llvm::zip_equal(laneLayout, laneData)) {
+  for (auto [laneDim, laneDataDim] : llvm::zip_equal(laneLayout, laneData)) {
     laneDataSize *= laneDataDim;
-    sgSize *= wiDim;
+    sgSize *= laneDim;
   }
 
   // Case 1: regular loads/stores
@@ -366,9 +369,9 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   // Case 2: block loads/stores
   // Check if the tensor descriptor shape is distributable.
   int64_t tensorSize = 1;
-  for (auto [tdescDim, wiDim, laneDataDim] :
+  for (auto [tdescDim, laneDim, laneDataDim] :
        llvm::zip_equal(tdescShape, laneLayout, laneData)) {
-    assert((tdescDim % (wiDim * laneDataDim) == 0) &&
+    assert((tdescDim % (laneDim * laneDataDim) == 0) &&
            "tensor descriptor shape is not distributable");
     tensorSize *= tdescDim;
   }
