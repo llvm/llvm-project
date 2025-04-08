@@ -26,7 +26,6 @@ public:
 
   ~MCGOFFStreamer() override;
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
 
   GOFFObjectWriter &getWriter();

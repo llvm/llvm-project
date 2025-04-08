@@ -27,14 +27,6 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-void MCGOFFStreamer::initSections(bool /*NoExecStack*/,
-                                  const MCSubtargetInfo &STI) {
-  MCContext &Ctx = getContext();
-  // Emit the text section.
-  switchSection(Ctx.getObjectFileInfo()->getADASection());
-  switchSection(Ctx.getObjectFileInfo()->getTextSection());
-}
-
 namespace {
 // Make sure that all section are registered in the correct order.
 void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
