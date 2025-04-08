@@ -78,12 +78,12 @@ struct NVVMIntrRangePass : PassInfoMixin<NVVMIntrRangePass> {
 };
 
 struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
-  NVVMReflectPass() : NVVMReflectPass(0) {}
-  NVVMReflectPass(unsigned SmVersion);
+  NVVMReflectPass() : SmVersion(0) {}
+  NVVMReflectPass(unsigned SmVersion) : SmVersion(SmVersion) {}
   PreservedAnalyses run(Module &F, ModuleAnalysisManager &AM);
 
 private:
-  StringMap<int> VarMap;
+  unsigned SmVersion;
 };
 
 struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
