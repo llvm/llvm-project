@@ -15,7 +15,7 @@ using namespace llvm;
 static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
 // Mark all our options with this category.
-static cl::OptionCategory OffloadArchCategory("amdgpu-arch options");
+static cl::OptionCategory OffloadArchCategory("offload-arch options");
 
 enum VendorName {
   all,
