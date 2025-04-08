@@ -37,8 +37,8 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // cuda_device
     0, // cuda_constant
     0, // cuda_shared
-    // Most SYCL address space values for this map are dummy
-    1, // sycl_global
+    // SYCL address space values for this map are dummy
+    0, // sycl_global
     0, // sycl_global_device
     0, // sycl_global_host
     0, // sycl_local
