@@ -320,7 +320,7 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
-                # "c++26": 202306, # P2562R1 constexpr Stable Sorting
+                "c++26": 202306,
             },
             "headers": ["algorithm", "utility"],
         },
@@ -520,7 +520,6 @@ feature_test_macros = [
             "name": "__cpp_lib_flat_set",
             "values": {"c++23": 202207},
             "headers": ["flat_set"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_format",
@@ -1081,7 +1080,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_join_with",
@@ -1194,7 +1192,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
@@ -1211,7 +1209,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {

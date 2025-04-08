@@ -1988,6 +1988,8 @@ unsigned mlir::affine::getNestingDepth(Operation *op) {
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
       depth++;
+    if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
+      depth += parOp.getNumDims();
   }
   return depth;
 }

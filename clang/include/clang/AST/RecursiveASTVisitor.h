@@ -795,7 +795,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifier(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseType(QualType(NNS->getAsType(), 0)));
   }
 
@@ -820,7 +819,6 @@ bool RecursiveASTVisitor<Derived>::TraverseNestedNameSpecifierLoc(
     return true;
 
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     TRY_TO(TraverseTypeLoc(NNS.getTypeLoc()));
     break;
   }
@@ -1004,7 +1002,10 @@ DEF_TRAVERSE_TYPE(RValueReferenceType,
                   { TRY_TO(TraverseType(T->getPointeeType())); })
 
 DEF_TRAVERSE_TYPE(MemberPointerType, {
-  TRY_TO(TraverseType(QualType(T->getClass(), 0)));
+  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  if (T->isSugared())
+    TRY_TO(TraverseType(
+        QualType(T->getMostRecentCXXRecordDecl()->getTypeForDecl(), 0)));
   TRY_TO(TraverseType(T->getPointeeType()));
 })
 
@@ -1169,7 +1170,8 @@ DEF_TRAVERSE_TYPE(DependentNameType,
                   { TRY_TO(TraverseNestedNameSpecifier(T->getQualifier())); })
 
 DEF_TRAVERSE_TYPE(DependentTemplateSpecializationType, {
-  TRY_TO(TraverseNestedNameSpecifier(T->getQualifier()));
+  const DependentTemplateStorage &S = T->getDependentTemplateName();
+  TRY_TO(TraverseNestedNameSpecifier(S.getQualifier()));
   TRY_TO(TraverseTemplateArguments(T->template_arguments()));
 })
 
@@ -1269,10 +1271,10 @@ DEF_TRAVERSE_TYPELOC(RValueReferenceType,
 // We traverse this in the type case as well, but how is it not reached through
 // the pointee type?
 DEF_TRAVERSE_TYPELOC(MemberPointerType, {
-  if (auto *TSI = TL.getClassTInfo())
-    TRY_TO(TraverseTypeLoc(TSI->getTypeLoc()));
+  if (NestedNameSpecifierLoc QL = TL.getQualifierLoc())
+    TRY_TO(TraverseNestedNameSpecifierLoc(QL));
   else
-    TRY_TO(TraverseType(QualType(TL.getTypePtr()->getClass(), 0)));
+    TRY_TO(TraverseNestedNameSpecifier(TL.getTypePtr()->getQualifier()));
   TRY_TO(TraverseTypeLoc(TL.getPointeeLoc()));
 })
 
@@ -2251,8 +2253,10 @@ bool RecursiveASTVisitor<Derived>::TraverseFunctionHelper(FunctionDecl *D) {
   }
 
   // Visit the trailing requires clause, if any.
-  if (Expr *TrailingRequiresClause = D->getTrailingRequiresClause()) {
-    TRY_TO(TraverseStmt(TrailingRequiresClause));
+  if (const AssociatedConstraint &TrailingRequiresClause =
+          D->getTrailingRequiresClause()) {
+    TRY_TO(TraverseStmt(
+        const_cast<Expr *>(TrailingRequiresClause.ConstraintExpr)));
   }
 
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(D)) {
@@ -2410,15 +2414,15 @@ DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
   }
 
 DEF_TRAVERSE_STMT(GCCAsmStmt, {
-  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmString());
+  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmStringExpr());
   for (unsigned I = 0, E = S->getNumInputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintExpr(I));
   }
   for (unsigned I = 0, E = S->getNumOutputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintExpr(I));
   }
   for (unsigned I = 0, E = S->getNumClobbers(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberStringLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberExpr(I));
   }
   // children() iterates over inputExpr and outputExpr.
 })
@@ -2766,7 +2770,8 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
 
     if (S->hasExplicitResultType())
       TRY_TO(TraverseTypeLoc(Proto.getReturnLoc()));
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getTrailingRequiresClause());
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(
+        const_cast<Expr *>(S->getTrailingRequiresClause().ConstraintExpr));
 
     TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   }
@@ -3440,6 +3445,11 @@ bool RecursiveASTVisitor<Derived>::VisitOMPDynamicAllocatorsClause(
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
     OMPAtomicDefaultMemOrderClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
   return true;
 }
 

@@ -2320,7 +2320,7 @@ func.func @omp_target_host_eval_parallel(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop1(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.wsloop {
       omp.loop_nest (%iv) : i32 = (%arg0) to (%arg0) step (%arg0) {
@@ -2335,7 +2335,7 @@ func.func @omp_target_host_eval_loop1(%x : i32) {
 // -----
 
 func.func @omp_target_host_eval_loop2(%x : i32) {
-  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when representing target SPMD or Generic-SPMD}}
+  // expected-error @below {{op host_eval argument only legal as loop bounds and steps in 'omp.loop_nest' when trip count must be evaluated in the host}}
   omp.target host_eval(%x -> %arg0 : i32) {
     omp.teams {
     ^bb0:
@@ -2876,8 +2876,8 @@ func.func @missing_workshare(%idx : index) {
 
 // -----
 llvm.func @invalid_mapper(%0 : !llvm.ptr) {
-  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) mapper(@my_mapper) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
   // expected-error @below {{invalid mapper id}}
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) map_clauses(to) capture(ByRef) mapper(@my_mapper) -> !llvm.ptr {name = ""}
   omp.target_data map_entries(%1 : !llvm.ptr) {
     omp.terminator
   }
