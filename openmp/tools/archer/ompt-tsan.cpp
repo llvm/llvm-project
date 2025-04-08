@@ -32,6 +32,7 @@
 #include <vector>
 
 #include "omp-tools.h"
+#include "omp.h" /* For omp_control_tool_result_t */
 
 // Define attribute that indicates that the fall through from the previous
 // case label is intentional and should not be diagnosed by a compiler
@@ -600,6 +601,44 @@ static inline TaskData *ToTaskData(ompt_data_t *task_data) {
 /// Store a mutex for each wait_id to resolve race condition with callbacks.
 static std::unordered_map<ompt_wait_id_t, std::mutex> Locks;
 static std::mutex LocksMutex;
+
+enum ArcherState { ACTIVE = 0, PAUSED, ENDED };
+static ArcherState archer_state{ACTIVE};
+
+static int ompt_tsan_control_tool(uint64_t command, uint64_t modifier,
+                                  void *arg, const void *codeptr_ra) {
+  omp_control_tool_result_t res = omp_control_tool_ignored;
+  switch (command) {
+  case omp_control_tool_start:
+    if (archer_state == ENDED || archer_state == ACTIVE)
+      return omp_control_tool_ignored;
+    if (archer_flags->verbose)
+      std::cout << "[Archer] Started operation\n";
+    archer_state = ACTIVE;
+    TsanIgnoreWritesEnd();
+    return omp_control_tool_success;
+  case omp_control_tool_pause:
+    if (archer_flags->verbose)
+      std::cout << "[Archer] Paused operation\n";
+    if (archer_state != ENDED) {
+      TsanIgnoreWritesBegin();
+      archer_state = PAUSED;
+    }
+    return omp_control_tool_success;
+  case omp_control_tool_flush:
+    return omp_control_tool_ignored;
+  case omp_control_tool_end:
+    archer_state = ENDED;
+    if (archer_flags->verbose) {
+      std::cout << "[Archer] Ended operation\n";
+    }
+    TsanIgnoreWritesBegin();
+    return omp_control_tool_success;
+  default:
+    return omp_control_tool_ignored;
+  }
+  return res;
+}
 
 static void ompt_tsan_thread_begin(ompt_thread_t thread_type,
                                    ompt_data_t *thread_data) {
@@ -1191,6 +1230,7 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
   findTsanFunction(__tsan_func_entry, (void (*)(const void *)));
   findTsanFunction(__tsan_func_exit, (void (*)(void)));
 
+  SET_CALLBACK(control_tool);
   SET_CALLBACK(thread_begin);
   SET_CALLBACK(thread_end);
   SET_CALLBACK(parallel_begin);
@@ -1221,6 +1261,8 @@ static int ompt_tsan_initialize(ompt_function_lookup_t lookup, int device_num,
 static void ompt_tsan_finalize(ompt_data_t *tool_data) {
   if (archer_flags->ignore_serial)
     TsanIgnoreWritesEnd();
+  if (archer_state == PAUSED || archer_state == ENDED)
+    TsanIgnoreWritesEnd();
   if (archer_flags->print_max_rss) {
     struct rusage end;
     getrusage(RUSAGE_SELF, &end);
@@ -1238,6 +1280,7 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
   if (!archer_flags->enabled) {
     if (archer_flags->verbose)
       std::cout << "Archer disabled, stopping operation" << std::endl;
+    archer_state = ENDED;
     delete archer_flags;
     return NULL;
   }
