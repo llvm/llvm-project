@@ -242,10 +242,21 @@ public:
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
   Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
-                                       CharUnits alignment) {
+                                       CharUnits alignment,
+                                       bool forPointeeType = false,
+                                       LValueBaseInfo *baseInfo = nullptr) {
     if (alignment.isZero())
-      alignment = cgm.getNaturalTypeAlignment(t);
+      alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty,
+                        AlignmentSource source = AlignmentSource::Type) {
+    return makeAddrLValue(addr, ty, LValueBaseInfo(source));
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
+    return LValue::makeAddr(addr, ty, baseInfo);
   }
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -523,7 +534,8 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address emitPointerWithAlignment(const clang::Expr *expr);
+  Address emitPointerWithAlignment(const clang::Expr *expr,
+                                   LValueBaseInfo *baseInfo);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
