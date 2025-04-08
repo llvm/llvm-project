@@ -5317,6 +5317,15 @@ struct AAAlignImpl : AAAlign {
             InstrChanged = ChangeStatus::CHANGED;
           }
         }
+      } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(U.getUser())) {
+        if (CAS->getPointerOperand() == &AssociatedValue) {
+          if (CAS->getAlign() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, AtomicCmpXchg,
+                            "Number of times alignment added to cmpxchg");
+            CAS->setAlignment(getAssumedAlign());
+            InstrChanged = ChangeStatus::CHANGED;
+          }
+        }
       }
     }
 
