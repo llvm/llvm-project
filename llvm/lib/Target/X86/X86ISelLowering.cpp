@@ -39827,7 +39827,6 @@ static SDValue combineX86ShuffleChain(
 
     // If we're inserting the low subvector, an insert-subvector 'concat'
     // pattern is quicker than VPERM2X128.
-    // TODO: Add AVX2 support instead of VPERMQ/VPERMPD.
     if (BaseMask[0] == 0 && (BaseMask[1] == 0 || BaseMask[1] == 2) &&
         !Subtarget.hasAVX2()) {
       if (Depth == 0 && RootOpc == ISD::INSERT_SUBVECTOR)
@@ -39838,8 +39837,9 @@ static SDValue combineX86ShuffleChain(
       return insertSubVector(Lo, Hi, NumRootElts / 2, DAG, DL, 128);
     }
 
-    // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
-    // we need to use the zeroing feature.
+    // Don't lower to VPERM2X128 here if we have AVX2+, prefer to use
+    // VPERMQ/VPERMPD for unary shuffles unless we need to use the zeroing
+    // feature.
     // Prefer blends for sequential shuffles unless we are optimizing for size.
     if (UnaryShuffle &&
         !(Subtarget.hasAVX2() && isUndefOrInRange(Mask, 0, 2)) &&
