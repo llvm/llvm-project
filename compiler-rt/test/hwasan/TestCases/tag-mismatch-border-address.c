@@ -16,8 +16,8 @@ extern void *__hwasan_shadow_memory_dynamic_address;
 int main(int argc, char **argv) {
   size_t page_size = getauxval(AT_PAGESZ);
   void *high_addr = (char *)__hwasan_shadow_memory_dynamic_address - page_size;
-  void *r = mmap(high_addr, page_size, PROT_READ, MAP_FIXED | MAP_ANON | MAP_PRIVATE,
-                 -1, 0);
+  void *r = mmap(high_addr, page_size, PROT_READ,
+                 MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0);
   if (r == MAP_FAILED) {
     fprintf(stderr, "Failed to mmap\n");
     abort();
