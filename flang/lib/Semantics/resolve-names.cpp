@@ -1468,11 +1468,15 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpMetadirectiveDirective &) {
+  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+    metaDirective_ = &x;
     ++metaLevel_;
     return true;
   }
-  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+  void Post(const parser::OmpMetadirectiveDirective &) {
+    metaDirective_ = nullptr;
+    --metaLevel_;
+  }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -1721,6 +1725,7 @@ private:
   parser::CharBlock MangleDefinedOperator(const parser::CharBlock &name);
 
   int metaLevel_{0};
+  const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1979,7 +1984,8 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, maybeClauses, x);
+        CHECK(metaDirective_);
+        ProcessReductionSpecifier(*spec, maybeClauses, *metaDirective_);
       }
     }
     break;

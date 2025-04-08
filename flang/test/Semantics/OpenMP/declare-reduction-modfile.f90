@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_modfile.py %s %flang_fc1 -fopenmp
+! RUN: %python %S/../test_modfile.py %s %flang_fc1 -fopenmp -fopenmp-version=52
 ! Check correct modfile generation for OpenMP DECLARE REDUCTION construct.
 
 !Expect: drm.mod
@@ -8,6 +8,7 @@
 !endtype
 !!$OMP DECLARE REDUCTION (*:t1:omp_out = omp_out*omp_in) INITIALIZER(omp_priv=t&
 !!$OMP&1(1))
+!!$OMP METADIRECTIVE OTHERWISE(DECLARE REDUCTION(+:INTEGER))
 !!$OMP DECLARE REDUCTION (.fluffy.:t1:omp_out = omp_out.fluffy.omp_in) INITIALI&
 !!$OMP&ZER(omp_priv=t1(0))
 !!$OMP DECLARE REDUCTION (.mul.:t1:omp_out = omp_out.mul.omp_in) INITIALIZER(om&
@@ -50,6 +51,7 @@ module drm
 !$omp declare reduction(*:t1:omp_out=omp_out*omp_in) initializer(omp_priv=t1(1))
 !$omp declare reduction(.mul.:t1:omp_out=omp_out.mul.omp_in) initializer(omp_priv=t1(1))
 !$omp declare reduction(.fluffy.:t1:omp_out=omp_out.fluffy.omp_in) initializer(omp_priv=t1(0))
+!$omp metadirective otherwise(declare reduction(+: integer))
 contains
   type(t1) function mul(v1, v2)
     type(t1), intent (in):: v1, v2
