@@ -3076,25 +3076,28 @@ class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
-                        Instruction::BinaryOps Opcode, FastMathFlags FMFs)
+                        Instruction::BinaryOps Opcode, FastMathFlags FMFs,
+                        DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs),
+                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs, DL),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step, VPValue *VF)
+                        VPValue *Step, VPValue *VF, DebugLoc DL = {})
       : VPScalarIVStepsRecipe(
             IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
-                : FastMathFlags()) {}
+                : FastMathFlags(),
+            DL) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
+        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
+        getDebugLoc());
   }
 
   /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
@@ -3765,6 +3768,14 @@ public:
   /// successors of the block in VPlan. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
+
+  /// Returns true if the VPlan is based on a loop with an early exit. That is
+  /// the case if the VPlan has either more than one exit block or a single exit
+  /// block with multiple predecessors (one for the exit via the latch and one
+  /// via the other early exit).
+  bool hasEarlyExit() const {
+    return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

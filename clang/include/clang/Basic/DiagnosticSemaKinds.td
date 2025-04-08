@@ -1031,6 +1031,9 @@ def err_mainlike_template_decl : Error<"%0 cannot be a template">;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
     InGroup<MainReturnType>;
+def ext_main_no_return : Extension<
+    "implicit '0' return value from 'main' is a C99 extension">,
+    InGroup<MainReturnType>;
 def note_main_change_return_type : Note<"change return type to 'int'">;
 def err_main_surplus_args : Error<"too many parameters (%0) for 'main': "
     "must be 0, 2, or 3">;
@@ -3195,6 +3198,10 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
+def err_callback_attribute_wrong_arg_count : Error<
+  "'callback' attribute references function of type %0 which expects %1 "
+  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
+  "%plural{1:argument|:arguments}2">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
@@ -7346,8 +7353,9 @@ def err_typecheck_pointer_arith_void_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to void">;
 def err_typecheck_decl_incomplete_type : Error<
   "variable has incomplete type %0">;
-def ext_typecheck_decl_incomplete_type : ExtWarn<
-  "tentative definition of variable with internal linkage has incomplete non-array type %0">,
+def ext_typecheck_decl_incomplete_type : Extension<
+  "tentative definition of variable with internal linkage has incomplete "
+  "%select{non-array|array}0 type %1">,
   InGroup<DiagGroup<"tentative-definition-incomplete-type">>;
 def err_tentative_def_incomplete_type : Error<
   "tentative definition has type %0 that is never completed">;
@@ -9071,7 +9079,7 @@ def err_atomic_op_needs_atomic_int : Error<
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
-def err_atomic_op_has_invalid_synch_scope : Error<
+def err_atomic_op_has_invalid_sync_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
 def warn_atomic_implicit_seq_cst : Warning<
   "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
@@ -13051,6 +13059,8 @@ def warn_acc_confusing_routine_name
       InGroup<DiagGroup<"openacc-confusing-routine-name">>;
 def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
+def err_acc_invalid_modifier
+    : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

@@ -88,7 +88,6 @@ struct MissingFeatures {
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
   static bool opTBAA() { return false; }
-  static bool opCmp() { return false; }
   static bool objCLifetime() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool astVarDeclInterface() { return false; }
@@ -108,6 +107,9 @@ struct MissingFeatures {
   static bool cgFPOptionsRAII() { return false; }
   static bool metaDataNode() { return false; }
   static bool fastMathFlags() { return false; }
+  static bool lvalueBaseInfo() { return false; }
+  static bool alignCXXRecordDecl() { return false; }
+  static bool setNonGC() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -122,12 +124,10 @@ struct MissingFeatures {
 
   // Future CIR operations
   static bool awaitOp() { return false; }
-  static bool breakOp() { return false; }
   static bool callOp() { return false; }
   static bool complexCreateOp() { return false; }
   static bool complexImagOp() { return false; }
   static bool complexRealOp() { return false; }
-  static bool continueOp() { return false; }
   static bool ifOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }

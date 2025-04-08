@@ -8,7 +8,7 @@
 //
 // \file
 // This file implements the TOSA Specification:
-// https://developer.mlplatform.org/w/tosa/
+// https://www.mlplatform.org/tosa/tosa_spec.html
 //
 //===----------------------------------------------------------------------===//
 
@@ -1066,6 +1066,10 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
     hasRankedInput = true;
   }
+
+  if (adaptor.getInput1().empty())
+    return failure();
+
   Type inputType =
       llvm::cast<TensorType>(adaptor.getInput1().getType()[0]).getElementType();
   if (!hasRankedInput) {

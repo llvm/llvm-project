@@ -856,6 +856,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"present", {{"a", Addressable, Rank::anyOrAssumedRank}}, DefaultLogical,
         Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"putenv", {{"str", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"radix",
         {{"x", AnyIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In,
@@ -1639,6 +1641,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
     {"perror", {{"string", DefaultChar, Rank::scalar}}, {}, Rank::elemental,
         IntrinsicClass::impureSubroutine},
+    {"putenv",
+        {{"str", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"mvbits",
         {{"from", SameIntOrUnsigned}, {"frompos", AnyInt}, {"len", AnyInt},
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
@@ -2874,8 +2882,8 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
   static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
-      {"ftell"}, {"getcwd"}, {"hostnm"}, {"rename"}, {"second"}, {"system"},
-      {"unlink"}};
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
 

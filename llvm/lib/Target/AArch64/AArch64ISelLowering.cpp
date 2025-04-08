@@ -8703,13 +8703,22 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
       return false;
 
     // On Windows, "inreg" attributes signify non-aggregate indirect returns.
-    // In this case, it is necessary to save/restore X0 in the callee. Tail
-    // call opt interferes with this. So we disable tail call opt when the
-    // caller has an argument with "inreg" attribute.
-
-    // FIXME: Check whether the callee also has an "inreg" argument.
-    if (i->hasInRegAttr())
-      return false;
+    // In this case, it is necessary to save X0/X1 in the callee and return it
+    // in X0. Tail call opt may interfere with this, so we disable tail call
+    // opt when the caller has an "inreg" attribute -- except if the callee
+    // also has that attribute on the same argument, and the same value is
+    // passed.
+    if (i->hasInRegAttr()) {
+      unsigned ArgIdx = i - CallerF.arg_begin();
+      if (!CLI.CB || CLI.CB->arg_size() <= ArgIdx)
+        return false;
+      AttributeSet Attrs = CLI.CB->getParamAttributes(ArgIdx);
+      if (!Attrs.hasAttribute(Attribute::InReg) ||
+          !Attrs.hasAttribute(Attribute::StructRet) || !i->hasStructRetAttr() ||
+          CLI.CB->getArgOperand(ArgIdx) != i) {
+        return false;
+      }
+    }
   }
 
   if (canGuaranteeTCO(CalleeCC, getTargetMachine().Options.GuaranteedTailCallOpt))
@@ -20190,6 +20199,12 @@ performInsertSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT VecVT = Vec.getValueType();
   EVT SubVT = SubVec.getValueType();
 
+  // Promote fixed length vector zeros.
+  if (VecVT.isScalableVector() && SubVT.isFixedLengthVector() &&
+      Vec.isUndef() && isZerosVector(SubVec.getNode()))
+    return VecVT.isInteger() ? DAG.getConstant(0, DL, VecVT)
+                             : DAG.getConstantFP(0, DL, VecVT);
+
   // Only do this for legal fixed vector types.
   if (!VecVT.isFixedLengthVector() ||
       !DAG.getTargetLoweringInfo().isTypeLegal(VecVT) ||
@@ -28697,17 +28712,36 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
   SDLoc DL(Mask);
   EVT InVT = Mask.getValueType();
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, InVT);
-
-  auto Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
+  SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, InVT);
 
   if (ISD::isBuildVectorAllOnes(Mask.getNode()))
     return Pg;
 
-  auto Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
-  auto Op2 = DAG.getConstant(0, DL, ContainerVT);
+  bool InvertCond = false;
+  if (isBitwiseNot(Mask)) {
+    InvertCond = true;
+    Mask = Mask.getOperand(0);
+  }
+
+  SDValue Op1, Op2;
+  ISD::CondCode CC;
+
+  // When Mask is the result of a SETCC, it's better to regenerate the compare.
+  if (Mask.getOpcode() == ISD::SETCC) {
+    Op1 = convertToScalableVector(DAG, ContainerVT, Mask.getOperand(0));
+    Op2 = convertToScalableVector(DAG, ContainerVT, Mask.getOperand(1));
+    CC = cast<CondCodeSDNode>(Mask.getOperand(2))->get();
+  } else {
+    Op1 = convertToScalableVector(DAG, ContainerVT, Mask);
+    Op2 = DAG.getConstant(0, DL, ContainerVT);
+    CC = ISD::SETNE;
+  }
+
+  if (InvertCond)
+    CC = getSetCCInverse(CC, Op1.getValueType());
 
   return DAG.getNode(AArch64ISD::SETCC_MERGE_ZERO, DL, Pg.getValueType(),
-                     {Pg, Op1, Op2, DAG.getCondCode(ISD::SETNE)});
+                     {Pg, Op1, Op2, DAG.getCondCode(CC)});
 }
 
 // Convert all fixed length vector loads larger than NEON to masked_loads.
@@ -30223,83 +30257,3 @@ bool AArch64TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
 
   return TargetLowering::isTypeDesirableForOp(Opc, VT);
 }
-
-#ifndef NDEBUG
-void AArch64TargetLowering::verifyTargetSDNode(const SDNode *N) const {
-  switch (N->getOpcode()) {
-  default:
-    break;
-  case AArch64ISD::SADDWT:
-  case AArch64ISD::SADDWB:
-  case AArch64ISD::UADDWT:
-  case AArch64ISD::UADDWB: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
-    EVT VT = N->getValueType(0);
-    EVT Op0VT = N->getOperand(0).getValueType();
-    EVT Op1VT = N->getOperand(1).getValueType();
-    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
-           VT.isInteger() && Op0VT.isInteger() && Op1VT.isInteger() &&
-           "Expected integer vectors!");
-    assert(VT == Op0VT &&
-           "Expected result and first input to have the same type!");
-    assert(Op0VT.getSizeInBits() == Op1VT.getSizeInBits() &&
-           "Expected vectors of equal size!");
-    assert(Op0VT.getVectorElementCount() * 2 == Op1VT.getVectorElementCount() &&
-           "Expected result vector and first input vector to have half the "
-           "lanes of the second input vector!");
-    break;
-  }
-  case AArch64ISD::SUNPKLO:
-  case AArch64ISD::SUNPKHI:
-  case AArch64ISD::UUNPKLO:
-  case AArch64ISD::UUNPKHI: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 1 && "Expected one operand!");
-    EVT VT = N->getValueType(0);
-    EVT OpVT = N->getOperand(0).getValueType();
-    assert(OpVT.isVector() && VT.isVector() && OpVT.isInteger() &&
-           VT.isInteger() && "Expected integer vectors!");
-    assert(OpVT.getSizeInBits() == VT.getSizeInBits() &&
-           "Expected vectors of equal size!");
-    assert(OpVT.getVectorElementCount() == VT.getVectorElementCount() * 2 &&
-           "Expected result vector with half the lanes of its input!");
-    break;
-  }
-  case AArch64ISD::TRN1:
-  case AArch64ISD::TRN2:
-  case AArch64ISD::UZP1:
-  case AArch64ISD::UZP2:
-  case AArch64ISD::ZIP1:
-  case AArch64ISD::ZIP2: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
-    EVT VT = N->getValueType(0);
-    EVT Op0VT = N->getOperand(0).getValueType();
-    EVT Op1VT = N->getOperand(1).getValueType();
-    assert(VT.isVector() && Op0VT.isVector() && Op1VT.isVector() &&
-           "Expected vectors!");
-    assert(VT == Op0VT && VT == Op1VT && "Expected matching vectors!");
-    break;
-  }
-  case AArch64ISD::RSHRNB_I: {
-    assert(N->getNumValues() == 1 && "Expected one result!");
-    assert(N->getNumOperands() == 2 && "Expected two operands!");
-    EVT VT = N->getValueType(0);
-    EVT Op0VT = N->getOperand(0).getValueType();
-    EVT Op1VT = N->getOperand(1).getValueType();
-    assert(VT.isVector() && VT.isInteger() &&
-           "Expected integer vector result type!");
-    assert(Op0VT.isVector() && Op0VT.isInteger() &&
-           "Expected first operand to be an integer vector!");
-    assert(VT.getSizeInBits() == Op0VT.getSizeInBits() &&
-           "Expected vectors of equal size!");
-    assert(VT.getVectorElementCount() == Op0VT.getVectorElementCount() * 2 &&
-           "Expected input vector with half the lanes of its result!");
-    assert(Op1VT == MVT::i32 && isa<ConstantSDNode>(N->getOperand(1)) &&
-           "Expected second operand to be a constant i32!");
-    break;
-  }
-  }
-}
-#endif
