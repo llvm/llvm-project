@@ -28,6 +28,7 @@
 #include <iterator>
 
 #include "test_macros.h"
+#include <iostream>
 
 void test() {
   {
