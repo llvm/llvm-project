@@ -493,10 +493,10 @@ u64 MonotonicNanoTime() {
 }
 
 void DumpProcessMap() {
-MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  MemoryMappingLayout proc_maps(/*cache_enabled*/ true);
   const sptr kBufSize = 4095;
-  char *filename = (char*)MmapOrDie(kBufSize, __func__);
-  char *displayname = (char*)MmapOrDie(kBufSize, __func__);
+  char *filename = (char *)MmapOrDie(kBufSize, __func__);
+  char *displayname = (char *)MmapOrDie(kBufSize, __func__);
   MemoryMappedSegment segment(filename, kBufSize, displayname, kBufSize);
   Report("Process memory map follows:\n");
   while (proc_maps.Next(&segment)) {

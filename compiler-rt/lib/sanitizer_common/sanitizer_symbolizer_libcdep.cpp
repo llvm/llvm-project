@@ -284,7 +284,7 @@ class LLVMSymbolizerProcess final : public SymbolizerProcess {
     const char *const kSymbolizerArch = "--default-arch=powerpc64le";
 #  elif defined(__powerpc__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     // Must check __powerpc__ after __powerpc64__ because both can be set.
-    const char* const kSymbolizerArch = "--default-arch=powerpc";
+    const char *const kSymbolizerArch = "--default-arch=powerpc";
 #  elif defined(__s390x__)
     const char *const kSymbolizerArch = "--default-arch=s390x";
 #  elif defined(__s390__)

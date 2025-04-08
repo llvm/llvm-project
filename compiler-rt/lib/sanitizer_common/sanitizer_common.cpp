@@ -172,7 +172,7 @@ void LoadedModule::set(const char *module_name, uptr base_address,
 }
 
 void LoadedModule::setDisplayName(const char *display_name) {
-  display_name_ = internal_strdup(display_name); 
+  display_name_ = internal_strdup(display_name);
 }
 
 void LoadedModule::setUuid(const char *uuid, uptr size) {

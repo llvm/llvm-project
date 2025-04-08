@@ -851,7 +851,7 @@ class LoadedModule {
   bool containsAddress(uptr address) const;
 
   const char *full_name() const { return full_name_; }
-  const char *display_name() const {return display_name_;}
+  const char *display_name() const { return display_name_; }
   uptr base_address() const { return base_address_; }
   uptr max_address() const { return max_address_; }
   ModuleArch arch() const { return arch_; }
