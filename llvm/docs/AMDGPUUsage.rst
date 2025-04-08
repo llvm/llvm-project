@@ -485,7 +485,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     **GCN GFX11 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
+     **GCN GFX11.5 (RDNA 3.5)** [AMD-GCN-GFX11-RDNA3.5]_
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1150``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -509,6 +509,15 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         IDs                             names.
 
      ``gfx1153``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
+     **GCN GFX11.7 (RDNA 3.7)**
+     -----------------------------------------------------------------------------------------------------------------------
+     ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
                                                                       - Packed
@@ -612,11 +621,13 @@ Generic processor code objects are versioned. See :ref:`amdgpu-generic-processor
                                          - ``gfx1150``                          IDs
                                          - ``gfx1151``
                                          - ``gfx1152``
-                                         - ``gfx1153``                                          Not all VGPRs can be used on:
+                                         - ``gfx1153``
+                                         - ``gfx1170``                                          Not all VGPRs can be used on:
 
                                                                                                 - ``gfx1100``
                                                                                                 - ``gfx1101``
                                                                                                 - ``gfx1151``
+                                                                                                - ``gfx1170``
 
                                                                                                 SALU floating point instructions
                                                                                                 are not available on:
@@ -2270,6 +2281,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x057      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1153``          0x058      ``gfx1153``.
      ``EF_AMDGPU_MACH_AMDGCN_GFX12_GENERIC``    0x059      ``gfx12-generic``
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1170``          0x05d      ``gfx1170``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC``   0x05f      ``gfx9-4-generic``
      ========================================== ========== =============================
 

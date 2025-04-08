@@ -850,4 +850,9 @@ def warn_missing_include_dirs : Warning<
 
 def err_drv_malformed_warning_suppression_mapping : Error<
   "failed to process suppression mapping file '%0': %1">;
+
+def warn_drv_openacc_without_cir
+    : Warning<"OpenACC directives will result in no runtime behavior; use "
+              "-fclangir to enable runtime effect">,
+      InGroup<SourceUsesOpenACC>;
 }

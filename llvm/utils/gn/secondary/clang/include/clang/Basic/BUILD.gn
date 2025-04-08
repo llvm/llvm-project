@@ -57,6 +57,14 @@ foreach(diag_group, diag_groups) {
     ]
     td_file = "Diagnostic.td"
   }
+
+  clang_tablegen("Diagnostic${diag_group}Interface") {
+    args = [
+      "-gen-clang-diags-iface",
+      "-clang-component=${diag_group}",
+    ]
+    td_file = "Diagnostic.td"
+  }
 }
 group("diags_tablegen") {
   # DiagnosticGroups, DiagnosticIndexName, DiagnosticAllCompatIDs are
@@ -70,6 +78,7 @@ group("diags_tablegen") {
         ":Diagnostic${diag_group}Kinds",
         ":Diagnostic${diag_group}Enums",
         ":Diagnostic${diag_group}CompatIDs",
+        ":Diagnostic${diag_group}Interface",
     ]
   }
 }
