@@ -1570,6 +1570,10 @@ void clang::EmitClangDiagsInterface(llvm::raw_ostream &OS,
   if (Component.empty())
     PrintFatalError("'-gen-clang-diags-iface' requires a component name");
 
+  std::string ComponentUpper = StringRef(Component).upper();
+  const char *Comp = Component.c_str();
+  const char *Upper = ComponentUpper.c_str();
+
   OS << llvm::format(R"c++(
 namespace clang {
 namespace diag {
@@ -1577,10 +1581,10 @@ enum {
 #define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
              SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
   ENUM,
-#define %2$sSTART
-#include "clang/Basic/Diagnostic%1$sKinds.inc"
+#define %sSTART
+#include "clang/Basic/Diagnostic%sKinds.inc"
 #undef DIAG
-  NUM_BUILTIN_%2$s_DIAGNOSTICS
+  NUM_BUILTIN_%s_DIAGNOSTICS
 };
 
 #define DIAG_ENUM(ENUM_NAME)                                                   \
@@ -1591,7 +1595,7 @@ enum {
   }                                                                            \
   ;                                                                            \
   }
-#include "clang/Basic/Diagnostic%1$sEnums.inc"
+#include "clang/Basic/Diagnostic%sEnums.inc"
 #undef DIAG_ENUM_END
 #undef DIAG_ENUM_ITEM
 #undef DIAG_ENUM
@@ -1603,14 +1607,14 @@ namespace diag_compat {
   }                                                                            \
   ;
 #define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
-#include "clang/Basic/Diagnostic%1$sCompatIDs.inc"
+#include "clang/Basic/Diagnostic%sCompatIDs.inc"
 #undef DIAG_COMPAT_ID
 #undef DIAG_COMPAT_IDS_BEGIN
 #undef DIAG_COMPAT_IDS_END
 } // end namespace diag_compat
 } // end namespace clang
 )c++",
-                     Component.c_str(), StringRef(Component).upper().c_str());
+                     Upper, Comp, Upper, Comp, Comp);
 }
 
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing
