@@ -591,8 +591,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
 
     for (auto &Sym : Symbols) {
       OutStreamer->emitValue(
-          MCSymbolRefExpr::create(Sym, WebAssemblyMCExpr::VK_FUNCINDEX,
-                                  OutContext),
+          MCSymbolRefExpr::create(Sym, WebAssembly::S_FUNCINDEX, OutContext),
           4);
     }
     OutStreamer->popSection();

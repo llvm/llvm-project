@@ -99,6 +99,19 @@ cbuffer CBArrays : register(b2) {
 // CHECK: @c7 = external addrspace(2) global [2 x i64], align 8
 // CHECK: @c8 = external addrspace(2) global [4 x i32], align 4
 
+typedef uint32_t4 uint32_t8[2];
+typedef uint4 T1;
+typedef T1 T2[2]; // check a double typedef
+
+cbuffer CBTypedefArray {
+  uint32_t8 t1[2];
+  T2 t2[2];
+}
+
+// CHECK: @CBTypedefArray.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray,
+// CHECK-SAME: 128, 0, 64))
+// CHECK: @t1 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
+// CHECK: @t2 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
 struct Empty {};
 
 struct A {
@@ -278,7 +291,7 @@ void main() {
 // CHECK-NEXT: call void @_init_resource_CBScalars.cb()
 // CHECK-NEXT: call void @_init_resource_CBArrays.cb()
 
-// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
+// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBTYPEDEFARRAY:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBCLASSES:[0-9]+]],
 // CHECK-SAME: ![[CBMIX:[0-9]+]], ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
 
 // CHECK: ![[CBSCALARS]] = !{ptr @CBScalars.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4,
@@ -289,6 +302,8 @@ void main() {
 
 // CHECK: ![[CBARRAYS]] = !{ptr @CBArrays.cb, ptr addrspace(2) @c1, ptr addrspace(2) @c2, ptr addrspace(2) @c3, ptr addrspace(2) @c4,
 // CHECK-SAME: ptr addrspace(2) @c5, ptr addrspace(2) @c6, ptr addrspace(2) @c7, ptr addrspace(2) @c8}
+
+// CHECK: ![[CBTYPEDEFARRAY]] = !{ptr @CBTypedefArray.cb, ptr addrspace(2) @t1, ptr addrspace(2) @t2}
 
 // CHECK: ![[CBSTRUCTS]] = !{ptr @CBStructs.cb, ptr addrspace(2) @a, ptr addrspace(2) @b, ptr addrspace(2) @c, ptr addrspace(2) @array_of_A,
 // CHECK-SAME: ptr addrspace(2) @d, ptr addrspace(2) @e, ptr addrspace(2) @f}

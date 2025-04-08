@@ -6,59 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The MCTargetExpr subclass describes a relocatable expression with a
-// WebAssembly-specific relocation specifier.
+// Defines WebAssembly-specific relocation specifiers.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCEXPR_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_MCTARGETDESC_WEBASSEMBLYMCEXPR_H
 
-#include "llvm/MC/MCExpr.h"
-
-namespace llvm {
-
-class WebAssemblyMCExpr : public MCTargetExpr {
-public:
-  enum Specifier {
-    VK_None,
-    VK_TYPEINDEX,
-    VK_TBREL,
-    VK_MBREL,
-    VK_TLSREL,
-    VK_GOT,
-    VK_GOT_TLS,
-    VK_FUNCINDEX,
-  };
-
-private:
-  const MCExpr *Expr;
-  const Specifier specifier;
-
-protected:
-  explicit WebAssemblyMCExpr(const MCExpr *Expr, Specifier S)
-      : Expr(Expr), specifier(S) {}
-
-public:
-  static const WebAssemblyMCExpr *create(const MCExpr *, Specifier,
-                                         MCContext &);
-
-  Specifier getSpecifier() const { return specifier; }
-  const MCExpr *getSubExpr() const { return Expr; }
-
-  void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res,
-                                 const MCAssembler *Asm) const override;
-  void visitUsedExpr(MCStreamer &Streamer) const override;
-  MCFragment *findAssociatedFragment() const override {
-    return getSubExpr()->findAssociatedFragment();
-  }
+namespace llvm::WebAssembly {
+enum Specifier {
+  S_None,
+  S_TYPEINDEX,
+  S_TBREL,
+  S_MBREL,
+  S_TLSREL,
+  S_GOT,
+  S_GOT_TLS,
+  S_FUNCINDEX,
 };
-
-static inline WebAssemblyMCExpr::Specifier
-getSpecifier(const MCSymbolRefExpr *SRE) {
-  return WebAssemblyMCExpr::Specifier(SRE->getKind());
-}
-} // namespace llvm
+} // namespace llvm::WebAssembly
 
 #endif

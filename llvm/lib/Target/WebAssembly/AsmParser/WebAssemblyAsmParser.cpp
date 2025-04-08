@@ -701,8 +701,8 @@ public:
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      const MCExpr *Expr = MCSymbolRefExpr::create(
-          WasmSym, WebAssemblyMCExpr::VK_TYPEINDEX, Ctx);
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }

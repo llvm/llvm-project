@@ -23,13 +23,13 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-mc-asm-info"
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {WebAssemblyMCExpr::VK_TYPEINDEX, "TYPEINDEX"},
-    {WebAssemblyMCExpr::VK_TBREL, "TBREL"},
-    {WebAssemblyMCExpr::VK_MBREL, "MBREL"},
-    {WebAssemblyMCExpr::VK_TLSREL, "TLSREL"},
-    {WebAssemblyMCExpr::VK_GOT, "GOT"},
-    {WebAssemblyMCExpr::VK_GOT_TLS, "GOT@TLS"},
-    {WebAssemblyMCExpr::VK_FUNCINDEX, "FUNCINDEX"},
+    {WebAssembly::S_TYPEINDEX, "TYPEINDEX"},
+    {WebAssembly::S_TBREL, "TBREL"},
+    {WebAssembly::S_MBREL, "MBREL"},
+    {WebAssembly::S_TLSREL, "TLSREL"},
+    {WebAssembly::S_GOT, "GOT"},
+    {WebAssembly::S_GOT_TLS, "GOT@TLS"},
+    {WebAssembly::S_FUNCINDEX, "FUNCINDEX"},
 };
 
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.

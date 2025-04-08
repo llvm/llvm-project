@@ -2167,6 +2167,7 @@ static bool isRemovablePointerIntrinsic(Intrinsic::ID IID) {
   case Intrinsic::memset:
   case Intrinsic::memset_inline:
   case Intrinsic::experimental_memset_pattern:
+  case Intrinsic::amdgcn_buffer_fat_ptr_load_lds:
     return true;
   }
 }
@@ -2255,6 +2256,26 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     SplitUsers.insert(&I);
     return {NewRsrc, Off};
   }
+  case Intrinsic::amdgcn_buffer_fat_ptr_load_lds: {
+    Value *BufferPtr = I.getArgOperand(0);
+    assert(isSplitFatPtr(BufferPtr->getType()) &&
+           "amdgcn.buffer.fat.pointer.load.lds must have a buffer fat pointer "
+           "as argument 0");
+    IRB.SetInsertPoint(&I);
+    auto [Rsrc, Off] = getPtrParts(BufferPtr);
+    Value *LDSPtr = I.getArgOperand(1);
+    Value *LoadSize = I.getArgOperand(2);
+    Value *ImmOff = I.getArgOperand(3);
+    Value *Aux = I.getArgOperand(4);
+    Value *SOffset = IRB.getInt32(0);
+    Instruction *NewLoad = IRB.CreateIntrinsic(
+        Intrinsic::amdgcn_raw_ptr_buffer_load_lds, {},
+        {Rsrc, LDSPtr, LoadSize, Off, SOffset, ImmOff, Aux});
+    copyMetadata(NewLoad, &I);
+    SplitUsers.insert(&I);
+    I.replaceAllUsesWith(NewLoad);
+    return {nullptr, nullptr};
+  }
   }
   return {nullptr, nullptr};
 }
@@ -2291,10 +2312,7 @@ class AMDGPULowerBufferFatPointers : public ModulePass {
 public:
   static char ID;
 
-  AMDGPULowerBufferFatPointers() : ModulePass(ID) {
-    initializeAMDGPULowerBufferFatPointersPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
   bool run(Module &M, const TargetMachine &TM);
   bool runOnModule(Module &M) override;

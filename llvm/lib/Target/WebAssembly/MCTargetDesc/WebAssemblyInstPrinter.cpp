@@ -340,7 +340,7 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     // as a signature here, such that the assembler can recover this
     // information.
     auto SRE = static_cast<const MCSymbolRefExpr *>(Op.getExpr());
-    if (getSpecifier(SRE) == WebAssemblyMCExpr::VK_TYPEINDEX) {
+    if (SRE->getSpecifier() == WebAssembly::S_TYPEINDEX) {
       auto &Sym = static_cast<const MCSymbolWasm &>(SRE->getSymbol());
       O << WebAssembly::signatureToString(Sym.getSignature());
     } else {

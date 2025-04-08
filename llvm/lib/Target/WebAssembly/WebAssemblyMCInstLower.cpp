@@ -92,26 +92,26 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
 
 MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
                                                      MCSymbol *Sym) const {
-  auto Spec = WebAssemblyMCExpr::VK_None;
+  auto Spec = WebAssembly::S_None;
   unsigned TargetFlags = MO.getTargetFlags();
 
   switch (TargetFlags) {
     case WebAssemblyII::MO_NO_FLAG:
       break;
     case WebAssemblyII::MO_GOT_TLS:
-      Spec = WebAssemblyMCExpr::VK_GOT_TLS;
+      Spec = WebAssembly::S_GOT_TLS;
       break;
     case WebAssemblyII::MO_GOT:
-      Spec = WebAssemblyMCExpr::VK_GOT;
+      Spec = WebAssembly::S_GOT;
       break;
     case WebAssemblyII::MO_MEMORY_BASE_REL:
-      Spec = WebAssemblyMCExpr::VK_MBREL;
+      Spec = WebAssembly::S_MBREL;
       break;
     case WebAssemblyII::MO_TLS_BASE_REL:
-      Spec = WebAssemblyMCExpr::VK_TLSREL;
+      Spec = WebAssembly::S_TLSREL;
       break;
     case WebAssemblyII::MO_TABLE_BASE_REL:
-      Spec = WebAssemblyMCExpr::VK_TBREL;
+      Spec = WebAssembly::S_TBREL;
       break;
     default:
       llvm_unreachable("Unknown target flag on GV operand");
@@ -150,7 +150,7 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   WasmSym->setSignature(Signature);
   WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
   const MCExpr *Expr =
-      MCSymbolRefExpr::create(WasmSym, WebAssemblyMCExpr::VK_TYPEINDEX, Ctx);
+      MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
 }
 

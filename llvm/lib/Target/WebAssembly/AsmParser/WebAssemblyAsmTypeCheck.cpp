@@ -265,9 +265,9 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
     break;
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_DATA:
-    switch (getSpecifier(SymRef)) {
-    case WebAssemblyMCExpr::VK_GOT:
-    case WebAssemblyMCExpr::VK_GOT_TLS:
+    switch (SymRef->getSpecifier()) {
+    case WebAssembly::S_GOT:
+    case WebAssembly::S_GOT_TLS:
       Type = Is64 ? wasm::ValType::I64 : wasm::ValType::I32;
       return false;
     default:
