@@ -6,14 +6,14 @@
 ; GCN: define amdgpu_kernel void @caller(ptr addrspace(1) captures(none) %p) local_unnamed_addr #1 {
 ; GCN: %mul.i = fmul float %load, 1.500000e+01
 
-; UNSAFE: attributes #0 = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; UNSAFE: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #1 = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 
-; NOINFS: attributes #0 = { nounwind "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NOINFS: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NOINFS: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NOINFS: attributes #1 = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 
-; NONANS: attributes #0 = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NONANS: attributes #1 = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NONANS: attributes #0 = { nounwind "amdgpu-waves-per-eu"="4,10" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NONANS: attributes #1 = { nounwind "amdgpu-waves-per-eu"="4,10" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
 
 declare void @extern() #0
 
