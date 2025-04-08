@@ -153,7 +153,6 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   if (MI.isCompare()) {
     const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::sdst);
-
     if (!Dst)
       return true;
 
