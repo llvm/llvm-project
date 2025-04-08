@@ -1417,32 +1417,42 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
-NestedNameSpecifier *
-Parser::zOSParseIdentifier(StringRef PragmaName,
-                           const IdentifierInfo *IdentName) {
+NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
+                                                const IdentifierInfo *IdentName,
+                                                SourceLocation &PrevLoc) {
   NestedNameSpecifier *NestedId = nullptr;
-  if (Tok.is(tok::coloncolon)) {
-    NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-  } else if (Actions.CurContext->isNamespace()) {
-    auto *NS = cast<NamespaceDecl>(Actions.CurContext);
-    NestedId =
-        NestedNameSpecifier::Create(Actions.Context, NS->getIdentifier());
-    NestedId =
-        NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
-    PP.Lex(Tok);
+  if (PP.getLangOpts().CPlusPlus) {
+    if (Tok.is(tok::coloncolon)) {
+    } else if (Actions.CurContext->isNamespace()) {
+      auto *NS = cast<NamespaceDecl>(Actions.CurContext);
+      NestedId =
+          NestedNameSpecifier::Create(Actions.Context, NS->getIdentifier());
+      NestedId =
+          NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
+      PrevLoc = Tok.getLocation();
+      PP.Lex(Tok);
+    } else {
+      NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
+      PrevLoc = Tok.getLocation();
+      PP.Lex(Tok);
+    }
+    while (Tok.is(tok::coloncolon)) {
+      PrevLoc = Tok.getLocation();
+      PP.Lex(Tok);
+      if (Tok.isNot(tok::identifier)) {
+        PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevLoc,
+                diag::warn_pragma_expected_identifier)
+            << PragmaName;
+        return nullptr;
+      }
+      IdentifierInfo *II = Tok.getIdentifierInfo();
+      NestedId = NestedNameSpecifier::Create(Actions.Context, NestedId, II);
+      PrevLoc = Tok.getLocation();
+      PP.Lex(Tok);
+    }
   } else {
     NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-    PP.Lex(Tok);
-  }
-  while (Tok.is(tok::coloncolon)) {
-    PP.Lex(Tok);
-    IdentifierInfo *II = Tok.getIdentifierInfo();
-    if (Tok.isNot(tok::identifier)) {
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
-          << PragmaName;
-      return nullptr;
-    }
-    NestedId = NestedNameSpecifier::Create(Actions.Context, NestedId, II);
+    PrevLoc = Tok.getLocation();
     PP.Lex(Tok);
   }
   return NestedId;
@@ -1450,9 +1460,10 @@ Parser::zOSParseIdentifier(StringRef PragmaName,
 
 bool Parser::zOSParseParameterList(
     StringRef PragmaName, std::optional<SmallVector<QualType, 4>> &TypeList,
-    Qualifiers &CVQual) {
+    Qualifiers &CVQual, SourceLocation &PrevLoc) {
   if (Tok.is(tok::l_paren)) {
     TypeList = SmallVector<QualType, 4>();
+    PrevLoc = Tok.getLocation();
     PP.Lex(Tok);
     while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
       TypeResult TResult = ParseTypeName(nullptr);
@@ -1462,16 +1473,18 @@ bool Parser::zOSParseParameterList(
           TypeList->push_back(QT);
         }
       }
-      if (Tok.is(tok::comma) || Tok.is(tok::identifier))
+      if (Tok.is(tok::comma) || Tok.is(tok::identifier)) {
+        PrevLoc = Tok.getLocation();
         PP.Lex(Tok);
+      }
     }
-    if (Tok.is(tok::r_paren))
+    if (Tok.is(tok::r_paren)) {
+      PrevLoc = Tok.getLocation();
       PP.Lex(Tok);
-    else {
+    } else {
       // We ate the whole line trying to find the right paren of the parameter
       // list
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
-          << PragmaName;
+      PP.Diag(PrevLoc, diag::warn_pragma_expected_identifier) << PragmaName;
       return false;
     }
 
@@ -1483,6 +1496,7 @@ bool Parser::zOSParseParameterList(
           assert(Tok.is(tok::kw_volatile));
           CVQual.addVolatile();
         }
+        PrevLoc = Tok.getLocation();
         PP.Lex(Tok);
       }
   }
@@ -1504,41 +1518,50 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
   ConsumeAnnotationToken(); // The annotation token.
 
   do {
+    SourceLocation PrevTokLocation = Tok.getLocation();
 
     PP.Lex(Tok);
     if (Tok.isNot(tok::l_paren)) {
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
+              diag::warn_pragma_expected_lparen)
           << PragmaName;
       return false;
     }
 
     // C++ could have a nested name, or be qualified with ::.
+    PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);
-    if (Tok.isNot(tok::identifier) && Tok.isNot(tok::coloncolon)) {
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+    if (Tok.isNot(tok::identifier) &&
+        !(PP.getLangOpts().CPlusPlus && Tok.is(tok::coloncolon))) {
+      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
+              diag::warn_pragma_expected_identifier)
           << PragmaName;
       return false;
     }
 
     IdentifierInfo *IdentName = Tok.getIdentifierInfo();
     SourceLocation IdentNameLoc = Tok.getLocation();
-    NestedNameSpecifier *NestedId = zOSParseIdentifier(PragmaName, IdentName);
+    NestedNameSpecifier *NestedId =
+        zOSParseIdentifier(PragmaName, IdentName, PrevTokLocation);
     if (!NestedId)
       return false;
-
-    if (Tok.isNot(tok::l_paren) && Tok.isNot(tok::r_paren)) {
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
-          << PragmaName;
-      return false;
-    }
 
     // C++ can have a paramater list for overloaded functions.
     // Try to parse the argument types.
     std::optional<SmallVector<QualType, 4>> TypeList;
     Qualifiers CVQual;
 
-    if (!zOSParseParameterList(PragmaName, TypeList, CVQual))
+    if (PP.getLangOpts().CPlusPlus && Tok.is(tok::l_paren)) {
+      if (!zOSParseParameterList(PragmaName, TypeList, CVQual, PrevTokLocation))
+        return false;
+    }
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
+              diag::warn_pragma_expected_rparen)
+          << PragmaName;
       return false;
+    }
 
     PP.Lex(Tok);
     Actions.ActOnPragmaExport(NestedId, IdentNameLoc, std::move(TypeList),

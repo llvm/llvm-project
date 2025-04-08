@@ -859,10 +859,11 @@ private:
 
   /// Helper functions for handling zOS pragmas.
   NestedNameSpecifier *zOSParseIdentifier(StringRef PragmaName,
-                                          const IdentifierInfo *IdentName);
+                                          const IdentifierInfo *IdentName,
+                                          SourceLocation &);
   bool zOSParseParameterList(StringRef PragmaName,
                              std::optional<SmallVector<QualType, 4>> &TypeList,
-                             Qualifiers &CVQual);
+                             Qualifiers &CVQual, SourceLocation &);
   bool zOSHandlePragmaHelper(tok::TokenKind);
 
   /// Handle the annotation token produced for
