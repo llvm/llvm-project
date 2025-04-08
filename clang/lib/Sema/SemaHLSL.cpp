@@ -3256,6 +3256,9 @@ class InitListTransformer {
   QualType InitTy;
   QualType *DstIt = nullptr;
   Expr **ArgIt = nullptr;
+  // Is wrapping the destination type iterator required? This is only used for
+  // incomplete array types where we loop over the destination type since we
+  // don't know the full number of elements from the declaration.
   bool Wrap;
 
   bool castInitializer(Expr *E) {
@@ -3269,8 +3272,8 @@ class InitListTransformer {
       }
       DstIt = DestTypes.begin();
     }
-    InitializedEntity Entity =
-        InitializedEntity::InitializeParameter(Ctx, *DstIt, true);
+    InitializedEntity Entity = InitializedEntity::InitializeParameter(
+        Ctx, *DstIt, /* Consumed (ObjC) */ false);
     ExprResult Res = S.PerformCopyInitialization(Entity, E->getBeginLoc(), E);
     if (Res.isInvalid())
       return false;
@@ -3422,6 +3425,8 @@ public:
   bool buildInitializerList(Expr *E) { return buildInitializerListImpl(E); }
 
   Expr *generateInitLists() {
+    assert(!ArgExprs.empty() &&
+           "Call buildInitializerList to generate argument expressions.");
     ArgIt = ArgExprs.begin();
     if (!Wrap)
       return generateInitListsImpl(InitTy);
