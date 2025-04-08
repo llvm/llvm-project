@@ -112,7 +112,7 @@ public:
       return {SM.getSpellingLineNumber(Begin),
               SM.getSpellingColumnNumber(Begin)};
     }
-    
+
     static Position GetEndSpelling(const SourceManager &SM,
                                    const CharSourceRange &R,
                                    const LangOptions &LangOpts) {
