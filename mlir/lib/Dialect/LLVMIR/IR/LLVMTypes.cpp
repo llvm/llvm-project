@@ -822,23 +822,17 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
 }
 
 Type mlir::LLVM::getVectorElementType(Type type) {
-  return llvm::TypeSwitch<Type, Type>(type)
-      .Case<VectorType>([](auto ty) { return ty.getElementType(); })
-      .Default([](Type) -> Type {
-        llvm_unreachable("incompatible with LLVM vector type");
-      });
+  auto vecTy = dyn_cast<VectorType>(type);
+  assert(vecTy && "incompatible with LLVM vector type");
+  return vecTy.getElementType();
 }
 
 llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
-  return llvm::TypeSwitch<Type, llvm::ElementCount>(type)
-      .Case([](VectorType ty) {
-        if (ty.isScalable())
-          return llvm::ElementCount::getScalable(ty.getNumElements());
-        return llvm::ElementCount::getFixed(ty.getNumElements());
-      })
-      .Default([](Type) -> llvm::ElementCount {
-        llvm_unreachable("incompatible with LLVM vector type");
-      });
+  auto vecTy = dyn_cast<VectorType>(type);
+  assert(vecTy && "incompatible with LLVM vector type");
+  if (vecTy.isScalable())
+    return llvm::ElementCount::getScalable(vecTy.getNumElements());
+  return llvm::ElementCount::getFixed(vecTy.getNumElements());
 }
 
 bool mlir::LLVM::isScalableVectorType(Type vectorType) {

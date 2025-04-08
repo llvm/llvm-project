@@ -3154,8 +3154,11 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 /// account nested types. Supported types are `VectorType` and `LLVMArrayType`.
 /// Everything else is treated as a scalar.
 static int64_t getNumElements(Type t) {
-  if (auto vecType = dyn_cast<VectorType>(t))
+  if (auto vecType = dyn_cast<VectorType>(t)) {
+    assert(!vecType.isScalable() &&
+           "number of elements of a scalable vector type is unknown");
     return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  }
   if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
     return arrayType.getNumElements() *
            getNumElements(arrayType.getElementType());
