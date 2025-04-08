@@ -5030,11 +5030,15 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
           // The output from scaled phis and scaled reductions actually have
           // fewer lanes than the VF.
           ElementCount VF = VFs[J];
-          if (auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R))
-            VF = VF.divideCoefficientBy(ReductionR->getVFScaleFactor());
-          else if (auto *PartialReductionR =
-                       dyn_cast<VPPartialReductionRecipe>(R))
-            VF = VF.divideCoefficientBy(PartialReductionR->getVFScaleFactor());
+          if (isa<VPPartialReductionRecipe, VPReductionPHIRecipe>(R)) {
+            auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R);
+            auto *PartialReductionR =
+                ReductionR ? nullptr : dyn_cast<VPPartialReductionRecipe>(R);
+            unsigned ScaleFactor = ReductionR
+                                       ? ReductionR->getVFScaleFactor()
+                                       : PartialReductionR->getVFScaleFactor();
+            VF = VF.divideCoefficientBy(ScaleFactor);
+          }
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
                    << " for ";
