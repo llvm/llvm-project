@@ -289,70 +289,6 @@ def LLVMPointerType : LLVMType<"LLVMPointer", "ptr", [
 }
 
 //===----------------------------------------------------------------------===//
-// LLVMFixedVectorType
-//===----------------------------------------------------------------------===//
-
-def LLVMFixedVectorType : LLVMType<"LLVMFixedVector", "vec"> {
-  let summary = "LLVM fixed vector type";
-  let description = [{
-    LLVM dialect vector type that supports all element types that are supported
-    in LLVM vectors but that are not supported by the builtin MLIR vector type.
-    E.g., LLVMFixedVectorType supports LLVM pointers as element type.
-  }];
-
-  let typeName = "llvm.fixed_vec";
-
-  let parameters = (ins "Type":$elementType, "unsigned":$numElements);
-  let assemblyFormat = [{
-    `<` $numElements `x` custom<PrettyLLVMType>($elementType) `>`
-  }];
-
-  let genVerifyDecl = 1;
-
-  let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$numElements)>
-  ];
-
-  let extraClassDeclaration = [{
-    /// Checks if the given type can be used in a vector type.
-    static bool isValidElementType(Type type);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
-// LLVMScalableVectorType
-//===----------------------------------------------------------------------===//
-
-def LLVMScalableVectorType : LLVMType<"LLVMScalableVector", "vec"> {
-  let summary = "LLVM scalable vector type";
-  let description = [{
-    LLVM dialect scalable vector type, represents a sequence of elements of
-    unknown length that is known to be divisible by some constant. These
-    elements can be processed as one in SIMD context.
-  }];
-
-  let typeName = "llvm.scalable_vec";
-
-  let parameters = (ins "Type":$elementType, "unsigned":$minNumElements);
-  let assemblyFormat = [{
-    `<` `?` `x` $minNumElements `x` ` ` custom<PrettyLLVMType>($elementType) `>`
-  }];
-
-  let genVerifyDecl = 1;
-
-  let builders = [
-    TypeBuilderWithInferredContext<(ins "Type":$elementType,
-                                        "unsigned":$minNumElements)>
-  ];
-
-  let extraClassDeclaration = [{
-    /// Checks if the given type can be used in a vector type.
-    static bool isValidElementType(Type type);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // LLVMTargetExtType
 //===----------------------------------------------------------------------===//
 
@@ -397,6 +333,19 @@ def LLVMX86AMXType : LLVMType<"LLVMX86AMX", "x86_amx"> {
   let description = [{
     The x86_amx type represents a value held in an AMX tile register on an x86
     machine. Can only be used in AMX intrinsics calls.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// LLVMPPCFP128Type
+//===----------------------------------------------------------------------===//
+
+def LLVMPPCFP128Type : LLVMType<"LLVMPPCFP128", "ppc_fp128",
+    [DeclareTypeInterfaceMethods<FloatTypeInterface, ["getFloatSemantics"]>]> {
+  let summary = "128 bit FP type with IBM double-double semantics";
+  let description = [{
+    A 128 bit floating-point type with IBM double-double semantics.
+    See S_PPCDoubleDouble in APFloat.h for details.
   }];
 }
 
