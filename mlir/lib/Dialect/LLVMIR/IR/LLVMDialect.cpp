@@ -2305,6 +2305,28 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
+static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
+  llvm::DenseSet<BlockTagAttr> blockTags;
+  BlockTagOp badBlockTagOp;
+  if (funcOp
+          .walk([&](BlockTagOp blockTagOp) {
+            if (blockTags.contains(blockTagOp.getTag())) {
+              badBlockTagOp = blockTagOp;
+              return WalkResult::interrupt();
+            }
+            blockTags.insert(blockTagOp.getTag());
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    badBlockTagOp.emitError()
+        << "duplicate block tag '" << badBlockTagOp.getTag().getId()
+        << "' in the same function: ";
+    return failure();
+  }
+
+  return success();
+}
+
 /// Parse common attributes that might show up in the same order in both
 /// GlobalOp and AliasOp.
 template <typename OpType>
@@ -3060,6 +3082,9 @@ LogicalResult LLVMFuncOp::verify() {
     return emitError(diagnosticMessage);
   }
 
+  if (failed(verifyBlockTags(*this)))
+    return failure();
+
   return success();
 }
 
@@ -3814,6 +3839,56 @@ void InlineAsmOp::getEffects(
     effects.emplace_back(MemoryEffects::Read::get());
   }
 }
+
+//===----------------------------------------------------------------------===//
+// BlockAddressOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BlockAddressOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symbol = symbolTable.lookupSymbolIn(parentLLVMModule(*this),
+                                                 getBlockAddr().getFunction());
+  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+
+  if (!function)
+    return emitOpError("must reference a function defined by 'llvm.func'");
+
+  return success();
+}
+
+LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<LLVMFuncOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getBlockAddr().getFunction()));
+}
+
+BlockTagOp BlockAddressOp::getBlockTagOp() {
+  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  if (!funcOp)
+    return nullptr;
+
+  BlockTagOp blockTagOp = nullptr;
+  funcOp.walk([&](LLVM::BlockTagOp labelOp) {
+    if (labelOp.getTag() == getBlockAddr().getTag()) {
+      blockTagOp = labelOp;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return blockTagOp;
+}
+
+LogicalResult BlockAddressOp::verify() {
+  if (!getBlockTagOp())
+    return emitOpError(
+        "expects an existing block label target in the referenced function");
+
+  return success();
+}
+
+/// Fold a blockaddress operation to a dedicated blockaddress
+/// attribute.
+OpFoldResult BlockAddressOp::fold(FoldAdaptor) { return getBlockAddr(); }
 
 //===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
