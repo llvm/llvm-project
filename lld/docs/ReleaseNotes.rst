@@ -47,6 +47,17 @@ ELF Improvements
   default value is ``--no-xosegment``.
   (`#132412 <https://github.com/llvm/llvm-project/pull/132412>`_)
 
+* For AArch64, added support for the ``SHF_AARCH64_PURECODE`` section flag,
+  which indicates that the section only contains program code and no data.
+  An output section will only have this flag set if all input sections also
+  have it set. (`#125689 <https://github.com/llvm/llvm-project/pull/125689>`_,
+  `#134798 <https://github.com/llvm/llvm-project/pull/134798>`_)
+
+* For AArch64 and ARM, added ``-zexecute-only-report``, which checks for
+  missing ``SHF_AARCH64_PURECODE`` and ``SHF_ARM_PURECODE`` section flags
+  on executable sections.
+  (`#128883 <https://github.com/llvm/llvm-project/pull/128883>`_)
+
 Breaking changes
 ----------------
 * Executable-only and readable-executable sections are now allowed to be placed
