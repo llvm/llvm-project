@@ -550,19 +550,21 @@ class MapInfoFinalizationPass
       // iterations from previous function scopes.
       localBoxAllocas.clear();
 
-      // First, walk `omp.map.info` ops to see if any 
+      // First, walk `omp.map.info` ops to see if any
       func->walk([&](mlir::omp::MapInfoOp op) {
         mlir::Value varPtr = op.getVarPtr();
         mlir::Type underlyingVarType = fir::unwrapRefType(varPtr.getType());
         if (!mlir::isa<fir::CharacterType>(underlyingVarType))
           return mlir::WalkResult::advance();
 
-        fir::CharacterType cType = mlir::cast<fir::CharacterType>(underlyingVarType);
+        fir::CharacterType cType =
+            mlir::cast<fir::CharacterType>(underlyingVarType);
         if (!cType.hasDynamicLen())
           return mlir::WalkResult::advance();
 
         // This means varPtr is a BlockArgument. I do not know how to get to a
-        // fir.boxchar<> type of mlir::Value for varPtr. So, skipping this for now.
+        // fir.boxchar<> type of mlir::Value for varPtr. So, skipping this for
+        // now.
         mlir::Operation *definingOp = varPtr.getDefiningOp();
         if (!definingOp)
           return mlir::WalkResult::advance();
@@ -572,18 +574,21 @@ class MapInfoFinalizationPass
           assert(mlir::isa<fir::BoxCharType>(base.getType()));
           //          mlir::value unboxChar
           builder.setInsertionPoint(op);
-          fir::BoxCharType boxCharType = mlir::cast<fir::BoxCharType>(base.getType());
+          fir::BoxCharType boxCharType =
+              mlir::cast<fir::BoxCharType>(base.getType());
           mlir::Type idxTy = builder.getIndexType();
           mlir::Type lenType = builder.getCharacterLengthType();
           mlir::Type refType = builder.getRefType(boxCharType.getEleTy());
           mlir::Location location = op.getLoc();
-          auto unboxed = builder.create<fir::UnboxCharOp>(location, refType, lenType, base);
+          auto unboxed = builder.create<fir::UnboxCharOp>(location, refType,
+                                                          lenType, base);
           //          len = unboxed.getResult(1);
           mlir::Value zero = builder.createIntegerConstant(location, idxTy, 0);
           mlir::Value one = builder.createIntegerConstant(location, idxTy, 1);
           mlir::Value extent = unboxed.getResult(1);
           mlir::Value stride = one;
-          mlir::Value ub = builder.create<mlir::arith::SubIOp>(location, extent, one);
+          mlir::Value ub =
+              builder.create<mlir::arith::SubIOp>(location, extent, one);
           mlir::Type boundTy = builder.getType<mlir::omp::MapBoundsType>();
           mlir::Value boundsOp = builder.create<mlir::omp::MapBoundsOp>(
               location, boundTy, /*lower_bound=*/zero,

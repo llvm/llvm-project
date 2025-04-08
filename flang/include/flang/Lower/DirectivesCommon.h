@@ -424,30 +424,23 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
 
     auto arrayBase = toMaybeExpr(arrayRef->base());
     assert(arrayBase);
-    llvm::errs() << "arrayBase = ";
-    arrayBase.value().dump();
     if (detail::getRef<evaluate::Component>(*arrayBase)) {
-      llvm::errs() << "detail::getRef<evaluate::Component>(*arrayBase)\n";
       dataExv = converter.genExprAddr(operandLocation, *arrayBase, stmtCtx);
       info.addr = fir::getBase(dataExv);
       info.rawInput = info.addr;
       asFortran << arrayBase->AsFortran();
     } else {
-      llvm::errs() << "ELSE -> detail::getRef<evaluate::Component>(*arrayBase)\n";
       const semantics::Symbol &sym = arrayRef->GetLastSymbol();
       dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(sym.GetUltimate());
       info = getDataOperandBaseAddr(converter, builder, sym, operandLocation,
                                     unwrapFirBox);
       dataExv = converter.getSymbolExtendedValue(sym);
-      llvm::errs() << "isAssumedSizeArray? = " << dataExvIsAssumedSize << "\n";
-      llvm::errs() << "dataExv = " << dataExv << "\n";
       asFortran << sym.name().ToString();
     }
 
     if (!arrayRef->subscript().empty()) {
       asFortran << '(';
-      llvm::errs() << "!arrayRef->subscript().empty()\n";
       bounds = genBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, converter, stmtCtx, arrayRef->subscript(),
           asFortran, dataExv, dataExvIsAssumedSize, info, treatIndexAsSection,
@@ -459,10 +452,8 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
         converter.genExprAddr(operandLocation, designator, stmtCtx);
     info.addr = fir::getBase(compExv);
     info.rawInput = info.addr;
-    llvm::errs() << "compRef = detail::getRef<evaluate::Component>(designator)\n";
     if (genDefaultBounds &&
         mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType()))) {
-      llvm::errs() << "genDefaultBounds && mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType()))\n";
       bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
           builder, operandLocation, compExv,
           /*isAssumedSize=*/false, strideIncludeLowerExtent);
@@ -500,7 +491,6 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
             builder, operandLocation, compExv, info);
     }
   } else {
-    llvm::errs() << "All else\n";
     if (detail::getRef<evaluate::ArrayRef>(designator)) {
       fir::ExtendedValue compExv =
           converter.genExprAddr(operandLocation, designator, stmtCtx);
@@ -509,26 +499,18 @@ fir::factory::AddrAndBoundsInfo gatherDataOperandAddrAndBounds(
       asFortran << designator.AsFortran();
     } else if (auto symRef = detail::getRef<semantics::SymbolRef>(designator)) {
       // Scalar or full array.
-      llvm::errs() << "symRef = detail::getRef<semantics::SymbolRef>(designator)\n";
       fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*symRef);
       info = getDataOperandBaseAddr(converter, builder, *symRef,
                                     operandLocation, unwrapFirBox);
-      llvm::errs() << "dataExv = " << dataExv << "\n";
-      llvm::errs() << "info is \n";
-      info.dump(llvm::errs());
-      llvm ::errs() << "info.addr.getType()" << info.addr.getType() << "\n";
       if (genDefaultBounds && mlir::isa<fir::BaseBoxType>(
                                   fir::unwrapRefType(info.addr.getType()))) {
-        llvm::errs() << "genDefaultBounds && mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(info.addr.getType())) \n";
         info.boxType = fir::unwrapRefType(info.addr.getType());
         bounds = fir::factory::genBoundsOpsFromBox<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, info);
-      } else
-        llvm::errs()<< "ELSE => genDefaultBounds && mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(info.addr.getType())) \n";
+      }
       bool dataExvIsAssumedSize =
           Fortran::semantics::IsAssumedSizeArray(symRef->get().GetUltimate());
-      llvm::errs() << "isAssumedSizeArray? = " << dataExvIsAssumedSize << "\n";
-       if (genDefaultBounds &&
+      if (genDefaultBounds &&
           mlir::isa<fir::SequenceType>(fir::unwrapRefType(info.addr.getType())))
         bounds = fir::factory::genBaseBoundsOps<BoundsOp, BoundsType>(
             builder, operandLocation, dataExv, dataExvIsAssumedSize,
