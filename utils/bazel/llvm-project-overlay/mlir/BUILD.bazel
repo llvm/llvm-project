@@ -1530,6 +1530,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
         ":ViewLikeInterface",
