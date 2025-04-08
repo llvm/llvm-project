@@ -114,7 +114,7 @@ private:
   struct Library {
     const StringRef InstallName;
     const MachO::Architecture Arch;
-    const size_t DocumentIdx;
+    const std::optional<size_t> DocumentIdx;
   };
 
   std::unique_ptr<MachO::InterfaceFile> ParsedFile;

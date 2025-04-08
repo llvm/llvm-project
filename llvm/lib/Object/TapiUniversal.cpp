@@ -29,14 +29,15 @@ TapiUniversal::TapiUniversal(MemoryBufferRef Source, Error &Err)
   }
   ParsedFile = std::move(Result.get());
 
-  auto FlattenObjectInfo = [this](const auto &File, size_t DocIdx) {
+  auto FlattenObjectInfo = [this](const auto &File,
+                                  std::optional<size_t> DocIdx = std::nullopt) {
     StringRef Name = File->getInstallName();
     for (const Architecture Arch : File->getArchitectures())
       Libraries.emplace_back(Library({Name, Arch, DocIdx}));
   };
-  size_t DocIdx = 0;
-  FlattenObjectInfo(ParsedFile, DocIdx);
+  FlattenObjectInfo(ParsedFile);
   // Get inlined documents from tapi file.
+  size_t DocIdx = 0;
   for (const std::shared_ptr<InterfaceFile> &File : ParsedFile->documents())
     FlattenObjectInfo(File, DocIdx++);
 }
@@ -47,11 +48,13 @@ Expected<std::unique_ptr<TapiFile>>
 TapiUniversal::ObjectForArch::getAsObjectFile() const {
   const auto &InlinedDocuments = Parent->ParsedFile->documents();
   const Library &CurrLib = Parent->Libraries[Index];
-  assert((isTopLevelLib() || (InlinedDocuments.size() > CurrLib.DocumentIdx)) &&
-         "Index into documents exceeds the container for them");
+  assert(
+      (isTopLevelLib() || (CurrLib.DocumentIdx.has_value() &&
+                           (InlinedDocuments.size() > *CurrLib.DocumentIdx))) &&
+      "Index into documents exceeds the container for them");
   InterfaceFile *IF = isTopLevelLib()
                           ? Parent->ParsedFile.get()
-                          : InlinedDocuments[CurrLib.DocumentIdx].get();
+                          : InlinedDocuments[*CurrLib.DocumentIdx].get();
   return std::make_unique<TapiFile>(Parent->getMemoryBufferRef(), *IF,
                                     CurrLib.Arch);
 }
