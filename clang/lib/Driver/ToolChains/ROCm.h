@@ -127,7 +127,6 @@ private:
 
   // Libraries that are always linked depending on the language
   SmallString<0> OpenCL;
-  SmallString<0> HIP;
 
   // Asan runtime library
   SmallString<0> AsanRTL;
@@ -149,7 +148,7 @@ private:
   bool Verbose;
 
   bool allGenericLibsValid() const {
-    return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() && !HIP.empty() &&
+    return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
            WavefrontSize64.isValid() && FiniteOnly.isValid() &&
            UnsafeMath.isValid() && DenormalsAreZero.isValid() &&
            CorrectlyRoundedSqrt.isValid();
@@ -227,11 +226,6 @@ public:
   StringRef getOpenCLPath() const {
     assert(!OpenCL.empty());
     return OpenCL;
-  }
-
-  StringRef getHIPPath() const {
-    assert(!HIP.empty());
-    return HIP;
   }
 
   /// Returns empty string of Asan runtime library is not available.
