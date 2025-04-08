@@ -235,8 +235,7 @@ Retry:
   }
 
   default: {
-    if (getLangOpts().CPlusPlus &&
-        MaybeParseCXX11Attributes(CXX11Attrs, true))
+    if (getLangOpts().CPlusPlus && MaybeParseCXX11Attributes(CXX11Attrs, true))
       goto Retry;
 
     bool HaveAttrs = !CXX11Attrs.empty() || !GNUAttrs.empty();
