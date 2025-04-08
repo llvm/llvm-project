@@ -2266,23 +2266,17 @@ define i8 @gep_in_entry(i32 %cond, ptr %ptr) {
 ; CHECK-NEXT:      i32 2, label [[CASE2:%.*]]
 ; CHECK-NEXT:      i32 3, label [[CASE3:%.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       case0:
-; CHECK-NEXT:    [[LOAD0:%.*]] = load i8, ptr [[GEP_0]], align 1
-; CHECK-NEXT:    br label [[SWITCH_MERGE:%.*]]
 ; CHECK:       case1:
-; CHECK-NEXT:    [[LOAD1:%.*]] = load i8, ptr [[GEP_1]], align 1
-; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK-NEXT:    br label [[CASE0]]
 ; CHECK:       case2:
-; CHECK-NEXT:    [[LOAD2:%.*]] = load i8, ptr [[GEP_2]], align 1
-; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK-NEXT:    br label [[CASE0]]
 ; CHECK:       case3:
-; CHECK-NEXT:    [[LOAD3:%.*]] = load i8, ptr [[GEP_3]], align 1
-; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK-NEXT:    br label [[CASE0]]
 ; CHECK:       default:
-; CHECK-NEXT:    [[LOAD_DEFAULT:%.*]] = load i8, ptr [[GEP_DEFAULT]], align 1
-; CHECK-NEXT:    br label [[SWITCH_MERGE]]
+; CHECK-NEXT:    br label [[CASE0]]
 ; CHECK:       switch.merge:
-; CHECK-NEXT:    [[GEP_LOAD:%.*]] = phi i8 [ [[LOAD0]], [[CASE0]] ], [ [[LOAD1]], [[CASE1]] ], [ [[LOAD2]], [[CASE2]] ], [ [[LOAD3]], [[CASE3]] ], [ [[LOAD_DEFAULT]], [[DEFAULT]] ]
+; CHECK-NEXT:    [[GEP_DEFAULT_SINK:%.*]] = phi ptr [ [[GEP_DEFAULT]], [[DEFAULT]] ], [ [[GEP_3]], [[CASE3]] ], [ [[GEP_2]], [[CASE2]] ], [ [[GEP_1]], [[CASE1]] ], [ [[GEP_0]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP_LOAD:%.*]] = load i8, ptr [[GEP_DEFAULT_SINK]], align 1
 ; CHECK-NEXT:    ret i8 [[GEP_LOAD]]
 ;
 entry:
