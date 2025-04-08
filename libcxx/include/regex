@@ -794,6 +794,19 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [iterator.range]
+#  include <__iterator/access.h>
+#  include <__iterator/data.h>
+#  include <__iterator/empty.h>
+#  include <__iterator/reverse_access.h>
+#  include <__iterator/size.h>
+
+// [re.syn]
+#  include <compare>
+#  include <initializer_list>
+
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__algorithm/find.h>
@@ -816,19 +829,6 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #    include <string>
 #    include <vector>
 #    include <version>
-
-// standard-mandated includes
-
-// [iterator.range]
-#    include <__iterator/access.h>
-#    include <__iterator/data.h>
-#    include <__iterator/empty.h>
-#    include <__iterator/reverse_access.h>
-#    include <__iterator/size.h>
-
-// [re.syn]
-#    include <compare>
-#    include <initializer_list>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
@@ -5336,8 +5336,8 @@ typedef regex_iterator<wstring::const_iterator> wsregex_iterator;
 
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 class _LIBCPP_PREFERRED_NAME(cregex_iterator) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wcregex_iterator))
-    _LIBCPP_PREFERRED_NAME(sregex_iterator)
-        _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_iterator)) regex_iterator {
+    _LIBCPP_PREFERRED_NAME(sregex_iterator) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFERRED_NAME(wsregex_iterator))
+        regex_iterator {
 public:
   typedef basic_regex<_CharT, _Traits> regex_type;
   typedef match_results<_BidirectionalIterator> value_type;

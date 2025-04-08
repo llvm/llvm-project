@@ -122,6 +122,11 @@ namespace std {
 #else
 #  include <__config>
 
+// standard-mandated includes
+
+// [syncstream.syn]
+#  include <ostream>
+
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__mutex/lock_guard.h>
@@ -130,16 +135,10 @@ namespace std {
 #    include <iosfwd> // required for declaration of default arguments
 #    include <streambuf>
 #    include <string>
-
 #    if _LIBCPP_HAS_THREADS
 #      include <map>
 #      include <shared_mutex>
 #    endif
-
-// standard-mandated includes
-
-// [syncstream.syn]
-#    include <ostream>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
