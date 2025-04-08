@@ -33,9 +33,7 @@ class AMDGPUReserveWWMRegsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {
-    initializeAMDGPUReserveWWMRegsLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
