@@ -15142,6 +15142,13 @@ TEST_F(FormatTest, PullInlineOnlyFunctionDefinitionsIntoSingleLine) {
                "}",
                MergeInlineOnly);
 
+  MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
+  verifyFormat("class Foo\n"
+               "  {\n"
+               "  void f() { foo(); }\n"
+               "  };",
+               MergeInlineOnly);
+
   // Also verify behavior when BraceWrapping.AfterFunction = true
   MergeInlineOnly.BreakBeforeBraces = FormatStyle::BS_Custom;
   MergeInlineOnly.BraceWrapping.AfterFunction = true;
@@ -27900,6 +27907,38 @@ TEST_F(FormatTest, RemoveSemicolon) {
 
   Style.TypenameMacros.push_back("STRUCT");
   verifyFormat("STRUCT(T, B) { int i; };", Style);
+}
+
+TEST_F(FormatTest, EnumTrailingComma) {
+  constexpr StringRef Code("enum : int { /**/ };\n"
+                           "enum {\n"
+                           "  a,\n"
+                           "  b,\n"
+                           "  c, //\n"
+                           "};\n"
+                           "enum Color { red, green, blue /**/ };");
+  verifyFormat(Code);
+
+  auto Style = getLLVMStyle();
+  Style.EnumTrailingComma = FormatStyle::ETC_Insert;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c, //\n"
+               "};\n"
+               "enum Color { red, green, blue, /**/ };",
+               Code, Style);
+
+  Style.EnumTrailingComma = FormatStyle::ETC_Remove;
+  verifyFormat("enum : int { /**/ };\n"
+               "enum {\n"
+               "  a,\n"
+               "  b,\n"
+               "  c //\n"
+               "};\n"
+               "enum Color { red, green, blue /**/ };",
+               Code, Style);
 }
 
 TEST_F(FormatTest, BreakAfterAttributes) {

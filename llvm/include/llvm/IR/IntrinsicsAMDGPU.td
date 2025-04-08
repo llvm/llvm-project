@@ -1863,7 +1863,9 @@ class AMDGPURawBufferLoadLDS : Intrinsic <
    ImmArg<ArgIndex<6>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>, AMDGPURsrcIntrinsic<0>;
 def int_amdgcn_raw_buffer_load_lds : AMDGPURawBufferLoadLDS;
 
-class AMDGPURawPtrBufferLoadLDS : Intrinsic <
+class AMDGPURawPtrBufferLoadLDS :
+  ClangBuiltin<"__builtin_amdgcn_raw_ptr_buffer_load_lds">,
+  Intrinsic <
   [],
   [AMDGPUBufferRsrcTy,        // rsrc(SGPR)
    LLVMQualPointerType<3>,    // LDS base offset
@@ -1938,6 +1940,27 @@ def int_amdgcn_s_buffer_prefetch_data : DefaultAttrsIntrinsic <
   ClangBuiltin<"__builtin_amdgcn_s_buffer_prefetch_data">;
 
 } // defset AMDGPUBufferIntrinsics
+
+// A wrapper around raw_ptr_buffer_load_lds that takes the global offset
+// from the addrspace(7) pointer argument.
+def int_amdgcn_buffer_fat_ptr_load_lds : Intrinsic <
+  [],
+  [LLVMQualPointerType<7>,    // buffer fat pointer (SGPRx4 + VGPR)
+   LLVMQualPointerType<3>,    // LDS base offset
+   llvm_i32_ty,               // Data byte size: 1/2/4 (/12/16 for gfx950)
+   llvm_i32_ty,               // imm offset(imm, included in bounds checking and swizzling)
+   llvm_i32_ty],              // auxiliary/cachepolicy(imm):
+                              //                bit 0 = glc, bit 1 = slc, bit 2 = dlc (gfx10/gfx11),
+                              //                bit 3 = swz, bit 4 = scc (gfx90a)
+                              //        gfx942: bit 0 = sc0, bit 1 = nt, bit 3 = swz, bit 4 = sc1
+                              //        gfx12+: bits [0-2] = th, bits [3-4] = scope,
+                              //                bit 6 = swz
+                              //           all: volatile op (bit 31, stripped at lowering)
+  [IntrWillReturn, IntrArgMemOnly,
+   ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
+   WriteOnly<ArgIndex<1>>, NoCapture<ArgIndex<1>>,
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>,
+   ImmArg<ArgIndex<4>>, IntrNoCallback, IntrNoFree], "", [SDNPMemOperand]>;
 
 // Uses that do not set the done bit should set IntrWriteMem on the
 // call site.
@@ -3374,6 +3397,12 @@ def int_amdgcn_cvt_sr_fp8_f32 : ClangBuiltin<"__builtin_amdgcn_cvt_sr_fp8_f32">,
   DefaultAttrsIntrinsic<[llvm_i32_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, ImmArg<ArgIndex<3>>]>;
+
+// llvm.amdgcn.cvt.off.fp32.i4 int srcA
+def int_amdgcn_cvt_off_f32_i4: ClangBuiltin<"__builtin_amdgcn_cvt_off_f32_i4">,
+  DefaultAttrsIntrinsic<[llvm_float_ty],
+            [llvm_i32_ty],
+            [IntrNoMem, IntrSpeculatable]>;
 
 //===----------------------------------------------------------------------===//
 // gfx950 intrinsics
