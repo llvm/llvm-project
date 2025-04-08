@@ -1,4 +1,4 @@
-# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+/Users/yijiagu # This file is licensed under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
@@ -78,6 +78,13 @@ gentbl_cc_library(
                 "-clang-component=%s" % c,
             ],
             "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
+        ),
+        (
+            [
+                "-gen-clang-diags-iface",
+                "-clang-component=%s" % c,
+            ],
+            "include/clang/Basic/Diagnostic%sInterface.inc" % c,
         ),
     ]] + [
         (
