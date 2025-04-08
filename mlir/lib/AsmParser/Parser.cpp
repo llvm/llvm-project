@@ -435,6 +435,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
 
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
@@ -478,6 +479,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
@@ -839,8 +841,8 @@ private:
 };
 } // namespace
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
-MLIR_DEFINE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {

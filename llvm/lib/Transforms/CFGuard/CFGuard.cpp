@@ -171,7 +171,7 @@ public:
 
 void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");
@@ -200,7 +200,7 @@ void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
 void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");

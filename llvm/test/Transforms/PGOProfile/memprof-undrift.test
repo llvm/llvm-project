@@ -35,11 +35,13 @@ HeapProfileRecords:
   - GUID:            _Z3aaav
     AllocSites:      []
     CallSites:
-      - - { Function: _Z3aaav, LineOffset: 5, Column: 33, IsInlineFrame: false }
+      - Frames:
+        - { Function: _Z3aaav, LineOffset: 5, Column: 33, IsInlineFrame: false }
   - GUID:            _Z6middlev
     AllocSites:      []
     CallSites:
-      - - { Function: _Z6middlev, LineOffset: 5, Column: 33, IsInlineFrame: false }
+      - Frames:
+        - { Function: _Z6middlev, LineOffset: 5, Column: 33, IsInlineFrame: false }
   - GUID:            _Z3foov
     AllocSites:
       - Callstack:
@@ -77,7 +79,8 @@ HeapProfileRecords:
   - GUID:            _Z3bbbv
     AllocSites:      []
     CallSites:
-      - - { Function: _Z3bbbv, LineOffset: 5, Column: 33, IsInlineFrame: false }
+      - Frames:
+        - { Function: _Z3bbbv, LineOffset: 5, Column: 33, IsInlineFrame: false }
 ...
 ;--- memprof_undrift.ll
 define dso_local ptr @_Z3foov() !dbg !5 {

@@ -30,6 +30,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -723,7 +724,12 @@ public:
   }
 
   Value *VisitTypeTraitExpr(const TypeTraitExpr *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    if (E->isStoredAsBoolean())
+      return llvm::ConstantInt::get(ConvertType(E->getType()),
+                                    E->getBoolValue());
+    assert(E->getAPValue().isInt() && "APValue type not supported");
+    return llvm::ConstantInt::get(ConvertType(E->getType()),
+                                  E->getAPValue().getInt());
   }
 
   Value *VisitConceptSpecializationExpr(const ConceptSpecializationExpr *E) {
@@ -2352,6 +2358,21 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Value *Src = Visit(const_cast<Expr*>(E));
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);
+
+    // FIXME: this is a gross but seemingly necessary workaround for an issue
+    // manifesting when a target uses a non-default AS for indirect sret args,
+    // but the source HLL is generic, wherein a valid C-cast or reinterpret_cast
+    // on the address of a local struct that gets returned by value yields an
+    // invalid bitcast from the a pointer to the IndirectAS to a pointer to the
+    // DefaultAS. We can only do this subversive thing because sret args are
+    // manufactured and them residing in the IndirectAS is a target specific
+    // detail, and doing an AS cast here still retains the semantics the user
+    // expects. It is desirable to remove this iff a better solution is found.
+    if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
+      return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
+          CGF, Src, E->getType().getAddressSpace(), DestTy.getAddressSpace(),
+          DstTy);
+
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace()) &&
@@ -3456,27 +3477,42 @@ ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
                               const UnaryExprOrTypeTraitExpr *E) {
   QualType TypeToSize = E->getTypeOfArgument();
   if (auto Kind = E->getKind();
-      Kind == UETT_SizeOf || Kind == UETT_DataSizeOf) {
+      Kind == UETT_SizeOf || Kind == UETT_DataSizeOf || Kind == UETT_CountOf) {
     if (const VariableArrayType *VAT =
             CGF.getContext().getAsVariableArrayType(TypeToSize)) {
-      if (E->isArgumentType()) {
-        // sizeof(type) - make sure to emit the VLA size.
-        CGF.EmitVariablyModifiedType(TypeToSize);
-      } else {
-        // C99 6.5.3.4p2: If the argument is an expression of type
-        // VLA, it is evaluated.
-        CGF.EmitIgnoredExpr(E->getArgumentExpr());
+      // For _Countof, we only want to evaluate if the extent is actually
+      // variable as opposed to a multi-dimensional array whose extent is
+      // constant but whose element type is variable.
+      bool EvaluateExtent = true;
+      if (Kind == UETT_CountOf && VAT->getElementType()->isArrayType()) {
+        EvaluateExtent =
+            !VAT->getSizeExpr()->isIntegerConstantExpr(CGF.getContext());
       }
+      if (EvaluateExtent) {
+        if (E->isArgumentType()) {
+          // sizeof(type) - make sure to emit the VLA size.
+          CGF.EmitVariablyModifiedType(TypeToSize);
+        } else {
+          // C99 6.5.3.4p2: If the argument is an expression of type
+          // VLA, it is evaluated.
+          CGF.EmitIgnoredExpr(E->getArgumentExpr());
+        }
 
-      auto VlaSize = CGF.getVLASize(VAT);
-      llvm::Value *size = VlaSize.NumElts;
+        auto VlaSize = CGF.getVLASize(VAT);
+        llvm::Value *size = VlaSize.NumElts;
 
-      // Scale the number of non-VLA elements by the non-VLA element size.
-      CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
-      if (!eltSize.isOne())
-        size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
+        // For sizeof and __datasizeof, we need to scale the number of elements
+        // by the size of the array element type. For _Countof, we just want to
+        // return the size directly.
+        if (Kind != UETT_CountOf) {
+          // Scale the number of non-VLA elements by the non-VLA element size.
+          CharUnits eltSize = CGF.getContext().getTypeSizeInChars(VlaSize.Type);
+          if (!eltSize.isOne())
+            size = CGF.Builder.CreateNUWMul(CGF.CGM.getSize(eltSize), size);
+        }
 
-      return size;
+        return size;
+      }
     }
   } else if (E->getKind() == UETT_OpenMPRequiredSimdAlign) {
     auto Alignment =

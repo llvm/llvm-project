@@ -50,7 +50,7 @@ define ptx_device float @f32_iir(float %x) {
 }
 
 define ptx_device float @f32_iii(float %x) {
-; CHECK: mov.f32 %f{{[0-9]+}}, 0f41200000;
+; CHECK: mov.b32 %f{{[0-9]+}}, 0f41200000;
 ; CHECK: ret;
   %r = call float @llvm.fma.f32(float 2.0, float 3.0, float 4.0)
   ret float %r

@@ -1250,7 +1250,7 @@ define <vscale x 8 x half> @dup_ld1rh_half_passthruzero_nxv8f16(<vscale x 8 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv8f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1266,7 +1266,7 @@ define <vscale x 4 x float> @dup_ld1rs_float_passthruzero_nxv4f32(<vscale x 4 x 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv4f32:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr s1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1282,7 +1282,7 @@ define <vscale x 2 x double> @dup_ld1rd_double_passthruzero_nxv2f64(<vscale x 2 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rd_double_passthruzero_nxv2f64:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr d1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.d, p0/m, d1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1298,7 +1298,7 @@ define <vscale x 4 x half> @dup_ld1rh_half_passthruzero_nxv4f16(<vscale x 4 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv4f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1314,7 +1314,7 @@ define <vscale x 2 x half> @dup_ld1rh_half_passthruzero_nxv2f16(<vscale x 2 x i1
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rh_half_passthruzero_nxv2f16:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.h, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr h1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.h, p0/m, h1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1330,7 +1330,7 @@ define <vscale x 2 x float> @dup_ld1rs_float_passthruzero_nxv2f32(<vscale x 2 x 
 ;
 ; CHECK-NO-LD1R-LABEL: dup_ld1rs_float_passthruzero_nxv2f32:
 ; CHECK-NO-LD1R:       // %bb.0:
-; CHECK-NO-LD1R-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NO-LD1R-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NO-LD1R-NEXT:    ldr s1, [x0]
 ; CHECK-NO-LD1R-NEXT:    mov z0.s, p0/m, s1
 ; CHECK-NO-LD1R-NEXT:    ret
@@ -1417,7 +1417,7 @@ define ptr @avoid_preindex_load(ptr %src, ptr %out) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1434,9 +1434,8 @@ define ptr @avoid_preindex_load_dup(ptr %src, <vscale x 2 x i1> %pg, ptr %out) {
 ; CHECK-LABEL: avoid_preindex_load_dup:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1451,9 +1450,8 @@ define ptr @avoid_preindex_load_dup_passthru_zero(ptr %src, <vscale x 2 x i1> %p
 ; CHECK-LABEL: avoid_preindex_load_dup_passthru_zero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1rsb { z0.d }, p0/z, [x0, #1]
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x0, x0, #1
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1469,8 +1467,7 @@ define ptr @preindex_load_dup_passthru(<vscale x 2 x i64> %passthru, ptr %src, <
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
 ; CHECK-NEXT:    mov z0.d, p0/m, x8
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1
   %tmp = load i8, ptr %ptr, align 4
@@ -1486,9 +1483,8 @@ define ptr @preidx8sext64_instead_of_ld1r(ptr %src, ptr %out, ptr %dst) {
 ; CHECK-LABEL: preidx8sext64_instead_of_ld1r:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldrsb x8, [x0, #1]!
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    mov z0.d, x8
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    str x8, [x2]
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %src, i64 1

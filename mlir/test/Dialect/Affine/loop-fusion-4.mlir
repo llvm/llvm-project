@@ -622,3 +622,47 @@ func.func @zero_tolerance(%arg0: memref<65536xcomplex<f64>>, %arg1: memref<30x13
 }
 func.func private @__external_levelwise_forward_ntt(memref<30x131072xi64>)
 func.func private @__external_reduce_barrett(i64, i64, i64, i64, i128) -> i64
+
+// An unrolled loop nest. Fusion here should correctly fuse while preserving
+// dependences between store-load pairs of the same memref. A private memref
+// of size 1x1x1 can't be created.
+
+// PRODUCER-CONSUMER-MAXIMAL-LABEL: func @unrolled
+func.func @unrolled(%arg0: memref<2x4xf32>, %arg1: memref<1x2x4xf32>) {
+  %alloc = memref.alloc() : memref<1x2x4xf32>
+  affine.for %i = 0 to 1 {
+    %0 = affine.load %arg0[0, 0] : memref<2x4xf32>
+    %1 = affine.load %arg0[0, 1] : memref<2x4xf32>
+    %2 = affine.load %arg0[0, 2] : memref<2x4xf32>
+    %3 = affine.load %arg0[0, 3] : memref<2x4xf32>
+    %4 = affine.load %arg0[1, 0] : memref<2x4xf32>
+    %5 = affine.load %arg0[1, 1] : memref<2x4xf32>
+    %6 = affine.load %arg0[1, 2] : memref<2x4xf32>
+    %7 = affine.load %arg0[1, 3] : memref<2x4xf32>
+
+    affine.store %0, %alloc[0, 0, 0] : memref<1x2x4xf32>
+    affine.store %1, %alloc[0, 0, 1] : memref<1x2x4xf32>
+    affine.store %2, %alloc[0, 0, 2] : memref<1x2x4xf32>
+    affine.store %3, %alloc[0, 0, 3] : memref<1x2x4xf32>
+    affine.store %4, %alloc[0, 1, 0] : memref<1x2x4xf32>
+    affine.store %5, %alloc[0, 1, 1] : memref<1x2x4xf32>
+    affine.store %6, %alloc[0, 1, 2] : memref<1x2x4xf32>
+    affine.store %7, %alloc[0, 1, 3] : memref<1x2x4xf32>
+  }
+
+  affine.for %i = 0 to 2 {
+    affine.for %j = 0 to 4 {
+      %8 = affine.load %alloc[0, %i, %j] : memref<1x2x4xf32>
+      %9 = arith.negf %8 : f32
+      affine.store %9, %arg1[0, %i, %j] : memref<1x2x4xf32>
+    }
+  }
+  // PRODUCER-CONSUMER-MAXIMAL:      affine.for %{{.*}} = 0 to 2 {
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:   affine.for %{{.*}} = 0 to 4 {
+  // PRODUCER-CONSUMER-MAXIMAL-NEXT:     affine.load %{{.*}}[0, 0]
+  // PRODUCER-CONSUMER-MAXIMAL:          affine.load %{{.*}}[1, 3]
+  // PRODUCER-CONSUMER-MAXIMAL:          affine.store %{{.*}}[0, 0, 0]
+  // PRODUCER-CONSUMER-MAXIMAL:          affine.store %{{.*}}[0, 1, 3]
+  // PRODUCER-CONSUMER-MAXIMAL:          affine.load %{{.*}}[0, %{{.*}}, %{{.*}}]
+  return
+}

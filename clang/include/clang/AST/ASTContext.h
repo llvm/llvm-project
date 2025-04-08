@@ -410,14 +410,8 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The identifier 'NSCopying'.
   IdentifierInfo *NSCopyingName = nullptr;
 
-  /// The identifier '__make_integer_seq'.
-  mutable IdentifierInfo *MakeIntegerSeqName = nullptr;
-
-  /// The identifier '__type_pack_element'.
-  mutable IdentifierInfo *TypePackElementName = nullptr;
-
-  /// The identifier '__builtin_common_type'.
-  mutable IdentifierInfo *BuiltinCommonTypeName = nullptr;
+#define BuiltinTemplate(BTName) mutable IdentifierInfo *Name##BTName = nullptr;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   QualType ObjCConstantStringType;
   mutable RecordDecl *CFConstantStringTagDecl = nullptr;
@@ -629,9 +623,10 @@ private:
 
   TranslationUnitDecl *TUDecl = nullptr;
   mutable ExternCContextDecl *ExternCContext = nullptr;
-  mutable BuiltinTemplateDecl *MakeIntegerSeqDecl = nullptr;
-  mutable BuiltinTemplateDecl *TypePackElementDecl = nullptr;
-  mutable BuiltinTemplateDecl *BuiltinCommonTypeDecl = nullptr;
+
+#define BuiltinTemplate(BTName)                                                \
+  mutable BuiltinTemplateDecl *Decl##BTName = nullptr;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// The associated SourceManager object.
   SourceManager &SourceMgr;
@@ -728,7 +723,7 @@ public:
   // (However they are still accessible via TranslationUnitDecl->decls())
   //
   // Changing the scope clears the parent cache, which is expensive to rebuild.
-  std::vector<Decl *> getTraversalScope() const { return TraversalScope; }
+  ArrayRef<Decl *> getTraversalScope() const { return TraversalScope; }
   void setTraversalScope(const std::vector<Decl *> &);
 
   /// Forwards to get node parents from the ParentMapContext. New callers should
@@ -1157,9 +1152,9 @@ public:
   }
 
   ExternCContextDecl *getExternCContextDecl() const;
-  BuiltinTemplateDecl *getMakeIntegerSeqDecl() const;
-  BuiltinTemplateDecl *getTypePackElementDecl() const;
-  BuiltinTemplateDecl *getBuiltinCommonTypeDecl() const;
+
+#define BuiltinTemplate(BTName) BuiltinTemplateDecl *get##BTName##Decl() const;
+#include "clang/Basic/BuiltinTemplates.inc"
 
   // Builtin Types.
   CanQualType VoidTy;
@@ -1563,10 +1558,9 @@ public:
   QualType getRValueReferenceType(QualType T) const;
 
   /// Return the uniqued reference to the type for a member pointer to
-  /// the specified type in the specified class.
-  ///
-  /// The class \p Cls is a \c Type because it could be a dependent name.
-  QualType getMemberPointerType(QualType T, const Type *Cls) const;
+  /// the specified type in the specified nested name.
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+                                const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
@@ -1801,12 +1795,10 @@ public:
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
 
-  QualType
-  getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                               unsigned Index,
-                               std::optional<unsigned> PackIndex,
-                               SubstTemplateTypeParmTypeFlag Flag =
-                                   SubstTemplateTypeParmTypeFlag::None) const;
+  QualType getSubstTemplateTypeParmType(QualType Replacement,
+                                        Decl *AssociatedDecl, unsigned Index,
+                                        UnsignedOrNone PackIndex,
+                                        bool Final) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
@@ -1843,15 +1835,14 @@ public:
                              TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier *NNS,
-                                const IdentifierInfo *Name,
-                                QualType Canon = QualType()) const;
+                                const IdentifierInfo *Name) const;
 
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgumentLoc> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgumentLoc> Args) const;
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
@@ -1862,8 +1853,7 @@ public:
   ///        expansion is used in a context where the arity is inferred from
   ///        elsewhere, such as if the pattern contains a placeholder type or
   ///        if this is the canonical type of another pack expansion type.
-  QualType getPackExpansionType(QualType Pattern,
-                                std::optional<unsigned> NumExpansions,
+  QualType getPackExpansionType(QualType Pattern, UnsignedOrNone NumExpansions,
                                 bool ExpectPackInType = true) const;
 
   QualType getObjCInterfaceType(const ObjCInterfaceDecl *Decl,
@@ -1907,7 +1897,7 @@ public:
   QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                bool FullySubstituted = false,
                                ArrayRef<QualType> Expansions = {},
-                               int Index = -1) const;
+                               UnsignedOrNone Index = std::nullopt) const;
 
   /// Unary type transforms
   QualType getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
@@ -2107,23 +2097,13 @@ public:
     return BoolName;
   }
 
-  IdentifierInfo *getMakeIntegerSeqName() const {
-    if (!MakeIntegerSeqName)
-      MakeIntegerSeqName = &Idents.get("__make_integer_seq");
-    return MakeIntegerSeqName;
+#define BuiltinTemplate(BTName)                                                \
+  IdentifierInfo *get##BTName##Name() const {                                  \
+    if (!Name##BTName)                                                         \
+      Name##BTName = &Idents.get(#BTName);                                     \
+    return Name##BTName;                                                       \
   }
-
-  IdentifierInfo *getTypePackElementName() const {
-    if (!TypePackElementName)
-      TypePackElementName = &Idents.get("__type_pack_element");
-    return TypePackElementName;
-  }
-
-  IdentifierInfo *getBuiltinCommonTypeName() const {
-    if (!BuiltinCommonTypeName)
-      BuiltinCommonTypeName = &Idents.get("__builtin_common_type");
-    return BuiltinCommonTypeName;
-  }
+#include "clang/Basic/BuiltinTemplates.inc"
 
   /// Retrieve the Objective-C "instancetype" type, if already known;
   /// otherwise, returns a NULL type;
@@ -2409,15 +2389,14 @@ public:
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
-
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        const IdentifierInfo *Name) const;
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        OverloadedOperatorKind Operator) const;
   TemplateName
-  getSubstTemplateTemplateParm(TemplateName replacement, Decl *AssociatedDecl,
-                               unsigned Index,
-                               std::optional<unsigned> PackIndex) const;
+  getDependentTemplateName(const DependentTemplateStorage &Name) const;
+
+  TemplateName getSubstTemplateTemplateParm(TemplateName replacement,
+                                            Decl *AssociatedDecl,
+                                            unsigned Index,
+                                            UnsignedOrNone PackIndex,
+                                            bool Final) const;
   TemplateName getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
                                                 Decl *AssociatedDecl,
                                                 unsigned Index,
@@ -2926,6 +2905,14 @@ public:
   /// Determine whether two template parameters are similar enough
   /// that they may be used in declarations of the same template.
   bool isSameTemplateParameter(const NamedDecl *X, const NamedDecl *Y) const;
+
+  /// Determine whether two 'requires' expressions are similar enough that they
+  /// may be used in re-declarations.
+  ///
+  /// Use of 'requires' isn't mandatory, works with constraints expressed in
+  /// other ways too.
+  bool isSameAssociatedConstraint(const AssociatedConstraint &ACX,
+                                  const AssociatedConstraint &ACY) const;
 
   /// Determine whether two 'requires' expressions are similar enough that they
   /// may be used in re-declarations.

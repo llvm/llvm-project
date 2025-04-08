@@ -598,11 +598,11 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    cmp x9, x8
 ; CHECK-NEXT:    csel x8, x9, x8, lo
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    st1b { z0.b }, p1, [sp, #1, mul vl]
-; CHECK-NEXT:    st1b { z1.b }, p1, [sp]
+; CHECK-NEXT:    str z0, [sp, #1, mul vl]
+; CHECK-NEXT:    str z1, [sp]
 ; CHECK-NEXT:    strb w0, [x9, x8]
-; CHECK-NEXT:    ld1b { z0.b }, p1/z, [sp]
-; CHECK-NEXT:    ld1b { z1.b }, p1/z, [sp, #1, mul vl]
+; CHECK-NEXT:    ldr z0, [sp]
+; CHECK-NEXT:    ldr z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    and z0.b, z0.b, #0x1
 ; CHECK-NEXT:    and z1.b, z1.b, #0x1
 ; CHECK-NEXT:    cmpne p0.b, p1/z, z0.b, #0

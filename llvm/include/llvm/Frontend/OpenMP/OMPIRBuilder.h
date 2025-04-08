@@ -14,14 +14,15 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
-#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <map>
@@ -479,7 +480,7 @@ public:
   /// not have an effect on \p M (see initialize)
   OpenMPIRBuilder(Module &M)
       : M(M), Builder(M.getContext()), OffloadInfoManager(this),
-        T(Triple(M.getTargetTriple())) {}
+        T(M.getTargetTriple()) {}
   ~OpenMPIRBuilder();
 
   class AtomicInfo : public llvm::AtomicInfo {
@@ -1093,7 +1094,8 @@ private:
   ///                   original and copied loop values and loop blocks.
   /// \param NamePrefix Optional name prefix for if.then if.else blocks.
   void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
-                       ValueToValueMapTy &VMap, const Twine &NamePrefix = "");
+                       ValueMap<const Value *, WeakTrackingVH> &VMap,
+                       const Twine &NamePrefix = "");
 
 public:
   /// Modifies the canonical loop to be a workshare loop.
@@ -1905,8 +1907,6 @@ public:
   ///                           nowait.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
-  /// \param HasDistribute      Optional flag set if it is a
-  ///                           distribute reduction.
   /// \param GridValue          Optional GPU grid value.
   /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
@@ -1915,7 +1915,6 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       bool IsNoWait = false, bool IsTeamsReduction = false,
-      bool HasDistribute = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
       std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
       Value *SrcLocInfo = nullptr);
@@ -1983,11 +1982,14 @@ public:
   /// \param IsNoWait           A flag set if the reduction is marked as nowait.
   /// \param IsByRef            A flag set if the reduction is using reference
   /// or direct value.
+  /// \param IsTeamsReduction   Optional flag set if it is a teams
+  ///                           reduction.
   InsertPointOrErrorTy createReductions(const LocationDescription &Loc,
                                         InsertPointTy AllocaIP,
                                         ArrayRef<ReductionInfo> ReductionInfos,
                                         ArrayRef<bool> IsByRef,
-                                        bool IsNoWait = false);
+                                        bool IsNoWait = false,
+                                        bool IsTeamsReduction = false);
 
   ///}
 
@@ -2271,6 +2273,8 @@ public:
     int32_t MinTeams = 1;
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
+    int32_t ReductionDataSize = 0;
+    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the

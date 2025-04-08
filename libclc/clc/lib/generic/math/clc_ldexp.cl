@@ -1,24 +1,10 @@
-/*
- * Copyright (c) 2014 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_add_sat.h>
@@ -41,7 +27,7 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
     int s = i & 0x80000000;
     int v = __clc_add_sat(e, n);
     v = __clc_clamp(v, 0, 0xff);
-    int mr = e == 0 | v == 0 | v == 0xff ? 0 : m;
+    int mr = (e == 0 || v == 0 || v == 0xff) ? 0 : m;
     int c = e == 0xff;
     mr = c ? m : mr;
     int er = c ? e : v;
@@ -96,7 +82,7 @@ _CLC_DEF_ldexp _CLC_OVERLOAD float __clc_ldexp(float x, int n) {
   val_ui = dexp == 0 ? dval_ui : val_ui;
   val_f = __clc_as_float(val_ui);
 
-  val_f = __clc_isnan(x) | __clc_isinf(x) | val_x == 0 ? x : val_f;
+  val_f = (__clc_isnan(x) || __clc_isinf(x) || val_x == 0) ? x : val_f;
   return val_f;
 }
 
