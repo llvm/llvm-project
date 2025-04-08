@@ -57,8 +57,8 @@ bool SetMachineFunctionBasePass::doFinalization(llvm::Module &) {
 /// AsmPrint. Returns true if failed.
 bool llvm::mclinker::addPassesToEmitMC(
     llvm::TargetMachine &TgtMachine, llvm::legacy::PassManagerBase &PM,
-    bool DisableVerify,
-    llvm::MachineModuleInfoWrapperPass *MMIWP, unsigned NumFnBase) {
+    bool DisableVerify, llvm::MachineModuleInfoWrapperPass *MMIWP,
+    unsigned NumFnBase) {
   // Targets may override createPassConfig to provide a target-specific
   // subclass.
   TargetPassConfig *PassConfig = TgtMachine.createPassConfig(PM);

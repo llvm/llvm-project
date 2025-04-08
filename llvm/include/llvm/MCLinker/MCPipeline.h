@@ -22,8 +22,7 @@ namespace mclinker {
 /// Build a pipeline that does machine specific codgen but stops before
 /// AsmPrint.
 bool addPassesToEmitMC(llvm::TargetMachine &, llvm::legacy::PassManagerBase &,
-                       bool,
-                       llvm::MachineModuleInfoWrapperPass *, unsigned);
+                       bool, llvm::MachineModuleInfoWrapperPass *, unsigned);
 
 /// Build a pipeline that does AsmPrint only.
 bool addPassesToAsmPrint(llvm::TargetMachine &, llvm::legacy::PassManagerBase &,
