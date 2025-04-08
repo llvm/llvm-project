@@ -183,47 +183,13 @@ static MCInstPrinter *createSystemZMCInstPrinter(const Triple &T,
   return new SystemZGNUInstPrinter(MAI, MII, MRI);
 }
 
-void SystemZTargetStreamer::emitConstantPools() {
-  // Emit EXRL target instructions.
-  if (EXRLTargets2Sym.empty())
-    return;
-  // Switch to the .text section.
-  const MCObjectFileInfo &OFI = *Streamer.getContext().getObjectFileInfo();
-  Streamer.switchSection(OFI.getTextSection());
-  for (auto &I : EXRLTargets2Sym) {
-    Streamer.emitLabel(I.second);
-    const MCInstSTIPair &MCI_STI = I.first;
-    Streamer.emitInstruction(MCI_STI.first, *MCI_STI.second);
-  }
-  EXRLTargets2Sym.clear();
-}
-
-namespace {
-class SystemZTargetAsmStreamer : public SystemZTargetStreamer {
-  formatted_raw_ostream &OS;
-
-public:
-  SystemZTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS)
-      : SystemZTargetStreamer(S), OS(OS) {}
-  void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << "\n";
-  }
-};
-
-class SystemZTargetELFStreamer : public SystemZTargetStreamer {
-public:
-  SystemZTargetELFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
-  void emitMachine(StringRef CPU) override {}
-};
-} // end namespace
-
 static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
                                                  MCInstPrinter *InstPrint) {
   if (S.getContext().getTargetTriple().isOSzOS())
     return new SystemZTargetHLASMStreamer(S, OS);
   else
-    return new SystemZTargetAsmStreamer(S, OS);
+    return new SystemZTargetGNUStreamer(S, OS);
 }
 
 static MCStreamer *createAsmStreamer(MCContext &Ctx,

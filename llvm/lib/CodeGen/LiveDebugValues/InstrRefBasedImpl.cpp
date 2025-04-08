@@ -900,8 +900,7 @@ public:
     // Commit ActiveMLoc changes.
     ActiveMLocIt->second.clear();
     if (!NewMLocs.empty())
-      for (DebugVariableID VarID : NewMLocs)
-        ActiveMLocs[*NewLoc].insert(VarID);
+      ActiveMLocs[*NewLoc].insert_range(NewMLocs);
   }
 
   /// Transfer variables based on \p Src to be based on \p Dst. This handles
@@ -4219,9 +4218,7 @@ std::optional<ValueIDNum> InstrRefBasedLDV::resolveDbgPHIsImpl(
   }
 
   // Sort PHIs to validate into RPO-order.
-  SmallVector<LDVSSAPhi *, 8> SortedPHIs;
-  for (auto &PHI : CreatedPHIs)
-    SortedPHIs.push_back(PHI);
+  SmallVector<LDVSSAPhi *, 8> SortedPHIs(CreatedPHIs);
 
   llvm::sort(SortedPHIs, [&](LDVSSAPhi *A, LDVSSAPhi *B) {
     return BBToOrder[&A->getParent()->BB] < BBToOrder[&B->getParent()->BB];

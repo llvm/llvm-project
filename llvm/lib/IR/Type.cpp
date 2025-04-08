@@ -553,7 +553,7 @@ Error StructType::checkBody(ArrayRef<Type *> Elements) {
     if (Ty == this)
       return createStringError(Twine("identified structure type '") +
                                getName() + "' is recursive");
-    Worklist.insert(Ty->subtype_begin(), Ty->subtype_end());
+    Worklist.insert_range(Ty->subtypes());
   }
   return Error::success();
 }

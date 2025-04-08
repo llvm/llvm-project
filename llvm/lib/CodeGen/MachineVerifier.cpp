@@ -708,11 +708,11 @@ void MachineVerifier::visitMachineFunctionBefore() {
     FunctionBlocks.insert(&MBB);
     BBInfo &MInfo = MBBInfoMap[&MBB];
 
-    MInfo.Preds.insert(MBB.pred_begin(), MBB.pred_end());
+    MInfo.Preds.insert_range(MBB.predecessors());
     if (MInfo.Preds.size() != MBB.pred_size())
       report("MBB has duplicate entries in its predecessor list.", &MBB);
 
-    MInfo.Succs.insert(MBB.succ_begin(), MBB.succ_end());
+    MInfo.Succs.insert_range(MBB.successors());
     if (MInfo.Succs.size() != MBB.succ_size())
       report("MBB has duplicate entries in its successor list.", &MBB);
   }
@@ -907,17 +907,14 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
         report("MBB live-in list contains non-physical register", MBB);
         continue;
       }
-      for (const MCPhysReg &SubReg : TRI->subregs_inclusive(LI.PhysReg))
-        regsLive.insert(SubReg);
+      regsLive.insert_range(TRI->subregs_inclusive(LI.PhysReg));
     }
   }
 
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   BitVector PR = MFI.getPristineRegs(*MF);
-  for (unsigned I : PR.set_bits()) {
-    for (const MCPhysReg &SubReg : TRI->subregs_inclusive(I))
-      regsLive.insert(SubReg);
-  }
+  for (unsigned I : PR.set_bits())
+    regsLive.insert_range(TRI->subregs_inclusive(I));
 
   regsKilled.clear();
   regsDefined.clear();

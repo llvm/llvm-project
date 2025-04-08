@@ -191,6 +191,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.ldiv
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
+    libc.src.stdlib.memalignment
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
@@ -645,6 +646,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT16)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float16 entrypoints
+    # libc.src.math.acoshf16
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
@@ -677,6 +679,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.ffma
     libc.src.math.ffmal
     libc.src.math.floorf16
+    libc.src.math.fmaf16
     libc.src.math.fmaxf16
     libc.src.math.fmaximum_mag_numf16
     libc.src.math.fmaximum_magf16
@@ -756,6 +759,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128

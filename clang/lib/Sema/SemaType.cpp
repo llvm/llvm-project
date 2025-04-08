@@ -1122,8 +1122,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   }
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type() &&
-        !(S.getLangOpts().SYCLIsDevice || S.getLangOpts().CUDAIsDevice ||
-          (S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice)))
+        !(S.getLangOpts().isTargetDevice()))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned)
@@ -1168,8 +1167,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     break;
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
-        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
+        !S.getLangOpts().isTargetDevice())
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -2685,10 +2683,23 @@ QualType Sema::BuildFunctionType(QualType T,
   return Context.getFunctionType(T, ParamTypes, EPI);
 }
 
-QualType Sema::BuildMemberPointerType(QualType T,
-                                      NestedNameSpecifier *Qualifier,
+QualType Sema::BuildMemberPointerType(QualType T, const CXXScopeSpec &SS,
                                       CXXRecordDecl *Cls, SourceLocation Loc,
                                       DeclarationName Entity) {
+  if (!Cls && !isDependentScopeSpecifier(SS)) {
+    Cls = dyn_cast_or_null<CXXRecordDecl>(computeDeclContext(SS));
+    if (!Cls) {
+      auto D =
+          Diag(SS.getBeginLoc(), diag::err_illegal_decl_mempointer_in_nonclass)
+          << SS.getRange();
+      if (const IdentifierInfo *II = Entity.getAsIdentifierInfo())
+        D << II;
+      else
+        D << "member pointer";
+      return QualType();
+    }
+  }
+
   // Verify that we're not building a pointer to pointer to function with
   // exception specification.
   if (CheckDistantExceptionSpec(T)) {
@@ -2730,7 +2741,7 @@ QualType Sema::BuildMemberPointerType(QualType T,
   if (T->isFunctionType())
     adjustMemberFunctionCC(T, /*HasThisPointer=*/true, IsCtorOrDtor, Loc);
 
-  return Context.getMemberPointerType(T, Qualifier, Cls);
+  return Context.getMemberPointerType(T, SS.getScopeRep(), Cls);
 }
 
 QualType Sema::BuildBlockPointerType(QualType T,
@@ -3041,9 +3052,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             AutoLoc.getNestedNameSpecifierLoc(), AutoLoc.getConceptNameInfo(),
             AutoLoc.getNamedConcept(), /*FoundDecl=*/AutoLoc.getFoundDecl(),
             AutoLoc.hasExplicitTemplateArgs() ? &TAL : nullptr,
-            InventedTemplateParam,
-            S.Context.getTypeDeclType(InventedTemplateParam),
-            D.getEllipsisLoc());
+            InventedTemplateParam, D.getEllipsisLoc());
       }
     } else {
       // The 'auto' appears in the decl-specifiers; we've not finished forming
@@ -3080,9 +3089,7 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
             /*FoundDecl=*/
             USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
-            InventedTemplateParam,
-            S.Context.getTypeDeclType(InventedTemplateParam),
-            D.getEllipsisLoc());
+            InventedTemplateParam, D.getEllipsisLoc());
       }
     }
   }
@@ -3369,13 +3376,18 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     } else if (Auto && D.getContext() != DeclaratorContext::LambdaExpr) {
       // If there was a trailing return type, we already got
       // warn_cxx98_compat_trailing_return_type in the parser.
-      SemaRef.Diag(AutoRange.getBegin(),
-                   D.getContext() == DeclaratorContext::LambdaExprParameter
-                       ? diag::warn_cxx11_compat_generic_lambda
-                   : IsDeducedReturnType
-                       ? diag::warn_cxx11_compat_deduced_return_type
-                       : diag::warn_cxx98_compat_auto_type_specifier)
-          << AutoRange;
+      // If there was a decltype(auto), we already got
+      // warn_cxx11_compat_decltype_auto_type_specifier.
+      unsigned DiagId = 0;
+      if (D.getContext() == DeclaratorContext::LambdaExprParameter)
+        DiagId = diag::warn_cxx11_compat_generic_lambda;
+      else if (IsDeducedReturnType)
+        DiagId = diag::warn_cxx11_compat_deduced_return_type;
+      else if (Auto->getKeyword() == AutoTypeKeyword::Auto)
+        DiagId = diag::warn_cxx98_compat_auto_type_specifier;
+
+      if (DiagId)
+        SemaRef.Diag(AutoRange.getBegin(), DiagId) << AutoRange;
     }
   }
 
@@ -5344,20 +5356,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Avoid emitting extra errors if we already errored on the scope.
         D.setInvalidType(true);
         AreDeclaratorChunksValid = false;
-      } else if (auto *RD =
-                     dyn_cast_or_null<CXXRecordDecl>(S.computeDeclContext(SS));
-                 RD || S.isDependentScopeSpecifier(SS)) {
-        T = S.BuildMemberPointerType(T, SS.getScopeRep(), RD, DeclType.Loc,
-                                     D.getIdentifier());
       } else {
-        S.Diag(DeclType.Mem.Scope().getBeginLoc(),
-             diag::err_illegal_decl_mempointer_in_nonclass)
-          << (D.getIdentifier() ? D.getIdentifier()->getName() : "type name")
-          << DeclType.Mem.Scope().getRange();
-        D.setInvalidType(true);
-        AreDeclaratorChunksValid = false;
-        // FIXME: Maybe we could model these as as a MemberPointerType with a
-        // non-dependent, non-class qualifier anyway.
+        T = S.BuildMemberPointerType(T, SS, /*Cls=*/nullptr, DeclType.Loc,
+                                     D.getIdentifier());
       }
 
       if (T.isNull()) {
@@ -8284,12 +8285,7 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
                                      Sema &S, VectorKind VecKind) {
-  bool IsTargetCUDAAndHostARM = false;
-  if (S.getLangOpts().CUDAIsDevice) {
-    const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
-    IsTargetCUDAAndHostARM =
-        AuxTI && (AuxTI->getTriple().isAArch64() || AuxTI->getTriple().isARM());
-  }
+  bool IsTargetOffloading = S.getLangOpts().isTargetDevice();
 
   // Target must have NEON (or MVE, whose vectors are similar enough
   // not to need a separate attribute)
@@ -8323,8 +8319,7 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
 
   // Only certain element types are supported for Neon vectors.
-  if (!isPermittedNeonBaseType(CurType, VecKind, S) &&
-      !IsTargetCUDAAndHostARM) {
+  if (!isPermittedNeonBaseType(CurType, VecKind, S) && !IsTargetOffloading) {
     S.Diag(Attr.getLoc(), diag::err_attribute_invalid_vector_type) << CurType;
     Attr.setInvalid();
     return;
@@ -9255,10 +9250,10 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
   //         "Can't ask whether a dependent type is complete");
 
   if (const MemberPointerType *MPTy = T->getAs<MemberPointerType>()) {
-    if (!MPTy->getQualifier()->isDependent()) {
-      QualType T = Context.getTypeDeclType(MPTy->getMostRecentCXXRecordDecl());
-      if (getLangOpts().CompleteMemberPointers &&
-          !MPTy->getMostRecentCXXRecordDecl()->isBeingDefined() &&
+    if (CXXRecordDecl *RD = MPTy->getMostRecentCXXRecordDecl();
+        RD && !RD->isDependentType()) {
+      QualType T = Context.getTypeDeclType(RD);
+      if (getLangOpts().CompleteMemberPointers && !RD->isBeingDefined() &&
           RequireCompleteType(Loc, T, Kind, diag::err_memptr_incomplete))
         return true;
 
@@ -9690,7 +9685,7 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                      bool FullySubstituted,
                                      ArrayRef<QualType> Expansions) {
 
-  std::optional<int64_t> Index;
+  UnsignedOrNone Index = std::nullopt;
   if (FullySubstituted && !IndexExpr->isValueDependent() &&
       !IndexExpr->isTypeDependent()) {
     llvm::APSInt Value(Context.getIntWidth(Context.getSizeType()));
@@ -9698,20 +9693,18 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
         IndexExpr, Context.getSizeType(), Value, CCEK_ArrayBound);
     if (!Res.isUsable())
       return QualType();
-    Index = Value.getExtValue();
     IndexExpr = Res.get();
-  }
-
-  if (FullySubstituted && Index) {
-    if (*Index < 0 || *Index >= int64_t(Expansions.size())) {
+    int64_t V = Value.getExtValue();
+    if (FullySubstituted && (V < 0 || V >= int64_t(Expansions.size()))) {
       Diag(IndexExpr->getBeginLoc(), diag::err_pack_index_out_of_bound)
-          << *Index << Pattern << Expansions.size();
+          << V << Pattern << Expansions.size();
       return QualType();
     }
+    Index = static_cast<unsigned>(V);
   }
 
   return Context.getPackIndexingType(Pattern, IndexExpr, FullySubstituted,
-                                     Expansions, Index.value_or(-1));
+                                     Expansions, Index);
 }
 
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,

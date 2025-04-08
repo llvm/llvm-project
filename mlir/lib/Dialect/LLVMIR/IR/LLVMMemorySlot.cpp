@@ -140,9 +140,13 @@ static bool isSupportedTypeForConversion(Type type) {
   if (isa<LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(type))
     return false;
 
-  // Scalable types are not supported.
-  if (auto vectorType = dyn_cast<VectorType>(type))
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    // Vectors of pointers cannot be casted.
+    if (isa<LLVM::LLVMPointerType>(vectorType.getElementType()))
+      return false;
+    // Scalable types are not supported.
     return !vectorType.isScalable();
+  }
   return true;
 }
 
@@ -1345,8 +1349,7 @@ static bool memcpyCanRewire(MemcpyLike op, const DestructurableMemorySlot &slot,
     return false;
 
   if (op.getSrc() == slot.ptr)
-    for (Attribute index : llvm::make_first_range(slot.subelementTypes))
-      usedIndices.insert(index);
+    usedIndices.insert_range(llvm::make_first_range(slot.subelementTypes));
 
   return true;
 }

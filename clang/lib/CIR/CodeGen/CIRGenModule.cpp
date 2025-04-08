@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -57,6 +58,18 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  PointerAlignInBytes =
+      astContext
+          .toCharUnitsFromBits(
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
+
+  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
+  const unsigned sizeTypeSize =
+      astContext.getTypeSize(astContext.getSignedSizeType());
+  PtrDiffTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
+
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
 }
@@ -79,6 +92,11 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+  if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
+    emitGlobalOpenACCDecl(cd);
+    return;
+  }
+
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -140,16 +158,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // certain constant expressions is implemented for now.
     const VarDecl *initDecl;
     const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    mlir::Attribute initializer;
     if (initExpr) {
-      mlir::Attribute initializer;
       if (APValue *value = initDecl->evaluateValue()) {
         ConstantEmitter emitter(*this);
         initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
       } else {
         errorNYI(initExpr->getSourceRange(), "non-constant initializer");
       }
-      varOp.setInitialValueAttr(initializer);
+    } else {
+      initializer = builder.getZeroInitAttr(convertType(astTy));
     }
+
+    varOp.setInitialValueAttr(initializer);
 
     // Set CIR's linkage type as appropriate.
     cir::GlobalLinkageKind linkage =
@@ -408,6 +429,12 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobal(vd);
     break;
   }
+  case Decl::OpenACCRoutine:
+    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    break;
+  case Decl::OpenACCDeclare:
+    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
   }
 }
 
