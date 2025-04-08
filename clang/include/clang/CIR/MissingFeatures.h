@@ -88,7 +88,6 @@ struct MissingFeatures {
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
   static bool opTBAA() { return false; }
-  static bool opCmp() { return false; }
   static bool objCLifetime() { return false; }
   static bool emitNullabilityCheck() { return false; }
   static bool astVarDeclInterface() { return false; }

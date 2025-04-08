@@ -4159,6 +4159,8 @@ cc_library(
     deps = [
         ":AllTargetsCodeGens",
         ":BinaryFormat",
+        ":BitReader",
+        ":BitstreamReader",
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
