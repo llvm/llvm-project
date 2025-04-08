@@ -425,8 +425,8 @@ define amdgpu_kernel void @multi_use_in_loop_global_base_address(ptr addrspace(1
 ; CHECK-NEXT:    [[TMP25]] = add nuw nsw i32 [[TMP13]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[TMP13]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 2
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(1) @extern_array_1, i64 [[TMP1]]
-; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[UGLYGEP]], i64 4
+; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr addrspace(1) @extern_array_1, i64 4
+; CHECK-NEXT:    [[UGLYGEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[UGLYGEP]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr addrspace(1) [[UGLYGEP2]], align 4
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP24]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP30]] = add i32 [[TMP29]], [[TMP28]]
