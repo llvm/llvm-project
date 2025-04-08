@@ -164,7 +164,7 @@ void WriteMemoryRequestHandler::operator()(
           break;
         }
         // Move to the start of the next memory region.
-        start_address = region_info.GetRegionEnd();
+        start_address = region_info.GetRegionEnd() + 1;
       }
     }
 
