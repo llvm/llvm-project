@@ -7399,8 +7399,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   for (auto &P : VPlans) {
     SmallVector<ElementCount, 1> VFs(P->vectorFactors());
     auto RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
-    for (unsigned I = 0; I < VFs.size(); I++) {
-      auto VF = VFs[I];
+    for (auto [VF, RU] : zip_equal(VFs, RUs)) {
       if (VF.isScalar())
         continue;
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -7427,7 +7426,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       // Make sure that the VF doesn't use more than the number of available
       // registers
-      const auto &MLU = RUs[I].MaxLocalUsers;
+      const auto &MLU = RU.MaxLocalUsers;
       if (any_of(MLU, [&](decltype(MLU.front()) &LU) {
             return LU.second > TTI.getNumberOfRegisters(LU.first);
           })) {
