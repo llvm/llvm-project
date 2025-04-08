@@ -238,9 +238,6 @@ protected:
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
 
-  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
-  bool enableDebuggerActionHookFlag = false;
-
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
 

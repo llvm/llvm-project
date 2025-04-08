@@ -140,9 +140,13 @@ static bool isSupportedTypeForConversion(Type type) {
   if (isa<LLVM::LLVMFixedVectorType, LLVM::LLVMScalableVectorType>(type))
     return false;
 
-  // Scalable types are not supported.
-  if (auto vectorType = dyn_cast<VectorType>(type))
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    // Vectors of pointers cannot be casted.
+    if (isa<LLVM::LLVMPointerType>(vectorType.getElementType()))
+      return false;
+    // Scalable types are not supported.
     return !vectorType.isScalable();
+  }
   return true;
 }
 

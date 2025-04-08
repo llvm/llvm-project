@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtOpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -85,7 +86,34 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitWhileStmt(cast<WhileStmt>(*s));
   case Stmt::DoStmtClass:
     return emitDoStmt(cast<DoStmt>(*s));
-
+  case Stmt::OpenACCComputeConstructClass:
+    return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
+  case Stmt::OpenACCLoopConstructClass:
+    return emitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*s));
+  case Stmt::OpenACCCombinedConstructClass:
+    return emitOpenACCCombinedConstruct(cast<OpenACCCombinedConstruct>(*s));
+  case Stmt::OpenACCDataConstructClass:
+    return emitOpenACCDataConstruct(cast<OpenACCDataConstruct>(*s));
+  case Stmt::OpenACCEnterDataConstructClass:
+    return emitOpenACCEnterDataConstruct(cast<OpenACCEnterDataConstruct>(*s));
+  case Stmt::OpenACCExitDataConstructClass:
+    return emitOpenACCExitDataConstruct(cast<OpenACCExitDataConstruct>(*s));
+  case Stmt::OpenACCHostDataConstructClass:
+    return emitOpenACCHostDataConstruct(cast<OpenACCHostDataConstruct>(*s));
+  case Stmt::OpenACCWaitConstructClass:
+    return emitOpenACCWaitConstruct(cast<OpenACCWaitConstruct>(*s));
+  case Stmt::OpenACCInitConstructClass:
+    return emitOpenACCInitConstruct(cast<OpenACCInitConstruct>(*s));
+  case Stmt::OpenACCShutdownConstructClass:
+    return emitOpenACCShutdownConstruct(cast<OpenACCShutdownConstruct>(*s));
+  case Stmt::OpenACCSetConstructClass:
+    return emitOpenACCSetConstruct(cast<OpenACCSetConstruct>(*s));
+  case Stmt::OpenACCUpdateConstructClass:
+    return emitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*s));
+  case Stmt::OpenACCCacheConstructClass:
+    return emitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*s));
+  case Stmt::OpenACCAtomicConstructClass:
+    return emitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*s));
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
   case Stmt::NoStmtClass:
@@ -192,20 +220,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass:
   case Stmt::OMPStripeDirectiveClass:
-  case Stmt::OpenACCComputeConstructClass:
-  case Stmt::OpenACCLoopConstructClass:
-  case Stmt::OpenACCCombinedConstructClass:
-  case Stmt::OpenACCDataConstructClass:
-  case Stmt::OpenACCEnterDataConstructClass:
-  case Stmt::OpenACCExitDataConstructClass:
-  case Stmt::OpenACCHostDataConstructClass:
-  case Stmt::OpenACCWaitConstructClass:
-  case Stmt::OpenACCInitConstructClass:
-  case Stmt::OpenACCShutdownConstructClass:
-  case Stmt::OpenACCSetConstructClass:
-  case Stmt::OpenACCUpdateConstructClass:
-  case Stmt::OpenACCCacheConstructClass:
-  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
     cgm.errorNYI(s->getSourceRange(),
