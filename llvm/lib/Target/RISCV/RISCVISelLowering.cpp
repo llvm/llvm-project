@@ -15095,7 +15095,7 @@ static SDValue reverseZExtICmpCombine(SDNode *N, SelectionDAG &DAG,
 
   SDValue Res =
       DAG.getNode(ISD::AND, DL, WideVT, X,
-                  DAG.getConstant(1 << ShAmt.getZExtValue(), DL, WideVT));
+                  DAG.getConstant(1ULL << ShAmt.getZExtValue(), DL, WideVT));
   Res = DAG.getSetCC(DL,
                      EVT::getVectorVT(*DAG.getContext(), MVT::i1,
                                       WideVT.getVectorElementCount()),
