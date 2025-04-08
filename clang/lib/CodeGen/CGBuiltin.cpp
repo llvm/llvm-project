@@ -20053,6 +20053,15 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
+static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
+  switch (BuiltinID) {
+    case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_mask_max_i32:
+      return Intrinsic::amdgcn_wave_reduce_umax;
+    default:
+      llvm_unreachable("Unknown BuiltinID for wave reduction");
+  }
+}
+
 Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
                                               const CallExpr *E) {
   llvm::AtomicOrdering AO = llvm::AtomicOrdering::SequentiallyConsistent;
@@ -20360,6 +20369,15 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return EmitAMDGCNBallotForExec(*this, E, Int32Ty, Int32Ty, false);
   case AMDGPU::BI__builtin_amdgcn_read_exec_hi:
     return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty, true);
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_mask_max_i32:{
+    Intrinsic::ID IID = getIntrinsicIDforWaveReduction(BuiltinID);
+    llvm::Value *Value = EmitScalarExpr(E->getArg(0));
+    llvm::Value *Mask = EmitScalarExpr(E->getArg(1));
+    llvm::Value *Strategy = EmitScalarExpr(E->getArg(2));
+    // llvm::errs() << "Value->getType():" << Value->getType() << "\n";
+    llvm::Function *F = CGM.getIntrinsic(IID, {Value->getType()});
+    return Builder.CreateCall(F, {Value, Mask, Strategy});
+  }
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_l:

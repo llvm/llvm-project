@@ -298,14 +298,14 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
     (V_SET_INACTIVE_B32 0, VGPR_32:$src, 0, VGPR_32:$inactive, (IMPLICIT_DEF))>;
 
 let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-  def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umin i32:$src, i32:$strategy))]> {
+  def WAVE_REDUCE_UMIN_PSEUDO_U32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+    (ins VSrc_b32: $src, VSrc_b32: $mask, VSrc_b32:$strategy),
+    [(set i32:$vdst, (int_amdgcn_wave_reduce_umin i32:$src, i32:$mask, i32:$strategy))]> {
   }
 
-  def WAVE_REDUCE_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs SGPR_32:$sdst),
-    (ins VSrc_b32: $src, VSrc_b32:$strategy),
-    [(set i32:$sdst, (int_amdgcn_wave_reduce_umax i32:$src, i32:$strategy))]> {
+  def WAVE_REDUCE_UMAX_PSEUDO_U32 : VPseudoInstSI <(outs VGPR_32:$vdst),
+    (ins VSrc_b32: $src, VSrc_b32: $mask, VSrc_b32:$strategy),
+    [(set i32:$vdst, (int_amdgcn_wave_reduce_umax i32:$src, i32:$mask, i32:$strategy))]> {
   }
 }
 
