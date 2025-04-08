@@ -20,7 +20,7 @@ define void @extract_row_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 %
 ; CHECK-NEXT:    mov z5.b, p0/m, za0h.b[w12, 10]
 ; CHECK-NEXT:    mov z6.b, p0/m, za0h.b[w12, 12]
 ; CHECK-NEXT:    mov z7.b, p0/m, za0h.b[w12, 14]
-; CHECK-NEXT:    b dummy_use_8_nxv16i8
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 16 x i8> @llvm.aarch64.sme.read.horiz.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.2 = add i32 %tileslice, 2
   %z1 = call <vscale x 16 x i8> @llvm.aarch64.sme.read.horiz.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 0, i32 %tileslice.2)
@@ -38,8 +38,8 @@ define void @extract_row_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 %
   %z7 = call <vscale x 16 x i8> @llvm.aarch64.sme.read.horiz.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 0, i32 %tileslice.14)
 
   ; Force retention of z0..z7
-  tail call void @dummy_use_8_nxv16i8(<vscale x 16 x i8> %z0, <vscale x 16 x i8> %z1, <vscale x 16 x i8> %z2, <vscale x 16 x i8> %z3,
-                                 <vscale x 16 x i8> %z4, <vscale x 16 x i8> %z5, <vscale x 16 x i8> %z6, <vscale x 16 x i8> %z7)
+  tail call void @use(<vscale x 16 x i8> %z0, <vscale x 16 x i8> %z1, <vscale x 16 x i8> %z2, <vscale x 16 x i8> %z3,
+                      <vscale x 16 x i8> %z4, <vscale x 16 x i8> %z5, <vscale x 16 x i8> %z6, <vscale x 16 x i8> %z7)
   ret void
 }
 
@@ -62,7 +62,7 @@ define void @extract_col_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 %
 ; CHECK-NEXT:    mov z5.b, p0/m, za0v.b[w12, 11]
 ; CHECK-NEXT:    mov z6.b, p0/m, za0v.b[w12, 13]
 ; CHECK-NEXT:    mov z7.b, p0/m, za0v.b[w12, 15]
-; CHECK-NEXT:    b dummy_use_8_nxv16i8
+; CHECK-NEXT:    b use
   %tileslice.1 = add i32 %tileslice, 1
   %z0 = call <vscale x 16 x i8> @llvm.aarch64.sme.read.vert.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 0, i32 %tileslice.1)
   %tileslice.3 = add i32 %tileslice, 3
@@ -80,8 +80,8 @@ define void @extract_col_b(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 %
   %tileslice.15 = add i32 %tileslice, 15
   %z7 = call <vscale x 16 x i8> @llvm.aarch64.sme.read.vert.nxv16i8(<vscale x 16 x i8> %zd, <vscale x 16 x i1> %pg, i32 0, i32 %tileslice.15)
 
-  tail call void @dummy_use_8_nxv16i8(<vscale x 16 x i8> %z0, <vscale x 16 x i8> %z1, <vscale x 16 x i8> %z2, <vscale x 16 x i8> %z3,
-                                 <vscale x 16 x i8> %z4, <vscale x 16 x i8> %z5, <vscale x 16 x i8> %z6, <vscale x 16 x i8> %z7)
+  tail call void @use(<vscale x 16 x i8> %z0, <vscale x 16 x i8> %z1, <vscale x 16 x i8> %z2, <vscale x 16 x i8> %z3,
+                      <vscale x 16 x i8> %z4, <vscale x 16 x i8> %z5, <vscale x 16 x i8> %z6, <vscale x 16 x i8> %z7)
   ret void
 }
 
@@ -96,7 +96,7 @@ define void @extract_row_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 %t
 ; CHECK-NEXT:    mov z1.h, p0/m, za0h.h[w12, 2]
 ; CHECK-NEXT:    mov z2.h, p0/m, za0h.h[w12, 4]
 ; CHECK-NEXT:    mov z3.h, p0/m, za0h.h[w12, 6]
-; CHECK-NEXT:    b dummy_use_4_nxv8i16
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 8 x i16> @llvm.aarch64.sme.read.horiz.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.2 = add i32 %tileslice, 2
   %z1 = call <vscale x 8 x i16> @llvm.aarch64.sme.read.horiz.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.2)
@@ -105,7 +105,7 @@ define void @extract_row_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 %t
   %tileslice.6 = add i32 %tileslice, 6
   %z3 = call <vscale x 8 x i16> @llvm.aarch64.sme.read.horiz.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.6)
 
-  tail call void @dummy_use_4_nxv8i16(<vscale x 8 x i16>  %z0, <vscale x 8 x i16>  %z1, <vscale x 8 x i16>  %z2, <vscale x 8 x i16>  %z3)
+  tail call void @use(<vscale x 8 x i16> %z0, <vscale x 8 x i16> %z1, <vscale x 8 x i16> %z2, <vscale x 8 x i16> %z3)
   ret void
 }
 
@@ -120,7 +120,7 @@ define void @extract_col_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 %t
 ; CHECK-NEXT:    mov z1.h, p0/m, za1v.h[w12, 3]
 ; CHECK-NEXT:    mov z2.h, p0/m, za1v.h[w12, 5]
 ; CHECK-NEXT:    mov z3.h, p0/m, za1v.h[w12, 7]
-; CHECK-NEXT:    b dummy_use_4_nxv8i16
+; CHECK-NEXT:    b use
   %tileslice.1 = add i32 %tileslice, 1
   %z0 = call <vscale x 8 x i16> @llvm.aarch64.sme.read.vert.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 1, i32 %tileslice.1)
   %tileslice.3 = add i32 %tileslice, 3
@@ -130,7 +130,7 @@ define void @extract_col_h(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 %t
   %tileslice.7 = add i32 %tileslice, 7
   %z3 = call <vscale x 8 x i16> @llvm.aarch64.sme.read.vert.nxv8i16(<vscale x 8 x i16> %zd, <vscale x 8 x i1> %pg, i32 1, i32 %tileslice.7)
 
-  tail call void @dummy_use_4_nxv8i16(<vscale x 8 x i16>  %z0, <vscale x 8 x i16>  %z1, <vscale x 8 x i16>  %z2, <vscale x 8 x i16>  %z3)
+  tail call void @use(<vscale x 8 x i16> %z0, <vscale x 8 x i16> %z1, <vscale x 8 x i16> %z2, <vscale x 8 x i16> %z3)
   ret void
 }
 
@@ -153,7 +153,7 @@ define void @extract_f16(<vscale x 8 x half> %zd, <vscale x 8 x i1> %pg, i32 %ti
 ; CHECK-NEXT:    mov z5.h, p0/m, za0h.h[w12, 5]
 ; CHECK-NEXT:    mov z6.h, p0/m, za0v.h[w12, 6]
 ; CHECK-NEXT:    mov z7.h, p0/m, za0v.h[w12, 7]
-; CHECK-NEXT:    b dummy_use_8_nxv8f16
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 8 x half> @llvm.aarch64.sme.read.horiz.nxv8f16(<vscale x 8 x half> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.1 = add i32 %tileslice, 1
   %z1 = call <vscale x 8 x half> @llvm.aarch64.sme.read.horiz.nxv8f16(<vscale x 8 x half> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.1)
@@ -170,8 +170,8 @@ define void @extract_f16(<vscale x 8 x half> %zd, <vscale x 8 x i1> %pg, i32 %ti
   %tileslice.7 = add i32 %tileslice, 7
   %z7 = call <vscale x 8 x half> @llvm.aarch64.sme.read.vert.nxv8f16(<vscale x 8 x half> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.7)
 
-  tail call void @dummy_use_8_nxv8f16(<vscale x 8 x half> %z0, <vscale x 8 x half> %z1, <vscale x 8 x half> %z2, <vscale x 8 x half> %z3,
-                                 <vscale x 8 x half> %z4, <vscale x 8 x half> %z5, <vscale x 8 x half> %z6, <vscale x 8 x half> %z7)
+  tail call void @use(<vscale x 8 x half> %z0, <vscale x 8 x half> %z1, <vscale x 8 x half> %z2, <vscale x 8 x half> %z3,
+                      <vscale x 8 x half> %z4, <vscale x 8 x half> %z5, <vscale x 8 x half> %z6, <vscale x 8 x half> %z7)
   ret void
 }
 
@@ -194,7 +194,7 @@ define void @extract_bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 
 ; CHECK-NEXT:    mov z5.h, p0/m, za0h.h[w12, 5]
 ; CHECK-NEXT:    mov z6.h, p0/m, za0v.h[w12, 6]
 ; CHECK-NEXT:    mov z7.h, p0/m, za0v.h[w12, 7]
-; CHECK-NEXT:    b dummy_use_8_nxv8bf16
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 8 x bfloat> @llvm.aarch64.sme.read.horiz.nxv8bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.1 = add i32 %tileslice, 1
   %z1 = call <vscale x 8 x bfloat> @llvm.aarch64.sme.read.horiz.nxv8bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.1)
@@ -211,8 +211,8 @@ define void @extract_bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 
   %tileslice.7 = add i32 %tileslice, 7
   %z7 = call <vscale x 8 x bfloat> @llvm.aarch64.sme.read.vert.nxv8bf16(<vscale x 8 x bfloat> %zd, <vscale x 8 x i1> %pg, i32 0, i32 %tileslice.7)
 
-  tail call void @dummy_use_8_nxv8bf16(<vscale x 8 x bfloat> %z0, <vscale x 8 x bfloat> %z1, <vscale x 8 x bfloat> %z2, <vscale x 8 x bfloat> %z3,
-                                  <vscale x 8 x bfloat> %z4, <vscale x 8 x bfloat> %z5, <vscale x 8 x bfloat> %z6, <vscale x 8 x bfloat> %z7)
+  tail call void @use(<vscale x 8 x bfloat> %z0, <vscale x 8 x bfloat> %z1, <vscale x 8 x bfloat> %z2, <vscale x 8 x bfloat> %z3,
+                      <vscale x 8 x bfloat> %z4, <vscale x 8 x bfloat> %z5, <vscale x 8 x bfloat> %z6, <vscale x 8 x bfloat> %z7)
   ret void
 }
 
@@ -223,12 +223,12 @@ define void @extract_row_s(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 %t
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    mov z0.s, p0/m, za0h.s[w12, 0]
 ; CHECK-NEXT:    mov z1.s, p0/m, za0h.s[w12, 2]
-; CHECK-NEXT:    b dummy_use_2_nxv4i32
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 4 x i32> @llvm.aarch64.sme.read.horiz.nxv4i32(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.2 = add i32 %tileslice, 2
   %z1 = call <vscale x 4 x i32> @llvm.aarch64.sme.read.horiz.nxv4i32(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 0, i32 %tileslice.2)
 
-  tail call void @dummy_use_2_nxv4i32(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1)
+  tail call void @use(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1)
   ret void
 }
 
@@ -239,13 +239,13 @@ define void @extract_col_s(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 %t
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    mov z0.s, p0/m, za3v.s[w12, 1]
 ; CHECK-NEXT:    mov z1.s, p0/m, za3v.s[w12, 3]
-; CHECK-NEXT:    b dummy_use_2_nxv4i32
+; CHECK-NEXT:    b use
   %tileslice.1 = add i32 %tileslice, 1
   %z0 = call <vscale x 4 x i32> @llvm.aarch64.sme.read.vert.nxv4i32(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 3, i32 %tileslice.1)
   %tileslice.3 = add i32 %tileslice, 3
   %z1 = call <vscale x 4 x i32> @llvm.aarch64.sme.read.vert.nxv4i32(<vscale x 4 x i32> %zd, <vscale x 4 x i1> %pg, i32 3, i32 %tileslice.3)
 
-  tail call void @dummy_use_2_nxv4i32(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1)
+  tail call void @use(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1)
   ret void
 }
 
@@ -260,7 +260,7 @@ define void @extract_f32(<vscale x 4 x float> %zd, <vscale x 4 x i1> %pg, i32 %t
 ; CHECK-NEXT:    mov z1.s, p0/m, za0h.s[w12, 1]
 ; CHECK-NEXT:    mov z2.s, p0/m, za0v.s[w12, 2]
 ; CHECK-NEXT:    mov z3.s, p0/m, za0v.s[w12, 3]
-; CHECK-NEXT:    b dummy_use_4_nxv4f32
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 4 x float> @llvm.aarch64.sme.read.horiz.nxv4f32(<vscale x 4 x float> %zd, <vscale x 4 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.1 = add i32 %tileslice, 1
   %z1 = call <vscale x 4 x float> @llvm.aarch64.sme.read.horiz.nxv4f32(<vscale x 4 x float> %zd, <vscale x 4 x i1> %pg, i32 0, i32 %tileslice.1)
@@ -269,7 +269,7 @@ define void @extract_f32(<vscale x 4 x float> %zd, <vscale x 4 x i1> %pg, i32 %t
   %tileslice.3 = add i32 %tileslice, 3
   %z3 = call <vscale x 4 x float> @llvm.aarch64.sme.read.vert.nxv4f32(<vscale x 4 x float> %zd, <vscale x 4 x i1> %pg, i32 0, i32 %tileslice.3)
 
-  tail call void @dummy_use_4_nxv4f32(<vscale x 4 x float> %z0, <vscale x 4 x float> %z1, <vscale x 4 x float> %z2, <vscale x 4 x float> %z3)
+  tail call void @use(<vscale x 4 x float> %z0, <vscale x 4 x float> %z1, <vscale x 4 x float> %z2, <vscale x 4 x float> %z3)
   ret void
 }
 
@@ -301,12 +301,12 @@ define void @extract_f64(<vscale x 2 x double> %zd, <vscale x 2 x i1> %pg, i32 %
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:    mov z0.d, p0/m, za0h.d[w12, 0]
 ; CHECK-NEXT:    mov z1.d, p0/m, za0v.d[w12, 1]
-; CHECK-NEXT:    b dummy_use_2_nxv2f64
+; CHECK-NEXT:    b use
   %z0 = call <vscale x 2 x double> @llvm.aarch64.sme.read.horiz.nxv2f64(<vscale x 2 x double> %zd, <vscale x 2 x i1> %pg, i32 0, i32 %tileslice)
   %tileslice.1 = add i32 %tileslice, 1
   %z1 = call <vscale x 2 x double> @llvm.aarch64.sme.read.vert.nxv2f64(<vscale x 2 x double> %zd, <vscale x 2 x i1> %pg, i32 0, i32 %tileslice.1)
 
-  tail call void @dummy_use_2_nxv2f64(<vscale x 2 x double> %z0, <vscale x 2 x double> %z1)
+  tail call void @use(<vscale x 2 x double> %z0, <vscale x 2 x double> %z1)
   ret void
 }
 
@@ -485,6 +485,7 @@ for.body:
 exit:
   %tmp1 = add <vscale x 4 x i32> %z0, %z1
   %res = add <vscale x 4 x i32> %tmp1, %z2
+  tail call void @use(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1, <vscale x 4 x i32> %z2)
   ret <vscale x 4 x i32> %res
 }
 
@@ -523,33 +524,7 @@ declare <vscale x 2 x i64> @llvm.aarch64.sme.readq.vert.nxv2i64(<vscale x 2 x i6
 declare <vscale x 2 x double> @llvm.aarch64.sme.readq.vert.nxv2f64(<vscale x 2 x double>, <vscale x 2 x i1>, i32, i32)
 
 ; ------------------------------------------------------------------------------
-; Dummy external functions to force code retention.
-; The compiler does not see their implementations, so it must keep the calls.
+; Dummy external function to force code retention.
 ; ------------------------------------------------------------------------------
 
-declare void @dummy_use_8_nxv16i8(
-  <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>,
-  <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>
-)
-
-declare void @dummy_use_4_nxv8i16(
-  <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>
-)
-
-declare void @dummy_use_8_nxv8f16(
-  <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>,
-  <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>
-)
-
-declare void @dummy_use_8_nxv8bf16(
-  <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>,
-  <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>
-)
-
-declare void @dummy_use_2_nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
-
-declare void @dummy_use_4_nxv4f32(
-  <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>
-)
-
-declare void @dummy_use_2_nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare void @use(...)
