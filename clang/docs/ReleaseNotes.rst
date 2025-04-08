@@ -280,6 +280,9 @@ Improvements to Clang's diagnostics
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
   prefixes.
+- Clang now respects the current language mode when printing expressions in
+  diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
+  a bunch of HLSL types being printed as their C++ equivalents.
 - When printing types for diagnostics, clang now doesn't suppress the scopes of
   template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
@@ -318,6 +321,9 @@ Improvements to Clang's diagnostics
 
 - ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
   ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
+
+- Now correctly diagnose a tentative definition of an array with static
+  storage duration in pedantic mode in C. (#GH50661)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -393,6 +399,7 @@ Bug Fixes to C++ Support
 - Improved fix for an issue with pack expansions of type constraints, where this
   now also works if the constraint has non-type or template template parameters.
   (#GH131798)
+- Fixes to partial ordering of non-type template parameter packs. (#GH132562)
 - Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
   a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)

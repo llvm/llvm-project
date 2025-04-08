@@ -817,7 +817,28 @@ namespace {
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
-  /// The main/alternate instruction. MainOp is also VL0.
+  /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
+  /// only BinaryOperator, CastInst, and CmpInst support alternate instructions
+  /// (i.e., AltOp is not equal to MainOp; this can be checked using
+  /// isAltShuffle).
+  /// A rare exception is TrySplitNode, where the InstructionsState is derived
+  /// from getMainAltOpsNoStateVL.
+  /// For those InstructionsState that use alternate instructions, the resulting
+  /// vectorized output ultimately comes from a shufflevector. For example,
+  /// given a vector list (VL):
+  /// VL[0] = add i32 a, e
+  /// VL[1] = sub i32 b, f
+  /// VL[2] = add i32 c, g
+  /// VL[3] = sub i32 d, h
+  /// The vectorized result would be:
+  /// intermediated_0 = add <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// intermediated_1 = sub <4 x i32> <a, b, c, d>, <e, f, g, h>
+  /// result = shufflevector <4 x i32> intermediated_0,
+  ///                        <4 x i32> intermediated_1,
+  ///                        <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  /// Since shufflevector is used in the final result, when calculating the cost
+  /// (getEntryCost), we must account for the usage of shufflevector in
+  /// GetVectorCost.
   Instruction *MainOp = nullptr;
   Instruction *AltOp = nullptr;
 
@@ -1243,9 +1264,8 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
 
 /// \returns a bitset for selecting opcodes. false for Opcode0 and true for
 /// Opcode1.
-static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
-                                      unsigned Opcode1) {
-  Type *ScalarTy = VL[0]->getType();
+static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
+                                      unsigned Opcode0, unsigned Opcode1) {
   unsigned ScalarTyNumElements = getNumElements(ScalarTy);
   SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
   for (unsigned Lane : seq<unsigned>(VL.size())) {
@@ -6273,7 +6293,7 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
 
     SmallVector<Instruction *> UserBVHead(TE.Scalars.size());
     for (auto [I, V] : zip(UserBVHead, TE.Scalars)) {
-      if (!V->hasNUsesOrMore(1))
+      if (isa<Constant>(V) || !V->hasNUsesOrMore(1))
         continue;
       auto *II = dyn_cast<InsertElementInst>(*V->user_begin());
       if (!II)
@@ -6646,11 +6666,12 @@ void BoUpSLP::reorderTopToBottom() {
     // to take into account their order when looking for the most used order.
     if (TE->hasState() && TE->isAltShuffle() &&
         TE->State != TreeEntry::SplitVectorize) {
-      VectorType *VecTy =
-          getWidenedType(TE->Scalars[0]->getType(), TE->Scalars.size());
+      Type *ScalarTy = TE->Scalars[0]->getType();
+      VectorType *VecTy = getWidenedType(ScalarTy, TE->Scalars.size());
       unsigned Opcode0 = TE->getOpcode();
       unsigned Opcode1 = TE->getAltOpcode();
-      SmallBitVector OpcodeMask(getAltInstrMask(TE->Scalars, Opcode0, Opcode1));
+      SmallBitVector OpcodeMask(
+          getAltInstrMask(TE->Scalars, ScalarTy, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
         VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
@@ -8331,12 +8352,13 @@ static bool isAlternateInstruction(const Instruction *I,
 
 bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                                        ArrayRef<Value *> VL) const {
+  Type *ScalarTy = S.getMainOp()->getType();
   unsigned Opcode0 = S.getOpcode();
   unsigned Opcode1 = S.getAltOpcode();
-  SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
+  SmallBitVector OpcodeMask(getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
   // If this pattern is supported by the target then consider it profitable.
-  if (TTI->isLegalAltInstr(getWidenedType(S.getMainOp()->getType(), VL.size()),
-                           Opcode0, Opcode1, OpcodeMask))
+  if (TTI->isLegalAltInstr(getWidenedType(ScalarTy, VL.size()), Opcode0,
+                           Opcode1, OpcodeMask))
     return true;
   SmallVector<ValueList> Operands;
   for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands())) {
@@ -9249,7 +9271,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     VectorType *VecTy = getWidenedType(ScalarTy, VL.size());
     unsigned Opcode0 = LocalState.getOpcode();
     unsigned Opcode1 = LocalState.getAltOpcode();
-    SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
+    SmallBitVector OpcodeMask(getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
     // Enable split node, only if all nodes do not form legal alternate
     // instruction (like X86 addsub).
     SmallPtrSet<Value *, 4> UOp1(llvm::from_range, Op1);
@@ -13179,7 +13201,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // order.
       unsigned Opcode0 = E->getOpcode();
       unsigned Opcode1 = E->getAltOpcode();
-      SmallBitVector OpcodeMask(getAltInstrMask(E->Scalars, Opcode0, Opcode1));
+      SmallBitVector OpcodeMask(
+          getAltInstrMask(E->Scalars, ScalarTy, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the
       // order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
@@ -13433,7 +13456,7 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
        allSameBlock(VectorizableTree.front()->Scalars));
   if (any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
         return TE->isGather() && all_of(TE->Scalars, [&](Value *V) {
-                 return isa<ExtractElementInst, UndefValue>(V) ||
+                 return isa<ExtractElementInst, Constant>(V) ||
                         (IsAllowedSingleBVNode &&
                          !V->hasNUsesOrMore(UsesLimit) &&
                          any_of(V->users(), IsaPred<InsertElementInst>));
@@ -15391,12 +15414,20 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   if (E->State == TreeEntry::SplitVectorize) {
     Res = FindLastInst();
+    if (ArrayRef<TreeEntry *> Entries = getTreeEntries(Res); !Entries.empty()) {
+      for (auto *E : Entries) {
+        auto *I = dyn_cast_or_null<Instruction>(E->VectorizedValue);
+        if (!I)
+          I = &getLastInstructionInBundle(E);
+        if (Res->comesBefore(I))
+          Res = I;
+      }
+    }
     return *Res;
   }
 
   // Set insertpoint for gathered loads to the very first load.
-  if (E->State != TreeEntry::SplitVectorize &&
-      GatheredLoadsEntriesFirst.has_value() &&
+  if (GatheredLoadsEntriesFirst.has_value() &&
       E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
       E->getOpcode() == Instruction::Load) {
     Res = FindFirstInst();
@@ -16051,11 +16082,9 @@ public:
         unsigned VF = std::max(CommonMask.size(), Mask.size());
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
           if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
-            CommonMask[Idx] =
-                V->getType() != V1->getType()
-                    ? Idx + VF
-                    : Mask[Idx] + cast<FixedVectorType>(V1->getType())
-                                      ->getNumElements();
+            CommonMask[Idx] = V->getType() != V1->getType()
+                                  ? Idx + VF
+                                  : Mask[Idx] + getVF(V1);
         if (V->getType() != V1->getType())
           V1 = createShuffle(V1, nullptr, Mask);
         InVectors.front() = V;
@@ -17741,13 +17770,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *Src = vectorizeOperand(E, 0);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
         if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
-          assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
-                 "Not supported shufflevector usage.");
           SmallVector<int> NewMask(ThisMask.size());
           transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
             return SVSrc->getShuffleMask()[Mask];
           });
-          V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+          V = Builder.CreateShuffleVector(SVSrc->getOperand(0),
+                                          SVSrc->getOperand(1), NewMask);
         } else {
           V = Builder.CreateShuffleVector(Src, ThisMask);
         }
@@ -19459,7 +19487,7 @@ bool BoUpSLP::collectValuesToDemote(
     return FinalAnalysis();
 
   if (any_of(E.Scalars, [&](Value *V) {
-        return !all_of(V->users(), [=](User *U) {
+        return !isa<Constant>(V) && !all_of(V->users(), [=](User *U) {
           return isVectorized(U) ||
                  (E.Idx == 0 && UserIgnoreList &&
                   UserIgnoreList->contains(U)) ||
