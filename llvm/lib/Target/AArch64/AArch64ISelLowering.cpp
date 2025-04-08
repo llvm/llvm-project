@@ -1394,9 +1394,6 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    // v1i64 -> v1i8 truncstore represents a bsub FPR8 store.
-    setTruncStoreAction(MVT::v1i64, MVT::v1i8, Legal);
-
     for (auto Op :
          {ISD::FFLOOR, ISD::FNEARBYINT, ISD::FCEIL, ISD::FRINT, ISD::FTRUNC,
           ISD::FROUND, ISD::FROUNDEVEN, ISD::FMAXNUM_IEEE, ISD::FMINNUM_IEEE,
@@ -23936,28 +23933,14 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
 static unsigned getFPSubregForVT(EVT VT) {
   assert(VT.isSimple() && "Expected simple VT");
   switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::aarch64mfp8:
+    return AArch64::bsub;
   case MVT::f16:
     return AArch64::hsub;
   case MVT::f32:
     return AArch64::ssub;
   case MVT::f64:
     return AArch64::dsub;
-  default:
-    llvm_unreachable("Unexpected VT!");
-  }
-}
-
-static EVT get64BitVector(EVT ElVT) {
-  assert(ElVT.isSimple() && "Expected simple VT");
-  switch (ElVT.getSimpleVT().SimpleTy) {
-  case MVT::i8:
-    return MVT::v8i8;
-  case MVT::i16:
-    return MVT::v4i16;
-  case MVT::i32:
-    return MVT::v2i32;
-  case MVT::i64:
-    return MVT::v1i64;
   default:
     llvm_unreachable("Unexpected VT!");
   }
@@ -24041,72 +24024,63 @@ static SDValue performSTORECombine(SDNode *N,
     SDValue ExtIdx = Value.getOperand(1);
     EVT VectorVT = Vector.getValueType();
     EVT ElemVT = VectorVT.getVectorElementType();
+
     if (!ValueVT.isInteger())
       return SDValue();
     if (ValueVT != MemVT && !ST->isTruncatingStore())
       return SDValue();
 
-    if (MemVT == MVT::i8) {
-      auto *ExtCst = dyn_cast<ConstantSDNode>(ExtIdx);
-      if (Subtarget->isNeonAvailable() &&
-          (VectorVT == MVT::v8i8 || VectorVT == MVT::v16i8) && ExtCst &&
-          !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD) {
-        // These can lower to st1.b, which is preferable if we're unlikely to
-        // fold the addressing into the store.
-        return SDValue();
-      }
-
-      // Lower as truncstore of v1i64 -> v1i8 (which can lower to a bsub store).
-      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-      SDValue ExtVector;
-      EVT VecVT64 = get64BitVector(ElemVT);
-      if (ExtCst && ExtCst->isZero()) {
-        ExtVector =
-            DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VecVT64, Vector, Zero);
-      } else {
-        SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
-                                  Value.getValueType(), Vector, ExtIdx);
-        ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VecVT64,
-                                DAG.getUNDEF(VecVT64), Ext, Zero);
-      }
-
-      SDValue Cast = DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, ExtVector);
-      return DAG.getTruncStore(ST->getChain(), DL, Cast, ST->getBasePtr(),
-                               MVT::v1i8, ST->getMemOperand());
-    }
-
-    // TODO: Handle storing i8s to wider types.
-    if (ElemVT == MVT::i8)
+    // This could generate an additional extract if the index is non-zero and
+    // the extracted value has multiple uses.
+    auto *ExtCst = dyn_cast<ConstantSDNode>(ExtIdx);
+    if ((!ExtCst || !ExtCst->isZero()) && !Value.hasOneUse())
       return SDValue();
 
-    // Heuristic: If there are other users of integer scalars extracted from
-    // this vector that won't fold into the store -- abandon folding. Applying
-    // this fold may extend the vector lifetime and disrupt paired stores.
-    for (const auto &Use : Vector->uses()) {
-      if (Use.getResNo() != Vector.getResNo())
-        continue;
-      const SDNode *User = Use.getUser();
-      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-          (!User->hasOneUse() ||
-           (*User->user_begin())->getOpcode() != ISD::STORE))
-        return SDValue();
+    if (Subtarget->isNeonAvailable() && ElemVT == MemVT &&
+        (VectorVT.is64BitVector() || VectorVT.is128BitVector()) && ExtCst &&
+        !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD) {
+      // These can lower to st1, which is preferable if we're unlikely to fold
+      // the addressing into the store.
+      return SDValue();
     }
 
-    EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
-    EVT FPVectorVT = VectorVT.changeVectorElementType(FPElemVT);
-    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, FPVectorVT, Vector);
-    SDValue Ext =
-        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, FPElemVT, Cast, ExtIdx);
-
-    EVT FPMemVT = EVT::getFloatingPointVT(MemVT.getSizeInBits());
-    if (ST->isTruncatingStore() && FPMemVT != FPElemVT) {
-      SDValue Trunc = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
-                                                 FPMemVT, Ext);
-      return DAG.getStore(ST->getChain(), DL, Trunc, ST->getBasePtr(),
-                          ST->getMemOperand());
+    if (MemVT == MVT::i64 || MemVT == MVT::i32) {
+      // Heuristic: If there are other users of w/x integer scalars extracted
+      // from this vector that won't fold into the store -- abandon folding.
+      // Applying this fold may disrupt paired stores.
+      for (const auto &Use : Vector->uses()) {
+        if (Use.getResNo() != Vector.getResNo())
+          continue;
+        const SDNode *User = Use.getUser();
+        if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+            (!User->hasOneUse() ||
+             (*User->user_begin())->getOpcode() != ISD::STORE))
+          return SDValue();
+      }
     }
 
-    return DAG.getStore(ST->getChain(), DL, Ext, ST->getBasePtr(),
+    SDValue ExtVector = Vector;
+    if (!ExtCst || !ExtCst->isZero()) {
+      // Handle extracting from lanes != 0.
+      SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
+                                Value.getValueType(), Vector, ExtIdx);
+      // FIXME: Using a fixed-size vector for the insertion should not be
+      // necessary, but SVE ISEL is missing some folds to avoid fmovs.
+      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+      EVT InsertVectorVT = EVT::getVectorVT(
+          *DAG.getContext(), ElemVT,
+          VectorVT.getVectorElementCount().getKnownMinValue(), false);
+      ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, InsertVectorVT,
+                              DAG.getUNDEF(InsertVectorVT), Ext, Zero);
+    }
+
+    EVT FPMemVT = MemVT == MVT::i8
+                      ? MVT::aarch64mfp8
+                      : EVT::getFloatingPointVT(MemVT.getSizeInBits());
+    SDValue FPSubreg = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
+                                                  FPMemVT, ExtVector);
+
+    return DAG.getStore(ST->getChain(), DL, FPSubreg, ST->getBasePtr(),
                         ST->getMemOperand());
   }
 
@@ -28860,10 +28834,6 @@ SDValue AArch64TargetLowering::LowerFixedLengthVectorStoreToSVE(
 
   auto Pg = getPredicateForFixedLengthVector(DAG, DL, VT);
   auto NewValue = convertToScalableVector(DAG, ContainerVT, Store->getValue());
-
-  // Can be lowered to a bsub store in ISEL.
-  if (VT == MVT::v1i64 && MemVT == MVT::v1i8)
-    return SDValue();
 
   if (VT.isFloatingPoint() && Store->isTruncatingStore()) {
     EVT TruncVT = ContainerVT.changeVectorElementType(

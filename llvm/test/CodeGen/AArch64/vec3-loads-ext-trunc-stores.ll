@@ -443,11 +443,11 @@ define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ldrh w9, [x0]
 ; CHECK-NEXT:    orr w8, w9, w8, lsl #16
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    st1.h { v0 }[2], [x8]
+; CHECK-NEXT:    mov.h v1[0], v0[2]
 ; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    str h1, [x1, #4]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: load_ext_to_64bits:
@@ -461,11 +461,11 @@ define void @load_ext_to_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
 ; BE-NEXT:    ld1 { v0.b }[4], [x8]
-; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v1.h[0], v0.h[2]
+; BE-NEXT:    rev32 v0.8h, v0.8h
+; BE-NEXT:    str h1, [x1, #4]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
 entry:
@@ -479,23 +479,23 @@ define void @load_ext_to_64bits_default_align(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_to_64bits_default_align:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    st1.h { v0 }[2], [x8]
+; CHECK-NEXT:    mov.h v1[0], v0[2]
 ; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    str h1, [x1, #4]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: load_ext_to_64bits_default_align:
 ; BE:       // %bb.0: // %entry
 ; BE-NEXT:    ldr s0, [x0]
-; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v1.h[0], v0.h[2]
+; BE-NEXT:    rev32 v0.8h, v0.8h
+; BE-NEXT:    str h1, [x1, #4]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    ret
 entry:
   %l = load <3 x i8>, ptr %src
@@ -508,23 +508,23 @@ define void @load_ext_to_64bits_align_4(ptr %src, ptr %dst) {
 ; CHECK-LABEL: load_ext_to_64bits_align_4:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    bic.4h v0, #255, lsl #8
-; CHECK-NEXT:    st1.h { v0 }[2], [x8]
+; CHECK-NEXT:    mov.h v1[0], v0[2]
 ; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    str h1, [x1, #4]
 ; CHECK-NEXT:    ret
 ;
 ; BE-LABEL: load_ext_to_64bits_align_4:
 ; BE:       // %bb.0: // %entry
 ; BE-NEXT:    ldr s0, [x0]
-; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    bic v0.4h, #255, lsl #8
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v1.h[0], v0.h[2]
+; BE-NEXT:    rev32 v0.8h, v0.8h
+; BE-NEXT:    str h1, [x1, #4]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    ret
 entry:
   %l = load <3 x i8>, ptr %src, align 4
@@ -542,14 +542,14 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    adrp x8, lCPI15_0@PAGE
 ; CHECK-NEXT:  Lloh3:
 ; CHECK-NEXT:    ldr d1, [x8, lCPI15_0@PAGEOFF]
-; CHECK-NEXT:    add x8, x1, #4
 ; CHECK-NEXT:    orr w9, w10, w9, lsl #16
 ; CHECK-NEXT:    fmov s0, w9
 ; CHECK-NEXT:    zip1.8b v0, v0, v0
 ; CHECK-NEXT:    bic.4h v0, #255, lsl #8
 ; CHECK-NEXT:    add.4h v0, v0, v1
-; CHECK-NEXT:    st1.h { v0 }[2], [x8]
+; CHECK-NEXT:    mov.h v1[0], v0[2]
 ; CHECK-NEXT:    str s0, [x1]
+; CHECK-NEXT:    str h1, [x1, #4]
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
 ;
@@ -567,12 +567,12 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    adrp x8, .LCPI15_0
 ; BE-NEXT:    add x8, x8, :lo12:.LCPI15_0
 ; BE-NEXT:    ld1 { v1.4h }, [x8]
-; BE-NEXT:    add x8, x1, #4
 ; BE-NEXT:    bic v0.4h, #255, lsl #8
 ; BE-NEXT:    add v0.4h, v0.4h, v1.4h
-; BE-NEXT:    rev32 v1.8h, v0.8h
-; BE-NEXT:    st1 { v0.h }[2], [x8]
-; BE-NEXT:    str s1, [x1]
+; BE-NEXT:    mov v1.h[0], v0.h[2]
+; BE-NEXT:    rev32 v0.8h, v0.8h
+; BE-NEXT:    str h1, [x1, #4]
+; BE-NEXT:    str s0, [x1]
 ; BE-NEXT:    add sp, sp, #16
 ; BE-NEXT:    ret
 entry:

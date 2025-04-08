@@ -243,7 +243,7 @@ define void @v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-SD-NEXT:    mul v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #2]
 ; CHECK-SD-NEXT:    ret
@@ -274,10 +274,10 @@ define void @v3i16(ptr %p1, ptr %p2) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr d0, [x0]
 ; CHECK-SD-NEXT:    ldr d1, [x1]
-; CHECK-SD-NEXT:    add x8, x0, #4
 ; CHECK-SD-NEXT:    mul v0.4h, v0.4h, v1.4h
-; CHECK-SD-NEXT:    st1 { v0.h }[2], [x8]
+; CHECK-SD-NEXT:    mov v1.h[0], v0.h[2]
 ; CHECK-SD-NEXT:    str s0, [x0]
+; CHECK-SD-NEXT:    str h1, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i16:

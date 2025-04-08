@@ -102,7 +102,7 @@ define i32 @bitcast_v2i16_i32(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [sp, #12]
 ; CHECK-SD-NEXT:    str h1, [sp, #14]
 ; CHECK-SD-NEXT:    ldr w0, [sp, #12]
@@ -399,7 +399,7 @@ define <4 x i8> @bitcast_v2i16_v4i8(<2 x i16> %a, <2 x i16> %b){
 ; CHECK-SD-NEXT:    sub sp, sp, #16
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [sp, #12]
 ; CHECK-SD-NEXT:    str h1, [sp, #14]
 ; CHECK-SD-NEXT:    ldr s0, [sp, #12]

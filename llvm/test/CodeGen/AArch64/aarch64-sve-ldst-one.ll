@@ -6,11 +6,17 @@
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @test_str_lane_s32(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: test_str_lane_s32:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    str s0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s32:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    str s0, [x0]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s32:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    str s0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 3
@@ -31,11 +37,17 @@ entry:
 }
 
 define void @test_str_lane_s64(ptr %a, <vscale x 2 x i64> %b) {
-; CHECK-LABEL: test_str_lane_s64:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    str d0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s64:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-NONSTREAMING-NEXT:    str d0, [x0]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s64:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.d, z0.d[1]
+; STREAMING-COMPAT-NEXT:    str d0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 2 x i64> %b, i32 1
@@ -135,11 +147,17 @@ entry:
 }
 
 define void @test_str_lane_s16(ptr %a, <vscale x 8 x i16> %b) {
-; CHECK-LABEL: test_str_lane_s16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.h, z0.h[3]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s16:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.h[0], v0.h[3]
+; CHECK-NONSTREAMING-NEXT:    str h0, [x0]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s16:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.h, z0.h[3]
+; STREAMING-COMPAT-NEXT:    str h0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 8 x i16> %b, i32 3
@@ -266,11 +284,17 @@ define void @test_str_reduction_i32_to_i8_negative_offset(ptr %ptr, <vscale x 4 
 }
 
 define void @test_str_lane_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: test_str_lane_s32_negative_offset:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    stur s0, [x0, #-32]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s32_negative_offset:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    stur s0, [x0, #-32]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s32_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    stur s0, [x0, #-32]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 3
@@ -293,11 +317,17 @@ entry:
 }
 
 define void @test_str_lane_s64_negative_offset(ptr %a, <vscale x 2 x i64> %b) {
-; CHECK-LABEL: test_str_lane_s64_negative_offset:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.d, z0.d[1]
-; CHECK-NEXT:    stur d0, [x0, #-64]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s64_negative_offset:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-NONSTREAMING-NEXT:    stur d0, [x0, #-64]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s64_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.d, z0.d[1]
+; STREAMING-COMPAT-NEXT:    stur d0, [x0, #-64]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 2 x i64> %b, i32 1
@@ -351,11 +381,17 @@ entry:
 }
 
 define void @test_str_lane_s16_negative_offset(ptr %a, <vscale x 8 x i16> %b) {
-; CHECK-LABEL: test_str_lane_s16_negative_offset:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.h, z0.h[3]
-; CHECK-NEXT:    stur h0, [x0, #-16]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_lane_s16_negative_offset:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.h[0], v0.h[3]
+; CHECK-NONSTREAMING-NEXT:    stur h0, [x0, #-16]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_lane_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.h, z0.h[3]
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 8 x i16> %b, i32 3
@@ -378,11 +414,17 @@ entry:
 }
 
 define void @test_str_trunc_lane_s32_to_s16(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: test_str_trunc_lane_s32_to_s16:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    str h0, [x0]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s16:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    str h0, [x0]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane_s32_to_s16:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    str h0, [x0]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 3
@@ -452,11 +494,17 @@ entry:
 }
 
 define void @test_str_trunc_lane_s32_to_s16_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
-; CHECK-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.s, z0.s[3]
-; CHECK-NEXT:    stur h0, [x0, #-16]
-; CHECK-NEXT:    ret
+; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
+; CHECK-NONSTREAMING:       // %bb.0: // %entry
+; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    stur h0, [x0, #-16]
+; CHECK-NONSTREAMING-NEXT:    ret
+;
+; STREAMING-COMPAT-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
+; STREAMING-COMPAT:       // %bb.0: // %entry
+; STREAMING-COMPAT-NEXT:    mov z0.s, z0.s[3]
+; STREAMING-COMPAT-NEXT:    stur h0, [x0, #-16]
+; STREAMING-COMPAT-NEXT:    ret
 
 entry:
   %0 = extractelement <vscale x 4 x i32> %b, i32 3

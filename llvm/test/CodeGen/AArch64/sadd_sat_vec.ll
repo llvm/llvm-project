@@ -255,7 +255,7 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    shl v0.2s, v0.2s, #16
 ; CHECK-SD-NEXT:    sqadd v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    ushr v0.2s, v0.2s, #16
-; CHECK-SD-NEXT:    mov s1, v0.s[1]
+; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x2]
 ; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret

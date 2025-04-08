@@ -73,7 +73,8 @@ define void @alloc_v6i8(ptr %st_ptr) nounwind {
 ; CHECK-NEXT:    zip1 z1.s, z1.s, z0.s
 ; CHECK-NEXT:    st1b { z1.h }, p0, [x8]
 ; CHECK-NEXT:    ld1h { z1.s }, p1/z, [x8]
-; CHECK-NEXT:    stur b0, [x19, #2]
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    strb w8, [x19, #2]
 ; CHECK-NEXT:    str h1, [x19]
 ; CHECK-NEXT:    ldp x30, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
