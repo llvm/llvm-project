@@ -41,24 +41,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
-static void printOperation(mlir::Operation *op) { llvm::dbgs() << *op << "\n"; }
-static void printBlock(mlir::Block &block) {
-  llvm::dbgs() << "Block with " << block.getNumArguments() << " arguments, "
-               << block.getNumSuccessors()
-               << " successors, and "
-               // Note, this `.size()` is traversing a linked-list and is O(n).
-               << block.getOperations().size() << " operations\n";
-  for (mlir::Operation &op : block.getOperations())
-    printOperation(&op);
-}
-
-static void printRegion(mlir::Region &region) {
-  // A region does not hold anything by itself other than a list of blocks.
-  llvm::dbgs() << "Region with " << region.getBlocks().size() << " blocks:\n";
-  for (mlir::Block &block : region.getBlocks())
-    printBlock(block);
-}
-
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
 

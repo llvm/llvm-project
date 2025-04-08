@@ -1054,6 +1054,7 @@ void ClauseProcessor::processMapObjects(
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
     std::optional<omp::Object> parentObj;
+
     fir::factory::AddrAndBoundsInfo info =
         lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                               mlir::omp::MapBoundsType>(
@@ -1088,6 +1089,7 @@ void ClauseProcessor::processMapObjects(
                                                     mapperIdName)
                      : mlir::FlatSymbolRefAttr();
     }
+
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise
