@@ -2,6 +2,28 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -mattr=+avx -passes=slp-vectorizer -S -slp-revec %s | FileCheck %s
 
 define i32 @test() {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr null, align 1
+; CHECK-NEXT:    [[WIDE_LOAD136:%.*]] = load <16 x i8>, ptr null, align 1
+; CHECK-NEXT:    [[WIDE_LOAD137:%.*]] = load <16 x i8>, ptr null, align 1
+; CHECK-NEXT:    [[WIDE_LOAD138:%.*]] = load <16 x i8>, ptr null, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <16 x i8> zeroinitializer, i8 0, i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = or <16 x i8> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = or <16 x i8> [[WIDE_LOAD136]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = or <16 x i8> [[WIDE_LOAD137]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i8> [[WIDE_LOAD138]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult <16 x i8> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <16 x i8> [[TMP4]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <16 x i8> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = or <16 x i8> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = or <16 x i8> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult <16 x i8> [[TMP10]], zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult <16 x i8> [[TMP11]], zeroinitializer
+; CHECK-NEXT:    ret i32 0
+;
 entry:
   %wide.load = load <16 x i8>, ptr null, align 1
   %wide.load136 = load <16 x i8>, ptr null, align 1
