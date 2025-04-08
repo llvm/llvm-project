@@ -20,11 +20,11 @@ entry:
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type)), ![[#]])
   call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpArg(0, ptr), DIOpComposite(2, %struct.type))), !dbg !22
 
-  ; CHECK: #dbg_declare(i16 42, ![[#]], !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16)), ![[#]])
-  call void @llvm.dbg.declare(metadata i16 42, metadata !21, metadata !DIExpression(DIOpArg(0, i16), DIOpFragment(16, 16))), !dbg !22
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16)), ![[#]])
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !21, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16))), !dbg !22
 
-  ; CHECK: #dbg_declare(i8 poison, ![[#]], !DIExpression(DIOpArg(0, i32)), ![[#]])
-  call void @llvm.dbg.declare(metadata i8 poison, metadata !24, metadata !DIExpression(DIOpArg(0, i32))), !dbg !22
+  ; CHECK: #dbg_declare(ptr poison, ![[#]], !DIExpression(DIOpArg(0, ptr)), ![[#]])
+  call void @llvm.dbg.declare(metadata ptr poison, metadata !24, metadata !DIExpression(DIOpArg(0, ptr))), !dbg !22
 
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr)), ![[#]])
   call void @llvm.dbg.declare(metadata ptr %i, metadata !26, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 64), DIOpBitOffset(ptr))), !dbg !22
@@ -32,8 +32,8 @@ entry:
   ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr)), ![[#]])
   call void @llvm.dbg.declare(metadata ptr %i, metadata !27, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(%struct.type), DIOpConstant(i32 8), DIOpByteOffset(ptr))), !dbg !22
 
-  ; CHECK: #dbg_declare(i32 3, ![[#]], !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
-  call void @llvm.dbg.declare(metadata i32 3, metadata !28, metadata !DIExpression(DIOpArg(0, i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect())), !dbg !22
+  ; CHECK: #dbg_declare(ptr %i, ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect()), ![[#]])
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !28, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32), DIOpConstant(<2 x i32> <i32 1, i32 2>), DIOpConstant(<2 x i32> <i32 3, i32 4>), DIOpSelect())), !dbg !22
 
   ret void
 }

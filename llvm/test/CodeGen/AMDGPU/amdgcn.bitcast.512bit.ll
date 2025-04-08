@@ -3786,10 +3786,6 @@ define <64 x i8> @bitcast_v16i32_to_v64i8(<16 x i32> %a, i32 %b) {
 ; VI-LABEL: bitcast_v16i32_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    ; kill: killed $vgpr17
-; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -3806,6 +3802,10 @@ define <64 x i8> @bitcast_v16i32_to_v64i8(<16 x i32> %a, i32 %b) {
 ; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; VI-NEXT:    ; implicit-def: $vgpr17
+; VI-NEXT:    ; kill: killed $vgpr17
+; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr29
 ; VI-NEXT:    ; implicit-def: $vgpr27
 ; VI-NEXT:    ; implicit-def: $vgpr22
@@ -4117,10 +4117,6 @@ define <64 x i8> @bitcast_v16i32_to_v64i8(<16 x i32> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v16i32_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -4137,6 +4133,10 @@ define <64 x i8> @bitcast_v16i32_to_v64i8(<16 x i32> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -10245,10 +10245,6 @@ define <64 x i8> @bitcast_v16f32_to_v64i8(<16 x float> %a, i32 %b) {
 ; VI-LABEL: bitcast_v16f32_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    ; kill: killed $vgpr17
-; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -10265,6 +10261,10 @@ define <64 x i8> @bitcast_v16f32_to_v64i8(<16 x float> %a, i32 %b) {
 ; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; VI-NEXT:    ; implicit-def: $vgpr17
+; VI-NEXT:    ; kill: killed $vgpr17
+; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr29
 ; VI-NEXT:    ; implicit-def: $vgpr27
 ; VI-NEXT:    ; implicit-def: $vgpr22
@@ -10576,10 +10576,6 @@ define <64 x i8> @bitcast_v16f32_to_v64i8(<16 x float> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v16f32_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -10596,6 +10592,10 @@ define <64 x i8> @bitcast_v16f32_to_v64i8(<16 x float> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -16480,10 +16480,6 @@ define <64 x i8> @bitcast_v8i64_to_v64i8(<8 x i64> %a, i32 %b) {
 ; VI-LABEL: bitcast_v8i64_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    ; kill: killed $vgpr17
-; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -16500,6 +16496,10 @@ define <64 x i8> @bitcast_v8i64_to_v64i8(<8 x i64> %a, i32 %b) {
 ; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; VI-NEXT:    ; implicit-def: $vgpr17
+; VI-NEXT:    ; kill: killed $vgpr17
+; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr29
 ; VI-NEXT:    ; implicit-def: $vgpr27
 ; VI-NEXT:    ; implicit-def: $vgpr22
@@ -16811,10 +16811,6 @@ define <64 x i8> @bitcast_v8i64_to_v64i8(<8 x i64> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v8i64_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -16831,6 +16827,10 @@ define <64 x i8> @bitcast_v8i64_to_v64i8(<8 x i64> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -22374,10 +22374,6 @@ define <64 x i8> @bitcast_v8f64_to_v64i8(<8 x double> %a, i32 %b) {
 ; VI-LABEL: bitcast_v8f64_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    ; kill: killed $vgpr17
-; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -22394,6 +22390,10 @@ define <64 x i8> @bitcast_v8f64_to_v64i8(<8 x double> %a, i32 %b) {
 ; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; VI-NEXT:    ; implicit-def: $vgpr17
+; VI-NEXT:    ; kill: killed $vgpr17
+; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr29
 ; VI-NEXT:    ; implicit-def: $vgpr27
 ; VI-NEXT:    ; implicit-def: $vgpr22
@@ -22697,10 +22697,6 @@ define <64 x i8> @bitcast_v8f64_to_v64i8(<8 x double> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v8f64_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -22717,6 +22713,10 @@ define <64 x i8> @bitcast_v8f64_to_v64i8(<8 x double> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -28312,8 +28312,24 @@ define <64 x i8> @bitcast_v32i16_to_v64i8(<32 x i16> %a, i32 %b) {
 ;
 ; VI-LABEL: bitcast_v32i16_to_v64i8:
 ; VI:       ; %bb.0:
-; VI-NEXT:    ; implicit-def: $vgpr19
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    ; implicit-def: $vgpr19
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
 ; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; kill: killed $vgpr19
@@ -28334,22 +28350,6 @@ define <64 x i8> @bitcast_v32i16_to_v64i8(<32 x i16> %a, i32 %b) {
 ; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; kill: killed $vgpr19
 ; VI-NEXT:    ; implicit-def: $vgpr19
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr43
 ; VI-NEXT:    ; kill: killed $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr17
@@ -28784,10 +28784,6 @@ define <64 x i8> @bitcast_v32i16_to_v64i8(<32 x i16> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v32i16_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -28804,6 +28800,10 @@ define <64 x i8> @bitcast_v32i16_to_v64i8(<32 x i16> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -33936,6 +33936,22 @@ define <64 x i8> @bitcast_v32f16_to_v64i8(<32 x half> %a, i32 %b) {
 ; VI-LABEL: bitcast_v32f16_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
+; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
 ; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; kill: killed $vgpr17
@@ -33958,22 +33974,6 @@ define <64 x i8> @bitcast_v32f16_to_v64i8(<32 x half> %a, i32 %b) {
 ; VI-NEXT:    v_lshrrev_b32_e32 v53, 16, v1
 ; VI-NEXT:    ; kill: killed $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v43, off, s[0:3], s32 offset:48 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v44, off, s[0:3], s32 offset:44 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v45, off, s[0:3], s32 offset:40 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v46, off, s[0:3], s32 offset:36 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v47, off, s[0:3], s32 offset:32 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v56, off, s[0:3], s32 offset:28 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v57, off, s[0:3], s32 offset:24 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v58, off, s[0:3], s32 offset:20 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v59, off, s[0:3], s32 offset:16 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v60, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
 ; VI-NEXT:    ; implicit-def: $vgpr22
 ; VI-NEXT:    ; implicit-def: $vgpr24
 ; VI-NEXT:    ; implicit-def: $vgpr55
@@ -34288,10 +34288,6 @@ define <64 x i8> @bitcast_v32f16_to_v64i8(<32 x half> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v32f16_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -34308,6 +34304,10 @@ define <64 x i8> @bitcast_v32f16_to_v64i8(<32 x half> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr29
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
@@ -37789,10 +37789,6 @@ define <64 x i8> @bitcast_v32bf16_to_v64i8(<32 x bfloat> %a, i32 %b) {
 ; VI-LABEL: bitcast_v32bf16_to_v64i8:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; VI-NEXT:    ; implicit-def: $vgpr17
-; VI-NEXT:    ; kill: killed $vgpr17
-; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -37809,6 +37805,10 @@ define <64 x i8> @bitcast_v32bf16_to_v64i8(<32 x bfloat> %a, i32 %b) {
 ; VI-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; VI-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; VI-NEXT:    ; implicit-def: $vgpr17
+; VI-NEXT:    ; kill: killed $vgpr17
+; VI-NEXT:    ; implicit-def: $vgpr17
 ; VI-NEXT:    ; implicit-def: $vgpr29
 ; VI-NEXT:    ; implicit-def: $vgpr27
 ; VI-NEXT:    ; implicit-def: $vgpr22
@@ -38393,12 +38393,6 @@ define <64 x i8> @bitcast_v32bf16_to_v64i8(<32 x bfloat> %a, i32 %b) {
 ; GFX9-LABEL: bitcast_v32bf16_to_v64i8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
-; GFX9-NEXT:    ; kill: killed $vgpr17
-; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:60 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:56 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v42, off, s[0:3], s32 offset:52 ; 4-byte Folded Spill
@@ -38415,6 +38409,12 @@ define <64 x i8> @bitcast_v32bf16_to_v64i8(<32 x bfloat> %a, i32 %b) {
 ; GFX9-NEXT:    buffer_store_dword v61, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v62, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v63, off, s[0:3], s32 ; 4-byte Folded Spill
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
+; GFX9-NEXT:    ; kill: killed $vgpr17
+; GFX9-NEXT:    ; implicit-def: $vgpr17
 ; GFX9-NEXT:    ; implicit-def: $vgpr27
 ; GFX9-NEXT:    ; implicit-def: $vgpr28
 ; GFX9-NEXT:    ; implicit-def: $vgpr23
