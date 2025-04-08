@@ -9,6 +9,7 @@
 #include "../clang-tidy/utils/ExprSequence.h"
 
 #include "ClangTidyTest.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "gtest/gtest.h"
