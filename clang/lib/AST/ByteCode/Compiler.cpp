@@ -6148,7 +6148,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr && !E->getType()->isArrayType())
+
+    if (classifyPrim(SubExpr) == PT_Ptr)
       return this->emitNarrowPtr(E);
     return true;
 
