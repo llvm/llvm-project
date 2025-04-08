@@ -91,7 +91,6 @@ struct LiveDebugValues {
 private:
   std::unique_ptr<LDVImpl> InstrRefImpl;
   std::unique_ptr<LDVImpl> VarLocImpl;
-  std::unique_ptr<LDVImpl> HeterogeneousImpl;
   MachineDominatorTree MDT;
 };
 } // namespace
@@ -112,8 +111,6 @@ LiveDebugValues::LiveDebugValues() {
   InstrRefImpl =
       std::unique_ptr<LDVImpl>(llvm::makeInstrRefBasedLiveDebugValues());
   VarLocImpl = std::unique_ptr<LDVImpl>(llvm::makeVarLocBasedLiveDebugValues());
-  HeterogeneousImpl =
-      std::unique_ptr<LDVImpl>(llvm::makeHeterogeneousLiveDebugValues());
 }
 
 PreservedAnalyses
@@ -148,15 +145,11 @@ bool LiveDebugValues::run(MachineFunction &MF,
   LDVImpl *TheImpl = &*VarLocImpl;
 
   MachineDominatorTree *DomTree = nullptr;
-  if (!llvm::isHeterogeneousDebug(*MF.getFunction().getParent())) {
-    if (InstrRefBased) {
-      DomTree = &MDT;
-      MDT.recalculate(MF);
-      TheImpl = &*InstrRefImpl;
-    }
-  } else
-    // Avoid DomTree calculation as non-used.
-    TheImpl = &*HeterogeneousImpl;
+  if (InstrRefBased) {
+    DomTree = &MDT;
+    MDT.recalculate(MF);
+    TheImpl = &*InstrRefImpl;
+  }
 
   return TheImpl->ExtendRanges(MF, DomTree, ShouldEmitDebugEntryValues,
                                InputBBLimit, InputDbgValueLimit);

@@ -1161,37 +1161,12 @@ void DwarfDebug::beginModule(Module *M) {
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;
-  for (GlobalVariable &Global : M->globals()) {
-    // To support the "inlining" of GV-fragments as an optimization, we record
-    // the referrer for each such fragment.
-    if (llvm::isHeterogeneousDebug(*M)) {
-      if (DIFragment *F = Global.getDbgDef())
-        GVFragmentMap[F] = &Global;
-      continue;
-    }
+  for (const GlobalVariable &Global : M->globals()) {
     SmallVector<DIGlobalVariableExpression *, 1> GVs;
     Global.getDebugInfo(GVs);
     for (auto *GVE : GVs)
       GVMap[GVE->getVariable()].push_back({&Global, GVE->getExpression()});
   }
-  // FIXME: This is a shortcut to enable debug info for globals at -O0. The
-  // general support cannot assume there is only a computed lifetime for each
-  // global, as function-local intrinsics may "override" the computed lifetime
-  // with bounded lifetimes.
-  DenseMap<DICompileUnit *, SmallVector<DILifetime *>> CULifetimeMap;
-  if (isHeterogeneousDebug(*M))
-    if (NamedMDNode *RN = M->getNamedMetadata("llvm.dbg.retainedNodes"))
-      for (MDNode *O : RN->operands())
-        if (auto *L = dyn_cast<DILifetime>(O))
-          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject())) {
-            if (auto *CU = dyn_cast<DICompileUnit>(GV->getScope())) {
-              CULifetimeMap[CU].push_back(L);
-              ProcessedLifetimes.insert(L);
-            } else if (auto *SP = dyn_cast<DISubprogram>(GV->getScope())) {
-              SPLifetimeMap[SP].push_back(L);
-              ProcessedLifetimes.insert(L);
-            }
-          }
 
   // Create the symbol that designates the start of the unit's contribution
   // to the string offsets table. In a split DWARF scenario, only the skeleton
@@ -1219,18 +1194,9 @@ void DwarfDebug::beginModule(Module *M) {
   DebugLocs.setSym(Asm->createTempSymbol("loclists_table_base"));
 
   for (DICompileUnit *CUNode : M->debug_compile_units()) {
-    // FIXME: Move local imported entities into a list attached to the
-    // subprogram, then this search won't be needed and a
-    // getImportedEntities().empty() test should go below with the rest.
-    bool HasNonLocalImportedEntities = llvm::any_of(
-        CUNode->getImportedEntities(), [](const DIImportedEntity *IE) {
-          return !isa<DILocalScope>(IE->getScope());
-        });
-
-    if (!HasNonLocalImportedEntities && CUNode->getEnumTypes().empty() &&
-        CUNode->getRetainedTypes().empty() &&
-        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty() &&
-        !isHeterogeneousDebug(*M))
+    if (CUNode->getImportedEntities().empty() &&
+        CUNode->getEnumTypes().empty() && CUNode->getRetainedTypes().empty() &&
+        CUNode->getGlobalVariables().empty() && CUNode->getMacros().empty())
       continue;
 
     DwarfCompileUnit &CU = getOrCreateDwarfCompileUnit(CUNode);
@@ -1251,13 +1217,6 @@ void DwarfDebug::beginModule(Module *M) {
       DIGlobalVariable *GV = GVE->getVariable();
       if (Processed.insert(GV).second)
         CU.getOrCreateGlobalVariableDIE(GV, sortGlobalExprs(GVMap[GV]));
-    }
-
-    if (isHeterogeneousDebug(*M)) {
-      const auto &LS = CULifetimeMap.find(CUNode);
-      if (LS != CULifetimeMap.end())
-        for (auto &L : LS->getSecond())
-          CU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
     }
 
     for (auto *Ty : CUNode->getEnumTypes())
@@ -1575,9 +1534,6 @@ static const DILocalScope *getRetainedNodeScope(const MDNode *N) {
 // Collect variable information from side table maintained by MF.
 void DwarfDebug::collectVariableInfoFromMFTable(
     DwarfCompileUnit &TheCU, DenseSet<InlinedEntity> &Processed) {
-  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent()))
-    return;
-
   SmallDenseMap<InlinedEntity, DbgVariable *> MFVars;
   LLVM_DEBUG(dbgs() << "DwarfDebug: collecting variables from MF side table\n");
   for (const auto &VI : Asm->MF->getVariableDbgInfo()) {
@@ -1999,103 +1955,6 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
       Entry.finalize(*Asm, List, BT, TheCU);
   }
 
-  Module &M = *Asm->MF->getFunction().getParent();
-  DenseMap<DICompileUnit *, SmallVector<DILifetime *>> AddCULifetimeMap;
-  if (isHeterogeneousDebug(M)) {
-    for (GlobalVariable &Global : M.globals()) {
-      if (DIFragment *F = Global.getDbgDef()) {
-        GVFragmentMap[F] = &Global;
-      }
-    }
-
-    if (NamedMDNode *RN = M.getNamedMetadata("llvm.dbg.retainedNodes")) {
-      for (MDNode *O : RN->operands()) {
-        if (auto *L = dyn_cast<DILifetime>(O)) {
-          if (auto *GV = dyn_cast<DIGlobalVariable>(L->getObject())) {
-            if (ProcessedLifetimes.insert(L).second) {
-              if (auto *AddCU = dyn_cast<DICompileUnit>(GV->getScope())) {
-                AddCULifetimeMap[AddCU].push_back(L);
-              } else if (isa<DINamespace>(GV->getScope())) {
-                // FIXME(KZHURAVL): Properly support DINamespace.
-              } else if (auto *AddSP = dyn_cast<DISubprogram>(GV->getScope())) {
-                SPLifetimeMap[AddSP].push_back(L);
-              } else {
-                llvm_unreachable("Unexpected DI type!");
-              }
-            }
-          }
-        }
-      }
-    }
-
-    const auto &CULS = AddCULifetimeMap.find(SP->getUnit());
-    if (CULS != AddCULifetimeMap.end())
-      for (auto &L : CULS->getSecond())
-        TheCU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
-
-    const auto &SPLS = SPLifetimeMap.find(SP);
-    if (SPLS != SPLifetimeMap.end())
-      for (auto &L : SPLS->getSecond())
-        TheCU.getOrCreateGlobalVariableDIE(*L, GVFragmentMap);
-  }
-
-  for (const auto &I : DbgDefKills) {
-    const DILifetime *LT = I.first;
-    auto &Entries = I.second;
-    assert(!Entries.empty());
-    auto &MI = *Entries.back().getBegin();
-    LLVM_DEBUG(dbgs() << "Processing instruction: " << MI);
-
-    // FIXME(KZHURAVL): This is fine at -O0. Need to handle DIFragment and
-    // DIGlobalVariable at other optimization levels.
-    const DILocalVariable *LocalVar =
-        dyn_cast<DILocalVariable>(LT->getObject());
-    assert(LocalVar && "DILifetime's object is not DILocalVariable");
-
-    LexicalScope *Scope = MI.getDebugLoc().get()
-                              ? LScopes.findLexicalScope(MI.getDebugLoc().get())
-                              : LScopes.findLexicalScope(LocalVar->getScope());
-
-    // If variable scope is not found then skip this variable.
-    if (!Scope) {
-      LLVM_DEBUG(dbgs() << "Dropping debug info for " << LocalVar->getName()
-                        << ", no variable scope found\n");
-      continue;
-    }
-    InlinedEntity Var(LocalVar, nullptr);
-    Processed.insert(Var);
-    DbgVariable *RegVar = cast<DbgVariable>(
-        createConcreteEntity(TheCU, *Scope, LocalVar, nullptr));
-
-    // FIXME: I'm not certain this is how we want to handle this, but the idea
-    // is to try to avoid loclist when we have DEFs in the prologue which are
-    // live out of the function. Should this also confirm there are no non-meta
-    // instructions preceding the DEF?
-    if (Entries.size() == 1 && Entries[0].isLiveThroughFunction()) {
-      RegVar->emplace<Loc::Def>(*LT, MI.getDebugReferrer());
-      LLVM_DEBUG(dbgs() << "Created DbgVariable for " << LocalVar->getName()
-                        << "\n");
-      continue;
-    }
-
-    // Handle multiple DBG_VALUE instructions describing one variable.
-    DebugLocStream::ListBuilder List(DebugLocs, TheCU, *Asm, *RegVar);
-    for (auto &Entry : Entries) {
-      auto &MI = *Entry.getBegin();
-      // FIXME: Handle when this spans multiple sections
-      const MCSymbol *Begin = getLabelAfterInsn(Entry.getBegin());
-      const MCSymbol *End = getLabelAfterInsn(Entry.getEnd());
-      DebugLocStream::EntryBuilder LocStreamEntry(List, Begin, End);
-      BufferByteStreamer Streamer = LocStreamEntry.getStreamer();
-      const TargetRegisterInfo &TRI =
-          *Asm->MF->getSubtarget().getRegisterInfo();
-      DebugLocDwarfExprAST ExprAST(*Asm, TRI, TheCU, Streamer,
-                                   *MI.getDebugLifetime(),
-                                   MI.getDebugReferrer());
-      ExprAST.finalize();
-    }
-  }
-
   // For each InlinedEntity collected from DBG_LABEL instructions, convert to
   // DWARF-related DbgLabel.
   for (const auto &I : DbgLabels) {
@@ -2126,12 +1985,7 @@ void DwarfDebug::collectEntityInfo(DwarfCompileUnit &TheCU,
     createConcreteEntity(TheCU, *Scope, Label, IL.second, Sym);
   }
 
-  // FIXME(KZHURAVL): Do we need following *for* loop for heterogeneous debug?
-  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
-    return;
-  }
-
-  // Collect info for variables/labels that were optimized out.
+  // Collect info for retained nodes.
   for (const DINode *DN : SP->getRetainedNodes()) {
     const auto *LS = getRetainedNodeScope(DN);
     if (isa<DILocalVariable>(DN) || isa<DILabel>(DN)) {

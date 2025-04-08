@@ -833,9 +833,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
     if (MI.isDebugLabel() || MI.isDebugRef() || MI.isPseudoProbe())
       continue;
 
-    if (MI.isDebugDefKill())
-      continue;
-
     SUnit *SU = MISUnitMap[&MI];
     assert(SU && "No SUnit mapped to this MI");
 

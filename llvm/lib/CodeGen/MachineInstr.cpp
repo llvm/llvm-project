@@ -916,26 +916,6 @@ const DILabel *MachineInstr::getDebugLabel() const {
   return cast<DILabel>(getOperand(0).getMetadata());
 }
 
-DILifetime *MachineInstr::getDebugLifetime() {
-  assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
-  return cast<DILifetime>(const_cast<MDNode *>(getOperand(0).getMetadata()));
-}
-
-const DILifetime *MachineInstr::getDebugLifetime() const {
-  assert(isDebugDefKill() && "not a DBG_DEF or DBG_KILL");
-  return cast<DILifetime>(getOperand(0).getMetadata());
-}
-
-const MachineOperand &MachineInstr::getDebugReferrer() const {
-  assert(isDebugDef() && "not a DBG_DEF");
-  return getOperand(1);
-}
-
-MachineOperand &MachineInstr::getDebugReferrer() {
-  assert(isDebugDef() && "not a DBG_DEF");
-  return getOperand(1);
-}
-
 const MachineOperand &MachineInstr::getDebugVariableOp() const {
   assert((isDebugValueLike()) && "not a DBG_VALUE*");
   unsigned VariableOp = isNonListDebugValue() ? 2 : 0;

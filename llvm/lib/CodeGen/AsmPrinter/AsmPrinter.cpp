@@ -1344,10 +1344,6 @@ bool AsmPrinter::emitDebugComment(const MachineInstr *MI) {
     return true;
 
   switch(MI->getOpcode()) {
-      case TargetOpcode::DBG_DEF:
-      case TargetOpcode::DBG_KILL:
-        // FIXME(KZHURAVL): Implement for def/kill.
-        return true;
       case TargetOpcode::DBG_VALUE:
       case TargetOpcode::DBG_VALUE_LIST:
         return emitDebugValueComment(MI, *this);
@@ -1922,8 +1918,6 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::INLINEASM_BR:
         emitInlineAsm(&MI);
         break;
-      case TargetOpcode::DBG_DEF:
-      case TargetOpcode::DBG_KILL:
       case TargetOpcode::DBG_VALUE:
       case TargetOpcode::DBG_VALUE_LIST:
       case TargetOpcode::DBG_LABEL:

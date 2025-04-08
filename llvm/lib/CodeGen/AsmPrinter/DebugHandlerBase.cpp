@@ -279,22 +279,14 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   identifyScopeMarkers();
 
   // Calculate history for local variables.
-  if (isHeterogeneousDebug(*Asm->MF->getFunction().getParent())) {
-    assert(DbgDefKills.empty() && "DbgDefKills map wasn't cleaned!");
-    calculateHeterogeneousDbgEntityHistory(
-
-        MF, Asm->MF->getSubtarget().getRegisterInfo(), DbgDefKills, DbgLabels);
-    InstOrdering.initialize(*MF);
-  } else {
-    assert(DbgValues.empty() && "DbgValues map wasn't cleaned!");
-    assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
-    calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
-                              DbgValues, DbgLabels);
-    InstOrdering.initialize(*MF);
-    if (TrimVarLocs)
-      DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
-    LLVM_DEBUG(DbgValues.dump(MF->getName()));
-  }
+  assert(DbgValues.empty() && "DbgValues map wasn't cleaned!");
+  assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
+  calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
+                            DbgValues, DbgLabels);
+  InstOrdering.initialize(*MF);
+  if (TrimVarLocs)
+    DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
+  LLVM_DEBUG(DbgValues.dump(MF->getName()));
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {
@@ -351,13 +343,6 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
         requestLabelBeforeInsn(Entry.getInstr());
       else
         requestLabelAfterInsn(Entry.getInstr());
-    }
-  }
-
-  for (const auto &I : DbgDefKills) {
-    for (const auto &Entry : I.second) {
-      requestLabelAfterInsn(Entry.getBegin());
-      requestLabelAfterInsn(Entry.getEnd());
     }
   }
 
@@ -437,7 +422,6 @@ void DebugHandlerBase::endFunction(const MachineFunction *MF) {
   if (Asm && hasDebugInfo(MF))
     endFunctionImpl(MF);
   DbgValues.clear();
-  DbgDefKills.clear();
   DbgLabels.clear();
   LabelsBeforeInsn.clear();
   LabelsAfterInsn.clear();

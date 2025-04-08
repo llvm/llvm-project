@@ -2330,9 +2330,7 @@ void ModuleBitcodeWriter::writeDILocalVariable(
 void ModuleBitcodeWriter::writeDIFragment(const DIFragment *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned Abbrev) {
-  assert(N->isDistinct() && "Expected distinct fragment");
-  Stream.EmitRecord(bitc::METADATA_FRAGMENT, Record, Abbrev);
-  Record.clear();
+  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 void ModuleBitcodeWriter::writeDILabel(
@@ -2444,13 +2442,7 @@ void ModuleBitcodeWriter::writeDIExpression(const DIExpression *N,
 void ModuleBitcodeWriter::writeDIExpr(const DIExpr *N,
                                       SmallVectorImpl<uint64_t> &Record,
                                       unsigned Abbrev) {
-  assert(!N->isDistinct() && "Expected non-distinct expr");
-  const unsigned Version = 0;
-  Record.push_back(Version);
-  for (auto &Op : N->builder())
-    writeOneDIOpToRecord(Record, Op);
-  Stream.EmitRecord(bitc::METADATA_EXPR, Record, Abbrev);
-  Record.clear();
+  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 void ModuleBitcodeWriter::writeDIGlobalVariableExpression(
@@ -2499,13 +2491,7 @@ void ModuleBitcodeWriter::writeDIImportedEntity(
 void ModuleBitcodeWriter::writeDILifetime(const DILifetime *N,
                                           SmallVectorImpl<uint64_t> &Record,
                                           unsigned Abbrev) {
-  Record.push_back(VE.getMetadataID(N->getObject()));
-  Record.push_back(VE.getMetadataID(N->getLocation()));
-  for (const auto &I : N->argObjects())
-    Record.push_back(VE.getMetadataID(I));
-
-  Stream.EmitRecord(bitc::METADATA_LIFETIME, Record, Abbrev);
-  Record.clear();
+  report_fatal_error("unsupported DIExpr-based metadata");
 }
 
 unsigned ModuleBitcodeWriter::createNamedMetadataAbbrev() {

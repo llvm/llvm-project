@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
-#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Metadata.h"
@@ -102,15 +101,6 @@ public:
 };
 
 class DbgVariable;
-
-// A pair to capture the arguments of a call to DBG_DEF
-struct DbgDefProxy {
-  std::reference_wrapper<const DILifetime> Lifetime;
-  std::reference_wrapper<const MachineOperand> Referrer;
-  explicit DbgDefProxy(const DILifetime &Lifetime,
-                       const MachineOperand &Referrer)
-      : Lifetime(Lifetime), Referrer(Referrer) {}
-};
 
 bool operator<(const struct FrameIndexExpr &LHS,
                const struct FrameIndexExpr &RHS);
@@ -195,17 +185,9 @@ struct EntryValue {
     EntryValues.insert({Reg, **NonVariadicExpr});
   }
 };
-/// Heterogeneous DWARF DBG_DEF location
-struct Def {
-  /// Records DbgDef referrers.
-  mutable SmallVector<DbgDefProxy, 1> DbgDefProxies;
-  explicit Def(const DILifetime &Lifetime, const MachineOperand &Referrer) {
-    DbgDefProxies.emplace_back(Lifetime, Referrer);
-  }
-};
 /// Alias for the std::variant specialization base class of DbgVariable.
 using Variant = std::variant<std::monostate, Loc::Single, Loc::Multi, Loc::MMI,
-                             Loc::EntryValue, Loc::Def>;
+                             Loc::EntryValue>;
 } // namespace Loc
 
 //===----------------------------------------------------------------------===//
@@ -468,14 +450,6 @@ class DwarfDebug : public DebugHandlerBase {
   bool EnableOpConvert;
 
 public:
-  using GVFragmentMapTy = DenseMap<DIFragment *, WeakVH>;
-
-private:
-  GVFragmentMapTy GVFragmentMap;
-  DenseMap<DISubprogram *, SmallVector<DILifetime *>> SPLifetimeMap;
-  DenseSet<DILifetime *> ProcessedLifetimes;
-
-public:
   enum class MinimizeAddrInV5 {
     Default,
     Disabled,
@@ -720,10 +694,6 @@ private:
   /// scope return true.
   bool buildLocationList(SmallVectorImpl<DebugLocEntry> &DebugLoc,
                          const DbgValueHistoryMap::Entries &Entries);
-
-  /// Collect variable information from MF.
-  void collectVariableInfoFromMF(DwarfCompileUnit &TheCU,
-                                 DenseSet<InlinedEntity> &P);
 
   /// Collect variable information from the side table maintained by MF.
   void collectVariableInfoFromMFTable(DwarfCompileUnit &TheCU,

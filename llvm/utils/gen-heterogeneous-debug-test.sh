@@ -36,7 +36,6 @@ target triple = "x86_64-unknown-linux-gnu"
 $ir_funcs
 declare void @Esc(ptr)
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.dbg.def(metadata, metadata) #1
 
 attributes #0 = { noinline nounwind optnone uwtable "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cmov,+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
@@ -194,75 +193,6 @@ stack: []
 body:             |
   bb.0.entry:
 $dbg_values
-    RET64 debug-location !$loc
-...
-EOF
-inc_idx
-}
-
-gencase_heterogeneous_mir_one_alloca() {
-local scalar_ty_idx="$1"; shift
-local expr="$1"; shift
-local type="${scalar_tys[$scalar_ty_idx]}"
-local size="${scalar_ty_byte_sizes[$scalar_ty_idx]}"
-local align="${scalar_ty_pow2_byte_sizes[$scalar_ty_idx]}"
-declare_one_var_metadata
-declare_mdid lifetime
-cat_ir_metadata <<EOF
-!$lifetime = distinct !DILifetime(object: !$var, location: !DIExpr($expr))
-EOF
-cat_ir_funcs <<EOF
-define dso_local void @Fun$idx() #0 !dbg !$sub {
-entry:
-  %Var$idx = alloca $type
-  call void @llvm.dbg.def(metadata !$lifetime, metadata ptr %Var$idx), !dbg !$loc
-  call void @Esc(ptr %Var$idx), !dbg !$loc
-  ret void, !dbg !$loc
-}
-EOF
-cat_mir_funcs <<EOF
----
-name:            Fun$idx
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-stack:
-  - { id: 0, name: Var$idx, type: default, offset: 0, size: $size, alignment: $align }
-body:             |
-  bb.0.entry:
-    ; !DIExpr($expr)
-    DBG_DEF !$lifetime, %stack.0
-    RET64 debug-location !$loc
-...
-EOF
-inc_idx
-}
-
-gencase_heterogeneous_mir_no_alloca_dbg_value() {
-local referrer="$1"; shift
-local expr="$1"; shift
-declare_one_var_metadata
-declare_mdid lifetime
-cat_ir_metadata <<EOF
-!$lifetime = distinct !DILifetime(object: !$var, location: !DIExpr($expr))
-EOF
-cat_ir_funcs <<EOF
-define dso_local void @Fun$idx() #0 !dbg !$sub {
-entry:
-  ret void, !dbg !$loc
-}
-EOF
-cat_mir_funcs <<EOF
----
-name:            Fun$idx
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64, preferred-register: '' }
-stack: []
-body:             |
-  bb.0.entry:
-    ; !DIExpr($expr)
-    DBG_DEF !$lifetime, $referrer, debug-location !$loc
     RET64 debug-location !$loc
 ...
 EOF
@@ -435,72 +365,3 @@ EOF
 
 
 # BEGIN heterogeneous_mir tests
-
-reset_per_test_state
-di_version=4
-
-for i in "${!scalar_tys[@]}"; do
-
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset"
-gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(${scalar_tys[$i]})"
-
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address"
-gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(ptr), DIOpDeref(${scalar_tys[$i]})"
-
-deref_and_mask_ops="DW_OP_deref_size 0x$(printf '%x' "${scalar_ty_byte_sizes[$i]}")"
-if [[ "${scalar_ty_bit_masks[$i]}" -ne 0 ]]; then
-  deref_and_mask_ops+=", DW_OP_constu 0x$(printf '%x' "${scalar_ty_bit_masks[$i]}"), DW_OP_and"
-fi
-
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, $deref_and_mask_ops, DW_OP_stack_value"
-gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(${scalar_tys[$i]}), DIOpRead()"
-
-add_checks_mir "DW_OP_reg6 RBP, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_consts -${scalar_ty_pow2_byte_sizes[$i]}, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, $deref_and_mask_ops, DW_OP_stack_value"
-gencase_heterogeneous_mir_one_alloca "$i" "DIOpReferrer(ptr), DIOpDeref(${scalar_tys[$i]}), DIOpRead()"
-
-done
-
-
-add_checks_mir "DW_AT_location (DW_OP_reg0 RAX)"
-gencase_heterogeneous_mir_no_alloca_dbg_value \$rax 'DIOpReferrer(i64)'
-
-add_checks_mir "DW_AT_location (DW_OP_reg0 RAX, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)"
-gencase_heterogeneous_mir_no_alloca_dbg_value \$rax 'DIOpReferrer(ptr), DIOpDeref(i64)'
-
-add_checks_mir "DW_AT_location (DW_OP_reg0 RAX, DW_OP_deref_size 0x8, DW_OP_stack_value"
-gencase_heterogeneous_mir_no_alloca_dbg_value \$rax 'DIOpReferrer(i64), DIOpRead()'
-
-add_checks_mir "DW_AT_location (DW_OP_reg0 RAX, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value)"
-gencase_heterogeneous_mir_no_alloca_dbg_value \$rax 'DIOpReferrer(ptr), DIOpDeref(i64), DIOpRead()'
-
-
-# FIXME: Need to locate subregs by offset?
-#add_checks_mir "DW_AT_location (DW_OP_reg0 RAX)"
-#gencase_heterogeneous_mir_no_alloca_dbg_value \$ax 'DIOpReferrer(i16)'
-
-
-add_checks_mir "DW_AT_location (DW_OP_constu 0x2a, DW_OP_stack_value)"
-gencase_heterogeneous_mir_no_alloca_dbg_value 42 'DIOpReferrer(i64)'
-
-add_checks_mir "DW_AT_location (DW_OP_constu 0x2a, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address)"
-gencase_heterogeneous_mir_no_alloca_dbg_value 42 'DIOpReferrer(ptr), DIOpDeref(i64)'
-
-add_checks_mir "DW_AT_location (DW_OP_constu 0x2a, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_stack_value)"
-gencase_heterogeneous_mir_no_alloca_dbg_value 42 'DIOpReferrer(i64), DIOpRead()'
-
-add_checks_mir "DW_AT_location (DW_OP_constu 0x2a, DW_OP_stack_value, DW_OP_deref_size 0x8, DW_OP_constu 0x0, DW_OP_LLVM_user DW_OP_LLVM_form_aspace_address, DW_OP_deref_size 0x8, DW_OP_stack_value)"
-gencase_heterogeneous_mir_no_alloca_dbg_value 42 'DIOpReferrer(ptr), DIOpDeref(i64), DIOpRead()'
-
-
-# The YAML parser requires this all be indented
-ir_module="$(print_ir_module | sed 's/^/  /')"
-cat <<EOF
-#--- heterogeneous_mir
-# RUN: llc -x mir -O0 -start-after=x86-isel -filetype=obj < %t/heterogeneous_mir | llvm-dwarfdump --diff --debug-info -name Var* -regex - | FileCheck %t/heterogeneous_mir
---- |
-$ir_module
-...
-$mir_funcs
-EOF
-
-# END heterogeneous_mir tests

@@ -64,16 +64,6 @@ TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
                                MFI.getOffsetAdjustment());
 }
 
-DIExprBuilder::Iterator TargetFrameLowering::insertFrameLocation(
-    const MachineFunction &MF, DIExprBuilder &Builder,
-    DIExprBuilder::Iterator BI, Type *ResultType) const {
-  std::initializer_list<DIOp::Variant> IL = {
-      DIOp::Referrer(PointerType::get(ResultType,
-                                      MF.getDataLayout().getAllocaAddrSpace())),
-      DIOp::Deref(ResultType)};
-  return Builder.insert(BI, IL) + IL.size();
-}
-
 /// Returns the offset from the stack pointer to the slot of the specified
 /// index. This function serves to provide a comparable offset from a single
 /// reference point (the value of the stack-pointer at function entry) that can

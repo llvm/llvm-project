@@ -58,7 +58,6 @@ inline BasicBlock **unwrap(LLVMBasicBlockRef *BBs) {
 
 void llvm::initializeCore(PassRegistry &Registry) {
   initializeDominatorTreeWrapperPassPass(Registry);
-  initializeHeterogeneousDebugVerifyLegacyPass(Registry);
   initializePrintModulePassWrapperPass(Registry);
   initializePrintFunctionPassWrapperPass(Registry);
   initializeSafepointIRVerifierPass(Registry);
