@@ -96,14 +96,6 @@ class LocationSize {
   static_assert(~(MaxValue & ScalableBit), "Max value don't have bit 62 set");
 
 public:
-  // FIXME: Migrate all users to construct via either `precise` or `upperBound`,
-  // to make it more obvious at the callsite the kind of size that they're
-  // providing.
-  //
-  // Since the overwhelming majority of users of this provide precise values,
-  // this assumes the provided value is precise.
-  explicit constexpr LocationSize(uint64_t Raw)
-      : Value(Raw > MaxValue ? AfterPointer : Raw) {}
   // Create non-scalable LocationSize
   static LocationSize precise(uint64_t Value) {
     return LocationSize(Value, false /*Scalable*/);
