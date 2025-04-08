@@ -12,6 +12,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
@@ -126,9 +127,7 @@ void Statusline::Redraw(bool update) {
     return;
   }
 
-  StreamString stream;
-  ExecutionContext exe_ctx =
-      m_debugger.GetCommandInterpreter().GetExecutionContext();
+  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
 
   // For colors and progress events, the format entity needs access to the
   // debugger, which requires a target in the execution context.
@@ -136,9 +135,15 @@ void Statusline::Redraw(bool update) {
     exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
 
   SymbolContext symbol_ctx;
-  if (auto frame_sp = exe_ctx.GetFrameSP())
-    symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+  if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
+    Process::StopLocker stop_locker;
+    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
+      if (auto frame_sp = exe_ctx.GetFrameSP())
+        symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
+    }
+  }
 
+  StreamString stream;
   if (auto *format = m_debugger.GetStatuslineFormat())
     FormatEntity::Format(*format, stream, &symbol_ctx, &exe_ctx, nullptr,
                          nullptr, false, false);
