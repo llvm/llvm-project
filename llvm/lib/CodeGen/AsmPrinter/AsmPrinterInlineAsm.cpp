@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
@@ -43,19 +44,25 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
-                                            const MDNode *LocMDNode) const {
+                                            const MDNode *LocMDNode,
+                                            const DebugLoc *DbgLoc) const {
   MCContext &Context = MMI->getContext();
   Context.initInlineSourceManager();
   SourceMgr &SrcMgr = *Context.getInlineSourceManager();
   std::vector<const MDNode *> &LocInfos = Context.getLocInfos();
 
+  DIScope *Scope = DbgLoc ? dyn_cast<DIScope>(DbgLoc->getScope()) : nullptr;
   std::unique_ptr<MemoryBuffer> Buffer;
   // The inline asm source manager will outlive AsmStr, so make a copy of the
   // string for SourceMgr to own.
   Buffer = MemoryBuffer::getMemBufferCopy(AsmStr, "<inline asm>");
 
   // Tell SrcMgr about this buffer, it takes ownership of the buffer.
-  unsigned BufNum = SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
+  unsigned BufNum = (DbgLoc && Scope)
+                        ? SrcMgr.AddNewSourceBuffer(
+                              std::move(Buffer), Scope->getFilename(),
+                              DbgLoc->getLine(), DbgLoc->getCol(), SMLoc())
+                        : SrcMgr.AddNewSourceBuffer(std::move(Buffer), SMLoc());
 
   // Store LocMDNode in DiagInfo, using BufNum as an identifier.
   if (LocMDNode) {
@@ -66,12 +73,12 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
   return BufNum;
 }
 
-
 /// EmitInlineAsm - Emit a blob of inline asm to the output streamer.
 void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
                                const MCTargetOptions &MCOptions,
                                const MDNode *LocMDNode,
-                               InlineAsm::AsmDialect Dialect) const {
+                               InlineAsm::AsmDialect Dialect,
+                               const DebugLoc *DbgLoc) const {
   assert(!Str.empty() && "Can't emit empty inline asm block");
 
   // Remember if the buffer is nul terminated or not so we can avoid a copy.
@@ -95,7 +102,7 @@ void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
     return;
   }
 
-  unsigned BufNum = addInlineAsmDiagBuffer(Str, LocMDNode);
+  unsigned BufNum = addInlineAsmDiagBuffer(Str, LocMDNode, DbgLoc);
   SourceMgr &SrcMgr = *MMI->getContext().getInlineSourceManager();
   SrcMgr.setIncludeDirs(MCOptions.IASSearchPaths);
 
@@ -409,8 +416,9 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
     }
   }
 
+  const DebugLoc &DbgLoc = MI->getDebugLoc();
   emitInlineAsm(StringData, getSubtargetInfo(), TM.Options.MCOptions, LocMD,
-                MI->getInlineAsmDialect());
+                MI->getInlineAsmDialect(), DbgLoc ? &DbgLoc : nullptr);
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
