@@ -4981,7 +4981,8 @@ void CGOpenMPRuntime::emitPrivateReduction(
                           CGM.getModule(), OMPRTL___kmpc_barrier),
                       BarrierArgs);
 
-  for (unsigned I = 0; I < ReductionOps.size(); ++I) {
+  for (unsigned I :
+       llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
     if (I >= LHSExprs.size()) {
       break;
     }
@@ -5003,7 +5004,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
     LValue SharedLV = CGF.MakeAddrLValue(SharedResult, PrivateType);
     LValue LHSLV = CGF.EmitLValue(LHSExprs[I]);
     RValue PrivateRV = CGF.EmitLoadOfLValue(LHSLV, Loc);
-    auto &&UpdateOp = [&CGF, PrivateRV, BinOp, BO](RValue OldVal) {
+    auto UpdateOp = [&](RValue OldVal) {
       if (BO == BO_Mul) {
         llvm::Value *OldScalar = OldVal.getScalarVal();
         llvm::Value *PrivateScalar = PrivateRV.getScalarVal();
@@ -5032,7 +5033,7 @@ void CGOpenMPRuntime::emitPrivateReduction(
   llvm::Value *FinalResult = CGF.Builder.CreateLoad(SharedResult);
 
   // Update private variables with final result
-  for (unsigned I = 0; I < Privates.size(); ++I) {
+  for (unsigned I : llvm::seq<unsigned>(Privates.size())) {
     LValue LHSLV = CGF.EmitLValue(LHSExprs[I]);
     CGF.Builder.CreateStore(FinalResult, LHSLV.getAddress());
   }
@@ -5345,9 +5346,8 @@ void CGOpenMPRuntime::emitReduction(CodeGenFunction &CGF, SourceLocation Loc,
 
   CGF.EmitBranch(DefaultBB);
   CGF.EmitBlock(DefaultBB, /*IsFinished=*/true);
-  if (Options.IsPrivateVarReduction) {
+  if (Options.IsPrivateVarReduction)
     emitPrivateReduction(CGF, Loc, Privates, LHSExprs, RHSExprs, ReductionOps);
-  }
 }
 
 /// Generates unique name for artificial threadprivate variables.
