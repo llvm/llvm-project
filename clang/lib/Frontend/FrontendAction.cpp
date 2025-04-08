@@ -13,6 +13,7 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/LangStandard.h"
 #include "clang/Basic/Sarif.h"
 #include "clang/Basic/SourceLocation.h"
@@ -114,25 +115,18 @@ public:
     }
 
     static Position GetEndSpelling(const SourceManager &SM,
-                                   const CharSourceRange &R,
+                                   const CharSourceRange &Range,
                                    const LangOptions &LangOpts) {
+      // For token ranges, compute end location for end character of the range.
+      // The end location of returned range is exclusive.
+      CharSourceRange R = Lexer::getAsCharRange(Range, SM, LangOpts);
       SourceLocation End = R.getEnd();
-      if (R.isTokenRange()) {
-        // Compute end location for end character of the range.
-        // The returned location is exclusive.
-        End = Lexer::getLocForEndOfToken(End, 0, SM, LangOpts);
-      } else {
-        // If end already points at the last character in the range, advance one
-        // location, so that end location is exclusive.
-        End = End.getLocWithOffset(1);
-      }
       // Relex the token past the end location of the last token in the source
       // range. If it's a semicolon, advance the location by one token.
       Token PossiblySemi;
       Lexer::getRawToken(End, PossiblySemi, SM, LangOpts, true);
       if (PossiblySemi.is(tok::semi))
-        End = Lexer::getLocForEndOfToken(PossiblySemi.getLocation(), 0, SM,
-                                         LangOpts);
+        End = End.getLocWithOffset(1);
       return {SM.getSpellingLineNumber(End), SM.getSpellingColumnNumber(End)};
     }
   };
