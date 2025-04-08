@@ -18,6 +18,13 @@ code bases.
 
 New Features
 ------------
+- Added a Comgr Caching infrastructure, currently covering the following
+behaviors:
+  - caching unbundling of compressed clang offload bundles
+  - caching SPIR-V to LLVM IR translations
+  - caching clang driver invocations
+  More information about the Comgr Caching infrastructure and how to use it can
+  be found in amd/comgr/README.md.
 
 Bug Fixes
 ---------
@@ -44,6 +51,9 @@ Comgr Testing, Debugging, and Logging Updates
 ---------------------------------------------
 - Removed HIP\_PATH and ROCM\_PATH environment variables. These were used for
 now-removed Comgr actions, such as \*COMPILE\_SOURCE\_TO\_FATBIN.
+- Added a new Comgr LIT testing infrastrucutre, which can be found in
+amd/comgr/test-lit. This will allow us to write more in-depth and targeted
+tests.
 
 New Targets
 -----------
