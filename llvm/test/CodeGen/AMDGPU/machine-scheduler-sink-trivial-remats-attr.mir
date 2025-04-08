@@ -9,10 +9,10 @@
   define void @dont_remat_waves_per_eu() "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-waves-per-eu"="7,7" {
     ret void
   }
-  define void @dont_remat_at_max_occ() "amdgpu-flat-work-group-size"="1024,1024" {
+  define void @dont_remat_at_max_occ() "amdgpu-waves-per-eu"="8,8" {
     ret void
   }
-  define void @reduce_arch_and_acc_vgrp_spill() "amdgpu-flat-work-group-size"="1024,1024" {
+  define void @reduce_arch_and_acc_vgrp_spill() "amdgpu-waves-per-eu"="8,8" {
     ret void
   }
   define void @reduce_spill_archvgpr_above_addressable_limit() "amdgpu-waves-per-eu"="1,10" {
@@ -491,10 +491,11 @@ body:             |
 
     S_ENDPGM 0
 ...
-# Min/Max occupancy is 8. For targets with unified RF we are able to eliminate
-# VGPR spilling w.r.t. minimum workgroup size induced occupancy using just
-# enough remats. In the non-unified RF case we remat all eligible ArchVGPRs to
-# try to eliminate both ArchVGPR and AGPR spilling.
+# Min/Max waves/EU is 8. For targets with non-unified RF (gfx908) we are able to
+# eliminate both ArchVGPR and AGPR spilling by saving 2 ArchVGPRs (one for
+# spilling AGPR to ArchVGPR). In the unified RF case (gfx90a) the ArchVGPR
+# allocation granule forces us to remat all eligible ArchVGPRs to eliminate
+# spilling.
 ---
 name:            reduce_arch_and_acc_vgrp_spill
 tracksRegLiveness: true
@@ -506,37 +507,6 @@ body:             |
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_4:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_5:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_6:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_7:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_8:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_9:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_10:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_11:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_12:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_13:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_14:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_15:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_16:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_17:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_18:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_19:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_24:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 64, implicit $exec, implicit $mode
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -570,22 +540,53 @@ body:             |
   ; GFX908-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF32:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_4:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 4, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_5:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 5, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_6:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 6, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_7:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 7, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_8:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 8, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_9:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 9, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_10:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 10, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_11:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 11, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_12:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 12, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_13:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 13, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_14:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 14, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_15:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 15, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_16:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 16, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_17:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 17, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_18:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 18, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_19:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 19, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_20:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 20, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_21:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 21, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_22:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 22, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_23:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 23, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_24:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 64, implicit $exec, implicit $mode
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_2]], implicit [[V_CVT_I32_F64_e32_3]], implicit [[V_CVT_I32_F64_e32_4]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_5]], implicit [[V_CVT_I32_F64_e32_6]], implicit [[V_CVT_I32_F64_e32_7]], implicit [[V_CVT_I32_F64_e32_8]], implicit [[V_CVT_I32_F64_e32_9]]
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_32:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_10]], implicit [[V_CVT_I32_F64_e32_11]], implicit [[V_CVT_I32_F64_e32_12]], implicit [[V_CVT_I32_F64_e32_13]], implicit [[V_CVT_I32_F64_e32_14]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_15]], implicit [[V_CVT_I32_F64_e32_16]], implicit [[V_CVT_I32_F64_e32_17]], implicit [[V_CVT_I32_F64_e32_18]], implicit [[V_CVT_I32_F64_e32_19]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_20]], implicit [[V_CVT_I32_F64_e32_21]], implicit [[V_CVT_I32_F64_e32_22]], implicit [[V_CVT_I32_F64_e32_23]], implicit [[V_CVT_I32_F64_e32_24]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]]
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_32:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_31]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[V_CVT_I32_F64_e32_27]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_28]], implicit [[V_CVT_I32_F64_e32_29]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[V_CVT_I32_F64_e32_31]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[V_CVT_I32_F64_e32_30]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF32]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
@@ -620,9 +621,6 @@ body:             |
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_24:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 24, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_25:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 25, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_26:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 26, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   [[DEF:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF2:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -655,8 +653,8 @@ body:             |
   ; GFX90A-NEXT:   [[DEF29:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 64, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   [[DEF32:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 64, implicit $exec, implicit $mode
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1:
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_2]], implicit [[V_CVT_I32_F64_e32_3]], implicit [[V_CVT_I32_F64_e32_4]]
@@ -664,16 +662,19 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_10]], implicit [[V_CVT_I32_F64_e32_11]], implicit [[V_CVT_I32_F64_e32_12]], implicit [[V_CVT_I32_F64_e32_13]], implicit [[V_CVT_I32_F64_e32_14]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_15]], implicit [[V_CVT_I32_F64_e32_16]], implicit [[V_CVT_I32_F64_e32_17]], implicit [[V_CVT_I32_F64_e32_18]], implicit [[V_CVT_I32_F64_e32_19]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_20]], implicit [[V_CVT_I32_F64_e32_21]], implicit [[V_CVT_I32_F64_e32_22]], implicit [[V_CVT_I32_F64_e32_23]], implicit [[V_CVT_I32_F64_e32_24]]
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_31]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]]
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_30:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_28]], implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]]
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_31:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_32:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 31, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_31]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[V_CVT_I32_F64_e32_30]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]], implicit [[V_CVT_I32_F64_e32_27]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF32]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   bb.0:
@@ -1032,7 +1033,6 @@ body:             |
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_252:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 252, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_253:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 253, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_254:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 254, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_255:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 256, implicit $exec, implicit $mode
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_2]], implicit [[V_CVT_I32_F64_e32_3]], implicit [[V_CVT_I32_F64_e32_4]], implicit [[V_CVT_I32_F64_e32_5]], implicit [[V_CVT_I32_F64_e32_6]], implicit [[V_CVT_I32_F64_e32_7]], implicit [[V_CVT_I32_F64_e32_8]], implicit [[V_CVT_I32_F64_e32_9]]
@@ -1060,8 +1060,9 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_220]], implicit [[V_CVT_I32_F64_e32_221]], implicit [[V_CVT_I32_F64_e32_222]], implicit [[V_CVT_I32_F64_e32_223]], implicit [[V_CVT_I32_F64_e32_224]], implicit [[V_CVT_I32_F64_e32_225]], implicit [[V_CVT_I32_F64_e32_226]], implicit [[V_CVT_I32_F64_e32_227]], implicit [[V_CVT_I32_F64_e32_228]], implicit [[V_CVT_I32_F64_e32_229]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_230]], implicit [[V_CVT_I32_F64_e32_231]], implicit [[V_CVT_I32_F64_e32_232]], implicit [[V_CVT_I32_F64_e32_233]], implicit [[V_CVT_I32_F64_e32_234]], implicit [[V_CVT_I32_F64_e32_235]], implicit [[V_CVT_I32_F64_e32_236]], implicit [[V_CVT_I32_F64_e32_237]], implicit [[V_CVT_I32_F64_e32_238]], implicit [[V_CVT_I32_F64_e32_239]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_240]], implicit [[V_CVT_I32_F64_e32_241]], implicit [[V_CVT_I32_F64_e32_242]], implicit [[V_CVT_I32_F64_e32_243]], implicit [[V_CVT_I32_F64_e32_244]], implicit [[V_CVT_I32_F64_e32_245]], implicit [[V_CVT_I32_F64_e32_246]], implicit [[V_CVT_I32_F64_e32_247]], implicit [[V_CVT_I32_F64_e32_248]], implicit [[V_CVT_I32_F64_e32_249]]
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_256:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 255, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_250]], implicit [[V_CVT_I32_F64_e32_251]], implicit [[V_CVT_I32_F64_e32_252]], implicit [[V_CVT_I32_F64_e32_253]], implicit [[V_CVT_I32_F64_e32_254]], implicit [[V_CVT_I32_F64_e32_256]], implicit [[V_CVT_I32_F64_e32_255]], implicit [[DEF]]
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_255:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 255, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_256:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 256, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_250]], implicit [[V_CVT_I32_F64_e32_251]], implicit [[V_CVT_I32_F64_e32_252]], implicit [[V_CVT_I32_F64_e32_253]], implicit [[V_CVT_I32_F64_e32_254]], implicit [[V_CVT_I32_F64_e32_255]], implicit [[V_CVT_I32_F64_e32_256]], implicit [[DEF]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: reduce_spill_archvgpr_above_addressable_limit
@@ -1324,7 +1325,6 @@ body:             |
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_252:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 252, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_253:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 253, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_254:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 254, implicit $exec, implicit $mode, implicit-def $m0
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_255:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 256, implicit $exec, implicit $mode
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1:
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_2]], implicit [[V_CVT_I32_F64_e32_3]], implicit [[V_CVT_I32_F64_e32_4]], implicit [[V_CVT_I32_F64_e32_5]], implicit [[V_CVT_I32_F64_e32_6]], implicit [[V_CVT_I32_F64_e32_7]], implicit [[V_CVT_I32_F64_e32_8]], implicit [[V_CVT_I32_F64_e32_9]]
@@ -1352,8 +1352,9 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_220]], implicit [[V_CVT_I32_F64_e32_221]], implicit [[V_CVT_I32_F64_e32_222]], implicit [[V_CVT_I32_F64_e32_223]], implicit [[V_CVT_I32_F64_e32_224]], implicit [[V_CVT_I32_F64_e32_225]], implicit [[V_CVT_I32_F64_e32_226]], implicit [[V_CVT_I32_F64_e32_227]], implicit [[V_CVT_I32_F64_e32_228]], implicit [[V_CVT_I32_F64_e32_229]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_230]], implicit [[V_CVT_I32_F64_e32_231]], implicit [[V_CVT_I32_F64_e32_232]], implicit [[V_CVT_I32_F64_e32_233]], implicit [[V_CVT_I32_F64_e32_234]], implicit [[V_CVT_I32_F64_e32_235]], implicit [[V_CVT_I32_F64_e32_236]], implicit [[V_CVT_I32_F64_e32_237]], implicit [[V_CVT_I32_F64_e32_238]], implicit [[V_CVT_I32_F64_e32_239]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_240]], implicit [[V_CVT_I32_F64_e32_241]], implicit [[V_CVT_I32_F64_e32_242]], implicit [[V_CVT_I32_F64_e32_243]], implicit [[V_CVT_I32_F64_e32_244]], implicit [[V_CVT_I32_F64_e32_245]], implicit [[V_CVT_I32_F64_e32_246]], implicit [[V_CVT_I32_F64_e32_247]], implicit [[V_CVT_I32_F64_e32_248]], implicit [[V_CVT_I32_F64_e32_249]]
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_256:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 255, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_250]], implicit [[V_CVT_I32_F64_e32_251]], implicit [[V_CVT_I32_F64_e32_252]], implicit [[V_CVT_I32_F64_e32_253]], implicit [[V_CVT_I32_F64_e32_254]], implicit [[V_CVT_I32_F64_e32_256]], implicit [[V_CVT_I32_F64_e32_255]], implicit [[DEF]]
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_255:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 255, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_256:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 256, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_250]], implicit [[V_CVT_I32_F64_e32_251]], implicit [[V_CVT_I32_F64_e32_252]], implicit [[V_CVT_I32_F64_e32_253]], implicit [[V_CVT_I32_F64_e32_254]], implicit [[V_CVT_I32_F64_e32_255]], implicit [[V_CVT_I32_F64_e32_256]], implicit [[DEF]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
@@ -1659,7 +1660,6 @@ body:             |
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
   ; GFX908-NEXT:   [[DEF:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF1:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF2:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -1944,8 +1944,9 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF220]], implicit [[DEF221]], implicit [[DEF222]], implicit [[DEF223]], implicit [[DEF224]], implicit [[DEF225]], implicit [[DEF226]], implicit [[DEF227]], implicit [[DEF228]], implicit [[DEF229]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF230]], implicit [[DEF231]], implicit [[DEF232]], implicit [[DEF233]], implicit [[DEF234]], implicit [[DEF235]], implicit [[DEF236]], implicit [[DEF237]], implicit [[DEF238]], implicit [[DEF239]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]], implicit [[DEF249]]
-  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[DEF256]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_]]
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[DEF256]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: reduce_spill_agpr_above_addressable_limit
@@ -2209,7 +2210,6 @@ body:             |
   ; GFX90A-NEXT:   [[DEF254:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF255:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF256:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1:
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]]
@@ -2237,8 +2237,9 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF220]], implicit [[DEF221]], implicit [[DEF222]], implicit [[DEF223]], implicit [[DEF224]], implicit [[DEF225]], implicit [[DEF226]], implicit [[DEF227]], implicit [[DEF228]], implicit [[DEF229]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF230]], implicit [[DEF231]], implicit [[DEF232]], implicit [[DEF233]], implicit [[DEF234]], implicit [[DEF235]], implicit [[DEF236]], implicit [[DEF237]], implicit [[DEF238]], implicit [[DEF239]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]], implicit [[DEF249]]
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[DEF256]], implicit [[V_CVT_I32_F64_e32_1]], implicit [[V_CVT_I32_F64_e32_]]
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[DEF256]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
   ; GFX90A-NEXT:   S_ENDPGM 0
 
   bb.0:

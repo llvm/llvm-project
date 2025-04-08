@@ -1711,6 +1711,11 @@ struct ExcessRP {
   unsigned ArchVGPRsToAlignment = 0;
   /// Whether the region uses AGPRs.
   bool HasAGPRs = false;
+  /// Whether the subtarget has a unified RF.
+  bool UnifiedRF;
+
+  /// ArchVGPR allocation granule for unified RFs with AGPR usage.
+  static const unsigned Granule = 4;
 
   /// Constructs the excess RP model; determines the excess pressure w.r.t. a
   /// maximum number of allowed VGPRs.
@@ -1749,12 +1754,13 @@ private:
 } // namespace
 
 ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
-                   unsigned MaxVGPRs) {
+                   unsigned MaxVGPRs)
+    : UnifiedRF(ST.hasGFX90AInsts()) {
   unsigned NumArchVGPRs = RP.getArchVGPRNum();
   unsigned NumAGPRs = RP.getAGPRNum();
   HasAGPRs = NumAGPRs;
 
-  if (!ST.hasGFX90AInsts()) {
+  if (!UnifiedRF) {
     // Non-unified RF. Account for excess pressure for ArchVGPRs and AGPRs
     // independently.
     if (NumArchVGPRs > MaxVGPRs)
@@ -1782,18 +1788,27 @@ ExcessRP::ExcessRP(const GCNSubtarget &ST, const GCNRegPressure &RP,
   unsigned NumVGPRs = GCNRegPressure::getUnifiedVGPRNum(NumArchVGPRs, NumAGPRs);
   if (NumVGPRs > MaxVGPRs) {
     VGPRs = NumVGPRs - MaxVGPRs;
-    ArchVGPRsToAlignment = NumArchVGPRs - alignDown(NumArchVGPRs, 4);
+    ArchVGPRsToAlignment = NumArchVGPRs - alignDown(NumArchVGPRs, Granule);
     if (!ArchVGPRsToAlignment)
-      ArchVGPRsToAlignment = 4;
+      ArchVGPRsToAlignment = Granule;
   }
 }
 
 bool ExcessRP::saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill) {
   bool Progress = saveRegs(ArchVGPRs, NumRegs);
+  if (!NumRegs)
+    return Progress;
 
-  if (HasAGPRs) {
-    // ArchVGPRs can only be allocated as a multiple of a granule.
-    const unsigned Granule = 4;
+  if (!UnifiedRF) {
+    if (UseArchVGPRForAGPRSpill)
+      Progress |= saveRegs(AGPRs, NumRegs);
+  } else if (HasAGPRs && (VGPRs || (UseArchVGPRForAGPRSpill && AGPRs))) {
+    // There is progress as long as there are VGPRs left to save, even if the
+    // save induced by this particular call does not cross an ArchVGPR alignment
+    // barrier.
+    Progress = true;
+
+    // ArchVGPRs can only be allocated as a multiple of a granule in unified RF.
     unsigned NumSavedRegs = 0;
 
     // Count the number of whole ArchVGPR allocation granules we can save.
@@ -1812,9 +1827,9 @@ bool ExcessRP::saveArchVGPRs(unsigned NumRegs, bool UseArchVGPRForAGPRSpill) {
 
     // Prioritize saving generic VGPRs, then AGPRs if we allow AGPR-to-ArchVGPR
     // spilling and have some free ArchVGPR slots.
-    Progress |= saveRegs(VGPRs, NumSavedRegs);
+    saveRegs(VGPRs, NumSavedRegs);
     if (UseArchVGPRForAGPRSpill)
-      Progress |= saveRegs(AGPRs, NumSavedRegs);
+      saveRegs(AGPRs, NumSavedRegs);
   } else {
     // No AGPR usage in the region i.e., no allocation granule to worry about.
     Progress |= saveRegs(VGPRs, NumRegs);
@@ -1838,35 +1853,16 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
   DenseMap<unsigned, ExcessRP> OptRegions;
   const Function &F = MF.getFunction();
 
-  // Adjust workgroup size induced occupancy bounds with the
-  // "amdgpu-waves-per-eu" attribute. This should be offloaded to a subtarget
-  // method, but at this point is if unclear how other parts of the codebase
-  // interpret this attribute and the default behavior produces unexpected
-  // bounds. Here we want to allow users to ask for target occupancies lower
-  // than the default lower bound.
-  std::pair<unsigned, unsigned> OccBounds =
-      ST.getOccupancyWithWorkGroupSizes(MF);
-  std::pair<unsigned, unsigned> WavesPerEU =
-      AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
-  if (WavesPerEU.first <= WavesPerEU.second) {
-    if (WavesPerEU.first && WavesPerEU.first <= OccBounds.second)
-      OccBounds.first = WavesPerEU.first;
-    if (WavesPerEU.second)
-      OccBounds.second = std::min(OccBounds.second, WavesPerEU.second);
-  }
-
-  // We call the "base max functions" directly because otherwise it uses the
-  // subtarget's logic for combining "amdgpu-waves-per-eu" with the function's
-  // groupsize induced occupancy bounds, producing unexpected results.
+  std::pair<unsigned, unsigned> WavesPerEU = ST.getWavesPerEU(F);
   const unsigned MaxSGPRsNoSpill = ST.getBaseMaxNumSGPRs(
-      F, OccBounds, ST.getMaxNumPreloadedSGPRs(), ST.getReservedNumSGPRs(F));
+      F, WavesPerEU, ST.getMaxNumPreloadedSGPRs(), ST.getReservedNumSGPRs(F));
   const unsigned MaxVGPRsNoSpill =
-      ST.getBaseMaxNumVGPRs(F, {ST.getMinNumVGPRs(OccBounds.second),
-                                ST.getMaxNumVGPRs(OccBounds.first)});
+      ST.getBaseMaxNumVGPRs(F, {ST.getMinNumVGPRs(WavesPerEU.second),
+                                ST.getMaxNumVGPRs(WavesPerEU.first)});
   const unsigned MaxSGPRsIncOcc =
       ST.getMaxNumSGPRs(DAG.MinOccupancy + 1, false);
   const unsigned MaxVGPRsIncOcc = ST.getMaxNumVGPRs(DAG.MinOccupancy + 1);
-  IncreaseOccupancy = OccBounds.second > DAG.MinOccupancy;
+  IncreaseOccupancy = WavesPerEU.second > DAG.MinOccupancy;
 
   auto ClearOptRegionsIf = [&](bool Cond) -> bool {
     if (Cond) {
@@ -1894,7 +1890,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
     } else if (IncreaseOccupancy) {
       // Check whether SGPR pressure prevents us from increasing occupancy.
       if (ClearOptRegionsIf(NumSGPRs > MaxSGPRsIncOcc)) {
-        if (DAG.MinOccupancy >= OccBounds.first)
+        if (DAG.MinOccupancy >= WavesPerEU.first)
           return false;
         continue;
       }
@@ -1903,7 +1899,7 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
         unsigned NumArchVGPRsToRemat = Excess.ArchVGPRs + Excess.VGPRs;
         bool NotEnoughArchVGPRs = NumArchVGPRsToRemat > RP.getArchVGPRNum();
         if (ClearOptRegionsIf(Excess.AGPRs || NotEnoughArchVGPRs)) {
-          if (DAG.MinOccupancy >= OccBounds.first)
+          if (DAG.MinOccupancy >= WavesPerEU.first)
             return false;
           continue;
         }
@@ -1925,10 +1921,9 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
       REMAT_DEBUG(dbgs() << "  " << I << ": " << OptIt->getSecond() << '\n');
 #endif
 
-  // When we are reducing spilling, the target is the minimum achievable
-  // occupancy implied by workgroup sizes / the "amdgpu-waves-per-eu"
-  // attribute.
-  TargetOcc = IncreaseOccupancy ? DAG.MinOccupancy + 1 : OccBounds.first;
+  // When we are reducing spilling, the target is the minimum target number of
+  // waves/EU determined by the subtarget.
+  TargetOcc = IncreaseOccupancy ? DAG.MinOccupancy + 1 : WavesPerEU.first;
 
   // Accounts for a reduction in RP in an optimizable region. Returns whether we
   // estimate that we have identified enough rematerialization opportunities to
