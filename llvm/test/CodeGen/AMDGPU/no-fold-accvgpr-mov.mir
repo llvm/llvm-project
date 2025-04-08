@@ -89,7 +89,7 @@ body:             |
   ; COALESCE-NEXT: bb.1:
   ; COALESCE-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; COALESCE-NEXT: {{  $}}
-  ; COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_ACCVGPR_WRITE_B32_e64_]].sub0
+  ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub0:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_]].sub0
   ; COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
   ; COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit killed $vcc
@@ -102,11 +102,10 @@ body:             |
   ; COALESCE-NEXT:   [[S_ASHR_I32_:%[0-9]+]]:sreg_32 = S_ASHR_I32 [[S_MOV_B32_1]], 31, implicit-def dead $scc
   ; COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_ASHR_I32_]], [[S_OR_B32_]], implicit-def dead $scc
   ; COALESCE-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = COPY [[S_MOV_B32_]].sub0
-  ; COALESCE-NEXT:   [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]]
-  ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub0:areg_128_align2 = COPY [[COPY1]]
+  ; COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]]
   ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub2:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_1]].sub1
   ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub3:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_1]].sub1
-  ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY2]], [[COPY2]], [[V_ACCVGPR_WRITE_B32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
+  ; COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_ACCVGPR_WRITE_B32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
   ; COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
   ; COALESCE-NEXT: {{  $}}
   ; COALESCE-NEXT: bb.3:
@@ -143,7 +142,7 @@ body:             |
   ; GFX908-COALESCE-NEXT: bb.1:
   ; GFX908-COALESCE-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GFX908-COALESCE-NEXT: {{  $}}
-  ; GFX908-COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_ACCVGPR_WRITE_B32_e64_]].sub0
+  ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub0:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_]].sub0
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 -1
   ; GFX908-COALESCE-NEXT:   $vcc = S_AND_B64 $exec, [[V_CMP_NE_U32_e64_]], implicit-def dead $scc
   ; GFX908-COALESCE-NEXT:   S_CBRANCH_VCCNZ %bb.3, implicit killed $vcc
@@ -156,11 +155,10 @@ body:             |
   ; GFX908-COALESCE-NEXT:   [[S_ASHR_I32_:%[0-9]+]]:sreg_32 = S_ASHR_I32 [[S_MOV_B32_1]], 31, implicit-def dead $scc
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 [[S_ASHR_I32_]], [[S_OR_B32_]], implicit-def dead $scc
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_64 = COPY [[S_MOV_B32_]].sub0
-  ; GFX908-COALESCE-NEXT:   [[COPY2:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]]
-  ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub0:areg_128_align2 = COPY [[COPY1]]
+  ; GFX908-COALESCE-NEXT:   [[COPY1:%[0-9]+]]:vreg_64_align2 = COPY [[S_MOV_B32_]]
   ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub2:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_1]].sub1
   ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_1:%[0-9]+]].sub3:areg_128_align2 = COPY [[V_ACCVGPR_WRITE_B32_e64_1]].sub1
-  ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY2]], [[COPY2]], [[V_ACCVGPR_WRITE_B32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX908-COALESCE-NEXT:   [[V_ACCVGPR_WRITE_B32_e64_:%[0-9]+]]:areg_128_align2 = V_MFMA_F32_16X16X16F16_e64 [[COPY1]], [[COPY1]], [[V_ACCVGPR_WRITE_B32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX908-COALESCE-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 0
   ; GFX908-COALESCE-NEXT: {{  $}}
   ; GFX908-COALESCE-NEXT: bb.3:

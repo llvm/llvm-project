@@ -518,9 +518,10 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
       SrcIdx = DstSub;
       NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
       if (!NewRC) {
-        auto SuperDstRC = MRI.getLargestConstrainedSuperClass(Dst);
-        if (SuperDstRC != DstRC)
-          NewRC = TRI.getMatchingSuperRegClass(SuperDstRC, SrcRC, DstSub);
+        auto SuperSrcRC = MRI.getLargestConstrainedSuperClass(Src);
+        if (SuperSrcRC != SrcRC) {
+          NewRC = TRI.getMatchingSuperRegClass(DstRC, SuperSrcRC, DstSub);
+        }
       }
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
