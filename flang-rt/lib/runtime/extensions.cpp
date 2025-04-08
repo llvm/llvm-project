@@ -264,6 +264,43 @@ int RTNAME(Chdir)(const char *name) {
 #endif
 }
 
+int FORTRAN_PROCEDURE_NAME(hostnm)(char* hn, int length) {
+
+  std::int32_t status{0};
+
+  if (!hn || length < 0) {
+    return EINVAL;
+  }
+
+#ifdef _WIN32
+
+  DWORD dwSize{length};
+
+  // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
+  // in order to avoid adding dependency on Winsock.
+  if (!GetComputerNameExA(ComputerNameDnsHostname, hn, &dwSize)) {
+    status = GetLastError();
+  }
+
+#else
+
+  if (gethostname(hn, sizeof(length)) < 0) {
+    status = errno;
+  }
+
+#endif
+
+  if (status == 0) {
+    // Find zero terminator and fill the string from the
+    // zero terminator to the end with spaces
+    const char* str_end = hn + length;
+    const char* str_zero = std::find(hn, str_end, '\0');
+    std::fill(str_zero, str_end, ' ');
+  }
+
+  return status;
+}
+
 int FORTRAN_PROCEDURE_NAME(ierrno)() { return errno; }
 
 void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
