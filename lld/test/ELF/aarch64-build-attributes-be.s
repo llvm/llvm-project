@@ -48,8 +48,3 @@
 .aeabi_attribute Tag_Feature_BTI, 1
 .aeabi_attribute Tag_Feature_PAC, 1
 .aeabi_attribute Tag_Feature_GCS, 1
-
-.global _start
-.type _start, %function
-_start:
-ret

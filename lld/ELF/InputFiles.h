@@ -241,12 +241,13 @@ public:
   StringRef sourceFile;
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
-  struct PauthSubSection {
-    unsigned tagPlatform = 0;
-    unsigned tagSchema = 0;
-  } pauthAbiCoreInfo;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
   std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
+};
+
+struct gnuPropertiesInfo {
+  uint32_t andFeatures = 0;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
