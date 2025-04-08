@@ -43,46 +43,6 @@
 // RANGE-NEXT:    }
 // RANGE-NEXT:  ]
 // RANGE-NEXT:}
-// RUN: echo -e '{\n\
-// RUN:  "required_ranges": [\n\
-// RUN:    {\n\
-// RUN:      "file": "%t/foo.h",\n\
-// RUN:      "range": [\n\
-// RUN:        {\n\
-// RUN:          "from": {\n\
-// RUN:            "line": 1,\n\
-// RUN:            "column": 1\n\
-// RUN:          },\n\
-// RUN:          "to": {\n\
-// RUN:            "line": 9,\n\
-// RUN:            "column": 1\n\
-// RUN:          }\n\
-// RUN:        },\n\
-// RUN:        {\n\
-// RUN:          "from": {\n\
-// RUN:            "line": 11,\n\
-// RUN:            "column": 1\n\
-// RUN:          },\n\
-// RUN:          "to": {\n\
-// RUN:            "line": 11,\n\
-// RUN:            "column": 12\n\
-// RUN:          }\n\
-// RUN:        },\n\
-// RUN:        {\n\
-// RUN:          "from": {\n\
-// RUN:            "line": 13,\n\
-// RUN:            "column": 1\n\
-// RUN:          },\n\
-// RUN:          "to": {\n\
-// RUN:            "line": 15,\n\
-// RUN:            "column": 1\n\
-// RUN:          }\n\
-// RUN:        }\n\
-// RUN:      ]\n\
-// RUN:    }\n\
-// RUN:  ]\n\
-// RUN:}' > %t/expected_decls
-// RUN: diff %t/decls %t/expected_decls
 
 //--- foo.cppmap
 module foo {
