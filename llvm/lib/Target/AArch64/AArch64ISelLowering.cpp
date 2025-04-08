@@ -8709,12 +8709,13 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     // also has that attribute on the same argument, and the same value is
     // passed.
     if (i->hasInRegAttr()) {
-      unsigned ArgNum = i - CallerF.arg_begin();
-      if (!CLI.CB || CLI.CB->arg_size() <= ArgNum ||
-          !CLI.CB->getParamAttr(ArgNum, Attribute::InReg).isValid() ||
-          !i->hasStructRetAttr() ||
-          !CLI.CB->getParamAttr(ArgNum, Attribute::StructRet).isValid() ||
-          CLI.CB->getArgOperand(ArgNum) != i) {
+      unsigned ArgIdx = i - CallerF.arg_begin();
+      if (!CLI.CB || CLI.CB->arg_size() <= ArgIdx)
+        return false;
+      AttributeSet Attrs = CLI.CB->getParamAttributes(ArgIdx);
+      if (!Attrs.hasAttribute(Attribute::InReg) ||
+          !Attrs.hasAttribute(Attribute::StructRet) || !i->hasStructRetAttr() ||
+          CLI.CB->getArgOperand(ArgIdx) != i) {
         return false;
       }
     }
