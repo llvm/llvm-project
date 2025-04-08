@@ -918,6 +918,16 @@ llvm::hash_code
 OperationName::UnregisteredOpModel::hashProperties(OpaqueProperties prop) {
   return llvm::hash_combine(*prop.as<Attribute *>());
 }
+void OperationName::UnregisteredOpModel::printProperties(
+    Operation *op, OpAsmPrinter &printer) {
+  auto asAttr = getPropertiesAsAttr(op);
+  // Note: printAttribute(nullptr) would insert <<NULL ATTRIBUTE>> which changes
+  // the current behavior
+  if (asAttr == nullptr)
+    return;
+  printer << ' ';
+  printer.printAttribute(asAttr);
+}
 
 //===----------------------------------------------------------------------===//
 // RegisteredOperationName
