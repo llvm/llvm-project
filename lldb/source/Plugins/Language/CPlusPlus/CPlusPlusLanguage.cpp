@@ -72,7 +72,7 @@ CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
 
 std::pair<FunctionNameType, llvm::StringRef>
 CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
-  if (Mangled::IsCPPMangledName(name.GetCString()))
+  if (Mangled::IsMangledName(name.GetCString()))
     return {eFunctionNameTypeFull, llvm::StringRef()};
 
   FunctionNameType func_name_type = eFunctionNameTypeNone;
@@ -99,7 +99,7 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
-  return mangled_name && Mangled::IsCPPMangledName(mangled_name);
+  return mangled_name && Mangled::IsMangledName(mangled_name);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(

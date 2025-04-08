@@ -36,6 +36,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -57,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -1811,7 +1811,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
     const auto lang = function->GetCompileUnit()->GetLanguage();
     const auto name = function->GetMangled().GetMangledName().AsCString();
     const bool extern_c =
-        (Language::LanguageIsC(lang) && !Mangled::IsCPPMangledName(name)) ||
+        (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
         (Language::LanguageIsObjC(lang) &&
          !Language::LanguageIsCPlusPlus(lang));
 

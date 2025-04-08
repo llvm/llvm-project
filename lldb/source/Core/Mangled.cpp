@@ -33,15 +33,10 @@
 #include <cstring>
 using namespace lldb_private;
 
-static inline bool cstring_is_mangled(llvm::StringRef s) {
-  return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
-}
-
 #pragma mark Mangled
 
-bool Mangled::IsCPPMangledName(llvm::StringRef name) {
-  Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
-  return (scheme != Mangled::eManglingSchemeNone);
+bool Mangled::IsMangledName(llvm::StringRef name) {
+  return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
 }
 
 Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
@@ -126,7 +121,7 @@ int Mangled::Compare(const Mangled &a, const Mangled &b) {
 
 void Mangled::SetValue(ConstString name) {
   if (name) {
-    if (cstring_is_mangled(name.GetStringRef())) {
+    if (IsMangledName(name.GetStringRef())) {
       m_demangled.Clear();
       m_mangled = name;
     } else {
