@@ -264,7 +264,7 @@ int RTNAME(Chdir)(const char *name) {
 #endif
 }
 
-int FORTRAN_PROCEDURE_NAME(hostnm)(char* hn, int length) {
+int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
 
   std::int32_t status{0};
 
@@ -293,8 +293,8 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char* hn, int length) {
   if (status == 0) {
     // Find zero terminator and fill the string from the
     // zero terminator to the end with spaces
-    char* str_end = hn + length;
-    char* str_zero = std::find(hn, str_end, '\0');
+    char *str_end = hn + length;
+    char *str_zero = std::find(hn, str_end, '\0');
     std::fill(str_zero, str_end, ' ');
   }
 
