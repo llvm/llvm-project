@@ -4,8 +4,8 @@
 ; CHECK-NEXT: define i32 @foo(i32 %a) #0 {
 define i32 @foo(i32 %a) #0 {
 entry:
-; CHECK-NOT: %0 = call token @llvm.experimental.convergence.entry()
-  %0 = call token @llvm.experimental.convergence.entry()
+; CHECK-NOT: %tk = call token @llvm.experimental.convergence.entry()
+  %tk = call token @llvm.experimental.convergence.entry()
   ret i32 %a
 }
 
@@ -13,8 +13,8 @@ entry:
 ; CHECK-NEXT: define void @bar() #0 {
 define void @bar() #0 {
 entry:
-; CHECK-NOT: %0 = call token @llvm.experimental.convergence.entry()
-  %0 = call token @llvm.experimental.convergence.anchor()
+; CHECK-NOT: %tk = call token @llvm.experimental.convergence.entry()
+  %tk = call token @llvm.experimental.convergence.anchor()
   ret void
 }
 
@@ -22,13 +22,13 @@ entry:
 ; CHECK-NEXT: define void @baz() #0 {
 define void @baz() #0 {
 entry:
-; CHECK-NOT: %0 = call token @llvm.experimental.convergence.entry()
-  %0 = call token @llvm.experimental.convergence.entry()
+; CHECK-NOT: %tk = call token @llvm.experimental.convergence.entry()
+  %tk0 = call token @llvm.experimental.convergence.entry()
   br label %header
 
 header:
-; CHECK-NOT: %1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
-  %1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
+; CHECK-NOT: %tk1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %tk0) ]
+  %tk1 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %tk0) ]
   br i1 true, label %body, label %exit
 
 body:
