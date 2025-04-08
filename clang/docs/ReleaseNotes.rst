@@ -364,6 +364,9 @@ Bug Fixes in This Version
     #if 1 ? 1 : 999999999999999999999
     #endif
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
