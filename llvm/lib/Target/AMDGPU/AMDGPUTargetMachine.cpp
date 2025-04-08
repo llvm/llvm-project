@@ -1433,10 +1433,12 @@ bool GCNPassConfig::addPreISel() {
   // the divergent control-flow to converge.
   addPass(createFixIrreduciblePass());
   addPass(createUnifyLoopExitsPass());
-  if (!WaveTransformCF) {
+  if (!WaveTransformCF)
     addPass(createStructurizeCFGPass(false)); // true -> SkipUniformRegions
 
-    addPass(createAMDGPUAnnotateUniformValuesLegacy());
+  addPass(createAMDGPUAnnotateUniformValuesLegacy());
+
+  if (!WaveTransformCF) {
     addPass(createSIAnnotateControlFlowLegacyPass());
     // TODO: Move this right after structurizeCFG to avoid extra divergence
     // analysis. This depends on stopping SIAnnotateControlFlow from making
