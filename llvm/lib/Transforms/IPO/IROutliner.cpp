@@ -1947,6 +1947,7 @@ void replaceConstants(OutlinableRegion &Region) {
     LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
                       << *Arg << "\n");
+    // FIXME: This is actually relying on the constant use list
     CST->replaceUsesWithIf(Arg, [OutlinedFunction](Use &U) {
       if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
         return I->getFunction() == OutlinedFunction;

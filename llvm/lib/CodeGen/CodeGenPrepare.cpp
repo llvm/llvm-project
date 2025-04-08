@@ -8547,6 +8547,9 @@ static bool optimizeBranch(BranchInst *Branch, const TargetLowering &TLI,
     return false;
 
   Value *X = Cmp->getOperand(0);
+  if (!X->hasUseList())
+    return false;
+
   APInt CmpC = cast<ConstantInt>(Cmp->getOperand(1))->getValue();
 
   for (auto *U : X->users()) {

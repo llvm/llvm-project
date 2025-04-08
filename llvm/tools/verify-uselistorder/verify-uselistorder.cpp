@@ -247,6 +247,9 @@ ValueMapping::ValueMapping(const Module &M) {
 }
 
 void ValueMapping::map(const Value *V) {
+  if (!V->hasUseList())
+    return;
+
   if (IDs.lookup(V))
     return;
 
@@ -397,6 +400,9 @@ static void verifyUseListOrder(const Module &M) {
 
 static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
                                  DenseSet<Value *> &Seen) {
+  if (isa<ConstantData>(V))
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
@@ -439,6 +445,9 @@ static void shuffleValueUseLists(Value *V, std::minstd_rand0 &Gen,
 }
 
 static void reverseValueUseLists(Value *V, DenseSet<Value *> &Seen) {
+  if (isa<ConstantData>(V))
+    return;
+
   if (!Seen.insert(V).second)
     return;
 
