@@ -55,15 +55,11 @@ define <2 x i32> @narrow_add_vec_1(<2 x i32> %a, <2 x i32> %b) #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_and_b32_e32 v1, 0x3fff, v1
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x4000, v0
-; CHECK-NEXT:    v_and_b32_e32 v3, 0x4001, v3
 ; CHECK-NEXT:    v_and_b32_e32 v2, 0x4000, v2
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
-; CHECK-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
-; CHECK-NEXT:    v_perm_b32 v1, v3, v2, 0x5040100
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; CHECK-NEXT:    v_pk_add_u16 v1, v0, v1
-; CHECK-NEXT:    v_and_b32_e32 v0, 0xc000, v1
-; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; CHECK-NEXT:    v_and_b32_e32 v3, 0x4001, v3
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v2
+; CHECK-NEXT:    v_add_nc_u32_e32 v1, v1, v3
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %zext0 = and <2 x i32> %a, <i32 16384, i32 16383>
   %zext1 = and <2 x i32> %b, <i32 16384, i32 16385>

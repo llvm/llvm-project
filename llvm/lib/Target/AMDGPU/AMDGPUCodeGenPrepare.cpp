@@ -1559,22 +1559,18 @@ void AMDGPUCodeGenPrepareImpl::expandDivRem64(BinaryOperator &I) const {
   llvm_unreachable("not a division");
 }
 
-Type *findSmallestLegalBits(Instruction *I, int OrigBit, int MaxBitsNeeded,
-                            const SITargetLowering *TLI, const DataLayout &DL) {
-  if (MaxBitsNeeded >= OrigBit)
-    return nullptr;
-
-  Type *NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
-  while (OrigBit > MaxBitsNeeded) {
-    if (TLI->isTypeLegal(TLI->getValueType(DL, NewType, true)))
-      return NewType;
-
-    MaxBitsNeeded *= 2;
-    NewType = I->getType()->getWithNewBitWidth(MaxBitsNeeded);
-  }
-  return nullptr;
-}
-
+/*
+This will cause non-byte load in consistency, for example:
+```
+    %load = load i1, ptr addrspace(4) %arg, align 4
+    %zext = zext i1 %load to
+    i64 %add = add i64 %zext
+```
+Instead of creating `s_and_b32 s0, s0, 1`,
+it will create `s_and_b32 s0, s0, 0xff`.
+We accept this change since the non-byte load assumes the upper bits
+within the byte are all 0.
+*/
 static bool tryNarrowMathIfNoOverflow(Instruction *I,
                                       const SITargetLowering *TLI,
                                       const TargetTransformInfo &TTI,
@@ -1605,10 +1601,14 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
   }
 
   MaxBitsNeeded = std::max<unsigned>(bit_ceil(MaxBitsNeeded), 8);
-  Type *NewType = findSmallestLegalBits(I, OrigBit, MaxBitsNeeded, TLI, DL);
-
+  Type *NewType =
+      DL.getSmallestLegalIntType(I->getType()->getContext(), MaxBitsNeeded);
   if (!NewType)
     return false;
+  unsigned NewBit = NewType->getIntegerBitWidth();
+  if (NewBit >= OrigBit)
+    return false;
+  NewType = I->getType()->getWithNewBitWidth(NewBit);
 
   // Old cost
   InstructionCost OldCost =
