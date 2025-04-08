@@ -278,9 +278,6 @@ class GOFFWriter {
   GOFFOstream OS;
   [[maybe_unused]] MCAssembler &Asm;
 
-  /// Counter for symbol id's.
-  uint32_t EsdIdCounter = 0;
-
   void writeHeader();
   void writeSymbol(const GOFFSymbol &Symbol);
   void writeEnd();
@@ -299,21 +296,21 @@ GOFFWriter::GOFFWriter(raw_pwrite_stream &OS) : OS(OS) {}
 
 void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   if (Section.isSD()) {
-    GOFFSymbol SD(Section.getName(), Section.getId(),
+    GOFFSymbol SD(Section.getName(), Section.getOrdinal(),
                   Section.getSDAttributes());
     writeSymbol(SD);
   }
 
   if (Section.isED()) {
-    GOFFSymbol ED(Section.getName(), Section.getId(),
-                  Section.getParent()->getId(), Section.getEDAttributes());
+    GOFFSymbol ED(Section.getName(), Section.getOrdinal(),
+                  Section.getParent()->getOrdinal(), Section.getEDAttributes());
     ED.SectionLength = Asm.getSectionAddressSize(Section);
     writeSymbol(ED);
   }
 
   if (Section.isPR()) {
-    GOFFSymbol PR(Section.getName(), Section.getId(),
-                  Section.getParent()->getId(), Section.getPRAttributes());
+    GOFFSymbol PR(Section.getName(), Section.getOrdinal(),
+                  Section.getParent()->getOrdinal(), Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
@@ -329,20 +326,21 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 }
 
 void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol LD(Symbol.getName(), ++EsdIdCounter,
-                static_cast<MCSectionGOFF &>(Symbol.getSection()).getId(),
+  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(),
+                static_cast<MCSectionGOFF &>(Symbol.getSection()).getOrdinal(),
                 Symbol.getLDAttributes());
   if (Symbol.getADA())
-    LD.ADAEsdId = Symbol.getADA()->getId();
+    LD.ADAEsdId = Symbol.getADA()->getOrdinal();
   writeSymbol(LD);
 }
 
 void GOFFWriter::defineSymbols() {
+  unsigned Ordinal = 0;
   // Process all sections.
   for (MCSection &S : Asm) {
     auto &Section = cast<MCSectionGOFF>(S);
+    Section.setOrdinal(++Ordinal);
     defineSectionSymbols(Section);
-    EsdIdCounter = std::max(EsdIdCounter, Section.getId());
   }
 
   // Process all symbols
@@ -351,6 +349,7 @@ void GOFFWriter::defineSymbols() {
       continue;
     auto &Symbol = cast<MCSymbolGOFF>(Sym);
     if (Symbol.hasLDAttributes()) {
+      Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);
     }
   }

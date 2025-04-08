@@ -78,9 +78,6 @@ public:
 
   bool useCodeAlign() const override { return false; }
 
-  // Return the id of the section. It is the 1-based ordinal number.
-  unsigned getId() const { return getOrdinal() + 1; }
-
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
 
