@@ -1186,7 +1186,7 @@ def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
 def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
 def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
-// Load/Store psuedos with QC.E.* Mnemonics. These expand to an AUIPC +
+// Load/Store pseudos with QC.E.* Mnemonics. These expand to an AUIPC +
 // (Standard) Load/Store sequence, as this can materialize all 32-bit addresses,
 // and is shorter than e.g. an AUIPC + Xqcilo Load/Store sequence. These
 // sequences can be turned back into a single Xqcilo instruction using linker
