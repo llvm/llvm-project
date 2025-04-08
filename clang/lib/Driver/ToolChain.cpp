@@ -744,10 +744,12 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = TT.isOSWindows()
-                 ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-             : TT.isOSAIX() ? ".a"
-                            : ".so";
+    if (TT.isOSWindows())
+      Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+    else if (TT.isOSAIX())
+      Suffix = ".a";
+    else
+      Suffix = ".so";
     break;
   }
 
