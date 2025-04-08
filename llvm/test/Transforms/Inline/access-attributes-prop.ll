@@ -750,3 +750,47 @@ define void @prop_range_direct(i32 %v) {
   call void @foo4(i32 range(i32 1, 11) %v)
   ret void
 }
+
+declare void @bar_fp(float %x)
+
+define void @foo_fp(float %x) {
+; CHECK-LABEL: define {{[^@]+}}@foo_fp
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    call void @bar_fp(float [[X]])
+; CHECK-NEXT:    ret void
+;
+  call void @bar_fp(float %x)
+  ret void
+}
+
+define void @prop_param_nofpclass(float %x) {
+; CHECK-LABEL: define {{[^@]+}}@prop_param_nofpclass
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    call void @bar_fp(float nofpclass(nan inf) [[X]])
+; CHECK-NEXT:    ret void
+;
+  call void @foo_fp(float nofpclass(nan inf) %x)
+  ret void
+}
+
+declare void @func_fp(float)
+
+define void @union_nofpclass(float %v) {
+; CHECK-LABEL: define {{[^@]+}}@union_nofpclass
+; CHECK-SAME: (float [[V:%.*]]) {
+; CHECK-NEXT:    call void @func_fp(float nofpclass(inf) [[V]])
+; CHECK-NEXT:    ret void
+;
+  call void @func_fp(float nofpclass(inf) %v)
+  ret void
+}
+
+define void @prop_nofpclass_union(float %v) {
+; CHECK-LABEL: define {{[^@]+}}@prop_nofpclass_union
+; CHECK-SAME: (float [[V:%.*]]) {
+; CHECK-NEXT:    call void @func_fp(float nofpclass(nan inf) [[V]])
+; CHECK-NEXT:    ret void
+;
+  call void @union_nofpclass(float nofpclass(nan) %v)
+  ret void
+}
