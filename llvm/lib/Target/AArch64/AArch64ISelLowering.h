@@ -1369,6 +1369,8 @@ private:
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
   }
+
+  bool shouldExtendTypeInLibCall(EVT Type) const override { return false; }
 };
 
 namespace AArch64 {
