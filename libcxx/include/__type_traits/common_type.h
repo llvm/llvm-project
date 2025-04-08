@@ -31,7 +31,7 @@ template <class... _Args>
 struct common_type;
 
 template <class... _Args>
-using __common_type_t = typename common_type<_Args...>::type;
+using __common_type_t _LIBCPP_NODEBUG = typename common_type<_Args...>::type;
 
 template <class... _Args>
 struct common_type : __builtin_common_type<__common_type_t, __type_identity, __empty, _Args...> {};
@@ -40,7 +40,7 @@ struct common_type : __builtin_common_type<__common_type_t, __type_identity, __e
 #  if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
 template <class _Tp, class _Up>
-using __cond_type = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
+using __cond_type _LIBCPP_NODEBUG = decltype(false ? std::declval<_Tp>() : std::declval<_Up>());
 
 template <class _Tp, class _Up, class = void>
 struct __common_type3 {};
@@ -48,7 +48,7 @@ struct __common_type3 {};
 // sub-bullet 4 - "if COND_RES(CREF(D1), CREF(D2)) denotes a type..."
 template <class _Tp, class _Up>
 struct __common_type3<_Tp, _Up, void_t<__cond_type<const _Tp&, const _Up&>>> {
-  using type = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
+  using type _LIBCPP_NODEBUG = remove_cvref_t<__cond_type<const _Tp&, const _Up&>>;
 };
 
 template <class _Tp, class _Up, class = void>

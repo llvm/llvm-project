@@ -49,6 +49,11 @@ llvm::ArrayRef<uint8_t> MinidumpParser::GetStream(StreamType stream_type) {
   return m_file->getRawStream(stream_type).value_or(llvm::ArrayRef<uint8_t>());
 }
 
+std::optional<llvm::ArrayRef<uint8_t>>
+MinidumpParser::GetRawStream(StreamType stream_type) {
+  return m_file->getRawStream(stream_type);
+}
+
 UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
   auto cv_record =
       GetData().slice(module->CvRecord.RVA, module->CvRecord.DataSize);
@@ -651,6 +656,7 @@ MinidumpParser::GetStreamTypeAsString(StreamType stream_type) {
     ENUM_TO_CSTR(FacebookAbortReason);
     ENUM_TO_CSTR(FacebookThreadName);
     ENUM_TO_CSTR(FacebookLogcat);
+    ENUM_TO_CSTR(LLDBGenerated);
   }
   return "unknown stream type";
 }

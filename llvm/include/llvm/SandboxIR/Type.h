@@ -34,6 +34,7 @@ class StructType;
 class TargetExtType;
 class Module;
 class FPMathOperator;
+class ConstantDataSequential;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/Values.def"
@@ -63,6 +64,7 @@ protected:
   friend class TargetExtType;      // For LLVMTy.
   friend class Module;             // For LLVMTy.
   friend class FPMathOperator;     // For LLVMTy.
+  friend class ConstantDataSequential; // For LLVMTy.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
@@ -291,7 +293,7 @@ public:
 class PointerType : public Type {
 public:
   // TODO: add missing functions
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+
   static PointerType *get(Context &Ctx, unsigned AddressSpace);
 
   static bool classof(const Type *From) {

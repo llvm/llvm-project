@@ -154,7 +154,6 @@ public:
     });
 
     addSourceMaterialization(sourceMaterializationCallback);
-    addArgumentMaterialization(sourceMaterializationCallback);
   }
 };
 
@@ -459,8 +458,7 @@ struct LinalgDetensorize
       });
 
       for (Block &block : llvm::drop_begin(func.getFunctionBody(), 1))
-        for (BlockArgument blockArgument : block.getArguments())
-          blockArgsToDetensor.insert(blockArgument);
+        blockArgsToDetensor.insert_range(block.getArguments());
     }
   };
 

@@ -53,6 +53,16 @@ void mlir::mpi::RecvOp::getCanonicalizationPatterns(
   results.add<FoldCast<mlir::mpi::RecvOp>>(context);
 }
 
+void mlir::mpi::ISendOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldCast<mlir::mpi::ISendOp>>(context);
+}
+
+void mlir::mpi::IRecvOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldCast<mlir::mpi::IRecvOp>>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//

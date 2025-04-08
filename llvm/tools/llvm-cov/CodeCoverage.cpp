@@ -588,8 +588,7 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
   // Invoke the demangler.
   std::vector<StringRef> ArgsV;
   ArgsV.reserve(ViewOpts.DemanglerOpts.size());
-  for (StringRef Arg : ViewOpts.DemanglerOpts)
-    ArgsV.push_back(Arg);
+  llvm::append_range(ArgsV, ViewOpts.DemanglerOpts);
   std::optional<StringRef> Redirects[] = {
       InputPath.str(), OutputPath.str(), {""}};
   std::string ErrMsg;
@@ -1023,6 +1022,12 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   cl::alias ShowOutputDirectoryA("o", cl::desc("Alias for --output-dir"),
                                  cl::aliasopt(ShowOutputDirectory));
 
+  cl::opt<bool> BinaryCounters(
+      "binary-counters", cl::Optional,
+      cl::desc("Show binary counters (1/0) in lines and branches instead of "
+               "integer execution counts"),
+      cl::cat(ViewCategory));
+
   cl::opt<uint32_t> TabSize(
       "tab-size", cl::init(2),
       cl::desc(
@@ -1100,6 +1105,7 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
   ViewOpts.ShowDirectoryCoverage = ShowDirectoryCoverage;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
+  ViewOpts.BinaryCounters = BinaryCounters;
   ViewOpts.TabSize = TabSize;
   ViewOpts.ProjectTitle = ProjectTitle;
 

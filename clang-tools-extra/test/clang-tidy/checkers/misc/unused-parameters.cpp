@@ -1,6 +1,6 @@
 // RUN: echo "static void staticFunctionHeader(int i) {;}" > %T/header.h
 // RUN: echo "static void staticFunctionHeader(int  /*i*/) {;}" > %T/header-fixed.h
-// RUN: %check_clang_tidy -std=c++11 %s misc-unused-parameters %t -- -header-filter='.*' -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy  --match-partial-fixes -std=c++11 %s misc-unused-parameters %t -- -header-filter='.*' -- -fno-delayed-template-parsing
 // RUN: diff %T/header.h %T/header-fixed.h
 // FIXME: Make the test work in all language modes.
 
@@ -33,6 +33,16 @@ void f(void (*fn)()) {;}
 // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: parameter 'fn' is unused [misc-unused-parameters]
 // CHECK-FIXES: {{^}}void f(void (* /*fn*/)()) {;}{{$}}
 
+int *k([[clang::lifetimebound]] int *i) { return nullptr; }
+// CHECK-MESSAGES: :[[@LINE-1]]:38: warning: parameter 'i' is unused [misc-unused-parameters]
+// CHECK-FIXES: {{^}}int *k({{\[\[clang::lifetimebound\]\]}} int * /*i*/) { return nullptr; }{{$}}
+
+#define ATTR_BEFORE(x) [[clang::lifetimebound]] x
+int* m(ATTR_BEFORE(const int *i)) { return nullptr; }
+// CHECK-MESSAGES: :[[@LINE-1]]:31: warning: parameter 'i' is unused [misc-unused-parameters]
+// CHECK-FIXES: {{^}}int* m(ATTR_BEFORE(const int * /*i*/)) { return nullptr; }{{$}}
+#undef ATTR_BEFORE
+
 // Unchanged cases
 // ===============
 void f(int i); // Don't remove stuff in declarations
@@ -41,6 +51,12 @@ void h(int i[]);
 void s(int i[1]);
 void u(void (*fn)());
 void w(int i) { (void)i; } // Don't remove used parameters
+
+// Don't reanchor the attribute to the type:
+int *x(int *i [[clang::lifetimebound]]) { return nullptr; }
+#define ATTR_AFTER(x) x [[clang::lifetimebound]]
+int* y(ATTR_AFTER(const int *i)) { return nullptr; }
+#undef ATTR_AFTER
 
 bool useLambda(int (*fn)(int));
 static bool static_var = useLambda([] (int a) { return a; });

@@ -24,15 +24,11 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/AutoConvert.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1222,7 +1218,7 @@ unsigned SourceManager::getPresumedColumnNumber(SourceLocation Loc,
   return PLoc.getColumn();
 }
 
-// Check if mutli-byte word x has bytes between m and n, included. This may also
+// Check if multi-byte word x has bytes between m and n, included. This may also
 // catch bytes equal to n + 1.
 // The returned value holds a 0x80 at each byte position that holds a match.
 // see http://graphics.stanford.edu/~seander/bithacks.html#HasBetweenInWord

@@ -1,52 +1,25 @@
-/*
- * Copyright (c) 2014 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/clcmacro.h>
-
-#include "math.h"
 #include "sincos_helpers.h"
+#include <clc/clc.h>
+#include <clc/clc_convert.h>
+#include <clc/clcmacro.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sincos_helpers.h>
+#include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-_CLC_OVERLOAD _CLC_DEF float cos(float x)
-{
-    int ix = as_int(x);
-    int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
-
-    float r0, r1;
-    int regn = __clc_argReductionS(&r0, &r1, dx);
-
-    float ss = -__clc_sinf_piby4(r0, r1);
-    float cc =  __clc_cosf_piby4(r0, r1);
-
-    float c =  (regn & 1) != 0 ? ss : cc;
-    c = as_float(as_int(c) ^ ((regn > 1) << 31));
-
-    c = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : c;
-
-    return c;
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, cos, float);
+// FP32 and FP16 versions.
+#define __CLC_BODY <cos.inc>
+#include <clc/math/gentype.inc>
 
 #ifdef cl_khr_fp64
 
@@ -75,5 +48,3 @@ _CLC_OVERLOAD _CLC_DEF double cos(double x) {
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, cos, double);
 
 #endif
-
-_CLC_DEFINE_UNARY_BUILTIN_FP16(cos)

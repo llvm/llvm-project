@@ -113,6 +113,18 @@ template <typename A> int ExpressionBase<A>::Rank() const {
       derived().u);
 }
 
+template <typename A> int ExpressionBase<A>::Corank() const {
+  return common::visit(
+      [](const auto &x) {
+        if constexpr (common::HasMember<decltype(x), TypelessExpression>) {
+          return 0;
+        } else {
+          return x.Corank();
+        }
+      },
+      derived().u);
+}
+
 DynamicType Parentheses<SomeDerived>::GetType() const {
   return left().GetType().value();
 }

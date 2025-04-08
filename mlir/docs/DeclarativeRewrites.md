@@ -237,9 +237,9 @@ In the above, we are using `BOp`'s result for building `COp`.
 
 Given that `COp` was specified with table-driven op definition, there will be
 several `build()` methods generated for it. One of them has aggregated
-parameters for result types, operands, and attributes in the signature: `void
+parameters for result types, operands, and properties in the signature: `void
 COp::build(..., ArrayRef<Type> resultTypes, Array<Value> operands,
-ArrayRef<NamedAttribute> attr)`. The pattern in the above calls this `build()`
+const COp::Properties& properties)`. The pattern in the above calls this `build()`
 method for constructing the `COp`.
 
 In general, arguments in the result pattern will be passed directly to the

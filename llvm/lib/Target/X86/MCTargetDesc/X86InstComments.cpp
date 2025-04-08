@@ -40,6 +40,17 @@ using namespace llvm;
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
+#define CASE_MASK_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##k_Int:
+
+#define CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##kz_Int:
+
+#define CASE_AVX512_INS_COMMON_INT(Inst, Suffix, src) \
+  CASE_AVX_INS_COMMON(Inst, Suffix, src##_Int)        \
+  CASE_MASK_INS_COMMON_INT(Inst, Suffix, src)         \
+  CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src)
+
 #define CASE_FPCLASS_PACKED(Inst, src)    \
   CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
   CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
@@ -196,8 +207,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, r)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, r)
 
 #define CASE_FMA_SCALAR_MEM(Inst)                 \
   CASE_AVX_INS_COMMON(Inst##SD, , m)              \
@@ -206,8 +217,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, m)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, m)
 
 #define CASE_FMA4(Inst, suf)                      \
   CASE_AVX_INS_COMMON(Inst, 4, suf)               \
@@ -968,7 +979,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   int SrcIdx;
   switch (MI->getOpcode()) {
-    CASE_FPCLASS_PACKED(FPCLASSPBF16, r)
+    CASE_FPCLASS_PACKED(FPCLASSBF16, r)
     CASE_FPCLASS_PACKED(FPCLASSPH, r)
     CASE_FPCLASS_PACKED(FPCLASSPS, r)
     CASE_FPCLASS_PACKED(FPCLASSPD, r)
@@ -978,7 +989,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
       SrcIdx = NumOperands - 2;
       break;
     }
-    CASE_FPCLASS_PACKED_MEM(FPCLASSPBF16)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSBF16)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPH)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPS)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPD)

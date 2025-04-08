@@ -1,7 +1,7 @@
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck %s --check-prefixes=BOTH,INTRINSICS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=false -o - | FileCheck --check-prefix=LINEONLY %s
-! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --write-experimental-debuginfo=true -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck %s --check-prefixes=BOTH,INTRINSICS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck %s --check-prefixes=BOTH,RECORDS
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=false -o - | FileCheck --check-prefix=LINEONLY %s
+! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only %s -mllvm --experimental-debuginfo-iterators=true -o - | FileCheck --check-prefix=LINEONLY %s
 
 ! This tests checks the debug information for local variables in llvm IR.
 
@@ -27,7 +27,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i64 @_QFPfn1
-! BOTH-SAME: (ptr nocapture %[[ARG1:.*]], ptr nocapture %[[ARG2:.*]], ptr nocapture %[[ARG3:.*]])
+! BOTH-SAME: (ptr captures(none) %[[ARG1:.*]], ptr captures(none) %[[ARG2:.*]], ptr captures(none) %[[ARG3:.*]])
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG1]], metadata ![[A1:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG2]], metadata ![[B1:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[ARG3]], metadata ![[C1:.*]], metadata !DIExpression())
@@ -40,7 +40,7 @@
 ! BOTH-LABEL: }
 
 ! BOTH-LABEL: define {{.*}}i32 @_QFPfn2
-! BOTH-SAME: (ptr nocapture %[[FN2ARG1:.*]], ptr nocapture %[[FN2ARG2:.*]], ptr nocapture %[[FN2ARG3:.*]])
+! BOTH-SAME: (ptr captures(none) %[[FN2ARG1:.*]], ptr captures(none) %[[FN2ARG2:.*]], ptr captures(none) %[[FN2ARG3:.*]])
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG1]], metadata ![[A2:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG2]], metadata ![[B2:.*]], metadata !DIExpression())
 ! INTRINSICS-DAG: call void @llvm.dbg.declare(metadata ptr %[[FN2ARG3]], metadata ![[C2:.*]], metadata !DIExpression())
@@ -107,4 +107,4 @@ contains
   end function
 end program
 
-LINEONLY-NOT: DILocalVariable
+! LINEONLY-NOT: DILocalVariable

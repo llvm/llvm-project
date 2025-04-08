@@ -11,7 +11,7 @@ RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-alias.s -o ref-alias.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ref-thunk.s -o ref-thunk.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows func.s -o func.obj
 RUN: llvm-mc -filetype=obj -triple=x86_64-windows func-x86_64.s -o func-x86_64.obj
-RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
 
 RUN: llvm-lib -machine:arm64ec -out:sym-arm64ec.lib sym-arm64ec.obj nsym-aarch64.obj

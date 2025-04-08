@@ -264,7 +264,7 @@ void HexagonSplitDoubleRegs::partitionRegisters(UUSetMap &P2Rs) {
         }
         if (MRI->getRegClass(T) != DoubleRC)
           continue;
-        unsigned u = Register::virtReg2Index(T);
+        unsigned u = T.virtRegIndex();
         if (FixedRegs[u])
           continue;
         LLVM_DEBUG(dbgs() << ' ' << printReg(T, TRI));

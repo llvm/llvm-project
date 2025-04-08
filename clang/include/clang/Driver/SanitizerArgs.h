@@ -26,6 +26,7 @@ class SanitizerArgs {
   SanitizerSet RecoverableSanitizers;
   SanitizerSet TrapSanitizers;
   SanitizerSet MergeHandlers;
+  SanitizerMaskCutoffs SkipHotCutoffs;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;
@@ -42,6 +43,7 @@ class SanitizerArgs {
   bool CfiICallGeneralizePointers = false;
   bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
+  bool KcfiArity = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool StableABI = false;

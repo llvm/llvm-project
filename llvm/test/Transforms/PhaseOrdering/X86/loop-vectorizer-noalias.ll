@@ -16,7 +16,7 @@ entry:
 ; This loop should not get vectorized.
 define void @accsum(ptr noundef %vals, i64 noundef %num) #0 {
 ; CHECK-LABEL: define void @accsum(
-; CHECK-SAME: ptr nocapture noundef [[VALS:%.*]], i64 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noundef captures(none) [[VALS:%.*]], i64 noundef [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i64 [[NUM]], 1
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]

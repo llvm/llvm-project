@@ -15,7 +15,7 @@ entry:
   ret i64 %xor
 }
 
-; Same check with mutliple uses of %neg
+; Same check with multiple uses of %neg
 define i64 @test2(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK: eon

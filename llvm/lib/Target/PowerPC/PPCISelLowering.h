@@ -161,6 +161,12 @@ namespace llvm {
     SRA,
     SHL,
 
+    /// These nodes represent PPC arithmetic operations with carry.
+    ADDC,
+    ADDE,
+    SUBC,
+    SUBE,
+
     /// FNMSUB - Negated multiply-subtract instruction.
     FNMSUB,
 
@@ -1226,8 +1232,6 @@ namespace llvm {
     bool canReuseLoadAddress(SDValue Op, EVT MemVT, ReuseLoadInfo &RLI,
                              SelectionDAG &DAG,
                              ISD::LoadExtType ET = ISD::NON_EXTLOAD) const;
-    void spliceIntoChain(SDValue ResChain, SDValue NewResChain,
-                         SelectionDAG &DAG) const;
 
     void LowerFP_TO_INTForReuse(SDValue Op, ReuseLoadInfo &RLI,
                                 SelectionDAG &DAG, const SDLoc &dl) const;
@@ -1282,7 +1286,6 @@ namespace llvm {
     SDValue LowerGlobalTLSAddressLinux(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerUaddo(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
@@ -1318,6 +1321,8 @@ namespace llvm {
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerADDSUBO(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerToLibCall(const char *LibCallName, SDValue Op,
                            SelectionDAG &DAG) const;
     SDValue lowerLibCallBasedOnType(const char *LibCallFloatName,
@@ -1346,6 +1351,8 @@ namespace llvm {
 
     SDValue LowerVectorLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVectorStore(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDMFVectorLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerDMFVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                             CallingConv::ID CallConv, bool isVarArg,
@@ -1373,7 +1380,7 @@ namespace llvm {
     bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                         bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

@@ -305,3 +305,42 @@ template <class... Args> struct mdispatch_ {
 mdispatch_<int, int> d;
 
 } // namespace GH116105
+
+namespace GH121242 {
+    // Non-dependent type pack access
+    template <int...x>
+    int y = x...[0];
+
+    struct X {};
+
+    template <X...x>
+    X z = x...[0];
+
+    void foo() {
+        (void)y<0>;
+        (void)z<X{}>;
+    }
+} // namespace GH121242
+
+namespace GH123033 {
+  template <class... Types>
+  requires __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  requires  __is_same_as(Types...[0], int)
+  void print(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d);
+
+  template <class... Types>
+  Types...[0] convert(double d) {
+      return static_cast<Types...[0]>(d);
+  }
+
+  void f() {
+      print<int, int>(12.34);
+      convert<int, int>(12.34);
+  }
+}

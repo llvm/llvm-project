@@ -17,90 +17,121 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-using Compare = int(const void *, const void *);
-using CompareWithState = int(const void *, const void *, void *);
-
-enum class CompType { COMPARE, COMPARE_WITH_STATE };
-
-struct Comparator {
-  union {
-    Compare *comp_func;
-    CompareWithState *comp_func_r;
-  };
-  const CompType comp_type;
-
-  void *arg;
-
-  Comparator(Compare *func)
-      : comp_func(func), comp_type(CompType::COMPARE), arg(nullptr) {}
-
-  Comparator(CompareWithState *func, void *arg_val)
-      : comp_func_r(func), comp_type(CompType::COMPARE_WITH_STATE),
-        arg(arg_val) {}
-
-#if defined(__clang__)
-  // Recent upstream changes to -fsanitize=function find more instances of
-  // function type mismatches. One case is with the comparator passed to this
-  // class. Libraries will tend to pass comparators that take pointers to
-  // varying types while this comparator expects to accept const void pointers.
-  // Ideally those tools would pass a function that strictly accepts const
-  // void*s to avoid UB, or would use qsort_r to pass their own comparator.
-  [[clang::no_sanitize("function")]]
-#endif
-  int comp_vals(const void *a, const void *b) const {
-    if (comp_type == CompType::COMPARE) {
-      return comp_func(a, b);
-    } else {
-      return comp_func_r(a, b, arg);
-    }
-  }
-};
-
-class Array {
-  uint8_t *array;
-  size_t array_size;
+class ArrayGenericSize {
+  cpp::byte *array_base;
+  size_t array_len;
   size_t elem_size;
-  Comparator compare;
+
+  LIBC_INLINE cpp::byte *get_internal(size_t i) const {
+    return array_base + (i * elem_size);
+  }
 
 public:
-  Array(uint8_t *a, size_t s, size_t e, Comparator c)
-      : array(a), array_size(s), elem_size(e), compare(c) {}
+  LIBC_INLINE ArrayGenericSize(void *a, size_t s, size_t e)
+      : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s),
+        elem_size(e) {}
 
-  uint8_t *get(size_t i) const { return array + i * elem_size; }
+  static constexpr bool has_fixed_size() { return false; }
 
-  void swap(size_t i, size_t j) const {
-    uint8_t *elem_i = get(i);
-    uint8_t *elem_j = get(j);
-    for (size_t b = 0; b < elem_size; ++b) {
-      uint8_t temp = elem_i[b];
-      elem_i[b] = elem_j[b];
-      elem_j[b] = temp;
+  LIBC_INLINE void *get(size_t i) const { return get_internal(i); }
+
+  LIBC_INLINE void swap(size_t i, size_t j) const {
+    // It's possible to use 8 byte blocks with `uint64_t`, but that
+    // generates more machine code as the remainder loop gets
+    // unrolled, plus 4 byte operations are more likely to be
+    // efficient on a wider variety of hardware. On x86 LLVM tends
+    // to unroll the block loop again into 2 16 byte swaps per
+    // iteration which is another reason that 4 byte blocks yields
+    // good performance even for big types.
+    using block_t = uint32_t;
+    constexpr size_t BLOCK_SIZE = sizeof(block_t);
+
+    alignas(block_t) cpp::byte tmp_block[BLOCK_SIZE];
+
+    cpp::byte *elem_i = get_internal(i);
+    cpp::byte *elem_j = get_internal(j);
+
+    const size_t elem_size_rem = elem_size % BLOCK_SIZE;
+    const cpp::byte *elem_i_block_end = elem_i + (elem_size - elem_size_rem);
+
+    while (elem_i != elem_i_block_end) {
+      __builtin_memcpy(tmp_block, elem_i, BLOCK_SIZE);
+      __builtin_memcpy(elem_i, elem_j, BLOCK_SIZE);
+      __builtin_memcpy(elem_j, tmp_block, BLOCK_SIZE);
+
+      elem_i += BLOCK_SIZE;
+      elem_j += BLOCK_SIZE;
+    }
+
+    for (size_t n = 0; n < elem_size_rem; ++n) {
+      cpp::byte tmp = elem_i[n];
+      elem_i[n] = elem_j[n];
+      elem_j[n] = tmp;
     }
   }
 
-  int elem_compare(size_t i, const uint8_t *other) const {
-    // An element must compare equal to itself so we don't need to consult the
-    // user provided comparator.
-    if (get(i) == other)
-      return 0;
-    return compare.comp_vals(get(i), other);
+  LIBC_INLINE size_t len() const { return array_len; }
+
+  // Make an Array starting at index |i| and length |s|.
+  LIBC_INLINE ArrayGenericSize make_array(size_t i, size_t s) const {
+    return ArrayGenericSize(get_internal(i), s, elem_size);
   }
 
-  size_t size() const { return array_size; }
-
-  // Make an Array starting at index |i| and size |s|.
-  LIBC_INLINE Array make_array(size_t i, size_t s) const {
-    return Array(get(i), s, elem_size, compare);
-  }
-
-  // Reset this Array to point at a different interval of the same items.
-  LIBC_INLINE void reset_bounds(uint8_t *a, size_t s) {
-    array = a;
-    array_size = s;
+  // Reset this Array to point at a different interval of the same
+  // items starting at index |i|.
+  LIBC_INLINE void reset_bounds(size_t i, size_t s) {
+    array_base = get_internal(i);
+    array_len = s;
   }
 };
 
-using SortingRoutine = void(const Array &);
+// Having a specialized Array type for sorting that knows at
+// compile-time what the size of the element is, allows for much more
+// efficient swapping and for cheaper offset calculations.
+template <size_t ELEM_SIZE> class ArrayFixedSize {
+  cpp::byte *array_base;
+  size_t array_len;
+
+  LIBC_INLINE cpp::byte *get_internal(size_t i) const {
+    return array_base + (i * ELEM_SIZE);
+  }
+
+public:
+  LIBC_INLINE ArrayFixedSize(void *a, size_t s)
+      : array_base(reinterpret_cast<cpp::byte *>(a)), array_len(s) {}
+
+  // Beware this function is used a heuristic for cheap to swap types, so
+  // instantiating `ArrayFixedSize` with `ELEM_SIZE > 100` is probably a bad
+  // idea perf wise.
+  static constexpr bool has_fixed_size() { return true; }
+
+  LIBC_INLINE void *get(size_t i) const { return get_internal(i); }
+
+  LIBC_INLINE void swap(size_t i, size_t j) const {
+    alignas(32) cpp::byte tmp[ELEM_SIZE];
+
+    cpp::byte *elem_i = get_internal(i);
+    cpp::byte *elem_j = get_internal(j);
+
+    __builtin_memcpy(tmp, elem_i, ELEM_SIZE);
+    __builtin_memmove(elem_i, elem_j, ELEM_SIZE);
+    __builtin_memcpy(elem_j, tmp, ELEM_SIZE);
+  }
+
+  LIBC_INLINE size_t len() const { return array_len; }
+
+  // Make an Array starting at index |i| and length |s|.
+  LIBC_INLINE ArrayFixedSize<ELEM_SIZE> make_array(size_t i, size_t s) const {
+    return ArrayFixedSize<ELEM_SIZE>(get_internal(i), s);
+  }
+
+  // Reset this Array to point at a different interval of the same
+  // items starting at index |i|.
+  LIBC_INLINE void reset_bounds(size_t i, size_t s) {
+    array_base = get_internal(i);
+    array_len = s;
+  }
+};
 
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

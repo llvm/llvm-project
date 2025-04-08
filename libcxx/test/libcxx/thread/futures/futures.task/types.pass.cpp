@@ -19,16 +19,16 @@
 
 // This is a libc++ extension.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <future>
 #include <type_traits>
 
-#include "test_macros.h"
-
 struct A {};
 
-int main(int, char**)
-{
-    static_assert((std::is_same<std::packaged_task<A(int, char)>::result_type, A>::value), "");
+int main(int, char**) {
+  static_assert((std::is_same<std::packaged_task<A(int, char)>::result_type, A>::value), "");
+  static_assert((std::is_same<std::packaged_task<void(int, char)>::result_type, void>::value), "");
 
   return 0;
 }

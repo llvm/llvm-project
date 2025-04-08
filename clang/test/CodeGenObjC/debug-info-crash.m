@@ -36,5 +36,6 @@
 }
 + (NSAttributedString *)attributedStringWithString:(id)string image:(NSImage *)image  {
   NSMutableAttributedString *attrStr;
+  return 0;
 }
 @end

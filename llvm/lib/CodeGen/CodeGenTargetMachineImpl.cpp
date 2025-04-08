@@ -133,8 +133,8 @@ bool CodeGenTargetMachineImpl::addAsmPrinter(PassManagerBase &PM,
                                              MCContext &Context) {
   Expected<std::unique_ptr<MCStreamer>> MCStreamerOrErr =
       createMCStreamer(Out, DwoOut, FileType, Context);
-  if (auto Err = MCStreamerOrErr.takeError()) {
-    Context.reportError(SMLoc(), toString(std::move(Err)));
+  if (!MCStreamerOrErr) {
+    Context.reportError(SMLoc(), toString(MCStreamerOrErr.takeError()));
     return true;
   }
 
@@ -168,8 +168,7 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
         MAI, MII, MRI);
     for (StringRef Opt : Options.MCOptions.InstPrinterOptions)
       if (!InstPrinter->applyTargetSpecificCLOption(Opt))
-        return createStringError(inconvertibleErrorCode(),
-                                 "invalid InstPrinter option '" + Opt + "'");
+        return createStringError("invalid InstPrinter option '" + Opt + "'");
 
     // Create a code emitter if asked to show the encoding.
     std::unique_ptr<MCCodeEmitter> MCE;

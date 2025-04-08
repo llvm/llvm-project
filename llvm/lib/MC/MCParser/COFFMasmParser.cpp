@@ -441,6 +441,9 @@ bool COFFMasmParser::parseDirectiveOption(StringRef Directive, SMLoc Loc) {
 ///          statements
 ///      label "endproc"
 bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
+  if (!getStreamer().getCurrentFragment())
+    return Error(getTok().getLoc(), "expected section directive");
+
   StringRef Label;
   if (getParser().parseIdentifier(Label))
     return Error(Loc, "expected identifier for procedure");

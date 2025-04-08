@@ -85,7 +85,7 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
                                            UnrankedMemRefType resultType,
                                            ValueRange inputs, Location loc,
                                            const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type
+  // A source materialization must return a value of type
   // `resultType`, so insert a cast from the memref descriptor type
   // (!llvm.struct) to the original memref type.
   Value packed =
@@ -101,7 +101,7 @@ static Value rankedMemRefMaterialization(OpBuilder &builder,
                                          MemRefType resultType,
                                          ValueRange inputs, Location loc,
                                          const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type `resultType`,
+  // A source materialization must return a value of type `resultType`,
   // so insert a cast from the memref descriptor type (!llvm.struct) to the
   // original memref type.
   Value packed =
@@ -234,19 +234,9 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
         .getResult(0);
   });
 
-  // Argument materializations convert from the new block argument types
+  // Source materializations convert from the new block argument types
   // (multiple SSA values that make up a memref descriptor) back to the
   // original block argument type.
-  addArgumentMaterialization([&](OpBuilder &builder,
-                                 UnrankedMemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return unrankedMemRefMaterialization(builder, resultType, inputs, loc,
-                                         *this);
-  });
-  addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return rankedMemRefMaterialization(builder, resultType, inputs, loc, *this);
-  });
   addSourceMaterialization([&](OpBuilder &builder,
                                UnrankedMemRefType resultType, ValueRange inputs,
                                Location loc) {
@@ -304,13 +294,20 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
-  if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
-      type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
-      type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
-      type.isFloat4E2M1FN() || type.isFloat6E2M3FN() || type.isFloat6E3M2FN() ||
-      type.isFloat8E8M0FNU())
+  // Valid LLVM float types are used directly.
+  if (LLVM::isCompatibleType(type))
+    return type;
+
+  // F4, F6, F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
+          Float8E8M0FNUType>(type))
     return IntegerType::get(&getContext(), type.getWidth());
-  return type;
+
+  // Other floating-point types: A custom type conversion rule must be
+  // specified by the user.
+  return Type();
 }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number
@@ -488,7 +485,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) const {
-  if (!isStrided(type)) {
+  if (!type.isStrided()) {
     emitError(
         UnknownLoc::get(type.getContext()),
         "conversion to strided form failed either due to non-strided layout "
@@ -606,7 +603,7 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
 
   int64_t offset = 0;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(memrefTy, strides, offset)))
+  if (failed(memrefTy.getStridesAndOffset(strides, offset)))
     return false;
 
   for (int64_t stride : strides)

@@ -38,7 +38,7 @@ namespace cwg1512 { // cwg1512: 4
   template<typename A, typename B, typename C> void composite_pointer_type_is_ord() {
     composite_pointer_type_is_base<A, B, C>();
 
-    typedef __typeof(val<A>() < val<B>()) cmp; // #cwg1512-lt 
+    typedef __typeof(val<A>() < val<B>()) cmp; // #cwg1512-lt
     // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)() noexcept' and 'int (*)()')}}
     //   since-cxx17-note@#cwg1512-noexcept-1st {{in instantiation of function template specialization 'cwg1512::composite_pointer_type_is_ord<int (*)() noexcept, int (*)(), int (*)()>' requested here}}
     // since-cxx17-warning@#cwg1512-lt {{ordered comparison of function pointers ('int (*)()' and 'int (*)() noexcept')}}
@@ -170,7 +170,7 @@ namespace cwg1512 { // cwg1512: 4
     //   since-cxx11-note@#cwg1512-Wrap {{second operand was implicitly converted to type 'int *'}}
   }
 #endif
-}
+} // namespace cwg1512
 
 namespace cwg1514 { // cwg1514: 11
 #if __cplusplus >= 201103L
@@ -184,7 +184,7 @@ namespace cwg1514 { // cwg1514: 11
 
   // The behavior in other contexts is superseded by CWG1966.
 #endif
-}
+} // namespace cwg1514
 
 namespace cwg1518 { // cwg1518: 4
 #if __cplusplus >= 201103L
@@ -321,18 +321,18 @@ namespace std_example {
   }
 }
 #endif // __cplusplus >= 201103L
-}
+} // namespace cwg1518
 
 namespace cwg1550 { // cwg1550: 3.4
   int f(bool b, int n) {
     return (b ? (throw 0) : n) + (b ? n : (throw 0));
   }
-}
+} // namespace cwg1550
 
 namespace cwg1558 { // cwg1558: 12
 #if __cplusplus >= 201103L
   template<class T, class...> using first_of = T;
-  template<class T> first_of<void, typename T::type> f(int); // #cwg1558-f 
+  template<class T> first_of<void, typename T::type> f(int); // #cwg1558-f
   template<class T> void f(...) = delete; // #cwg1558-f-deleted
 
   struct X { typedef void type; };
@@ -344,7 +344,7 @@ namespace cwg1558 { // cwg1558: 12
     //   since-cxx11-note@#cwg1558-f {{candidate template ignored: substitution failure [with T = int]: type 'int' cannot be used prior to '::' because it has no members}}
   }
 #endif
-}
+} // namespace cwg1558
 
 namespace cwg1560 { // cwg1560: 3.5
   void f(bool b, int n) {
@@ -353,9 +353,9 @@ namespace cwg1560 { // cwg1560: 3.5
   class X { X(const X&); };
   const X &get();
   const X &x = true ? get() : throw 0;
-}
+} // namespace cwg1560
 
-namespace cwg1563 { // cwg1563: yes
+namespace cwg1563 { // cwg1563: 3.1
 #if __cplusplus >= 201103L
   double bar(double) { return 0.0; }
   float bar(float) { return 0.0f; }
@@ -363,7 +363,7 @@ namespace cwg1563 { // cwg1563: yes
   using fun = double(double);
   fun &foo{bar}; // ok
 #endif
-}
+} // namespace cwg1563
 
 namespace cwg1567 { // cwg1567: 3.3
 #if __cplusplus >= 201103L
@@ -402,7 +402,7 @@ B b5{A{0}};
 //   since-cxx11-note@#cwg1567-B {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'A' to 'B' for 1st argument}}
 //   since-cxx11-note@#cwg1567-B-double {{candidate constructor not viable: no known conversion from 'A' to 'double' for 1st argument}}
 #endif
-}
+} // namespace cwg1567
 
 namespace cwg1573 { // cwg1573: 3.9
 #if __cplusplus >= 201103L
@@ -445,7 +445,7 @@ namespace cwg1573 { // cwg1573: 3.9
   // since-cxx11-error@-1 {{call to deleted constructor of 'J'}}
   //   since-cxx11-note@#cwg1573-I {{'I' has been explicitly marked deleted here}}
 #endif
-}
+} // namespace cwg1573
 
 #if __cplusplus >= 201103L
 namespace std {
@@ -485,7 +485,7 @@ namespace std {
   };
   typedef basic_string<char> string;
 
-} // std
+} // namespace std
 #endif
 
 namespace cwg1579 { // cwg1579: 3.9
@@ -558,7 +558,7 @@ auto CWG1579_lambda_invalid = []() -> GenericMoveOnly<char> {
   //   since-cxx11-note@#cwg1579-deleted-U {{'GenericMoveOnly<float>' has been explicitly marked deleted here}}
 };
 #endif
-} // end namespace cwg1579
+} // namespace cwg1579
 
 namespace cwg1584 { // cwg1584: 7 drafting 2015-05
 // Deducing function types from cv-qualified types
@@ -633,13 +633,13 @@ namespace cwg1589 {   // cwg1589: 3.7 c++11
     //   since-cxx11-note@#cwg1589-f2-ilist-int {{candidate function}}
   }
 #endif
-} // cwg1589
+} // namespace cwg1589
 
 namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initializer list
 #if __cplusplus >= 201103L
   template<class T, int N> int h(T const(&)[N]);
   int X = h({1,2,3});              // T deduced to int, N deduced to 3
-  
+
   template<class T> int j(T const(&)[3]);
   int Y = j({42});                 // T deduced to int, array bound not considered
 
@@ -655,12 +655,12 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
 
   template<class T, int N> int n(T const(&)[N], T);
   int X1 = n({{1},{2},{3}},Aggr()); // OK, T is Aggr, N is 3
-  
-  
+
+
   namespace check_multi_dim_arrays {
     template<class T, int N, int M, int O> int ***f(const T (&a)[N][M][O]); // #cwg1591-f-3
     template<class T, int N, int M> int **f(const T (&a)[N][M]); // #cwg1591-f-2
-   
+
    template<class T, int N> int *f(const T (&a)[N]); // #cwg1591-f-1
     int ***p3 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
     int ***p33 = f({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } });
@@ -675,7 +675,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
   namespace check_multi_dim_arrays_rref {
     template<class T, int N, int M, int O> int ***g(T (&&a)[N][M][O]); // #cwg1591-g-3
     template<class T, int N, int M> int **g(T (&&a)[N][M]); // #cwg1591-g-2
-   
+
     template<class T, int N> int *g(T (&&a)[N]); // #cwg1591-g-1
     int ***p3 = g({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12}  } });
     int ***p33 = g({  {  {1,2}, {3, 4}  }, {  {5,6}, {7, 8}  }, {  {9,10}, {11, 12, 13}  } });
@@ -687,7 +687,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     int **p22 = g({  {1,2}, {3, 4}  });
     int *p1 = g({1, 2, 3});
   }
-  
+
   namespace check_arrays_of_init_list {
     template<class T, int N> float *h(const std::initializer_list<T> (&)[N]);
     template<class T, int N> double *h(const T(&)[N]);
@@ -695,7 +695,7 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     float *fp = h({{1}, {1, 2}, {1, 2, 3}});
   }
   namespace core_reflector_28543 {
-    
+
     template<class T, int N> int *i(T (&&)[N]);  // #1
     template<class T> char *i(std::initializer_list<T> &&);  // #2
     template<class T, int N, int M> int **i(T (&&)[N][M]); // #3 #cwg1591-i-2
@@ -704,13 +704,13 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     template<class T> short *i(T (&&)[2]);  // #5
 
     template<class T> using Arr = T[];
-     
+
     char *pc = i({1, 2, 3}); // OK prefer #2 via 13.3.3.2 [over.ics.rank]
-    char *pc2 = i({1, 2}); // #2 also 
+    char *pc2 = i({1, 2}); // #2 also
     int *pi = i(Arr<int>{1, 2, 3}); // OK prefer #1
 
     void *pv1 = i({ {1, 2, 3}, {4, 5, 6} }); // ambiguous btw 3 & 4
-    // since-cxx11-error@-1 {{call to 'i' is ambiguous}} 
+    // since-cxx11-error@-1 {{call to 'i' is ambiguous}}
     //   since-cxx11-note@#cwg1591-i-2 {{candidate function [with T = int, N = 2, M = 3]}}
     //   since-cxx11-note@#cwg1591-i-1 {{candidate function [with T = int, N = 2]}}
     char **pcc = i({ {1}, {2, 3} }); // OK #4
@@ -718,4 +718,4 @@ namespace cwg1591 {  //cwg1591. Deducing array bound and element type from initi
     short *ps = i(Arr<int>{1, 2});  // OK #5
   }
 #endif
-} // cwg1591
+} // namespace cwg1591

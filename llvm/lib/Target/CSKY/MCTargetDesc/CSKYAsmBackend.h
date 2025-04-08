@@ -22,9 +22,6 @@ public:
   CSKYAsmBackend(const MCSubtargetInfo &STI, const MCTargetOptions &OP)
       : MCAsmBackend(llvm::endianness::little) {}
 
-  unsigned int getNumFixupKinds() const override {
-    return CSKY::NumTargetFixupKinds;
-  }
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

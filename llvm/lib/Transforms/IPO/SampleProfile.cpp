@@ -162,7 +162,7 @@ static cl::opt<bool> ProfileSampleBlockAccurate(
 static cl::opt<bool> ProfileAccurateForSymsInList(
     "profile-accurate-for-symsinlist", cl::Hidden, cl::init(true),
     cl::desc("For symbols in profile symbol list, regard their profiles to "
-             "be accurate. It may be overriden by profile-sample-accurate. "));
+             "be accurate. It may be overridden by profile-sample-accurate. "));
 
 static cl::opt<bool> ProfileMergeInlinee(
     "sample-profile-merge-inlinee", cl::Hidden, cl::init(true),
@@ -193,9 +193,10 @@ static cl::opt<bool> ProfileSizeInline(
 // and inline the hot functions (that are skipped in this pass).
 static cl::opt<bool> DisableSampleLoaderInlining(
     "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
-    cl::desc("If true, artifically skip inline transformation in sample-loader "
-             "pass, and merge (or scale) profiles (as configured by "
-             "--sample-profile-merge-inlinee)."));
+    cl::desc(
+        "If true, artificially skip inline transformation in sample-loader "
+        "pass, and merge (or scale) profiles (as configured by "
+        "--sample-profile-merge-inlinee)."));
 
 namespace llvm {
 cl::opt<bool>
@@ -255,7 +256,7 @@ static cl::opt<unsigned> PrecentMismatchForStalenessError(
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
-    cl::desc("Use call site prioritized inlining for sample profile loader."
+    cl::desc("Use call site prioritized inlining for sample profile loader. "
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
@@ -561,12 +562,6 @@ protected:
   /// used to generate the current profile.
   std::shared_ptr<ProfileSymbolList> PSL;
 
-  /// Total number of samples collected in this profile.
-  ///
-  /// This is the sum of all the samples collected in all the functions executed
-  /// at runtime.
-  uint64_t TotalCollectedSamples = 0;
-
   // Information recorded when we declined to inline a call site
   // because we have determined it is too cold is accumulated for
   // each callee function. Initially this is just the entry count.
@@ -628,7 +623,8 @@ inline void SampleProfileInference<Function>::findUnlikelyJumps(
     const Instruction *TI = BB->getTerminator();
     // Check if a block ends with InvokeInst and mark non-taken branch unlikely.
     // In that case block Succ should be a landing pad
-    if (Successors[BB].size() == 2 && Successors[BB].back() == Succ) {
+    const auto &Succs = Successors[BB];
+    if (Succs.size() == 2 && Succs.back() == Succ) {
       if (isa<InvokeInst>(TI)) {
         Jump.IsUnlikely = true;
       }
@@ -1271,8 +1267,7 @@ bool SampleProfileLoader::tryInlineCandidate(
   // Now populate the list of newly exposed call sites.
   if (InlinedCallSites) {
     InlinedCallSites->clear();
-    for (auto &I : IFI.InlinedCallSites)
-      InlinedCallSites->push_back(I);
+    llvm::append_range(*InlinedCallSites, IFI.InlinedCallSites);
   }
 
   if (FunctionSamples::ProfileIsCS)
@@ -1746,7 +1741,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
         }
       }
     }
@@ -2044,9 +2039,11 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // which is currently only available for pseudo-probe mode. Removing the
     // checksum check could cause regressions for some cases, so further tuning
     // might be needed if we want to enable it for all cases.
-    if (Reader->profileIsProbeBased() &&
-        !SalvageStaleProfile.getNumOccurrences()) {
-      SalvageStaleProfile = true;
+    if (Reader->profileIsProbeBased()) {
+      if (!SalvageStaleProfile.getNumOccurrences())
+        SalvageStaleProfile = true;
+      if (!SalvageUnusedProfile.getNumOccurrences())
+        SalvageUnusedProfile = true;
     }
 
     if (!Reader->profileIsCS()) {
@@ -2178,10 +2175,6 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
   if (FunctionSamples::ProfileIsProbeBased &&
       rejectHighStalenessProfile(M, PSI, Reader->getProfiles()))
     return false;
-
-  // Compute the total number of samples collected in this profile.
-  for (const auto &I : Reader->getProfiles())
-    TotalCollectedSamples += I.second.getTotalSamples();
 
   auto Remapper = Reader->getRemapper();
   // Populate the symbol map.
