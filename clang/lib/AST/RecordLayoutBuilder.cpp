@@ -3231,6 +3231,11 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   uint64_t UnpaddedSizeInBits = Context.toBits(DataSize);
   UnpaddedSizeInBits -= RemainingBitsInField;
 
+  // MS ABI allocates 1 byte for empty class
+  // (not padding)
+  if (Size.isZero())
+    UnpaddedSizeInBits += 8;
+
   // Respect required alignment.  Note that in 32-bit mode Required alignment
   // may be 0 and cause size not to be updated.
   DataSize = Size;
@@ -3262,9 +3267,10 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
     return;
   }
   unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
-  uint64_t DataSizeInBits = Context.toBits(DataSize);
-  if (DataSizeInBits > UnpaddedSizeInBits) {
-    unsigned int PadSize = DataSizeInBits - UnpaddedSizeInBits;
+  uint64_t SizeInBits = Context.toBits(Size);
+
+  if (SizeInBits > UnpaddedSizeInBits) {
+    unsigned int PadSize = SizeInBits - UnpaddedSizeInBits;
     bool InBits = true;
     if (PadSize % CharBitNum == 0) {
       PadSize = PadSize / CharBitNum;
