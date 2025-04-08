@@ -30,9 +30,11 @@ class MCSectionGOFF final : public MCSection {
   MCSectionGOFF *Parent;
 
   // The attributes of the GOFF symbols.
-  GOFF::SDAttr SDAttributes;
-  GOFF::EDAttr EDAttributes;
-  GOFF::PRAttr PRAttributes;
+  union {
+    GOFF::SDAttr SDAttributes;
+    GOFF::EDAttr EDAttributes;
+    GOFF::PRAttr PRAttributes;
+  };
 
   // The type of this section.
   GOFF::ESDSymbolType SymbolType;
@@ -47,13 +49,27 @@ class MCSectionGOFF final : public MCSection {
 
   friend class MCContext;
   friend class MCSymbolGOFF;
-  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::ESDSymbolType SymbolType,
-                GOFF::SDAttr SDAttributes, GOFF::EDAttr EDAttributes,
-                GOFF::PRAttr PRAttributes, MCSectionGOFF *Parent = nullptr)
+
+  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::SDAttr SDAttributes,
+                MCSectionGOFF *Parent)
       : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
-        Parent(Parent), SDAttributes(SDAttributes), EDAttributes(EDAttributes),
-        PRAttributes(PRAttributes), SymbolType(SymbolType),
-        RequiresNonZeroLength(0), Emitted(0) {}
+        Parent(Parent), SDAttributes(SDAttributes),
+        SymbolType(GOFF::ESD_ST_SectionDefinition), RequiresNonZeroLength(0),
+        Emitted(0) {}
+
+  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::EDAttr EDAttributes,
+                MCSectionGOFF *Parent)
+      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+        Parent(Parent), EDAttributes(EDAttributes),
+        SymbolType(GOFF::ESD_ST_ElementDefinition), RequiresNonZeroLength(0),
+        Emitted(0) {}
+
+  MCSectionGOFF(StringRef Name, SectionKind K, GOFF::PRAttr PRAttributes,
+                MCSectionGOFF *Parent)
+      : MCSection(SV_GOFF, Name, K.isText(), /*IsVirtual=*/false, nullptr),
+        Parent(Parent), PRAttributes(PRAttributes),
+        SymbolType(GOFF::ESD_ST_PartReference), RequiresNonZeroLength(0),
+        Emitted(0) {}
 
 public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
