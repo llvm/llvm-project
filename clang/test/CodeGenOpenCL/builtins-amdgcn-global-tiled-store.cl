@@ -12,7 +12,7 @@ typedef int    v7i   __attribute__((ext_vector_type(7)));
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_half_b64(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4, !tbaa [[TBAA8:![0-9]+]], !amdgpu.noclobber [[META12:![0-9]+]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.b64(i32 [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.b64(i32 [[TMP0]], ptr addrspace(1) align 4 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_half_b64(global int* ptr)
@@ -23,7 +23,7 @@ void kernel test_global_tiled_store_half_b64(global int* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_b64(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[PTR:%.*]], align 8, !tbaa [[TBAA15:![0-9]+]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.b64(<2 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.b64(<2 x i32> [[TMP0]], ptr addrspace(1) align 8 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_b64(global v2i* ptr)
@@ -34,7 +34,7 @@ void kernel test_global_tiled_store_b64(global v2i* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_vst2_b64(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[PTR:%.*]], align 16, !tbaa [[TBAA15]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.vst2.b64(<3 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.vst2.b64(<3 x i32> [[TMP0]], ptr addrspace(1) align 16 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_vst2_b64(global v3i* ptr)
@@ -45,7 +45,7 @@ void kernel test_global_tiled_store_vst2_b64(global v3i* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_qtr_b128(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4, !tbaa [[TBAA8]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.qtr.b128(i32 [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.qtr.b128(i32 [[TMP0]], ptr addrspace(1) align 4 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_qtr_b128(global int* ptr)
@@ -56,7 +56,7 @@ void kernel test_global_tiled_store_qtr_b128(global int* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_half_b128(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[PTR:%.*]], align 8, !tbaa [[TBAA15]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.b128(<2 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.b128(<2 x i32> [[TMP0]], ptr addrspace(1) align 8 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_half_b128(global v2i* ptr)
@@ -67,7 +67,7 @@ void kernel test_global_tiled_store_half_b128(global v2i* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_half_vst2_b128(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[PTR:%.*]], align 16, !tbaa [[TBAA15]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.vst2.b128(<3 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.half.vst2.b128(<3 x i32> [[TMP0]], ptr addrspace(1) align 16 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_half_vst2_b128(global v3i* ptr)
@@ -78,7 +78,7 @@ void kernel test_global_tiled_store_half_vst2_b128(global v3i* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_b128(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr addrspace(1) [[PTR:%.*]], align 16, !tbaa [[TBAA15]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.b128(<4 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.b128(<4 x i32> [[TMP0]], ptr addrspace(1) align 16 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_b128(global v4i* ptr)
@@ -89,7 +89,7 @@ void kernel test_global_tiled_store_b128(global v4i* ptr)
 // CHECK-GFX1300-LABEL: @test_global_tiled_store_vst2_b128(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr addrspace(1) [[PTR:%.*]], align 32, !tbaa [[TBAA15]], !amdgpu.noclobber [[META12]]
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.vst2.b128(<7 x i32> [[TMP0]], ptr addrspace(1) [[PTR]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.global.tiled.store.vst2.b128(<7 x i32> [[TMP0]], ptr addrspace(1) align 32 [[PTR]])
 // CHECK-GFX1300-NEXT:    ret void
 //
 void kernel test_global_tiled_store_vst2_b128(global v7i* ptr)
