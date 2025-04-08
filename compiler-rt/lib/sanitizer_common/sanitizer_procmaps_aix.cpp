@@ -106,6 +106,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
     constexpr unsigned BUFFER_SIZE = 128;
     char objPath[BUFFER_SIZE] = {};
     // Use path /proc/<pid>/object/<object_id> to pass to the symbolizer.
+    // TODO: Append the archive member name if it exists.
     internal_snprintf(objPath, BUFFER_SIZE, "/proc/%d/object/%s",
                       internal_getpid(), mapIter->pr_mapname);
     len = Min((uptr)internal_strlen(objPath), segment->filename_size - 1);
@@ -114,6 +115,7 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
 
     // We don't have the full path to user libraries, so we use what we have
     // available as the display name.
+    // TODO: Append the archive member name if it exists.
     const char *displayPath = data_.proc_self_maps.data + mapIter->pr_pathoff;
     len =
         Min((uptr)internal_strlen(displayPath), segment->displayname_size - 1);
@@ -131,6 +133,38 @@ bool MemoryMappingLayout::Next(MemoryMappedSegment *segment) {
   data_.current = (const char *)mapIter;
 
   return true;
+}
+
+void MemoryMappingLayout::DumpListOfModules(
+    InternalMmapVectorNoCtor<LoadedModule> *modules) {
+  Reset();
+  InternalMmapVector<char> module_name(kMaxPathLength);
+  InternalMmapVector<char> module_displayname(kMaxPathLength);
+  MemoryMappedSegment segment(module_name.data(), module_name.size(),
+                              module_displayname.data(),
+                              module_displayname.size());
+  for (uptr i = 0; Next(&segment); i++) {
+    const char *cur_name = segment.filename;
+    if (cur_name[0] == '\0')
+      continue;
+    // Don't subtract 'cur_beg' from the first entry:
+    // * If a binary is compiled w/o -pie, then the first entry in
+    //   process maps is likely the binary itself (all dynamic libs
+    //   are mapped higher in address space). For such a binary,
+    //   instruction offset in binary coincides with the actual
+    //   instruction address in virtual memory (as code section
+    //   is mapped to a fixed memory range).
+    // * If a binary is compiled with -pie, all the modules are
+    //   mapped high at address space (in particular, higher than
+    //   shadow memory of the tool), so the module can't be the
+    //   first entry.
+    uptr base_address = (i ? segment.start : 0) - segment.offset;
+    LoadedModule cur_module;
+    cur_module.set(cur_name, base_address);
+    cur_module.setDisplayName(segment.displayname);
+    segment.AddAddressRanges(&cur_module);
+    modules->push_back(cur_module);
+  }
 }
 
 }  // namespace __sanitizer

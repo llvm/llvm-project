@@ -492,6 +492,22 @@ u64 MonotonicNanoTime() {
   return (u64)ts.tv_sec * (1000ULL * 1000 * 1000) + ts.tv_nsec;
 }
 
+void DumpProcessMap() {
+MemoryMappingLayout proc_maps(/*cache_enabled*/true);
+  const sptr kBufSize = 4095;
+  char *filename = (char*)MmapOrDie(kBufSize, __func__);
+  char *displayname = (char*)MmapOrDie(kBufSize, __func__);
+  MemoryMappedSegment segment(filename, kBufSize, displayname, kBufSize);
+  Report("Process memory map follows:\n");
+  while (proc_maps.Next(&segment)) {
+    Printf("\t%p-%p\t%s\n", (void *)segment.start, (void *)segment.end,
+           segment.displayname);
+  }
+  Report("End of process memory map.\n");
+  UnmapOrDie(filename, kBufSize);
+  UnmapOrDie(displayname, kBufSize);
+}
+
 // FIXME implement on this platform.
 void GetMemoryProfile(fill_profile_f cb, uptr *stats) {}
 

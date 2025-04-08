@@ -416,18 +416,19 @@ bool MmapFixedSuperNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
+# if !SANITIZER_AIX
+   base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size, name)
+                      : MmapNoAccess(size);
+# else
   // AIX can not mmap on a mmaped memory, so init it as read/write so we won't
   // mmap on this memory again.
-#  if SANITIZER_AIX
   if (fixed_addr) {
     MmapFixed(fixed_addr, size, MAP_PRIVATE | MAP_FIXED | MAP_ANON, name);
     base_ = (void *)fixed_addr;
-  } else
+  } else {
     base_ = (void *)internal_mmap(nullptr, size, PROT_READ | PROT_WRITE,
                                   MAP_PRIVATE | MAP_ANON, -1, 0);
-#  else
-  base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size, name)
-                     : MmapNoAccess(size);
+  }
 #  endif
   size_ = size;
   name_ = name;
