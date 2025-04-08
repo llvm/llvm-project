@@ -37,7 +37,7 @@ adds `FOO=1` and `bar` to the environment:
   "program": "/tmp/a.out",
   "args": [ "one", "two", "three" ],
   "env": {
-    "FOO": "1"
+    "FOO": "1",
     "BAR": ""
   }
 }
