@@ -4016,6 +4016,8 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   auto NoScalarEpilogueNeeded = [this, &UserIC](unsigned MaxVF) {
+    // Return false if the loop is neither a single-latch-exit loop nor an
+    // early-exit loop as tail-folding is not supported in that case.
     if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch() &&
         !Legal->hasUncountableEarlyExit())
       return false;
