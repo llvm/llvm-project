@@ -231,7 +231,6 @@ protected:
   MCSection *GLJMPSection = nullptr;
 
   // GOFF specific sections.
-  MCSection *RootSDSection = nullptr;
   MCSection *PPA2ListSection = nullptr;
   MCSection *ADASection = nullptr;
   MCSection *IDRLSection = nullptr;

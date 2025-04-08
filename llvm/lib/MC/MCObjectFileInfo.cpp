@@ -547,7 +547,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
 }
 
 void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
-  RootSDSection = Ctx->getGOFFSection(
+  MCSectionGOFF *RootSDSection = Ctx->getGOFFSection(
       SectionKind::getMetadata(), "#C",
       GOFF::SDAttr{GOFF::ESD_TA_Rent, GOFF::ESD_BSC_Section});
 

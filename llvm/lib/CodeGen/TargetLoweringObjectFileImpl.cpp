@@ -2786,7 +2786,7 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
     FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
-  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(RootSDSection);
+  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(TextSection)->getParent();
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
@@ -2815,7 +2815,7 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
                    GOFF::ESD_NS_Parts, GOFF::ESD_TS_ByteOriented,
                    GOFF::ESD_BA_Merge, GOFF::LOADBEHAVIOR, GOFF::ESD_RQ_0,
                    GOFF::ESD_ALIGN_Doubleword},
-      RootSDSection);
+      static_cast<MCSectionGOFF *>(TextSection)->getParent());
   return getContext().getGOFFSection(
       SectionKind::getData(), Name,
       GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
