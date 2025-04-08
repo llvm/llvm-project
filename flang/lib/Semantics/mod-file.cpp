@@ -1047,7 +1047,7 @@ void ModFileWriter::PutUserReduction(
     if (auto d = std::get_if<const parser::OpenMPDeclareReductionConstruct *>(
             &decl)) {
       Unparse(os, **d);
-    } else if (auto s = std::get_if<const parser::OmpDirectiveSpecification *>(
+    } else if (auto s = std::get_if<const parser::OmpMetadirectiveDirective *>(
                    &decl)) {
       Unparse(os, **s);
     } else {

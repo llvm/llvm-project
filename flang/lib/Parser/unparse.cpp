@@ -3329,7 +3329,7 @@ template void Unparse<Expr>(llvm::raw_ostream &, const Expr &, Encoding, bool,
 template void Unparse<parser::OpenMPDeclareReductionConstruct>(
     llvm::raw_ostream &, const parser::OpenMPDeclareReductionConstruct &,
     Encoding, bool, bool, preStatementType *, AnalyzedObjectsAsFortran *);
-template void Unparse<parser::OmpDirectiveSpecification>(llvm::raw_ostream &,
-    const parser::OmpDirectiveSpecification &, Encoding, bool, bool,
+template void Unparse<parser::OmpMetadirectiveDirective>(llvm::raw_ostream &,
+    const parser::OmpMetadirectiveDirective &, Encoding, bool, bool,
     preStatementType *, AnalyzedObjectsAsFortran *);
 } // namespace Fortran::parser
