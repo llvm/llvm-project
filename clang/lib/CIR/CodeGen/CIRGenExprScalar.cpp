@@ -707,6 +707,89 @@ public:
   HANDLEBINOP(Xor)
   HANDLEBINOP(Or)
 #undef HANDLEBINOP
+
+  mlir::Value emitCmp(const BinaryOperator *e) {
+    mlir::Value result;
+    QualType lhsTy = e->getLHS()->getType();
+    QualType rhsTy = e->getRHS()->getType();
+
+    auto clangCmpToCIRCmp =
+        [](clang::BinaryOperatorKind clangCmp) -> cir::CmpOpKind {
+      switch (clangCmp) {
+      case BO_LT:
+        return cir::CmpOpKind::lt;
+      case BO_GT:
+        return cir::CmpOpKind::gt;
+      case BO_LE:
+        return cir::CmpOpKind::le;
+      case BO_GE:
+        return cir::CmpOpKind::ge;
+      case BO_EQ:
+        return cir::CmpOpKind::eq;
+      case BO_NE:
+        return cir::CmpOpKind::ne;
+      default:
+        llvm_unreachable("unsupported comparison kind");
+      }
+    };
+
+    if (lhsTy->getAs<MemberPointerType>()) {
+      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
+      mlir::Value lhs = cgf.emitScalarExpr(e->getLHS());
+      mlir::Value rhs = cgf.emitScalarExpr(e->getRHS());
+      cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+      result =
+          builder.createCompare(cgf.getLoc(e->getExprLoc()), kind, lhs, rhs);
+    } else if (!lhsTy->isAnyComplexType() && !rhsTy->isAnyComplexType()) {
+      BinOpInfo boInfo = emitBinOps(e);
+      mlir::Value lhs = boInfo.lhs;
+      mlir::Value rhs = boInfo.rhs;
+
+      if (lhsTy->isVectorType()) {
+        assert(!cir::MissingFeatures::vectorType());
+        cgf.cgm.errorNYI(boInfo.loc, "vector comparisons");
+        result = builder.getBool(false, cgf.getLoc(boInfo.loc));
+      } else if (boInfo.isFixedPointOp()) {
+        assert(!cir::MissingFeatures::fixedPointType());
+        cgf.cgm.errorNYI(boInfo.loc, "fixed point comparisons");
+        result = builder.getBool(false, cgf.getLoc(boInfo.loc));
+      } else if (lhsTy->hasSignedIntegerRepresentation()) {
+        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+        result = builder.createCompare(cgf.getLoc(boInfo.loc), kind, lhs, rhs);
+      } else {
+        // Unsigned integers and pointers.
+        if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
+            mlir::isa<cir::PointerType>(lhs.getType()) &&
+            mlir::isa<cir::PointerType>(rhs.getType())) {
+          cgf.cgm.errorNYI(boInfo.loc, "strict vtable pointer comparisons");
+          result = builder.getBool(false, cgf.getLoc(boInfo.loc));
+        }
+
+        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+        result = builder.createCompare(cgf.getLoc(boInfo.loc), kind, lhs, rhs);
+      }
+    } else {
+      // Complex Comparison: can only be an equality comparison.
+      assert(!cir::MissingFeatures::complexType());
+      const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+      cgf.cgm.errorNYI(loc, "complex comparison");
+      result = builder.getBool(false, loc);
+    }
+
+    return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
+                                e->getExprLoc());
+  }
+
+// Comparisons.
+#define VISITCOMP(CODE)                                                        \
+  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return emitCmp(E); }
+  VISITCOMP(LT)
+  VISITCOMP(GT)
+  VISITCOMP(LE)
+  VISITCOMP(GE)
+  VISITCOMP(EQ)
+  VISITCOMP(NE)
+#undef VISITCOMP
 };
 
 LValue ScalarExprEmitter::emitCompoundAssignLValue(
