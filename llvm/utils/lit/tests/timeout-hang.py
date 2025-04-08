@@ -17,7 +17,7 @@ import sys
 import re
 
 timeout_time = float(sys.argv[1])
-testing_time = float(re.search(r'Testing Time: (.*)s', sys.stdin.read()).group(1))
+testing_time = float(re.search(r"Testing Time: (.*)s", sys.stdin.read()).group(1))
 
 if testing_time < timeout_time:
     print("Testing took less than timeout")

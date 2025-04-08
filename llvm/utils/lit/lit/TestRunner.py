@@ -206,7 +206,9 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     except InternalShellError:
         e = sys.exc_info()[1]
         finalExitCode = 127
-        results.append(ShellCommandResult(e.command, "", e.message, finalExitCode, False))
+        results.append(
+            ShellCommandResult(e.command, "", e.message, finalExitCode, False)
+        )
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
@@ -1112,8 +1114,8 @@ def executeScriptInternal(
     timeoutInfo = None
     shenv = ShellEnvironment(cwd, test.config.environment)
     exitCode, timeoutInfo = executeShCmd(
-            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
-            )
+        cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+    )
 
     out = err = ""
     for i, result in enumerate(results):
