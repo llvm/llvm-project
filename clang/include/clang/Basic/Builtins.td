@@ -920,7 +920,7 @@ def FrameAddress : Builtin {
 def ClearCache : Builtin {
   let Spellings = ["__builtin___clear_cache"];
   let Attributes = [NoThrow];
-  let Prototype = "void(char*, char*)";
+  let Prototype = "void(void*, void*)";
 }
 
 def BuiltinSetjmp : Builtin {
@@ -4889,12 +4889,6 @@ def HLSLDotProduct : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_dot"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
-}
-
-def HLSLDot2Add : LangBuiltin<"HLSL_LANG"> {
-  let Spellings = ["__builtin_hlsl_dot2add"];
-  let Attributes = [NoThrow, Const];
-  let Prototype = "float(_ExtVector<2, _Float16>, _ExtVector<2, _Float16>, float)";
 }
 
 def HLSLDot4AddI8Packed : LangBuiltin<"HLSL_LANG"> {

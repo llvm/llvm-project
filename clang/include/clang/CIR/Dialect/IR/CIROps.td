@@ -400,7 +400,9 @@ def LoadOp : CIR_Op<"load", [
   let summary = "Load value from memory adddress";
   let description = [{
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
-    backed up by a `cir.ptr` type.
+    backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
+    mark the resulting value as used by another operation to dereference
+    a pointer.
 
     Example:
 
@@ -408,14 +410,19 @@ def LoadOp : CIR_Op<"load", [
 
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
+
+    // Load address from memory at address %0. %3 is used by at least one
+    // operation that dereferences a pointer.
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr);
+                           [MemRead]>:$addr, UnitAttr:$isDeref);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
+    (`deref` $isDeref^)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -518,7 +525,7 @@ def ConditionOp : CIR_Op<"condition", [
     `cir.bool` operand and, depending on its value, may branch to different
     regions:
 
-     - When in the `cond` region of a `cir.loop`, it continues the loop
+     - When in the `cond` region of a loop, it continues the loop
        if true, or exits it if false.
      - When in the `ready` region of a `cir.await`, it branches to the `resume`
        region when true, and to the `suspend` region when false.
@@ -526,12 +533,12 @@ def ConditionOp : CIR_Op<"condition", [
     Example:
 
     ```mlir
-    cir.loop for(cond : {
-      cir.condition(%arg0) // Branches to `step` region or exits.
-    }, step : {
-      [...]
-    }) {
-      [...]
+    cir.for cond {
+      cir.condition(%val) // Branches to `step` region or exits.
+    } body {
+      cir.yield
+    } step {
+      cir.yield
     }
 
     cir.await(user, ready : {
@@ -608,6 +615,36 @@ def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
   let builders = [
     OpBuilder<(ins), [{ /* nothing to do */ }]>,
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// BreakOp
+//===----------------------------------------------------------------------===//
+
+def BreakOp : CIR_Op<"break", [Terminator]> {
+  let summary = "C/C++ `break` statement equivalent";
+  let description = [{
+    The `cir.break` operation is used to cease the execution of the current loop
+    or switch operation and transfer control to the parent operation. It is only
+    allowed within a breakable operations (loops and switches).
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// ContinueOp
+//===----------------------------------------------------------------------===//
+
+def ContinueOp : CIR_Op<"continue", [Terminator]> {
+  let summary = "C/C++ `continue` statement equivalent";
+  let description = [{
+    The `cir.continue` operation is used to end execution of the current
+    iteration of a loop and resume execution beginning at the next iteration.
+    It is only allowed within loop regions.
+  }];
+  let assemblyFormat = "attr-dict";
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -968,6 +1005,47 @@ def ForOp : LoopOpBase<"for"> {
     llvm::SmallVector<mlir::Region *> getRegionsInExecutionOrder() {
       return llvm::SmallVector<mlir::Region *, 3>{&getCond(), &getBody(), &getStep()};
     }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+def CmpOpKind_LT : I32EnumAttrCase<"lt", 1>;
+def CmpOpKind_LE : I32EnumAttrCase<"le", 2>;
+def CmpOpKind_GT : I32EnumAttrCase<"gt", 3>;
+def CmpOpKind_GE : I32EnumAttrCase<"ge", 4>;
+def CmpOpKind_EQ : I32EnumAttrCase<"eq", 5>;
+def CmpOpKind_NE : I32EnumAttrCase<"ne", 6>;
+
+def CmpOpKind : I32EnumAttr<
+    "CmpOpKind",
+    "compare operation kind",
+    [CmpOpKind_LT, CmpOpKind_LE, CmpOpKind_GT,
+     CmpOpKind_GE, CmpOpKind_EQ, CmpOpKind_NE]> {
+  let cppNamespace = "::cir";
+}
+
+def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare values two values and produce a boolean result";
+  let description = [{
+    `cir.cmp` compares two input operands of the same type and produces a
+    `cir.bool` result. The kinds of comparison available are:
+    [lt,gt,ge,eq,ne]
+
+    ```mlir
+    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind,
+                       CIR_AnyType:$lhs, CIR_AnyType:$rhs);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
   }];
 }
 

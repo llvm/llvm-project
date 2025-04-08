@@ -47,6 +47,7 @@ public:
   virtual std::optional<bool> isUnsafePtr(QualType) const = 0;
   virtual bool isSafePtr(const CXXRecordDecl *Record) const = 0;
   virtual bool isSafePtrType(const QualType type) const = 0;
+  virtual bool isSafeExpr(const Expr *) const { return false; }
   virtual const char *ptrKind() const = 0;
 
   void checkASTDecl(const TranslationUnitDecl *TUD, AnalysisManager &MGR,
@@ -232,6 +233,8 @@ public:
           if (isASafeCallArg(ArgOrigin))
             return true;
           if (EFA.isACallToEnsureFn(ArgOrigin))
+            return true;
+          if (isSafeExpr(ArgOrigin))
             return true;
           return false;
         });
@@ -467,6 +470,11 @@ public:
 
   bool isSafePtrType(const QualType type) const final {
     return isRetainPtrType(type);
+  }
+
+  bool isSafeExpr(const Expr *E) const final {
+    return ento::cocoa::isCocoaObjectRef(E->getType()) &&
+           isa<ObjCMessageExpr>(E);
   }
 
   const char *ptrKind() const final { return "unretained"; }

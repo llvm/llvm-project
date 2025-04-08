@@ -10,6 +10,7 @@ group("default") {
     "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
+    "//compiler-rt/test/builtins",
     "//lld/test",
     "//lldb/test",
     "//llvm/test",
