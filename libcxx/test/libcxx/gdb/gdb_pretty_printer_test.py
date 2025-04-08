@@ -30,7 +30,7 @@ test_failures = 0
 # we exit.
 has_run_tests = False
 
-has_execute_mi = "execute_mi" in gdb.__dict__
+has_execute_mi = getattr(gdb, "execute_mi", None) is not None
 
 
 class CheckResult(gdb.Command):
