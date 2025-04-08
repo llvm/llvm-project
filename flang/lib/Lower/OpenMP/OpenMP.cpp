@@ -41,6 +41,28 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 
+#define DEBUG_TYPE "flang-openmp-lowering"
+#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
+
+static void printOperation(mlir::Operation *op) { llvm::dbgs() << *op << "\n"; }
+static void printBlock(mlir::Block &block) {
+  llvm::dbgs() << "Block with " << block.getNumArguments() << " arguments, "
+  << block.getNumSuccessors()
+  << " successors, and "
+      // Note, this `.size()` is traversing a linked-list and is O(n).
+  << block.getOperations().size() << " operations\n";
+  for (mlir::Operation &op : block.getOperations())
+    printOperation(&op);
+}
+
+static void printRegion(mlir::Region &region) {
+  // A region does not hold anything by itself other than a list of blocks.
+  llvm::dbgs() << "Region with " << region.getBlocks().size()
+                << " blocks:\n";
+  for (mlir::Block &block : region.getBlocks())
+    printBlock(block);
+}
+
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
 
@@ -219,12 +241,23 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
 
   auto bindSingleMapLike = [&converter,
                             &firOpBuilder](const semantics::Symbol &sym,
+                                           const mlir::Value val,
                                            const mlir::BlockArgument &arg) {
     // Clones the `bounds` placing them inside the entry block and returns
     // them.
     auto cloneBound = [&](mlir::Value bound) {
+      LLVM_DEBUG(PDBGS() << "Cloning bound " << bound << "\n");
       if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
+        if (auto unboxCharOp = mlir::dyn_cast<fir::UnboxCharOp>(bound.getDefiningOp())) {
+          LLVM_DEBUG(PDBGS() << "Defining Op of Bound : " << unboxCharOp << "\n");
+          mlir::Operation *clonedOp = firOpBuilder.clone(*unboxCharOp);
+          LLVM_DEBUG(PDBGS() << "Cloned Op of Bound : " << *clonedOp << "\n");
+          return clonedOp->getResult(1);
+        }
+        mlir::Operation *defOp = bound.getDefiningOp();
+        LLVM_DEBUG(PDBGS() << "Defining Op of Bound : " << *defOp << "\n");
         mlir::Operation *clonedOp = firOpBuilder.clone(*bound.getDefiningOp());
+        LLVM_DEBUG(PDBGS() << "Cloned Op of Bound : " << *clonedOp << "\n");
         return clonedOp->getResult(0);
       }
       TODO(converter.getCurrentLocation(),
@@ -239,39 +272,72 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
     };
 
     fir::ExtendedValue extVal = converter.getSymbolExtendedValue(sym);
+    LLVM_DEBUG(PDBGS() << "In bindEntryBlockArgs\n");
+    LLVM_DEBUG(PDBGS() << "Sym: " << sym << "\n");
+    LLVM_DEBUG(PDBGS() << "Extended Value:\n " << extVal << "\n");
+    LLVM_DEBUG(PDBGS() << "mapBaseValue: \n" << val << "\n");
     auto refType = mlir::dyn_cast<fir::ReferenceType>(arg.getType());
     if (refType && fir::isa_builtin_cptr_type(refType.getElementType())) {
+      LLVM_DEBUG(PDBGS() << "binding builting_cptr_type\n");
       converter.bindSymbol(sym, arg);
     } else {
       extVal.match(
           [&](const fir::BoxValue &v) {
+            LLVM_DEBUG(PDBGS() << "binding BoxValue " << v << "\n");
             converter.bindSymbol(sym,
                                  fir::BoxValue(arg, cloneBounds(v.getLBounds()),
                                                v.getExplicitParameters(),
                                                v.getExplicitExtents()));
           },
           [&](const fir::MutableBoxValue &v) {
+            LLVM_DEBUG(PDBGS() << "binding MutableBoxValue " << v << "\n");
             converter.bindSymbol(
                 sym, fir::MutableBoxValue(arg, cloneBounds(v.getLBounds()),
                                           v.getMutableProperties()));
           },
           [&](const fir::ArrayBoxValue &v) {
+            LLVM_DEBUG(PDBGS() << "binding ArrayBoxValue " << v << "\n");
             converter.bindSymbol(
                 sym, fir::ArrayBoxValue(arg, cloneBounds(v.getExtents()),
                                         cloneBounds(v.getLBounds()),
                                         v.getSourceBox()));
           },
           [&](const fir::CharArrayBoxValue &v) {
+            LLVM_DEBUG(PDBGS() << "binding CharArrayBoxValue " << v << "\n");
             converter.bindSymbol(
                 sym, fir::CharArrayBoxValue(arg, cloneBound(v.getLen()),
                                             cloneBounds(v.getExtents()),
                                             cloneBounds(v.getLBounds())));
           },
           [&](const fir::CharBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
+            // PDB: THe problem here is that v is
+            // [flang-openmp-lowering]: Sym: a0, INTENT(IN) (OmpMapTo) size=24 offset=0: ObjectEntity dummy type: CHARACTER(*,1)
+            // [flang-openmp-lowering]: Extended Value:
+            // boxchar { addr: %9:2 = "hlfir.declare"(%8#0, %8#1, %7) <{fortran_attrs = #fir.var_attrs<intent_in>, operandSegmentSizes = array<i32: 1, 0, 1, 1>, uniq_name = "_QFFrealtest_Ea0"}> : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>), len: %8:2 = "fir.unboxchar"(%arg0) : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index) }
+            // Porblem above is that "len:" references the input to the hlfir.declare. It could get it directly from the hlfir.declare.
+            // PDB: start thinking from here - it looks like we'll have to map %arg after all because getting the length will still need us to access the defining op of the len, which is the unboxchar.
+            // Maybe we should use val which could be the hlfir.declare for the symbol. Use the len from that instead of cloning the len from the extended value.
+            LLVM_DEBUG(PDBGS() << "binding CharBoxValue " << v << "\n");
+            mlir::Value len = v.getLen();
+            LLVM_DEBUG(PDBGS() << "Starting with len = v.getLen() = " << len << "\n");
+            if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>()) {
+              mlir::Value base = declareOp.getBase();
+              if (auto boxCharType = mlir::dyn_cast<fir::BoxCharType>(base.getType())) {
+                LLVM_DEBUG(PDBGS() << "Type of declareOp.getBase() = " << boxCharType << "\n");
+                mlir::Type lenType = firOpBuilder.getCharacterLengthType();
+                mlir::Type refType = firOpBuilder.getRefType(boxCharType.getEleTy());
+                mlir::Location loc = converter.getCurrentLocation();
+                LLVM_DEBUG(PDBGS() << "lenType = " << lenType << "\n");
+                LLVM_DEBUG(PDBGS() << "refType = " << refType << "\n");
+                auto unboxed = firOpBuilder.create<fir::UnboxCharOp>(loc, refType, lenType, base);
+                len = unboxed.getResult(1);
+              }
+            }
+            auto charBoxValue = fir::CharBoxValue(arg, cloneBound(len));
+            LLVM_DEBUG(PDBGS() << "Binding " << sym << " to " << charBoxValue << "\n");
+            converter.bindSymbol(sym, charBoxValue);
           },
-          [&](const fir::UnboxedValue &v) { converter.bindSymbol(sym, arg); },
+          [&](const fir::UnboxedValue &v) { LLVM_DEBUG(PDBGS() << "binding Unboxed Value " << v << " \n");converter.bindSymbol(sym, arg); },
           [&](const auto &) {
             TODO(converter.getCurrentLocation(),
                  "target map clause operand unsupported type");
@@ -281,6 +347,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
 
   auto bindMapLike =
       [&bindSingleMapLike](llvm::ArrayRef<const semantics::Symbol *> syms,
+                           llvm::ArrayRef<mlir::Value> vars,
                            llvm::ArrayRef<mlir::BlockArgument> args) {
         // Structure component symbols don't have bindings, and can only be
         // explicitly mapped individually. If a member is captured implicitly
@@ -289,8 +356,8 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
         llvm::copy_if(syms, std::back_inserter(processedSyms),
                       [](auto *sym) { return !sym->owner().IsDerivedType(); });
 
-        for (auto [sym, arg] : llvm::zip_equal(processedSyms, args))
-          bindSingleMapLike(*sym, arg);
+        for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args))
+          bindSingleMapLike(*sym, var, arg);
       };
 
   auto bindPrivateLike = [&converter, &firOpBuilder](
@@ -321,17 +388,17 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   // Process in clause name alphabetical order to match block arguments order.
   // Do not bind host_eval variables because they cannot be used inside of the
   // corresponding region, except for very specific cases handled separately.
-  bindMapLike(args.hasDeviceAddr.syms, op.getHasDeviceAddrBlockArgs());
+  bindMapLike(args.hasDeviceAddr.syms, args.hasDeviceAddr.vars, op.getHasDeviceAddrBlockArgs());
   bindPrivateLike(args.inReduction.syms, args.inReduction.vars,
                   op.getInReductionBlockArgs());
-  bindMapLike(args.map.syms, op.getMapBlockArgs());
+  bindMapLike(args.map.syms, args.map.vars, op.getMapBlockArgs());
   bindPrivateLike(args.priv.syms, args.priv.vars, op.getPrivateBlockArgs());
   bindPrivateLike(args.reduction.syms, args.reduction.vars,
                   op.getReductionBlockArgs());
   bindPrivateLike(args.taskReduction.syms, args.taskReduction.vars,
                   op.getTaskReductionBlockArgs());
-  bindMapLike(args.useDeviceAddr.syms, op.getUseDeviceAddrBlockArgs());
-  bindMapLike(args.useDevicePtr.syms, op.getUseDevicePtrBlockArgs());
+  bindMapLike(args.useDeviceAddr.syms, args.useDeviceAddr.vars,  op.getUseDeviceAddrBlockArgs());
+  bindMapLike(args.useDevicePtr.syms, args.useDevicePtr.vars, op.getUseDevicePtrBlockArgs());
 }
 
 /// Get the list of base values that the specified map-like variables point to.
@@ -1357,8 +1424,13 @@ static void genBodyOfTargetOp(
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
   mlir::Region &region = targetOp.getRegion();
+  mlir::func::FuncOp func = targetOp->getParentOfType<mlir::func::FuncOp>();
+  LLVM_DEBUG(PDBGS() << "Function before genEntryBlock\n " << func << "\n\n");
   mlir::Block *entryBlock = genEntryBlock(firOpBuilder, args, region);
+  LLVM_DEBUG(PDBGS() << "Function after genEntryBlock\n" << func << "\n\n");
+  LLVM_DEBUG(PDBGS() << "entryBlock before bindEntryBlockArgs\n" << *entryBlock << "\n\n");
   bindEntryBlockArgs(converter, targetOp, args);
+  LLVM_DEBUG(PDBGS() << "entryBlock after bindEntryBlockArgs\n" << *entryBlock << "\n\n");
   if (!hostEvalInfo.empty())
     hostEvalInfo.back().bindOperands(argIface.getHostEvalBlockArgs());
 
@@ -1368,9 +1440,26 @@ static void genBodyOfTargetOp(
   // lists and replace their uses with the new temporary.
   llvm::SetVector<mlir::Value> valuesDefinedAbove;
   mlir::getUsedValuesDefinedAbove(region, valuesDefinedAbove);
+  LLVM_DEBUG(PDBGS() << "region is \n");
+  LLVM_DEBUG(printRegion(region));
+  LLVM_DEBUG(PDBGS() << "valuesDefinedAbove.empty() : " << valuesDefinedAbove.empty() << "\n");
   while (!valuesDefinedAbove.empty()) {
     for (mlir::Value val : valuesDefinedAbove) {
+      LLVM_DEBUG(PDBGS() << "Value defined above is \n" << val << "\n");
       mlir::Operation *valOp = val.getDefiningOp();
+      // if (!valOp) {
+      //   // This means val is a blockArg.
+      //   assert(mlir::isa<mlir::BlockArgument>(val));
+      //   auto blockArg = llvm::cast<mlir::BlockArgument>(val);
+      //   LLVM_DEBUG(PDBGS() << "val is a BlockArgument: Arg Number: " << blockArg.getArgNumber() << "\n");
+      //   mlir::OpBuilder::InsertionGuard guard(firOpBuilder);
+      //   firOpBuilder.setInsertionPoint(targetOp);
+      //   //        firOpBuilder.setInsertionPointAfter(valOp);
+      //   auto copyVal =
+      //       firOpBuilder.createTemporary(val.getLoc(), val.getType());
+      //   firOpBuilder.createStoreWithConvert(copyVal.getLoc(), val, copyVal);
+      //   LLVM_DEBUG(PDBGS() << "Function after processing null valOp\n" << func << "\n\n");
+      // }
       assert(valOp != nullptr);
 
       // NOTE: We skip BoxDimsOp's as the lesser of two evils is to map the
@@ -2397,6 +2486,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   extractMappedBaseValues(clauseOps.hasDeviceAddrVars, hasDeviceAddrBaseValues);
   extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
 
+  LLVM_DEBUG(PDBGS() << "mapVars and mapBaseValues are \n";
+             for (auto [mapSym, mapVar, mapBaseValue] : llvm::zip(mapSyms, clauseOps.mapVars, mapBaseValues)) {
+               PDBGS() << "(mapSym): " << *mapSym << "\n";
+               PDBGS() << "(mapVar): " << mapVar  << "\n";
+               PDBGS() << "(mapBaseValue): " << mapBaseValue << "\n";
+             }
+             );
   EntryBlockArgs args;
   args.hasDeviceAddr.syms = hasDeviceAddrSyms;
   args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
