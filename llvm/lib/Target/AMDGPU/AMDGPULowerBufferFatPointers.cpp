@@ -2312,10 +2312,7 @@ class AMDGPULowerBufferFatPointers : public ModulePass {
 public:
   static char ID;
 
-  AMDGPULowerBufferFatPointers() : ModulePass(ID) {
-    initializeAMDGPULowerBufferFatPointersPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
   bool run(Module &M, const TargetMachine &TM);
   bool runOnModule(Module &M) override;
