@@ -583,9 +583,8 @@ void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
   thenBuilder(builder, result.location);
 
   Region *elseRegion = result.addRegion();
-  if (!withElseRegion) {
+  if (!withElseRegion)
     return;
-  }
 
   builder.createBlock(elseRegion);
   elseBuilder(builder, result.location);

@@ -540,7 +540,6 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
   assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
 
   if (isa<ConditionalOperator>(cond)) {
-
     cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
     assert(!cir::MissingFeatures::ternaryOp());
     return createDummyValue(loc, cond->getType());
@@ -548,6 +547,7 @@ mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
 
   if (isa<CXXThrowExpr>(cond)) {
     cgm.errorNYI("NYI");
+    return createDummyValue(loc, cond->getType());
   }
 
   // If the branch has a condition wrapped by __builtin_unpredictable,

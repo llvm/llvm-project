@@ -253,7 +253,7 @@ void if2(int a, bool b, bool c) {
 // OGCG:   ret void
 
 int if_init() {
-  if (int x = 42) {
+  if (int x = 42 ; x) {
     return x + 1; // x should be visible here
   } else {
     return x - 1; // x should also be visible here

@@ -473,7 +473,7 @@ def StoreOp : CIR_Op<"store", [
 //===----------------------------------------------------------------------===//
 
 def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
-                                             "DoWhileOp", "WhileOp", "ForOp"]>,
+                                              "DoWhileOp", "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -527,17 +527,17 @@ def IfOp : CIR_Op<"if",
     Examples:
 
     ```mlir
-    cir.if %b  {
+    cir.if %cond  {
       ...
     } else {
       ...
     }
 
-    cir.if %c  {
+    cir.if %cond  {
       ...
     }
 
-    cir.if %c  {
+    cir.if %cond  {
       ...
       cir.br ^a
     ^a:
@@ -613,7 +613,7 @@ def ConditionOp : CIR_Op<"condition", [
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
                                ParentOneOf<["IfOp", "ScopeOp", "WhileOp",
-                                           "ForOp", "DoWhileOp"]>]> {
+                                            "ForOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,

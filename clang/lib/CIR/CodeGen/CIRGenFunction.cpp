@@ -164,9 +164,9 @@ bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
                      });
 }
 
-/// If the specified expression does not fold
-/// to a constant, or if it does but contains a label, return false.  If it
-/// constant folds return true and set the folded value.
+/// If the specified expression does not fold to a constant, or if it does
+/// fold but contains a label, return false. If it constant folds, return
+/// true and set the folded value.
 bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
                                                   llvm::APSInt &resultInt,
                                                   bool allowLabels) {

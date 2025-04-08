@@ -11,8 +11,8 @@ void f() {
   if consteval {
     result = 10; 
     // CIR-NOT: cir.const #cir.int<10> : !s32i
-    // LLVM-NOT: store i32 10, ptr %1, align 4
-    // OGCG-NOT: store i32 10, ptr %result, align 4
+    // LLVM-NOT: store i32 10
+    // OGCG-NOT: store i32 10
   } else {
     result = 20; 
     // CHECK: cir.const #cir.int<20> : !s32i
@@ -29,15 +29,15 @@ void f() {
   } else {
     result = 40; 
     // CIR-NOT: cir.const #cir.int<40> : !s32i
-    // LLVM-NOT: store i32 40, ptr %1, align 4
-    // OGCG-NOT: store i32 40, ptr %result, align 4
+    // LLVM-NOT: store i32 40
+    // OGCG-NOT: store i32 40
   }
 
   if consteval {
     result = 50; 
     // CIR-NOT: cir.const #cir.int<50> : !s32i
-    // LLVM-NOT: store i32 50, ptr %1, align 4
-    // OGCG-NOT: store i32 50, ptr %result, align 4
+    // LLVM-NOT: store i32 50
+    // OGCG-NOT: store i32 50
   }
 
   if !consteval {
