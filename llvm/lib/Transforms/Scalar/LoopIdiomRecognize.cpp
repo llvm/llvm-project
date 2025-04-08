@@ -1745,7 +1745,11 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
     return false;
 
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
+  BasicBlock *LoopBody = *CurLoop->block_begin();
   BasicBlock *LoopExitBB = CurLoop->getExitBlock();
+  BranchInst *LoopTerm = dyn_cast<BranchInst>(LoopBody->getTerminator());
+  assert(Preheader && LoopBody && LoopExitBB && LoopTerm &&
+         "Should be verified to be valid by StrlenVerifier");
 
   if (Verifier.OpWidth == 8) {
     if (DisableLIRP::Strlen)
@@ -1804,6 +1808,11 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   // up by later passes
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
+
+  ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
+                                 ? Builder.getFalse()
+                                 : Builder.getTrue();
+  LoopTerm->setCondition(NewLoopCond);
   SE->forgetLoop(CurLoop);
 
   ++NumStrLen;
