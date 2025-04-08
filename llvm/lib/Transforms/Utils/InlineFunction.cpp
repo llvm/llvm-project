@@ -1381,8 +1381,7 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // behavior was just using a poison value.
   static const Attribute::AttrKind ExactAttrsToPropagate[] = {
       Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-      Attribute::NonNull,         Attribute::NoFPClass,
-      Attribute::Alignment,       Attribute::Range};
+      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
 
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
     ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
@@ -1464,13 +1463,6 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
               NewAB.addRangeAttr(CombinedRange);
             }
           }
-
-          if (FPClassTest ExistingNoFP = AL.getParamNoFPClass(I)) {
-            FPClassTest NewNoFP =
-                NewAB.getAttribute(Attribute::NoFPClass).getNoFPClass();
-            NewAB.addNoFPClassAttr(ExistingNoFP | NewNoFP);
-          }
-
           AL = AL.addParamAttributes(Context, I, NewAB);
         } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
