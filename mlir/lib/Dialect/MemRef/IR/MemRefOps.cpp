@@ -1948,27 +1948,6 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
     if (auto prev = src.getDefiningOp<CastOp>())
       return prev.getSource();
 
-    // reinterpret_cast(extract_strided_metadata(x)) -> reinterpret_cast(x).
-    //
-    // We can always fold the input of a extract_strided_metadata operator
-    // to the input of a reinterpret_cast operator, because they point to
-    // the same memory. Note that the reinterpret_cast does not use the
-    // layout of its input memref, only its base memory pointer which is
-    // the same as the base pointer returned by the extract_strided_metadata
-    // operator and the base pointer of the extract_strided_metadata memref
-    // input. This folding is only profitable when the reinterpret_cast
-    // layout is constant, because the extract_strided_metadata gets
-    // eliminated by dead code elimination. For non-constant folding we don’t
-    // get the extract_strided_metadata node eliminated and one of the LLVM
-    // tests regress in performance because the folding gets in the way of
-    // another optimization. For this reason the folding is only done on
-    // constant layout.
-    if (auto prev = src.getDefiningOp<ExtractStridedMetadataOp>()) {
-      if (isLayoutConstant()) {
-        return prev.getSource();
-      }
-    }
-
     // reinterpret_cast(subview(x)) -> reinterpret_cast(x) if subview offsets
     // are 0.
     if (auto prev = src.getDefiningOp<SubViewOp>())
@@ -1992,22 +1971,6 @@ OpFoldResult ReinterpretCastOp::fold(FoldAdaptor /*operands*/) {
   }
 
   return nullptr;
-}
-
-bool ReinterpretCastOp::isLayoutConstant() {
-  if (llvm::all_of(
-          getOffsets(),
-          [](OpFoldResult val) { return isConstantIntValue(val, 0); }) &&
-      llvm::all_of(
-          getStrides(),
-          [](OpFoldResult val) { return isConstantIntValue(val, 0); }) &&
-      llvm::all_of(getSizes(), [](OpFoldResult val) {
-        return isConstantIntValue(val, 0);
-      })) {
-    return true;
-  } else {
-    return false;
-  }
 }
 
 SmallVector<OpFoldResult> ReinterpretCastOp::getConstifiedMixedSizes() {
@@ -2071,6 +2034,11 @@ namespace {
 /// ```
 /// Because we know that `offset`and `c0` will hold 0
 /// and `c4` will hold 4.
+///
+/// If the pattern above does not match, the input of the extract_strided_metadata
+/// is always folded into the input of the reinterpret_cast operator. This allows
+/// for dead code elimination to get rid of the extract_strided_metadata in some
+/// cases.
 struct ReinterpretCastOpExtractStridedMetadataFolder
     : public OpRewritePattern<ReinterpretCastOp> {
 public:
@@ -2082,44 +2050,65 @@ public:
         op.getSource().getDefiningOp<ExtractStridedMetadataOp>();
     if (!extractStridedMetadata)
       return failure();
+
     // Check if the reinterpret cast reconstructs a memref with the exact same
     // properties as the extract strided metadata.
-
-    // First, check that the strides are the same.
     SmallVector<OpFoldResult> extractStridesOfr =
         extractStridedMetadata.getConstifiedMixedStrides();
     SmallVector<OpFoldResult> reinterpretStridesOfr =
         op.getConstifiedMixedStrides();
-    if (extractStridesOfr.size() != reinterpretStridesOfr.size())
-      return failure();
+    auto isReinterpretCastNoop = [&]() -> bool {
+      // First, check that the strides are the same.
+      if (extractStridesOfr.size() != reinterpretStridesOfr.size())
+        return false;
 
-    unsigned rank = op.getType().getRank();
-    for (unsigned i = 0; i < rank; ++i) {
-      if (extractStridesOfr[i] != reinterpretStridesOfr[i])
-        return failure();
-    }
+      unsigned rank = op.getType().getRank();
+      for (unsigned i = 0; i < rank; ++i) {
+        if (extractStridesOfr[i] != reinterpretStridesOfr[i])
+          return false;
+      }
 
-    // Second, check the sizes.
-    assert(extractStridedMetadata.getSizes().size() ==
-               op.getMixedSizes().size() &&
-           "Strides and sizes rank must match");
-    SmallVector<OpFoldResult> extractSizesOfr =
-        extractStridedMetadata.getConstifiedMixedSizes();
-    SmallVector<OpFoldResult> reinterpretSizesOfr =
-        op.getConstifiedMixedSizes();
-    for (unsigned i = 0; i < rank; ++i) {
-      if (extractSizesOfr[i] != reinterpretSizesOfr[i])
-        return failure();
+      // Second, check the sizes.
+      assert(extractStridedMetadata.getSizes().size() ==
+                op.getMixedSizes().size() &&
+            "Strides and sizes rank must match");
+      SmallVector<OpFoldResult> extractSizesOfr =
+          extractStridedMetadata.getConstifiedMixedSizes();
+      SmallVector<OpFoldResult> reinterpretSizesOfr =
+          op.getConstifiedMixedSizes();
+      for (unsigned i = 0; i < rank; ++i) {
+        if (extractSizesOfr[i] != reinterpretSizesOfr[i])
+          return false;
+      }
+      // Finally, check the offset.
+      assert(op.getMixedOffsets().size() == 1 &&
+            "reinterpret_cast with more than one offset should have been "
+            "rejected by the verifier");
+      OpFoldResult extractOffsetOfr =
+          extractStridedMetadata.getConstifiedMixedOffset();
+      OpFoldResult reinterpretOffsetOfr = op.getConstifiedMixedOffset();
+      return extractOffsetOfr == reinterpretOffsetOfr;
+    };
+
+    if (!isReinterpretCastNoop()) {
+      // If the extract_strided_metadata / reinterpret_cast pair can't be
+      // completely folded, then we could fold the input of the
+      // extract_strided_metadata into the input of the reinterpret_cast
+      // input. For some cases (e.g., static dimensions) the 
+      // the extract_strided_metadata is eliminated by dead code elimination.
+      //
+      // reinterpret_cast(extract_strided_metadata(x)) -> reinterpret_cast(x).
+      //
+      // We can always fold the input of a extract_strided_metadata operator
+      // to the input of a reinterpret_cast operator, because they point to
+      // the same memory. Note that the reinterpret_cast does not use the
+      // layout of its input memref, only its base memory pointer which is
+      // the same as the base pointer returned by the extract_strided_metadata
+      // operator and the base pointer of the extract_strided_metadata memref
+      // input.
+      op.setOperand(0, extractStridedMetadata.getSource());
+      return success();
     }
-    // Finally, check the offset.
-    assert(op.getMixedOffsets().size() == 1 &&
-           "reinterpret_cast with more than one offset should have been "
-           "rejected by the verifier");
-    OpFoldResult extractOffsetOfr =
-        extractStridedMetadata.getConstifiedMixedOffset();
-    OpFoldResult reinterpretOffsetOfr = op.getConstifiedMixedOffset();
-    if (extractOffsetOfr != reinterpretOffsetOfr)
-      return failure();
 
     // At this point, we know that the back and forth between extract strided
     // metadata and reinterpret cast is a noop. However, the final type of the

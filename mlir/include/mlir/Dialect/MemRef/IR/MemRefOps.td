@@ -1440,9 +1440,6 @@ def MemRef_ReinterpretCastOp
     SmallVector<OpFoldResult> getConstifiedMixedStrides();
     /// Similar to `getConstifiedMixedSizes` but for the offset.
     OpFoldResult getConstifiedMixedOffset();
-    /// Returns true if the reinterpret cast operation's offset, stride, and 
-    /// size are all constant.
-    bool isLayoutConstant();
   }];
 
   let hasFolder = 1;

@@ -975,7 +975,11 @@ func.func @simplify_collapse(%arg : memref<?x?x4x?x6x7xi32>)
 //
 // CHECK-LABEL: func @simplify_collapse_with_dim_of_size1(
 //  CHECK-SAME: %[[ARG:.*]]: memref<3x1xf32, strided<[2, 1]>>,
-//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[ARG]] to offset: [0], sizes: [3], strides: [2]
+//
+//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]] : memref<3x1xf32, strided<[2, 1]>>
+//
+//
+//       CHECK: %[[COLLAPSE_VIEW:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [0], sizes: [3], strides: [2]
 func.func @simplify_collapse_with_dim_of_size1(%arg0: memref<3x1xf32, strided<[2,1]>>, %arg1: memref<3xf32>) {
 
   %collapse_shape = memref.collapse_shape %arg0 [[0, 1]] :
