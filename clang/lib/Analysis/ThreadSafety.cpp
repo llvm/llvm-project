@@ -1040,6 +1040,7 @@ class ThreadSafetyAnalyzer {
   std::vector<CFGBlockInfo> BlockInfo;
 
   BeforeSet *GlobalBeforeSet;
+  CapExprSet ExpectedReturnedCapabilities;
 
 public:
   ThreadSafetyAnalyzer(ThreadSafetyHandler &H, BeforeSet* Bset)
@@ -2041,15 +2042,16 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         if (!a.has_value()) {
           Analyzer->Handler.handleExpectFewerUnderlyingMutexes(
               Exp->getExprLoc(), D->getLocation(), Scope->toString(),
-              b.value().getKind(), b.value().toString());
+              b.value().getKind(), b.value().toString(), true);
         } else if (!b.has_value()) {
           Analyzer->Handler.handleExpectMoreUnderlyingMutexes(
               Exp->getExprLoc(), D->getLocation(), Scope->toString(),
-              a.value().getKind(), a.value().toString());
-        } else if (!a.value().equals(b.value())) {
+              a.value().getKind(), a.value().toString(), true);
+        } else if (!a.value().matches(b.value())) {
           Analyzer->Handler.handleUnmatchedUnderlyingMutexes(
               Exp->getExprLoc(), D->getLocation(), Scope->toString(),
-              a.value().getKind(), a.value().toString(), b.value().toString());
+              a.value().getKind(), a.value().toString(), b.value().toString(),
+              true);
           break;
         }
       }
@@ -2294,6 +2296,25 @@ void BuildLockset::VisitMaterializeTemporaryExpr(
   }
 }
 
+static bool checkRecordTypeForScopedCapability(QualType Ty) {
+  const RecordType *RT = Ty->getAs<RecordType>();
+
+  if (!RT)
+    return false;
+
+  if (RT->getDecl()->hasAttr<ScopedLockableAttr>())
+    return true;
+
+  // Else check if any base classes have the attribute.
+  if (const auto *CRD = dyn_cast<CXXRecordDecl>(RT->getDecl())) {
+    if (!CRD->forallBases([](const CXXRecordDecl *Base) {
+          return !Base->hasAttr<ScopedLockableAttr>();
+        }))
+      return true;
+  }
+  return false;
+}
+
 void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
   if (Analyzer->CurrentFunction == nullptr)
     return;
@@ -2315,6 +2336,49 @@ void BuildLockset::VisitReturnStmt(const ReturnStmt *S) {
         FunctionExitFSet, RetVal,
         ReturnType->getPointeeType().isConstQualified() ? AK_Read : AK_Written,
         POK_ReturnPointer);
+  }
+
+  if (!checkRecordTypeForScopedCapability(ReturnType))
+    return;
+
+  if (const auto *CBTE = dyn_cast<ExprWithCleanups>(RetVal))
+    RetVal = CBTE->getSubExpr();
+  RetVal = RetVal->IgnoreCasts();
+  if (const auto *CBTE = dyn_cast<CXXBindTemporaryExpr>(RetVal))
+    RetVal = CBTE->getSubExpr();
+  CapabilityExpr Cp;
+  if (auto Object = Analyzer->ConstructedObjects.find(RetVal);
+      Object != Analyzer->ConstructedObjects.end()) {
+    Cp = CapabilityExpr(Object->second, StringRef(), false);
+    Analyzer->ConstructedObjects.erase(Object);
+  }
+  if (!Cp.shouldIgnore()) {
+    const FactEntry *Fact = FSet.findLock(Analyzer->FactMan, Cp);
+    if (const ScopedLockableFactEntry *Scope =
+            cast_or_null<ScopedLockableFactEntry>(Fact)) {
+      CapExprSet LocksInReturnVal = Scope->getUnderlyingMutexes();
+      for (const auto &[a, b] : zip_longest(
+               Analyzer->ExpectedReturnedCapabilities, LocksInReturnVal)) {
+        if (!a.has_value()) {
+          Analyzer->Handler.handleExpectFewerUnderlyingMutexes(
+              RetVal->getExprLoc(), Analyzer->CurrentFunction->getLocation(),
+              Scope->toString(), b.value().getKind(), b.value().toString(),
+              false);
+        } else if (!b.has_value()) {
+          Analyzer->Handler.handleExpectMoreUnderlyingMutexes(
+              RetVal->getExprLoc(), Analyzer->CurrentFunction->getLocation(),
+              Scope->toString(), a.value().getKind(), a.value().toString(),
+              false);
+          break;
+        } else if (!a.value().matches(b.value())) {
+          Analyzer->Handler.handleUnmatchedUnderlyingMutexes(
+              RetVal->getExprLoc(), Analyzer->CurrentFunction->getLocation(),
+              Scope->toString(), a.value().getKind(), a.value().toString(),
+              b.value().toString(), false);
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -2480,11 +2544,22 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
     CapExprSet SharedLocksToAdd;
 
     SourceLocation Loc = D->getLocation();
+    bool ReturnsScopedCapability;
+    if (CurrentFunction)
+      ReturnsScopedCapability = checkRecordTypeForScopedCapability(
+          CurrentFunction->getReturnType().getCanonicalType());
+    else if (auto CurrentMethod = dyn_cast<ObjCMethodDecl>(D))
+      ReturnsScopedCapability = checkRecordTypeForScopedCapability(
+          CurrentMethod->getReturnType().getCanonicalType());
+    else
+      llvm_unreachable("Unknown function kind");
     for (const auto *Attr : D->attrs()) {
       Loc = Attr->getLocation();
       if (const auto *A = dyn_cast<RequiresCapabilityAttr>(Attr)) {
         getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
                     nullptr, D);
+        if (ReturnsScopedCapability)
+          getMutexIDs(ExpectedReturnedCapabilities, A, nullptr, D);
       } else if (const auto *A = dyn_cast<ReleaseCapabilityAttr>(Attr)) {
         // UNLOCK_FUNCTION() is used to hide the underlying lock implementation.
         // We must ignore such methods.
@@ -2493,12 +2568,19 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         getMutexIDs(A->isShared() ? SharedLocksToAdd : ExclusiveLocksToAdd, A,
                     nullptr, D);
         getMutexIDs(LocksReleased, A, nullptr, D);
+        if (ReturnsScopedCapability)
+          getMutexIDs(ExpectedReturnedCapabilities, A, nullptr, D);
       } else if (const auto *A = dyn_cast<AcquireCapabilityAttr>(Attr)) {
         if (A->args_size() == 0)
           return;
         getMutexIDs(A->isShared() ? SharedLocksAcquired
                                   : ExclusiveLocksAcquired,
                     A, nullptr, D);
+        if (ReturnsScopedCapability)
+          getMutexIDs(ExpectedReturnedCapabilities, A, nullptr, D);
+      } else if (const auto *A = dyn_cast<LocksExcludedAttr>(Attr)) {
+        if (ReturnsScopedCapability)
+          getMutexIDs(ExpectedReturnedCapabilities, A, nullptr, D);
       } else if (isa<ExclusiveTrylockFunctionAttr>(Attr)) {
         // Don't try to check trylock functions for now.
         return;
