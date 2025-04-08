@@ -1,6 +1,6 @@
 // This test started failing recently for unknown reasons.
 // XFAIL:*
-// RUN: %dexter_regression_test_build \
+// RUN: %dexter_regression_test_cxx_build \
 // RUN:     -fdebug-prefix-map=%S=/changed %s -o %t
 // RUN: %dexter --fail-lt 1.0 -w \
 // RUN:     --binary %t \
