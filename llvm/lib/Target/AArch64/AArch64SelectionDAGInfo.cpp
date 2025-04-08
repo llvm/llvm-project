@@ -35,6 +35,7 @@ bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
 
 void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                                const SDNode *N) const {
+#ifndef NDEBUG
   switch (N->getOpcode()) {
   default:
     break;
@@ -110,6 +111,7 @@ void AArch64SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
     break;
   }
   }
+#endif
 }
 
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,

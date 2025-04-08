@@ -458,3 +458,12 @@ namespace PR37680 {
   };
   int f(b<a> ba) { return ba.add<0>(); }
 }
+
+namespace TransformDependentTemplates {
+  template <class T> struct Test1 {
+    template <class T2>
+      using Arg = typename T::template Arg<T2>;
+    void f(Arg<void>);
+    void f(Arg<int>);
+  };
+} // namespace TransformDependentTemplates

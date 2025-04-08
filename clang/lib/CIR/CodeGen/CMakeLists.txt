@@ -10,6 +10,7 @@ add_clang_library(clangCIR
   CIRGenerator.cpp
   CIRGenBuilder.cpp
   CIRGenDecl.cpp
+  CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
   CIRGenExprConstant.cpp
@@ -17,6 +18,7 @@ add_clang_library(clangCIR
   CIRGenFunction.cpp
   CIRGenModule.cpp
   CIRGenStmt.cpp
+  CIRGenStmtOpenACC.cpp
   CIRGenTypes.cpp
 
   DEPENDS

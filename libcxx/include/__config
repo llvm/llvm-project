@@ -383,7 +383,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_NAMESPACE_VISIBILITY
@@ -405,13 +404,6 @@ typedef __char32_t char32_t;
 // TODO: Make this a proper customization point or remove the option to override it.
 #    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
-#    endif
-
-#    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
-// The inline should be removed once PR32114 is resolved
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS inline _LIBCPP_HIDDEN
-#    else
-#      define _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
 #    endif
 
 // This is kept to avoid a huge library-wide diff in the first step.
@@ -1073,9 +1065,8 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
 #  endif
 
-// TODO(varconst): currently, there are bugs in Clang's intrinsics when handling Objective-C++ `id`, so don't use
-// compiler intrinsics in the Objective-C++ mode.
-#  ifdef __OBJC__
+// TODO(LLVM 22): Remove the workaround
+#  if defined(__OBJC__) && (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER < 2001)
 #    define _LIBCPP_WORKAROUND_OBJCXX_COMPILER_INTRINSICS
 #  endif
 

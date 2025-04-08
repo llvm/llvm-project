@@ -135,7 +135,7 @@ unsigned __tree_sub_invariant(_NodePtr __x) {
 }
 
 // Determines if the red black tree rooted at __root is a proper red black tree.
-//    __root == nullptr is a proper tree.  Returns true is __root is a proper
+//    __root == nullptr is a proper tree.  Returns true if __root is a proper
 //    red black tree, else returns false.
 template <class _NodePtr>
 _LIBCPP_HIDE_FROM_ABI bool __tree_invariant(_NodePtr __root) {
