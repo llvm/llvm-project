@@ -17770,13 +17770,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Value *Src = vectorizeOperand(E, 0);
         SmallVector<int> ThisMask(calculateShufflevectorMask(E->Scalars));
         if (auto *SVSrc = dyn_cast<ShuffleVectorInst>(Src)) {
-          assert(isa<PoisonValue>(SVSrc->getOperand(1)) &&
-                 "Not supported shufflevector usage.");
           SmallVector<int> NewMask(ThisMask.size());
           transform(ThisMask, NewMask.begin(), [&SVSrc](int Mask) {
             return SVSrc->getShuffleMask()[Mask];
           });
-          V = Builder.CreateShuffleVector(SVSrc->getOperand(0), NewMask);
+          V = Builder.CreateShuffleVector(SVSrc->getOperand(0),
+                                          SVSrc->getOperand(1), NewMask);
         } else {
           V = Builder.CreateShuffleVector(Src, ThisMask);
         }
