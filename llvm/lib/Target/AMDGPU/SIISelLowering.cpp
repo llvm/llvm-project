@@ -915,8 +915,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BUILD_VECTOR, MVT::v2bf16, Legal);
   }
 
-  if (Subtarget->hasCvtPkF16F32Inst() && TM.Options.UnsafeFPMath) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
+  if (Subtarget->hasCvtPkF16F32Inst()) {
+    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
   }
 
   setTargetDAGCombine({ISD::ADD,
@@ -6893,6 +6893,9 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   EVT DstVT = Op.getValueType();
+  if (DstVT == MVT::v2f16)
+    return DAG.getTarget().Options.UnsafeFPMath ? Op : SDValue();
+
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp
