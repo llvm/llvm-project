@@ -690,6 +690,23 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
   SemaRef.MarkUsedTemplateParameters(
       DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
 
+  auto MarkDefaultArgs = [&](auto *Param) {
+    if (!Param || !Param->hasDefaultArgument())
+      return;
+    SemaRef.MarkUsedTemplateParameters(
+        Param->getDefaultArgument().getArgument(),
+        TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  };
+
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (!ReferencedTemplateParams[Index])
+      continue;
+    auto *Param = TemplateParamsList->getParam(Index);
+    MarkDefaultArgs(dyn_cast<TemplateTypeParmDecl>(Param));
+    MarkDefaultArgs(dyn_cast<NonTypeTemplateParmDecl>(Param));
+    MarkDefaultArgs(dyn_cast<TemplateTemplateParmDecl>(Param));
+  }
+
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
     if (ReferencedTemplateParams[Index])
