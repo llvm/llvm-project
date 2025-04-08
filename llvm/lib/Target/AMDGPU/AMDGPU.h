@@ -215,7 +215,7 @@ extern char &SIWholeQuadModeID;
 void initializeSILowerControlFlowLegacyPass(PassRegistry &);
 extern char &SILowerControlFlowLegacyID;
 
-void initializeSIPreEmitPeepholePass(PassRegistry &);
+void initializeSIPreEmitPeepholeLegacyPass(PassRegistry &);
 extern char &SIPreEmitPeepholeID;
 
 void initializeSILateBranchLoweringLegacyPass(PassRegistry &);
@@ -404,6 +404,13 @@ public:
 
 class SILateBranchLoweringPass
     : public PassInfoMixin<SILateBranchLoweringPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class SIPreEmitPeepholePass : public PassInfoMixin<SIPreEmitPeepholePass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

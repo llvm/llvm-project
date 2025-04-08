@@ -460,10 +460,9 @@ define void @masked_gather_v1i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: masked_gather_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr q0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    cmpeq p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    ldr q0, [x1]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [z0.d]
 ; CHECK-NEXT:    str q0, [x0]
