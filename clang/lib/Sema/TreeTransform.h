@@ -3981,7 +3981,7 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(Result.get(), Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get());
     }
 
     case TemplateArgument::Template:
@@ -16131,8 +16131,8 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = new (getSema().Context)
-            PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt);
+        ArgStorage = TemplateArgument(new (getSema().Context) PackExpansionExpr(
+            DRE.get(), E->getPackLoc(), std::nullopt));
       }
       PackArgs = ArgStorage;
     }
