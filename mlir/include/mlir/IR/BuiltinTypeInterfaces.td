@@ -27,8 +27,9 @@ def VectorElementTypeInterface : TypeInterface<"VectorElementTypeInterface"> {
     vector type, indicating that this type can be used as element of vectors.
 
     Vector element types are treated as a bag of bits without any assumed
-    structure. The size of an element type must be constant, but it does not
-    necessarily have to be a compile-time constant.
+    structure. The size of an element type must be a compile-time constant.
+    However, the bit-width may remain opaque or unavailable during
+    transformations that do not depend on the element type.
 
     Note: This type interface is still evolving. It currently has no methods
     and is just used as marker to allow types to opt into being vector elements.
