@@ -80,11 +80,7 @@ class LocationSize {
 
   uint64_t Value;
 
-  // Hack to support implicit construction. This should disappear when the
-  // public LocationSize ctor goes away.
-  enum DirectConstruction { Direct };
-
-  constexpr LocationSize(uint64_t Raw, DirectConstruction) : Value(Raw) {}
+  constexpr LocationSize(uint64_t Raw) : Value(Raw) {}
   constexpr LocationSize(uint64_t Raw, bool Scalable)
       : Value(Raw > MaxValue ? AfterPointer
                              : Raw | (Scalable ? ScalableBit : uint64_t(0))) {}
@@ -110,7 +106,7 @@ public:
       return precise(0);
     if (LLVM_UNLIKELY(Value > MaxValue))
       return afterPointer();
-    return LocationSize(Value | ImpreciseBit, Direct);
+    return LocationSize(Value | ImpreciseBit);
   }
   static LocationSize upperBound(TypeSize Value) {
     if (Value.isScalable())
@@ -121,21 +117,21 @@ public:
   /// Any location after the base pointer (but still within the underlying
   /// object).
   constexpr static LocationSize afterPointer() {
-    return LocationSize(AfterPointer, Direct);
+    return LocationSize(AfterPointer);
   }
 
   /// Any location before or after the base pointer (but still within the
   /// underlying object).
   constexpr static LocationSize beforeOrAfterPointer() {
-    return LocationSize(BeforeOrAfterPointer, Direct);
+    return LocationSize(BeforeOrAfterPointer);
   }
 
   // Sentinel values, generally used for maps.
   constexpr static LocationSize mapTombstone() {
-    return LocationSize(MapTombstone, Direct);
+    return LocationSize(MapTombstone);
   }
   constexpr static LocationSize mapEmpty() {
-    return LocationSize(MapEmpty, Direct);
+    return LocationSize(MapEmpty);
   }
 
   // Returns a LocationSize that can correctly represent either `*this` or
