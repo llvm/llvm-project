@@ -376,14 +376,25 @@ You can test this locally with the following command:
         sys.stdout.write(proc.stderr)
         stdout = proc.stdout
 
+        if not stdout:
+            return None
+
         files = []
+
         # Split the diff so we have one array entry per file.
         # Each file is prefixed like:
         # diff --git a/file b/file
         for file in re.split("^diff --git ", stdout, 0, re.MULTILINE):
+            filename = re.match("a/([^ ]+)", file.splitlines()[0])[1]
+            if filename.endswith(".ll"):
+                undef_regex = r"\bundef\b"
+            else:
+                undef_regex = r"UndefValue::get"
             # search for additions of undef
-            if re.search(r"^[+](?!\s*#\s*).*(\bundef\b|UndefValue::get)", file, re.MULTILINE):
-                files.append(re.match("a/([^ ]+)", file.splitlines()[0])[1])
+            if re.search(
+                r"^[+](?!\s*#\s*).*(" + undef_regex + r")", file, re.MULTILINE
+            ):
+                files.append(filename)
 
         if not files:
             return None
