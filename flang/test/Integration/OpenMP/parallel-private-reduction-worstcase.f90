@@ -1,5 +1,4 @@
 ! RUN: %flang_fc1 -fopenmp -emit-llvm %s -o - | FileCheck %s
-! XFAIL: *
 
 ! Combinational testing of control flow graph and builder insertion points
 ! in mlir-to-llvm conversion:
