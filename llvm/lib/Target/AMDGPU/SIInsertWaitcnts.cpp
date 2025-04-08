@@ -467,7 +467,7 @@ public:
   void clearGprIdxImmedVal(unsigned Idx) { GprIdxImmedVals[Idx] = {}; }
 
   void print(raw_ostream &) const;
-  void dump() { print(dbgs()); }
+  void dump() const { print(dbgs()); }
 
 private:
   struct MergeInfo {
