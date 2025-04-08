@@ -757,6 +757,9 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
     //
     // However, some imported Clang types (specifically enums) will also produce
     // `BuiltinTypeInfo` instances. These types are not to be handled here.
+    if (TypeSystemSwiftTypeRef::IsBuiltinType(type))
+      return 0;
+
     LLDB_LOG(GetLog(LLDBLog::Types),
              "{0}: unrecognized builtin type info or this is a Clang type "
              "without DWARF debug info",
@@ -1162,6 +1165,9 @@ SwiftLanguageRuntime::GetIndexOfChildMemberWithName(
     }
   }
   case TypeInfoKind::Builtin: {
+    if (TypeSystemSwiftTypeRef::IsBuiltinType(type))
+      return {SwiftLanguageRuntime::eNotFound, {}};
+
     CompilerType clang_type;
     if (ts.IsImportedType(type.GetOpaqueQualType(), &clang_type)) {
       clang_type = GetTypedefedTypeRecursive(clang_type);
