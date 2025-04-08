@@ -2,6 +2,18 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -mattr=+avx10.2-512 -passes=slp-vectorizer -S -slp-revec %s | FileCheck %s
 
 define void @test() {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub <8 x i64> zeroinitializer, splat (i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <8 x i64> zeroinitializer, zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = or <8 x i64> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i64> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc <8 x i64> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr null, i64 32
+; CHECK-NEXT:    store <8 x i32> [[TMP3]], ptr null, align 4
+; CHECK-NEXT:    store <8 x i32> [[TMP4]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    ret void
+;
 entry:
   %0 = sub <8 x i64> zeroinitializer, splat (i64 1)
   %1 = sub <8 x i64> zeroinitializer, zeroinitializer
