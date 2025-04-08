@@ -1422,7 +1422,7 @@ void Sema::ActOnEndOfTranslationUnit() {
     Consumer.CompleteExternalDeclaration(D);
   }
 
-  // Visit all pending #pragma export
+  // Visit all pending #pragma export.
   for (auto &Iter : PendingExportNames) {
     NestedNameSpecifier *Name = Iter.first;
     PendingSymbolOverloads &Overloads = Iter.second;
@@ -1436,8 +1436,7 @@ void Sema::ActOnEndOfTranslationUnit() {
           } else
             Consumer.CompletePragmaExport(D);
         } else
-          Diag(D->getLocation(), diag::warn_pragma_not_applied)
-              << "export" << D;
+          Diag(I.NameLoc, diag::warn_pragma_not_applied) << "export" << D;
       } else
         Diag(I.NameLoc, diag::warn_failed_to_resolve_pragma) << "export";
     }

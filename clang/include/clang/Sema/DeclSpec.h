@@ -2134,7 +2134,7 @@ public:
   /// Whether this declarator is marked as _Export.
   bool IsExport() const { return ExportSpecified; }
 
-  /// Get the location of the _Export keyword
+  /// Get the location of the _Export keyword.
   SourceLocation getExportLoc() const { return ExportLoc; }
 
   /// Reset the contents of this Declarator.

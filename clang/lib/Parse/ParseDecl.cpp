@@ -6779,7 +6779,7 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
 
   tok::TokenKind Kind = Tok.getKind();
 
-  // If this variable or function is marked as _Export, set the bit
+  // If this variable or function is marked as _Export, set the bit.
   if (Kind == tok::kw__Export) {
     SourceLocation loc = ConsumeToken();
     D.SetExport(loc);

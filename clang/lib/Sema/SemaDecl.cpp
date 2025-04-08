@@ -6506,7 +6506,7 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
       if (existingValue != VisibilityAttr::Default)
         Diag(D.getExportLoc(), diag::err_mismatched_visibility);
     } else
-      // Add VisibilityAttr::Default since the default could be hidden, etc
+      // Add VisibilityAttr::Default since the default could be hidden, etc.
       New->addAttr(
           VisibilityAttr::CreateImplicit(Context, VisibilityAttr::Default));
   }

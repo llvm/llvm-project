@@ -1385,7 +1385,7 @@ FunctionDecl *Sema::tryFunctionLookUpInPragma(NestedNameSpecifier *NestedName,
   }
   F.done();
   // Loop over all the found decls and see if the arguments match
-  // any of the results
+  // any of the results.
   for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
     NamedDecl *ND = (*I)->getUnderlyingDecl();
     FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);
@@ -1438,14 +1438,14 @@ Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
     return nullptr;
   };
 
-  // global variable or function in a namespace
+  // global variable or function in a namespace.
   if (NamespaceDecl *ND = Result.getAsSingle<NamespaceDecl>()) {
     if (ND->getIdentifierNamespace() == Decl::IDNS_Namespace) {
       return MatchDecl(ND);
     }
   }
 
-  // data or function member
+  // data or function member.
   if (CXXRecordDecl *RD = Result.getAsSingle<CXXRecordDecl>()) {
     return MatchDecl(RD);
   }
@@ -1467,7 +1467,7 @@ Sema::trySymbolLookUpInPragma(NestedNameSpecifier *NestedName,
   }
 
   // Loop over all the found decls and see if the arguments match
-  // any of the results
+  // any of the results.
   for (LookupResult::iterator I = Result.begin(); I != Result.end(); ++I) {
     NamedDecl *ND = (*I)->getUnderlyingDecl();
     FunctionDecl *FD = dyn_cast<FunctionDecl>(ND);

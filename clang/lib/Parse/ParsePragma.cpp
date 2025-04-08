@@ -1417,42 +1417,37 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
-NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
-                                                const IdentifierInfo *IdentName,
-                                                SourceLocation &PrevLoc) {
+NestedNameSpecifier *
+Parser::zOSParseIdentifier(StringRef PragmaName,
+                           const IdentifierInfo *IdentName) {
   NestedNameSpecifier *NestedId = nullptr;
   if (PP.getLangOpts().CPlusPlus) {
     if (Tok.is(tok::coloncolon)) {
+      // Nothing to do.
     } else if (Actions.CurContext->isNamespace()) {
       auto *NS = cast<NamespaceDecl>(Actions.CurContext);
       NestedId =
           NestedNameSpecifier::Create(Actions.Context, NS->getIdentifier());
       NestedId =
           NestedNameSpecifier::Create(Actions.Context, NestedId, IdentName);
-      PrevLoc = Tok.getLocation();
       PP.Lex(Tok);
     } else {
       NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-      PrevLoc = Tok.getLocation();
       PP.Lex(Tok);
     }
     while (Tok.is(tok::coloncolon)) {
-      PrevLoc = Tok.getLocation();
       PP.Lex(Tok);
       if (Tok.isNot(tok::identifier)) {
-        PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevLoc,
-                diag::warn_pragma_expected_identifier)
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
             << PragmaName;
         return nullptr;
       }
       IdentifierInfo *II = Tok.getIdentifierInfo();
       NestedId = NestedNameSpecifier::Create(Actions.Context, NestedId, II);
-      PrevLoc = Tok.getLocation();
       PP.Lex(Tok);
     }
   } else {
     NestedId = NestedNameSpecifier::Create(Actions.Context, IdentName);
-    PrevLoc = Tok.getLocation();
     PP.Lex(Tok);
   }
   return NestedId;
@@ -1460,10 +1455,9 @@ NestedNameSpecifier *Parser::zOSParseIdentifier(StringRef PragmaName,
 
 bool Parser::zOSParseParameterList(
     StringRef PragmaName, std::optional<SmallVector<QualType, 4>> &TypeList,
-    Qualifiers &CVQual, SourceLocation &PrevLoc) {
+    Qualifiers &CVQual) {
   if (Tok.is(tok::l_paren)) {
     TypeList = SmallVector<QualType, 4>();
-    PrevLoc = Tok.getLocation();
     PP.Lex(Tok);
     while (Tok.isNot(tok::eof) && !Tok.is(tok::r_paren)) {
       TypeResult TResult = ParseTypeName(nullptr);
@@ -1473,18 +1467,16 @@ bool Parser::zOSParseParameterList(
           TypeList->push_back(QT);
         }
       }
-      if (Tok.is(tok::comma) || Tok.is(tok::identifier)) {
-        PrevLoc = Tok.getLocation();
+      if (Tok.is(tok::comma) || Tok.is(tok::identifier))
         PP.Lex(Tok);
-      }
     }
-    if (Tok.is(tok::r_paren)) {
-      PrevLoc = Tok.getLocation();
+    if (Tok.is(tok::r_paren))
       PP.Lex(Tok);
-    } else {
+    else {
       // We ate the whole line trying to find the right paren of the parameter
-      // list
-      PP.Diag(PrevLoc, diag::warn_pragma_expected_identifier) << PragmaName;
+      // list.
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
       return false;
     }
 
@@ -1496,7 +1488,6 @@ bool Parser::zOSParseParameterList(
           assert(Tok.is(tok::kw_volatile));
           CVQual.addVolatile();
         }
-        PrevLoc = Tok.getLocation();
         PP.Lex(Tok);
       }
   }
@@ -1515,34 +1506,28 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
       (std::pair<std::unique_ptr<Token[]>, size_t> *)Tok.getAnnotationValue();
   PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
                       false);
-  ConsumeAnnotationToken(); // The annotation token.
+  ConsumeAnnotationToken();
 
   do {
-    SourceLocation PrevTokLocation = Tok.getLocation();
-
     PP.Lex(Tok);
     if (Tok.isNot(tok::l_paren)) {
-      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
-              diag::warn_pragma_expected_lparen)
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
           << PragmaName;
       return false;
     }
 
     // C++ could have a nested name, or be qualified with ::.
-    PrevTokLocation = Tok.getLocation();
     PP.Lex(Tok);
     if (Tok.isNot(tok::identifier) &&
         !(PP.getLangOpts().CPlusPlus && Tok.is(tok::coloncolon))) {
-      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
-              diag::warn_pragma_expected_identifier)
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
           << PragmaName;
       return false;
     }
 
     IdentifierInfo *IdentName = Tok.getIdentifierInfo();
     SourceLocation IdentNameLoc = Tok.getLocation();
-    NestedNameSpecifier *NestedId =
-        zOSParseIdentifier(PragmaName, IdentName, PrevTokLocation);
+    NestedNameSpecifier *NestedId = zOSParseIdentifier(PragmaName, IdentName);
     if (!NestedId)
       return false;
 
@@ -1552,13 +1537,12 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     Qualifiers CVQual;
 
     if (PP.getLangOpts().CPlusPlus && Tok.is(tok::l_paren)) {
-      if (!zOSParseParameterList(PragmaName, TypeList, CVQual, PrevTokLocation))
+      if (!zOSParseParameterList(PragmaName, TypeList, CVQual))
         return false;
     }
 
     if (Tok.isNot(tok::r_paren)) {
-      PP.Diag(Tok.getLocation().isValid() ? Tok.getLocation() : PrevTokLocation,
-              diag::warn_pragma_expected_rparen)
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
           << PragmaName;
       return false;
     }
@@ -1567,7 +1551,7 @@ bool Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
     Actions.ActOnPragmaExport(NestedId, IdentNameLoc, std::move(TypeList),
                               CVQual);
 
-    // Because export is also a C++ keyword, we also check for that
+    // Because export is also a C++ keyword, we also check for that.
     if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
       IsPragmaExport = false;
       PragmaName = Tok.getIdentifierInfo()->getName();
@@ -4363,6 +4347,7 @@ static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
     AnnotTok.setAnnotationEndLoc(Tok.getLocation());
   }
   // Add a sentinel EoF token to the end of the list.
+  EoF.setLocation(Tok.getLocation());
   TokenVector.push_back(EoF);
   // We must allocate this array with new because EnterTokenStream is going to
   // delete it later.
