@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -91,6 +92,11 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+  if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
+    emitGlobalOpenACCDecl(cd);
+    return;
+  }
+
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -423,6 +429,12 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobal(vd);
     break;
   }
+  case Decl::OpenACCRoutine:
+    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    break;
+  case Decl::OpenACCDeclare:
+    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
   }
 }
 
