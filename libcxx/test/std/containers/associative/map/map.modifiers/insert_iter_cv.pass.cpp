@@ -19,7 +19,7 @@
 #include "min_allocator.h"
 
 template <class Container>
-void do_insert_iter_cv_test() {
+TEST_CONSTEXPR_CXX26 bool do_insert_iter_cv_test() {
   typedef Container M;
   typedef typename M::iterator R;
   typedef typename M::value_type VT;
@@ -52,6 +52,8 @@ void do_insert_iter_cv_test() {
   assert(m.size() == 3);
   assert(r->first == 3);
   assert(r->second == 3.5);
+
+  return true;
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
