@@ -1519,13 +1519,10 @@ bool GCNPassConfig::addLegalizeMachineIR() {
 }
 
 void GCNPassConfig::addPreRegBankSelect() {
-  // TODO-WAVETRANSFORM:
-  // GlobalISel does not run SIFixSGPRCopies and SILowerI1Copies.
-  // Equivalent work is done during GlobalISel, which indicates that
-  // GlobalISel need some change to support WaveTransform.
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
   addPass(createAMDGPUPostLegalizeCombiner(IsOptNone));
-  addPass(createAMDGPUGlobalISelDivergenceLoweringPass());
+  // The following pass behaves differently with WaveTransformCF.
+  addPass(createAMDGPUGlobalISelDivergenceLoweringPass(WaveTransformCF));
 }
 
 bool GCNPassConfig::addRegBankSelect() {

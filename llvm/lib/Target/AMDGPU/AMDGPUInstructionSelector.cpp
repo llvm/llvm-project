@@ -290,11 +290,17 @@ bool AMDGPUInstructionSelector::selectPHI(MachineInstr &I) const {
   const Register DefReg = I.getOperand(0).getReg();
   const LLT DefTy = MRI->getType(DefReg);
 
+  MachineFunction *MF = I.getParent()->getParent();
+  SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
   // S1 G_PHIs should not be selected in instruction-select, instead:
   // - divergent S1 G_PHI should go through lane mask merging algorithm
   //   and be fully inst-selected in AMDGPUGlobalISelDivergenceLowering
   // - uniform S1 G_PHI should be lowered into S32 G_PHI in AMDGPURegBankSelect
-  if (DefTy == LLT::scalar(1))
+  //
+  // TODO-WAVETRANSFORM: the statement about uniform S1 is not totally true
+  // because AMDGPURegBankSelect is not turned on by default. So for now, we
+  // still need to handle uniform S1 during instruction-select.
+  if (DefTy == LLT::scalar(1) && MFInfo->isWholeWaveControlFlow())
     return false;
 
   // TODO: Verify this doesn't have insane operands (i.e. VGPR to SGPR copy)

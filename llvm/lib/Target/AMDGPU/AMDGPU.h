@@ -29,7 +29,8 @@ void initializeAMDGPUPostLegalizerCombinerPass(PassRegistry &);
 FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
-FunctionPass *createAMDGPUGlobalISelDivergenceLoweringPass();
+FunctionPass *
+createAMDGPUGlobalISelDivergenceLoweringPass(bool EnableWaveTransformCF = false);
 FunctionPass *createAMDGPURegBankSelectPass();
 FunctionPass *createAMDGPURegBankLegalizePass();
 
