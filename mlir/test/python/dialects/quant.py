@@ -1,5 +1,6 @@
 # RUN: %PYTHON %s | FileCheck %s
 
+import numpy as np
 from mlir.ir import *
 from mlir.dialects import quant
 
@@ -18,21 +19,28 @@ def test_type_hierarchy():
         any = Type.parse("!quant.any<i8<-8:7>:f32>")
         uniform = Type.parse("!quant.uniform<i8<-8:7>:f32, 0.99872:127>")
         per_axis = Type.parse("!quant.uniform<i8:f32:1, {2.0e+2,0.99872:120}>")
+        sub_channel = Type.parse(
+            "!quant.uniform<i8:f32:{0:1, 1:2}, {{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
+        )
         calibrated = Type.parse("!quant.calibrated<f32<-0.998:1.2321>>")
 
         assert not quant.QuantizedType.isinstance(i8)
         assert quant.QuantizedType.isinstance(any)
         assert quant.QuantizedType.isinstance(uniform)
         assert quant.QuantizedType.isinstance(per_axis)
+        assert quant.QuantizedType.isinstance(sub_channel)
         assert quant.QuantizedType.isinstance(calibrated)
 
         assert quant.AnyQuantizedType.isinstance(any)
         assert quant.UniformQuantizedType.isinstance(uniform)
         assert quant.UniformQuantizedPerAxisType.isinstance(per_axis)
+        assert quant.UniformQuantizedSubChannelType.isinstance(sub_channel)
         assert quant.CalibratedQuantizedType.isinstance(calibrated)
 
         assert not quant.AnyQuantizedType.isinstance(uniform)
         assert not quant.UniformQuantizedType.isinstance(per_axis)
+        assert not quant.UniformQuantizedType.isinstance(sub_channel)
+        assert not quant.UniformQuantizedPerAxisType.isinstance(sub_channel)
 
 
 # CHECK-LABEL: TEST: test_any_quantized_type
@@ -119,6 +127,47 @@ def test_uniform_per_axis_type():
         # CHECK: !quant.uniform<i8:f32:1, {2.000000e+02,9.987200e-01:120}>
         print(per_axis)
         assert per_axis == Type.parse("!quant.uniform<i8:f32:1, {2.0e+2,0.99872:120}>")
+
+
+# CHECK-LABEL: TEST: test_uniform_sub_channel_type
+@run
+def test_uniform_sub_channel_type():
+    with Context():
+        i8 = IntegerType.get_signless(8)
+        f32 = F32Type.get()
+        sub_channel = quant.UniformQuantizedSubChannelType.get(
+            quant.QuantizedType.FLAG_SIGNED,
+            i8,
+            f32,
+            DenseElementsAttr.get(
+                np.asarray([2.0, 3.0, 4.0, 5.0], np.float32).reshape(2, 2)
+            ),
+            DenseElementsAttr.get(np.asarray([10, 20, 30, 40], np.int8).reshape(2, 2)),
+            [0, 1],
+            [1, 2],
+            storage_type_min=quant.QuantizedType.default_minimum_for_integer(
+                is_signed=True, integral_width=8
+            ),
+            storage_type_max=quant.QuantizedType.default_maximum_for_integer(
+                is_signed=True, integral_width=8
+            ),
+        )
+
+        # CHECK: quantized dimensions: [0, 1]
+        print(f"quantized dimensions: {sub_channel.quantized_dimensions}")
+        # CHECK: block sizes: [1, 2]
+        print(f"block sizes: {sub_channel.block_sizes}")
+        # CHECK: scales: {{\[}}[2. 3.]
+        # CHECK:               [4. 5.]]
+        print(f"scales: {np.asarray(sub_channel.scales)}")
+        # CHECK: zero-points: {{\[}}[10 20]
+        # CHECK:                    [30 40]]
+        print(f"zero-points: {np.asarray(sub_channel.zero_points)}")
+        # CHECK: !quant.uniform<i8:f32:{0:1, 1:2}, {{\{}}{2.000000e+00:10, 3.000000e+00:20}, {4.000000e+00:30, 5.000000e+00:40}}>
+        print(sub_channel)
+        assert sub_channel == Type.parse(
+            "!quant.uniform<i8:f32:{0:1, 1:2},{{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
+        )
 
 
 # CHECK-LABEL: TEST: test_calibrated_type

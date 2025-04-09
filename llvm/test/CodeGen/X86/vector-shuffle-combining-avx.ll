@@ -674,10 +674,9 @@ define <8 x i32> @concat_self_v8i32(<4 x i32> %x) {
 define <4 x double> @concat_vpermilvar_v4f64_v2f64(<2 x double> %a0, <2 x double> %a1, <4 x i64> %m) {
 ; CHECK-LABEL: concat_vpermilvar_v4f64_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; CHECK-NEXT:    vpermilpd %xmm2, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilpd %ymm2, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %m0 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
   %m1 = shufflevector <4 x i64> %m, <4 x i64> poison, <2 x i32> <i32 2, i32 3>

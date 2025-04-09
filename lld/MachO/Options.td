@@ -393,6 +393,9 @@ def grp_opts : OptionGroup<"opts">, HelpText<"OPTIMIZATIONS">;
 def dead_strip : Flag<["-"], "dead_strip">,
     HelpText<"Remove unreachable functions and data">,
     Group<grp_opts>;
+def interposable : Flag<["-"], "interposable">,
+    HelpText<"Indirects access to all exported symbols in an image">,
+    Group<grp_opts>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
     HelpText<"Layout functions and data according to specification in <file>">,
@@ -874,10 +877,6 @@ def root_safe : Flag<["-"], "root_safe">,
     Group<grp_rare>;
 def setuid_safe : Flag<["-"], "setuid_safe">,
     HelpText<"Set the MH_SETUID_SAFE bit in the mach-o header">,
-    Flags<[HelpHidden]>,
-    Group<grp_rare>;
-def interposable : Flag<["-"], "interposable">,
-    HelpText<"Indirects access to all to exported symbols in a dylib">,
     Flags<[HelpHidden]>,
     Group<grp_rare>;
 def multi_module : Flag<["-"], "multi_module">,

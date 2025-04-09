@@ -1885,7 +1885,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should not be defined before c++17"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++14"
 #   endif
@@ -1894,7 +1894,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2971,7 +2971,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++17"
 #   endif
@@ -2980,7 +2980,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -2998,7 +2998,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++17"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++17"
 #   endif
@@ -3007,7 +3007,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4333,7 +4333,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++20"
 #   endif
@@ -4342,7 +4342,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -4360,7 +4360,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++20"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++20"
 #   endif
@@ -4369,7 +4369,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -5128,17 +5128,11 @@
 #   error "__cpp_lib_flat_map should have the value 202207L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_flat_set
-#     error "__cpp_lib_flat_set should be defined in c++23"
-#   endif
-#   if __cpp_lib_flat_set != 202207L
-#     error "__cpp_lib_flat_set should have the value 202207L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_flat_set
-#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should be defined in c++23"
+# endif
+# if __cpp_lib_flat_set != 202207L
+#   error "__cpp_lib_flat_set should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -5771,17 +5765,11 @@
 #   error "__cpp_lib_ranges_find_last should have the value 202207L in c++23"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_iota
-#     error "__cpp_lib_ranges_iota should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_iota != 202202L
-#     error "__cpp_lib_ranges_iota should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_iota
-#     error "__cpp_lib_ranges_iota should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_iota != 202202L
+#   error "__cpp_lib_ranges_iota should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -5938,7 +5926,7 @@
 #   error "__cpp_lib_senders should not be defined before c++26"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++23"
 #   endif
@@ -5947,7 +5935,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -5965,7 +5953,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++23"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++23"
 #   endif
@@ -5974,7 +5962,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -6841,17 +6829,11 @@
 #   error "__cpp_lib_flat_map should have the value 202207L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_flat_set
-#     error "__cpp_lib_flat_set should be defined in c++26"
-#   endif
-#   if __cpp_lib_flat_set != 202207L
-#     error "__cpp_lib_flat_set should have the value 202207L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_flat_set
-#     error "__cpp_lib_flat_set should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_flat_set
+#   error "__cpp_lib_flat_set should be defined in c++26"
+# endif
+# if __cpp_lib_flat_set != 202207L
+#   error "__cpp_lib_flat_set should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION) || _LIBCPP_AVAILABILITY_HAS_TO_CHARS_FLOATING_POINT
@@ -7664,17 +7646,11 @@
 #   error "__cpp_lib_ranges_find_last should have the value 202207L in c++26"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_iota
-#     error "__cpp_lib_ranges_iota should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_iota != 202202L
-#     error "__cpp_lib_ranges_iota should have the value 202202L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_iota
-#     error "__cpp_lib_ranges_iota should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_iota
+#   error "__cpp_lib_ranges_iota should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_iota != 202202L
+#   error "__cpp_lib_ranges_iota should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -7858,7 +7834,7 @@
 #   endif
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_mutex
 #     error "__cpp_lib_shared_mutex should be defined in c++26"
 #   endif
@@ -7867,7 +7843,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_mutex
-#     error "__cpp_lib_shared_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 
@@ -7885,7 +7861,7 @@
 #   error "__cpp_lib_shared_ptr_weak_type should have the value 201606L in c++26"
 # endif
 
-# if _LIBCPP_HAS_THREADS
+# if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #   ifndef __cpp_lib_shared_timed_mutex
 #     error "__cpp_lib_shared_timed_mutex should be defined in c++26"
 #   endif
@@ -7894,7 +7870,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_shared_timed_mutex
-#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '_LIBCPP_HAS_THREADS' is not met!"
+#     error "__cpp_lib_shared_timed_mutex should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #   endif
 # endif
 

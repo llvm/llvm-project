@@ -693,6 +693,10 @@ class Attr {
   // content. Eg) It parses 3 args, but semantically takes 4 args.  Opts out of
   // common attribute error checking.
   bit HasCustomParsing = 0;
+  // Set to true if this attribute requires custom serialization after the
+  // typical attribute serialization. This will cause tablegen to emit a call to
+  // ASTRecordWriter::Add<Name>Attr and ASTRecordReader::read<Name>Attr.
+  bit HasCustomSerialization = 0;
   // Set to true if all of the attribute's arguments should be parsed in an
   // unevaluated context.
   bit ParseArgumentsAsUnevaluated = 0;
@@ -932,7 +936,8 @@ def PatchableFunctionEntry
            "riscv64", "x86", "x86_64", "ppc", "ppc64"]>> {
   let Spellings = [GCC<"patchable_function_entry">];
   let Subjects = SubjectList<[Function, ObjCMethod]>;
-  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>];
+  let Args = [UnsignedArgument<"Count">, DefaultIntArgument<"Offset", 0>,
+              StringArgument<"Section", /* optional */ 1>];
   let Documentation = [PatchableFunctionEntryDocs];
 }
 
@@ -1704,6 +1709,13 @@ def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
 def AllocSize : InheritableAttr {
   let Spellings = [GCC<"alloc_size">];
   let Subjects = SubjectList<[HasFunctionProto]>;
+  // The parameter names here are a bit misleading.
+  // When used with a single argument, the first argument is obviously the
+  // allocation size; but when used with two arguments, the first argument is
+  // usually the number of elements, while the second argument is usually the
+  // element size - the reverse of how they are named here.
+  // The documentation of both GCC and clang does not describe any semantic
+  // difference between the first and second argument.
   let Args = [ParamIdxArgument<"ElemSizeParam">,
               ParamIdxArgument<"NumElemsParam", /*opt*/ 1>];
   let TemplateDependent = 1;
@@ -4391,8 +4403,8 @@ def HLSLControlFlowHint: StmtAttr {
   /// [branch]
   /// [flatten]
   let Spellings = [Microsoft<"branch">, Microsoft<"flatten">];
-  let Subjects = SubjectList<[IfStmt],
-                              ErrorDiag, "'if' statements">;
+  let Subjects = SubjectList<[IfStmt, SwitchStmt],
+                              ErrorDiag, "'if' and 'switch' statements">;
   let LangOpts = [HLSL];
   let Documentation = [InternalOnly];
 }
@@ -4991,12 +5003,30 @@ def Atomic : StmtAttr {
 }
 
 def OpenACCRoutineAnnot : InheritableAttr {
-  // This attribute is used to mark that a function is targetted by a `routine`
-  // directive, so it dones't have a spelling and is always implicit.
+  // This attribute is used to mark that a function is targeted by a `routine`
+  // directive with a name for the purposes of checking the declaration later.
+  // We don't really need a link back to the declaration, as location is
+  // sufficient.
+  // We abuse the source locations on this a little, since we need two locations
+  // for various diagnostic purposes.  The 'begin' location is the location of
+  // the Routine directive. We are using the 'end' location for any 'bind'
+  // clauses, since this is needed for a diagnostic.
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [InternalOnly];
+}
+
+def OpenACCRoutineDecl :InheritableAttr {
+  // This attribute represents the 'routine' directive when spelled without a
+  // 'name'.
+  let Spellings = [Pragma<"acc", "routine">];
+  let Subjects = SubjectList<[Function]>;
+  let SemaHandler = 0;
+  let HasCustomParsing = 1;
+  let HasCustomSerialization = 1;
+  let Documentation = [InternalOnly];
   let AdditionalMembers = [{
-    SourceLocation BindClause;
+    llvm::SmallVector<const OpenACCClause *> Clauses;
+    void printPrettyPragma(raw_ostream &OS, const PrintingPolicy &Policy) const;
   }];
 }

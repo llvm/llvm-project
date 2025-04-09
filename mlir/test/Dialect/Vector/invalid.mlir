@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @broadcast_to_scalar(%arg0: f32) -> f32 {
-  // expected-error@+1 {{custom op 'vector.broadcast' invalid kind of type specified}}
+  // expected-error@+1 {{custom op 'vector.broadcast' invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = vector.broadcast %arg0 : f32 to f32
 }
 
@@ -144,7 +144,7 @@ func.func @extract_element(%arg0: vector<4x4xf32>) {
 // -----
 
 func.func @extract_vector_type(%arg0: index) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'index'}}
   %1 = vector.extract %arg0[] : index from index
 }
 
@@ -1015,6 +1015,14 @@ func.func @contract_with_dim_unused_by_lhs_and_rhs(%arg0 : vector<1x2xi32>, %arg
 
 // -----
 
+func.func @contract_missing_iterator_types(%arg0: vector<1x2xi32>, %arg1: vector<2xi32>, %arg2: vector<1xi32>) -> vector<1xi32> {
+  // expected-error@+1 {{'vector.contract' expected "iterator_types" array attribute}}
+  %0 = vector.contract {} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2xi32> into vector<1xi32>
+  return %0 : vector<1xi32>
+}
+
+// -----
+
 func.func @create_mask_0d_no_operands() {
   %c1 = arith.constant 1 : index
   // expected-error@+1 {{must specify exactly one operand for 0-D create_mask}}
@@ -1166,7 +1174,7 @@ func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<2x[15]x[2]xf32>
 // -----
 
 func.func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{'vector.bitcast' invalid kind of type specified}}
+  // expected-error@+1 {{'vector.bitcast' invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to f32
 }
 
@@ -1484,7 +1492,7 @@ func.func @scatter_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi
 func.func @scatter_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                             %mask: vector<16xi1>, %value: vector<2x16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.scatter' op operand #4 must be  of ranks 1, but got 'vector<2x16xf32>'}}
+  // expected-error@+1 {{'vector.scatter' op expected valueToStore dim to match indices dim}}
   vector.scatter %base[%c0][%indices], %mask, %value
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<2x16xf32>
 }
@@ -1620,7 +1628,7 @@ func.func @scan_unsupported_kind(%arg0: vector<2x3xf32>, %arg1: vector<3xf32>) -
 // -----
 
 func.func @invalid_splat(%v : f32) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'memref<8xf32>'}}
   vector.splat %v : memref<8xf32>
   return
 }

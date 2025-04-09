@@ -313,9 +313,7 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   auto *NewModule = NewFunc->getParent();
   auto *NMD = NewModule->getOrInsertNamedMetadata("llvm.dbg.cu");
   // Avoid multiple insertions of the same DICompileUnit to NMD.
-  SmallPtrSet<const void *, 8> Visited;
-  for (auto *Operand : NMD->operands())
-    Visited.insert(Operand);
+  SmallPtrSet<const void *, 8> Visited(llvm::from_range, NMD->operands());
 
   // Collect and clone all the compile units referenced from the instructions in
   // the function (e.g. as instructions' scope).
@@ -609,7 +607,9 @@ void PruningFunctionCloner::CloneBlock(
       // Constant fold to uncond branch!
       if (Cond) {
         BasicBlock *Dest = BI->getSuccessor(!Cond->getZExtValue());
-        VMap[OldTI] = BranchInst::Create(Dest, NewBB);
+        auto *NewBI = BranchInst::Create(Dest, NewBB);
+        NewBI->setDebugLoc(BI->getDebugLoc());
+        VMap[OldTI] = NewBI;
         ToClone.push_back(Dest);
         TerminatorDone = true;
       }
@@ -624,7 +624,9 @@ void PruningFunctionCloner::CloneBlock(
     if (Cond) { // Constant fold to uncond branch!
       SwitchInst::ConstCaseHandle Case = *SI->findCaseValue(Cond);
       BasicBlock *Dest = const_cast<BasicBlock *>(Case.getCaseSuccessor());
-      VMap[OldTI] = BranchInst::Create(Dest, NewBB);
+      auto *NewBI = BranchInst::Create(Dest, NewBB);
+      NewBI->setDebugLoc(SI->getDebugLoc());
+      VMap[OldTI] = NewBI;
       ToClone.push_back(Dest);
       TerminatorDone = true;
     }
@@ -930,7 +932,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
 
     BasicBlock *Dest = BI->getSuccessor(0);
-    if (!Dest->getSinglePredecessor()) {
+    if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
       ++I;
       continue;
     }
