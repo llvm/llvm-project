@@ -805,13 +805,10 @@ define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
 ; KNL_64-LABEL: test14:
 ; KNL_64:       # %bb.0:
 ; KNL_64-NEXT:    vmovq %xmm0, %rax
-; KNL_64-NEXT:    vmovd %esi, %xmm0
-; KNL_64-NEXT:    vpbroadcastd %xmm0, %ymm0
-; KNL_64-NEXT:    vpmovsxdq %ymm0, %zmm0
+; KNL_64-NEXT:    vpbroadcastd %esi, %zmm1
 ; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
-; KNL_64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; KNL_64-NEXT:    vgatherqps (%rax,%zmm0,4), %ymm1 {%k1}
-; KNL_64-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test14:
@@ -826,12 +823,10 @@ define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
 ; SKX-LABEL: test14:
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    vmovq %xmm0, %rax
-; SKX-NEXT:    vpbroadcastd %esi, %ymm0
-; SKX-NEXT:    vpmovsxdq %ymm0, %zmm0
+; SKX-NEXT:    vpbroadcastd %esi, %zmm1
 ; SKX-NEXT:    kxnorw %k0, %k0, %k1
-; SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; SKX-NEXT:    vgatherqps (%rax,%zmm0,4), %ymm1 {%k1}
-; SKX-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
 ; SKX-NEXT:    retq
 ;
 ; SKX_32-LABEL: test14:
