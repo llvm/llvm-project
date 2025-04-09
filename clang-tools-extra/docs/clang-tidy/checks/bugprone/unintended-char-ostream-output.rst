@@ -44,10 +44,12 @@ Options
 
 .. option:: AllowedTypes
 
-  A semicolon-separated list of type names that will be treated as ``char``
-  type. It only contains the non canonical type names without the alias of type
-  names. Explicit casting to these types or use the variable defined with these
-  types will be ignored.
+  A semicolon-separated list of type names that will be treated like the ``char``
+  type: the check will not report variables declared with with these types or
+  explicit cast expressions to these types. Note that this distinguishes type
+  aliases from the original type, so specifying e.g. ``unsigned char`` here
+  will not suppress reports about ``uint8_t`` even if it is defined as a
+  ``typedef`` alias for ``unsigned char``.
   Default is `unsigned char;signed char`.
 
 .. option:: CastTypeName
