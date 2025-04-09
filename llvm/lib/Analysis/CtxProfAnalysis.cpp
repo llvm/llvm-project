@@ -334,6 +334,20 @@ const CtxProfFlatProfile PGOContextualProfile::flatten() const {
   return Flat;
 }
 
+const CtxProfFlatIndirectCallProfile
+PGOContextualProfile::flattenVirtCalls() const {
+  CtxProfFlatIndirectCallProfile Ret;
+  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                const PGOCtxProfContext>(
+      Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
+        auto &Targets = Ret[Ctx.guid()];
+        for (const auto &[ID, SubctxSet] : Ctx.callsites())
+          for (const auto &Subctx : SubctxSet)
+            Targets[ID][Subctx.first] += Subctx.second.getEntrycount();
+      });
+  return Ret;
+}
+
 void CtxProfAnalysis::collectIndirectCallPromotionList(
     CallBase &IC, Result &Profile,
     SetVector<std::pair<CallBase *, Function *>> &Candidates) {
