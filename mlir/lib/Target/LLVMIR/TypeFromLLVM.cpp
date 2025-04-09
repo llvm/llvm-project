@@ -130,8 +130,8 @@ private:
 
   /// Translates the given scalable-vector type.
   Type translate(llvm::ScalableVectorType *type) {
-    return LLVM::LLVMScalableVectorType::get(
-        translateType(type->getElementType()), type->getMinNumElements());
+    return LLVM::getScalableVectorType(translateType(type->getElementType()),
+                                       type->getMinNumElements());
   }
 
   /// Translates the given target extension type.

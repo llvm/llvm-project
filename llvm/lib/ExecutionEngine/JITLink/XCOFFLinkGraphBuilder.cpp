@@ -40,6 +40,7 @@ XCOFFLinkGraphBuilder::XCOFFLinkGraphBuilder(
           std::string(Obj.getFileName()), std::move(SSP), std::move(TT),
           std::move(Features), std::move(GetEdgeKindName))) {}
 
+#ifndef NDEBUG
 static llvm::StringRef getStorageClassString(XCOFF::StorageClass SC) {
   switch (SC) {
   case XCOFF::StorageClass::C_FILE:
@@ -143,7 +144,9 @@ static llvm::StringRef getStorageClassString(XCOFF::StorageClass SC) {
   case XCOFF::StorageClass::C_TCSYM:
     return "C_TCSYM (Reserved)";
   }
+  llvm_unreachable("Unknown XCOFF::StorageClass enum");
 }
+#endif
 
 Error XCOFFLinkGraphBuilder::processSections() {
   LLVM_DEBUG(dbgs() << "  Creating graph sections...\n");
@@ -203,6 +206,7 @@ getXCOFFSymbolContainingSymbolRef(const object::XCOFFObjectFile &Obj,
   return object::XCOFFSymbolRef(DRI, &Obj);
 }
 
+#ifndef NDEBUG
 static void printSymbolEntry(raw_ostream &OS,
                              const object::XCOFFObjectFile &Obj,
                              const object::XCOFFSymbolRef &Sym) {
@@ -231,6 +235,7 @@ static void printSymbolEntry(raw_ostream &OS,
   }
   OS << "\n";
 }
+#endif
 
 Error XCOFFLinkGraphBuilder::processCsectsAndSymbols() {
   LLVM_DEBUG(dbgs() << "  Creating graph blocks and symbols...\n");
