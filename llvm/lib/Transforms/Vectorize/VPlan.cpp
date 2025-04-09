@@ -92,6 +92,12 @@ VPValue::VPValue(const unsigned char SC, Value *UV, VPDef *Def)
     Def->addDefinedValue(this);
 }
 
+VPValue::VPValue(Type *UT, VPDef *Def)
+    : SubclassID(VPTypedValueSC), UnderlyingType(UT), Def(Def) {
+  if (Def)
+    Def->addDefinedValue(this);
+}
+
 VPValue::~VPValue() {
   assert(Users.empty() && "trying to delete a VPValue with remaining users");
   if (Def)

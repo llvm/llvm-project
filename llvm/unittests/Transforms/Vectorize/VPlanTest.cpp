@@ -1568,8 +1568,8 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPValue(nullptr, this);
-    new VPValue(nullptr, this);
+    new VPValue(static_cast<Value *>(nullptr), this);
+    new VPValue(static_cast<Value *>(nullptr), this);
   }
 
   VPRecipeBase *clone() override { return nullptr; }

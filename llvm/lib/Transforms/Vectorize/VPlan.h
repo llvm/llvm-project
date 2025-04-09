@@ -503,6 +503,10 @@ public:
                     DebugLoc DL = {})
       : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
 
+  VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                    Type *ResultTy, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), VPValue(ResultTy, this) {}
+
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
@@ -694,6 +698,13 @@ public:
                       DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
         DisjointFlags(DisjointFlags) {}
+
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                      Type *ResultTy, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, ResultTy, DL) {
+    OpType = OperationType::Other;
+    AllFlags = 0;
+  }
 
 protected:
   template <typename IterT>
@@ -923,6 +934,11 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
         Opcode(Opcode), Name(Name.str()) {}
 
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, Type *ResultTy,
+                DebugLoc DL, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, ResultTy, DL),
+        Opcode(Opcode), Name(Name.str()) {}
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
@@ -1034,13 +1050,10 @@ public:
 /// type, to be used when the opcode and operands of the VPInstruction don't
 /// directly determine the result type.
 class VPInstructionWithType : public VPInstruction {
-  /// Scalar result type produced by the recipe.
-  Type *ResultTy;
-
 public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
-      : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+      : VPInstruction(Opcode, Operands, ResultTy, DL, Name) {}
 
   static inline bool classof(const VPRecipeBase *R) { return isCast(R); }
 
@@ -1051,8 +1064,7 @@ public:
   VPInstruction *clone() override {
     SmallVector<VPValue *, 2> Operands(operands());
     auto *New = new VPInstructionWithType(
-        getOpcode(), Operands, getResultType(), getDebugLoc(), getName());
-    New->setUnderlyingValue(getUnderlyingValue());
+        getOpcode(), Operands, getScalarType(), getDebugLoc(), getName());
     return New;
   }
 
@@ -1065,7 +1077,7 @@ public:
     return 0;
   }
 
-  Type *getResultType() const { return ResultTy; }
+  Type *getResultType() const { return getScalarType(); }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.

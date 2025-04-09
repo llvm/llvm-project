@@ -1078,7 +1078,7 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   case Instruction::Trunc: {
     Value *Op = State.get(getOperand(0), VPLane(0));
     Value *Cast = State.Builder.CreateCast(Instruction::CastOps(getOpcode()),
-                                           Op, ResultTy);
+                                           Op, getScalarType());
     State.set(this, Cast, VPLane(0));
     break;
   }
@@ -1094,7 +1094,7 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
   printOperands(O, SlotTracker);
-  O << " to " << *ResultTy;
+  O << " to " << *getScalarType();
 }
 #endif
 

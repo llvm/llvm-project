@@ -62,7 +62,10 @@ class VPValue {
 
 protected:
   // Hold the underlying Value, if any, attached to this VPValue.
-  Value *UnderlyingVal;
+  union {
+    Value *UnderlyingVal;
+    Type *UnderlyingType;
+  };
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
   /// VPValue is not defined by any recipe modeled in VPlan.
@@ -71,11 +74,13 @@ protected:
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
   /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  VPValue(Value *UV = nullptr) : VPValue(VPIRValueSC, UV, nullptr) {}
   /// Create a VPValue for a \p Def which is a subclass of VPValue.
-  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
+  VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPIRValueSC, UV, Def) {}
   /// Create a VPValue for a \p Def which defines multiple values.
-  VPValue(Value *UV, VPDef *Def) : VPValue(VPValueSC, UV, Def) {}
+  VPValue(Value *UV, VPDef *Def) : VPValue(VPIRValueSC, UV, Def) {}
+
+  VPValue(Type *UT, VPDef *Def);
 
   // DESIGN PRINCIPLE: Access to the underlying IR must be strictly limited to
   // the front-end and back-end of VPlan so that the middle-end is as
@@ -86,14 +91,15 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const {
+    return isTyped() ? nullptr : UnderlyingVal;
+  }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
-               /// that defines multiple values.
-    VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
+    VPIRValueSC,   /// A VPValue with an optional underlying IR value.
+    VPTypedValueSC /// A VPValue with an underlying type.
   };
 
   VPValue(const VPValue &) = delete;
@@ -105,6 +111,14 @@ public:
   /// This is used to implement the classof checks. This should not be used
   /// for any other purpose, as the values may change as LLVM evolves.
   unsigned getVPValueID() const { return SubclassID; }
+
+  Type *getScalarType() const {
+    assert(SubclassID == VPTypedValueSC &&
+           "Can only be called on VPValues with an underlying type");
+    return UnderlyingType;
+  }
+
+  bool isTyped() const { return SubclassID == VPTypedValueSC; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const;
