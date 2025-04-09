@@ -3455,10 +3455,28 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   return true;
 }
 
+typedef SmallPtrSet<BasicBlock *, 8> BlocksSet;
+
+static bool reachesUsed(BasicBlock *BB,
+                        const BlocksSet &UsedInNonLocalBlocksSet,
+                        BlocksSet &VisitedBlocksSet) {
+  if (VisitedBlocksSet.contains(BB))
+    return false;
+  VisitedBlocksSet.insert(BB);
+  if (UsedInNonLocalBlocksSet.contains(BB))
+    return true;
+  for (BasicBlock *Succ : successors(BB))
+    if (reachesUsed(Succ, UsedInNonLocalBlocksSet, VisitedBlocksSet))
+      return true;
+  return false;
+}
+
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               BlocksSet &ReachesNonLocalUses) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
+  BlocksSet UsedInNonLocalBlocksSet;
 
   // Walk the loop in reverse so that we can identify ephemeral values properly
   // (values only feeding assumes).
@@ -3480,11 +3498,21 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
     // live outside of the current basic block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      if (UI->getParent() != BB || isa<PHINode>(UI))
-        return false;
+      BasicBlock *UsedInBB = UI->getParent();
+      if (UsedInBB == BB) {
+        if (isa<PHINode>(UI))
+          return false;
+      } else
+        UsedInNonLocalBlocksSet.insert(UsedInBB);
     }
 
     // Looks ok, continue checking.
+  }
+
+  for (BasicBlock *Succ : successors(BB)) {
+    BlocksSet VisitedBlocksSet;
+    if (reachesUsed(Succ, UsedInNonLocalBlocksSet, VisitedBlocksSet))
+      ReachesNonLocalUses.insert(Succ);
   }
 
   return true;
@@ -3540,18 +3568,24 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and values defined in the block are
-  // not used outside of it.
-  if (!blockIsSimpleEnoughToThreadThrough(BB))
+  // Check that the block is small enough and which destination(s) use values
+  // defined in the block.
+
+  BlocksSet ReachesNonLocalUses;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, ReachesNonLocalUses))
     return false;
 
   for (const auto &Pair : KnownValues) {
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
+    // Only revector to RealDest if no values defined in BB are live.
+    if (ReachesNonLocalUses.contains(RealDest))
+      continue;
+
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
