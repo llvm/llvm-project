@@ -16,6 +16,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstddef>
 
 #ifndef DEBUG_TYPE
 #define DEBUG_TYPE "goff"
@@ -23,6 +24,95 @@
 
 using namespace llvm::object;
 using namespace llvm;
+
+// Return the type of the record.
+static GOFF::RecordType getRecordType(const uint8_t *PhysicalRecord) {
+  return GOFF::RecordType((PhysicalRecord[1] & 0xF0) >> 4);
+}
+
+// Return true if the record is a continuation record.
+static bool isContinuation(const uint8_t *PhysicalRecord) {
+  return PhysicalRecord[1] & 0x02;
+}
+
+// Return true if the record has a continuation.
+static bool isContinued(const uint8_t *PhysicalRecord) {
+  return PhysicalRecord[1] & 0x01;
+}
+
+void RecordRef::determineSize() {
+  GOFF::RecordType CurrRecordType = ::getRecordType(Data);
+  bool PrevWasContinued = isContinued(Data);
+  const uint8_t *It = Data + GOFF::RecordLength;
+  const uint8_t *End = reinterpret_cast<const uint8_t *>(
+      base() + OwningObject->getData().size());
+  for (; It < End;
+       PrevWasContinued = isContinued(It), It += GOFF::RecordLength) {
+    GOFF::RecordType RecordType = ::getRecordType(It);
+    bool IsContinuation = isContinuation(It);
+    size_t RecordNum = (It - base()) / GOFF::RecordLength;
+    // If the previous record was continued, the current record should be a
+    // continuation.
+    if (PrevWasContinued && !IsContinuation) {
+      createError(object_error::parse_failed,
+                  Twine("Record ")
+                      .concat(Twine(RecordNum))
+                      .concat(" is not a continuation record but the "
+                              "preceding record is continued"));
+      return;
+    }
+    // If the current record is a continuation, then the previous record should
+    // be continued, and have the same record type.
+    if (IsContinuation) {
+      if (RecordType != CurrRecordType) {
+        createError(object_error::parse_failed,
+                    Twine("Record ")
+                        .concat(Twine(RecordNum))
+                        .concat(" is a continuation record that does not "
+                                "match the type of the previous record"));
+        return;
+      }
+      if (!PrevWasContinued) {
+        createError(object_error::parse_failed,
+                    Twine("Record ")
+                        .concat(Twine(RecordNum))
+                        .concat(" is a continuation record that is not "
+                                "preceded by a continued record"));
+        return;
+      }
+    }
+
+    // Break out of loop when we reached a new record.
+    if (!IsContinuation)
+      break;
+  }
+  Size = It - Data;
+}
+
+void RecordRef::moveNext() {
+  if (Data == nullptr)
+    return;
+  const uint8_t *Base = base();
+  std::ptrdiff_t Offset = Data - Base;
+  uint64_t NewOffset = Offset + Size;
+  if (NewOffset > OwningObject->getData().size()) {
+    Data = nullptr;
+    Size = 0;
+  } else {
+    Data = &Base[NewOffset];
+    determineSize();
+  }
+}
+
+GOFF::RecordType RecordRef::getRecordType() const {
+  return ::getRecordType(Data);
+}
+
+uint64_t RecordRef::getSize() const { return Size; }
+
+const ArrayRef<uint8_t> RecordRef::getContents() const {
+  return ArrayRef<uint8_t>(Data, Size);
+}
 
 Expected<std::unique_ptr<ObjectFile>>
 ObjectFile::createGOFFObjectFile(MemoryBufferRef Object) {
@@ -64,52 +154,11 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
   SectionEntryImpl DummySection;
   SectionList.emplace_back(DummySection); // Dummy entry at index 0.
 
-  uint8_t PrevRecordType = 0;
-  uint8_t PrevContinuationBits = 0;
-  const uint8_t *End = reinterpret_cast<const uint8_t *>(Data.getBufferEnd());
-  for (const uint8_t *I = base(); I < End; I += GOFF::RecordLength) {
-    uint8_t RecordType = (I[1] & 0xF0) >> 4;
-    bool IsContinuation = I[1] & 0x02;
-    bool PrevWasContinued = PrevContinuationBits & 0x01;
-    size_t RecordNum = (I - base()) / GOFF::RecordLength;
-
-    // If the previous record was continued, the current record should be a
-    // continuation.
-    if (PrevWasContinued && !IsContinuation) {
-      if (PrevRecordType == RecordType) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is not a continuation record but the "
-                                    "preceding record is continued");
-        return;
-      }
-    }
-    // Don't parse continuations records, only parse initial record.
-    if (IsContinuation) {
-      if (RecordType != PrevRecordType) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is a continuation record that does not "
-                                    "match the type of the previous record");
-        return;
-      }
-      if (!PrevWasContinued) {
-        Err = createStringError(object_error::parse_failed,
-                                "record " + std::to_string(RecordNum) +
-                                    " is a continuation record that is not "
-                                    "preceded by a continued record");
-        return;
-      }
-      PrevRecordType = RecordType;
-      PrevContinuationBits = I[1] & 0x03;
-      continue;
-    }
-    LLVM_DEBUG(for (size_t J = 0; J < GOFF::RecordLength; ++J) {
-      const uint8_t *P = I + J;
-      if (J % 8 == 0)
-        dbgs() << "  ";
-      dbgs() << format("%02hhX", *P);
-    });
+  for (auto &Rec : records(&Err)) {
+    if (Err)
+      return;
+    uint8_t RecordType = Rec.getRecordType();
+    const uint8_t *I = Rec.getContents().data();
 
     switch (RecordType) {
     case GOFF::RT_ESD: {
@@ -179,9 +228,15 @@ GOFFObjectFile::GOFFObjectFile(MemoryBufferRef Object, Error &Err)
     default:
       llvm_unreachable("Unknown record type");
     }
-    PrevRecordType = RecordType;
-    PrevContinuationBits = I[1] & 0x03;
   }
+}
+
+record_iterator GOFFObjectFile::record_begin(Error *Err) const {
+  return record_iterator(RecordRef(this, Err));
+}
+
+record_iterator GOFFObjectFile::record_end() const {
+  return record_iterator(RecordRef(this));
 }
 
 const uint8_t *GOFFObjectFile::getSymbolEsdRecord(DataRefImpl Symb) const {
