@@ -1186,6 +1186,23 @@ def PseudoLongQC_E_BGEI : LongBcciPseudo<simm16nonzero, 10>;
 def PseudoLongQC_E_BLTUI : LongBcciPseudo<uimm16nonzero, 10>;
 def PseudoLongQC_E_BGEUI : LongBcciPseudo<uimm16nonzero, 10>;
 
+// Load/Store pseudos with QC.E.* Mnemonics. These expand to an AUIPC +
+// (Standard) Load/Store sequence, as this can materialize all 32-bit addresses,
+// and is shorter than e.g. an AUIPC + Xqcilo Load/Store sequence. These
+// sequences can be turned back into a single Xqcilo instruction using linker
+// relaxation.
+let Predicates = [HasVendorXqcilo, IsRV32] in {
+def PseudoQC_E_LB : PseudoLoad<"qc.e.lb">;
+def PseudoQC_E_LBU : PseudoLoad<"qc.e.lbu">;
+def PseudoQC_E_LH : PseudoLoad<"qc.e.lh">;
+def PseudoQC_E_LHU : PseudoLoad<"qc.e.lhu">;
+def PseudoQC_E_LW : PseudoLoad<"qc.e.lw">;
+
+def PseudoQC_E_SB : PseudoStore<"qc.e.sb">;
+def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
+def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
+} // Predicates = [HasVendorXqcilo, IsRV32]
+
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//

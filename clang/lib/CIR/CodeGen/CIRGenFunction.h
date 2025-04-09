@@ -24,6 +24,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -165,6 +166,20 @@ public:
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
   bool isTrivialInitializer(const Expr *init);
+
+  /// If the specified expression does not fold to a constant, or if it does but
+  /// contains a label, return false.  If it constant folds return true and set
+  /// the boolean result in Result.
+  bool constantFoldsToBool(const clang::Expr *cond, bool &resultBool,
+                           bool allowLabels = false);
+  bool constantFoldsToSimpleInteger(const clang::Expr *cond,
+                                    llvm::APSInt &resultInt,
+                                    bool allowLabels = false);
+
+  /// Return true if the statement contains a label in it.  If
+  /// this statement is not executed normally, it not containing a label means
+  /// that we can just remove the code.
+  bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -458,6 +473,25 @@ public:
   void emitDecl(const clang::Decl &d);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
+
+  /// Emit an `if` on a boolean condition to the specified blocks.
+  /// FIXME: Based on the condition, this might try to simplify the codegen of
+  /// the conditional based on the branch.
+  /// In the future, we may apply code generation simplifications here,
+  /// similar to those used in classic LLVM  codegen
+  /// See `EmitBranchOnBoolExpr` for inspiration.
+  mlir::LogicalResult emitIfOnBoolExpr(const clang::Expr *cond,
+                                       const clang::Stmt *thenS,
+                                       const clang::Stmt *elseS);
+  cir::IfOp emitIfOnBoolExpr(const clang::Expr *cond,
+                             BuilderCallbackRef thenBuilder,
+                             mlir::Location thenLoc,
+                             BuilderCallbackRef elseBuilder,
+                             std::optional<mlir::Location> elseLoc = {});
+
+  mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
 
   /// Emit code to compute the specified expression,
   /// ignoring the result.
