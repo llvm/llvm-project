@@ -68,8 +68,7 @@ public:
 template <typename Op, typename TermOp>
 mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     mlir::Location start, mlir::Location end,
-    llvm::ArrayRef<const OpenACCClause *> clauses,
-    const Stmt *associatedStmt) {
+    llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *associatedStmt) {
   mlir::LogicalResult res = mlir::success();
 
   llvm::SmallVector<mlir::Type> retTy;
