@@ -105,6 +105,25 @@ public:
     }
   }
 
+  unsigned getInverseCompareOpcode(MachineInstr &MI) const {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_CMP_EQ_U32_e64:
+      return AMDGPU::V_CMP_NE_U32_e64;
+    case AMDGPU::V_CMP_NE_U32_e64:
+      return AMDGPU::V_CMP_EQ_U32_e64;
+    case AMDGPU::V_CMP_GE_U32_e64:
+      return AMDGPU::V_CMP_LT_U32_e64;
+    case AMDGPU::V_CMP_LE_U32_e64:
+      return AMDGPU::V_CMP_GT_U32_e64;
+    case AMDGPU::V_CMP_GT_U32_e64:
+      return AMDGPU::V_CMP_LE_U32_e64;
+    case AMDGPU::V_CMP_LT_U32_e64:
+      return AMDGPU::V_CMP_GE_U32_e64;
+    default:
+      return 0;
+    }
+  }
+
   bool foldCopyToVGPROfScalarAddOfFrameIndex(Register DstReg, Register SrcReg,
                                              MachineInstr &MI) const;
 
@@ -133,7 +152,8 @@ public:
 
   std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
-  bool tryFoldCndMask(MachineInstr &MI) const;
+  bool tryFoldCndMask(MachineInstr &MI, Register *RegVCC,
+                      Register *newVCC) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
 
@@ -151,6 +171,9 @@ public:
   bool tryFoldLoad(MachineInstr &MI);
 
   bool tryOptimizeAGPRPhis(MachineBasicBlock &MBB);
+
+  bool shouldSwitchOperands(MachineRegisterInfo &MRI, MachineInstr &MI,
+                            const SIInstrInfo &TII) const;
 
 public:
   SIFoldOperandsImpl() = default;
@@ -1459,12 +1482,72 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   return false;
 }
 
+bool SIFoldOperandsImpl::shouldSwitchOperands(MachineRegisterInfo &MRI,
+                                              MachineInstr &MI,
+                                              const SIInstrInfo &TII) const {
+  auto allUses = MRI.use_nodbg_operands(MI.getOperand(5).getReg());
+  unsigned count = 0;
+
+  for (auto &Use : allUses) {
+    if (Use.getParent()->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
+      return false;
+    MachineOperand *Src0 =
+        TII.getNamedOperand(*Use.getParent(), AMDGPU::OpName::src0);
+    MachineOperand *Src1 =
+        TII.getNamedOperand(*Use.getParent(), AMDGPU::OpName::src1);
+
+    auto src0Imm = getImmOrMaterializedImm(*Src0);
+    auto src1Imm = getImmOrMaterializedImm(*Src1);
+
+    if (!src1Imm && src0Imm)
+      return false;
+    if (src1Imm && !src0Imm)
+      count++;
+  }
+  return (count >= 2);
+}
+
 // Try to fold an instruction into a simpler one
-bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
+bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI, Register *RegVCC,
+                                        Register *NewVCC) const {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64 &&
       Opc != AMDGPU::V_CNDMASK_B64_PSEUDO)
     return false;
+
+  if (Opc == AMDGPU::V_CNDMASK_B32_e64) {
+    const DebugLoc &DL = MI.getDebugLoc();
+    auto Reg = MI.getOperand(5).getReg();
+
+    if (*RegVCC != Reg) {
+      MachineInstr *DefMI = MRI->getVRegDef(Reg);
+      if (DefMI) {
+        unsigned Opcode = getInverseCompareOpcode(*DefMI);
+        if (Opcode &&
+            SIFoldOperandsImpl::shouldSwitchOperands(*MRI, MI, *TII)) {
+          auto cmpDL = DefMI->getDebugLoc();
+          *NewVCC = MRI->createVirtualRegister(MRI->getRegClass(Reg));
+          *RegVCC = Reg;
+          MachineInstrBuilder inverseCompare = BuildMI(
+              *DefMI->getParent(), DefMI, cmpDL, TII->get(Opcode), *NewVCC);
+
+          inverseCompare.add(DefMI->getOperand(1));
+          inverseCompare.add(DefMI->getOperand(2));
+        }
+      }
+    }
+    if (*RegVCC == Reg) {
+      BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64),
+              MI.getOperand(0).getReg())
+          .add(MI.getOperand(3))
+          .add(MI.getOperand(4))
+          .add(MI.getOperand(1))
+          .add(MI.getOperand(2))
+          .addReg(*NewVCC);
+      MI.eraseFromParent();
+      return true;
+    }
+  }
 
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
@@ -2533,10 +2616,12 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   bool Changed = false;
+  Register Reg = 0;
+  Register newVCC = 0;
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
-      Changed |= tryFoldCndMask(MI);
+      Changed |= tryFoldCndMask(MI, &Reg, &newVCC);
 
       if (tryFoldZeroHighBits(MI)) {
         Changed = true;

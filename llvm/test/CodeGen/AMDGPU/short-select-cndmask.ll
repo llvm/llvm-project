@@ -5,11 +5,9 @@
 define amdgpu_cs void @test(i32 %a, i32 %x, i32 %y, i32 %p, i32 %q, i32 %r, i32 %s, ptr addrspace(1) %out) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v6, v5, vcc_lo
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, v1, v2 :: v_dual_cndmask_b32 v1, 0, v3
+; GCN-NEXT:    v_dual_cndmask_b32 v2, 0, v4 :: v_dual_cndmask_b32 v3, v5, v6
 ; GCN-NEXT:    global_store_b128 v[7:8], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -29,11 +27,9 @@ define amdgpu_cs void @test(i32 %a, i32 %x, i32 %y, i32 %p, i32 %q, i32 %r, i32 
 define amdgpu_cs void @test_negative_case(i32 %a, i32 %x, i32 %y, i32 %p, i32 %q, i32 %r, i32 %s, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_negative_case:
 ; GCN:       ; %bb.0: ; %.entry
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v3, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v4, 0, vcc_lo
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v6, v5, vcc_lo
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, v1, v2 :: v_dual_cndmask_b32 v1, 0, v3
+; GCN-NEXT:    v_dual_cndmask_b32 v2, 0, v4 :: v_dual_cndmask_b32 v3, v5, v6
 ; GCN-NEXT:    global_store_b128 v[7:8], v[0:3], off
 ; GCN-NEXT:    s_endpgm
 .entry:

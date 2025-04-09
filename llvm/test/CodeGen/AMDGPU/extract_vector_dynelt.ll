@@ -1282,10 +1282,10 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GCN-NEXT:    s_or_b64 vcc, vcc, s[4:5]
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 15, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0x40301999
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %ext = extractelement <16 x double> <double 1.1, double 2.1, double 3.1, double 4.1, double 5.1, double 6.1, double 7.1, double 8.1, double 9.1, double 10.1, double 11.1, double 12.1, double 13.1, double 14.1, double 15.1, double 16.1>, i32 %sel
