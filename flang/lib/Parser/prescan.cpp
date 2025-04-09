@@ -150,7 +150,9 @@ void Prescanner::Statement() {
       CHECK(*at_ == '!');
     }
     std::optional<int> condOffset;
-    if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
+    bool isOpenMPCondCompilation{
+        directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0'};
+    if (isOpenMPCondCompilation) {
       // OpenMP conditional compilation line.
       condOffset = 2;
     } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'c' &&
@@ -159,18 +161,29 @@ void Prescanner::Statement() {
       // CUDA conditional compilation line.
       condOffset = 5;
     }
-    if (condOffset) {
+    if (condOffset && !preprocessingOnly_) {
       at_ += *condOffset, column_ += *condOffset;
       if (auto payload{IsIncludeLine(at_)}) {
         FortranInclude(at_ + *payload);
         return;
-      } else if (inFixedForm_) {
-        LabelField(tokens);
-      } else {
-        SkipSpaces();
+      }
+      while (true) {
+        if (auto n{IsSpace(at_)}) {
+          at_ += n, ++column_;
+        } else if (*at_ == '\t') {
+          ++at_, ++column_;
+          tabInCurrentLine_ = true;
+        } else if (inFixedForm_ && column_ == 6 && !tabInCurrentLine_ &&
+            *at_ == '0') {
+          ++at_, ++column_;
+        } else {
+          break;
+        }
       }
     } else {
       // Compiler directive.  Emit normalized sentinel, squash following spaces.
+      // Conditional compilation lines (!$) take this path in -E mode too
+      // so that -fopenmp only has to appear on the later compilation.
       EmitChar(tokens, '!');
       ++at_, ++column_;
       for (const char *sp{directiveSentinel_}; *sp != '\0';
@@ -178,12 +191,34 @@ void Prescanner::Statement() {
         EmitChar(tokens, *sp);
       }
       if (IsSpaceOrTab(at_)) {
-        EmitChar(tokens, ' ');
         while (int n{IsSpaceOrTab(at_)}) {
+          if (isOpenMPCondCompilation && inFixedForm_) {
+            EmitChar(tokens, ' ');
+          }
+          tabInCurrentLine_ |= *at_ == '\t';
           at_ += n, ++column_;
+          if (inFixedForm_ && column_ > fixedFormColumnLimit_) {
+            break;
+          }
+        }
+        if (isOpenMPCondCompilation && inFixedForm_ && column_ == 6) {
+          if (*at_ == '0') {
+            EmitChar(tokens, ' ');
+          } else {
+            tokens.CloseToken();
+            EmitChar(tokens, '&');
+          }
+          ++at_, ++column_;
+        } else {
+          EmitChar(tokens, ' ');
         }
       }
       tokens.CloseToken();
+    }
+    if (*at_ == '!' || *at_ == '\n' ||
+        (inFixedForm_ && column_ > fixedFormColumnLimit_ &&
+            !tabInCurrentLine_)) {
+      return; // Directive without payload
     }
     break;
   }
@@ -330,7 +365,7 @@ void Prescanner::Statement() {
 void Prescanner::CheckAndEmitLine(
     TokenSequence &tokens, Provenance newlineProvenance) {
   tokens.CheckBadFortranCharacters(
-      messages_, *this, disableSourceContinuation_);
+      messages_, *this, disableSourceContinuation_ || preprocessingOnly_);
   // Parenthesis nesting check does not apply while any #include is
   // active, nor on the lines before and after a top-level #include,
   // nor before or after conditional source.
@@ -749,35 +784,48 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    int parts{1};
-    const char *afterLast{nullptr};
+    std::size_t parts{1};
+    bool anyDefined{false};
+    bool hadContinuation{false};
+    // Subtlety: When an identifier is split across continuation lines,
+    // its parts are kept as distinct pp-tokens if that macro replacement
+    // should operate on them independently.  This trick accommodates the
+    // historic practice of using line continuation for token pasting after
+    // replacement.
+    // In free form, the macro to be replaced must have been preceded
+    // by '&' and followed by either '&' or, if last, the end of a line.
+    //   call &                call foo&        call foo&
+    //     &MACRO&      OR       &MACRO&   OR     &MACRO
+    //     &foo(...)             &(...)
     do {
       EmitChar(tokens, *at_);
       ++at_, ++column_;
-      afterLast = at_;
-      if (SkipToNextSignificantCharacter() && IsLegalIdentifierStart(*at_)) {
+      hadContinuation = SkipToNextSignificantCharacter();
+      if (hadContinuation && IsLegalIdentifierStart(*at_)) {
+        // Continued identifier
         tokens.CloseToken();
         ++parts;
+        if (!anyDefined &&
+            (parts > 2 || inFixedForm_ ||
+                (start > start_ && start[-1] == '&')) &&
+            preprocessor_.IsNameDefined(
+                tokens.TokenAt(tokens.SizeInTokens() - 1))) {
+          anyDefined = true;
+        }
       }
     } while (IsLegalInIdentifier(*at_));
-    if (parts >= 3) {
-      // Subtlety: When an identifier is split across three or more continuation
-      // lines (or two continuation lines, immediately preceded or followed
-      // by '&' free form continuation line markers, its parts are kept as
-      // distinct pp-tokens so that macro replacement operates on them
-      // independently.  This trick accommodates the historic practice of
-      // using line continuation for token pasting after replacement.
-    } else if (parts == 2) {
-      if (afterLast && afterLast < limit_) {
-        afterLast = SkipWhiteSpace(afterLast);
-      }
-      if ((start > start_ && start[-1] == '&') ||
-          (afterLast && afterLast < limit_ &&
-              (*afterLast == '&' || *afterLast == '\n'))) {
-        // call &                call foo&        call foo&
-        //   &MACRO&      OR       &MACRO&   OR     &MACRO
-        //   &foo(...)             &(...)
-      } else {
+    if (!anyDefined && parts > 1) {
+      tokens.CloseToken();
+      char after{*SkipWhiteSpace(at_)};
+      anyDefined = (hadContinuation || after == '\n' || after == '&') &&
+          preprocessor_.IsNameDefined(
+              tokens.TokenAt(tokens.SizeInTokens() - 1));
+      tokens.ReopenLastToken();
+    }
+    if (!anyDefined) {
+      // If no part was a defined macro, combine the parts into one so that
+      // the combination itself can be subject to macro replacement.
+      while (parts-- > 1) {
         tokens.ReopenLastToken();
       }
     }
@@ -862,11 +910,24 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
 }
 
 bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
-  if (*at_ == '_' && IsLegalInIdentifier(*SkipWhiteSpace(at_ + 1))) {
-    EmitCharAndAdvance(tokens, *at_);
-    if (IsLegalIdentifierStart(*at_)) {
-      // The kind specifier might be a macro, so put it into its own token.
+  if (*at_ == '_' && IsLegalInIdentifier(at_[1])) {
+    // The kind specifier might be a macro (with or without its leading
+    // underscore); put it into its own token if it has been defined.
+    const char *p{at_ + 1};
+    while (IsLegalInIdentifier(*++p)) {
+    }
+    if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+        preprocessor_.IsNameDefined(id)) {
+      // In 1.0e0_foo, "_foo" is a defined name; retain the
+      // underscore
       tokens.CloseToken();
+    } else {
+      EmitCharAndAdvance(tokens, '_');
+      if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+          preprocessor_.IsNameDefined(id)) {
+        // In 1.0e0_foo, "foo" is a defined name
+        tokens.CloseToken();
+      }
     }
     while (IsLegalInIdentifier(*at_)) {
       EmitCharAndAdvance(tokens, *at_);
@@ -1247,32 +1308,39 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
-  if (IsFixedFormCommentChar(col1)) {
-    int j{1};
-    if (InCompilerDirective()) {
-      // Must be a continued compiler directive.
+  if (InCompilerDirective()) {
+    if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
+      // !$ OpenMP conditional compilation
+      if (preprocessingOnly_) {
+        // in -E mode, don't treat "!$   &" as a continuation
+        return nullptr;
+      } else if (IsFixedFormCommentChar(col1)) {
+        if (nextLine_[1] == '$') {
+          // accept but do not require a matching sentinel
+          if (!(nextLine_[2] == '&' || IsSpaceOrTab(&nextLine_[2]))) {
+            return nullptr;
+          }
+        } else {
+          return nullptr; // distinct directive
+        }
+      }
+    } else if (IsFixedFormCommentChar(col1)) {
+      int j{1};
       for (; j < 5; ++j) {
         char ch{directiveSentinel_[j - 1]};
         if (ch == '\0') {
           break;
-        }
-        if (ch != ToLowerCaseLetter(nextLine_[j])) {
+        } else if (ch != ToLowerCaseLetter(nextLine_[j])) {
           return nullptr;
         }
       }
-    } else if (features_.IsEnabled(LanguageFeature::OpenMP)) {
-      // Fixed Source Form Conditional Compilation Sentinels.
-      if (nextLine_[1] != '$') {
-        return nullptr;
+      for (; j < 5; ++j) {
+        if (nextLine_[j] != ' ') {
+          return nullptr;
+        }
       }
-      j++;
     } else {
       return nullptr;
-    }
-    for (; j < 5; ++j) {
-      if (nextLine_[j] != ' ') {
-        return nullptr;
-      }
     }
     const char *col6{nextLine_ + 5};
     if (*col6 != '\n' && *col6 != '0' && !IsSpaceOrTab(col6)) {
@@ -1281,7 +1349,6 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
       }
       return nextLine_ + 6;
     }
-    return nullptr;
   } else {
     // Normal case: not in a compiler directive.
     if (col1 == '&' &&
@@ -1321,21 +1388,30 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
 }
 
 const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
-  const char *p{nextLine_};
+  const char *lineStart{nextLine_};
+  const char *p{lineStart};
   if (p >= limit_) {
     return nullptr;
   }
-  p = SkipWhiteSpace(p);
-  if (*p == '!') {
-    ++p;
-    if (InCompilerDirective()) {
+  p = SkipWhiteSpaceIncludingEmptyMacros(p);
+  if (InCompilerDirective()) {
+    if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
+      if (preprocessingOnly_) {
+        // in -E mode, don't treat !$ as a continuation
+        return nullptr;
+      } else if (p[0] == '!' && p[1] == '$') {
+        // accept but do not require a matching sentinel
+        if (!(p[2] == '&' || IsSpaceOrTab(&p[2]))) {
+          return nullptr; // not !$
+        }
+        p += 2;
+      }
+    } else if (*p++ == '!') {
       for (const char *s{directiveSentinel_}; *s != '\0'; ++p, ++s) {
         if (*s != ToLowerCaseLetter(*p)) {
-          return nullptr;
+          return nullptr; // not the same directive class
         }
       }
-    } else if (features_.IsEnabled(LanguageFeature::OpenMP) && *p == '$') {
-      ++p;
     } else {
       return nullptr;
     }
@@ -1350,30 +1426,33 @@ const char *Prescanner::FreeFormContinuationLine(bool ampersand) {
     } else {
       return nullptr;
     }
-  } else {
-    if (*p == '&') {
-      return p + 1;
-    } else if (*p == '!' || *p == '\n' || *p == '#') {
-      return nullptr;
-    } else if (ampersand || IsImplicitContinuation()) {
-      if (continuationInCharLiteral_) {
-        // 'a'&            -> 'a''b' == "a'b"
-        //   'b'
-        if (features_.ShouldWarn(
-                common::LanguageFeature::MiscSourceExtensions)) {
-          Say(common::LanguageFeature::MiscSourceExtensions,
-              GetProvenanceRange(p, p + 1),
-              "Character literal continuation line should have been preceded by '&'"_port_en_US);
-        }
-      } else if (p > nextLine_) {
-        --p;
-      } else {
-        insertASpace_ = true;
+  }
+  if (p[0] == '!' && p[1] == '$' && !preprocessingOnly_ &&
+      features_.IsEnabled(LanguageFeature::OpenMP)) {
+    // !$ conditional line can be a continuation
+    p = lineStart = SkipWhiteSpace(p + 2);
+  }
+  if (*p == '&') {
+    return p + 1;
+  } else if (*p == '!' || *p == '\n' || *p == '#') {
+    return nullptr;
+  } else if (ampersand || IsImplicitContinuation()) {
+    if (continuationInCharLiteral_) {
+      // 'a'&            -> 'a''b' == "a'b"
+      //   'b'
+      if (features_.ShouldWarn(common::LanguageFeature::MiscSourceExtensions)) {
+        Say(common::LanguageFeature::MiscSourceExtensions,
+            GetProvenanceRange(p, p + 1),
+            "Character literal continuation line should have been preceded by '&'"_port_en_US);
       }
-      return p;
+    } else if (p > lineStart) {
+      --p;
     } else {
-      return nullptr;
+      insertASpace_ = true;
     }
+    return p;
+  } else {
+    return nullptr;
   }
 }
 
@@ -1406,6 +1485,8 @@ bool Prescanner::FreeFormContinuation() {
     } else if (*p == '!') { // & ! comment - ok
     } else if (ampersand && isPossibleMacroCall_ && (*p == ',' || *p == ')')) {
       return false; // allow & at end of a macro argument
+    } else if (ampersand && preprocessingOnly_ && !parenthesisNesting_) {
+      return false; // allow & at start of line, maybe after !$
     } else if (features_.ShouldWarn(LanguageFeature::CruftAfterAmpersand)) {
       Say(LanguageFeature::CruftAfterAmpersand, GetProvenance(p),
           "missing ! before comment after &"_warn_en_US);
@@ -1468,19 +1549,23 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     *sp++ = ToLowerCaseLetter(*p);
   }
+  if (sp == sentinel) {
+    return std::nullopt;
+  }
+  *sp = '\0';
   // A fixed form OpenMP conditional compilation sentinel must satisfy the
   // following criteria, for initial lines:
   // - Columns 3 through 5 must have only white space or numbers.
   // - Column 6 must be space or zero.
-  if (column == 3 && sentinel[0] == '$') {
-    const char *q{p};
-    for (int col{3}; col < 6; ++col, ++q) {
-      if (!IsSpaceOrTab(q) && !IsDecimalDigit(*q)) {
+  bool isOpenMPConditional{sp == &sentinel[1] && sentinel[0] == '$'};
+  bool hadDigit{false};
+  if (isOpenMPConditional) {
+    for (; column < 6; ++column, ++p) {
+      if (IsDecimalDigit(*p)) {
+        hadDigit = true;
+      } else if (!IsSpaceOrTab(p)) {
         return std::nullopt;
       }
-    }
-    if (*q != ' ' && *q != '0') {
-      return std::nullopt;
     }
   }
   if (column == 6) {
@@ -1488,15 +1573,13 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
       ++p;
     } else if (int n{IsSpaceOrTab(p)}) {
       p += n;
+    } else if (isOpenMPConditional && preprocessingOnly_ && !hadDigit) {
+      // In -E mode, "!$   &" is treated as a directive
     } else {
       // This is a Continuation line, not an initial directive line.
       return std::nullopt;
     }
   }
-  if (sp == sentinel) {
-    return std::nullopt;
-  }
-  *sp = '\0';
   if (const char *ss{IsCompilerDirectiveSentinel(
           sentinel, static_cast<std::size_t>(sp - sentinel))}) {
     return {
@@ -1562,10 +1645,16 @@ std::optional<std::pair<const char *, const char *>>
 Prescanner::IsCompilerDirectiveSentinel(const char *p) const {
   char sentinel[8];
   for (std::size_t j{0}; j + 1 < sizeof sentinel && *p != '\n'; ++p, ++j) {
-    if (int n{*p == '&' ? 1 : IsSpaceOrTab(p)}) {
+    if (int n{IsSpaceOrTab(p)};
+        n || !(IsLetter(*p) || *p == '$' || *p == '@')) {
       if (j > 0) {
+        if (j == 1 && sentinel[0] == '$' && n == 0 && *p != '&') {
+          // OpenMP conditional compilation line sentinels have to
+          // be immediately followed by a space or &, not a digit
+          // or anything else.
+          break;
+        }
         sentinel[j] = '\0';
-        p = SkipWhiteSpaceIncludingEmptyMacros(p + n);
         if (*p != '!') {
           if (const char *sp{IsCompilerDirectiveSentinel(sentinel, j)}) {
             return std::make_pair(sp, p);
@@ -1655,7 +1744,8 @@ void Prescanner::SourceFormChange(std::string &&dir) {
 bool Prescanner::CompilerDirectiveContinuation(
     TokenSequence &tokens, const char *origSentinel) {
   if (inFixedForm_ || tokens.empty() ||
-      tokens.TokenAt(tokens.SizeInTokens() - 1) != "&") {
+      tokens.TokenAt(tokens.SizeInTokens() - 1) != "&" ||
+      (preprocessingOnly_ && !parenthesisNesting_)) {
     return false;
   }
   LineClassification followingLine{ClassifyLine(nextLine_)};

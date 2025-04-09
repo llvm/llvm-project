@@ -365,9 +365,10 @@ HeuristicResolverImpl::resolveDependentNameType(const DependentNameType *DNT) {
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveTemplateSpecializationType(
     const DependentTemplateSpecializationType *DTST) {
+  const DependentTemplateStorage &DTN = DTST->getDependentTemplateName();
   return resolveDependentMember(
-      resolveNestedNameSpecifierToType(DTST->getQualifier()),
-      DTST->getIdentifier(), TemplateFilter);
+      resolveNestedNameSpecifierToType(DTN.getQualifier()),
+      DTN.getName().getIdentifier(), TemplateFilter);
 }
 
 std::vector<const NamedDecl *>
@@ -409,7 +410,6 @@ QualType HeuristicResolverImpl::resolveNestedNameSpecifierToType(
   // the TypeSpec cases too.
   switch (NNS->getKind()) {
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     return QualType(NNS->getAsType(), 0);
   case NestedNameSpecifier::Identifier: {
     return resolveDeclsToType(
