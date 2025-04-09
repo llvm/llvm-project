@@ -1049,6 +1049,9 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << "))";
   }
 
+  if (T->hasCFIUncheckedCallee())
+    OS << " __attribute__((cfi_unchecked_callee))";
+
   if (T->hasTrailingReturn()) {
     OS << " -> ";
     print(T->getReturnType(), OS, StringRef());
@@ -2088,6 +2091,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::NoDeref:
     OS << "noderef";
+    break;
+  case attr::CFIUncheckedCallee:
+    OS << "cfi_unchecked_callee";
     break;
   case attr::AcquireHandle:
     OS << "acquire_handle";
