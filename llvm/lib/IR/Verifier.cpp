@@ -5798,7 +5798,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // Are we tied to a statepoint properly?
     const auto *StatepointCall = dyn_cast<CallBase>(Statepoint);
     Check(StatepointCall && StatepointCall->getIntrinsicID() ==
-              Intrinsic::experimental_gc_statepoint,
+                                Intrinsic::experimental_gc_statepoint,
           "gc.result operand #1 must be from a statepoint", Call,
           Call.getArgOperand(0));
 
