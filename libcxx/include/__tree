@@ -53,9 +53,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Compare, class _Allocator>
 class __tree;
 template <class _Tp, class _NodePtr, class _DiffType>
-class _LIBCPP_TEMPLATE_VIS __tree_iterator;
+class __tree_iterator;
 template <class _Tp, class _ConstNodePtr, class _DiffType>
-class _LIBCPP_TEMPLATE_VIS __tree_const_iterator;
+class __tree_const_iterator;
 
 template <class _Pointer>
 class __tree_end_node;
@@ -70,9 +70,9 @@ struct __value_type;
 template <class _Allocator>
 class __map_node_destructor;
 template <class _TreeIterator>
-class _LIBCPP_TEMPLATE_VIS __map_iterator;
+class __map_iterator;
 template <class _TreeIterator>
-class _LIBCPP_TEMPLATE_VIS __map_const_iterator;
+class __map_const_iterator;
 
 /*
 
@@ -707,7 +707,7 @@ struct __generic_container_node_destructor<__tree_node<_Tp, _VoidPtr>, _Alloc> :
 #endif
 
 template <class _Tp, class _NodePtr, class _DiffType>
-class _LIBCPP_TEMPLATE_VIS __tree_iterator {
+class __tree_iterator {
   typedef __tree_node_types<_NodePtr> _NodeTypes;
   typedef _NodePtr __node_pointer;
   typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
@@ -770,21 +770,21 @@ private:
   template <class, class, class>
   friend class __tree;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS __tree_const_iterator;
+  friend class __tree_const_iterator;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __map_iterator;
+  friend class __map_iterator;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
 };
 
 template <class _Tp, class _NodePtr, class _DiffType>
-class _LIBCPP_TEMPLATE_VIS __tree_const_iterator {
+class __tree_const_iterator {
   typedef __tree_node_types<_NodePtr> _NodeTypes;
   typedef typename _NodeTypes::__node_pointer __node_pointer;
   typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
@@ -856,15 +856,15 @@ private:
   template <class, class, class>
   friend class __tree;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS map;
+  friend class map;
   template <class, class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multimap;
+  friend class multimap;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS set;
+  friend class set;
   template <class, class, class>
-  friend class _LIBCPP_TEMPLATE_VIS multiset;
+  friend class multiset;
   template <class>
-  friend class _LIBCPP_TEMPLATE_VIS __map_const_iterator;
+  friend class __map_const_iterator;
 };
 
 template <class _Tp, class _Compare>

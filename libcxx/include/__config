@@ -383,7 +383,6 @@ typedef __char32_t char32_t;
 #    endif
 
 #    define _LIBCPP_HIDDEN
-#    define _LIBCPP_TEMPLATE_VIS
 #    define _LIBCPP_TEMPLATE_DATA_VIS
 #    define _LIBCPP_NAMESPACE_VISIBILITY
 
@@ -405,10 +404,6 @@ typedef __char32_t char32_t;
 #    ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
 #      define _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_VISIBILITY("default")
 #    endif
-
-// This is kept to avoid a huge library-wide diff in the first step.
-// TODO: Remove this in a follow-up patch
-#    define _LIBCPP_TEMPLATE_VIS
 
 #    if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) && __has_attribute(__type_visibility__)
 #      define _LIBCPP_NAMESPACE_VISIBILITY __attribute__((__type_visibility__("default")))
