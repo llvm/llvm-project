@@ -304,16 +304,12 @@ def : ProcessorModel<"gfx1153", GFX11SpeedModel,
   FeatureISAVersion11_5_3.Features
 >;
 
-#ifdef LLPC_BUILD_NPI
-// [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1153]
-#else /* LLPC_BUILD_NPI */
 def : ProcessorModel<"gfx1170", GFX11SpeedModel,
   FeatureISAVersion11_7_0.Features
 >;
 
 // [gfx1100, gfx1101, gfx1102, gfx1103, gfx1150, gfx1151, gfx1152, gfx1153,
 //  gfx1170]
-#endif /* LLPC_BUILD_NPI */
 def : ProcessorModel<"gfx11-generic", GFX11SpeedModel,
   FeatureISAVersion11_Generic.Features
 >;
@@ -348,8 +344,8 @@ def : ProcessorModel<"gfx120E", GFX12SpeedModel,
 // Internal only (A0)
 def : ProcessorModel<"gfx120F", GFX12SpeedModel,
   FeatureISAVersion12.Features
-#ifdef LLPC_BUILD_NPI
 >;
+#ifdef LLPC_BUILD_NPI
 
 def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
   FeatureISAVersion12_50.Features
@@ -382,5 +378,5 @@ def : ProcessorModel<"gfx1302", GFX12SpeedModel,
 
 def : ProcessorModel<"gfx130E", GFX12SpeedModel,
   FeatureISAVersion13.Features
-#endif /* LLPC_BUILD_NPI */
 >;
+#endif /* LLPC_BUILD_NPI */

@@ -134,10 +134,7 @@ enum class OffloadArch {
   GFX1151,
   GFX1152,
   GFX1153,
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
   GFX1170,
-#endif /* LLPC_BUILD_NPI */
   GFX12_GENERIC,
   GFX1200,
   GFX1201,
