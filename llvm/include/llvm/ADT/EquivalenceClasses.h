@@ -265,7 +265,7 @@ public:
     // Update 'TheMapping' and 'Members'.
     assert(TheMapping.contains(V) && "Can't find input in TheMapping!");
     TheMapping.erase(V);
-    auto I = llvm::find(Members, Cur);
+    auto I = find(Members, Cur);
     assert(I != Members.end() && "Can't find input in members!");
     Members.erase(I);
     return true;
