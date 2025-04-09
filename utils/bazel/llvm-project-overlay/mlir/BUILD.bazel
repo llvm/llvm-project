@@ -2298,14 +2298,6 @@ cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "X86VectorConversionIncGen",
-    tbl_outs = {"include/mlir/Dialect/X86Vector/X86VectorConversions.inc": ["-gen-llvmir-conversions"]},
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/X86Vector.td",
-    deps = [":X86VectorTdFiles"],
-)
-
 ##---------------------------------------------------------------------------##
 # IRDL dialect.
 ##---------------------------------------------------------------------------##
