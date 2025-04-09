@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s | mlir-opt | FileCheck %s
+// RUN: mlir-opt %s --verify-roundtrip | FileCheck %s
 
 // CHECK-LABEL: func @bitvectors
 func.func @bitvectors() {
