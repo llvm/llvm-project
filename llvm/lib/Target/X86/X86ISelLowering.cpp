@@ -56643,6 +56643,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
 
     // Attempt to move shifted index into the address scale, allows further
     // index truncation below.
+    // TODO
     if (Index.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Scale)) {
       uint64_t ScaleAmt = Scale->getAsZExtVal();
       if (auto MinShAmt = DAG.getValidMinimumShiftAmount(Index)) {
