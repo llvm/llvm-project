@@ -72,9 +72,9 @@ static inline uint64_t fastHexToU64(const char *inStr) {
 static void parseLine(const char *line, ParseResult &parseResult,
                       int32_t &curFails, int32_t &curBitDiffs) {
 
-  if (line[0] == '#') {
+  if (line[0] == '#')
     return;
-  }
+
   parseResult.total += 1;
   uint32_t expectedFloatRaw;
   uint64_t expectedDoubleRaw;
@@ -187,13 +187,13 @@ ParseStatus checkFile(char *inputFileName, ParseResult &parseResult) {
   return ParseStatus::SUCCESS;
 }
 
-ParseStatus updateResult(ParseStatus result, ParseStatus curResult) {
-  if (curResult == ParseStatus::FILE_ERROR) {
-    result = ParseStatus::FILE_ERROR;
-  } else if (curResult == ParseStatus::PARSE_ERROR) {
-    result = ParseStatus::PARSE_ERROR;
+ParseStatus updateStatus(ParseStatus parse_status, ParseStatus cur_status) {
+  if (cur_status == ParseStatus::FILE_ERROR) {
+    parse_status = ParseStatus::FILE_ERROR;
+  } else if (cur_status == ParseStatus::PARSE_ERROR) {
+    parse_status = ParseStatus::PARSE_ERROR;
   }
-  return result;
+  return parse_status;
 }
 
 TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
@@ -214,14 +214,14 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
   char *files = LIBC_NAMESPACE::getenv("FILES");
 
   if (files == nullptr) {
-    ParseStatus curResult = checkBuffer(parseResult);
-    parseStatus = updateResult(parseStatus, curResult);
+    ParseStatus cur_status = checkBuffer(parseResult);
+    parseStatus = updateStatus(parseStatus, cur_status);
   } else {
     files = LIBC_NAMESPACE::strdup(files);
     for (char *file = LIBC_NAMESPACE::strtok(files, ","); file != nullptr;
          file = LIBC_NAMESPACE::strtok(nullptr, ",")) {
-      ParseStatus curResult = checkFile(file, parseResult);
-      parseStatus = updateResult(parseStatus, curResult);
+      ParseStatus cur_status = checkFile(file, parseResult);
+      parseStatus = updateStatus(parseStatus, cur_status);
     }
   }
 
