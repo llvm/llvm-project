@@ -550,7 +550,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
     return __node_value_type::__get_address_of_value(__n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }
 };
 
 template <class _VoidPtr>
@@ -1272,21 +1272,21 @@ private:
   // TODO: Make this _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_HIDDEN _LIBCPP_CONSTEXPR_SINCE_CXX26 void destroy(__node_pointer __nd) _NOEXCEPT;
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, false_type);
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(__tree& __t, true_type) _NOEXCEPT_(
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign(__tree& __t, false_type);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign(__tree& __t, true_type) _NOEXCEPT_(
       is_nothrow_move_assignable<value_compare>::value&& is_nothrow_move_assignable<__node_allocator>::value);
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__tree& __t)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree& __t)
       _NOEXCEPT_(!__node_traits::propagate_on_container_move_assignment::value ||
                  is_nothrow_move_assignable<__node_allocator>::value) {
     __move_assign_alloc(__t, integral_constant<bool, __node_traits::propagate_on_container_move_assignment::value>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__tree& __t, true_type)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree& __t, true_type)
       _NOEXCEPT_(is_nothrow_move_assignable<__node_allocator>::value) {
     __node_alloc() = std::move(__t.__node_alloc());
   }
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
   struct _DetachedTreeCache {
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit _DetachedTreeCache(__tree* __t) _NOEXCEPT
@@ -1486,7 +1486,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(__tree&&
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
     _NOEXCEPT_(is_nothrow_move_assignable<value_compare>::value&& is_nothrow_move_assignable<__node_allocator>::value) {
   destroy(static_cast<__node_pointer>(__end_node()->__left_));
   __begin_node_ = __t.__begin_node_;
@@ -1505,7 +1505,7 @@ void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, true_type)
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, false_type) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__move_assign(__tree& __t, false_type) {
   if (__node_alloc() == __t.__node_alloc())
     __move_assign(__t, true_type());
   else {
