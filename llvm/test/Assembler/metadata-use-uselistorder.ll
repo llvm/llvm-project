@@ -24,6 +24,7 @@ entry:
     #dbg_value(ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 5), !10, !DIExpression(), !13)
   %1 = load i64, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), align 16
     #dbg_value(ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), !10, !DIExpression(), !14)
+    #dbg_assign(i32 0, !10, !DIExpression(), !19, ptr getelementptr inbounds ([10 x i64], ptr @global_arr, i64 0, i64 6), !DIExpression(), !14)
   ret void
 }
 
@@ -58,3 +59,4 @@ attributes #0 = { nounwind readnone speculatable }
 !16 = !{!17}
 !17 = !DILocalVariable(name: "local2", scope: !15, file: !1, line: 13, type: !11)
 !18 = !DILocation(line: 14, column: 1, scope: !15)
+!19 = distinct !DIAssignID()
