@@ -25,6 +25,10 @@ class StringExtractorGDBRemote;
 
 namespace lldb_private {
 
+namespace lldb_server {
+  class LLDBServerPlugin;
+}
+
 namespace process_gdb_remote {
 
 class ProcessGDBRemote;
@@ -85,16 +89,7 @@ public:
 
   Status InitializeConnection(std::unique_ptr<Connection> connection);
 
-  using ProcessStoppedChangedCallback = 
-      std::function<std::string (GDBRemoteCommunicationServerLLGS &server,
-                                 NativeProcessProtocol *process)>;
-
-  bool SetProcessStoppedCallback(ProcessStoppedChangedCallback callback) {
-    if (m_process_stopped_callback)
-      return false;
-    m_process_stopped_callback = callback;
-    return true;
-  }
+  void InstallPlugin(std::unique_ptr<lldb_server::LLDBServerPlugin> plugin_up);
 
   struct DebuggedProcess {
     enum class Flag {
@@ -134,7 +129,7 @@ protected:
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
 
-  ProcessStoppedChangedCallback m_process_stopped_callback = nullptr;
+  std::vector<std::unique_ptr<lldb_server::LLDBServerPlugin>> m_plugins;
 
   // Typically we would use a SmallVector for this data but in this context we
   // don't know how much data we're recieving so we would have to heap allocate
@@ -284,6 +279,8 @@ protected:
   PacketResult Handle_QMemTags(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jGPUPluginInitialize(StringExtractorGDBRemote &packet);
 
   void SetCurrentThreadID(lldb::tid_t tid);
 

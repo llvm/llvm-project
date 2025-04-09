@@ -11,6 +11,7 @@
 #include "lldb/Host/common/TCPSocket.h"
 #include "llvm/Support/Error.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
 
 #include <sys/socket.h>

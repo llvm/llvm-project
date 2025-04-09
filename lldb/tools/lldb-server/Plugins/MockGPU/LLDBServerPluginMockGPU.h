@@ -9,10 +9,13 @@
 #ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGINMOCKGPU_H
 #define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGINMOCKGPU_H
 
-#include "Plugins/PluginInterface/LLDBServerPlugin.h"
+#include "Plugins/Process/gdb-remote/LLDBServerPlugin.h"
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
+  
+  class TCPSocket;
+
 namespace lldb_server {
 
 class LLDBServerPluginMockGPU : public lldb_private::lldb_server::LLDBServerPlugin {

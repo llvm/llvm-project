@@ -365,7 +365,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
   m_x_packet_state.reset();
   m_supports_reverse_continue = eLazyBoolNo;
   m_supports_reverse_step = eLazyBoolNo;
-
+  m_supports_gpu_plugins =  eLazyBoolNo;
   m_max_packet_size = UINT64_MAX; // It's supposed to always be there, but if
                                   // not, we assume no limit
 
@@ -420,10 +420,13 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_uses_native_signals = eLazyBoolYes;
       else if (x == "binary-upload+")
         m_x_packet_state = xPacketState::Prefixed;
+      else if (x == "gpu-plugins")
+        m_supports_gpu_plugins = eLazyBoolYes;
       else if (x == "ReverseContinue+")
         m_supports_reverse_continue = eLazyBoolYes;
       else if (x == "ReverseStep+")
         m_supports_reverse_step = eLazyBoolYes;
+      
       // Look for a list of compressions in the features list e.g.
       // qXfer:features:read+;PacketSize=20000;qEcho+;SupportedCompressions=zlib-
       // deflate,lzma
@@ -591,6 +594,31 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
         PacketResult::Success) {
       if (response.IsUnsupportedResponse()) {
         m_supports_jThreadsInfo = false;
+      } else if (!response.Empty()) {
+        object_sp = StructuredData::ParseJSON(response.GetStringRef());
+      }
+    }
+  }
+  return object_sp;
+}
+
+StructuredData::ObjectSP GDBRemoteCommunicationClient::GetGPUPluginInfo() {
+  // Get JSON information containing any breakpoints and other information
+  // required by any GPU plug-ins using the "jGPUPluginInitialize" packet.
+  //
+  // GPU plug-ins might require breakpoints to be set in the native program
+  // that controls the GPUs. This packet allows the GPU plug-ins to set one or
+  // more breakpoints in the native program and get a callback when those 
+  // breakpoints get hit.
+  StructuredData::ObjectSP object_sp;
+
+  if (m_supports_gpu_plugins == eLazyBoolYes) {
+    StringExtractorGDBRemote response;
+    response.SetResponseValidatorToJSON();
+    if (SendPacketAndWaitForResponse("jGPUPluginInitialize", response) ==
+        PacketResult::Success) {
+      if (response.IsUnsupportedResponse()) {
+        m_supports_gpu_plugins = eLazyBoolNo;
       } else if (!response.Empty()) {
         object_sp = StructuredData::ParseJSON(response.GetStringRef());
       }

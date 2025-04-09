@@ -17,6 +17,7 @@
 #include <thread>
 
 #include "GDBRemoteCommunicationServerLLGS.h"
+#include "LLDBServerPlugin.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/File.h"
@@ -253,7 +254,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_vCtrlC,
       &GDBRemoteCommunicationServerLLGS::Handle_vCtrlC);
-}
+  RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jGPUPluginInitialize,
+      &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize);
+  }
 
 void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(
     const ProcessLaunchInfo &info) {
@@ -1090,12 +1094,13 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
+  // Check if any plug-ins have new connections
   std::string extra_stop_reply_args;
-  // Call the state changed callback
-  if (m_process_stopped_callback) {
-    extra_stop_reply_args = m_process_stopped_callback(*this, process);
-    // LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called, m_process_stopped_callback returned \"%s\"", __FUNCTION__, extra_stop_reply_args.str().c_str());
-
+  for (auto &plugin_up : m_plugins) {
+    if (!plugin_up->IsConnected()) {
+      if (std::optional<std::string> opt_url = plugin_up->GetConnectionURL())
+        extra_stop_reply_args += opt_url.value();
+    } 
   }
 
   PacketResult result = SendStopReasonForState(
@@ -3679,6 +3684,35 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
 }
 
 GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize(
+    StringExtractorGDBRemote &) {
+
+  // // Ensure we have a debugged process.
+  // if (!m_current_process ||
+  //     (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
+  //     return SendErrorResponse(llvm::make_error<StringError>(
+  //       inconvertibleErrorCode(), "No current process and no PID provided"));
+
+  // StreamString response;
+  // const bool threads_with_valid_stop_info_only = false;
+  // llvm::Expected<json::Value> threads_info =
+  //     GetJSONThreadsInfo(*m_current_process, threads_with_valid_stop_info_only);
+  // if (!threads_info) {
+  //   LLDB_LOG_ERROR(log, threads_info.takeError(),
+  //                  "failed to prepare a packet for pid {1}: {0}",
+  //                  m_current_process->GetID());
+  //   return SendErrorResponse(52);
+  // }
+
+  // response.AsRawOstream() << *threads_info;
+  // StreamGDBRemote escaped_response;
+  // escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
+  // return SendPacketNoLock(escaped_response.GetString());
+  return SendErrorResponse(99);
+}
+
+
+GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo(
     StringExtractorGDBRemote &packet) {
   // Fail if we don't have a current process.
@@ -4246,6 +4280,7 @@ std::vector<std::string> GDBRemoteCommunicationServerLLGS::HandleFeatures(
                             "QListThreadsInStopReply+",
                             "qXfer:features:read+",
                             "QNonStop+",
+                            "gpu-plugins"
                         });
 
   // report server-only features
@@ -4353,4 +4388,9 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
   // If none of the above applied, interpret the argument as UNIX socket path.
   return (reverse_connect ? "unix-connect://" : "unix-accept://") +
          url_arg.str();
+}
+
+void GDBRemoteCommunicationServerLLGS::InstallPlugin(
+    std::unique_ptr<lldb_server::LLDBServerPlugin> plugin_up) {
+  m_plugins.emplace_back(std::move(plugin_up));
 }
