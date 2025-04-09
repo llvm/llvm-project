@@ -155,9 +155,6 @@ class CrashLogScriptedThread(ScriptedThread):
         return frames
 
     def create_stackframes(self):
-        if not (self.originating_process.options.load_all_images or self.has_crashed):
-            return None
-
         if not self.backing_thread or not len(self.backing_thread.frames):
             return None
 
