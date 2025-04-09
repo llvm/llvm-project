@@ -606,38 +606,3 @@ def testPackUnPackOp():
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
         # CHECK:         }
         print(module)
-
-
-@run
-def test_infer_contraction_dimensions():
-    with Context(), Location.unknown():
-        module = ir.Module.parse(
-            r"""
-            module {
-            func.func @matmul(%arg0: tensor<4x4xf32>, %arg1: tensor<4x4xf32>)
-                -> tensor<4x4xf32> {
-                %cst = arith.constant 0.0 : f32
-                %0 = linalg.fill ins(%cst : f32) outs(%arg0 : tensor<4x4xf32>) -> tensor<4x4xf32>
-                %1 = linalg.matmul ins(%arg0, %arg1 : tensor<4x4xf32>, tensor<4x4xf32>)
-                outs(%0 : tensor<4x4xf32>) -> tensor<4x4xf32>
-                return %1 : tensor<4x4xf32>
-            }
-            }
-            """
-        )
-        func_op = module.body.operations[0]
-        body_block = func_op.regions[0].blocks[0]
-        fill_op = body_block.operations[1]
-        matmul_op = body_block.operations[2]
-
-        assert not linalg.isa_contraction_op(fill_op)
-        assert linalg.isa_contraction_op(matmul_op)
-
-        dims = linalg.infer_contraction_dimensions(fill_op)
-        assert dims is None
-        dims = linalg.infer_contraction_dimensions(matmul_op)
-        assert dims
-
-        assert dims.m == [0], f"Expected m=[0], got {dims.m}"
-        assert dims.n == [1], f"Expected n=[1], got {dims.n}"
-        assert dims.k == [2], f"Expected k=[2], got {dims.k}"

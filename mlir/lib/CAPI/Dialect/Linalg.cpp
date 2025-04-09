@@ -43,6 +43,7 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsContractionOp(MlirOperation op) {
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  // isaContractionOpInterface handles null linalgOp internally.
   return linalg::isaContractionOpInterface(linalgOp);
 }
 
@@ -53,16 +54,17 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
   if (!linalgOp)
     return result;
 
-  auto maybeDims = linalg::inferContractionDims(linalgOp);
+  FailureOr<linalg::ContractionDimensions> maybeDims =
+      linalg::inferContractionDims(linalgOp);
   if (failed(maybeDims))
     return result;
 
-  linalg::ContractionDimensions contractionDims = maybeDims.value();
+  linalg::ContractionDimensions contractionDims = *maybeDims;
   MLIRContext *ctx = linalgOp.getContext();
 
-  auto toAttr = [&](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
-    SmallVector<int32_t> intVals(vals.begin(), vals.end());
-    return wrap(DenseI32ArrayAttr::get(ctx, intVals));
+  auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
+    return wrap(
+        DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t, 2>(vals)));
   };
 
   result.batch = toAttr(contractionDims.batch);
