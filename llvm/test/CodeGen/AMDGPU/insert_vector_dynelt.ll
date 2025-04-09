@@ -1920,10 +1920,9 @@ define <8 x double> @double8_inselt_vec(<8 x double> %vec, i32 %sel) {
 ; GCN-LABEL: double8_inselt_vec:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_mov_b32_e32 v17, 0x3ff00000
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v16
+; GCN-NEXT:    v_mov_b32_e32 v17, 0x3ff00000
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, v17, v1, vcc
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v16
 ; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc

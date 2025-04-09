@@ -119,6 +119,19 @@ public:
       return AMDGPU::V_CMP_LE_U32_e64;
     case AMDGPU::V_CMP_LT_U32_e64:
       return AMDGPU::V_CMP_GE_U32_e64;
+
+    //   case AMDGPU::V_CMP_EQ_U32_e64:
+    //   return AMDGPU::V_CMP_NE_U32_e64;
+    // case AMDGPU::V_CMP_NE_U32_e64:
+    //   return AMDGPU::V_CMP_EQ_U32_e64;
+    // case AMDGPU::V_CMP_GE_U32_e64:
+    //   return AMDGPU::V_CMP_LT_U32_e64;
+    // case AMDGPU::V_CMP_LE_U32_e64:
+    //   return AMDGPU::V_CMP_GT_U32_e64;
+    // case AMDGPU::V_CMP_GT_U32_e64:
+    //   return AMDGPU::V_CMP_LE_U32_e64;
+    // case AMDGPU::V_CMP_LT_U32_e64:
+    //   return AMDGPU::V_CMP_GE_U32_e64;
     default:
       return 0;
     }
@@ -1504,7 +1517,7 @@ bool SIFoldOperandsImpl::shouldSwitchOperands(MachineRegisterInfo &MRI,
     if (src1Imm && !src0Imm)
       count++;
   }
-  return (count >= 2);
+  return (count >= 1);
 }
 
 // Try to fold an instruction into a simpler one

@@ -1170,8 +1170,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_eq_neg1(ptr addrspace(1) noalias %out,
 ; GFX9-GISEL-NEXT:    v_or3_b32 v1, v2, v3, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v1
 ; GFX9-GISEL-NEXT:    v_min_u32_e32 v2, 32, v2
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v1, v2, -1, vcc
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, -1, v2, vcc
 ; GFX9-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i32, ptr addrspace(1) %arrayidx, align 1
@@ -1510,8 +1510,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    v_or_b32_e32 v3, 0x100, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v3, v3
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v3
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
 ; GFX9-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i8, ptr addrspace(1) %arrayidx, align 1
@@ -1612,8 +1612,8 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    v_or_b32_e32 v2, 0x10000, v1
 ; GFX9-GISEL-NEXT:    v_ffbl_b32_e32 v2, v2
 ; GFX9-GISEL-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v2, v3, vcc
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; GFX9-GISEL-NEXT:    global_store_short v0, v1, s[0:1]
 ; GFX9-GISEL-NEXT:    s_endpgm
   %val = load i16, ptr addrspace(1) %arrayidx, align 1
