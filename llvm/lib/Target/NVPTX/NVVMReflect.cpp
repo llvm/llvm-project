@@ -165,7 +165,7 @@ bool NVVMReflect::handleReflectFunction(Module &M,
     if (!GlobalStr)
       report_fatal_error("__nvvm_reflect argument must be a constant string");
 
-    const auto *const ConstantStr = dyn_cast<ConstantDataSequential>(GlobalStr);
+    const auto *const ConstantStr = dyn_cast<ConstantDataSequential>(GlobalStr->getOperand(0));
     if (!ConstantStr)
       report_fatal_error("__nvvm_reflect argument must be a string constant");
     if (!ConstantStr->isCString())
