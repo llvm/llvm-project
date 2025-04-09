@@ -536,21 +536,9 @@ public:
     m_plan_is_sourced_from_compiler = eLazyBoolCalculate;
     m_plan_is_valid_at_all_instruction_locations = eLazyBoolCalculate;
     m_plan_is_for_signal_trap = eLazyBoolCalculate;
-    m_lsda_address.Clear();
-    m_personality_func_addr.Clear();
   }
 
   const RegisterInfo *GetRegisterInfo(Thread *thread, uint32_t reg_num) const;
-
-  Address GetLSDAAddress() const { return m_lsda_address; }
-
-  void SetLSDAAddress(Address lsda_addr) { m_lsda_address = lsda_addr; }
-
-  Address GetPersonalityFunctionPtr() const { return m_personality_func_addr; }
-
-  void SetPersonalityFunctionPtr(Address presonality_func_ptr) {
-    m_personality_func_addr = presonality_func_ptr;
-  }
 
 private:
   std::vector<Row> m_row_list;
@@ -566,13 +554,6 @@ private:
   lldb_private::LazyBool m_plan_is_sourced_from_compiler;
   lldb_private::LazyBool m_plan_is_valid_at_all_instruction_locations;
   lldb_private::LazyBool m_plan_is_for_signal_trap;
-
-  Address m_lsda_address; // Where the language specific data area exists in the
-                          // module - used
-                          // in exception handling.
-  Address m_personality_func_addr; // The address of a pointer to the
-                                   // personality function - used in
-                                   // exception handling.
 };                                 // class UnwindPlan
 
 } // namespace lldb_private
