@@ -997,8 +997,13 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
-    if (!noGPULib)
-      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
+    // Starting from COV6, we will report minimum ROCm version requirement in
+    // the error message.
+    if (ABIVer.getAsCodeObjectVersion() < 6)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString() << 0;
+    else
+      D.Diag(diag::err_drv_no_rocm_device_lib)
+          << 2 << ABIVer.toString() << 1 << "6.3";
     return false;
   }
   return true;
