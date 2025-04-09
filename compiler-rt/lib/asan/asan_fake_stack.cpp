@@ -40,6 +40,11 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
     // The size class is too big, it's cheaper to poison only size bytes.
     PoisonShadow(ptr, size, static_cast<u8>(magic));
   }
+
+  if (magic == 0) {
+    uptr redzone_size = FakeStack::BytesInSizeClass(class_id) - size;
+    PoisonShadow(ptr + size, redzone_size, kAsanStackRightRedzoneMagic);
+  }
 }
 
 FakeStack *FakeStack::Create(uptr stack_size_log) {
@@ -232,13 +237,6 @@ static ALWAYS_INLINE uptr OnMalloc(uptr class_id, uptr size) {
     return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);
   SetShadow(ptr, size, class_id, 0);
-
-  // Poison everything beyond user size, use kNumberOfSizeClasses to prevent
-  // SetShadow from inlining PoisonShadow
-  SetShadow(reinterpret_cast<uptr>(ptr + size),
-            FakeStack::BytesInSizeClass(class_id) - size, kNumberOfSizeClasses,
-            kAsanStackRightRedzoneMagic);
-
   return ptr;
 }
 
@@ -252,13 +250,6 @@ static ALWAYS_INLINE uptr OnMallocAlways(uptr class_id, uptr size) {
     return 0;  // Out of fake stack.
   uptr ptr = reinterpret_cast<uptr>(ff);
   SetShadow(ptr, size, class_id, 0);
-
-  // Poison everything beyond user size, use kNumberOfSizeClasses to prevent
-  // SetShadow from inlining PoisonShadow
-  SetShadow(reinterpret_cast<uptr>(ptr + size),
-            FakeStack::BytesInSizeClass(class_id) - size, kNumberOfSizeClasses,
-            kAsanStackRightRedzoneMagic);
-
   return ptr;
 }
 

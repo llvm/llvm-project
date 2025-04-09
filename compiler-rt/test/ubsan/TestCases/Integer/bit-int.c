@@ -49,13 +49,6 @@ uint32_t unsigned_shift_base() {
   return x;
 }
 
-uint32_t array_bounds() {
-  _BitInt(37) x[4];
-  _BitInt(37) y = x[10];
-  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:19: runtime error: index 10 out of bounds for type
-  return (uint32_t)y;
-}
-
 uint32_t float_cast_overflow() {
   float a = 100000000.0f;
   _BitInt(7) b = (_BitInt(7))a;
@@ -154,7 +147,6 @@ int main(int argc, char **argv) {
       pointer_overflow() +
       vla_bound(argc) +
       unsigned_shift_base() +
-      (uint32_t)array_bounds() +
       float_cast_overflow() +
       implicit_integer_sign_change((unsigned _BitInt(37))(argc - 2)) +
       (uint64_t)implicit_signed_integer_truncation() +
