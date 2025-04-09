@@ -245,7 +245,7 @@ requirement applies even when the class itself is annotated with ``LLVM_ABI``.
    compiler error when building for Windows. This annotation is harmless but not
    required when building ELF or Mach-O shared libraries.
 
-VTable and Type Info
+Virtual Table and Type Info
 ~~~~~~~~~~~~~~~~~~~~
 Classes and structs with exported virtual methods, or child classes that export
 overridden virtual methods, must also export their vtable for ELF and Mach-O
