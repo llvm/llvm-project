@@ -676,34 +676,34 @@ class __map_value_compare<_Key, _CP, _Compare, false> {
   _Compare __comp_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_value_compare() _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
       : __comp_() {}
-  _LIBCPP_HIDE_FROM_ABI __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __map_value_compare(_Compare __c) _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
       : __comp_(__c) {}
-  _LIBCPP_HIDE_FROM_ABI const _Compare& key_comp() const _NOEXCEPT { return __comp_; }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const _Compare& key_comp() const _NOEXCEPT { return __comp_; }
 
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _CP& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _CP& __x, const _CP& __y) const {
     return __comp_(__x.__get_value().first, __y.__get_value().first);
   }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _Key& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _CP& __x, const _Key& __y) const {
     return __comp_(__x.__get_value().first, __y);
   }
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Key& __x, const _CP& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _Key& __x, const _CP& __y) const {
     return __comp_(__x, __y.__get_value().first);
   }
-  void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 void swap(__map_value_compare& __y) _NOEXCEPT_(__is_nothrow_swappable_v<_Compare>) {
     using std::swap;
     swap(__comp_, __y.__comp_);
   }
 
 #  if _LIBCPP_STD_VER >= 14
   template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _K2& __x, const _CP& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _K2& __x, const _CP& __y) const {
     return __comp_(__x, __y.__get_value().first);
   }
 
   template <typename _K2>
-  _LIBCPP_HIDE_FROM_ABI bool operator()(const _CP& __x, const _K2& __y) const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool operator()(const _CP& __x, const _K2& __y) const {
     return __comp_(__x.__get_value().first, __y);
   }
 #  endif
