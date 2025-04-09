@@ -58,10 +58,10 @@ entry:
 
 ; FUNC-LABEL: {{^}}null_32bit_lds_ptr:
 ; GFX7 v_cmp_ne_u32
-; GFX7: s_cselect_b32
+; GFX7: s_cmovk_i32
 ; GFX8: s_cmp_lg_u32
 ; GFX8-NOT: v_cmp_ne_u32
-; GFX8: s_cselect_b32
+; GFX8: s_cmovk_i32
 define amdgpu_kernel void @null_32bit_lds_ptr(ptr addrspace(1) %out, ptr addrspace(3) %lds) nounwind {
   %cmp = icmp ne ptr addrspace(3) %lds, null
   %x = select i1 %cmp, i32 123, i32 456

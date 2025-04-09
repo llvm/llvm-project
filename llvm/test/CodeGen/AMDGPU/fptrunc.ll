@@ -132,7 +132,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; SI-NEXT:    s_or_b32 s8, s8, s9
 ; SI-NEXT:    s_add_i32 s6, s6, s8
 ; SI-NEXT:    s_cmp_lt_i32 s0, 31
-; SI-NEXT:    s_cselect_b32 s6, s6, 0x7c00
+; SI-NEXT:    s_cmovk_i32 s6, 0x7c00
 ; SI-NEXT:    s_cmp_lg_u32 s1, 0
 ; SI-NEXT:    s_cselect_b32 s1, s2, 0x7c00
 ; SI-NEXT:    s_cmpk_eq_i32 s0, 0x40f
@@ -188,10 +188,10 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; VI-SAFE-SDAG-NEXT:    s_lshr_b32 s5, s5, 2
 ; VI-SAFE-SDAG-NEXT:    s_add_i32 s5, s5, s8
 ; VI-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s6, 31
-; VI-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, 0x7c00
+; VI-SAFE-SDAG-NEXT:    s_cmovk_i32 s5, 0x7c00
 ; VI-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; VI-SAFE-SDAG-NEXT:    s_movk_i32 s4, 0x7e00
-; VI-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, 0x7c00
+; VI-SAFE-SDAG-NEXT:    s_cmovk_i32 s4, 0x7c00
 ; VI-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s6, 0x40f
 ; VI-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s4, s5
 ; VI-SAFE-SDAG-NEXT:    s_lshr_b32 s5, s7, 16
@@ -312,7 +312,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX10-SAFE-SDAG-NEXT:    s_add_i32 s5, s5, s6
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 31
 ; GFX10-SAFE-SDAG-NEXT:    s_movk_i32 s6, 0x7e00
-; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, 0x7c00
+; GFX10-SAFE-SDAG-NEXT:    s_cmovk_i32 s5, 0x7c00
 ; GFX10-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX10-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s6, 0x7c00
 ; GFX10-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0x40f
@@ -444,7 +444,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-SDAG-NEXT:    s_add_i32 s5, s5, s6
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_lt_i32 s2, 31
 ; GFX11-SAFE-SDAG-NEXT:    s_movk_i32 s6, 0x7e00
-; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s5, s5, 0x7c00
+; GFX11-SAFE-SDAG-NEXT:    s_cmovk_i32 s5, 0x7c00
 ; GFX11-SAFE-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX11-SAFE-SDAG-NEXT:    s_cselect_b32 s4, s6, 0x7c00
 ; GFX11-SAFE-SDAG-NEXT:    s_cmpk_eq_i32 s2, 0x40f
