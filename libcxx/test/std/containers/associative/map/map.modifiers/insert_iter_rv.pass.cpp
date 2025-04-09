@@ -23,7 +23,7 @@
 #include "test_macros.h"
 
 template <class Container, class Pair>
-void do_insert_iter_rv_test() {
+TEST_CONSTEXPR_CXX26 bool do_insert_iter_rv_test() {
   typedef Container M;
   typedef Pair P;
   typedef typename M::iterator R;
@@ -51,6 +51,8 @@ void do_insert_iter_rv_test() {
   assert(m.size() == 3);
   assert(r->first == 3);
   assert(r->second == 3);
+
+  return true;
 }
 TEST_CONSTEXPR_CXX26 bool test() {
   do_insert_iter_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
