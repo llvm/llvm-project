@@ -16,6 +16,7 @@
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Dialect/X86Vector/X86VectorInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // X86Vector dialect definition
@@ -39,6 +40,7 @@ class AVX512_Op<string mnemonic, list<Trait> traits = []> :
 //----------------------------------------------------------------------------//
 
 def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
   // then be removed from assemblyFormat.
   AllTypesMatch<["a", "dst"]>,
@@ -73,12 +75,15 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
-      // Overload is resolved later by intrisic call lowering.
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
+      // Call the baseline overloaded intrisic.
+      // Final overload name mangling is resolved by the created function call.
       return "llvm.x86.avx512.mask.compress";
     }
+  }];
+  let extraClassDeclaration = [{
+    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&);
   }];
 }
 
@@ -87,6 +92,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   AllTypesMatch<["src", "a", "dst"]>,
   TypesMatchWith<"imm has the same number of bits as elements in dst",
                  "dst", "imm",
@@ -117,9 +123,8 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
   let assemblyFormat =
     "$src `,` $k `,` $a `,` $imm `,` $rounding attr-dict `:` type($dst)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.mask.rndscale";
       VectorType vecType = getSrc().getType();
       Type elemType = vecType.getElementType();
@@ -138,6 +143,7 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
 //----------------------------------------------------------------------------//
 
 def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   AllTypesMatch<["src", "a", "b", "dst"]>,
   TypesMatchWith<"k has the same number of bits as elements in dst",
                  "dst", "k",
@@ -169,9 +175,8 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
   let assemblyFormat =
     "$src `,` $a `,` $b `,` $k `,` $rounding attr-dict `:` type($dst)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.mask.scalef";
       VectorType vecType = getSrc().getType();
       Type elemType = vecType.getElementType();
@@ -190,6 +195,7 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
 //----------------------------------------------------------------------------//
 
 def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   AllTypesMatch<["a", "b"]>,
   TypesMatchWith<"k1 has the same number of bits as elements in a",
                  "a", "k1",
@@ -225,9 +231,8 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
   let assemblyFormat =
     "$a `,` $b attr-dict `:` type($a)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       std::string intr = "llvm.x86.avx512.vp2intersect";
       VectorType vecType = getA().getType();
       Type elemType = vecType.getElementType();
@@ -246,6 +251,7 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
 //----------------------------------------------------------------------------//
 
 def DotBF16Op : AVX512_Op<"dot", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   AllTypesMatch<["a", "b"]>,
   AllTypesMatch<["src", "dst"]>,
   TypesMatchWith<"`a` has twice an many elements as `src`",
@@ -277,9 +283,8 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
   let assemblyFormat =
     "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       std::string intr = "llvm.x86.avx512bf16.dpbf16ps";
       VectorType vecType = getSrc().getType();
       unsigned elemBitWidth = vecType.getElementTypeBitWidth();
@@ -295,6 +300,7 @@ def DotBF16Op : AVX512_Op<"dot", [Pure,
 //----------------------------------------------------------------------------//
 
 def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
   AllElementCountsMatch<["a", "dst"]>]> {
   let summary = "Convert packed F32 to packed BF16 Data.";
   let description = [{
@@ -317,9 +323,8 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
   let assemblyFormat =
     "$a attr-dict `:` type($a) `->` type($dst)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       std::string intr = "llvm.x86.avx512bf16.cvtneps2bf16";
       VectorType vecType = getA().getType();
       unsigned elemBitWidth = vecType.getElementTypeBitWidth();
@@ -348,15 +353,16 @@ class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
 // AVX Rsqrt
 //----------------------------------------------------------------------------//
 
-def RsqrtOp : AVX_Op<"rsqrt", [Pure, SameOperandsAndResultType]> {
+def RsqrtOp : AVX_Op<"rsqrt", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
+  SameOperandsAndResultType]> {
   let summary = "Rsqrt";
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$b);
   let assemblyFormat = "$a attr-dict `:` type($a)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
       return "llvm.x86.avx.rsqrt.ps.256";
     }
   }];
@@ -366,7 +372,9 @@ def RsqrtOp : AVX_Op<"rsqrt", [Pure, SameOperandsAndResultType]> {
 // AVX Dot
 //----------------------------------------------------------------------------//
 
-def DotOp : AVX_LowOp<"dot", [Pure, SameOperandsAndResultType]> {
+def DotOp : AVX_LowOp<"dot", [Pure,
+  DeclareOpInterfaceMethods<OneToOneIntrinsicOpInterface>,
+  SameOperandsAndResultType]> {
   let summary = "Dot";
   let description = [{
     Computes the 4-way dot products of the lower and higher parts of the source
@@ -389,11 +397,14 @@ def DotOp : AVX_LowOp<"dot", [Pure, SameOperandsAndResultType]> {
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
   let assemblyFormat = "$a `,` $b attr-dict `:` type($res)";
 
-  let extraClassDeclaration = [{
-    /// Return LLVM intrinsic function name matching op variant.
-    std::string getIntrinsicName() {
+  let extraClassDefinition = [{
+    std::string $cppClass::getIntrinsicName() {
+      // Only one variant is supported right now - no extra mangling.
       return "llvm.x86.avx.dp.ps.256";
     }
+  }];
+  let extraClassDeclaration = [{
+    SmallVector<Value> getIntrinsicOperands(::mlir::RewriterBase&);
   }];
 }
 
