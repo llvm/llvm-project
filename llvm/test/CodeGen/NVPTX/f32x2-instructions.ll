@@ -33,7 +33,7 @@ define float @test_extract_0(<2 x float> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_extract_0_param_0];
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {%f1, tmp}, %rd1; }
+; CHECK-NEXT:    mov.b64 {%f1, _}, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
 ; CHECK-NEXT:    ret;
   %e = extractelement <2 x float> %a, i32 0
@@ -48,7 +48,7 @@ define float @test_extract_1(<2 x float> %a) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_extract_1_param_0];
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %f1}, %rd1; }
+; CHECK-NEXT:    mov.b64 {_, %f1}, %rd1;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %f1;
 ; CHECK-NEXT:    ret;
   %e = extractelement <2 x float> %a, i32 1
