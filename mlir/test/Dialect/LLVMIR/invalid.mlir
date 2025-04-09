@@ -121,7 +121,7 @@ func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
 // -----
 
 func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.function, but found '!llvm.ptr'}}
   llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
