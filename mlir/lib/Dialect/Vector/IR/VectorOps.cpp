@@ -150,13 +150,18 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
-AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
-                                                    VectorType vectorType) {
-  int64_t elementVectorRank = 0;
+static unsigned getRealVectorRank(ShapedType shapedType,
+                                  VectorType vectorType) {
+  unsigned elementVectorRank = 0;
   VectorType elementVectorType =
       llvm::dyn_cast<VectorType>(shapedType.getElementType());
   if (elementVectorType)
     elementVectorRank += elementVectorType.getRank();
+  return vectorType.getRank() - elementVectorRank;
+}
+
+AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
+                                                    VectorType vectorType) {
   // 0-d transfers are to/from tensor<t>/memref<t> and vector<1xt>.
   // TODO: replace once we have 0-d vectors.
   if (shapedType.getRank() == 0 &&
@@ -165,7 +170,7 @@ AffineMap mlir::vector::getTransferMinorIdentityMap(ShapedType shapedType,
         /*numDims=*/0, /*numSymbols=*/0,
         getAffineConstantExpr(0, shapedType.getContext()));
   return AffineMap::getMinorIdentityMap(
-      shapedType.getRank(), vectorType.getRank() - elementVectorRank,
+      shapedType.getRank(), getRealVectorRank(shapedType, vectorType),
       shapedType.getContext());
 }
 
@@ -4259,12 +4264,7 @@ ParseResult TransferReadOp::parse(OpAsmParser &parser, OperationState &result) {
   Attribute permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    int64_t elementVectorRank = 0;
-    VectorType elementVectorType =
-        llvm::dyn_cast<VectorType>(shapedType.getElementType());
-    if (elementVectorType)
-      elementVectorRank += elementVectorType.getRank();
-    if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
+    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
@@ -4676,12 +4676,7 @@ ParseResult TransferWriteOp::parse(OpAsmParser &parser,
   auto permMapAttr = result.attributes.get(permMapAttrName);
   AffineMap permMap;
   if (!permMapAttr) {
-    int64_t elementVectorRank = 0;
-    VectorType elementVectorType =
-        llvm::dyn_cast<VectorType>(shapedType.getElementType());
-    if (elementVectorType)
-      elementVectorRank += elementVectorType.getRank();
-    if (shapedType.getRank() < vectorType.getRank() - elementVectorRank)
+    if (shapedType.getRank() < getRealVectorRank(shapedType, vectorType))
       return parser.emitError(typesLoc,
                               "expected a custom permutation_map when "
                               "rank(source) != rank(destination)");
