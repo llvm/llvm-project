@@ -723,6 +723,7 @@ def ProcessorFeatures {
                                  FeatureSB, FeaturePAuth, FeatureSSBS, FeatureSVE, FeatureSVE2,
                                  FeatureComplxNum, FeatureCRC, FeatureDotProd,
                                  FeatureFPARMv8,FeatureFullFP16, FeatureJS, FeatureLSE,
+                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureRAS, FeatureRCPC, FeatureRDM];
   list<SubtargetFeature> A520 = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,
@@ -732,6 +733,7 @@ def ProcessorFeatures {
                                  FeatureSVE, FeatureSVE2, FeatureBF16, FeatureComplxNum, FeatureCRC,
                                  FeatureFPARMv8, FeatureFullFP16, FeatureMatMulInt8, FeatureJS,
                                  FeatureNEON, FeatureLSE, FeatureRAS, FeatureRCPC, FeatureRDM,
+                                 FeatureUseFixedOverScalableIfEqualCost,
                                  FeatureDotProd];
   list<SubtargetFeature> A520AE = [HasV9_2aOps, FeaturePerfMon, FeatureAM,
                                  FeatureMTE, FeatureETE, FeatureSVEBitPerm,
@@ -1015,7 +1017,7 @@ def ProcessorFeatures {
                                        FeatureCCIDX,
                                        FeatureSVE, FeatureSVE2, FeatureSSBS, FeatureFullFP16, FeatureDotProd,
                                        FeatureComplxNum, FeatureCRC, FeatureFPARMv8, FeatureJS, FeatureLSE,
-                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM];
+                                       FeaturePAuth, FeatureRAS, FeatureRCPC, FeatureRDM, FeatureFPAC];
   list<SubtargetFeature> NeoverseV3 = [HasV9_2aOps, FeatureETE, FeatureFP16FML,
                                       FeatureFullFP16, FeatureLS64, FeatureMTE,
                                       FeaturePerfMon, FeatureRandGen, FeatureSPE,

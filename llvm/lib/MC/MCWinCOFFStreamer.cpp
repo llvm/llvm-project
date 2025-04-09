@@ -287,7 +287,8 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
     return;
 
   MCSection *SXData = getContext().getObjectFileInfo()->getSXDataSection();
-  changeSection(SXData);
+  pushSection();
+  switchSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
   insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
@@ -298,6 +299,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   // function. Go ahead and oblige it here.
   CSymbol->setType(COFF::IMAGE_SYM_DTYPE_FUNCTION
                    << COFF::SCT_COMPLEX_TYPE_SHIFT);
+  popSection();
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {

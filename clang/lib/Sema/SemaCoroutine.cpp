@@ -116,8 +116,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
 
   auto buildElaboratedType = [&]() {
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
-    NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
-                                      CoroTrait.getTypePtr());
+    NNS = NestedNameSpecifier::Create(S.Context, NNS, CoroTrait.getTypePtr());
     return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
                                        PromiseType);
   };
