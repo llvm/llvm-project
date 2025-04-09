@@ -20,6 +20,7 @@
 #define LLVM_BINARYFORMAT_ELF_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
@@ -814,7 +815,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1035         = 0x03d,
   EF_AMDGPU_MACH_AMDGCN_GFX1034         = 0x03e,
   EF_AMDGPU_MACH_AMDGCN_GFX90A          = 0x03f,
-  EF_AMDGPU_MACH_AMDGCN_GFX940          = 0x040,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X40   = 0x040,
   EF_AMDGPU_MACH_AMDGCN_GFX1100         = 0x041,
   EF_AMDGPU_MACH_AMDGCN_GFX1013         = 0x042,
   EF_AMDGPU_MACH_AMDGCN_GFX1150         = 0x043,
@@ -825,7 +826,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_GFX1200         = 0x048,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X49   = 0x049,
   EF_AMDGPU_MACH_AMDGCN_GFX1151         = 0x04a,
-  EF_AMDGPU_MACH_AMDGCN_GFX941          = 0x04b,
+  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4B   = 0x04b,
   EF_AMDGPU_MACH_AMDGCN_GFX942          = 0x04c,
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
@@ -1299,8 +1300,11 @@ enum : unsigned {
   // Section data is string data by default.
   SHF_MIPS_STRING = 0x80000000,
 
-  // Make code section unreadable when in execute-only mode
-  SHF_ARM_PURECODE = 0x20000000
+  // Section contains only program instructions and no program data.
+  SHF_ARM_PURECODE = 0x20000000,
+
+  // Section contains only program instructions and no program data.
+  SHF_AARCH64_PURECODE = 0x20000000
 };
 
 // Section Group Flags
@@ -2014,6 +2018,9 @@ uint16_t convertArchNameToEMachine(StringRef Arch);
 
 /// Convert an ELF's e_machine value into an architecture name.
 StringRef convertEMachineToArchName(uint16_t EMachine);
+
+// Convert a triple's architecture to ELF's e_machine value.
+uint16_t convertTripleArchTypeToEMachine(Triple::ArchType ArchType);
 
 // Convert a lowercase string identifier into an OSABI value.
 uint8_t convertNameToOSABI(StringRef Name);

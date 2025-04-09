@@ -9,7 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/UnwindInfoRegistrationPlugin.h"
 
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MachOObjectFormat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/IR/IRBuilder.h"
@@ -19,95 +18,21 @@
 
 using namespace llvm::jitlink;
 
-static const char *FindDynamicUnwindSectionsFunctionName =
-    "_orc_rt_alt_find_dynamic_unwind_sections";
-
 namespace llvm::orc {
 
 Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-UnwindInfoRegistrationPlugin::Create(IRLayer &IRL, JITDylib &PlatformJD,
-                                     ExecutorAddr Instance,
-                                     ExecutorAddr FindHelper,
-                                     ExecutorAddr Enable, ExecutorAddr Disable,
-                                     ExecutorAddr Register,
-                                     ExecutorAddr Deregister) {
+UnwindInfoRegistrationPlugin::Create(ExecutionSession &ES) {
 
-  auto &ES = IRL.getExecutionSession();
+  ExecutorAddr Register, Deregister;
 
-  // Build bouncer module.
-  auto M = makeBouncerModule(ES);
-  if (!M)
-    return M.takeError();
-
-  auto BouncerRT = PlatformJD.createResourceTracker();
-  auto RemoveBouncerModule = make_scope_exit([&]() {
-    if (auto Err = BouncerRT->remove())
-      ES.reportError(std::move(Err));
-  });
-
-  if (auto Err = PlatformJD.define(absoluteSymbols(
-          {{ES.intern(rt_alt::UnwindInfoManagerInstanceName),
-            ExecutorSymbolDef(Instance, JITSymbolFlags())},
-           {ES.intern(rt_alt::UnwindInfoManagerFindSectionsHelperName),
-            ExecutorSymbolDef(FindHelper, JITSymbolFlags::Callable)}})))
-    return std::move(Err);
-
-  if (auto Err = IRL.add(BouncerRT, std::move(*M)))
-    return Err;
-
-  auto FindUnwindSections =
-      ES.lookup({&PlatformJD}, FindDynamicUnwindSectionsFunctionName);
-  if (!FindUnwindSections)
-    return FindUnwindSections.takeError();
-
-  using namespace shared;
-  using SPSEnableSig = SPSError(SPSExecutorAddr, SPSExecutorAddr);
-  Error CallErr = Error::success();
-  if (auto Err = ES.callSPSWrapper<SPSEnableSig>(
-          Enable, CallErr, Instance, FindUnwindSections->getAddress())) {
-    consumeError(std::move(CallErr));
-    return std::move(Err);
-  }
-
-  if (CallErr)
-    return std::move(CallErr);
-
-  RemoveBouncerModule.release();
-
-  return std::shared_ptr<UnwindInfoRegistrationPlugin>(
-      new UnwindInfoRegistrationPlugin(ES, Instance, Disable, Register,
-                                       Deregister));
-}
-
-Expected<std::shared_ptr<UnwindInfoRegistrationPlugin>>
-UnwindInfoRegistrationPlugin::Create(IRLayer &IRL, JITDylib &PlatformJD) {
-
-  ExecutorAddr Instance, FindHelper, Enable, Disable, Register, Deregister;
-
-  auto &EPC = IRL.getExecutionSession().getExecutorProcessControl();
+  auto &EPC = ES.getExecutorProcessControl();
   if (auto Err = EPC.getBootstrapSymbols(
-          {{Instance, rt_alt::UnwindInfoManagerInstanceName},
-           {FindHelper, rt_alt::UnwindInfoManagerFindSectionsHelperName},
-           {Enable, rt_alt::UnwindInfoManagerEnableWrapperName},
-           {Disable, rt_alt::UnwindInfoManagerDisableWrapperName},
-           {Register, rt_alt::UnwindInfoManagerRegisterActionName},
+          {{Register, rt_alt::UnwindInfoManagerRegisterActionName},
            {Deregister, rt_alt::UnwindInfoManagerDeregisterActionName}}))
     return std::move(Err);
 
-  return Create(IRL, PlatformJD, Instance, FindHelper, Enable, Disable,
-                Register, Deregister);
-}
-
-UnwindInfoRegistrationPlugin::~UnwindInfoRegistrationPlugin() {
-  using namespace shared;
-  using SPSDisableSig = SPSError(SPSExecutorAddr);
-  Error CallErr = Error::success();
-  if (auto Err = ES.callSPSWrapper<SPSDisableSig>(Disable, CallErr, Instance)) {
-    consumeError(std::move(CallErr));
-    ES.reportError(std::move(Err));
-  }
-  if (CallErr)
-    ES.reportError(std::move(CallErr));
+  return std::make_shared<UnwindInfoRegistrationPlugin>(ES, Register,
+                                                        Deregister);
 }
 
 void UnwindInfoRegistrationPlugin::modifyPassConfig(
@@ -116,43 +41,6 @@ void UnwindInfoRegistrationPlugin::modifyPassConfig(
 
   PassConfig.PostFixupPasses.push_back(
       [this](LinkGraph &G) { return addUnwindInfoRegistrationActions(G); });
-}
-
-Expected<ThreadSafeModule>
-UnwindInfoRegistrationPlugin::makeBouncerModule(ExecutionSession &ES) {
-  auto Ctx = std::make_unique<LLVMContext>();
-  auto M = std::make_unique<Module>("__libunwind_find_unwind_bouncer", *Ctx);
-  M->setTargetTriple(ES.getTargetTriple().str());
-
-  auto EscapeName = [](const char *N) { return std::string("\01") + N; };
-
-  auto *PtrTy = PointerType::getUnqual(*Ctx);
-  auto *OpaqueStructTy = StructType::create(*Ctx, "UnwindInfoMgr");
-  auto *UnwindMgrInstance = new GlobalVariable(
-      *M, OpaqueStructTy, true, GlobalValue::ExternalLinkage, nullptr,
-      EscapeName(rt_alt::UnwindInfoManagerInstanceName));
-
-  auto *Int64Ty = Type::getInt64Ty(*Ctx);
-  auto *FindHelperTy = FunctionType::get(Int64Ty, {PtrTy, PtrTy, PtrTy}, false);
-  auto *FindHelperFn = Function::Create(
-      FindHelperTy, GlobalValue::ExternalLinkage,
-      EscapeName(rt_alt::UnwindInfoManagerFindSectionsHelperName), *M);
-
-  auto *FindFnTy = FunctionType::get(Int64Ty, {PtrTy, PtrTy}, false);
-  auto *FindFn =
-      Function::Create(FindFnTy, GlobalValue::ExternalLinkage,
-                       EscapeName(FindDynamicUnwindSectionsFunctionName), *M);
-  auto *EntryBlock = BasicBlock::Create(M->getContext(), StringRef(), FindFn);
-  IRBuilder<> IB(EntryBlock);
-
-  std::vector<Value *> FindHelperArgs;
-  FindHelperArgs.push_back(UnwindMgrInstance);
-  for (auto &Arg : FindFn->args())
-    FindHelperArgs.push_back(&Arg);
-
-  IB.CreateRet(IB.CreateCall(FindHelperFn, FindHelperArgs));
-
-  return ThreadSafeModule(std::move(M), std::move(Ctx));
 }
 
 Error UnwindInfoRegistrationPlugin::addUnwindInfoRegistrationActions(
@@ -220,17 +108,15 @@ Error UnwindInfoRegistrationPlugin::addUnwindInfoRegistrationActions(
 
   using namespace shared;
   using SPSRegisterArgs =
-      SPSArgList<SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>,
-                 SPSExecutorAddr, SPSExecutorAddrRange, SPSExecutorAddrRange>;
-  using SPSDeregisterArgs =
-      SPSArgList<SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>>;
+      SPSArgList<SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
+                 SPSExecutorAddrRange, SPSExecutorAddrRange>;
+  using SPSDeregisterArgs = SPSArgList<SPSSequence<SPSExecutorAddrRange>>;
 
   G.allocActions().push_back(
       {cantFail(WrapperFunctionCall::Create<SPSRegisterArgs>(
-           Register, Instance, CodeRanges, DSOBase, EHFrameRange,
-           UnwindInfoRange)),
-       cantFail(WrapperFunctionCall::Create<SPSDeregisterArgs>(
-           Deregister, Instance, CodeRanges))});
+           Register, CodeRanges, DSOBase, EHFrameRange, UnwindInfoRange)),
+       cantFail(WrapperFunctionCall::Create<SPSDeregisterArgs>(Deregister,
+                                                               CodeRanges))});
 
   return Error::success();
 }

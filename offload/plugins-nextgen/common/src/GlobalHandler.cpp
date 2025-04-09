@@ -282,8 +282,6 @@ Error GPUProfGlobals::write() const {
          CountsSize = Counts.size() * sizeof(int64_t);
   __llvm_profile_data *DataBegin, *DataEnd;
   char *CountersBegin, *CountersEnd, *NamesBegin, *NamesEnd;
-  const uint64_t *VersionOverride =
-      Version.has_value() ? &Version.value() : nullptr;
 
   // Initialize array of contiguous data. We need to make sure each section is
   // contiguous so that the PGO library can compute deltas properly
@@ -307,7 +305,7 @@ Error GPUProfGlobals::write() const {
   // Invoke compiler-rt entrypoint
   int result = __llvm_write_custom_profile(
       TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
-      CountersEnd, NamesBegin, NamesEnd, VersionOverride);
+      CountersEnd, NamesBegin, NamesEnd, &Version);
   if (result != 0)
     return Plugin::error("Error writing GPU PGO data to file");
 

@@ -63,6 +63,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    PrintMIAddrs("print-mi-addrs", cl::Hidden,
+                 cl::desc("Print addresses of MachineInstrs when dumping"));
+
 static const MachineFunction *getMFIfAvailable(const MachineInstr &MI) {
   if (const MachineBasicBlock *MBB = MI.getParent())
     if (const MachineFunction *MF = MBB->getParent())
@@ -1308,9 +1312,26 @@ bool MachineInstr::isSafeToMove(bool &SawStore) const {
     return false;
   }
 
+  // Don't touch instructions that have non-trivial invariants.  For example,
+  // terminators have to be at the end of a basic block.
   if (isPosition() || isDebugInstr() || isTerminator() ||
-      mayRaiseFPException() || hasUnmodeledSideEffects() ||
       isJumpTableDebugInfo())
+    return false;
+
+  // Don't touch instructions which can have non-load/store effects.
+  //
+  // Inline asm has a "sideeffect" marker to indicate whether the asm has
+  // intentional side-effects. Even if an inline asm is not "sideeffect",
+  // though, it still can't be speculatively executed: the operation might
+  // not be valid on the current target, or for some combinations of operands.
+  // (Some transforms that move an instruction don't speculatively execute it;
+  // we currently don't try to handle that distinction here.)
+  //
+  // Other instructions handled here include those that can raise FP
+  // exceptions, x86 "DIV" instructions which trap on divide by zero, and
+  // stack adjustments.
+  if (mayRaiseFPException() || hasProperty(MCID::UnmodeledSideEffects) ||
+      isInlineAsm())
     return false;
 
   // See if this instruction does a load.  If so, we have to guarantee that the
@@ -2059,6 +2080,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
   // TODO: DBG_LABEL
 
+  if (PrintMIAddrs)
+    OS << " ; " << this;
+
   if (AddNewLine)
     OS << '\n';
 }
@@ -2501,7 +2525,7 @@ using MMOList = SmallVector<const MachineMemOperand *, 2>;
 
 static LocationSize getSpillSlotSize(const MMOList &Accesses,
                                      const MachineFrameInfo &MFI) {
-  uint64_t Size = 0;
+  std::optional<TypeSize> Size;
   for (const auto *A : Accesses) {
     if (MFI.isSpillSlotObjectIndex(
             cast<FixedStackPseudoSourceValue>(A->getPseudoValue())
@@ -2509,10 +2533,15 @@ static LocationSize getSpillSlotSize(const MMOList &Accesses,
       LocationSize S = A->getSize();
       if (!S.hasValue())
         return LocationSize::beforeOrAfterPointer();
-      Size += S.getValue();
+      if (!Size)
+        Size = S.getValue();
+      else
+        Size = *Size + S.getValue();
     }
   }
-  return Size;
+  if (!Size)
+    return LocationSize::precise(0);
+  return LocationSize::precise(*Size);
 }
 
 std::optional<LocationSize>

@@ -69,7 +69,6 @@ public:
 namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY SPIRVToolChain : public ToolChain {
-  mutable std::unique_ptr<Tool> Translator;
   mutable std::unique_ptr<Tool> Assembler;
 
 public:
@@ -78,7 +77,7 @@ public:
 
   bool useIntegratedAs() const override { return true; }
 
-  bool IsIntegratedBackendDefault() const override { return false; }
+  bool IsIntegratedBackendDefault() const override { return true; }
   bool IsNonIntegratedBackendSupported() const override { return true; }
   bool IsMathErrnoDefault() const override { return false; }
   bool isCrossCompiling() const override { return true; }
@@ -97,7 +96,6 @@ protected:
   Tool *buildLinker() const override;
 
 private:
-  clang::driver::Tool *getTranslator() const;
   clang::driver::Tool *getAssembler() const;
 
   bool NativeLLVMSupport;

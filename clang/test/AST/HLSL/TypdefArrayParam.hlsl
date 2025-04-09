@@ -55,3 +55,14 @@ void call2() {
   uint4 C[2] = {A,A};
   uint32_t D = Accumulate(C);
 }
+
+typedef int Foo[2];
+
+// CHECK-LABEL: call3
+// CHECK: ArraySubscriptExpr {{.*}} 'int' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int *' <ArrayToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int[2]' lvalue ParmVar {{.*}} 'F' 'int[2]'
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 0
+int call3(Foo F) {
+  return F[0];
+}

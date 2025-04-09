@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64MCAsmInfo.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
@@ -30,6 +31,29 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
                clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
+const MCAsmInfo::AtSpecifier COFFAtSpecifiers[] = {
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+    {MCSymbolRefExpr::VK_WEAKREF, "WEAKREF"},
+    {AArch64MCExpr::M_PAGEOFF, "PAGEOFF"},
+};
+
+const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
+    {AArch64MCExpr::VK_GOT, "GOT"},
+    {AArch64MCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {AArch64MCExpr::VK_PLT, "PLT"},
+};
+
+const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
+    {AArch64MCExpr::M_GOT, "GOT"},
+    {AArch64MCExpr::M_GOTPAGE, "GOTPAGE"},
+    {AArch64MCExpr::M_GOTPAGEOFF, "GOTPAGEOFF"},
+    {AArch64MCExpr::M_PAGE, "PAGE"},
+    {AArch64MCExpr::M_PAGEOFF, "PAGEOFF"},
+    {AArch64MCExpr::M_TLVP, "TLVP"},
+    {AArch64MCExpr::M_TLVPPAGE, "TLVPPAGE"},
+    {AArch64MCExpr::M_TLVPPAGEOFF, "TLVPPAGEOFF"},
+};
+
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
@@ -46,8 +70,11 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
+  UseAtForSpecifier = false;
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeVariantKinds(MachOAtSpecifiers);
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -58,7 +85,7 @@ const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
   // version.
   MCContext &Context = Streamer.getContext();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_GOT, Context);
+      MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, Context);
   MCSymbol *PCSym = Context.createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, Context);
@@ -88,6 +115,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   Data64bitsDirective = "\t.xword\t";
 
   UseDataRegionDirectives = false;
+  UseAtForSpecifier = false;
 
   WeakRefDirective = "\t.weak\t";
 
@@ -97,6 +125,8 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
   HasIdentDirective = true;
+
+  initializeVariantKinds(ELFAtSpecifiers);
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
@@ -114,6 +144,8 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  initializeVariantKinds(COFFAtSpecifiers);
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
@@ -131,4 +163,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  initializeVariantKinds(COFFAtSpecifiers);
 }

@@ -308,6 +308,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
 #define INSTR_PROF_RAW_HEADER(Type, Name, Init) Header.Name = Init;
 #include "profile/InstrProfData.inc"
   }
+  Header.Version = Version;
 
   /* On WIN64, label differences are truncated 32-bit values. Truncate
    * CountersDelta to match. */

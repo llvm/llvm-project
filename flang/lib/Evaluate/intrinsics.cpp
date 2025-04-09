@@ -8,6 +8,7 @@
 
 #include "flang/Evaluate/intrinsics.h"
 #include "flang/Common/enum-set.h"
+#include "flang/Common/float128.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/common.h"
@@ -83,7 +84,7 @@ static constexpr CategorySet AnyType{IntrinsicType | DerivedType};
 
 ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
-    doublePrecision, defaultCharKind, defaultLogicalKind,
+    doublePrecision, quadPrecision, defaultCharKind, defaultLogicalKind,
     greaterOrEqualToKind, // match kind value greater than or equal to a single
                           // explicit kind value
     any, // matches any kind value; each instance is independent
@@ -139,6 +140,7 @@ static constexpr TypePattern DoublePrecision{
     RealType, KindCode::doublePrecision};
 static constexpr TypePattern DoublePrecisionComplex{
     ComplexType, KindCode::doublePrecision};
+static constexpr TypePattern QuadPrecision{RealType, KindCode::quadPrecision};
 static constexpr TypePattern SubscriptInt{IntType, KindCode::subscript};
 
 // Match any kind of some intrinsic or derived types
@@ -247,12 +249,15 @@ ENUM_CLASS(Optionality, required,
 )
 
 ENUM_CLASS(ArgFlag, none,
-    canBeNull, // actual argument can be NULL(with or without MOLD=)
-    canBeMoldNull, // actual argument can be NULL(with MOLD=)
+    canBeNullPointer, // actual argument can be NULL(with or without
+                      // MOLD=pointer)
+    canBeMoldNull, // actual argument can be NULL(MOLD=any)
+    canBeNullAllocatable, // actual argument can be NULL(MOLD=allocatable)
     defaultsToSameKind, // for MatchingDefaultKIND
     defaultsToSizeKind, // for SizeDefaultKIND
     defaultsToDefaultForResult, // for DefaultingKIND
-    notAssumedSize)
+    notAssumedSize,
+    onlyConstantInquiry) // e.g., PRECISION(X)
 
 struct IntrinsicDummyArgument {
   const char *keyword{nullptr};
@@ -343,8 +348,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"allocated", {{"scalar", AnyData, Rank::scalar}}, DefaultLogical,
         Rank::elemental, IntrinsicClass::inquiryFunction},
-    {"allocated", {{"array", AnyData, Rank::anyOrAssumedRank}}, DefaultLogical,
-        Rank::elemental, IntrinsicClass::inquiryFunction},
+    {"allocated",
+        {{"array", AnyData, Rank::anyOrAssumedRank, Optionality::required,
+            common::Intent::In, {ArgFlag::canBeNullAllocatable}}},
+        DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"anint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"any", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
@@ -353,10 +360,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asinh", {{"x", SameFloating}}, SameFloating},
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
-             common::Intent::In, {ArgFlag::canBeNull}},
+             common::Intent::In, {ArgFlag::canBeNullPointer}},
             {"target", Addressable, Rank::anyOrAssumedRank,
                 Optionality::optional, common::Intent::In,
-                {ArgFlag::canBeNull}}},
+                {ArgFlag::canBeNullPointer}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
@@ -392,7 +399,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical},
     {"bit_size",
         {{"i", SameIntOrUnsigned, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         SameInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"ble",
         {{"i", AnyIntOrUnsigned, Rank::elementalOrBOZ},
@@ -421,6 +429,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"cos", {{"x", SameFloating}}, SameFloating},
     {"cosd", {{"x", SameFloating}}, SameFloating},
     {"cosh", {{"x", SameFloating}}, SameFloating},
+    {"coshape", {{"coarray", AnyData, Rank::coarray}, SizeDefaultKIND}, KINDInt,
+        Rank::vector, IntrinsicClass::inquiryFunction},
     {"count", {{"mask", AnyLogical, Rank::array}, OptionalDIM, DefaultingKIND},
         KINDInt, Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"cshift",
@@ -431,7 +441,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"digits",
         {{"x", AnyIntUnsignedOrReal, Rank::anyOrAssumedRank,
             Optionality::required, common::Intent::In,
-            {ArgFlag::canBeMoldNull}}},
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"dim", {{"x", OperandIntOrReal}, {"y", OperandIntOrReal}},
         OperandIntOrReal},
@@ -477,7 +487,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         IntrinsicClass::transformationalFunction},
     {"epsilon",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         SameReal, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"erf", {{"x", SameReal}}, SameReal},
     {"erfc", {{"x", SameReal}}, SameReal},
@@ -537,6 +548,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"floor", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"fraction", {{"x", SameReal}}, SameReal},
+    {"fseek",
+        {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
+            {"whence", AnyInt, Rank::scalar}},
+        DefaultInt, Rank::scalar},
+    {"ftell", {{"unit", AnyInt, Rank::scalar}},
+        TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar},
     {"gamma", {{"x", SameReal}}, SameReal},
     {"get_team", {{"level", DefaultInt, Rank::scalar, Optionality::optional}},
         TeamType, Rank::scalar, IntrinsicClass::transformationalFunction},
@@ -547,10 +564,14 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"getgid", {}, DefaultInt},
     {"getpid", {}, DefaultInt},
     {"getuid", {}, DefaultInt},
+    {"hostnm",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+            common::Intent::Out}},
+        TypePattern{IntType, KindCode::greaterOrEqualToKind, 4}},
     {"huge",
         {{"x", SameIntUnsignedOrReal, Rank::anyOrAssumedRank,
             Optionality::required, common::Intent::In,
-            {ArgFlag::canBeMoldNull}}},
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         SameIntUnsignedOrReal, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"hypot", {{"x", OperandReal}, {"y", OperandReal}}, OperandReal},
     {"iachar", {{"c", AnyChar}, DefaultingKIND}, KINDInt},
@@ -638,7 +659,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"jzext", {{"i", AnyInt}}, DefaultInt},
     {"kind",
         {{"x", AnyIntrinsic, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"lbound",
         {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
@@ -712,7 +734,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameCharNoLen},
     {"maxexponent",
         {{"x", AnyReal, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"maxloc",
         {{"array", AnyRelatable, Rank::array}, RequiredDIM, OptionalMASK,
@@ -757,7 +780,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameCharNoLen},
     {"minexponent",
         {{"x", AnyReal, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"minloc",
         {{"array", AnyRelatable, Rank::array}, RequiredDIM, OptionalMASK,
@@ -786,7 +810,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"nearest", {{"x", SameReal}, {"s", AnyReal}}, SameReal},
     {"new_line",
         {{"a", SameCharNoLen, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         SameCharNoLen, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"nint", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"norm2", {{"x", SameReal, Rank::array}, RequiredDIM}, SameReal,
@@ -826,21 +851,27 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameNumeric, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"precision",
         {{"x", AnyFloating, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"present", {{"a", Addressable, Rank::anyOrAssumedRank}}, DefaultLogical,
         Rank::scalar, IntrinsicClass::inquiryFunction},
+    {"putenv", {{"str", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"radix",
         {{"x", AnyIntOrReal, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"range",
         {{"x", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"rank",
         {{"a", AnyData, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"real", {{"a", SameComplex, Rank::elemental}},
         SameReal}, // 16.9.160(4)(ii)
@@ -930,7 +961,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             OptionalDIM, // unless array is assumed-size
             SizeDefaultKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
-    {"sizeof", {{"a", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
+    {"sizeof", {{"x", AnyData, Rank::anyOrAssumedRank}}, SubscriptInt,
         Rank::scalar, IntrinsicClass::inquiryFunction},
     {"spacing", {{"x", SameReal}}, SameReal},
     {"spread",
@@ -965,9 +996,12 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"this_image", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
+    {"time", {}, TypePattern{IntType, KindCode::exactKind, 8}, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"tiny",
         {{"x", SameReal, Rank::anyOrAssumedRank, Optionality::required,
-            common::Intent::In, {ArgFlag::canBeMoldNull}}},
+            common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         SameReal, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"trailz", {{"i", AnyInt}}, DefaultInt},
     {"transfer",
@@ -998,6 +1032,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         KINDUnsigned},
     {"umaskl", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
     {"umaskr", {{"i", AnyInt}, DefaultingKIND}, KINDUnsigned},
+    {"unlink", {{"path", DefaultChar, Rank::scalar}}, DefaultInt, Rank::scalar,
+        IntrinsicClass::transformationalFunction},
     {"unpack",
         {{"vector", SameType, Rank::vector}, {"mask", AnyLogical, Rank::array},
             {"field", SameType, Rank::conformable}},
@@ -1022,50 +1058,62 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"__builtin_ieee_next_up", {{"x", SameReal}}, SameReal},
     {"__builtin_ieee_real", {{"a", AnyIntOrReal}, DefaultingKIND}, KINDReal},
     {"__builtin_ieee_support_datatype",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_denormal",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_divide",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_flag",
         {{"flag", IeeeFlagType, Rank::scalar},
-            {"x", AnyReal, Rank::elemental, Optionality::optional}},
+            {"x", AnyReal, Rank::known, Optionality::optional,
+                common::Intent::In,
+                {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_halting", {{"flag", IeeeFlagType, Rank::scalar}},
         DefaultLogical},
     {"__builtin_ieee_support_inf",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_io",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_nan",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_rounding",
         {{"round_value", IeeeRoundType, Rank::scalar},
-            {"x", AnyReal, Rank::elemental, Optionality::optional}},
+            {"x", AnyReal, Rank::known, Optionality::optional,
+                common::Intent::In,
+                {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_sqrt",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_standard",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_subnormal",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_ieee_support_underflow_control",
-        {{"x", AnyReal, Rank::elemental, Optionality::optional}},
+        {{"x", AnyReal, Rank::known, Optionality::optional, common::Intent::In,
+            {ArgFlag::canBeMoldNull, ArgFlag::onlyConstantInquiry}}},
         DefaultLogical},
     {"__builtin_numeric_storage_size", {}, DefaultInt},
 };
 
-// TODO: Coarray intrinsic functions
-//  COSHAPE
 // TODO: Non-standard intrinsic functions
 //  SHIFT,
 //  COMPL, EQV, NEQV, INT8, JINT, JNINT, KNINT,
@@ -1079,11 +1127,16 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
 //  LOC, probably others
 // TODO: Optionally warn on operand promotion extension
 
-// Aliases for a few generic intrinsic functions for legacy
-// compatibility and builtins.
+// Aliases for a few generic procedures for legacy compatibility and builtins.
 static const std::pair<const char *, const char *> genericAlias[]{
     {"and", "iand"},
     {"getenv", "get_environment_variable"},
+    {"fseek64", "fseek"},
+    {"fseeko64", "fseek"}, // SUN
+    {"fseeki8", "fseek"}, // Intel
+    {"ftell64", "ftell"},
+    {"ftello64", "ftell"}, // SUN
+    {"ftelli8", "ftell"}, // Intel
     {"imag", "aimag"},
     {"lshift", "shiftl"},
     {"or", "ior"},
@@ -1201,6 +1254,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
          DoublePrecision},
         "dim"},
     {{"derf", {{"x", DoublePrecision}}, DoublePrecision}, "erf"},
+    {{"derfc", {{"x", DoublePrecision}}, DoublePrecision}, "erfc"},
+    {{"derfc_scaled", {{"x", DoublePrecision}}, DoublePrecision},
+        "erfc_scaled"},
     {{"dexp", {{"x", DoublePrecision}}, DoublePrecision}, "exp"},
     {{"dfloat", {{"a", AnyInt}}, DoublePrecision}, "real", true},
     {{"dim", {{"x", DefaultReal}, {"y", DefaultReal}}, DefaultReal}},
@@ -1301,6 +1357,9 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
         "min", true, true},
     {{"mod", {{"a", DefaultInt}, {"p", DefaultInt}}, DefaultInt}},
     {{"nint", {{"a", DefaultReal}}, DefaultInt}},
+    {{"qerf", {{"x", QuadPrecision}}, QuadPrecision}, "erf"},
+    {{"qerfc", {{"x", QuadPrecision}}, QuadPrecision}, "erfc"},
+    {{"qerfc_scaled", {{"x", QuadPrecision}}, QuadPrecision}, "erfc_scaled"},
     {{"sign", {{"a", DefaultReal}, {"b", DefaultReal}}, DefaultReal}},
     {{"sin", {{"x", DefaultReal}}, DefaultReal}},
     {{"sinh", {{"x", DefaultReal}}, DefaultReal}},
@@ -1313,6 +1372,8 @@ static const SpecificIntrinsicInterface specificIntrinsicFunction[]{
         "abs"},
 };
 
+// Must be sorted by name. The rank of the return value is ignored since
+// subroutines are do not have a return value.
 static const IntrinsicInterface intrinsicSubroutine[]{
     {"abort", {}, {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"atomic_add",
@@ -1450,6 +1511,17 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
+    {"co_reduce",
+        {{"a", AnyData, Rank::known, Optionality::required,
+             common::Intent::InOut},
+            {"operation", SameType, Rank::reduceOperation},
+            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"co_sum",
         {{"a", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -1501,6 +1573,17 @@ static const IntrinsicInterface intrinsicSubroutine[]{
     {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
+    {"fseek",
+        {{"unit", AnyInt, Rank::scalar}, {"offset", AnyInt, Rank::scalar},
+            {"whence", AnyInt, Rank::scalar},
+            {"status", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"ftell",
+        {{"unit", AnyInt, Rank::scalar},
+            {"offset", AnyInt, Rank::scalar, Optionality::required,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"get_command",
         {{"command", DefaultChar, Rank::scalar, Optionality::optional,
              common::Intent::Out},
@@ -1540,6 +1623,12 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
                 Rank::scalar, Optionality::optional, common::Intent::Out}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"hostnm",
+        {{"c", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::Out},
+            {"status", TypePattern{IntType, KindCode::greaterOrEqualToKind, 4},
+                Rank::scalar, Optionality::optional, common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"move_alloc",
         {{"from", SameType, Rank::known, Optionality::required,
              common::Intent::InOut},
@@ -1550,6 +1639,14 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::pureSubroutine},
+    {"perror", {{"string", DefaultChar, Rank::scalar}}, {}, Rank::elemental,
+        IntrinsicClass::impureSubroutine},
+    {"putenv",
+        {{"str", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
     {"mvbits",
         {{"from", SameIntOrUnsigned}, {"frompos", AnyInt}, {"len", AnyInt},
             {"to", SameIntOrUnsigned, Rank::elemental, Optionality::required,
@@ -1606,9 +1703,13 @@ static const IntrinsicInterface intrinsicSubroutine[]{
         {{"seconds", AnyInt, Rank::scalar, Optionality::required,
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
+    {"unlink",
+        {{"path", DefaultChar, Rank::scalar, Optionality::required,
+             common::Intent::In},
+            {"status", DefaultInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out}},
+        {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
-
-// TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
 static DynamicType GetBuiltinDerivedType(
@@ -1893,9 +1994,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           d.keyword);
       return std::nullopt;
     }
-    if (!d.flags.test(ArgFlag::canBeNull)) {
-      if (const auto *expr{arg->UnwrapExpr()}; expr && IsNullPointer(*expr)) {
-        if (!IsBareNullPointer(expr) && IsNullObjectPointer(*expr) &&
+    if (!d.flags.test(ArgFlag::canBeNullPointer)) {
+      if (const auto *expr{arg->UnwrapExpr()}; IsNullPointer(expr)) {
+        if (!IsBareNullPointer(expr) && IsNullObjectPointer(expr) &&
             d.flags.test(ArgFlag::canBeMoldNull)) {
           // ok
         } else {
@@ -1905,6 +2006,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           return std::nullopt;
         }
       }
+    }
+    if (!d.flags.test(ArgFlag::canBeNullAllocatable) &&
+        IsNullAllocatable(arg->UnwrapExpr()) &&
+        !d.flags.test(ArgFlag::canBeMoldNull)) {
+      messages.Say(arg->sourceLocation(),
+          "A NULL() allocatable is not allowed for '%s=' intrinsic argument"_err_en_US,
+          d.keyword);
+      return std::nullopt;
     }
     if (d.flags.test(ArgFlag::notAssumedSize)) {
       if (auto named{ExtractNamedEntity(*arg)}) {
@@ -2011,6 +2120,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       break;
     case KindCode::doublePrecision:
       argOk = type->kind() == defaults.doublePrecisionKind();
+      break;
+    case KindCode::quadPrecision:
+      argOk = type->kind() == defaults.quadPrecisionKind();
       break;
     case KindCode::defaultCharKind:
       argOk = type->kind() == defaults.GetDefaultKind(TypeCategory::Character);
@@ -2322,6 +2434,18 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       CHECK(FloatingType.test(*category));
       resultType = DynamicType{*category, defaults.doublePrecisionKind()};
       break;
+    case KindCode::quadPrecision:
+      CHECK(result.categorySet == CategorySet{*category});
+      CHECK(FloatingType.test(*category));
+      resultType = DynamicType{*category, defaults.quadPrecisionKind()};
+      if (!context.targetCharacteristics().CanSupportType(
+              *category, defaults.quadPrecisionKind())) {
+        messages.Say(
+            "%s(KIND=%jd) type not supported on this target."_err_en_US,
+            parser::ToUpperCaseLetters(EnumToString(*category)),
+            defaults.quadPrecisionKind());
+      }
+      break;
     case KindCode::defaultLogicalKind:
       CHECK(result.categorySet == LogicalType);
       CHECK(*category == TypeCategory::Logical);
@@ -2591,6 +2715,10 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
                          std::get_if<characteristics::DummyDataObject>(
                              &dc->u)}) {
             dummyObject->type.set_corank(0);
+            if (d.flags.test(ArgFlag::onlyConstantInquiry)) {
+              dummyObject->attrs.set(
+                  characteristics::DummyDataObject::Attr::OnlyIntrinsicInquiry);
+            }
           }
           dummyArgs.emplace_back(std::move(*dc));
           if (d.typePattern.kindCode == KindCode::same && !sameDummyArg) {
@@ -2753,9 +2881,9 @@ bool IntrinsicProcTable::Implementation::IsDualIntrinsic(
     const std::string &name) const {
   // Collection for some intrinsics with function and subroutine form,
   // in order to pass the semantic check.
-  static const std::string dualIntrinsic[]{{"chdir"s}, {"etime"s}, {"getcwd"s},
-      {"rename"s}, {"second"s}, {"system"s}};
-
+  static const std::string dualIntrinsic[]{{"chdir"}, {"etime"}, {"fseek"},
+      {"ftell"}, {"getcwd"}, {"hostnm"}, {"putenv"s}, {"rename"}, {"second"},
+      {"system"}, {"unlink"}};
   return llvm::is_contained(dualIntrinsic, name);
 }
 
@@ -2863,14 +2991,15 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
             "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
       }
       bool isProcPtrTarget{
-          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
+          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
+        bool isAllocatableMold{false};
         if (isProcPtrTarget) {
           // MOLD= procedure pointer
           std::optional<characteristics::Procedure> procPointer;
-          if (IsNullProcedurePointer(*mold)) {
+          if (IsNullProcedurePointer(mold)) {
             procPointer =
                 characteristics::Procedure::Characterize(*mold, context);
           } else {
@@ -2886,12 +3015,13 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
             fResult.emplace(std::move(*procPointer));
           }
         } else if (auto type{mold->GetType()}) {
-          // MOLD= object pointer
+          // MOLD= object pointer or allocatable
           characteristics::TypeAndShape typeAndShape{
               *type, GetShape(context, *mold)};
           args.emplace_back(
               "mold"s, characteristics::DummyDataObject{typeAndShape});
           fResult.emplace(std::move(typeAndShape));
+          isAllocatableMold = IsAllocatableDesignator(*mold);
         } else {
           context.messages().Say(arguments[0]->sourceLocation(),
               "MOLD= argument to NULL() lacks type"_err_en_US);
@@ -2899,7 +3029,9 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         if (fResult) {
           fResult->attrs.set(characteristics::FunctionResult::Attr::Pointer);
           characteristics::Procedure::Attrs attrs;
-          attrs.set(characteristics::Procedure::Attr::NullPointer);
+          attrs.set(isAllocatableMold
+                  ? characteristics::Procedure::Attr::NullAllocatable
+                  : characteristics::Procedure::Attr::NullPointer);
           characteristics::Procedure chars{
               std::move(*fResult), std::move(args), attrs};
           return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
@@ -3258,7 +3390,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     const auto &arg{call.arguments[0]};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
-        ok = evaluate::IsAllocatableDesignator(*expr);
+        ok = IsAllocatableDesignator(*expr) || IsNullAllocatable(expr);
       }
     }
     if (!ok) {
@@ -3316,6 +3448,7 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   case KindCode::defaultIntegerKind:
     break;
   case KindCode::doublePrecision:
+  case KindCode::quadPrecision:
   case KindCode::defaultRealKind:
     category = TypeCategory::Real;
     break;
@@ -3324,6 +3457,8 @@ static DynamicType GetReturnType(const SpecificIntrinsicInterface &interface,
   }
   int kind{interface.result.kindCode == KindCode::doublePrecision
           ? defaults.doublePrecisionKind()
+          : interface.result.kindCode == KindCode::quadPrecision
+          ? defaults.quadPrecisionKind()
           : defaults.GetDefaultKind(category)};
   return DynamicType{category, kind};
 }
@@ -3564,6 +3699,8 @@ DynamicType IntrinsicProcTable::Implementation::GetSpecificType(
   TypeCategory category{set.LeastElement().value()};
   if (pattern.kindCode == KindCode::doublePrecision) {
     return DynamicType{category, defaults_.doublePrecisionKind()};
+  } else if (pattern.kindCode == KindCode::quadPrecision) {
+    return DynamicType{category, defaults_.quadPrecisionKind()};
   } else if (category == TypeCategory::Character) {
     // All character arguments to specific intrinsic functions are
     // assumed-length.

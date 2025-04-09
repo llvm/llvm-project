@@ -4,7 +4,7 @@ Section,Description,Dependencies,Assignee,Status,First released version
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::sys_time<Duration>``",,Mark de Wever,|Complete|,17
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::utc_time<Duration>``",,Mark de Wever,|Complete|,20
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::tai_time<Duration>``",,Mark de Wever,|Complete|,21
-`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::gps_time<Duration>``",A ``<chrono>`` implementation,Mark de Wever,,,
+`[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::gps_time<Duration>``",,Mark de Wever,|Complete|,21
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::file_time<Duration>``",,Mark de Wever,|Complete|,17
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local_time<Duration>``",,Mark de Wever,|Complete|,17
 `[time.syn] <https://wg21.link/time.syn>`_,"Formatter ``chrono::local-time-format-t<Duration>``",,,|Nothing To Do|,

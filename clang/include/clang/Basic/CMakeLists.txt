@@ -8,6 +8,16 @@ macro(clang_diag_gen component)
     -gen-clang-diags-enums -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component}Enums)
+
+  clang_tablegen(Diagnostic${component}CompatIDs.inc
+    -gen-clang-diags-compat-ids -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}CompatIDs)
+
+  clang_tablegen(Diagnostic${component}Interface.inc
+    -gen-clang-diags-iface -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Interface)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
@@ -30,6 +40,11 @@ clang_tablegen(DiagnosticGroups.inc -gen-clang-diag-groups
 clang_tablegen(DiagnosticIndexName.inc -gen-clang-diags-index-name
   SOURCE Diagnostic.td
   TARGET ClangDiagnosticIndexName)
+
+clang_tablegen(DiagnosticAllCompatIDs.inc
+  -gen-clang-diags-compat-ids
+  SOURCE Diagnostic.td
+  TARGET ClangDiagnosticAllCompatIDs)
 
 clang_tablegen(AttrList.inc -gen-clang-attr-list
   -I ${CMAKE_CURRENT_SOURCE_DIR}/../../
@@ -72,6 +87,10 @@ clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
 
+clang_tablegen(BuiltinsDirectX.inc -gen-clang-builtins
+  SOURCE BuiltinsDirectX.td
+  TARGET ClangBuiltinsDirectX)
+
 clang_tablegen(BuiltinsHexagon.inc -gen-clang-builtins
   SOURCE BuiltinsHexagon.td
   TARGET ClangBuiltinsHexagon)
@@ -95,6 +114,10 @@ clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
 clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
   SOURCE BuiltinsX86_64.td
   TARGET ClangBuiltinsX86_64)
+
+clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
+  SOURCE BuiltinTemplates.td
+  TARGET ClangBuiltinTemplates)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema
