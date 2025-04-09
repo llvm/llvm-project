@@ -172,7 +172,7 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
 
 /// Construct ModuleShaderFlags for module Module M
 void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
-                                   DXILBindingMap &DBM,
+                                   DXILResourceMap &DRM,
                                    const ModuleMetadataInfo &MMDI) {
 
   CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
@@ -211,7 +211,7 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
       // Set ResMayNotAlias to true if DXIL version < 1.8 and there are UAVs
       // present globally.
       if (CanSetResMayNotAlias && MMDI.DXILVersion < VersionTuple(1, 8))
-        SCCSF.ResMayNotAlias = !DBM.uavs().empty();
+        SCCSF.ResMayNotAlias = !DRM.uavs().empty();
 
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)
@@ -286,11 +286,11 @@ AnalysisKey ShaderFlagsAnalysis::Key;
 ModuleShaderFlags ShaderFlagsAnalysis::run(Module &M,
                                            ModuleAnalysisManager &AM) {
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
-  DXILBindingMap &DBM = AM.getResult<DXILResourceBindingAnalysis>(M);
+  DXILResourceMap &DRM = AM.getResult<DXILResourceAnalysis>(M);
   const ModuleMetadataInfo MMDI = AM.getResult<DXILMetadataAnalysis>(M);
 
   ModuleShaderFlags MSFI;
-  MSFI.initialize(M, DRTM, DBM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI);
 
   return MSFI;
 }
@@ -320,19 +320,19 @@ PreservedAnalyses ShaderFlagsAnalysisPrinter::run(Module &M,
 bool ShaderFlagsAnalysisWrapper::runOnModule(Module &M) {
   DXILResourceTypeMap &DRTM =
       getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
-  DXILBindingMap &DBM =
-      getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  DXILResourceMap &DRM =
+      getAnalysis<DXILResourceWrapperPass>().getBindingMap();
   const ModuleMetadataInfo MMDI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
-  MSFI.initialize(M, DRTM, DBM, MMDI);
+  MSFI.initialize(M, DRTM, DRM, MMDI);
   return false;
 }
 
 void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<DXILResourceTypeWrapperPass>();
-  AU.addRequiredTransitive<DXILResourceBindingWrapperPass>();
+  AU.addRequiredTransitive<DXILResourceWrapperPass>();
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 

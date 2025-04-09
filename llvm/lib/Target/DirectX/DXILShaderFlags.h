@@ -28,7 +28,7 @@ namespace llvm {
 class Module;
 class GlobalVariable;
 class DXILResourceTypeMap;
-class DXILBindingMap;
+class DXILResourceMap;
 
 namespace dxil {
 
@@ -85,7 +85,7 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(Module &, DXILResourceTypeMap &DRTM, DXILBindingMap &DBM,
+  void initialize(Module &, DXILResourceTypeMap &DRTM, DXILResourceMap &DRM,
                   const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
