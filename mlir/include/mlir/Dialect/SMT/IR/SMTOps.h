@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTOPS_H
+#ifndef MLIR_DIALECT_SMT_IR_SMTOPS_H
 #define MLIR_DIALECT_SMT_SMTOPS_H
 
 #include "mlir/IR/OpImplementation.h"
