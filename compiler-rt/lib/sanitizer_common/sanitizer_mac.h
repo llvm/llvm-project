@@ -37,8 +37,8 @@ struct VersionBase {
 
   VersionBase(u16 major, u16 minor) : major(major), minor(minor) {}
 
-  bool operator==(const VersionType &other) const {
-    return major == other.major && minor == other.minor;
+  friend bool operator==(const VersionType &self, const VersionType &other) {
+    return self.major == other.major && self.minor == other.minor;
   }
   bool operator>=(const VersionType &other) const {
     return major > other.major ||
