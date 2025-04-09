@@ -264,8 +264,6 @@ static cl::opt<bool>
     LTOSaveBeforeOpt("lto-save-before-opt", cl::init(false),
                      cl::desc("Save the IR before running optimizations"));
 
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
-
 namespace {
 
 struct ModuleInfo {
@@ -1000,11 +998,6 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   cl::HideUnrelatedOptions({&LTOCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv, "llvm LTO linker\n");
-
-  // Since llvm-lto collects multiple IR modules together, for simplicity's sake
-  // we disable the "PreserveInputDbgFormat" flag to enforce a single debug info
-  // format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   if (OptLevel < '0' || OptLevel > '3')
     error("optimization level must be between 0 and 3");

@@ -256,6 +256,7 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
   RetainPtr<id> delegate;
 }
 -(void)doWork;
+-(void)doMoreWork;
 -(void)run;
 @end
 
@@ -265,8 +266,27 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
     someFunction();
     [delegate doWork];
   };
+  auto doMoreWork = [=] {
+    someFunction();
+    [delegate doWork];
+  };
+  auto doExtraWork = [&, protectedSelf = retainPtr(self)] {
+    someFunction();
+    [delegate doWork];
+  };
+  callFunctionOpaque(doWork);
+  callFunctionOpaque(doMoreWork);
+  callFunctionOpaque(doExtraWork);
+}
+
+-(void)doMoreWork {
+  auto doWork = [self, protectedSelf = retainPtr(self)] {
+    someFunction();
+    [self doWork];
+  };
   callFunctionOpaque(doWork);
 }
+
 -(void)run {
   someFunction();
 }
