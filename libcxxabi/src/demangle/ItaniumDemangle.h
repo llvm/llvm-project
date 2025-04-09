@@ -5743,10 +5743,14 @@ struct FloatData<long double>
 {
 #if __LDBL_MANT_DIG__ == 113
   static const size_t mangled_size = 32;
-#elif __LDBL_MANT_DIG__ == 53
+#elif __LDBL_MANT_DIG__ == 53 || defined(_MSC_VER)
+  // MSVC doesn't define __LDBL_MANT_DIG__, but it has long double equal to
+  // regular double on all current architectures.
   static const size_t mangled_size = 16;
-#else // __LDBL_MANT_DIG__ == 64
+#elif __LDBL_MANT_DIG__ == 64
   static const size_t mangled_size = 20;
+#else
+#error Unknown size for __LDBL_MANT_DIG__
 #endif
     // `-0x1.ffffffffffffffffffffffffffffp+16383` + 'L' + '\0' == 42 bytes.
     // 28 'f's * 4 bits == 112 bits, which is the number of mantissa bits.
