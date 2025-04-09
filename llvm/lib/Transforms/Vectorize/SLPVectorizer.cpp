@@ -5579,8 +5579,8 @@ static bool isMaskedLoadCompress(
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
-                              Instruction::Load, AlignedLoadVecTy, CompressMask[1],
-                              std::nullopt, CommonAlignment,
+                              Instruction::Load, AlignedLoadVecTy,
+                              CompressMask[1], std::nullopt, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
         InterleavedCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
