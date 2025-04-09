@@ -94,6 +94,23 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
   return res;
 }
 
+template <typename Op>
+mlir::LogicalResult
+CIRGenFunction::emitOpenACCOp(mlir::Location start,
+                              llvm::ArrayRef<const OpenACCClause *> clauses) {
+  mlir::LogicalResult res = mlir::success();
+
+  llvm::SmallVector<mlir::Type> retTy;
+  llvm::SmallVector<mlir::Value> operands;
+
+  // Clause-emitter must be here because it might modify operands.
+  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule());
+  clauseEmitter.VisitClauseList(clauses);
+
+  builder.create<Op>(start, retTy, operands);
+  return res;
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getEnd());
@@ -124,6 +141,17 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
 }
 
 mlir::LogicalResult
+CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  return emitOpenACCOp<InitOp>(start, s.clauses());
+}
+mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
+    const OpenACCShutdownConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  return emitOpenACCOp<ShutdownOp>(start, s.clauses());
+}
+
+mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Loop Construct");
   return mlir::failure();
@@ -151,16 +179,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Init Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
-    const OpenACCShutdownConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Shutdown Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
