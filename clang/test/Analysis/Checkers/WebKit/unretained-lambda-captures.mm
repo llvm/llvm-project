@@ -290,11 +290,17 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
     someFunction();
     [delegate doWork];
   };
+  auto doMoreWork = [=] {
+    // expected-warning@-1{{Implicitly captured raw-pointer 'self' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    someFunction();
+    [delegate doWork];
+  };
   auto doExtraWork = [&, protectedSelf = retainPtr(self)] {
     someFunction();
     [delegate doWork];
   };
   callFunctionOpaque(doWork);
+  callFunctionOpaque(doMoreWork);
   callFunctionOpaque(doExtraWork);
 }
 
