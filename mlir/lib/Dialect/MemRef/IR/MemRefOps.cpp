@@ -2053,31 +2053,23 @@ public:
 
     // Check if the reinterpret cast reconstructs a memref with the exact same
     // properties as the extract strided metadata.
-    SmallVector<OpFoldResult> extractStridesOfr =
-        extractStridedMetadata.getConstifiedMixedStrides();
-    SmallVector<OpFoldResult> reinterpretStridesOfr =
-        op.getConstifiedMixedStrides();
     auto isReinterpretCastNoop = [&]() -> bool {
       // First, check that the strides are the same.
-      if (!llvm::equal(extractStridesOfr, reinterpretStridesOfr))
+      if (!llvm::equal(extractStridedMetadata.getConstifiedMixedStrides(),
+                       op.getConstifiedMixedStrides()))
         return false;
 
       // Second, check the sizes.
-      SmallVector<OpFoldResult> extractSizesOfr =
-          extractStridedMetadata.getConstifiedMixedSizes();
-      SmallVector<OpFoldResult> reinterpretSizesOfr =
-          op.getConstifiedMixedSizes();
-      if (!llvm::equal(extractSizesOfr, reinterpretSizesOfr))
+      if (!llvm::equal(extractStridedMetadata.getConstifiedMixedSizes(),
+                       op.getConstifiedMixedSizes()))
           return false;
 
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
              "reinterpret_cast with more than one offset should have been "
              "rejected by the verifier");
-      OpFoldResult extractOffsetOfr =
-          extractStridedMetadata.getConstifiedMixedOffset();
-      OpFoldResult reinterpretOffsetOfr = op.getConstifiedMixedOffset();
-      return extractOffsetOfr == reinterpretOffsetOfr;
+      return extractStridedMetadata.getConstifiedMixedOffset() ==
+             op.getConstifiedMixedOffset();
     };
 
     if (!isReinterpretCastNoop()) {
