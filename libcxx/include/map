@@ -1657,7 +1657,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 const _Tp& map<_Key, _Tp, _Compare, _Allocator>::a
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator==(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return __x.size() == __y.size() && std::equal(__x.begin(), __x.end(), __y.begin());
 }
@@ -1665,31 +1665,31 @@ operator==(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp,
 #  if _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator<(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare(__x.begin(), __x.end(), __y.begin(), __y.end());
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator!=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return !(__x == __y);
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator>(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return __y < __x;
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator>=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return !(__x < __y);
 }
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 bool
 operator<=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return !(__y < __x);
 }
@@ -1697,7 +1697,7 @@ operator<=(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp,
 #  else // #if _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI __synth_three_way_result<pair<const _Key, _Tp>>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __synth_three_way_result<pair<const _Key, _Tp>>
 operator<=>(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
@@ -1705,7 +1705,7 @@ operator<=>(const map<_Key, _Tp, _Compare, _Allocator>& __x, const map<_Key, _Tp
 #  endif // #if _LIBCPP_STD_VER <= 17
 
 template <class _Key, class _Tp, class _Compare, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI void
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 swap(map<_Key, _Tp, _Compare, _Allocator>& __x, map<_Key, _Tp, _Compare, _Allocator>& __y)
     _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
@@ -1713,7 +1713,7 @@ swap(map<_Key, _Tp, _Compare, _Allocator>& __x, map<_Key, _Tp, _Compare, _Alloca
 
 #  if _LIBCPP_STD_VER >= 20
 template <class _Key, class _Tp, class _Compare, class _Allocator, class _Predicate>
-inline _LIBCPP_HIDE_FROM_ABI typename map<_Key, _Tp, _Compare, _Allocator>::size_type
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 typename map<_Key, _Tp, _Compare, _Allocator>::size_type
 erase_if(map<_Key, _Tp, _Compare, _Allocator>& __c, _Predicate __pred) {
   return std::__libcpp_erase_if_container(__c, __pred);
 }
