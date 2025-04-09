@@ -103,22 +103,38 @@ def simm16nonzero : RISCVOp<XLenVT>,
   let OperandType = "OPERAND_SIMM16_NONZERO";
 }
 
-def simm20 : RISCVSImmLeafOp<20>;
+def simm20_li : RISCVOp<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<20, "LI">;
+  let EncoderMethod = "getImmOpValue";
+  let DecoderMethod = "decodeSImmOperand<20>";
+  let OperandType = "OPERAND_SIMM20_LI";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isInt<20>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
+}
 
 def simm26 : RISCVSImmLeafOp<26>;
 
+class BareSImmNAsmOperand<int width>
+    : ImmAsmOperand<"BareS", width, ""> {
+  let PredicateMethod = "isBareSimmN<" # width # ">";
+}
+
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
-def simm32 : RISCVOp<XLenVT> {
-  let ParserMatchClass = SImmAsmOperand<32, "">;
+def bare_simm32 : RISCVOp<XLenVT> {
+  let ParserMatchClass = BareSImmNAsmOperand<32>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<32>";
-  let OperandType = "OPERAND_SIMM32";
+  let OperandType = "OPERAND_BARE_SIMM32";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
       return isInt<32>(Imm);
-    return false;
+    return MCOp.isBareSymbolRef();
   }];
 }
 
@@ -256,7 +272,7 @@ def InsnQC_EAI : DirectiveInsnQC_EAI<(outs AnyReg:$rd),
                                      (ins uimm7_opcode:$opcode,
                                           uimm3:$func3,
                                           uimm1:$func1,
-                                          simm32:$imm32),
+                                          bare_simm32:$imm32),
                                      "$opcode, $func3, $func1, $rd, $imm32">;
 def InsnQC_EI : DirectiveInsnQC_EI<(outs AnyReg:$rd),
                                    (ins uimm7_opcode:$opcode,
@@ -303,7 +319,7 @@ def : InstAlias<".insn_qc.eai $opcode, $func3, $func1, $rd, $imm32",
                             uimm7_opcode:$opcode,
                             uimm3:$func3,
                             uimm1:$func1,
-                            simm32:$imm32)>;
+                            bare_simm32:$imm32)>;
 def : InstAlias<".insn_qc.ei $opcode, $func3, $func2, $rd, $rs1, $imm26",
                 (InsnQC_EI AnyReg:$rd,
                            uimm7_opcode:$opcode,
@@ -671,7 +687,7 @@ class QCIRVInstESStore<bits<3> funct3, bits<2> funct2, string opcodestr>
                       opcodestr, "$rs2, ${imm}(${rs1})">;
 
 class QCIRVInstEAI<bits<3> funct3, bits<1> funct1, string opcodestr>
-    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, simm32:$imm),
+    : RVInst48<(outs GPRNoX0:$rd_wb), (ins GPRNoX0:$rd, bare_simm32:$imm),
                opcodestr, "$rd, $imm", [], InstFormatOther> {
   bits<5> rd;
   bits<32> imm;
@@ -1009,15 +1025,15 @@ let Predicates = [HasVendorXqcilb, IsRV32] in {
 
 let Predicates = [HasVendorXqcili, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20:$imm20),
+  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20_li:$imm20),
                       "qc.li", "$rd, $imm20"> {
     let Inst{31} = imm20{19};
     let Inst{30-16} = imm20{14-0};
     let Inst{15-12} = imm20{18-15};
   }
 
-  def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins simm32:$imm),
-                         "qc.e.li", "$rd, $imm", [], InstFormatOther> {
+  def QC_E_LI : RVInst48<(outs GPRNoX0:$rd), (ins bare_simm32:$imm),
+                         "qc.e.li", "$rd, $imm", [], InstFormatQC_EAI> {
     bits<5> rd;
     bits<32> imm;
 

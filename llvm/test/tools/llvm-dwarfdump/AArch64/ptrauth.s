@@ -23,7 +23,7 @@
 
 # CHECK: 0x0000004f:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p3")
-# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values,strip")")
+# CHECK:                 DW_AT_type      (0x0000005a "void *__ptrauth(4, 1, 0x04d4, "authenticates-null-values")")
 
 # CHECK: 0x0000005a:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
@@ -33,7 +33,7 @@
 
 # CHECK: 0x00000063:   DW_TAG_variable
 # CHECK:                 DW_AT_name      ("p4")
-# CHECK:                 DW_AT_type (0x0000006e "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values,sign-and-strip")")
+# CHECK:                 DW_AT_type (0x0000006e "void *__ptrauth(4, 1, 0x04d5, "isa-pointer,authenticates-null-values")")
 
 # CHECK: 0x0000006e:   DW_TAG_LLVM_ptrauth_type
 # CHECK:                 DW_AT_LLVM_ptrauth_key  (0x04)
