@@ -67,10 +67,10 @@ namespace {
 /// compiler frontend have been deserialized. In case our processing causes
 /// further deserialization, DeclRead from the listener might be called again.
 /// However, at that point we don't accept any more Decls for processing.
-class DeserializedDeclsLineRangePrinter : public ASTConsumer,
-                                          ASTDeserializationListener {
+class DeserializedDeclsSourceRangePrinter : public ASTConsumer,
+                                            ASTDeserializationListener {
 public:
-  explicit DeserializedDeclsLineRangePrinter(
+  explicit DeserializedDeclsSourceRangePrinter(
       SourceManager &SM, std::unique_ptr<llvm::raw_fd_ostream> OS)
       : ASTDeserializationListener(), SM(SM), OS(std::move(OS)) {}
 
@@ -144,7 +144,7 @@ public:
       std::vector<std::pair<Position, Position>> FromTo;
       OptionalFileEntryRef Ref;
     };
-    llvm::DenseMap<const FileEntry *, FileData> FileToLines;
+    llvm::DenseMap<const FileEntry *, FileData> FileToRanges;
     for (const Decl *D : PendingDecls) {
       CharSourceRange R = SM.getExpansionRange(D->getSourceRange());
       if (!R.isValid())
@@ -156,7 +156,7 @@ public:
         continue;
       }
 
-      auto &Data = FileToLines[F];
+      auto &Data = FileToRanges[F];
       if (!Data.Ref)
         Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
       Data.FromTo.push_back(
@@ -166,7 +166,7 @@ public:
 
     // To simplify output, merge consecutive and intersecting ranges.
     std::vector<RequiredRanges> Result;
-    for (auto &[F, Data] : FileToLines) {
+    for (auto &[F, Data] : FileToRanges) {
       auto &FromTo = Data.FromTo;
       assert(!FromTo.empty());
 
@@ -314,11 +314,11 @@ FrontendAction::CreateWrappedASTConsumer(CompilerInstance &CI,
         DumpDeserializedDeclarationRangesPath, ErrorCode,
         llvm::sys::fs::OF_None);
     if (!ErrorCode) {
-      Consumers.push_back(std::make_unique<DeserializedDeclsLineRangePrinter>(
+      Consumers.push_back(std::make_unique<DeserializedDeclsSourceRangePrinter>(
           CI.getSourceManager(), std::move(FileStream)));
     } else {
       llvm::errs() << "Failed to create output file for "
-                      "-dump-deserialized-declaration-ranges flag, file path: "
+                      "-dump-minimization-hints flag, file path: "
                    << DumpDeserializedDeclarationRangesPath
                    << ", error: " << ErrorCode.message() << "\n";
     }
