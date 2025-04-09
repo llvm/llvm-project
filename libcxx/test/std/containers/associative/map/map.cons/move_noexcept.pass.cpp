@@ -51,6 +51,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::map<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
     static_assert(!std::is_nothrow_move_constructible<C>::value, "");
   }
+  return true;
 }
 int main(int, char**) {
   assert(test());
