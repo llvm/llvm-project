@@ -195,6 +195,7 @@ typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
 typedef DenseMap<VPValue *, Value *> VPValue2ValueTy;
 
 raw_ostream &operator<<(raw_ostream &OS, const VPValue &V);
+raw_ostream &operator<<(raw_ostream &OS, const VPDef &D);
 
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.

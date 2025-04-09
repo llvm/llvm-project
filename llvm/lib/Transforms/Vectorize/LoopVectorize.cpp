@@ -4874,6 +4874,20 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   }
 }
 
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+static unsigned getVFScaleFactor(VPRecipeBase *R) {
+  if (isa<VPPartialReductionRecipe, VPReductionPHIRecipe>(R)) {
+    auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R);
+    auto *PartialReductionR =
+        ReductionR ? nullptr : dyn_cast<VPPartialReductionRecipe>(R);
+    unsigned ScaleFactor = ReductionR ? ReductionR->getVFScaleFactor()
+                                      : PartialReductionR->getVFScaleFactor();
+    return ScaleFactor;
+  }
+  return 1;
+}
+
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
@@ -5027,22 +5041,13 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
           // even in the scalar case.
           RegUsage[ClassID] += 1;
         } else {
-          // The output from scaled phis and scaled reductions actually have
+          // The output from scaled phis and scaled reductions actually has
           // fewer lanes than the VF.
-          ElementCount VF = VFs[J];
-          if (isa<VPPartialReductionRecipe, VPReductionPHIRecipe>(R)) {
-            auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R);
-            auto *PartialReductionR =
-                ReductionR ? nullptr : dyn_cast<VPPartialReductionRecipe>(R);
-            unsigned ScaleFactor = ReductionR
-                                       ? ReductionR->getVFScaleFactor()
-                                       : PartialReductionR->getVFScaleFactor();
-            VF = VF.divideCoefficientBy(ScaleFactor);
-          }
+          unsigned ScaleFactor = getVFScaleFactor(R);
+          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
           LLVM_DEBUG(if (VF != VFs[J]) {
             dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
-                   << " for ";
-            R->dump();
+                   << " for " << *R << "\n";
           });
 
           for (VPValue *DefV : R->definedValues()) {
