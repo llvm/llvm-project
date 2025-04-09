@@ -135,7 +135,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   // Helper to emit a combination of AUIPC and SecondOpcode. Used to implement
   // helpers such as emitLoadLocalAddress and emitLoadAddress.
-  void emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
+  void emitAuipcInstPair(MCRegister DestReg, MCRegister TmpReg,
                          const MCExpr *Symbol, RISCVMCExpr::Specifier VKHi,
                          unsigned SecondOpcode, SMLoc IDLoc, MCStreamer &Out);
 
@@ -551,6 +551,21 @@ public:
     return IsValid && VK == RISCVMCExpr::VK_None;
   }
 
+  // True if operand is a symbol with no modifiers, or a constant with no
+  // modifiers and isInt<N>(Op).
+  template <int N> bool isBareSimmN() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    if (evaluateConstantImm(getImm(), Imm))
+      return isInt<N>(fixImmediateForRV32(Imm, isRV64Imm()));
+
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_None;
+  }
+
   // Predicate methods for AsmOperands defined in RISCVInstrInfo.td
 
   bool isBareSymbol() const {
@@ -794,9 +809,7 @@ public:
   bool isSImm6() const { return isSImm<6>(); }
   bool isSImm11() const { return isSImm<11>(); }
   bool isSImm16() const { return isSImm<16>(); }
-  bool isSImm20() const { return isSImm<20>(); }
   bool isSImm26() const { return isSImm<26>(); }
-  bool isSImm32() const { return isSImm<32>(); }
 
   bool isSImm5NonZero() const {
     return isSImmPred([](int64_t Imm) { return Imm != 0 && isInt<5>(Imm); });
@@ -874,6 +887,19 @@ public:
 
   bool isUImm16NonZero() const {
     return isUImmPred([](int64_t Imm) { return isUInt<16>(Imm) && Imm != 0; });
+  }
+
+  bool isSImm20LI() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    if (evaluateConstantImm(getImm(), Imm))
+      return isInt<20>(fixImmediateForRV32(Imm, isRV64Imm()));
+
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_QC_ABS20;
   }
 
   bool isUImm20LUI() const {
@@ -1519,6 +1545,11 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 15), (1 << 15) - 1,
         "immediate must be non-zero in the range");
+  case Match_InvalidSImm20LI:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, -(1 << 19), (1 << 19) - 1,
+        "operand must be a symbol with a %qc.abs20 specifier or an integer "
+        " in the range");
   case Match_InvalidUImm20LUI:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, 0, (1 << 20) - 1,
@@ -1555,10 +1586,7 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm26:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
                                       (1 << 25) - 1);
-  case Match_InvalidSImm20:
-    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 19),
-                                      (1 << 19) - 1);
-  case Match_InvalidSImm32:
+  case Match_InvalidBareSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
                                       std::numeric_limits<uint32_t>::max());
@@ -3302,7 +3330,7 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
   }
 }
 
-void RISCVAsmParser::emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
+void RISCVAsmParser::emitAuipcInstPair(MCRegister DestReg, MCRegister TmpReg,
                                        const MCExpr *Symbol,
                                        RISCVMCExpr::Specifier VKHi,
                                        unsigned SecondOpcode, SMLoc IDLoc,
@@ -3316,15 +3344,15 @@ void RISCVAsmParser::emitAuipcInstPair(MCOperand DestReg, MCOperand TmpReg,
   Out.emitLabel(TmpLabel);
 
   const RISCVMCExpr *SymbolHi = RISCVMCExpr::create(Symbol, VKHi, Ctx);
-  emitToStreamer(
-      Out, MCInstBuilder(RISCV::AUIPC).addOperand(TmpReg).addExpr(SymbolHi));
+  emitToStreamer(Out,
+                 MCInstBuilder(RISCV::AUIPC).addReg(TmpReg).addExpr(SymbolHi));
 
   const MCExpr *RefToLinkTmpLabel = RISCVMCExpr::create(
       MCSymbolRefExpr::create(TmpLabel, Ctx), RISCVMCExpr::VK_PCREL_LO, Ctx);
 
   emitToStreamer(Out, MCInstBuilder(SecondOpcode)
-                          .addOperand(DestReg)
-                          .addOperand(TmpReg)
+                          .addReg(DestReg)
+                          .addReg(TmpReg)
                           .addExpr(RefToLinkTmpLabel));
 }
 
@@ -3336,7 +3364,7 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   // expands to
   //   TmpLabel: AUIPC rdest, %pcrel_hi(symbol)
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
-  MCOperand DestReg = Inst.getOperand(0);
+  MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_PCREL_HI,
                     RISCV::ADDI, IDLoc, Out);
@@ -3350,7 +3378,7 @@ void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
   // expands to
   //   TmpLabel: AUIPC rdest, %got_pcrel_hi(symbol)
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
-  MCOperand DestReg = Inst.getOperand(0);
+  MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
   emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_GOT_HI,
@@ -3380,7 +3408,7 @@ void RISCVAsmParser::emitLoadTLSIEAddress(MCInst &Inst, SMLoc IDLoc,
   // expands to
   //   TmpLabel: AUIPC rdest, %tls_ie_pcrel_hi(symbol)
   //             Lx rdest, %pcrel_lo(TmpLabel)(rdest)
-  MCOperand DestReg = Inst.getOperand(0);
+  MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
   emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_TLS_GOT_HI,
@@ -3395,7 +3423,7 @@ void RISCVAsmParser::emitLoadTLSGDAddress(MCInst &Inst, SMLoc IDLoc,
   // expands to
   //   TmpLabel: AUIPC rdest, %tls_gd_pcrel_hi(symbol)
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
-  MCOperand DestReg = Inst.getOperand(0);
+  MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   emitAuipcInstPair(DestReg, DestReg, Symbol, RISCVMCExpr::VK_TLS_GD_HI,
                     RISCV::ADDI, IDLoc, Out);
@@ -3412,9 +3440,16 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   //   TmpLabel: AUIPC tmp, %pcrel_hi(symbol)
   //             [S|L]X    rd, %pcrel_lo(TmpLabel)(tmp)
   unsigned DestRegOpIdx = HasTmpReg ? 1 : 0;
-  MCOperand DestReg = Inst.getOperand(DestRegOpIdx);
+  MCRegister DestReg = Inst.getOperand(DestRegOpIdx).getReg();
   unsigned SymbolOpIdx = HasTmpReg ? 2 : 1;
-  MCOperand TmpReg = Inst.getOperand(0);
+  MCRegister TmpReg = Inst.getOperand(0).getReg();
+
+  // If TmpReg is a GPR pair, get the even register.
+  if (RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(TmpReg)) {
+    const MCRegisterInfo *RI = getContext().getRegisterInfo();
+    TmpReg = RI->getSubReg(TmpReg, RISCV::sub_gpr_even);
+  }
+
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
   emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCVMCExpr::VK_PCREL_HI, Opcode,
                     IDLoc, Out);
@@ -3430,8 +3465,8 @@ void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
   //
   //    SLLI rd, rs, XLEN - Width
   //    SR[A|R]I rd, rd, XLEN - Width
-  MCOperand DestReg = Inst.getOperand(0);
-  MCOperand SourceReg = Inst.getOperand(1);
+  const MCOperand &DestReg = Inst.getOperand(0);
+  const MCOperand &SourceReg = Inst.getOperand(1);
 
   unsigned SecondOpcode = SignExtend ? RISCV::SRAI : RISCV::SRLI;
   int64_t ShAmt = (isRV64() ? 64 : 32) - Width;
@@ -3771,6 +3806,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
   case RISCV::PseudoLD:
     emitLoadStoreSymbol(Inst, RISCV::LD, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
+  case RISCV::PseudoLD_RV32:
+    emitLoadStoreSymbol(Inst, RISCV::LD_RV32, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
   case RISCV::PseudoFLH:
     emitLoadStoreSymbol(Inst, RISCV::FLH, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
@@ -3794,6 +3832,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoSD:
     emitLoadStoreSymbol(Inst, RISCV::SD, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoSD_RV32:
+    emitLoadStoreSymbol(Inst, RISCV::SD_RV32, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoFSH:
     emitLoadStoreSymbol(Inst, RISCV::FSH, IDLoc, Out, /*HasTmpReg=*/true);
