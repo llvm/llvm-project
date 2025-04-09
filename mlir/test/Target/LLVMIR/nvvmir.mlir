@@ -832,6 +832,7 @@ llvm.func @nvvm_match_sync(%mask: i32, %val32: i32, %val64: i64) {
 }
 
 // -----
+
 // CHECK-LABEL: @nvvm_st_bulk
 llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size: i64) {
   // CHECK: call void @llvm.nvvm.st.bulk(ptr %{{.*}}, i64 %{{.*}}, i64 0)
@@ -842,5 +843,21 @@ llvm.func @nvvm_st_bulk(%addr_gen: !llvm.ptr, %addr_shared: !llvm.ptr<3>, %size:
   nvvm.st.bulk %addr_gen, size = %size, init = 0 : !llvm.ptr
   // CHECK: call void @llvm.nvvm.st.bulk.shared.cta(ptr addrspace(3) %{{.*}}, i64 %{{.*}}, i64 0)
   nvvm.st.bulk %addr_shared, size = %size, init = 0: !llvm.ptr<3>
+  llvm.return
+}
+
+
+// -----
+
+// CHECK-LABEL: @nvvm_pmevent
+llvm.func @nvvm_pmevent() {
+  nvvm.pmevent id = 0
+
+  nvvm.pmevent id = 15
+
+  nvvm.pmevent mask = 15000
+
+  nvvm.pmevent mask = 10
+
   llvm.return
 }
