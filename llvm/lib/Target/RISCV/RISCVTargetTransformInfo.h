@@ -18,7 +18,6 @@
 
 #include "RISCVSubtarget.h"
 #include "RISCVTargetMachine.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
@@ -125,6 +124,8 @@ public:
 
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const;
 
+  bool preferAlternateOpcodeVectorization() const { return false; }
+
   bool preferEpilogueVectorization() const {
     // Epilogue vectorization is usually unprofitable - tail folding or
     // a smaller VF would have been better.  This a blunt hammer - we
@@ -209,7 +210,7 @@ public:
 
   InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
                                            Type *ResTy, VectorType *ValTy,
-                                           FastMathFlags FMF,
+                                           std::optional<FastMathFlags> FMF,
                                            TTI::TargetCostKind CostKind);
 
   InstructionCost
@@ -260,10 +261,12 @@ public:
     return TLI->isLegalElementTypeForRVV(ElemType);
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -349,15 +352,8 @@ public:
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
       return false;
 
-    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
-    // expanded.
-    // TODO: Promote f16/bf16 fmin/fmax reductions
-    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
-      return false;
-
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
-    case RecurKind::FAdd:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
@@ -365,11 +361,17 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
+    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
+      return true;
     case RecurKind::FAnyOf:
+    case RecurKind::FAdd:
+    case RecurKind::FMulAdd:
+      // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+      // expanded.
+      if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
+        return false;
       return true;
     default:
       return false;
@@ -386,6 +388,8 @@ public:
   }
 
   bool enableInterleavedAccessVectorization() { return true; }
+
+  unsigned getMinTripCountTailFoldingThreshold() const;
 
   enum RISCVRegisterClass { GPRRC, FPRRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const {

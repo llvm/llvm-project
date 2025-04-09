@@ -75,9 +75,8 @@ define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq0(<vscale x 1 x i16> %x) 
 define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq1(<vscale x 1 x i16> %x) nounwind {
 ; RV32-LABEL: test_urem_vec_even_divisor_eq1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vsub.vx v8, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vadd.vi v8, v8, -1
 ; RV32-NEXT:    lui a0, 1048571
 ; RV32-NEXT:    addi a0, a0, -1365
 ; RV32-NEXT:    vmul.vx v8, v8, a0
@@ -93,9 +92,8 @@ define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq1(<vscale x 1 x i16> %x)
 ;
 ; RV64-LABEL: test_urem_vec_even_divisor_eq1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vsub.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vadd.vi v8, v8, -1
 ; RV64-NEXT:    lui a0, 1048571
 ; RV64-NEXT:    addi a0, a0, -1365
 ; RV64-NEXT:    vmul.vx v8, v8, a0
@@ -117,9 +115,8 @@ define <vscale x 1 x i16> @test_urem_vec_even_divisor_eq1(<vscale x 1 x i16> %x)
 define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq1(<vscale x 1 x i16> %x) nounwind {
 ; RV32-LABEL: test_urem_vec_odd_divisor_eq1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    li a0, 1
-; RV32-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; RV32-NEXT:    vsub.vx v8, v8, a0
+; RV32-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vadd.vi v8, v8, -1
 ; RV32-NEXT:    lui a0, 1048573
 ; RV32-NEXT:    addi a0, a0, -819
 ; RV32-NEXT:    vmul.vx v8, v8, a0
@@ -132,9 +129,8 @@ define <vscale x 1 x i16> @test_urem_vec_odd_divisor_eq1(<vscale x 1 x i16> %x) 
 ;
 ; RV64-LABEL: test_urem_vec_odd_divisor_eq1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    li a0, 1
-; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vsub.vx v8, v8, a0
+; RV64-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vadd.vi v8, v8, -1
 ; RV64-NEXT:    lui a0, 1048573
 ; RV64-NEXT:    addi a0, a0, -819
 ; RV64-NEXT:    vmul.vx v8, v8, a0

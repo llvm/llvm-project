@@ -163,6 +163,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
     return (ScalarOpdIdx == 2);
+  case Intrinsic::experimental_vp_splice:
+    return ScalarOpdIdx == 2 || ScalarOpdIdx == 4 || ScalarOpdIdx == 5;
   default:
     return false;
   }
@@ -841,9 +843,11 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
 
-  for (auto I = ECs.begin(), E = ECs.end(); I != E; ++I) {
+  for (const auto &E : ECs) {
+    if (!E->isLeader())
+      continue;
     uint64_t LeaderDemandedBits = 0;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       LeaderDemandedBits |= DBits[M];
 
     uint64_t MinBW = llvm::bit_width(LeaderDemandedBits);
@@ -855,7 +859,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     // indvars.
     // If we are required to shrink a PHI, abandon this entire equivalence class.
     bool Abort = false;
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end()))
+    for (Value *M : ECs.members(*E))
       if (isa<PHINode>(M) && MinBW < M->getType()->getScalarSizeInBits()) {
         Abort = true;
         break;
@@ -863,7 +867,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     if (Abort)
       continue;
 
-    for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
+    for (Value *M : ECs.members(*E)) {
       auto *MI = dyn_cast<Instruction>(M);
       if (!MI)
         continue;

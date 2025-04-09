@@ -48,7 +48,7 @@ Strict Diagnostic Mode
 
 When strict HLSL availability diagnostic mode is enabled the compiler must report all HLSL API availability issues regardless of code reachability. The implementation of this mode takes advantage of an existing diagnostic scan in ``DiagnoseUnguardedAvailability`` class which is already traversing AST of each function as soon as the function body has been parsed. For HLSL, this pass was only slightly modified, such as making sure diagnostic messages are in the ``hlsl-availability`` group and that availability checks based on shader stage are not included if the shader stage context is unknown.
 
-If the compilation target is a shader library, only availability based on shader model version can be diagnosed during this scan. To diagnose availability based on shader stage, the compiler needs to run the AST traversals implementated in ``DiagnoseHLSLAvailability`` at the end of the translation unit as described above.
+If the compilation target is a shader library, only availability based on shader model version can be diagnosed during this scan. To diagnose availability based on shader stage, the compiler needs to run the AST traversals implemented in ``DiagnoseHLSLAvailability`` at the end of the translation unit as described above.
 
 As a result, availability based on specific shader stage will only be diagnosed in code that is reachable from a shader entry point or library export function. It also means that function bodies might be scanned multiple time. When that happens, care should be taken not to produce duplicated diagnostics.
 

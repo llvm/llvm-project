@@ -116,8 +116,8 @@ void DataBreakpointInfoRequestHandler::operator()(
   llvm::json::Array accessTypes{"read", "write", "readWrite"};
   const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
-      GetUnsigned(arguments, "variablesReference", 0);
-  llvm::StringRef name = GetString(arguments, "name");
+      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
+  llvm::StringRef name = GetString(arguments, "name").value_or("");
   lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   lldb::SBValue variable = dap.variables.FindVariable(variablesReference, name);
   std::string addr, size;
