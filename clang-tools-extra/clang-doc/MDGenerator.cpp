@@ -56,9 +56,8 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
                                raw_ostream &OS) {
 
   if (!CDCtx.RepositoryUrl) {
-    OS << "*Defined at " << L.Filename << "#" 
-       << std::to_string(L.StartLineNumber)
-       << "*";
+    OS << "*Defined at " << L.Filename << "#"
+       << std::to_string(L.StartLineNumber) << "*";
   } else {
 
     OS << formatv("*Defined at [#{0}{1}{2}](#{0}{1}{3})*",
