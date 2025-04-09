@@ -1,6 +1,11 @@
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
+# `exec_script_allowlist` was added in GN version 2207, so that's the minimum
+# version of GN we require.
+assert(gn_version >= 2207,
+       "Your GN is too old! Update it, perhaps by running llvm/utils/gn/get.py")
+
 group("default") {
   deps = [
     "//clang-tools-extra/clangd/test",
@@ -10,6 +15,7 @@ group("default") {
     "//compiler-rt",
     "//compiler-rt/include",
     "//compiler-rt/lib/scudo",
+    "//compiler-rt/test/builtins",
     "//lld/test",
     "//lldb/test",
     "//llvm/test",

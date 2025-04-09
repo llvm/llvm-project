@@ -200,11 +200,9 @@ template <class T, class Allocator, class Predicate>
 #include <__cxx03/__algorithm/comp.h>
 #include <__cxx03/__algorithm/equal.h>
 #include <__cxx03/__algorithm/lexicographical_compare.h>
-#include <__cxx03/__algorithm/lexicographical_compare_three_way.h>
 #include <__cxx03/__algorithm/min.h>
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
-#include <__cxx03/__format/enable_insertable.h>
 #include <__cxx03/__iterator/distance.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__iterator/move_iterator.h>
@@ -219,11 +217,6 @@ template <class T, class Allocator, class Predicate>
 #include <__cxx03/__memory/construct_at.h>
 #include <__cxx03/__memory/pointer_traits.h>
 #include <__cxx03/__memory/swap_allocator.h>
-#include <__cxx03/__memory_resource/polymorphic_allocator.h>
-#include <__cxx03/__ranges/access.h>
-#include <__cxx03/__ranges/concepts.h>
-#include <__cxx03/__ranges/container_compatible_range.h>
-#include <__cxx03/__ranges/from_range.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/is_allocator.h>
 #include <__cxx03/__type_traits/is_nothrow_assignable.h>
@@ -243,14 +236,6 @@ template <class T, class Allocator, class Predicate>
 
 // [iterator.range]
 #include <__cxx03/__iterator/access.h>
-#include <__cxx03/__iterator/data.h>
-#include <__cxx03/__iterator/empty.h>
-#include <__cxx03/__iterator/reverse_access.h>
-#include <__cxx03/__iterator/size.h>
-
-// [list.syn]
-#include <__cxx03/compare>
-#include <__cxx03/initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -1728,7 +1713,6 @@ _LIBCPP_POP_MACROS
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <__cxx03/algorithm>
 #  include <__cxx03/atomic>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdint>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/functional>
