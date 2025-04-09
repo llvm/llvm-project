@@ -697,7 +697,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -1074,6 +1075,40 @@ static bool buildTernaryBitwiseFunctionINTELInst(
     MIB.addUse(Call->Arguments[i]);
 
   return true;
+}
+
+static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
+                          unsigned Scope, MachineIRBuilder &MIRBuilder,
+                          SPIRVGlobalRegistry *GR) {
+  switch (Opcode) {
+  case SPIRV::OpCommitReadPipe:
+  case SPIRV::OpCommitWritePipe:
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call, Register(0));
+  case SPIRV::OpGroupCommitReadPipe:
+  case SPIRV::OpGroupCommitWritePipe:
+  case SPIRV::OpGroupReserveReadPipePackets:
+  case SPIRV::OpGroupReserveWritePipePackets: {
+    Register ScopeConstReg =
+        MIRBuilder.buildConstant(LLT::scalar(32), Scope).getReg(0);
+    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+    MRI->setRegClass(ScopeConstReg, &SPIRV::iIDRegClass);
+    MachineInstrBuilder MIB;
+    MIB = MIRBuilder.buildInstr(Opcode);
+    if (Opcode == SPIRV::OpGroupReserveReadPipePackets ||
+        Opcode == SPIRV::OpGroupReserveWritePipePackets) {
+      MIB.addDef(Call->ReturnRegister)
+          .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+    }
+    MIB.addUse(ScopeConstReg);
+    for (unsigned int i = 0; i < Call->Arguments.size(); ++i) {
+      MIB.addUse(Call->Arguments[i]);
+    }
+    return true;
+  }
+  default:
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+  }
 }
 
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
@@ -2294,6 +2329,20 @@ generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
   return buildTernaryBitwiseFunctionINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool generatePipeInst(const SPIRV::IncomingCall *Call,
+                             MachineIRBuilder &MIRBuilder,
+                             SPIRVGlobalRegistry *GR) {
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  unsigned Scope = SPIRV::Scope::Workgroup;
+  if (Builtin->Name.contains("sub_group"))
+    Scope = SPIRV::Scope::Subgroup;
+
+  return buildPipeInst(Call, Opcode, Scope, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2877,6 +2926,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::Pipe:
+    return generatePipeInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
