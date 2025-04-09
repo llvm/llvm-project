@@ -2902,6 +2902,22 @@ struct AANonConvergentImpl : public AANonConvergent {
   }
 };
 
+static bool FunctionCalledWithConvergenceToken(const Function *F) {
+  for (auto &Use : F->uses()) {
+    CallBase *CB = dyn_cast<CallBase>(Use.getUser());
+    if (!CB)
+      continue;
+
+    // We are not called, just used as an argument.
+    if (CB->getCalledFunction() != F)
+      continue;
+
+    if (CB->getConvergenceControlToken())
+      return true;
+  }
+  return false;
+}
+
 struct AANonConvergentFunction final : AANonConvergentImpl {
   AANonConvergentFunction(const IRPosition &IRP, Attributor &A)
       : AANonConvergentImpl(IRP, A) {}
@@ -2929,6 +2945,11 @@ struct AANonConvergentFunction final : AANonConvergentImpl {
                                            UsedAssumedInformation)) {
       return indicatePessimisticFixpoint();
     }
+
+    const Function *F = this->getIRPosition().getAssociatedFunction();
+    if (FunctionCalledWithConvergenceToken(F))
+      return indicatePessimisticFixpoint();
+
     return ChangeStatus::UNCHANGED;
   }
 

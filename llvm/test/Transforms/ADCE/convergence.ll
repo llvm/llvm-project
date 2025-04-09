@@ -53,6 +53,37 @@ exit:
   ret void
 }
 
+define void @indirect_inner() #0 {
+; CHECK-LABEL: define void @indirect_inner(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tk0 = call token @llvm.experimental.convergence.entry()
+  ret void
+}
+
+define void @indirect() #0 {
+; CHECK-LABEL: define void @indirect(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TK0:%.*]] = call token @llvm.experimental.convergence.entry()
+; CHECK-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr @indirect_inner, ptr [[VAR]], align 8
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr [[VAR]], align 8
+; CHECK-NEXT:    call void [[PTR]]() #[[ATTR0]] [ "convergencectrl"(token [[TK0]]) ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %tk0 = call token @llvm.experimental.convergence.entry()
+  %var = alloca ptr, align 8
+  store ptr @indirect_inner, ptr %var, align 8
+  %ptr = load ptr, ptr %var, align 8
+  call void %ptr() convergent [ "convergencectrl"(token %tk0) ]
+  ret void
+}
+
 declare token @llvm.experimental.convergence.entry() #1
 declare token @llvm.experimental.convergence.anchor() #1
 declare token @llvm.experimental.convergence.loop() #1

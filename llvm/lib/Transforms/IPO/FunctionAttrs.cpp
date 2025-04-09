@@ -1864,11 +1864,15 @@ static bool InstrBreaksNonConvergent(Instruction &I,
          !SCCNodes.contains(CB->getCalledFunction());
 }
 
-static bool FunctionRequiresConvergence(const Function &F) {
-  for (auto &Use : F.uses()) {
+static bool FunctionRequiresConvergence(const Function *F) {
+  for (auto &Use : F->uses()) {
     CallBase *CB = dyn_cast<CallBase>(Use.getUser());
     if (!CB)
       return true;
+
+    // We are not called, just used as an argument.
+    if (CB->getCalledFunction() != F)
+      continue;
 
     if (CB->getConvergenceControlToken())
       return true;
@@ -1981,7 +1985,7 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
       Attribute::Convergent,
       // Skip non-convergent functions.
       [](const Function &F) {
-        return !F.isConvergent() || FunctionRequiresConvergence(F);
+        return !F.isConvergent() || FunctionRequiresConvergence(&F);
       },
       // Instructions that break non-convergent assumption.
       [SCCNodes](Instruction &I) {
