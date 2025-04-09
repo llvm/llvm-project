@@ -6180,7 +6180,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Subvector isn't demanded - just return the base vector.
     if (DemandedElts.extractBits(NumSubElts, InsertIdx) == 0) {
-      Mask.resize(NumElts, SM_SentinelUndef);
+      Mask.resize(NumElts);
       std::iota(Mask.begin(), Mask.end(), 0);
       Ops.push_back(Src);
       return true;
@@ -6194,10 +6194,9 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         Src.getConstantOperandVal(2) == 0 &&
         (NumBitsPerElt == 64 || Src.getOperand(1) == Sub) &&
         SDNode::areOnlyUsersOf({N.getNode(), Src.getNode()}, Sub.getNode())) {
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i);
-      for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask.push_back(i + NumElts);
+      Mask.resize(NumElts);
+      std::iota(Mask.begin(), Mask.begin() + NumSubElts, 0);
+      std::iota(Mask.begin() + NumSubElts, Mask.end(), NumElts);
       Ops.push_back(Src.getOperand(1));
       Ops.push_back(Sub);
       return true;
