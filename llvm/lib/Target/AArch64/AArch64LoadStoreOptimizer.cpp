@@ -298,7 +298,6 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   case AArch64::STRXui:
   case AArch64::STRXpre:
   case AArch64::STURXi:
-  case AArch64::STR_ZXI:
   case AArch64::LDRDui:
   case AArch64::LDURDi:
   case AArch64::LDRDpre:
@@ -317,7 +316,6 @@ static unsigned getMatchingNonSExtOpcode(unsigned Opc,
   case AArch64::LDRSui:
   case AArch64::LDURSi:
   case AArch64::LDRSpre:
-  case AArch64::LDR_ZXI:
     return Opc;
   case AArch64::LDRSWui:
     return AArch64::LDRWui;
@@ -363,7 +361,6 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
     return AArch64::STPDpre;
   case AArch64::STRQui:
   case AArch64::STURQi:
-  case AArch64::STR_ZXI:
     return AArch64::STPQi;
   case AArch64::STRQpre:
     return AArch64::STPQpre;
@@ -389,7 +386,6 @@ static unsigned getMatchingPairOpcode(unsigned Opc) {
     return AArch64::LDPDpre;
   case AArch64::LDRQui:
   case AArch64::LDURQi:
-  case AArch64::LDR_ZXI:
     return AArch64::LDPQi;
   case AArch64::LDRQpre:
     return AArch64::LDPQpre;
@@ -1229,16 +1225,6 @@ AArch64LoadStoreOpt::mergePairedInsns(MachineBasicBlock::iterator I,
     (void)MIBSXTW;
     LLVM_DEBUG(dbgs() << "  Extend operand:\n    ");
     LLVM_DEBUG(((MachineInstr *)MIBSXTW)->print(dbgs()));
-  } else if (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI) {
-    // We are combining SVE fill/spill to LDP/STP, so we need to use the Q
-    // variant of the registers.
-    MachineOperand &MOp0 = MIB->getOperand(0);
-    MachineOperand &MOp1 = MIB->getOperand(1);
-    assert(AArch64::ZPRRegClass.contains(MOp0.getReg()) &&
-           AArch64::ZPRRegClass.contains(MOp1.getReg()) && "Invalid register.");
-    MOp0.setReg(AArch64::Q0 + (MOp0.getReg() - AArch64::Z0));
-    MOp1.setReg(AArch64::Q0 + (MOp1.getReg() - AArch64::Z0));
-    LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   } else {
     LLVM_DEBUG(((MachineInstr *)MIB)->print(dbgs()));
   }
@@ -2673,8 +2659,7 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
       // Get the needed alignments to check them if
       // ldp-aligned-only/stp-aligned-only features are opted.
       uint64_t MemAlignment = MemOp->getAlign().value();
-      uint64_t TypeAlignment =
-          Align(MemOp->getSize().getValue().getKnownMinValue()).value();
+      uint64_t TypeAlignment = Align(MemOp->getSize().getValue()).value();
 
       if (MemAlignment < 2 * TypeAlignment) {
         NumFailedAlignmentCheck++;
@@ -2835,18 +2820,11 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
     }
   // 3) Find loads and stores that can be merged into a single load or store
   //    pair instruction.
-  //    When compiling for SVE 128, also try to combine SVE fill/spill
-  //    instructions into LDP/STP.
   //      e.g.,
   //        ldr x0, [x2]
   //        ldr x1, [x2, #8]
   //        ; becomes
   //        ldp x0, x1, [x2]
-  //      e.g.,
-  //        ldr z0, [x2]
-  //        ldr z1, [x2, #1, mul vl]
-  //        ; becomes
-  //        ldp q0, q1, [x2]
 
   if (MBB.getParent()->getRegInfo().tracksLiveness()) {
     DefinedInBB.clear();
