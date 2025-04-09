@@ -90,15 +90,15 @@ public:
 
   // Accessors to the attributes.
   GOFF::SDAttr getSDAttributes() const {
-    assert(SymbolType == GOFF::ESD_ST_SectionDefinition && "Not PR symbol");
+    assert(isSD() && "Not a SD section");
     return SDAttributes;
   }
   GOFF::EDAttr getEDAttributes() const {
-    assert(SymbolType == GOFF::ESD_ST_ElementDefinition && "Not PR symbol");
+    assert(isED() && "Not a ED section");
     return EDAttributes;
   }
   GOFF::PRAttr getPRAttributes() const {
-    assert(SymbolType == GOFF::ESD_ST_PartReference && "Not PR symbol");
+    assert(isPR() && "Not a PR section");
     return PRAttributes;
   }
 

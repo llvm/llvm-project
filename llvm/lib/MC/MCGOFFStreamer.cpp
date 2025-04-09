@@ -39,7 +39,8 @@ void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
 } // namespace
 
 void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
-  registerSectionHierarchy(getAssembler(), static_cast<MCSectionGOFF *>(Section));
+  registerSectionHierarchy(getAssembler(),
+                           static_cast<MCSectionGOFF *>(Section));
   MCObjectStreamer::changeSection(Section, Subsection);
 }
 

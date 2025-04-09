@@ -2786,7 +2786,8 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
     FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
-  MCSectionGOFF *RootSD = static_cast<MCSectionGOFF *>(TextSection)->getParent();
+  MCSectionGOFF *RootSD =
+      static_cast<MCSectionGOFF *>(TextSection)->getParent();
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
