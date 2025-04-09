@@ -310,11 +310,26 @@ define void @has_musttail_calls() {
   musttail call void @bar()
   ret void
 }
+
+define void @does_not_return() noreturn {
+; INSTRUMENT-LABEL: define void @does_not_return(
+; INSTRUMENT-SAME: ) #[[ATTR0:[0-9]+]] {
+; INSTRUMENT-NEXT:    call void @llvm.instrprof.increment(ptr @does_not_return, i64 742261418966908927, i32 1, i32 0)
+; INSTRUMENT-NEXT:    unreachable
+;
+; LOWERING-LABEL: define void @does_not_return(
+; LOWERING-SAME: ) #[[ATTR0:[0-9]+]] !guid [[META8:![0-9]+]] {
+; LOWERING-NEXT:    unreachable
+;
+  unreachable
+}
 ;.
-; LOWERING: attributes #[[ATTR0:[0-9]+]] = { nounwind }
-; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; LOWERING: attributes #[[ATTR0]] = { noreturn }
+; LOWERING: attributes #[[ATTR1:[0-9]+]] = { nounwind }
+; LOWERING: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
-; INSTRUMENT: attributes #[[ATTR0:[0-9]+]] = { nounwind }
+; INSTRUMENT: attributes #[[ATTR0]] = { noreturn }
+; INSTRUMENT: attributes #[[ATTR1:[0-9]+]] = { nounwind }
 ;.
 ; LOWERING: [[META0]] = !{i64 6699318081062747564}
 ; LOWERING: [[META1]] = !{i64 4909520559318251808}
@@ -324,4 +339,5 @@ define void @has_musttail_calls() {
 ; LOWERING: [[META5]] = !{i64 5458232184388660970}
 ; LOWERING: [[META6]] = !{i64 -3771893999295659109}
 ; LOWERING: [[META7]] = !{i64 -4680624981836544329}
+; LOWERING: [[META8]] = !{i64 5519225910966780583}
 ;.

@@ -18,12 +18,154 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
+
+/// Given an expression of pointer type, try to
+/// derive a more accurate bound on the alignment of the pointer.
+Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
+  // We allow this with ObjC object pointers because of fragile ABIs.
+  assert(expr->getType()->isPointerType() ||
+         expr->getType()->isObjCObjectPointerType());
+  expr = expr->IgnoreParens();
+
+  // Casts:
+  if (auto const *ce = dyn_cast<CastExpr>(expr)) {
+    if (auto const *ece = dyn_cast<ExplicitCastExpr>(ce)) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: explicit cast");
+      return Address::invalid();
+    }
+
+    switch (ce->getCastKind()) {
+    // Non-converting casts (but not C's implicit conversion from void*).
+    case CK_BitCast:
+    case CK_NoOp:
+    case CK_AddressSpaceConversion: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: noop cast");
+      return Address::invalid();
+    } break;
+
+    // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.
+    case CK_ArrayToPointerDecay: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: array-to-pointer decay");
+      return Address::invalid();
+    }
+
+    case CK_UncheckedDerivedToBase:
+    case CK_DerivedToBase: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: derived-to-base cast");
+      return Address::invalid();
+    }
+
+    case CK_AnyPointerToBlockPointerCast:
+    case CK_BaseToDerived:
+    case CK_BaseToDerivedMemberPointer:
+    case CK_BlockPointerToObjCPointerCast:
+    case CK_BuiltinFnToFnPtr:
+    case CK_CPointerToObjCPointerCast:
+    case CK_DerivedToBaseMemberPointer:
+    case CK_Dynamic:
+    case CK_FunctionToPointerDecay:
+    case CK_IntegralToPointer:
+    case CK_LValueToRValue:
+    case CK_LValueToRValueBitCast:
+    case CK_NullToMemberPointer:
+    case CK_NullToPointer:
+    case CK_ReinterpretMemberPointer:
+      // Common pointer conversions, nothing to do here.
+      // TODO: Is there any reason to treat base-to-derived conversions
+      // specially?
+      break;
+
+    case CK_ARCConsumeObject:
+    case CK_ARCExtendBlockObject:
+    case CK_ARCProduceObject:
+    case CK_ARCReclaimReturnedObject:
+    case CK_AtomicToNonAtomic:
+    case CK_BooleanToSignedIntegral:
+    case CK_ConstructorConversion:
+    case CK_CopyAndAutoreleaseBlockObject:
+    case CK_Dependent:
+    case CK_FixedPointCast:
+    case CK_FixedPointToBoolean:
+    case CK_FixedPointToFloating:
+    case CK_FixedPointToIntegral:
+    case CK_FloatingCast:
+    case CK_FloatingComplexCast:
+    case CK_FloatingComplexToBoolean:
+    case CK_FloatingComplexToIntegralComplex:
+    case CK_FloatingComplexToReal:
+    case CK_FloatingRealToComplex:
+    case CK_FloatingToBoolean:
+    case CK_FloatingToFixedPoint:
+    case CK_FloatingToIntegral:
+    case CK_HLSLAggregateSplatCast:
+    case CK_HLSLArrayRValue:
+    case CK_HLSLElementwiseCast:
+    case CK_HLSLVectorTruncation:
+    case CK_IntToOCLSampler:
+    case CK_IntegralCast:
+    case CK_IntegralComplexCast:
+    case CK_IntegralComplexToBoolean:
+    case CK_IntegralComplexToFloatingComplex:
+    case CK_IntegralComplexToReal:
+    case CK_IntegralRealToComplex:
+    case CK_IntegralToBoolean:
+    case CK_IntegralToFixedPoint:
+    case CK_IntegralToFloating:
+    case CK_LValueBitCast:
+    case CK_MatrixCast:
+    case CK_MemberPointerToBoolean:
+    case CK_NonAtomicToAtomic:
+    case CK_ObjCObjectLValueCast:
+    case CK_PointerToBoolean:
+    case CK_PointerToIntegral:
+    case CK_ToUnion:
+    case CK_ToVoid:
+    case CK_UserDefinedConversion:
+    case CK_VectorSplat:
+    case CK_ZeroToOCLOpaqueType:
+      llvm_unreachable("unexpected cast for emitPointerWithAlignment");
+    }
+  }
+
+  // Unary &
+  if (const UnaryOperator *uo = dyn_cast<UnaryOperator>(expr)) {
+    // TODO(cir): maybe we should use cir.unary for pointers here instead.
+    if (uo->getOpcode() == UO_AddrOf) {
+      cgm.errorNYI(expr->getSourceRange(), "emitPointerWithAlignment: unary &");
+      return Address::invalid();
+    }
+  }
+
+  // std::addressof and variants.
+  if (auto const *call = dyn_cast<CallExpr>(expr)) {
+    switch (call->getBuiltinCallee()) {
+    default:
+      break;
+    case Builtin::BIaddressof:
+    case Builtin::BI__addressof:
+    case Builtin::BI__builtin_addressof: {
+      cgm.errorNYI(expr->getSourceRange(),
+                   "emitPointerWithAlignment: builtin addressof");
+      return Address::invalid();
+    }
+    }
+  }
+
+  // Otherwise, use the alignment of the type.
+  return makeNaturalAddressForPointer(
+      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits());
+}
 
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
                                             bool isInit) {
@@ -193,8 +335,25 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
 
   switch (op) {
   case UO_Deref: {
-    cgm.errorNYI(e->getSourceRange(), "UnaryOp dereference");
-    return LValue();
+    QualType t = e->getSubExpr()->getType()->getPointeeType();
+    assert(!t.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
+
+    assert(!cir::MissingFeatures::lvalueBaseInfo());
+    assert(!cir::MissingFeatures::opTBAA());
+    Address addr = emitPointerWithAlignment(e->getSubExpr());
+
+    // Tag 'load' with deref attribute.
+    // FIXME: This misses some derefence cases and has problematic interactions
+    // with other operators.
+    if (auto loadOp =
+            dyn_cast<cir::LoadOp>(addr.getPointer().getDefiningOp())) {
+      loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    }
+
+    LValue lv = LValue::makeAddr(addr, t);
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::setNonGC());
+    return lv;
   }
   case UO_Real:
   case UO_Imag: {
@@ -314,6 +473,90 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
 
   // Just emit it as an l-value and drop the result.
   emitLValue(e);
+}
+
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
+                                                     const Stmt *thenS,
+                                                     const Stmt *elseS) {
+  mlir::Location thenLoc = getLoc(thenS->getSourceRange());
+  std::optional<mlir::Location> elseLoc;
+  if (elseS)
+    elseLoc = getLoc(elseS->getSourceRange());
+
+  mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+  emitIfOnBoolExpr(
+      cond, /*thenBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        LexicalScope lexScope{*this, thenLoc, builder.getInsertionBlock()};
+        resThen = emitStmt(thenS, /*useCurrentScope=*/true);
+      },
+      thenLoc,
+      /*elseBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        assert(elseLoc && "Invalid location for elseS.");
+        LexicalScope lexScope{*this, *elseLoc, builder.getInsertionBlock()};
+        resElse = emitStmt(elseS, /*useCurrentScope=*/true);
+      },
+      elseLoc);
+
+  return mlir::LogicalResult::success(resThen.succeeded() &&
+                                      resElse.succeeded());
+}
+
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
+    const clang::Expr *cond, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
+  // Attempt to be as accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
+  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
+  if (elseLoc)
+    ifLocs.push_back(*elseLoc);
+  mlir::Location loc = mlir::FusedLoc::get(&getMLIRContext(), ifLocs);
+
+  // Emit the code with the fully general case.
+  mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return builder.create<cir::IfOp>(loc, condV, elseLoc.has_value(),
+                                   /*thenBuilder=*/thenBuilder,
+                                   /*elseBuilder=*/elseBuilder);
+}
+
+/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
+mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
+                                             const Expr *cond) {
+  assert(!cir::MissingFeatures::pgoUse());
+  assert(!cir::MissingFeatures::generateDebugInfo());
+  cond = cond->IgnoreParens();
+
+  // In LLVM the condition is reversed here for efficient codegen.
+  // This should be done in CIR prior to LLVM lowering, if we do now
+  // we can make CIR based diagnostics misleading.
+  //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
+  assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
+
+  if (isa<ConditionalOperator>(cond)) {
+    cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
+    assert(!cir::MissingFeatures::ternaryOp());
+    return createDummyValue(loc, cond->getType());
+  }
+
+  if (isa<CXXThrowExpr>(cond)) {
+    cgm.errorNYI("NYI");
+    return createDummyValue(loc, cond->getType());
+  }
+
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
+  assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
+
+  // Emit the code with the fully general case.
+  return evaluateExprAsBool(cond);
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
