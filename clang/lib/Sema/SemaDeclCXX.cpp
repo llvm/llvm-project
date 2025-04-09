@@ -7326,11 +7326,10 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   llvm::SmallDenseMap<OverloadedOperatorKind,
                       llvm::SmallVector<const FunctionDecl *, 2>, 4>
-      TypeAwareDecls;
-  TypeAwareDecls.insert({OO_New, {}});
-  TypeAwareDecls.insert({OO_Array_New, {}});
-  TypeAwareDecls.insert({OO_Delete, {}});
-  TypeAwareDecls.insert({OO_Array_New, {}});
+      TypeAwareDecls{{OO_New, {}},
+                     {OO_Array_New, {}},
+                     {OO_Delete, {}},
+                     {OO_Array_New, {}}};
   for (auto *D : Record->decls()) {
     const FunctionDecl *FnDecl = D->getAsFunction();
     if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
