@@ -57,7 +57,7 @@ void based_on_ostream(A &os) {
   os << char_value;
 }
 
-void based_on_ostream(std::basic_ostream<unsigned char> &os) {
+void other_ostream_template_parameters(std::basic_ostream<unsigned char> &os) {
   unsigned char unsigned_value = 9;
   os << unsigned_value;
 

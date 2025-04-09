@@ -65,9 +65,7 @@ class SystemZElimCompare : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZElimCompare() : MachineFunctionPass(ID) {
-    initializeSystemZElimComparePass(*PassRegistry::getPassRegistry());
-  }
+  SystemZElimCompare() : MachineFunctionPass(ID) {}
 
   bool processBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -227,6 +225,9 @@ bool SystemZElimCompare::convertToBRCT(
   // this is not necessary there.
   if (BRCT != SystemZ::BRCTH)
     MIB.addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);
+  // The debug instr tracking for the counter now used by BRCT needs to be
+  // updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
   return true;
 }
@@ -268,6 +269,9 @@ bool SystemZElimCompare::convertToLoadAndTrap(
       .add(MI.getOperand(1))
       .add(MI.getOperand(2))
       .add(MI.getOperand(3));
+  // The debug instr tracking for the load target now used by the load-and-trap
+  // needs to be updated.
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *Branch);
   MI.eraseFromParent();
   return true;
 }
@@ -288,6 +292,9 @@ bool SystemZElimCompare::convertToLoadAndTest(
   for (const auto &MO : MI.operands())
     MIB.add(MO);
   MIB.setMemRefs(MI.memoperands());
+  // The debug instr tracking for the load target now needs to be updated
+  // because the load has moved to a new instruction
+  MI.getParent()->getParent()->substituteDebugValuesForInst(MI, *MIB);
   MI.eraseFromParent();
 
   // Mark instruction as not raising an FP exception if applicable.  We already

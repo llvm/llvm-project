@@ -410,9 +410,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       ++ReachableCaseCount;
     }
 
-    BasicBlock *DefaultDest = SI->getDefaultDest();
-    if (ReachableCaseCount > 1 &&
-        !isa<UnreachableInst>(DefaultDest->getFirstNonPHIOrDbg())) {
+    if (ReachableCaseCount > 1 && !SI->defaultDestUnreachable()) {
+      BasicBlock *DefaultDest = SI->getDefaultDest();
       ConstantRange CR = LVI->getConstantRangeAtUse(I->getOperandUse(0),
                                                     /*UndefAllowed*/ false);
       // The default dest is unreachable if all cases are covered.
