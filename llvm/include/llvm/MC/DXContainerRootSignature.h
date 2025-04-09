@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <limits>
 
