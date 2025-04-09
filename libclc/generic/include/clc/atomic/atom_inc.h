@@ -17,9 +17,10 @@ _CLC_OVERLOAD _CLC_DECL unsigned int atom_inc(volatile global unsigned int *p);
 _CLC_OVERLOAD _CLC_DECL int atom_inc(volatile local int *p);
 _CLC_OVERLOAD _CLC_DECL unsigned int atom_inc(volatile local unsigned int *p);
 
-// cl_khr_int64_base_atomics
+#ifdef cl_khr_int64_base_atomics
 _CLC_OVERLOAD _CLC_DECL long atom_inc(volatile global long *p);
 _CLC_OVERLOAD _CLC_DECL unsigned long
 atom_inc(volatile global unsigned long *p);
 _CLC_OVERLOAD _CLC_DECL long atom_inc(volatile local long *p);
 _CLC_OVERLOAD _CLC_DECL unsigned long atom_inc(volatile local unsigned long *p);
+#endif // cl_khr_int64_base_atomics

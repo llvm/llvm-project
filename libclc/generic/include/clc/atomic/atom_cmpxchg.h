@@ -23,7 +23,7 @@ _CLC_OVERLOAD _CLC_DECL unsigned int
 atom_cmpxchg(volatile local unsigned int *p, unsigned int cmp,
              unsigned int val);
 
-// cl_khr_int64_base_atomics
+#ifdef cl_khr_int64_base_atomics
 _CLC_OVERLOAD _CLC_DECL long atom_cmpxchg(volatile global long *p, long cmp,
                                           long val);
 _CLC_OVERLOAD _CLC_DECL unsigned long
@@ -34,3 +34,4 @@ _CLC_OVERLOAD _CLC_DECL long atom_cmpxchg(volatile local long *p, long cmp,
 _CLC_OVERLOAD _CLC_DECL unsigned long
 atom_cmpxchg(volatile local unsigned long *p, unsigned long cmp,
              unsigned long val);
+#endif // cl_khr_int64_base_atomics

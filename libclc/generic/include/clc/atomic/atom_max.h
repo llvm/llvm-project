@@ -16,7 +16,7 @@
 #define __CLC_ADDRESS_SPACE local
 #include <clc/atomic/atom_decl_int32.inc>
 
-// cl_khr_int64_extended_atomics
+#ifdef cl_khr_int64_base_atomics
 #define __CLC_FUNCTION atom_max
 #include <clc/atomic/atom_decl_int64.inc>
-#undef __CLC_FUNCTION
+#endif // cl_khr_int64_base_atomics
