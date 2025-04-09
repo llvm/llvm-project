@@ -53,8 +53,8 @@ def OneToOneIntrinsicOpInterface : OpInterface<"OneToOneIntrinsicOp"> {
       /*desc=*/[{
         Returns operands for a corresponding LLVM intrinsic.
 
-        Additional operations may be created to faciliate mapping
-        between the operation and the target intrinsic.
+        Additional operations may be created to facilitate mapping
+        between the source operands and the target intrinsic.
       }],
       /*retType=*/"SmallVector<Value>",
       /*methodName=*/"getIntrinsicOperands",
