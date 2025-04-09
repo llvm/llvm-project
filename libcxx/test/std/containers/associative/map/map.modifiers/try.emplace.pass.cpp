@@ -13,11 +13,11 @@
 // class map
 
 // template <class... Args>
-//  pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17
+//  pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);          // C++17 // constexpr since C++26
 // template <class... Args>
-//  pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17
+//  pair<iterator, bool> try_emplace(key_type&& k, Args&&... args);               // C++17 // constexpr since C++26
 // template <class... Args>
-//  iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17
+//  iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17 // constexpr since C++26
 // template <class... Args>
 //  iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17 // constexpr since C++26
 
@@ -181,7 +181,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 return true;
 }
 
-int main(int, char**) {
+int nmain(int, char**) {
 assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
