@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTVISITORS_H
-#define MLIR_DIALECT_SMT_SMTVISITORS_H
+#ifndef MLIR_DIALECT_SMT_IR_SMTVISITORS_H
+#define MLIR_DIALECT_SMT_IR_SMTVISITORS_H
 
 #include "mlir/Dialect/SMT/IR/SMTOps.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -198,4 +198,4 @@ public:
 } // namespace smt
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SMT_SMTVISITORS_H
+#endif // MLIR_DIALECT_SMT_IR_SMTVISITORS_H

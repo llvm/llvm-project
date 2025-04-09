@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTDIALECT_TD
-#define MLIR_DIALECT_SMT_SMTDIALECT_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTDIALECT_TD
+#define MLIR_DIALECT_SMT_IR_SMTDIALECT_TD
 
 include "mlir/IR/DialectBase.td"
 
@@ -27,4 +27,4 @@ def SMTDialect : Dialect {
   }];
 }
 
-#endif // MLIR_DIALECT_SMT_SMTDIALECT_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTDIALECT_TD

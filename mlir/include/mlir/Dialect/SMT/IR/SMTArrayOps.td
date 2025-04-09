@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTARRAYOPS_TD
-#define MLIR_DIALECT_SMT_SMTARRAYOPS_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTARRAYOPS_TD
+#define MLIR_DIALECT_SMT_IR_SMTARRAYOPS_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/Dialect/SMT/IR/SMTAttributes.td"
@@ -96,4 +96,4 @@ def ArrayBroadcastOp : SMTArrayOp<"broadcast", [
   let assemblyFormat = "$value attr-dict `:` qualified(type($result))";
 }
 
-#endif // MLIR_DIALECT_SMT_SMTARRAYOPS_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTARRAYOPS_TD

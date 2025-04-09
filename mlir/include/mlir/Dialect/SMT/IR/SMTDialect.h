@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTDIALECT_H
-#define MLIR_DIALECT_SMT_SMTDIALECT_H
+#ifndef MLIR_DIALECT_SMT_IR_SMTDIALECT_H
+#define MLIR_DIALECT_SMT_IR_SMTDIALECT_H
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dialect.h"
@@ -17,4 +17,4 @@
 #include "mlir/Dialect/SMT/IR/SMTDialect.h.inc"
 #include "mlir/Dialect/SMT/IR/SMTEnums.h.inc"
 
-#endif // MLIR_DIALECT_SMT_SMTDIALECT_H
+#endif // MLIR_DIALECT_SMT_IR_SMTDIALECT_H

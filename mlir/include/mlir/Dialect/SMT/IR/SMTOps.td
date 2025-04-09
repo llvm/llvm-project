@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTOPS_TD
-#define MLIR_DIALECT_SMT_SMTOPS_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTOPS_TD
+#define MLIR_DIALECT_SMT_IR_SMTOPS_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/Dialect/SMT/IR/SMTAttributes.td"
@@ -472,4 +472,4 @@ class QuantifierOp<string mnemonic> : SMTOp<mnemonic, [
 def ForallOp : QuantifierOp<"forall"> { let summary = "forall quantifier"; }
 def ExistsOp : QuantifierOp<"exists"> { let summary = "exists quantifier"; }
 
-#endif // MLIR_DIALECT_SMT_SMTOPS_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTOPS_TD

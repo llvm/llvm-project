@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTBITVECTOROPS_TD
-#define MLIR_DIALECT_SMT_SMTBITVECTOROPS_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTBITVECTOROPS_TD
+#define MLIR_DIALECT_SMT_IR_SMTBITVECTOROPS_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/Dialect/SMT/IR/SMTAttributes.td"
@@ -252,4 +252,4 @@ def BV2IntOp : SMTOp<"bv2int", [Pure]> {
     qualified(type($input))}];
 }
 
-#endif // MLIR_DIALECT_SMT_SMTBITVECTOROPS_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTBITVECTOROPS_TD

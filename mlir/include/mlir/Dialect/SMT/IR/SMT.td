@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMT_TD
-#define MLIR_DIALECT_SMT_SMT_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMT_TD
+#define MLIR_DIALECT_SMT_IR_SMT_TD
 
 include "mlir/IR/OpBase.td"
 
@@ -19,4 +19,4 @@ include "mlir/Dialect/SMT/IR/SMTArrayOps.td"
 include "mlir/Dialect/SMT/IR/SMTBitVectorOps.td"
 include "mlir/Dialect/SMT/IR/SMTIntOps.td"
 
-#endif // MLIR_DIALECT_SMT_SMT_TD
+#endif // MLIR_DIALECT_SMT_IR_SMT_TD

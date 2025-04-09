@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_SMT_IR_SMTOPS_H
-#define MLIR_DIALECT_SMT_SMTOPS_H
+#define MLIR_DIALECT_SMT_IR_SMTOPS_H
 
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/SymbolTable.h"
@@ -22,4 +22,4 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/SMT/IR/SMT.h.inc"
 
-#endif // MLIR_DIALECT_SMT_SMTOPS_H
+#endif // MLIR_DIALECT_SMT_IR_SMTOPS_H

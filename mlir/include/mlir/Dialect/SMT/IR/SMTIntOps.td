@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTINTOPS_TD
-#define MLIR_DIALECT_SMT_SMTINTOPS_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTINTOPS_TD
+#define MLIR_DIALECT_SMT_IR_SMTINTOPS_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/Dialect/SMT/IR/SMTAttributes.td"
@@ -134,4 +134,4 @@ def Int2BVOp : SMTOp<"int2bv", [Pure]> {
   let assemblyFormat = "$input attr-dict `:` qualified(type($result))";
 }
 
-#endif // MLIR_DIALECT_SMT_SMTINTOPS_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTINTOPS_TD

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTATTRIBUTES_TD
-#define MLIR_DIALECT_SMT_SMTATTRIBUTES_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_TD
+#define MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/IR/EnumAttr.td"
@@ -71,4 +71,4 @@ def BitVectorAttr : AttrDef<SMTDialect, "BitVector", [
   }];
 }
 
-#endif // MLIR_DIALECT_SMT_SMTATTRIBUTES_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_TD

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTTYPES_TD
-#define MLIR_DIALECT_SMT_SMTTYPES_TD
+#ifndef MLIR_DIALECT_SMT_IR_SMTTYPES_TD
+#define MLIR_DIALECT_SMT_IR_SMTTYPES_TD
 
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -142,4 +142,4 @@ def AnyNonFuncSMTType : Type<CPred<"smt::isAnyNonFuncSMTValueType($_self)">,
                              "any non-function SMT value type">;
 def AnyNonSMTType : Type<Neg<AnySMTType.predicate>, "any non-smt type">;
 
-#endif // MLIR_DIALECT_SMT_SMTTYPES_TD
+#endif // MLIR_DIALECT_SMT_IR_SMTTYPES_TD

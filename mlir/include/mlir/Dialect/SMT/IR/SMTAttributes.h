@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTATTRIBUTES_H
-#define MLIR_DIALECT_SMT_SMTATTRIBUTES_H
+#ifndef MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_H
+#define MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_H
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
@@ -26,4 +26,4 @@ struct BitVectorAttrStorage;
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SMT/IR/SMTAttributes.h.inc"
 
-#endif // MLIR_DIALECT_SMT_SMTATTRIBUTES_H
+#endif // MLIR_DIALECT_SMT_IR_SMTATTRIBUTES_H

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SMT_SMTTYPES_H
-#define MLIR_DIALECT_SMT_SMTTYPES_H
+#ifndef MLIR_DIALECT_SMT_IR_SMTTYPES_H
+#define MLIR_DIALECT_SMT_IR_SMTTYPES_H
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
@@ -27,4 +27,4 @@ bool isAnyNonFuncSMTValueType(mlir::Type type);
 } // namespace smt
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SMT_SMTTYPES_H
+#endif // MLIR_DIALECT_SMT_IR_SMTTYPES_H
