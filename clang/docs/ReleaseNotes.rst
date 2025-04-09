@@ -537,9 +537,6 @@ Python Binding Changes
 
 OpenMP Support
 --------------
-- Added support for 'omp assume' directive.
-- Added support for 'omp scope' directive.
-- Added support for allocator-modifier in 'allocate' clause.
 - Added support for 'omp dispatch' directive.
 - Added support 'no_openmp_constructs' assumption clause.
 - Added support for 'self_maps' in map and requirement clause.

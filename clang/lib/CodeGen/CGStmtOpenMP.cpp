@@ -4528,7 +4528,7 @@ void CodeGenFunction::EmitOMPMasterDirective(const OMPMasterDirective &S) {
   emitMaster(*this, S);
 }
 
-static Expr *getInitialExprFromCapturedExpr(Expr *Cond) {
+static Expr *getCapturedExprFromImplicitCastExpr(Expr *Cond) {
 
   Expr *SubExpr = Cond->IgnoreParenImpCasts();
 
@@ -4623,12 +4623,14 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
       if (const OMPNovariantsClause *NoVariantsC =
               OMPExecutableDirective::getSingleClause<OMPNovariantsClause>(
                   Clauses)) {
-        Condition = getInitialExprFromCapturedExpr(NoVariantsC->getCondition());
+        Condition =
+            getCapturedExprFromImplicitCastExpr(NoVariantsC->getCondition());
       } else {
         const OMPNocontextClause *NoContextC =
             OMPExecutableDirective::getSingleClause<OMPNocontextClause>(
                 Clauses);
-        Condition = getInitialExprFromCapturedExpr(NoContextC->getCondition());
+        Condition =
+            getCapturedExprFromImplicitCastExpr(NoContextC->getCondition());
       }
       /* OMPC_novariants or OMPC_nocontext present */
       EmitIfElse(this, Condition, AssociatedStmt);
