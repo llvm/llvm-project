@@ -27,6 +27,12 @@ class OpenACCClauseCIREmitter final
     : public OpenACCClauseVisitor<OpenACCClauseCIREmitter> {
   CIRGenModule &cgm;
 
+  struct AttributeData {
+    // Value of the 'default' attribute, added on 'data' and 'compute'/etc
+    // constructs as a 'default-attr'.
+    std::optional<ClauseDefaultValue> defaultVal = std::nullopt;
+  } attrData;
+
   void clauseNotImplemented(const OpenACCClause &c) {
     cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
   }
@@ -34,34 +40,55 @@ class OpenACCClauseCIREmitter final
 public:
   OpenACCClauseCIREmitter(CIRGenModule &cgm) : cgm(cgm) {}
 
-#define VISIT_CLAUSE(CN)                                                       \
-  void Visit##CN##Clause(const OpenACC##CN##Clause &clause) {                  \
-    clauseNotImplemented(clause);                                              \
+  void VisitClause(const OpenACCClause &clause) {
+    clauseNotImplemented(clause);
   }
-#include "clang/Basic/OpenACCClauses.def"
+
+  void VisitDefaultClause(const OpenACCDefaultClause &clause) {
+    switch (clause.getDefaultClauseKind()) {
+    case OpenACCDefaultClauseKind::None:
+      attrData.defaultVal = ClauseDefaultValue::None;
+      break;
+    case OpenACCDefaultClauseKind::Present:
+      attrData.defaultVal = ClauseDefaultValue::Present;
+      break;
+    case OpenACCDefaultClauseKind::Invalid:
+      break;
+    }
+  }
+
+  // Apply any of the clauses that resulted in an 'attribute'.
+  template <typename Op> void applyAttributes(Op &op) {
+    if (attrData.defaultVal.has_value())
+      op.setDefaultAttr(*attrData.defaultVal);
+  }
 };
 } // namespace
 
 template <typename Op, typename TermOp>
-mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(
+mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
     mlir::Location start, mlir::Location end,
-    llvm::ArrayRef<const OpenACCClause *> clauses,
-    const Stmt *structuredBlock) {
+    llvm::ArrayRef<const OpenACCClause *> clauses, const Stmt *associatedStmt) {
   mlir::LogicalResult res = mlir::success();
-
-  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule());
-  clauseEmitter.VisitClauseList(clauses);
 
   llvm::SmallVector<mlir::Type> retTy;
   llvm::SmallVector<mlir::Value> operands;
+
+  // Clause-emitter must be here because it might modify operands.
+  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule());
+  clauseEmitter.VisitClauseList(clauses);
+
   auto op = builder.create<Op>(start, retTy, operands);
+
+  // Apply the attributes derived from the clauses.
+  clauseEmitter.applyAttributes(op);
 
   mlir::Block &block = op.getRegion().emplaceBlock();
   mlir::OpBuilder::InsertionGuard guardCase(builder);
   builder.setInsertionPointToEnd(&block);
 
   LexicalScope ls{*this, start, builder.getInsertionBlock()};
-  res = emitStmt(structuredBlock, /*useCurrentScope=*/true);
+  res = emitStmt(associatedStmt, /*useCurrentScope=*/true);
 
   builder.create<TermOp>(end);
   return res;
@@ -74,17 +101,26 @@ CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
 
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::Parallel:
-    return emitOpenACCComputeOp<ParallelOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpAssociatedStmt<ParallelOp, mlir::acc::YieldOp>(
         start, end, s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Serial:
-    return emitOpenACCComputeOp<SerialOp, mlir::acc::YieldOp>(
+    return emitOpenACCOpAssociatedStmt<SerialOp, mlir::acc::YieldOp>(
         start, end, s.clauses(), s.getStructuredBlock());
   case OpenACCDirectiveKind::Kernels:
-    return emitOpenACCComputeOp<KernelsOp, mlir::acc::TerminatorOp>(
+    return emitOpenACCOpAssociatedStmt<KernelsOp, mlir::acc::TerminatorOp>(
         start, end, s.clauses(), s.getStructuredBlock());
   default:
     llvm_unreachable("invalid compute construct kind");
   }
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
+      start, end, s.clauses(), s.getStructuredBlock());
 }
 
 mlir::LogicalResult
@@ -95,11 +131,6 @@ CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
 mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Data Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
