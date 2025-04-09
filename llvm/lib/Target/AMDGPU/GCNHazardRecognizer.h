@@ -69,6 +69,7 @@ private:
   // Advance over a MachineInstr bundle. Look for hazards in the bundled
   // instructions.
   void processBundle();
+  void reverseProcessBundle();
 
   // Run on an individual instruction in hazard recognizer mode. This can be
   // used on a newly inserted instruction before returning from PreEmitNoops.
