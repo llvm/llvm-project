@@ -1911,6 +1911,7 @@ the configuration (without a prefix: ``Auto``).
   statement.
 
   They can be read as a whole for compatibility. The choices are:
+
   * ``None``
     Never merge functions into a single line.
 
