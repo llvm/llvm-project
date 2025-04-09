@@ -277,21 +277,18 @@ public:
   /// reg_begin/reg_end - Provide iteration support to walk over all definitions
   /// and uses of a register within the MachineFunction that corresponds to this
   /// MachineRegisterInfo object.
-  template<bool Uses, bool Defs, bool SkipDebug,
-           bool ByOperand, bool ByInstr, bool ByBundle>
+  template <bool Uses, bool Defs, bool SkipDebug, bool ByOperand, bool ByInstr>
   class defusechain_iterator;
   template <bool Uses, bool Defs, bool SkipDebug, bool ByInstr>
   class defusechain_instr_iterator;
 
   // Make it a friend so it can access getNextOperandForReg().
-  template<bool, bool, bool, bool, bool, bool>
-    friend class defusechain_iterator;
+  template <bool, bool, bool, bool, bool> friend class defusechain_iterator;
   template <bool, bool, bool, bool> friend class defusechain_instr_iterator;
 
   /// reg_iterator/reg_begin/reg_end - Walk all defs and uses of the specified
   /// register.
-  using reg_iterator =
-      defusechain_iterator<true, true, false, true, false, false>;
+  using reg_iterator = defusechain_iterator<true, true, false, true, false>;
   reg_iterator reg_begin(Register RegNo) const {
     return reg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -339,7 +336,7 @@ public:
   /// reg_nodbg_iterator/reg_nodbg_begin/reg_nodbg_end - Walk all defs and uses
   /// of the specified register, skipping those marked as Debug.
   using reg_nodbg_iterator =
-      defusechain_iterator<true, true, true, true, false, false>;
+      defusechain_iterator<true, true, true, true, false>;
   reg_nodbg_iterator reg_nodbg_begin(Register RegNo) const {
     return reg_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -393,8 +390,7 @@ public:
   }
 
   /// def_iterator/def_begin/def_end - Walk all defs of the specified register.
-  using def_iterator =
-      defusechain_iterator<false, true, false, true, false, false>;
+  using def_iterator = defusechain_iterator<false, true, false, true, false>;
   def_iterator def_begin(Register RegNo) const {
     return def_iterator(getRegUseDefListHead(RegNo));
   }
@@ -473,8 +469,7 @@ public:
   }
 
   /// use_iterator/use_begin/use_end - Walk all uses of the specified register.
-  using use_iterator =
-      defusechain_iterator<true, false, false, true, false, false>;
+  using use_iterator = defusechain_iterator<true, false, false, true, false>;
   use_iterator use_begin(Register RegNo) const {
     return use_iterator(getRegUseDefListHead(RegNo));
   }
@@ -528,7 +523,7 @@ public:
   /// use_nodbg_iterator/use_nodbg_begin/use_nodbg_end - Walk all uses of the
   /// specified register, skipping those marked as Debug.
   using use_nodbg_iterator =
-      defusechain_iterator<true, false, true, true, false, false>;
+      defusechain_iterator<true, false, true, true, false>;
   use_nodbg_iterator use_nodbg_begin(Register RegNo) const {
     return use_nodbg_iterator(getRegUseDefListHead(RegNo));
   }
@@ -1045,9 +1040,11 @@ public:
   /// returns end().  If SkipDebug is true it skips uses marked Debug
   /// when incrementing.
   template <bool ReturnUses, bool ReturnDefs, bool SkipDebug, bool ByOperand,
-            bool ByInstr, bool ByBundle>
+            bool ByInstr>
   class defusechain_iterator {
     friend class MachineRegisterInfo;
+    static_assert(!ByOperand || !ByInstr,
+                  "ByOperand and ByInstr are mutually exclusive");
 
   public:
     using iterator_category = std::forward_iterator_tag;
@@ -1110,7 +1107,7 @@ public:
         do {
           advance();
         } while (Op && Op->getParent() == P);
-      } else if (ByBundle) {
+      } else {
         MachineBasicBlock::instr_iterator P =
             getBundleStart(Op->getParent()->getIterator());
         do {
