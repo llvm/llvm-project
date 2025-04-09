@@ -26,7 +26,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Dialect/OpenACC/OpenACCToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -1493,7 +1492,6 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
   mlir::registerCIRDialectTranslation(*mlirCtx);
-  mlir::registerOpenACCDialectTranslation(*mlirCtx);
 
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
 
