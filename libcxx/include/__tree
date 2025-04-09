@@ -173,7 +173,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_max(_
 
 // Returns:  pointer to the next in-order node after __x.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI _NodePtr __tree_next(_NodePtr __x) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _NodePtr __tree_next(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   if (__x->__right_ != nullptr)
     return std::__tree_min(__x->__right_);
@@ -183,7 +183,7 @@ _LIBCPP_HIDE_FROM_ABI _NodePtr __tree_next(_NodePtr __x) _NOEXCEPT {
 }
 
 template <class _EndNodePtr, class _NodePtr>
-inline _LIBCPP_HIDE_FROM_ABI _EndNodePtr _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_next_iter(_NodePtr __x) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _EndNodePtr __tree_next_iter(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   if (__x->__right_ != nullptr)
     return static_cast<_EndNodePtr>(std::__tree_min(__x->__right_));
