@@ -12078,6 +12078,7 @@ NamespaceDecl *Sema::getOrCreateStdNamespace() {
 /// \returns true if any issues were found.
 static bool CheckStdInitializerList(Sema &S, const ClassTemplateDecl *Template,
                                     bool Diagnose) {
+  assert(Template && "Template can't be null");
   const TemplateParameterList *Params = Template->getTemplateParameters();
   int ErrorKind = -1;
 
