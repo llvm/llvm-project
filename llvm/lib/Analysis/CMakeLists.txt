@@ -52,6 +52,7 @@ add_llvm_component_library(LLVMAnalysis
   DDGPrinter.cpp
   ConstraintSystem.cpp
   Delinearization.cpp
+  DebugInfoCache.cpp
   DemandedBits.cpp
   DependenceAnalysis.cpp
   DependenceGraphBuilder.cpp
