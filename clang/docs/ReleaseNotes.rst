@@ -364,6 +364,10 @@ Bug Fixes in This Version
     #if 1 ? 1 : 999999999999999999999
     #endif
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
