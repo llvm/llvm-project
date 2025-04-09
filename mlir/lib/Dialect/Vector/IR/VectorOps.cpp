@@ -5776,10 +5776,12 @@ public:
   }
 };
 
-/// Pattern to rewrite a ShapeCast(Broadcast) -> Broadcast.
-/// This only applies when the shape of the broadcast source
-/// 1. can be broadcast directly to the final shape, or
-/// 2. has the same element count as the shape cast result.
+/// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as either
+///
+/// 1) Y = ShapeCast(X), or
+/// 2) Y = Broadcast(X)
+///
+/// If both (1) and (2) are possible, (1) is chosen.
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
@@ -5791,22 +5793,17 @@ public:
     if (!broadcastOp)
       return failure();
 
-    {
-      VectorType dstType = shapeCastOp.getResultVectorType();
-      auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-      bool isScalar = !srcType;
-      if (isScalar || isBroadcastableTo(srcType, dstType) ==
-                          BroadcastableToResult::Success) {
-        rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-            shapeCastOp, dstType, broadcastOp.getSource());
-        return success();
-      }
-    }
+    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
 
-    // If the final result has the same element count, we can replace with a
-    // shape cast.
-    if (auto srcType = dyn_cast<VectorType>(broadcastOp.getSourceType())) {
-      if (srcType.getNumElements() ==
+    // Replace Y = ShapeCast(Broadcast(X)) with Y = ShapeCast(X).
+    // Example:
+    // %0 = vector.broadcast %in : vector<3x4xf32> to vector<1x3x4xf32>
+    // %1 = vector.shape_cast %0 : vector<1x3x4xf32> to vector<12xf32>
+    // to
+    // %1 = vector.shape_cast %in : vector<3x4xf32> to vector<12xf32>
+    if (srcVectorType) {
+      if (srcVectorType.getNumElements() ==
           shapeCastOp.getResultVectorType().getNumElements()) {
         rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
             shapeCastOp, shapeCastOp.getResultVectorType(),
@@ -5815,6 +5812,19 @@ public:
       }
     }
 
+    // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
+    // Example
+    // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
+    // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+    // to
+    // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
+    VectorType dstVectorType = shapeCastOp.getResultVectorType();
+    if (srcIsScalar || isBroadcastableTo(srcVectorType, dstVectorType) ==
+                           BroadcastableToResult::Success) {
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          shapeCastOp, dstVectorType, broadcastOp.getSource());
+      return success();
+    }
     return failure();
   }
 };
