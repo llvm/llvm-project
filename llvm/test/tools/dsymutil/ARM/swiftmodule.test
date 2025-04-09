@@ -18,11 +18,11 @@
 ---
 triple:          'arm64-apple-darwin'
 objects:
-  - filename:        '/Inputs/Binary.swiftmodule'
+  - filename:        '../Inputs/Binary.swiftmodule'
     timestamp:       0
     type:            50
     symbols:         []
-  - filename:        '/Inputs/FromInterface.swiftmodule'
+  - filename:        '../Inputs/FromInterface.swiftmodule'
     timestamp:       0
     type:            50
     symbols:         []

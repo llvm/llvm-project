@@ -1100,7 +1100,10 @@ static Value *EmitAddTreeOfValues(Instruction *I,
 /// If V is an expression tree that is a multiplication sequence,
 /// and if this sequence contains a multiply by Factor,
 /// remove Factor from the tree and return the new tree.
-Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
+/// If new instructions are inserted to generate this tree, DL should be used
+/// as the DebugLoc for these instructions.
+Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor,
+                                                   DebugLoc DL) {
   BinaryOperator *BO = isReassociableOp(V, Instruction::Mul, Instruction::FMul);
   if (!BO)
     return nullptr;
@@ -1164,8 +1167,10 @@ Value *ReassociatePass::RemoveFactorFromExpression(Value *V, Value *Factor) {
     V = BO;
   }
 
-  if (NeedsNegate)
+  if (NeedsNegate) {
     V = CreateNeg(V, "neg", InsertPt, BO);
+    cast<Instruction>(V)->setDebugLoc(DL);
+  }
 
   return V;
 }
@@ -1666,7 +1671,8 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       if (!BOp)
         continue;
 
-      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal)) {
+      if (Value *V = RemoveFactorFromExpression(Ops[i].Op, MaxOccVal,
+                                                I->getDebugLoc())) {
         // The factorized operand may occur several times.  Convert them all in
         // one fell swoop.
         for (unsigned j = Ops.size(); j != i;) {
