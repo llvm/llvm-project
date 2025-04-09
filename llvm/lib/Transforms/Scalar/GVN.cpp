@@ -622,7 +622,7 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
 
 /// Returns the value number for the specified load or store instruction.
 uint32_t GVNPass::ValueTable::lookupOrAddLoadStore(Instruction *I) {
-  if (!MSSA) {
+  if (!MSSA || !IsMSSAEnabled) {
     ValueNumbering[I] = NextValueNumber;
     return NextValueNumber++;
   }

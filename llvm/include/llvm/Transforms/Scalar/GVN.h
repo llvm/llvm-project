@@ -185,7 +185,9 @@ public:
 
     AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
+    bool IsMDEnabled = false;
     MemorySSA *MSSA = nullptr;
+    bool IsMSSAEnabled = false;
     DominatorTree *DT = nullptr;
 
     uint32_t NextValueNumber = 1;
@@ -226,8 +228,14 @@ public:
     void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M) { MD = M; }
-    void setMemorySSA(MemorySSA *M) { MSSA = M; }
+    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
+      MD = M;
+      IsMDEnabled = MDEnabled;
+    }
+    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
+      MSSA = M;
+      IsMSSAEnabled = MSSAEnabled;
+    }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
     void verifyRemoved(const Value *) const;
