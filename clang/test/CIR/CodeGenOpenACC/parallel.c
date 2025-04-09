@@ -5,8 +5,20 @@ void acc_parallel(void) {
 #pragma acc parallel
   {}
   // CHECK-NEXT: acc.parallel {
-  // CHECK-NEXT:acc.yield
+  // CHECK-NEXT: acc.yield
   // CHECK-NEXT:}
+
+#pragma acc parallel default(none)
+  {}
+  // CHECK-NEXT: acc.parallel {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+#pragma acc parallel default(present)
+  {}
+  // CHECK-NEXT: acc.parallel {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
 
 #pragma acc parallel
   while(1){}
@@ -22,7 +34,7 @@ void acc_parallel(void) {
   // CHECK-NEXT: }
   // cir.scope end:
   // CHECK-NEXT: }
-  // CHECK-NEXT:acc.yield
+  // CHECK-NEXT: acc.yield
   // CHECK-NEXT:}
 
   // CHECK-NEXT: cir.return
