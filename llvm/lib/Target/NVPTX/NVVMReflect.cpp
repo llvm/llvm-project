@@ -85,8 +85,6 @@ public:
 } // namespace
 
 ModulePass *llvm::createNVVMReflectPass(const unsigned SmVersion) {
-  LLVM_DEBUG(dbgs() << "Creating NVVMReflectPass with SM version " << SmVersion
-                    << "\n");
   return new NVVMReflectLegacyPass(SmVersion);
 }
 
