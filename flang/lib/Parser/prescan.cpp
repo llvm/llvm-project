@@ -892,11 +892,24 @@ bool Prescanner::HandleExponent(TokenSequence &tokens) {
 }
 
 bool Prescanner::HandleKindSuffix(TokenSequence &tokens) {
-  if (*at_ == '_' && IsLegalInIdentifier(*SkipWhiteSpace(at_ + 1))) {
-    EmitCharAndAdvance(tokens, *at_);
-    if (IsLegalIdentifierStart(*at_)) {
-      // The kind specifier might be a macro, so put it into its own token.
+  if (*at_ == '_' && IsLegalInIdentifier(at_[1])) {
+    // The kind specifier might be a macro (with or without its leading
+    // underscore); put it into its own token if it has been defined.
+    const char *p{at_ + 1};
+    while (IsLegalInIdentifier(*++p)) {
+    }
+    if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+        preprocessor_.IsNameDefined(id)) {
+      // In 1.0e0_foo, "_foo" is a defined name; retain the
+      // underscore
       tokens.CloseToken();
+    } else {
+      EmitCharAndAdvance(tokens, '_');
+      if (CharBlock id{at_, static_cast<std::size_t>(p - at_)};
+          preprocessor_.IsNameDefined(id)) {
+        // In 1.0e0_foo, "foo" is a defined name
+        tokens.CloseToken();
+      }
     }
     while (IsLegalInIdentifier(*at_)) {
       EmitCharAndAdvance(tokens, *at_);
