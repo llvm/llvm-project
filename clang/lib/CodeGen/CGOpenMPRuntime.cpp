@@ -4983,9 +4983,6 @@ void CGOpenMPRuntime::emitPrivateReduction(
 
   for (unsigned I :
        llvm::seq<unsigned>(std::min(ReductionOps.size(), LHSExprs.size()))) {
-    if (I >= LHSExprs.size()) {
-      break;
-    }
 
     const auto *BinOp = dyn_cast<BinaryOperator>(ReductionOps[I]);
     if (!BinOp || BinOp->getOpcode() != BO_Assign)
