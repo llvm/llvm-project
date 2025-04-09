@@ -9,7 +9,6 @@
 #ifndef LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
 #define LLDB_TOOLS_LLDB_SERVER_LLDBSERVERPLUGIN_H
 
-#include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/lldb-types.h"
@@ -26,9 +25,6 @@ namespace process_gdb_remote {
   
 namespace lldb_server {
 
-
-class LLDBServerNativeProcess;
-
 class LLDBServerPlugin {
 protected:
   // Add a version field to allow the APIs to change over time.
@@ -41,13 +37,7 @@ protected:
   bool m_is_connected = false;
 
 public:
-  using CreateCallback = llvm::function_ref<LLDBServerPlugin *()>;
-  static void RegisterCreatePlugin(CreateCallback callback);
-  static size_t GetNumCreateCallbacks();
-  static CreateCallback GetCreateCallbackAtIndex(size_t i);
-  LLDBServerPlugin(GDBServer &native_process) : 
-      m_native_process(native_process) {}
-
+  LLDBServerPlugin(GDBServer &native_process);
   virtual ~LLDBServerPlugin();
 
   /// Check if we are already connected.

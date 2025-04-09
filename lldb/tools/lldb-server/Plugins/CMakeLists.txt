@@ -1,2 +1,1 @@
 add_subdirectory(MockGPU)
-add_subdirectory(PluginInterface)

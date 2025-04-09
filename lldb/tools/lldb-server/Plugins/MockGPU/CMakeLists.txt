@@ -6,5 +6,4 @@ add_lldb_library(lldbServerPluginMockGPU
   ThreadMockGPU.cpp
 )
 
-target_link_libraries(lldbServerPluginMockGPU lldbServerPluginInterface)
 target_include_directories(lldbServerPluginMockGPU PRIVATE "${LLDB_SOURCE_DIR}/source" "../..")

@@ -18,7 +18,6 @@
 #endif
 
 #include "LLDBServerUtilities.h"
-#include "Plugins/PluginInterface/LLDBServerNativeProcess.h"
 #include "Plugins/MockGPU/LLDBServerPluginMockGPU.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
@@ -457,22 +456,8 @@ int main_gdbserver(int argc, char *argv[]) {
   NativeProcessManager manager(mainloop);
   GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
 
-
-  LLDBServerPluginMockGPU mockGPUPlugin(gdb_server);
-
-  gdb_server.SetProcessStoppedCallback([&](
-      GDBRemoteCommunicationServerLLGS &gdb_server,
-      NativeProcessProtocol *native_process) -> std::string {
-    if (!mockGPUPlugin.IsConnected()) {
-      if (std::optional<std::string> opt_url = mockGPUPlugin.GetConnectionURL())
-        return opt_url.value();
-    } 
-    return "";
-  });
-
-  // MockGPUProcessManager manager(mainloop);
-  // GDBRemoteCommunicationServerLLGS gdb_server(mainloop, manager);
-
+  // Install the mock GPU plugin.
+  gdb_server.InstallPlugin(std::make_unique<LLDBServerPluginMockGPU>(gdb_server));
 
   llvm::StringRef host_and_port;
   if (!Inputs.empty() && connection_fd == SharedSocket::kInvalidFD) {

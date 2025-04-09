@@ -64,6 +64,7 @@ add_lldb_tool(lldb-server
       lldbPluginInstructionRISCV
       ${LLDB_SYSTEM_LIBS}
       lldbServerPluginInterface
+      lldbServerPluginMockGPU
 )
 
 set_target_properties(lldb-server PROPERTIES ENABLE_EXPORTS 1)
