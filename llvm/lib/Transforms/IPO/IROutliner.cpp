@@ -1942,10 +1942,6 @@ void replaceConstants(OutlinableRegion &Region) {
     Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
     // Identify the argument it will be elevated to, and replace instances of
     // that constant in the function.
-
-    // TODO: If in the future constants do not have one global value number,
-    // i.e. a constant 1 could be mapped to several values, this check will
-    // have to be more strict.  It cannot be using only replaceUsesWithIf.
     VMap[CST] = Arg;
     LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
