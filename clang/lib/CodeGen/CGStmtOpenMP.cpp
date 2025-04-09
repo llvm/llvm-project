@@ -4577,7 +4577,7 @@ static void transformCallInStmt(Stmt *StmtP) {
   }
 }
 
-static void EmitIfElse(CodeGenFunction *CGF, Expr *Condition,
+static void emitIfElse(CodeGenFunction *CGF, Expr *Condition,
                        Stmt *AssociatedStmt) {
   llvm::Value *CondValue = CGF->EvaluateExprAsBool(Condition);
   llvm::BasicBlock *ThenBlock = CGF->createBasicBlock("if.then");
@@ -4633,8 +4633,9 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
         Condition =
             getCapturedExprFromImplicitCastExpr(NoContextC->getCondition());
       }
+      OMPLexicalScope Scope(CGF, S, OMPD_unknown);
       /* OMPC_novariants or OMPC_nocontext present */
-      EmitIfElse(this, Condition, AssociatedStmt);
+      emitIfElse(this, Condition, AssociatedStmt);
     }
   } else
     EmitStmt(AssociatedStmt);
