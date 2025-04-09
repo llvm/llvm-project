@@ -40,6 +40,13 @@ static bool reportError(LLVMContext *Ctx, Twine Message,
   return true;
 }
 
+static bool reportValueError(LLVMContext *Ctx, Twine ParamName, uint32_t Value,
+                             DiagnosticSeverity Severity = DS_Error) {
+  Ctx->diagnose(DiagnosticInfoGeneric(
+      "Invalid value for " + ParamName + ": " + Twine(Value), Severity));
+  return true;
+}
+
 static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
                            MDNode *RootFlagNode) {
 
@@ -48,6 +55,45 @@ static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
   RSD.Header.Flags = Flag->getZExtValue();
+
+  return false;
+}
+
+static bool extractMdValue(uint32_t &Value, MDNode *Node, unsigned int OpId) {
+
+  auto *CI = mdconst::extract<ConstantInt>(Node->getOperand(OpId));
+  if (CI == nullptr)
+    return true;
+
+  Value = CI->getZExtValue();
+  return false;
+}
+
+static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *RootFlagNode) {
+
+  if (RootFlagNode->getNumOperands() != 5)
+    return reportError(Ctx, "Invalid format for RootConstants Element");
+
+  mcdxbc::RootParameter NewParameter;
+  NewParameter.Header.ParameterType = dxbc::RootParameterType::Constants32Bit;
+
+  uint32_t SV;
+  if (extractMdValue(SV, RootFlagNode, 1))
+    return reportError(Ctx, "Invalid value for ShaderVisibility");
+
+  NewParameter.Header.ShaderVisibility = (dxbc::ShaderVisibility)SV;
+
+  if (extractMdValue(NewParameter.Constants.ShaderRegister, RootFlagNode, 2))
+    return reportError(Ctx, "Invalid value for ShaderRegister");
+
+  if (extractMdValue(NewParameter.Constants.RegisterSpace, RootFlagNode, 3))
+    return reportError(Ctx, "Invalid value for RegisterSpace");
+
+  if (extractMdValue(NewParameter.Constants.Num32BitValues, RootFlagNode, 4))
+    return reportError(Ctx, "Invalid value for Num32BitValues");
+
+  RSD.Parameters.push_back(NewParameter);
 
   return false;
 }
@@ -62,12 +108,16 @@ static bool parseRootSignatureElement(LLVMContext *Ctx,
   RootSignatureElementKind ElementKind =
       StringSwitch<RootSignatureElementKind>(ElementText->getString())
           .Case("RootFlags", RootSignatureElementKind::RootFlags)
+          .Case("RootConstants", RootSignatureElementKind::RootConstants)
           .Default(RootSignatureElementKind::Error);
 
   switch (ElementKind) {
 
   case RootSignatureElementKind::RootFlags:
     return parseRootFlags(Ctx, RSD, Element);
+  case RootSignatureElementKind::RootConstants:
+    return parseRootConstants(Ctx, RSD, Element);
+    break;
   case RootSignatureElementKind::Error:
     return reportError(Ctx, "Invalid Root Signature Element: " +
                                 ElementText->getString());
@@ -94,10 +144,56 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 
 static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
-static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!verifyRootFlag(RSD.Header.Flags)) {
-    return reportError(Ctx, "Invalid Root Signature flag value");
+static bool verifyShaderVisibility(dxbc::ShaderVisibility Flags) {
+  switch (Flags) {
+
+  case dxbc::ShaderVisibility::All:
+  case dxbc::ShaderVisibility::Vertex:
+  case dxbc::ShaderVisibility::Hull:
+  case dxbc::ShaderVisibility::Domain:
+  case dxbc::ShaderVisibility::Geometry:
+  case dxbc::ShaderVisibility::Pixel:
+  case dxbc::ShaderVisibility::Amplification:
+  case dxbc::ShaderVisibility::Mesh:
+    return true;
   }
+
+  return false;
+}
+
+static bool verifyParameterType(dxbc::RootParameterType Flags) {
+  switch (Flags) {
+  case dxbc::RootParameterType::Constants32Bit:
+    return true;
+  }
+
+  return false;
+}
+
+static bool verifyVersion(uint32_t Version) {
+  return (Version == 1 || Version == 2);
+}
+
+static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
+
+  if (!verifyVersion(RSD.Header.Version)) {
+    return reportValueError(Ctx, "Version", RSD.Header.Version);
+  }
+
+  if (!verifyRootFlag(RSD.Header.Flags)) {
+    return reportValueError(Ctx, "RootFlags", RSD.Header.Flags);
+  }
+
+  for (const auto &P : RSD.Parameters) {
+    if (!verifyShaderVisibility(P.Header.ShaderVisibility))
+      return reportValueError(Ctx, "ShaderVisibility",
+                              (uint32_t)P.Header.ShaderVisibility);
+
+    if (!verifyParameterType(P.Header.ParameterType))
+      return reportValueError(Ctx, "ParameterType",
+                              (uint32_t)P.Header.ParameterType);
+  }
+
   return false;
 }
 
@@ -211,6 +307,28 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
     OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
     OS << indent(Space) << "StaticSamplersOffset: "
        << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
+
+    Space++;
+    for (auto const &P : RS.Parameters) {
+      OS << indent(Space) << "Parameter Type: " << &P.Header.ParameterType
+         << ":\n";
+      OS << indent(Space) << "Shader Visibility: " << &P.Header.ShaderVisibility
+         << ":\n";
+      OS << indent(Space) << "Parameter Offset: " << &P.Header.ParameterOffset
+         << ":\n";
+      switch (P.Header.ParameterType) {
+      case dxbc::RootParameterType::Constants32Bit:
+        OS << indent(Space) << "Register Space: " << &P.Constants.RegisterSpace
+           << ":\n";
+        OS << indent(Space)
+           << "Shader Register: " << &P.Constants.ShaderRegister << ":\n";
+        OS << indent(Space)
+           << "Num 32 Bit Values: " << &P.Constants.Num32BitValues << ":\n";
+        break;
+      }
+    }
+    Space--;
+
     Space--;
     // end root signature header
   }
