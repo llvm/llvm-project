@@ -20,10 +20,10 @@
 
 #ifdef cl_khr_int64_extended_atomics
 
-#define IMPL(AS, TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_xor(volatile AS TYPE *p, TYPE val) { \
-  return __sync_fetch_and_xor_8(p, val); \
-}
+#define IMPL(AS, TYPE)                                                         \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_xor(volatile AS TYPE *p, TYPE val) {        \
+    return __sync_fetch_and_xor_8(p, val);                                     \
+  }
 
 IMPL(global, long)
 IMPL(global, unsigned long)

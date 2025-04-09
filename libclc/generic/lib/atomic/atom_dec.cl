@@ -10,10 +10,10 @@
 #include <clc/atomic/atom_sub.h>
 #include <clc/atomic/atomic_dec.h>
 
-#define IMPL(AS, TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) { \
-  return atomic_dec(p); \
-}
+#define IMPL(AS, TYPE)                                                         \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) {                  \
+    return atomic_dec(p);                                                      \
+  }
 
 // cl_khr_global_int32_base_atomics
 IMPL(global, int)
@@ -25,10 +25,10 @@ IMPL(local, unsigned int)
 
 #ifdef cl_khr_int64_base_atomics
 
-#define IMPL(AS, TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) { \
-  return atom_sub(p, (TYPE)1); \
-}
+#define IMPL(AS, TYPE)                                                         \
+  _CLC_OVERLOAD _CLC_DEF TYPE atom_dec(volatile AS TYPE *p) {                  \
+    return atom_sub(p, (TYPE)1);                                               \
+  }
 
 IMPL(global, long)
 IMPL(global, unsigned long)
