@@ -6655,13 +6655,12 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
-      Value *RegSaveAreaPtrPtr =
-          IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
+      Value *RegSaveAreaPtrPtr = IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
       Value *RegSaveAreaSize = CopySize;
 
       // In PPC32 va_list_tag is a struct
-      RegSaveAreaPtrPtr = IRB.CreateAdd(RegSaveAreaPtrPtr,
-                                        ConstantInt::get(MS.IntptrTy, 8));
+      RegSaveAreaPtrPtr =
+          IRB.CreateAdd(RegSaveAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 8));
 
       // On PPC 32 reg_save_area can only hold 32 bytes of data
       RegSaveAreaSize = IRB.CreateBinaryIntrinsic(
@@ -6684,8 +6683,8 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
         RegSaveAreaShadowPtr =
             IRB.CreatePtrToInt(RegSaveAreaShadowPtr, MS.IntptrTy);
-        Value *FPSaveArea = IRB.CreateAdd(
-            RegSaveAreaShadowPtr, ConstantInt::get(MS.IntptrTy, 32));
+        Value *FPSaveArea = IRB.CreateAdd(RegSaveAreaShadowPtr,
+                                          ConstantInt::get(MS.IntptrTy, 32));
         FPSaveArea = IRB.CreateIntToPtr(FPSaveArea, MS.PtrTy);
         // We fill fp shadow with zeroes as uninitialized fp args should have
         // been found during call base check
@@ -6697,10 +6696,9 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
         // RegSaveAreaSize is min(CopySize, 32) -> no overflow can occur
         Value *OverflowAreaSize = IRB.CreateSub(CopySize, RegSaveAreaSize);
 
-        Value *OverflowAreaPtrPtr =
-            IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
-        OverflowAreaPtrPtr = IRB.CreateAdd(
-            OverflowAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 4));
+        Value *OverflowAreaPtrPtr = IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
+        OverflowAreaPtrPtr =
+            IRB.CreateAdd(OverflowAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 4));
         OverflowAreaPtrPtr = IRB.CreateIntToPtr(OverflowAreaPtrPtr, MS.PtrTy);
 
         Value *OverflowAreaPtr = IRB.CreateLoad(MS.PtrTy, OverflowAreaPtrPtr);
