@@ -375,6 +375,11 @@ class DwarfDebug : public DebugHandlerBase {
   /// create DIEs.
   SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
 
+  /// The set of subprograms that have concrete functions.
+  /// This does not include subprograms of machine outlined functions because
+  /// they are created after this set is computed.
+  SmallSetVector<const DISubprogram *, 16> ConcreteSPs;
+
   /// Map function-local imported entities to their parent local scope
   /// (either DILexicalBlock or DISubprogram) for a processed function
   /// (including inlined subprograms).
@@ -927,6 +932,14 @@ public:
   /// If the \p File has an MD5 checksum, return it as an MD5Result
   /// allocated in the MCContext.
   std::optional<MD5::MD5Result> getMD5AsBytes(const DIFile *File) const;
+
+  /// Returns false for subprograms that do not have concrete functions and thus
+  /// could have only abstract DIEs. Also returns false for machine outlined
+  /// subprograms, but they will never be emitted as abstract DIEs in the first
+  /// place.
+  bool isConcrete(const DISubprogram *SP) const {
+    return ConcreteSPs.count(SP);
+  }
 
   MDNodeSet &getLocalDeclsForScope(const DILocalScope *S) {
     return LocalDeclsPerLS[S];
