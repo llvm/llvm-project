@@ -51,13 +51,16 @@ struct NestedCountedRegion : public coverage::CountedRegion {
   // Contains the path to default and expanded branches.
   // Size is 1 for default branches and greater 1 for expanded branches.
   std::vector<LineColPair> NestedPath;
+  // Contains the original index of this element used to keep the original order
+  // in case of equal nested path.
+  unsigned Position;
   // Indicates whether this item should be ignored at rendering.
   bool Ignore = false;
 
   NestedCountedRegion(llvm::coverage::CountedRegion Region,
-                      std::vector<LineColPair> NestedPath)
+                      std::vector<LineColPair> NestedPath, unsigned Position)
       : llvm::coverage::CountedRegion(std::move(Region)),
-        NestedPath(std::move(NestedPath)) {}
+        NestedPath(std::move(NestedPath)), Position(Position) {}
 
   // Returns the root line of the branch.
   unsigned getEffectiveLine() const { return NestedPath.front().first; }
@@ -95,7 +98,8 @@ void renderLineExecutionCounts(raw_ostream &OS,
 std::vector<NestedCountedRegion>
 collectNestedBranches(const coverage::CoverageMapping &Coverage,
                       ArrayRef<llvm::coverage::ExpansionRecord> Expansions,
-                      std::vector<LineColPair> &NestedPath) {
+                      std::vector<LineColPair> &NestedPath,
+                      unsigned &PositionCounter) {
   std::vector<NestedCountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
@@ -105,15 +109,16 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
 
     // Recursively collect branches from nested expansions.
     auto NestedExpansions = ExpansionCoverage.getExpansions();
-    auto NestedExBranches =
-        collectNestedBranches(Coverage, NestedExpansions, NestedPath);
+    auto NestedExBranches = collectNestedBranches(Coverage, NestedExpansions,
+                                                  NestedPath, PositionCounter);
     append_range(Branches, NestedExBranches);
 
     // Add branches from this level of expansion.
     auto ExBranches = ExpansionCoverage.getBranches();
     for (auto &B : ExBranches)
       if (B.FileID == Expansion.FileID) {
-        Branches.push_back(NestedCountedRegion(B, NestedPath));
+        Branches.push_back(
+            NestedCountedRegion(B, NestedPath, PositionCounter++));
       }
 
     NestedPath.pop_back();
@@ -128,9 +133,11 @@ void appendNestedCountedRegions(const std::vector<CountedRegion> &Src,
     return !Region.TrueFolded || !Region.FalseFolded;
   });
   Dst.reserve(Dst.size() + Src.size());
+  unsigned PositionCounter = Dst.size();
   std::transform(Unfolded.begin(), Unfolded.end(), std::back_inserter(Dst),
-                 [=](auto &Region) {
-                   return NestedCountedRegion(Region, {Region.startLoc()});
+                 [=, &PositionCounter](auto &Region) {
+                   return NestedCountedRegion(Region, {Region.startLoc()},
+                                              PositionCounter++);
                  });
 }
 
@@ -146,7 +153,9 @@ void appendNestedCountedRegions(const std::vector<NestedCountedRegion> &Src,
 bool sortNested(const NestedCountedRegion &I, const NestedCountedRegion &J) {
   // This sorts each element by line and column.
   // Implies that all elements are first sorted by getEffectiveLine().
-  return I.NestedPath < J.NestedPath;
+  // Use original position if NestedPath is equal.
+  return std::tie(I.NestedPath, I.Position) <
+         std::tie(J.NestedPath, J.Position);
 }
 
 void combineInstanceCounts(std::vector<NestedCountedRegion> &Branches) {
@@ -180,8 +189,9 @@ void renderBranchExecutionCounts(raw_ostream &OS,
 
   // Recursively collect branches for all file expansions.
   std::vector<LineColPair> NestedPath;
-  std::vector<NestedCountedRegion> ExBranches =
-      collectNestedBranches(Coverage, FileCoverage.getExpansions(), NestedPath);
+  unsigned PositionCounter = 0;
+  std::vector<NestedCountedRegion> ExBranches = collectNestedBranches(
+      Coverage, FileCoverage.getExpansions(), NestedPath, PositionCounter);
 
   // Append Expansion Branches to Source Branches.
   appendNestedCountedRegions(ExBranches, Branches);
