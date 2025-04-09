@@ -321,6 +321,28 @@ entry:
   ret void
 }
 
+; Check fixes for:
+; - detection of VMEM_READS which are FLAT loads.
+; - unsigned int underflows in MFMASmallGemmSingleWaveOpt::applyIGLPStrategy.
+; - resetting global static DSWCounters for new runs.
+; (reduced fuzzer-generated test case)
+define amdgpu_kernel void @test_iglp_opt_flat_load(ptr %ptr1, ptr %ptr2, ptr addrspace(3) %ptr3, ptr addrspace(3) %ptr4) {
+entry:
+  %LGV2 = load <8 x half>, ptr %ptr1, align 16
+  %LGV = load i1, ptr %ptr2, align 1
+  call void @llvm.amdgcn.iglp.opt(i32 1)
+  %C = fcmp ugt <8 x half> zeroinitializer, %LGV2
+  store <8 x i1> %C, ptr addrspace(3) %ptr3, align 1
+  br i1 %LGV, label %common.ret, label %F
+
+common.ret:                                       ; preds = %F, %entry
+  ret void
+
+F:                                                ; preds = %entry
+  store <32 x float> zeroinitializer, ptr addrspace(3) %ptr4, align 128
+  br label %common.ret
+}
+
 declare void @llvm.amdgcn.iglp.opt(i32) #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare <32 x float> @llvm.amdgcn.mfma.f32.32x32x1f32(float, float, <32 x float>, i32, i32, i32) #1
