@@ -16,8 +16,8 @@
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include <cassert>
