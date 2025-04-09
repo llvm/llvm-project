@@ -1,0 +1,54 @@
+# Test the ${function.template-arguments} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %build %t/main.cpp -o %t.cxx.out
+# RUN: %lldb -x -b -s %t/commands.input %t.cxx.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# Check that we have an appropriate fallback for languages that
+# don't implement this frame format variable (in this case Objective-C).
+#
+# RUN: %build %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=CHECK-OBJC
+
+#--- main.cpp
+template<typename K>
+struct Foo {
+    template<typename T>
+    void func() {}
+};
+
+template<typename T, template <typename> class K,
+         typename M>
+int foo() {
+    Foo<int>{}.func<T>();
+    return 5;
+}
+
+int bar() {
+  return foo<int, Foo, Foo<float>>();
+}
+
+int main() { return bar(); }
+
+#--- main.m
+
+int func() {}
+int bar() { func(); }
+
+int main() { return bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.template-arguments}'\n"
+break set -n func
+
+run
+bt
+
+# CHECK: custom-frame '<int>'
+# CHECK: custom-frame '<int, Foo, Foo<float>>'
+# CHECK: custom-frame ''
+
+# CHECK-OBJC: bt
+# CHECK-OBJC-NOT: custom-frame
