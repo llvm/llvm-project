@@ -67,26 +67,22 @@ int i12 = f12(a);
 //   since-cxx20-note@-4 {{candidate function}}
 //   since-cxx20-note@-4 {{candidate function}}
 
-#if __cplusplus >= 201103L
 void f13(const int* const&&);
 int f13(int* const&);
 int i13 = f13((int*)0);
+// cxx98-error@-3 {{rvalue references are a C++11 extension}}
 
 void f14(const int* const&);
 int f14(const volatile int* const volatile&&);
 int i14 = f14((int*)0);
+// cxx98-error@-2 {{rvalue references are a C++11 extension}}
 
-constexpr int f15(const volatile int (&&)[]) {
-	return 1;
-}
-constexpr int f15(const int (&)[1]) {
-	return 2;
-}
-constexpr int i15 = f15(static_cast<int (&&)[1]>(a));
-static_assert(i15 == 2, "");
-// since-cxx20-error@-1 {{static assertion failed}}
-//   since-cxx20-note@-2 {{expression evaluates to '1 == 2'}}
-#endif
+template<bool> class R {};
+R<true> f15(const volatile int (&&)[]);
+R<false> f15(const int (&)[1]);
+R<__cplusplus >= 202002> i15 = f15(static_cast<int (&&)[1]>(a));
+// cxx98-error@-3 {{rvalue references are a C++11 extension}}
+// cxx98-error@-2 {{rvalue references are a C++11 extension}}
 
 } // namespace cwg2803
 
