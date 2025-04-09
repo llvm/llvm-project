@@ -2059,27 +2059,17 @@ public:
         op.getConstifiedMixedStrides();
     auto isReinterpretCastNoop = [&]() -> bool {
       // First, check that the strides are the same.
-      if (extractStridesOfr.size() != reinterpretStridesOfr.size())
+      if (!llvm::equal(extractStridesOfr, reinterpretStridesOfr))
         return false;
 
-      unsigned rank = op.getType().getRank();
-      for (unsigned i = 0; i < rank; ++i) {
-        if (extractStridesOfr[i] != reinterpretStridesOfr[i])
-          return false;
-      }
-
       // Second, check the sizes.
-      assert(extractStridedMetadata.getSizes().size() ==
-                 op.getMixedSizes().size() &&
-             "Strides and sizes rank must match");
       SmallVector<OpFoldResult> extractSizesOfr =
           extractStridedMetadata.getConstifiedMixedSizes();
       SmallVector<OpFoldResult> reinterpretSizesOfr =
           op.getConstifiedMixedSizes();
-      for (unsigned i = 0; i < rank; ++i) {
-        if (extractSizesOfr[i] != reinterpretSizesOfr[i])
+      if (!llvm::equal(extractSizesOfr, reinterpretSizesOfr))
           return false;
-      }
+
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
              "reinterpret_cast with more than one offset should have been "
@@ -2106,7 +2096,9 @@ public:
       // the same as the base pointer returned by the extract_strided_metadata
       // operator and the base pointer of the extract_strided_metadata memref
       // input.
-      op.setOperand(0, extractStridedMetadata.getSource());
+      rewriter.modifyOpInPlace(op, [&]() {
+        op.getSourceMutable().assign(extractStridedMetadata.getSource());
+      });
       return success();
     }
 
