@@ -67,8 +67,8 @@ int a(int (*)());
 int a(int (&)());
 int x = a(arg);
 // expected-error@-1 {{call to 'a' is ambiguous}}
-//   expected-note@-3 {{candidate function}}
-//   expected-note@-3 {{candidate function}}
+//   expected-note@-4 {{candidate function}}
+//   expected-note@-4 {{candidate function}}
 #endif
 } // namespace cwg2815
 
