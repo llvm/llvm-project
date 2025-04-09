@@ -397,11 +397,6 @@ public:
   mlir::Value createConvert(mlir::Location loc, mlir::Type toTy,
                             mlir::Value val);
 
-  /// Create a fir.convert op with a volatile cast if the source value's type
-  /// does not match the target type's volatility.
-  mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
-                                            mlir::Value val);
-
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.
   void createStoreWithConvert(mlir::Location loc, mlir::Value val,
