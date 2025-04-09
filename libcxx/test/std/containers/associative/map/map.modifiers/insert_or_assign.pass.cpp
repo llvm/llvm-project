@@ -36,13 +36,13 @@ class Moveable {
   double double_;
 
 public:
-  Moveable() : int_(0), double_(0) {}
-  Moveable(int i, double d) : int_(i), double_(d) {}
-  Moveable(Moveable&& x) : int_(x.int_), double_(x.double_) {
+  TEST_CONSTEXPR_CXX26 Moveable() : int_(0), double_(0) {}
+  TEST_CONSTEXPR_CXX26 Moveable(int i, double d) : int_(i), double_(d) {}
+  TEST_CONSTEXPR_CXX26 Moveable(Moveable&& x) : int_(x.int_), double_(x.double_) {
     x.int_    = -1;
     x.double_ = -1;
   }
-  Moveable& operator=(Moveable&& x) {
+  TEST_CONSTEXPR_CXX26 Moveable& operator=(Moveable&& x) {
     int_      = x.int_;
     x.int_    = -1;
     double_   = x.double_;
@@ -50,11 +50,11 @@ public:
     return *this;
   }
 
-  bool operator==(const Moveable& x) const { return int_ == x.int_ && double_ == x.double_; }
-  bool operator<(const Moveable& x) const { return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_); }
+  TEST_CONSTEXPR_CXX26 bool operator==(const Moveable& x) const { return int_ == x.int_ && double_ == x.double_; }
+  TEST_CONSTEXPR_CXX26 bool operator<(const Moveable& x) const { return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_); }
 
-  int get() const { return int_; }
-  bool moved() const { return int_ == -1; }
+  TEST_CONSTEXPR_CXX26 int get() const { return int_; }
+  TEST_CONSTEXPR_CXX26 bool moved() const { return int_ == -1; }
 };
 
 TEST_CONSTEXPR_CXX26 bool test() {
