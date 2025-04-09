@@ -1,5 +1,5 @@
 # RUN: yaml2obj %s -o %t.o
-# RUN: not llvm-readobj --arch-specific %t.o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-readobj --arch-specific %t.o 2>&1 | FileCheck %s
 
 # CHECK: BuildAttributes {
 # CHECK-NEXT:  FormatVersion: 0x41
