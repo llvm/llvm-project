@@ -631,10 +631,11 @@ Fortran::common::optional<char32_t> IoStatementState::GetCurrentChar(
 Fortran::common::optional<char32_t> IoStatementState::NextInField(
     Fortran::common::optional<int> &remaining, const DataEdit &edit) {
   std::size_t byteCount{0};
-  if (!remaining) { // Stream, list-directed, or NAMELIST
+  if (!remaining) { // Stream, list-directed, NAMELIST, &c.
     if (auto next{GetCurrentChar(byteCount)}) {
-      if (edit.IsListDirected()) {
-        // list-directed or NAMELIST: check for separators
+      if (edit.width.value_or(0) == 0) {
+        // list-directed, NAMELIST, I0 &c., or width-free I/G:
+        // check for separator character
         switch (*next) {
         case ' ':
         case '\t':
