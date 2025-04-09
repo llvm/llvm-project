@@ -13061,6 +13061,8 @@ def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
 def err_acc_invalid_modifier
     : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
+def err_acc_invalid_default_type
+    : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
