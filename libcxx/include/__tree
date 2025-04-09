@@ -1249,16 +1249,16 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_base_pointer&
   __find_equal(const_iterator __hint, __parent_pointer& __parent, __node_base_pointer& __dummy, const _Key& __v);
 
-  _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __tree& __t) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __copy_assign_alloc(const __tree& __t) {
     __copy_assign_alloc(__t, integral_constant<bool, __node_traits::propagate_on_container_copy_assignment::value>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __tree& __t, true_type) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __copy_assign_alloc(const __tree& __t, true_type) {
     if (__node_alloc() != __t.__node_alloc())
       clear();
     __node_alloc() = __t.__node_alloc();
   }
-  _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const __tree&, false_type) {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __copy_assign_alloc(const __tree&, false_type) {}
 
 private:
   _LIBCPP_HIDE_FROM_ABI __node_base_pointer& __find_leaf_low(__parent_pointer& __parent, const key_type& __v);
