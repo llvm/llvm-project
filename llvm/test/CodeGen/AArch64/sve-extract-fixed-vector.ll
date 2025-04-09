@@ -238,11 +238,8 @@ define <2 x i1> @extract_v2i1_nxv2i1(<vscale x 2 x i1> %inmask) {
 ; CHECK-LABEL: extract_v2i1_nxv2i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov x0, d0
-; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov s0, w0
-; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov v0.s[1], v0.s[2]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <2 x i1> @llvm.vector.extract.v2i1.nxv2i1(<vscale x 2 x i1> %inmask, i64 0)
   ret <2 x i1> %mask
@@ -290,41 +287,28 @@ define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
   ret <8 x i1> %mask
 }
 
+; TODO: Apply better reasoning when lowering extract_subvector from the bottom 128-bits
+; of an SVE type.
 define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
 ; CHECK-LABEL: extract_v16i1_nxv16i1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    umov w8, v1.b[1]
 ; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    umov w9, v1.b[2]
-; CHECK-NEXT:    mov v0.b[1], w8
-; CHECK-NEXT:    umov w8, v1.b[3]
-; CHECK-NEXT:    mov v0.b[2], w9
-; CHECK-NEXT:    umov w9, v1.b[4]
-; CHECK-NEXT:    mov v0.b[3], w8
-; CHECK-NEXT:    umov w8, v1.b[5]
-; CHECK-NEXT:    mov v0.b[4], w9
-; CHECK-NEXT:    umov w9, v1.b[6]
-; CHECK-NEXT:    mov v0.b[5], w8
-; CHECK-NEXT:    umov w8, v1.b[7]
-; CHECK-NEXT:    mov v0.b[6], w9
-; CHECK-NEXT:    umov w9, v1.b[8]
-; CHECK-NEXT:    mov v0.b[7], w8
-; CHECK-NEXT:    umov w8, v1.b[9]
-; CHECK-NEXT:    mov v0.b[8], w9
-; CHECK-NEXT:    umov w9, v1.b[10]
-; CHECK-NEXT:    mov v0.b[9], w8
-; CHECK-NEXT:    umov w8, v1.b[11]
-; CHECK-NEXT:    mov v0.b[10], w9
-; CHECK-NEXT:    umov w9, v1.b[12]
-; CHECK-NEXT:    mov v0.b[11], w8
-; CHECK-NEXT:    umov w8, v1.b[13]
-; CHECK-NEXT:    mov v0.b[12], w9
-; CHECK-NEXT:    umov w9, v1.b[14]
-; CHECK-NEXT:    mov v0.b[13], w8
-; CHECK-NEXT:    umov w8, v1.b[15]
-; CHECK-NEXT:    mov v0.b[14], w9
-; CHECK-NEXT:    mov v0.b[15], w8
+; CHECK-NEXT:    mov v0.b[1], v1.b[1]
+; CHECK-NEXT:    mov v0.b[2], v1.b[2]
+; CHECK-NEXT:    mov v0.b[3], v1.b[3]
+; CHECK-NEXT:    mov v0.b[4], v1.b[4]
+; CHECK-NEXT:    mov v0.b[5], v1.b[5]
+; CHECK-NEXT:    mov v0.b[6], v1.b[6]
+; CHECK-NEXT:    mov v0.b[7], v1.b[7]
+; CHECK-NEXT:    mov v0.b[8], v1.b[8]
+; CHECK-NEXT:    mov v0.b[9], v1.b[9]
+; CHECK-NEXT:    mov v0.b[10], v1.b[10]
+; CHECK-NEXT:    mov v0.b[11], v1.b[11]
+; CHECK-NEXT:    mov v0.b[12], v1.b[12]
+; CHECK-NEXT:    mov v0.b[13], v1.b[13]
+; CHECK-NEXT:    mov v0.b[14], v1.b[14]
+; CHECK-NEXT:    mov v0.b[15], v1.b[15]
 ; CHECK-NEXT:    ret
   %mask = call <16 x i1> @llvm.vector.extract.v16i1.nxv16i1(<vscale x 16 x i1> %inmask, i64 0)
   ret <16 x i1> %mask

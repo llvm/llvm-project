@@ -42,8 +42,7 @@ namespace __formatter {
 
 /// Writes a string using format's width estimation algorithm.
 ///
-/// \note When \c _LIBCPP_HAS_NO_UNICODE is defined the function assumes the
-/// input is ASCII.
+/// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
 _LIBCPP_HIDE_FROM_ABI auto
 __write_string(basic_string_view<_CharT> __str,
@@ -104,7 +103,7 @@ _LIBCPP_HIDE_FROM_ABI void __write_escape_ill_formed_code_unit(basic_string<_Cha
 template <class _CharT>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool
 __is_escaped_sequence_written(basic_string<_CharT>& __str, bool __last_escaped, char32_t __value) {
-#  ifdef _LIBCPP_HAS_NO_UNICODE
+#  if !_LIBCPP_HAS_UNICODE
   // For ASCII assume everything above 127 is printable.
   if (__value > 127)
     return false;

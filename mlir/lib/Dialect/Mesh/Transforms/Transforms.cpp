@@ -217,7 +217,7 @@ TypedValue<IndexType> createProcessLinearIndex(StringRef mesh,
   OpFoldResult processInGroupLinearIndex = affine::linearizeIndex(
       llvm::to_vector_of<OpFoldResult>(processInGroupMultiIndex),
       llvm::to_vector_of<OpFoldResult>(processGroupShape), builder);
-  return cast<TypedValue<IndexType>>(processInGroupLinearIndex.get<Value>());
+  return cast<TypedValue<IndexType>>(cast<Value>(processInGroupLinearIndex));
 }
 
 } // namespace mlir::mesh

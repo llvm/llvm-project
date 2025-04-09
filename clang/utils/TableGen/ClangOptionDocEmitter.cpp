@@ -1,4 +1,4 @@
-//===- ClangOptionDocEmitter.cpp - Documentation for command line flags ---===//
+//===-- ClangOptionDocEmitter.cpp - Documentation for command line flags --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,11 +9,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
-#include "llvm/TableGen/Error.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cctype>
@@ -110,13 +109,17 @@ Documentation extractDocumentation(const RecordKeeper &Records,
     // Pretend no-X and Xno-Y options are aliases of X and XY.
     std::string Name = std::string(R->getValueAsString("Name"));
     if (Name.size() >= 4) {
-      if (Name.substr(0, 3) == "no-" && OptionsByName[Name.substr(3)]) {
-        Aliases[OptionsByName[Name.substr(3)]].push_back(R);
-        continue;
+      if (Name.substr(0, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name.substr(3)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
-      if (Name.substr(1, 3) == "no-" && OptionsByName[Name[0] + Name.substr(4)]) {
-        Aliases[OptionsByName[Name[0] + Name.substr(4)]].push_back(R);
-        continue;
+      if (Name.substr(1, 3) == "no-") {
+        if (const Record *Opt = OptionsByName[Name[0] + Name.substr(4)]) {
+          Aliases[Opt].push_back(R);
+          continue;
+        }
       }
     }
 
@@ -367,13 +370,13 @@ void emitOption(const DocumentedOption &Option, const Record *DocInfo,
   for (const Record *VisibilityHelp :
        R->getValueAsListOfDefs("HelpTextsForVariants")) {
     // This is a list of visibilities.
-    ArrayRef<Init *> Visibilities =
+    ArrayRef<const Init *> Visibilities =
         VisibilityHelp->getValueAsListInit("Visibilities")->getValues();
 
     // See if any of the program's visibilities are in the list.
     for (StringRef DocInfoMask :
          DocInfo->getValueAsListOfStrings("VisibilityMask")) {
-      for (Init *Visibility : Visibilities) {
+      for (const Init *Visibility : Visibilities) {
         if (Visibility->getAsUnquotedString() == DocInfoMask) {
           // Use the first one we find.
           Description = escapeRST(VisibilityHelp->getValueAsString("Text"));

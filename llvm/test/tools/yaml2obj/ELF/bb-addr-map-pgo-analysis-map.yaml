@@ -66,7 +66,7 @@ Sections:
 
 ## Check that yaml2obj generates a warning when we use unsupported feature.
 # RUN: yaml2obj --docnum=2  %s 2>&1 | FileCheck %s --check-prefix=INVALID-FEATURE
-# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0xff
+# INVALID-FEATURE: warning: invalid encoding for BBAddrMap::Features: 0xf0
 
 --- !ELF
 FileHeader:
@@ -79,5 +79,4 @@ Sections:
     Entries:
       - Version: 2
 ##  Specify unsupported feature
-        Feature: 0xFF
-
+        Feature: 0xF0

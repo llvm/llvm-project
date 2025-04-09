@@ -161,6 +161,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vuzp1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vuzp1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vuzp1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vuzp1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -369,6 +379,16 @@ define <2 x i64> @test_vuzp2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vuzp2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vuzp2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vuzp2_f32(<2 x float> %a, <2 x float> %b) {
@@ -581,6 +601,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vzip1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vzip1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vzip1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vzip1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -789,6 +819,16 @@ define <2 x i64> @test_vzip2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vzip2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vzip2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vzip2_f32(<2 x float> %a, <2 x float> %b) {
@@ -1001,6 +1041,16 @@ entry:
   ret <2 x i64> %shuffle.i
 }
 
+define <2 x ptr> @test_vtrn1q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vtrn1q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 0, i32 2>
+  ret <2 x ptr> %shuffle.i
+}
+
 define <2 x float> @test_vtrn1_f32(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: test_vtrn1_f32:
 ; CHECK:       // %bb.0: // %entry
@@ -1209,6 +1259,16 @@ define <2 x i64> @test_vtrn2q_u64(<2 x i64> %a, <2 x i64> %b) {
 entry:
   %shuffle.i = shufflevector <2 x i64> %a, <2 x i64> %b, <2 x i32> <i32 1, i32 3>
   ret <2 x i64> %shuffle.i
+}
+
+define <2 x ptr> @test_vtrn2q_p0(<2 x ptr> %a, <2 x ptr> %b) {
+; CHECK-LABEL: test_vtrn2q_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    zip2 v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 1, i32 3>
+  ret <2 x ptr> %shuffle.i
 }
 
 define <2 x float> @test_vtrn2_f32(<2 x float> %a, <2 x float> %b) {
@@ -2838,435 +2898,285 @@ entry:
 }
 
 define <8 x i8> @test_undef_vtrn1_s8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_s8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_s8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn1q_s8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_s8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_s8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn1_s16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn1q_s16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i16> %shuffle.i
 }
 
 define <4 x i32> @test_undef_vtrn1q_s32(<4 x i32> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i32> %shuffle.i
 }
 
 define <8 x i8> @test_undef_vtrn1_u8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_u8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_u8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn1q_u8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_u8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_u8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn1_u16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn1q_u16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i16> %shuffle.i
 }
 
 define <4 x i32> @test_undef_vtrn1q_u32(<4 x i32> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i32> %shuffle.i
 }
 
 define <4 x float> @test_undef_vtrn1q_f32(<4 x float> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x float> %shuffle.i
 }
 
 define <8 x i8> @test_undef_vtrn1_p8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_p8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_p8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_p8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn1q_p8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_p8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_p8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_p8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 0, i32 16, i32 2, i32 18, i32 4, i32 20, i32 6, i32 22, i32 8, i32 24, i32 10, i32 26, i32 12, i32 28, i32 14, i32 30>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn1_p16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1_p16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1_p16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1_p16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn1q_p16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn1q_p16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn1q_p16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn1 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn1q_p16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   ret <8 x i16> %shuffle.i
 }
 
 define <8 x i8> @test_undef_vtrn2_s8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_s8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_s8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn2q_s8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_s8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_s8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_s8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn2_s16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn2q_s16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_s16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_s16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_s16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.8h, v0.8h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i16> %shuffle.i
 }
 
 define <4 x i32> @test_undef_vtrn2q_s32(<4 x i32> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_s32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_s32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_s32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i32> %shuffle.i
 }
 
 define <8 x i8> @test_undef_vtrn2_u8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_u8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_u8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn2q_u8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_u8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_u8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_u8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn2_u16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn2q_u16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_u16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_u16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_u16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.8h, v0.8h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i16> %shuffle.i
 }
 
 define <4 x i32> @test_undef_vtrn2q_u32(<4 x i32> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_u32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_u32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_u32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i32> %shuffle.i
 }
 
 define <4 x float> @test_undef_vtrn2q_f32(<4 x float> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_f32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_f32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v0.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x float> %shuffle.i
 }
 
 define <8 x i8> @test_undef_vtrn2_p8(<8 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_p8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.8b, v0.8b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_p8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8b, v0.8b, v0.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_p8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i8> %a, <8 x i8> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i8> %shuffle.i
 }
 
 define <16 x i8> @test_undef_vtrn2q_p8(<16 x i8> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_p8:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev16 v0.16b, v0.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_p8:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.16b, v0.16b, v0.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_p8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev16 v0.16b, v0.16b
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> <i32 1, i32 17, i32 3, i32 19, i32 5, i32 21, i32 7, i32 23, i32 9, i32 25, i32 11, i32 27, i32 13, i32 29, i32 15, i32 31>
   ret <16 x i8> %shuffle.i
 }
 
 define <4 x i16> @test_undef_vtrn2_p16(<4 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2_p16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.4h, v0.4h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2_p16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.4h, v0.4h, v0.4h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2_p16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <4 x i16> %a, <4 x i16> undef, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
   ret <4 x i16> %shuffle.i
 }
 
 define <8 x i16> @test_undef_vtrn2q_p16(<8 x i16> %a) {
-; CHECK-SD-LABEL: test_undef_vtrn2q_p16:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev32 v0.8h, v0.8h
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_undef_vtrn2q_p16:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    trn2 v0.8h, v0.8h, v0.8h
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_undef_vtrn2q_p16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev32 v0.8h, v0.8h
+; CHECK-NEXT:    ret
 entry:
   %shuffle.i = shufflevector <8 x i16> %a, <8 x i16> undef, <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   ret <8 x i16> %shuffle.i

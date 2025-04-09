@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,all %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17,all %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++17 -verify=cxx17,all -triple armv8 %s
 // RUN: %clang_cc1 -std=c++20 -verify=ref,all %s
 // RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17,all %s
+// RUN: %clang_cc1 -std=c++17 -verify=ref-cxx17,all -triple armv8 %s
 
 #define INT_MIN (~__INT_MAX__)
 
@@ -21,27 +23,15 @@ namespace shifts {
     c = 1 << 0;
     c = 1 << -0;
     c = 1 >> -0;
-    c = 1 << -1; // expected-warning {{shift count is negative}} \
-                 // expected-note {{negative shift count -1}} \
-                 // cxx17-note {{negative shift count -1}} \
-                 // cxx17-warning {{shift count is negative}} \
-                 // ref-warning {{shift count is negative}} \
-                 // ref-note {{negative shift count -1}} \
-                 // ref-cxx17-warning {{shift count is negative}} \
-                 // ref-cxx17-note {{negative shift count -1}}
+    c = 1 << -1; // all-warning {{shift count is negative}} \
+                 // all-note {{negative shift count -1}}
 
     c = 1 >> -1; // expected-warning {{shift count is negative}} \
                  // cxx17-warning {{shift count is negative}} \
                  // ref-warning {{shift count is negative}} \
                  // ref-cxx17-warning {{shift count is negative}}
-    c = 1 << (unsigned)-1; // expected-warning {{shift count >= width of type}} \
-                           // expected-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
-                           // cxx17-warning {{shift count >= width of type}} \
-                           // cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
-                           // ref-warning {{shift count >= width of type}} \
-                           // ref-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}} \
-                           // ref-cxx17-warning {{shift count >= width of type}} \
-                           // ref-cxx17-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}}
+    c = 1 << (unsigned)-1; // all-warning {{shift count >= width of type}} \
+                           // all-warning {{implicit conversion from 'int' to 'char' changes value from -2147483648 to 0}}
     c = 1 >> (unsigned)-1; // expected-warning {{shift count >= width of type}} \
                            // cxx17-warning {{shift count >= width of type}} \
                            // ref-warning {{shift count >= width of type}} \
@@ -212,3 +202,28 @@ enum shiftof {
     X3 = (1<<32) // all-error {{expression is not an integral constant expression}} \
                  // all-note {{shift count 32 >= width of type 'int'}}
 };
+
+#if __WCHAR_WIDTH__ == 32
+#  if !defined(__WCHAR_UNSIGNED__)
+static_assert(((wchar_t)-1U >> 31) == -1);
+#  else
+static_assert(((wchar_t)-1U >> 31) == 1);
+#  endif
+#endif
+
+#if __INT_WIDTH__ == 32
+static_assert(((int)-1U >> 32) == -1); // all-error {{not an integral constant expression}} \
+                                       // all-note {{shift count 32 >= width of type 'int' (32 bits)}}
+#endif
+
+static_assert((-4 << 32) == 0); // all-error {{not an integral constant expression}} \
+                                // all-note {{shift count}}
+
+static_assert((-4 << 1) == -8); // ref-cxx17-error {{not an integral constant expression}} \
+                                // ref-cxx17-note {{left shift of negative value -4}} \
+                                // cxx17-error {{not an integral constant expression}} \
+                                // cxx17-note {{left shift of negative value -4}}
+static_assert((-4 << 31) == 0); // ref-cxx17-error {{not an integral constant expression}} \
+                                // ref-cxx17-note {{left shift of negative value -4}} \
+                                // cxx17-error {{not an integral constant expression}} \
+                                // cxx17-note {{left shift of negative value -4}}

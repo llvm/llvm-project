@@ -382,6 +382,8 @@ class DwarfDebug : public DebugHandlerBase {
                               SmallPtrSet<const MDNode *, 2>>;
   DenseMap<const DILocalScope *, MDNodeSet> LocalDeclsPerLS;
 
+  SmallDenseSet<const MachineInstr *> ForceIsStmtInstrs;
+
   /// If nonnull, stores the current machine function we're processing.
   const MachineFunction *CurFn = nullptr;
 
@@ -407,6 +409,9 @@ class DwarfDebug : public DebugHandlerBase {
   SmallVector<
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
+
+  /// Symbol pointing to the current function's DWARF line table entries.
+  MCSymbol *FunctionLineTableLabel;
 
   /// Used to set a uniqe ID for a Type Unit.
   /// This counter represents number of DwarfTypeUnits created, not necessarily
@@ -674,7 +679,7 @@ private:
   /// label that was emitted and which provides correspondence to the
   /// source line list.
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
-                        unsigned Flags);
+                        unsigned Flags, StringRef Location = {});
 
   /// Populate LexicalScope entries with variables' info.
   void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
@@ -693,6 +698,8 @@ private:
 
   /// Emit the reference to the section.
   void emitSectionReference(const DwarfCompileUnit &CU);
+
+  void findForceIsStmtInstrs(const MachineFunction *MF);
 
 protected:
   /// Gather pre-function debug information.

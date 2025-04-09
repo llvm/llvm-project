@@ -152,6 +152,17 @@ func.func @gpu_dim_of_alloc(%size: index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @out_of_bound_memref.dim
+//  CHECK:   %[[MEMREF:.[a-z0-9A-Z_]+]] = memref.dim
+//  CHECK:   return %[[MEMREF]] : index
+func.func @out_of_bound_memref.dim(%arg : memref<?xi8>, %size: index) -> index {
+  %c2 = arith.constant 2 : index
+  %1 = memref.dim %arg, %c2 : memref<?xi8>
+  return %1 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @simplify_gpu_launch
 func.func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
   %cst = arith.constant 0.000000e+00 : f32

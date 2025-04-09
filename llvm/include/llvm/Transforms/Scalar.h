@@ -153,12 +153,6 @@ extern char &InferAddressSpacesID;
 
 //===----------------------------------------------------------------------===//
 //
-// TLSVariableHoist - This pass reduce duplicated TLS address call.
-//
-FunctionPass *createTLSVariableHoistPass();
-
-//===----------------------------------------------------------------------===//
-//
 // PartiallyInlineLibCalls - Tries to inline the fast path of library
 // calls such as sqrt.
 //

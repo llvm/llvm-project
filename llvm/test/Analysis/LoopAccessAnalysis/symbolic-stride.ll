@@ -48,6 +48,51 @@ exit:                                          ; preds = %loop
   ret void
 }
 
+; A forwarding in the presence of symbolic strides,
+; with nusw instead of inbounds on the GEPs.
+define void @single_stride_nusw(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
+; CHECK-LABEL: 'single_stride_nusw'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %load = load i32, ptr %gep.A, align 4 ->
+; CHECK-NEXT:            store i32 %add, ptr %gep.A.next, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %stride == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr nusw i32, ptr %A, i64 %mul:
+; CHECK-NEXT:        {%A,+,(4 * %stride)}<%loop>
+; CHECK-NEXT:        --> {%A,+,4}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i64 %iv, %stride
+  %gep.A = getelementptr nusw i32, ptr %A, i64 %mul
+  %load = load i32, ptr %gep.A, align 4
+  %gep.B = getelementptr nusw i32, ptr %B, i64 %iv
+  %load_1 = load i32, ptr %gep.B, align 4
+  %add = add i32 %load_1, %load
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.A.next = getelementptr nusw i32, ptr %A, i64 %iv.next
+  store i32 %add, ptr %gep.A.next, align 4
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:                                          ; preds = %loop
+  ret void
+}
+
 ; Similar to @single_stride, but with struct types.
 define void @single_stride_struct(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
 ; CHECK-LABEL: 'single_stride_struct'
@@ -88,6 +133,53 @@ loop:
   %iv.next = add nuw nsw i64 %iv, 1
   %gep.A.next = getelementptr inbounds { i32, i8 }, ptr %A, i64 %iv.next
   store { i32, i8 } %ins, ptr %gep.A.next, align 4
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Test with multiple GEP indices
+define void @single_stride_array(ptr noalias %A, ptr noalias %B, i64 %N, i64 %stride) {
+; CHECK-LABEL: 'single_stride_array'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Backward loop carried data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Backward:
+; CHECK-NEXT:            %load = load [2 x i32], ptr %gep.A, align 4 ->
+; CHECK-NEXT:            store [2 x i32] %ins, ptr %gep.A.next, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      Equal predicate: %stride == 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+; CHECK-NEXT:      [PSE] %gep.A = getelementptr inbounds [2 x i32], ptr %A, i64 %mul, i64 1:
+; CHECK-NEXT:        {(4 + %A),+,(8 * %stride)}<%loop>
+; CHECK-NEXT:        --> {(4 + %A),+,8}<%loop>
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %mul = mul i64 %iv, %stride
+  %gep.A = getelementptr inbounds [2 x i32], ptr %A, i64 %mul, i64 1
+  %load = load [2 x i32], ptr %gep.A, align 4
+  %gep.B = getelementptr inbounds [2 x i32], ptr %B, i64 %iv
+  %load_1 = load [2 x i32], ptr %gep.B, align 4
+  %v1 = extractvalue [2 x i32] %load, 0
+  %v2 = extractvalue [2 x i32] %load_1, 0
+  %add = add i32 %v1, %v2
+  %ins = insertvalue [2 x i32] poison, i32 %add, 0
+  %iv.next = add nuw nsw i64 %iv, 1
+  %gep.A.next = getelementptr inbounds [2 x i32], ptr %A, i64 %iv.next
+  store [2 x i32] %ins, ptr %gep.A.next, align 4
   %exitcond = icmp eq i64 %iv.next, %N
   br i1 %exitcond, label %exit, label %loop
 

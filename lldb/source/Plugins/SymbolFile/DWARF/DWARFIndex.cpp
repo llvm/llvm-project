@@ -137,9 +137,19 @@ void DWARFIndex::GetTypesWithQuery(
 bool DWARFIndex::ProcessTypeDIEMatchQuery(
     TypeQuery &query, DWARFDIE die,
     llvm::function_ref<bool(DWARFDIE die)> callback) {
-  // Nothing to match from query
-  if (query.GetContextRef().size() <= 1)
+  // Check the language, but only if we have a language filter.
+  if (query.HasLanguage() &&
+      !query.LanguageMatches(SymbolFileDWARF::GetLanguageFamily(*die.GetCU())))
+    return true; // Keep iterating over index types, language mismatch.
+
+  // Since mangled names are unique, we only need to check if the names are
+  // the same.
+  if (query.GetSearchByMangledName()) {
+    if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
+        query.GetTypeBasename().GetStringRef())
+      return true; // Keep iterating over index types, mangled name mismatch.
     return callback(die);
+  }
 
   std::vector<lldb_private::CompilerContext> die_context;
   if (query.GetModuleSearch())
@@ -148,6 +158,22 @@ bool DWARFIndex::ProcessTypeDIEMatchQuery(
     die_context = die.GetTypeLookupContext();
 
   if (!query.ContextMatches(die_context))
+    return true;
+  return callback(die);
+}
+
+void DWARFIndex::GetNamespacesWithParents(
+    ConstString name, const CompilerDeclContext &parent_decl_ctx,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  GetNamespaces(name, [&](DWARFDIE die) {
+    return ProcessNamespaceDieMatchParents(parent_decl_ctx, die, callback);
+  });
+}
+
+bool DWARFIndex::ProcessNamespaceDieMatchParents(
+    const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
+    llvm::function_ref<bool(DWARFDIE die)> callback) {
+  if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx, die))
     return true;
   return callback(die);
 }

@@ -13,8 +13,8 @@
 ; CHECK: tbuffer_store_format_xyzw v[0:3],
 define amdgpu_vs void @main(i32 inreg %arg) {
 main_body:
-  %tmp = load float, ptr addrspace(3) undef, align 4
-  %tmp1 = load float, ptr addrspace(3) undef, align 4
+  %tmp = load float, ptr addrspace(3) poison, align 4
+  %tmp1 = load float, ptr addrspace(3) poison, align 4
   store float %tmp, ptr addrspace(3) null, align 4
   %tmp2 = bitcast float %tmp to i32
   %tmp3 = add nuw nsw i32 0, 1
@@ -22,11 +22,11 @@ main_body:
   %tmp5 = getelementptr [8192 x i32], ptr addrspace(3) @tess_lds, i64 0, i64 %tmp4
   store float %tmp1, ptr addrspace(3) %tmp5, align 4
   %tmp7 = bitcast float %tmp1 to i32
-  %tmp8 = insertelement <4 x i32> undef, i32 %tmp2, i32 0
+  %tmp8 = insertelement <4 x i32> poison, i32 %tmp2, i32 0
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp7, i32 1
-  %tmp10 = insertelement <4 x i32> %tmp9, i32 undef, i32 2
-  %tmp11 = insertelement <4 x i32> %tmp10, i32 undef, i32 3
-  call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %tmp11, ptr addrspace(8) undef, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
+  %tmp10 = insertelement <4 x i32> %tmp9, i32 poison, i32 2
+  %tmp11 = insertelement <4 x i32> %tmp10, i32 poison, i32 3
+  call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %tmp11, ptr addrspace(8) poison, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
   ret void
 }
 

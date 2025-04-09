@@ -604,3 +604,51 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %val) nounwind {
   store atomic i64 %val, ptr %a seq_cst, align 8
   ret void
 }
+
+define void @store_arid(ptr nonnull align 4 %a) {
+; NO-ATOMIC-LABEL: store_arid:
+; NO-ATOMIC:         .cfi_startproc
+; NO-ATOMIC-NEXT:  ; %bb.0: ; %start
+; NO-ATOMIC-NEXT:    moveq #1, %d0
+; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
+; NO-ATOMIC-NEXT:    move.l %d0, (32,%a0)
+; NO-ATOMIC-NEXT:    rts
+;
+; ATOMIC-LABEL: store_arid:
+; ATOMIC:         .cfi_startproc
+; ATOMIC-NEXT:  ; %bb.0: ; %start
+; ATOMIC-NEXT:    moveq #1, %d0
+; ATOMIC-NEXT:    move.l (4,%sp), %a0
+; ATOMIC-NEXT:    move.l %d0, (32,%a0)
+; ATOMIC-NEXT:    rts
+start:
+  %1 = getelementptr inbounds i32, ptr %a, i32 8
+  store atomic i32 1, ptr %1 seq_cst, align 4
+  br label %exit
+
+exit:                                              ; preds = %start
+  ret void
+}
+
+define i32 @load_arid(ptr nonnull align 4 %a) {
+; NO-ATOMIC-LABEL: load_arid:
+; NO-ATOMIC:         .cfi_startproc
+; NO-ATOMIC-NEXT:  ; %bb.0: ; %start
+; NO-ATOMIC-NEXT:    move.l (4,%sp), %a0
+; NO-ATOMIC-NEXT:    move.l (32,%a0), %d0
+; NO-ATOMIC-NEXT:    rts
+;
+; ATOMIC-LABEL: load_arid:
+; ATOMIC:         .cfi_startproc
+; ATOMIC-NEXT:  ; %bb.0: ; %start
+; ATOMIC-NEXT:    move.l (4,%sp), %a0
+; ATOMIC-NEXT:    move.l (32,%a0), %d0
+; ATOMIC-NEXT:    rts
+start:
+  %1 = getelementptr inbounds i32, ptr %a, i32 8
+  %2 = load atomic i32, ptr %1 seq_cst, align 4
+  br label %exit
+
+exit:                                              ; preds = %start
+  ret i32 %2
+}

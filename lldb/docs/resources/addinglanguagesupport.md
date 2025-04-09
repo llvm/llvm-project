@@ -49,21 +49,21 @@ clearer that evaluation with the static `Module`-returned `TypeSystem` instances
 make no sense, and have them error out on those calls. But either approach is
 fine.
 
-# Creating Types
+## Creating Types
 
 Your `TypeSystem` will need an approach for creating types based on a set of
 `Module`s. If your type info is going to come from DWARF info, you will want to
 subclass [DWARFASTParser](https://github.com/llvm/llvm-project/blob/main/lldb/source/Plugins/SymbolFile/DWARF/DWARFASTParser.h).
 
 
-# Add Expression Evaluation Support
+## Add Expression Evaluation Support
 
 Expression Evaluation support is enabled by implementing the relevant methods on
 a `TypeSystem`-derived class. Search for `Expression` in the
 [TypeSystem header](https://github.com/llvm/llvm-project/blob/main/lldb/include/lldb/Symbol/TypeSystem.h)
 to find the methods to implement.
 
-# Type Completion
+## Type Completion
 
 There are three levels of type completion, each requiring more type information:
 1. Pointer size: When you have a forward decl or a reference, and that's all you
@@ -76,7 +76,7 @@ There are three levels of type completion, each requiring more type information:
 Ensure you never complete more of a type than is needed for a given situation.
 This will keep your type system from doing more work than necessary.
 
-# Language and LanguageRuntime Plugins
+## Language and LanguageRuntime Plugins
 
 If you followed the steps outlined above, you already have taught LLDB a great
 deal about your language. If your language's runtime model and fundamental data

@@ -192,3 +192,23 @@ define void @PR112347(ptr %p0, ptr %p1, ptr %p2) {
   ret void
 }
 
+define void @PR113240(i64 %a) {
+; CHECK-LABEL: PR113240:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    notq %rax
+; CHECK-NEXT:    movabsq $8796093022206, %rcx # imm = 0x7FFFFFFFFFE
+; CHECK-NEXT:    notq %rcx
+; CHECK-NEXT:    orq %rax, %rcx
+; CHECK-NEXT:    andq %rdi, %rcx
+; CHECK-NEXT:    movq %rcx, 0
+; CHECK-NEXT:    retq
+entry:
+  %and = and i64 %a, 8796093022206
+  %bf.value = and i64 8796093022206, 0
+  %not = xor i64 %and, -1
+  %and4 = and i64 %a, %not
+  store i64 %and4, ptr null, align 8
+  ret void
+}
+

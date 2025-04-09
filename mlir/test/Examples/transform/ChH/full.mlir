@@ -1,6 +1,8 @@
-// RUN: mlir-opt %s --transform-interpreter="debug-payload-root-tag=payload" \
-// RUN:             --test-transform-dialect-erase-schedule |\
-// RUN: mlir-opt -pass-pipeline='builtin.module(builtin.module(math-uplift-to-fma,convert-bufferization-to-memref,test-lower-to-llvm))' - |\
+// RUN: mlir-opt %s --transform-interpreter \
+// RUN:             --test-transform-dialect-erase-schedule \
+// RUN:             --math-uplift-to-fma \
+// RUN:             --convert-bufferization-to-memref \
+// RUN:             --test-lower-to-llvm |\
 // RUN: FileCheck %s
 
 // Fixed-size tensor types to be used in convolution.
@@ -17,7 +19,6 @@
 // tensors annotated with attributes from the `bufferization` dialect. These
 // attributes hint the bufferization pass to assume buffers can be directly
 // used for these tensors without reshaping.
-module @payload attributes { transform.target_tag = "payload" } {
 func.func @conv(
     %input: !tinput {bufferization.writable = false,
                      bufferization.access = "read",
@@ -83,7 +84,7 @@ func.func @conv(
 
   return %relued : !toutput
 }
-}
+
 // Module containing the transformation script to be applied. The attribute
 // is required to correctly verify the use of named (macro-like) sequences.
 module attributes { transform.with_named_sequence } {
@@ -378,7 +379,7 @@ module attributes { transform.with_named_sequence } {
 // The core computation, at the LLVM dialect level, must correspond to five
 // immediately adjacent fma on vector<64xf32>.
 
-// CHECK:      %[[R0:.+]] = llvm.mlir.undef : !llvm.array<5 x vector<64xf32>>
+// CHECK:      %[[R0:.+]] = llvm.mlir.poison : !llvm.array<5 x vector<64xf32>>
 
 // CHECK:      %[[V:.+]] = llvm.load %{{.*}} : !llvm.ptr -> !llvm.array<5 x vector<64xf32>>
 // CHECK-NEXT: %[[LINE0:.+]] = llvm.extractvalue %[[V]][0] : !llvm.array<5 x vector<64xf32>>

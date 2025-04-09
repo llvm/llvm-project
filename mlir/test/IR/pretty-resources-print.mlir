@@ -12,7 +12,7 @@
 // CHECK:      {-#
 // CHECK-NEXT:   external_resources: {
 // CHECK-NEXT:     external: {
-// CHECK-NEXT:       bool: true,
+// CHECK-NEXT:       "backslash\\tab\09": true,
 // CHECK-NEXT:       string: "\22string\22"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     other_stuff: {
@@ -31,8 +31,8 @@
   external_resources: {
     external: {
       blob: "0x08000000010000000000000002000000000000000300000000000000",
-      bool: true,
-      string: "\"string\"" // with escape characters
+      "backslash\\tab\09": true, // quoted key with escape characters
+      string: "\"string\"" // string with escape characters
     },
     other_stuff: {
       bool: true

@@ -345,7 +345,7 @@ define <2 x i64> @bitcast_select_multi_uses(<4 x i1> %cmp, <2 x i64> %a, <2 x i6
 ; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
 ; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[A:%.*]], [[BC1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
-; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], <i64 -1, i64 -1>
+; CHECK-NEXT:    [[BC2:%.*]] = xor <2 x i64> [[TMP1]], splat (i64 -1)
 ; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[B:%.*]], [[BC2]]
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND1]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[AND2]], [[BC2]]

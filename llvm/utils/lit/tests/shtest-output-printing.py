@@ -25,7 +25,7 @@
 #  CHECK-NEXT: not not wc missing-file &> [[FILE:.*]] || true
 #  CHECK-NEXT: # executed command: not not wc missing-file
 #  CHECK-NEXT: # .---redirected output from '[[FILE]]'
-#  CHECK-NEXT: # | wc: {{cannot open missing-file|missing-file.* No such file or directory}}
+#  CHECK-NEXT: # | {{.*}}wc: {{cannot open missing-file|missing-file.* No such file or directory}}
 #  CHECK-NEXT: # `-----------------------------
 #  CHECK-NEXT: # note: command had no output on stdout or stderr
 #  CHECK-NEXT: # error: command failed with exit status: 1

@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -O2 -mattr=+hvxv73,hvx-length64b < %s | FileCheck %s
 ; CHECK: .p2align{{.*}}5
 
 ; Function Attrs: nounwind

@@ -41,7 +41,7 @@ def :MnemonicAlias<"InstB", "BInst">;
 
 // Check that the matcher lower()s the mnemonics it matches.
 // MATCHER: static const char MnemonicTable[] =
-// MATCHER-NEXT: "\005ainst\005binst";
+// MATCHER-NEXT: "\000\005ainst\005binst";
 
 // Check that aInst appears before BInst in the match table.
 // This shows that the mnemonics are sorted in a case-insensitive way,
@@ -53,8 +53,8 @@ def :MnemonicAlias<"InstB", "BInst">;
 
 // Check that the writer preserves the case of the mnemonics.
 // WRITER:      static const char AsmStrs[] = {
-// WRITER:        "BInst\0"
-// WRITER-NEXT:   "aInst\0"
+// WRITER:        "BInst\000"
+// WRITER-NEXT:   "aInst\000"
 // WRITER-NEXT: };
 
 // ALIAS: static void applyMnemonicAliases(StringRef &Mnemonic, const FeatureBitset &Features, unsigned VariantID) {
@@ -73,4 +73,3 @@ def :MnemonicAlias<"InstB", "BInst">;
 // ALIAS-NEXT        case 'b':	 // 1 string to match.
 // ALIAS-NEXT          Mnemonic = "binst";	 // "instb"
 // ALIAS-NEXT          return;
-

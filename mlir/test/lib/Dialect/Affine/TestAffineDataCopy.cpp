@@ -53,6 +53,11 @@ private:
       *this, "for-memref-region",
       llvm::cl::desc("Test copy generation for a single memref region"),
       llvm::cl::init(false)};
+  Option<uint64_t> clCapacityLimit{
+      *this, "capacity-kib",
+      llvm::cl::desc("Test copy generation enforcing a limit of capacity "
+                     "(default: unlimited)"),
+      llvm::cl::init(UINT64_MAX)};
 };
 
 } // namespace
@@ -73,24 +78,24 @@ void TestAffineDataCopy::runOnOperation() {
   auto loopNest = depthToLoops[0][0];
   auto innermostLoop = depthToLoops[innermostLoopIdx][0];
   AffineLoadOp load;
+  // For simplicity, these options are tested on the first memref being loaded
+  // from in the innermost loop.
   if (clMemRefFilter || clTestGenerateCopyForMemRegion) {
-    // Gather MemRef filter. For simplicity, we use the first loaded memref
-    // found in the innermost loop.
     for (auto &op : *innermostLoop.getBody()) {
       if (auto ld = dyn_cast<AffineLoadOp>(op)) {
         load = ld;
         break;
       }
     }
+    if (!load)
+      return;
   }
-  if (!load)
-    return;
 
   AffineCopyOptions copyOptions = {/*generateDma=*/false,
                                    /*slowMemorySpace=*/0,
                                    /*fastMemorySpace=*/0,
                                    /*tagMemorySpace=*/0,
-                                   /*fastMemCapacityBytes=*/32 * 1024 * 1024UL};
+                                   /*fastMemCapacityBytes=*/clCapacityLimit};
   DenseSet<Operation *> copyNests;
   if (clMemRefFilter) {
     if (failed(affineDataCopyGenerate(loopNest, copyOptions, load.getMemRef(),
@@ -103,6 +108,10 @@ void TestAffineDataCopy::runOnOperation() {
       return;
     if (failed(generateCopyForMemRegion(region, loopNest, copyOptions, result)))
       return;
+  } else if (failed(affineDataCopyGenerate(loopNest, copyOptions,
+                                           /*filterMemref=*/std::nullopt,
+                                           copyNests))) {
+    return;
   }
 
   // Promote any single iteration loops in the copy nests and simplify
@@ -136,7 +145,7 @@ void TestAffineDataCopy::runOnOperation() {
   }
   GreedyRewriteConfig config;
   config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
-  (void)applyOpPatternsAndFold(copyOps, std::move(patterns), config);
+  (void)applyOpPatternsGreedily(copyOps, std::move(patterns), config);
 }
 
 namespace mlir {

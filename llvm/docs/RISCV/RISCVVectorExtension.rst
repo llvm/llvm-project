@@ -233,23 +233,19 @@ For scalable vectors that should use VLMAX, the AVL is set to a sentinel value o
 
 There are patterns for target agnostic SelectionDAG nodes in ``RISCVInstrInfoVSDPatterns.td``, VL nodes in ``RISCVInstrInfoVVLPatterns.td`` and RVV intrinsics in ``RISCVInstrInfoVPseudos.td``.
 
+Instructions that operate only on masks like VMAND or VMSBF uses pseudo instructions suffixed with B1, B2, B4, B8, B16, B32, or B64 where the number is SEW/LMUL representing
+the ratio between SEW and LMUL needed in vtype. These instructions always operate as if EEW=1 and always use a value of 0 as their SEW operand.
+
 Mask patterns
 -------------
 
-For masked pseudos the mask operand is copied to the physical ``$v0`` register during instruction selection with a glued ``CopyToReg`` node:
-
-.. code-block::
-
-     t23: ch,glue = CopyToReg t0, Register:nxv4i1 $v0, t6
-   t25: nxv4i32 = PseudoVADD_VV_M2_MASK Register:nxv4i32 $noreg, t2, t4, Register:nxv4i1 $v0, TargetConstant:i64<8>, TargetConstant:i64<5>, TargetConstant:i64<1>, t23:1
-
 The patterns in ``RISCVInstrInfoVVLPatterns.td`` only match masked pseudos to reduce the size of the match table, even if the node's mask is all ones and could be an unmasked pseudo.
-``RISCVFoldMasks::convertToUnmasked`` will detect if the mask is all ones and convert it into its unmasked form.
+``RISCVVectorPeephole::convertToUnmasked`` will detect if the mask is all ones and convert it into its unmasked form.
 
 .. code-block::
 
-   $v0 = PseudoVMSET_M_B16 -1, 32
-   %rd:vrm2 = PseudoVADD_VV_M2_MASK %passthru:vrm2(tied-def 0), %rs2:vrm2, %rs1:vrm2, $v0, %avl:gpr, sew:imm, policy:imm
+   %mask:vmv0 = PseudoVMSET_M_B16 -1, 32
+   %rd:vrm2 = PseudoVADD_VV_M2_MASK %passthru:vrm2(tied-def 0), %rs2:vrm2, %rs1:vrm2, %mask:vmv0, %avl:gpr, sew:imm, policy:imm
 
    // gets optimized to:
 
@@ -258,6 +254,28 @@ The patterns in ``RISCVInstrInfoVVLPatterns.td`` only match masked pseudos to re
 .. note::
 
    Any ``vmset.m`` can be treated as an all ones mask since the tail elements past AVL are ``undef`` and can be replaced with ones.
+
+VMV0 elimination
+=================
+
+Because masked instructions must have the mask register in ``v0``, a specific register class ``vmv0`` is used that contains only one register, ``v0``.
+
+However register coalescing may end up coleascing copies into ``vmv0``, resulting in instructions with multiple uses of ``vmv0`` that the register allocator can't allocate:
+
+.. code-block::
+
+   %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vmv0, %3:vmv0, ...
+
+To avoid this, ``RISCVVMV0Elimination`` replaces any uses of ``vmv0`` with physical copies to ``v0`` before register coalescing and allocation:
+
+.. code-block::
+   
+  %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, %3:vmv0, ...
+
+  // vmv0 gets eliminated to:
+
+  $v0 = COPY %3:vr
+  %x:vrnov0 = PseudoVADD_VV_M1_MASK %0:vrnov0, %1:vr, %2:vr, $v0, ...
 
 .. _rvv_register_allocation:
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -fcxx-exceptions -verify -Wreturn-type -Wmissing-noreturn -Wno-unreachable-code -Wno-covered-switch-default
-// RUN: %clang_cc1 %s -fsyntax-only -fcxx-exceptions -std=c++11 -verify -Wreturn-type -Wmissing-noreturn -Wno-unreachable-code -Wno-covered-switch-default
+// RUN: %clang_cc1 %s -fsyntax-only -fcxx-exceptions -verify -Wreturn-type -Wno-error=return-type -Wmissing-noreturn -Wno-unreachable-code -Wno-covered-switch-default
+// RUN: %clang_cc1 %s -fsyntax-only -fcxx-exceptions -std=c++11 -verify -Wreturn-type -Wno-error=return-type -Wmissing-noreturn -Wno-unreachable-code -Wno-covered-switch-default
 
 // A destructor may be marked noreturn and should still influence the CFG.
 void pr6884_abort() __attribute__((noreturn));

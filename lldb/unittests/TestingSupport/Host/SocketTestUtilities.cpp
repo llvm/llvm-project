@@ -19,34 +19,20 @@
 
 using namespace lldb_private;
 
-static void AcceptThread(Socket *listen_socket, bool child_processes_inherit,
-                         Socket **accept_socket, Status *error) {
-  *error = listen_socket->Accept(*accept_socket);
-}
-
 template <typename SocketType>
 void lldb_private::CreateConnectedSockets(
     llvm::StringRef listen_remote_address,
     const std::function<std::string(const SocketType &)> &get_connect_addr,
     std::unique_ptr<SocketType> *a_up, std::unique_ptr<SocketType> *b_up) {
-  bool child_processes_inherit = false;
   Status error;
-  std::unique_ptr<SocketType> listen_socket_up(
-      new SocketType(true, child_processes_inherit));
+  auto listen_socket_up = std::make_unique<SocketType>(true);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = listen_socket_up->Listen(listen_remote_address, 5);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   ASSERT_TRUE(listen_socket_up->IsValid());
 
-  Status accept_error;
-  Socket *accept_socket;
-  std::thread accept_thread(AcceptThread, listen_socket_up.get(),
-                            child_processes_inherit, &accept_socket,
-                            &accept_error);
-
   std::string connect_remote_address = get_connect_addr(*listen_socket_up);
-  std::unique_ptr<SocketType> connect_socket_up(
-      new SocketType(true, child_processes_inherit));
+  auto connect_socket_up = std::make_unique<SocketType>(true);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
   error = connect_socket_up->Connect(connect_remote_address);
   ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
@@ -55,9 +41,13 @@ void lldb_private::CreateConnectedSockets(
   a_up->swap(connect_socket_up);
   ASSERT_TRUE((*a_up)->IsValid());
 
-  accept_thread.join();
+  Socket *accept_socket;
+  ASSERT_THAT_ERROR(
+      listen_socket_up->Accept(std::chrono::seconds(1), accept_socket)
+          .takeError(),
+      llvm::Succeeded());
+
   b_up->reset(static_cast<SocketType *>(accept_socket));
-  ASSERT_THAT_ERROR(accept_error.ToError(), llvm::Succeeded());
   ASSERT_NE(nullptr, b_up->get());
   ASSERT_TRUE((*b_up)->IsValid());
 
@@ -92,8 +82,7 @@ void lldb_private::CreateDomainConnectedSockets(
 #endif
 
 static bool CheckIPSupport(llvm::StringRef Proto, llvm::StringRef Addr) {
-  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(
-      Addr, /*child_processes_inherit=*/false);
+  llvm::Expected<std::unique_ptr<TCPSocket>> Sock = Socket::TcpListen(Addr);
   if (Sock)
     return true;
   llvm::Error Err = Sock.takeError();
@@ -125,6 +114,28 @@ bool lldb_private::HostSupportsIPv4() {
 
 bool lldb_private::HostSupportsIPv6() {
   return CheckIPSupport("IPv6", "[::1]:0");
+}
+
+bool lldb_private::HostSupportsLocalhostToIPv4() {
+  if (!HostSupportsIPv4())
+    return false;
+
+  auto addresses = SocketAddress::GetAddressInfo(
+      "localhost", nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+  return llvm::any_of(addresses, [](const SocketAddress &addr) {
+    return addr.GetFamily() == AF_INET;
+  });
+}
+
+bool lldb_private::HostSupportsLocalhostToIPv6() {
+  if (!HostSupportsIPv6())
+    return false;
+
+  auto addresses = SocketAddress::GetAddressInfo(
+      "localhost", nullptr, AF_UNSPEC, SOCK_STREAM, IPPROTO_TCP);
+  return llvm::any_of(addresses, [](const SocketAddress &addr) {
+    return addr.GetFamily() == AF_INET6;
+  });
 }
 
 llvm::Expected<std::string> lldb_private::GetLocalhostIP() {

@@ -12,32 +12,32 @@ unreachable_block:
     ret i32 %a
 }
 
-define i32 @pr23096_test0() {
+define i32 @pr23096_test0(i1 %arg, ptr %arg2) {
 entry:
   br label %bb0
 
 bb1:
   %ptr1 = ptrtoint ptr %ptr2 to i64
   %ptr2 = inttoptr i64 %ptr1 to ptr
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
-  %phi = phi ptr [ undef, %entry ], [ %ptr2, %bb1 ]
+  %phi = phi ptr [ %arg2, %entry ], [ %ptr2, %bb1 ]
   %load = load i32, ptr %phi
   ret i32 %load
 }
 
-define i32 @pr23096_test1() {
+define i32 @pr23096_test1(i1 %arg, ptr %arg2) {
 entry:
   br label %bb0
 
 bb1:
   %ptr1 = getelementptr i32, ptr %ptr2, i32 0
   %ptr2 = getelementptr i32, ptr %ptr1, i32 0
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
-  %phi = phi ptr [ undef, %entry ], [ %ptr2, %bb1 ]
+  %phi = phi ptr [ %arg2, %entry ], [ %ptr2, %bb1 ]
   %load = load i32, ptr %phi
   ret i32 %load
 }

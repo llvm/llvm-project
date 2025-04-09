@@ -8,6 +8,7 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/utility.h"
+#include "src/stdlib/_Exit.h"
 #include "src/stdlib/at_quick_exit.h"
 #include "src/stdlib/quick_exit.h"
 #include "test/UnitTest/Test.h"
@@ -33,7 +34,7 @@ TEST(LlvmLibcAtQuickExit, Basic) {
 
 TEST(LlvmLibcAtQuickExit, AtQuickExitCallsSysExit) {
   auto test = [] {
-    LIBC_NAMESPACE::at_quick_exit(+[] { _Exit(1); });
+    LIBC_NAMESPACE::at_quick_exit(+[] { LIBC_NAMESPACE::_Exit(1); });
     LIBC_NAMESPACE::quick_exit(0);
   };
   EXPECT_EXITS(test, 1);

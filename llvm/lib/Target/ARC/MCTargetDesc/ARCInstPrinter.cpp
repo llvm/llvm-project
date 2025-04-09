@@ -93,7 +93,7 @@ static const char *ARCCondCodeToString(ARCCC::CondCode CC) {
   return BadConditionCode(CC);
 }
 
-void ARCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+void ARCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   OS << StringRef(getRegisterName(Reg)).lower();
 }
 

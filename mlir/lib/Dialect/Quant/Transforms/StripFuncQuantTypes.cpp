@@ -36,49 +36,40 @@ class QuantizedTypeConverter : public TypeConverter {
   static Type convertQuantizedType(QuantizedType quantizedType) {
     return quantizedType.getStorageType();
   }
-  
+
   static Type convertTensorType(TensorType tensorType) {
-    if (auto quantizedType = dyn_cast<QuantizedType>(tensorType.getElementType()))
+    if (auto quantizedType =
+            dyn_cast<QuantizedType>(tensorType.getElementType()))
       return tensorType.clone(convertQuantizedType(quantizedType));
     return tensorType;
   }
 
   static Value materializeConversion(OpBuilder &builder, Type type,
                                      ValueRange inputs, Location loc) {
-    assert(inputs.size() == 1);
-    return builder.create<quant::StorageCastOp>(loc, type, inputs[0]);
+    return builder.create<quant::StorageCastOp>(loc, type,
+                                                llvm::getSingleElement(inputs));
   }
 
 public:
-
   explicit QuantizedTypeConverter() {
     addConversion([](Type type) { return type; });
     addConversion(convertQuantizedType);
     addConversion(convertTensorType);
 
-    addArgumentMaterialization(materializeConversion);
     addSourceMaterialization(materializeConversion);
     addTargetMaterialization(materializeConversion);
   }
 };
 
 // Conversion pass
-class StripFuncQuantTypes : public impl::StripFuncQuantTypesBase<StripFuncQuantTypes> {
-
-  // Return whether a type is considered legal when occurring in the header of
-  // a function or as an operand to a 'return' op.
-  static bool isLegalType(Type type) {
-    if (auto tensorType = dyn_cast<TensorType>(type))
-      return isLegalType(tensorType.getElementType());
-    return !isa<quant::QuantizedType>(type);
-  }
+class StripFuncQuantTypes
+    : public impl::StripFuncQuantTypesBase<StripFuncQuantTypes> {
 
 public:
-
   void runOnOperation() override {
-    
+
     auto moduleOp = cast<ModuleOp>(getOperation());
-    auto* context = &getContext();
+    auto *context = &getContext();
 
     QuantizedTypeConverter typeConverter;
     ConversionTarget target(*context);
@@ -111,4 +102,3 @@ public:
 
 } // namespace quant
 } // namespace mlir
-

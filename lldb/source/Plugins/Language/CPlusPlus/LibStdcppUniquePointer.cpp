@@ -8,10 +8,10 @@
 
 #include "LibStdcpp.h"
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 #include <memory>
 #include <vector>
@@ -31,8 +31,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -103,7 +101,8 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   // storage due to no_unique_address, so infer the actual size from the total
   // size of the unique_ptr class. If sizeof(unique_ptr) == sizeof(void*) then
   // the deleter is empty and should be hidden.
-  if (tuple_sp->GetByteSize() > ptr_obj->GetByteSize()) {
+  if (llvm::expectedToOptional(tuple_sp->GetByteSize()).value_or(0) >
+      llvm::expectedToOptional(ptr_obj->GetByteSize()).value_or(0)) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
       m_del_obj = del_obj->Clone(ConstString("deleter")).get();
@@ -112,8 +111,6 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppUniquePtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 lldb::ValueObjectSP
 LibStdcppUniquePtrSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {

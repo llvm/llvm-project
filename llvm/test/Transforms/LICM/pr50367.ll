@@ -2,14 +2,14 @@
 ; RUN: opt -S -passes='loop-mssa(licm)' < %s | FileCheck %s
 @e = external dso_local global ptr, align 8
 
-define void @main() {
+define void @main(i1 %arg) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop1:
 ; CHECK-NEXT:    br label [[LOOP2:%.*]]
 ; CHECK:       loop2:
-; CHECK-NEXT:    br i1 false, label [[LOOP2_LATCH:%.*]], label [[LOOP_LATCH:%.*]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[LOOP2_LATCH:%.*]], label [[LOOP_LATCH:%.*]]
 ; CHECK:       loop2.latch:
 ; CHECK-NEXT:    br label [[LOOP2]]
 ; CHECK:       loop.latch:
@@ -22,7 +22,7 @@ loop1:
   br label %loop2
 
 loop2:
-  br i1 undef, label %loop2.latch, label %loop.latch
+  br i1 %arg, label %loop2.latch, label %loop.latch
 
 loop2.latch:
   store i32 0, ptr null, align 4

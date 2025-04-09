@@ -51,12 +51,13 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
-  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
-                                                std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Opts.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Opts.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 using namespace llvm::opt;
 static constexpr opt::OptTable::Info InfoTable[] = {
@@ -67,7 +68,8 @@ static constexpr opt::OptTable::Info InfoTable[] = {
 
 class CGDataOptTable : public opt::GenericOptTable {
 public:
-  CGDataOptTable() : GenericOptTable(InfoTable) {}
+  CGDataOptTable()
+      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
 };
 } // end anonymous namespace
 
@@ -76,14 +78,13 @@ static StringRef ToolName;
 static StringRef OutputFilename = "-";
 static StringRef Filename;
 static bool ShowCGDataVersion;
+static bool SkipTrim;
 static CGDataAction Action;
 static std::optional<CGDataFormat> OutputFormat;
 static std::vector<std::string> InputFilenames;
 
-// TODO: Add a doc, https://llvm.org/docs/CommandGuide/llvm-cgdata.html
-
-static void exitWithError(Twine Message, std::string Whence = "",
-                          std::string Hint = "") {
+static void exitWithError(Twine Message, StringRef Whence = "",
+                          StringRef Hint = "") {
   WithColor::error();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -96,16 +97,16 @@ static void exitWithError(Twine Message, std::string Whence = "",
 static void exitWithError(Error E, StringRef Whence = "") {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      exitWithError(IPE.message(), std::string(Whence));
+      exitWithError(IPE.message(), Whence);
     });
     return;
   }
 
-  exitWithError(toString(std::move(E)), std::string(Whence));
+  exitWithError(toString(std::move(E)), Whence);
 }
 
 static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
-  exitWithError(EC.message(), std::string(Whence));
+  exitWithError(EC.message(), Whence);
 }
 
 static int convert_main(int argc, const char *argv[]) {
@@ -128,6 +129,10 @@ static int convert_main(int argc, const char *argv[]) {
     OutlinedHashTreeRecord Record(Reader->releaseOutlinedHashTree());
     Writer.addRecord(Record);
   }
+  if (Reader->hasStableFunctionMap()) {
+    StableFunctionMapRecord Record(Reader->releaseStableFunctionMap());
+    Writer.addRecord(Record);
+  }
 
   if (OutputFormat == CGDataFormat::Text) {
     if (Error E = Writer.writeText(OS))
@@ -141,10 +146,12 @@ static int convert_main(int argc, const char *argv[]) {
 }
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
-                         OutlinedHashTreeRecord &GlobalOutlineRecord);
+                         OutlinedHashTreeRecord &GlobalOutlineRecord,
+                         StableFunctionMapRecord &GlobalFunctionMapRecord);
 
 static bool handleArchive(StringRef Filename, Archive &Arch,
-                          OutlinedHashTreeRecord &GlobalOutlineRecord) {
+                          OutlinedHashTreeRecord &GlobalOutlineRecord,
+                          StableFunctionMapRecord &GlobalFunctionMapRecord) {
   bool Result = true;
   Error Err = Error::success();
   for (const auto &Child : Arch.children(Err)) {
@@ -155,7 +162,8 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
     if (Error E = NameOrErr.takeError())
       exitWithError(std::move(E), Filename);
     std::string Name = (Filename + "(" + NameOrErr.get() + ")").str();
-    Result &= handleBuffer(Name, BuffOrErr.get(), GlobalOutlineRecord);
+    Result &= handleBuffer(Name, BuffOrErr.get(), GlobalOutlineRecord,
+                           GlobalFunctionMapRecord);
   }
   if (Err)
     exitWithError(std::move(Err), Filename);
@@ -163,7 +171,8 @@ static bool handleArchive(StringRef Filename, Archive &Arch,
 }
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
-                         OutlinedHashTreeRecord &GlobalOutlineRecord) {
+                         OutlinedHashTreeRecord &GlobalOutlineRecord,
+                         StableFunctionMapRecord &GlobalFunctionMapRecord) {
   Expected<std::unique_ptr<object::Binary>> BinOrErr =
       object::createBinary(Buffer);
   if (Error E = BinOrErr.takeError())
@@ -171,11 +180,12 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 
   bool Result = true;
   if (auto *Obj = dyn_cast<ObjectFile>(BinOrErr->get())) {
-    if (Error E =
-            CodeGenDataReader::mergeFromObjectFile(Obj, GlobalOutlineRecord))
+    if (Error E = CodeGenDataReader::mergeFromObjectFile(
+            Obj, GlobalOutlineRecord, GlobalFunctionMapRecord))
       exitWithError(std::move(E), Filename);
   } else if (auto *Arch = dyn_cast<Archive>(BinOrErr->get())) {
-    Result &= handleArchive(Filename, *Arch, GlobalOutlineRecord);
+    Result &= handleArchive(Filename, *Arch, GlobalOutlineRecord,
+                            GlobalFunctionMapRecord);
   } else {
     // TODO: Support for the MachO universal binary format.
     errs() << "Error: unsupported binary file: " << Filename << "\n";
@@ -186,26 +196,34 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
 }
 
 static bool handleFile(StringRef Filename,
-                       OutlinedHashTreeRecord &GlobalOutlineRecord) {
+                       OutlinedHashTreeRecord &GlobalOutlineRecord,
+                       StableFunctionMapRecord &GlobalFunctionMapRecord) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (std::error_code EC = BuffOrErr.getError())
     exitWithErrorCode(EC, Filename);
-  return handleBuffer(Filename, *BuffOrErr.get(), GlobalOutlineRecord);
+  return handleBuffer(Filename, *BuffOrErr.get(), GlobalOutlineRecord,
+                      GlobalFunctionMapRecord);
 }
 
 static int merge_main(int argc, const char *argv[]) {
   bool Result = true;
   OutlinedHashTreeRecord GlobalOutlineRecord;
+  StableFunctionMapRecord GlobalFunctionMapRecord;
   for (auto &Filename : InputFilenames)
-    Result &= handleFile(Filename, GlobalOutlineRecord);
+    Result &=
+        handleFile(Filename, GlobalOutlineRecord, GlobalFunctionMapRecord);
 
   if (!Result)
     exitWithError("failed to merge codegen data files.");
 
+  GlobalFunctionMapRecord.finalize(SkipTrim);
+
   CodeGenDataWriter Writer;
   if (!GlobalOutlineRecord.empty())
     Writer.addRecord(GlobalOutlineRecord);
+  if (!GlobalFunctionMapRecord.empty())
+    Writer.addRecord(GlobalFunctionMapRecord);
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename, EC,
@@ -249,6 +267,15 @@ static int show_main(int argc, const char *argv[]) {
        << "\n";
     OS << "  Depth: " << Tree->depth() << "\n";
   }
+  if (Reader->hasStableFunctionMap()) {
+    auto Map = Reader->releaseStableFunctionMap();
+    OS << "Stable function map:\n";
+    OS << "  Unique hash Count: " << Map->size() << "\n";
+    OS << "  Total function Count: "
+       << Map->size(StableFunctionMap::TotalFunctionCount) << "\n";
+    OS << "  Mergeable function Count: "
+       << Map->size(StableFunctionMap::MergeableFunctionCount) << "\n";
+  }
 
   return 0;
 }
@@ -277,6 +304,7 @@ static void parseArgs(int argc, char **argv) {
   }
 
   ShowCGDataVersion = Args.hasArg(OPT_cgdata_version);
+  SkipTrim = Args.hasArg(OPT_skip_trim);
 
   if (opt::Arg *A = Args.getLastArg(OPT_format)) {
     StringRef OF = A->getValue();

@@ -111,7 +111,7 @@ add_integration_test(
   DEPENDS
     libc_execv_test_normal_exit
     libc_execv_test_signal_exit
-    libc.errno.errno
+    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execve
     libc.src.unistd.fork

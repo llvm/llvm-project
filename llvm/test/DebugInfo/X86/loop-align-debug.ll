@@ -5,6 +5,7 @@
 
 ; OBJ: 1:{{.*}}nop
 
+;; prologue_end goes on start-of-loop, the call to @g.
 ;;     Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DBG: 0x0000000000000000      3      0      0   0             0       0  is_stmt
 ; DBG: 0x0000000000000001      0      0      0   0             0       0

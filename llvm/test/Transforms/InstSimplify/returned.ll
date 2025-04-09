@@ -38,7 +38,7 @@ define <8 x i1> @returned_vec_arg_casted(<2 x i32> %a) {
 
 define <8 x i1> @returned_vec_arg_casted2(<2 x i32> %a) {
 ; CHECK-LABEL: @returned_vec_arg_casted2(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[A:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[X:%.*]] = call <8 x i8> @passthru_8i8v_from_2i32v(<2 x i32> [[OR]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp ne <8 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    ret <8 x i1> [[C]]

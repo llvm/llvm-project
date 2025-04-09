@@ -1199,7 +1199,9 @@ def HI16 : SDNodeXForm<imm, [{
 }]>;
 
 // Plus 1.
-def Plus1 : SDNodeXForm<imm, [{ return getImm(N, N->getSExtValue() + 1); }]>;
+def Plus1 : SDNodeXForm<imm, [{
+  return getSignedImm(N, N->getSExtValue() + 1);
+}]>;
 
 // Node immediate is zero (e.g. insve.d)
 def immz : PatLeaf<(imm), [{ return N->getSExtValue() == 0; }]>;

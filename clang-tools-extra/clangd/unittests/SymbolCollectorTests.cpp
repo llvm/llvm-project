@@ -1335,6 +1335,42 @@ TEST_F(SymbolCollectorTest, OverrideRelationsMultipleInheritance) {
                           OverriddenBy(CBar, DBar), OverriddenBy(CBaz, DBaz)));
 }
 
+TEST_F(SymbolCollectorTest, ObjCOverrideRelationsSimpleInheritance) {
+  std::string Header = R"cpp(
+    @interface A
+    - (void)foo;
+    @end
+    @interface B : A
+    - (void)foo;  // A::foo
+    - (void)bar;
+    @end
+    @interface C : B
+    - (void)bar;  // B::bar
+    @end
+    @interface D : C
+    - (void)foo;  // B::foo
+    - (void)bar;  // C::bar
+    @end
+  )cpp";
+  runSymbolCollector(Header, /*Main=*/"",
+                     {"-xobjective-c++", "-Wno-objc-root-class"});
+  const Symbol &AFoo = findSymbol(Symbols, "A::foo");
+  const Symbol &BFoo = findSymbol(Symbols, "B::foo");
+  const Symbol &DFoo = findSymbol(Symbols, "D::foo");
+
+  const Symbol &BBar = findSymbol(Symbols, "B::bar");
+  const Symbol &CBar = findSymbol(Symbols, "C::bar");
+  const Symbol &DBar = findSymbol(Symbols, "D::bar");
+
+  std::vector<Relation> Result;
+  for (const Relation &R : Relations)
+    if (R.Predicate == RelationKind::OverriddenBy)
+      Result.push_back(R);
+  EXPECT_THAT(Result, UnorderedElementsAre(
+                          OverriddenBy(AFoo, BFoo), OverriddenBy(BBar, CBar),
+                          OverriddenBy(BFoo, DFoo), OverriddenBy(CBar, DBar)));
+}
+
 TEST_F(SymbolCollectorTest, CountReferences) {
   const std::string Header = R"(
     class W;
@@ -2109,6 +2145,20 @@ TEST_F(SymbolCollectorTest, Reserved) {
   InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
   runSymbolCollector("#pragma GCC system_header\n" + std::string(Header), "");
   EXPECT_THAT(Symbols, IsEmpty());
+}
+
+TEST_F(SymbolCollectorTest, ReservedSymbolInIntrinsicHeader) {
+  const char *Header = R"cpp(
+    #pragma once
+    void __foo();
+  )cpp";
+
+  TestHeaderName = "xintrin.h";
+  TestHeaderURI = URI::create(testPath(TestHeaderName)).toString();
+  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+  CollectorOpts.FallbackDir = testRoot();
+  runSymbolCollector("#pragma GCC system_header\n" + std::string(Header), "");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo")));
 }
 
 TEST_F(SymbolCollectorTest, Concepts) {

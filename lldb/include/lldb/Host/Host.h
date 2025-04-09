@@ -259,6 +259,8 @@ public:
                                               const FileSpec &file_spec,
                                               uint32_t line_no);
 
+  static llvm::Error OpenURL(llvm::StringRef url);
+
   /// Check if we're running in an interactive graphical session.
   ///
   /// \return

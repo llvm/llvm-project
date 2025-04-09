@@ -62,6 +62,8 @@ private:
                   type == ELF::SHT_NOBITS, Begin),
         Type(type), Flags(flags), UniqueID(UniqueID), EntrySize(entrySize),
         Group(group, IsComdat), LinkedToSym(LinkedToSym) {
+    assert((!(Flags & ELF::SHF_GROUP) || Group.getPointer()) &&
+           "Group section without signature!");
     if (Group.getPointer())
       Group.getPointer()->setIsSignature();
   }

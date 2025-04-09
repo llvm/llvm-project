@@ -29,16 +29,21 @@ enum {
   // is the target address.  The arguments start at operand 2.
   // There is an optional glue operand at the end.
   CALL,
+  // Call with rotation window by 8 registers
+  CALLW8,
 
   // Extract unsigned immediate. Operand 0 is value, operand 1
   // is bit position of the field [0..31], operand 2 is bit size
   // of the field [1..16]
   EXTUI,
 
+  MOVSP,
+
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
   // accesses.  Operand 0 is the address.
   PCREL_WRAPPER,
   RET,
+  RETW,
 
   // Select with condition operator - This selects between a true value and
   // a false value (ops #2 and #3) based on the boolean result of comparing
@@ -105,7 +110,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool isVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
 
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -147,6 +152,12 @@ private:
   SDValue LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerSTACKRESTORE(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVACOPY(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
 

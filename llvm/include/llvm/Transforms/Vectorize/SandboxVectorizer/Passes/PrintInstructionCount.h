@@ -12,7 +12,7 @@ namespace llvm::sandboxir {
 class PrintInstructionCount final : public RegionPass {
 public:
   PrintInstructionCount() : RegionPass("null") {}
-  bool runOnRegion(Region &R) final {
+  bool runOnRegion(Region &R, const Analyses &A) final {
     outs() << "InstructionCount: " << std::distance(R.begin(), R.end()) << "\n";
     return false;
   }

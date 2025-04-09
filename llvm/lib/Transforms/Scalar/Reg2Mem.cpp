@@ -25,6 +25,7 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -104,4 +105,46 @@ PreservedAnalyses RegToMemPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<LoopAnalysis>();
   return PA;
+}
+
+namespace llvm {
+
+void initializeRegToMemWrapperPassPass(PassRegistry &);
+
+class RegToMemWrapperPass : public FunctionPass {
+public:
+  static char ID;
+
+  RegToMemWrapperPass() : FunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<DominatorTreeWrapperPass>();
+
+    AU.addPreserved<LoopInfoWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+  }
+
+  bool runOnFunction(Function &F) override {
+    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+
+    unsigned N = SplitAllCriticalEdges(F, CriticalEdgeSplittingOptions(DT, LI));
+    bool Changed = runPass(F);
+    return N != 0 || Changed;
+  }
+};
+} // namespace llvm
+
+INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
+INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
+
+char RegToMemWrapperPass::ID = 0;
+
+FunctionPass *llvm::createRegToMemWrapperPass() {
+  return new RegToMemWrapperPass();
 }

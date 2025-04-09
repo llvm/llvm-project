@@ -1,8 +1,10 @@
-// RUN: mlir-translate -mlir-to-cpp %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-cpp %s | FileCheck --match-full-lines %s
 
 // CHECK: int32_t bar(int32_t [[V1:[^ ]*]]);
 emitc.declare_func @bar
-// CHECK: int32_t bar(int32_t [[V1:[^ ]*]]) {
+// CHECK:       int32_t bar(int32_t [[V1:[^ ]*]]) {
+// CHECK-NEXT:      return [[V1]];
+// CHECK-NEXT:  }
 emitc.func @bar(%arg0: i32) -> i32 {
     emitc.return %arg0 : i32
 }

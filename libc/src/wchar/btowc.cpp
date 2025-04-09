@@ -11,12 +11,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/wctype_utils.h"
 
-#include "hdr/stdio_macros.h" // for EOF.
 #include "hdr/types/wint_t.h"
+#include "hdr/wchar_macros.h" // for WEOF.
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, btowc, (wint_t c)) {
+LLVM_LIBC_FUNCTION(wint_t, btowc, (int c)) {
   auto result = internal::btowc(c);
   if (result.has_value()) {
     return result.value();

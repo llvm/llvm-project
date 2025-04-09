@@ -224,6 +224,10 @@ private:
   /// Save a value for subsequent runs.
   void generateSaveEntity(hlfir::SaveEntity savedEntity,
                           bool willUseSavedEntityInSameRun);
+  /// Save a variable address instead of its value.
+  void saveNonVectorSubscriptedAddress(hlfir::SaveEntity savedEntity);
+  /// Save a LHS variable address instead of its value, handling the cases
+  /// where the LHS is vector subscripted.
   void saveLeftHandSide(hlfir::SaveEntity savedEntity,
                         hlfir::RegionAssignOp regionAssignOp);
 
@@ -444,7 +448,16 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
 
 void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   mlir::Location loc = regionAssignOp.getLoc();
-  std::optional<hlfir::LoopNest> elementalLoopNest;
+  if (regionAssignOp.isPointerAssignment()) {
+    auto [lhsValue, oldLhsYield] =
+        generateYieldedEntity(regionAssignOp.getLhsRegion());
+    auto [rhsValue, oldRhsYield] =
+        generateYieldedEntity(regionAssignOp.getRhsRegion());
+    builder.createStoreWithConvert(loc, rhsValue, lhsValue);
+    generateCleanupIfAny(oldLhsYield);
+    generateCleanupIfAny(oldRhsYield);
+    return;
+  }
   auto [rhsValue, oldRhsYield] =
       generateYieldedEntity(regionAssignOp.getRhsRegion());
   hlfir::Entity rhsEntity{rhsValue};
@@ -464,7 +477,7 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
       // if the LHS is not).
       mlir::Value shape = hlfir::genShape(loc, builder, lhsEntity);
       elementalLoopNest = hlfir::genLoopNest(loc, builder, shape);
-      builder.setInsertionPointToStart(elementalLoopNest->innerLoop.getBody());
+      builder.setInsertionPointToStart(elementalLoopNest->body);
       lhsEntity = hlfir::getElementAt(loc, builder, lhsEntity,
                                       elementalLoopNest->oneBasedIndices);
       rhsEntity = hlfir::getElementAt(loc, builder, rhsEntity,
@@ -484,7 +497,7 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
     for (auto &cleanupConversion : argConversionCleanups)
       cleanupConversion();
     if (elementalLoopNest)
-      builder.setInsertionPointAfter(elementalLoopNest->outerLoop);
+      builder.setInsertionPointAfter(elementalLoopNest->outerOp);
   } else {
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
@@ -492,8 +505,7 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)
-    builder.setInsertionPointAfter(
-        loweredLhs.vectorSubscriptLoopNest->outerLoop);
+    builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
   generateCleanupIfAny(oldRhsYield);
   generateCleanupIfAny(loweredLhs.nonElementalCleanup);
 }
@@ -518,8 +530,8 @@ void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
       hlfir::Entity savedMask{maybeSaved->first};
       mlir::Value shape = hlfir::genShape(loc, builder, savedMask);
       whereLoopNest = hlfir::genLoopNest(loc, builder, shape);
-      constructStack.push_back(whereLoopNest->outerLoop.getOperation());
-      builder.setInsertionPointToStart(whereLoopNest->innerLoop.getBody());
+      constructStack.push_back(whereLoopNest->outerOp);
+      builder.setInsertionPointToStart(whereLoopNest->body);
       mlir::Value cdt = hlfir::getElementAt(loc, builder, savedMask,
                                             whereLoopNest->oneBasedIndices);
       generateMaskIfOp(cdt);
@@ -527,7 +539,7 @@ void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
         // If this is the same run as the one that saved the value, the clean-up
         // was left-over to be done now.
         auto insertionPoint = builder.saveInsertionPoint();
-        builder.setInsertionPointAfter(whereLoopNest->outerLoop);
+        builder.setInsertionPointAfter(whereLoopNest->outerOp);
         generateCleanupIfAny(maybeSaved->second);
         builder.restoreInsertionPoint(insertionPoint);
       }
@@ -539,8 +551,8 @@ void OrderedAssignmentRewriter::pre(hlfir::WhereOp whereOp) {
     mask.generateNoneElementalPart(builder, mapper);
     mlir::Value shape = mask.generateShape(builder, mapper);
     whereLoopNest = hlfir::genLoopNest(loc, builder, shape);
-    constructStack.push_back(whereLoopNest->outerLoop.getOperation());
-    builder.setInsertionPointToStart(whereLoopNest->innerLoop.getBody());
+    constructStack.push_back(whereLoopNest->outerOp);
+    builder.setInsertionPointToStart(whereLoopNest->body);
     mlir::Value cdt = generateMaskedEntity(mask);
     generateMaskIfOp(cdt);
     return;
@@ -661,10 +673,7 @@ OrderedAssignmentRewriter::generateYieldedEntity(
     return castIfNeeded(loc, builder, {maskedValue, std::nullopt}, castToType);
   }
 
-  assert(region.hasOneBlock() && "region must contain one block");
   auto oldYield = getYield(region);
-  mlir::Block::OpListType &ops = region.back().getOperations();
-
   // Inside Forall, scalars that do not depend on forall indices can be hoisted
   // here because their evaluation is required to only call pure procedures, and
   // if they depend on a variable previously assigned to in a forall assignment,
@@ -675,24 +684,24 @@ OrderedAssignmentRewriter::generateYieldedEntity(
   bool hoistComputation = false;
   if (fir::isa_trivial(oldYield.getEntity().getType()) &&
       !constructStack.empty()) {
-    hoistComputation = true;
-    for (mlir::Operation &op : ops)
-      if (llvm::any_of(op.getOperands(), [](mlir::Value value) {
-            return isForallIndex(value);
-          })) {
-        hoistComputation = false;
-        break;
-      }
+    mlir::WalkResult walkResult =
+        region.walk([&](mlir::Operation *op) -> mlir::WalkResult {
+          if (llvm::any_of(op->getOperands(), [](mlir::Value value) {
+                return isForallIndex(value);
+              }))
+            return mlir::WalkResult::interrupt();
+          return mlir::WalkResult::advance();
+        });
+    hoistComputation = !walkResult.wasInterrupted();
   }
   auto insertionPoint = builder.saveInsertionPoint();
   if (hoistComputation)
     builder.setInsertionPoint(constructStack[0]);
 
   // Clone all operations except the final hlfir.yield.
-  assert(!ops.empty() && "yield block cannot be empty");
-  auto end = ops.end();
-  for (auto opIt = ops.begin(); std::next(opIt) != end; ++opIt)
-    (void)builder.clone(*opIt, mapper);
+  assert(region.hasOneBlock() && "region must contain one block");
+  for (auto &op : region.back().without_terminator())
+    (void)builder.clone(op, mapper);
   // Get the value for the yielded entity, it may be the result of an operation
   // that was cloned, or it may be the same as the previous value if the yield
   // operand was created before the ordered assignment tree.
@@ -754,7 +763,7 @@ OrderedAssignmentRewriter::generateYieldedLHS(
       loweredLhs.vectorSubscriptLoopNest = hlfir::genLoopNest(
           loc, builder, loweredLhs.vectorSubscriptShape.value());
       builder.setInsertionPointToStart(
-          loweredLhs.vectorSubscriptLoopNest->innerLoop.getBody());
+          loweredLhs.vectorSubscriptLoopNest->body);
     }
     loweredLhs.lhs = temp->second.fetch(loc, builder);
     return loweredLhs;
@@ -771,8 +780,7 @@ OrderedAssignmentRewriter::generateYieldedLHS(
     loweredLhs.vectorSubscriptLoopNest =
         hlfir::genLoopNest(loc, builder, *loweredLhs.vectorSubscriptShape,
                            !elementalAddrLhs.isOrdered());
-    builder.setInsertionPointToStart(
-        loweredLhs.vectorSubscriptLoopNest->innerLoop.getBody());
+    builder.setInsertionPointToStart(loweredLhs.vectorSubscriptLoopNest->body);
     mapper.map(elementalAddrLhs.getIndices(),
                loweredLhs.vectorSubscriptLoopNest->oneBasedIndices);
     for (auto &op : elementalAddrLhs.getBody().front().without_terminator())
@@ -798,11 +806,11 @@ OrderedAssignmentRewriter::generateMaskedEntity(MaskedArrayExpr &maskedExpr) {
   if (!maskedExpr.noneElementalPartWasGenerated) {
     // Generate none elemental part before the where loops (but inside the
     // current forall loops if any).
-    builder.setInsertionPoint(whereLoopNest->outerLoop);
+    builder.setInsertionPoint(whereLoopNest->outerOp);
     maskedExpr.generateNoneElementalPart(builder, mapper);
   }
   // Generate the none elemental part cleanup after the where loops.
-  builder.setInsertionPointAfter(whereLoopNest->outerLoop);
+  builder.setInsertionPointAfter(whereLoopNest->outerOp);
   maskedExpr.generateNoneElementalCleanupIfAny(builder, mapper);
   // Generate the value of the current element for the masked expression
   // at the current insertion point (inside the where loops, and any fir.if
@@ -1080,6 +1088,12 @@ getAssignIfLeftHandSideRegion(mlir::Region &region) {
   return nullptr;
 }
 
+static bool isPointerAssignmentRHS(mlir::Region &region) {
+  auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
+  return assign && assign.isPointerAssignment() &&
+         (&assign.getRhsRegion() == &region);
+}
+
 bool OrderedAssignmentRewriter::currentLoopNestIterationNumberCanBeComputed(
     llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest) {
   if (constructStack.empty())
@@ -1143,6 +1157,11 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     assert(!willUseSavedEntityInSameRun &&
            "lhs cannot be used in the loop nest where it is saved");
     return saveLeftHandSide(savedEntity, regionAssignOp);
+  }
+  if (isPointerAssignmentRHS(region)) {
+    assert(!willUseSavedEntityInSameRun &&
+           "rhs cannot be used in the loop nest where it is saved");
+    return saveNonVectorSubscriptedAddress(savedEntity);
   }
 
   mlir::Location loc = region.getParentOp()->getLoc();
@@ -1235,14 +1254,58 @@ static bool rhsIsArray(hlfir::RegionAssignOp regionAssignOp) {
   return yieldOp && hlfir::Entity{yieldOp.getEntity()}.isArray();
 }
 
+static bool isVectorSubscripted(mlir::Region &region) {
+  return llvm::isa<hlfir::ElementalAddrOp>(region.back().back());
+}
+
+void OrderedAssignmentRewriter::saveNonVectorSubscriptedAddress(
+    hlfir::SaveEntity savedEntity) {
+  mlir::Region &region = *savedEntity.yieldRegion;
+  mlir::Location loc = region.getParentOp()->getLoc();
+  assert(!isVectorSubscripted(region) &&
+         "expected variable without vector subscripts");
+  ValueAndCleanUp varAndCleanup = generateYieldedEntity(region);
+  hlfir::Entity var{varAndCleanup.first};
+  fir::factory::TemporaryStorage *temp = nullptr;
+  // If the address dominates the constructs, its SSA value can simply be
+  // tracked and there is no need to save the address in memory.  Otherwise,
+  // the addresses are stored at each iteration in memory with a descriptor
+  // stack.
+  if (constructStack.empty() ||
+      dominanceInfo.properlyDominates(var, constructStack[0]))
+    doBeforeLoopNest(
+        [&] { temp = insertSavedEntity(region, fir::factory::SSARegister{}); });
+  else
+    doBeforeLoopNest([&] {
+      if (var.isMutableBox() || var.isProcedure() || var.isProcedurePointer())
+        // Store single C pointer to entity.
+        temp = insertSavedEntity(
+            region, fir::factory::AnyAddressStack{loc, builder, var.getType()});
+      else
+        // Store the base address and dynamic shape/length/type information
+        // as descriptor.
+        temp = insertSavedEntity(region, fir::factory::AnyVariableStack{
+                                             loc, builder, var.getType()});
+    });
+  temp->pushValue(loc, builder, var);
+  generateCleanupIfAny(varAndCleanup.second);
+}
+
 void OrderedAssignmentRewriter::saveLeftHandSide(
     hlfir::SaveEntity savedEntity, hlfir::RegionAssignOp regionAssignOp) {
   mlir::Region &region = *savedEntity.yieldRegion;
+  if (!isVectorSubscripted(region)) {
+    saveNonVectorSubscriptedAddress(savedEntity);
+    return;
+  }
+  // Save vector subscripted LHS address.
   mlir::Location loc = region.getParentOp()->getLoc();
   LhsValueAndCleanUp loweredLhs = generateYieldedLHS(loc, region);
-  fir::factory::TemporaryStorage *temp = nullptr;
+  // loweredLhs.vectorSubscriptLoopNest is empty inside a WHERE because the
+  // WHERE loops are already indexing the vector subscripted designator.
   if (loweredLhs.vectorSubscriptLoopNest)
-    constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerLoop);
+    constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  fir::factory::TemporaryStorage *temp = nullptr;
   if (loweredLhs.vectorSubscriptLoopNest && !rhsIsArray(regionAssignOp)) {
     // Vector subscripted entity for which the shape must also be saved on top
     // of the element addresses (e.g. the shape may change in each forall
@@ -1265,33 +1328,25 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
     // subscripted LHS.
     auto &vectorTmp = temp->cast<fir::factory::AnyVectorSubscriptStack>();
     auto insertionPoint = builder.saveInsertionPoint();
-    builder.setInsertionPoint(loweredLhs.vectorSubscriptLoopNest->outerLoop);
+    builder.setInsertionPoint(loweredLhs.vectorSubscriptLoopNest->outerOp);
     vectorTmp.pushShape(loc, builder, shape);
     builder.restoreInsertionPoint(insertionPoint);
   } else {
-    // Otherwise, only save the LHS address.
-    // If the LHS address dominates the constructs, its SSA value can
-    // simply be tracked and there is no need to save the address in memory.
-    // Otherwise, the addresses are stored at each iteration in memory with
-    // a descriptor stack.
-    if (constructStack.empty() ||
-        dominanceInfo.properlyDominates(loweredLhs.lhs, constructStack[0]))
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(region, fir::factory::SSARegister{});
-      });
-    else
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(
-            region, fir::factory::AnyVariableStack{loc, builder,
-                                                   loweredLhs.lhs.getType()});
-      });
+    // Only saving the scalar elements addresses. These addresses computation
+    // depend on the inner loop indices generated for the vector subscripts
+    // (no need to wast time checking dominance) and can only be save in a
+    // variable stack so far.
+    doBeforeLoopNest([&] {
+      temp = insertSavedEntity(
+          region, fir::factory::AnyVariableStack{loc, builder,
+                                                 loweredLhs.lhs.getType()});
+    });
   }
   temp->pushValue(loc, builder, loweredLhs.lhs);
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest) {
     constructStack.pop_back();
-    builder.setInsertionPointAfter(
-        loweredLhs.vectorSubscriptLoopNest->outerLoop);
+    builder.setInsertionPointAfter(loweredLhs.vectorSubscriptLoopNest->outerOp);
   }
 }
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc <%s | FileCheck %s
+; RUN: llc -mtriple=sparc <%s | FileCheck %s
 
 ; CHECK-LABEL: test_constraint_r
 ; CHECK:       add %i1, %i0, %i0

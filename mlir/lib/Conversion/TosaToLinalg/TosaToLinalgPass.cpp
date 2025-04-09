@@ -55,6 +55,7 @@ public:
     target.addLegalOp<tosa::ApplyScaleOp>();
     target.addLegalOp<tosa::IfOp>();
     target.addLegalOp<tosa::ConstOp>();
+    target.addLegalOp<tosa::ConstShapeOp>();
     target.addLegalOp<tosa::WhileOp>();
     target.addLegalOp<tosa::ConcatOp>();
     target.addLegalOp<tosa::SliceOp>();
@@ -84,7 +85,8 @@ void mlir::tosa::addTosaToLinalgPasses(
     std::optional<tosa::TosaValidationOptions> validationOptions) {
   // Optional decompositions are designed to benefit linalg.
   if (!options.disableTosaDecompositions)
-    pm.addNestedPass<func::FuncOp>(tosa::createTosaOptionalDecompositions());
+    pm.addNestedPass<func::FuncOp>(
+        tosa::createTosaOptionalDecompositionsPass());
   pm.addNestedPass<func::FuncOp>(createCanonicalizerPass());
 
   pm.addNestedPass<func::FuncOp>(tosa::createTosaInferShapesPass());
@@ -116,7 +118,9 @@ void mlir::tosa::registerTosaToLinalgPipelines() {
         TosaToLinalgNamedOptions tosaToLinalgNamedOptions;
         TosaValidationOptions validationOptions;
         validationOptions.profile = {"none"};
-        validationOptions.StrictOperationSpecAlignment = true;
+        validationOptions.extension = {"none"};
+        validationOptions.strictOpSpecAlignment = false;
+        validationOptions.allowInvalidOpDatatypeCombinations = false;
         validationOptions.level = tosa::TosaLevelEnum::EightK;
         tosa::addTosaToLinalgPasses(pm, tosaToLinalgOptions,
                                     tosaToLinalgNamedOptions,

@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_LLJIT_H
 
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -243,8 +244,6 @@ protected:
 
   Error applyDataLayout(Module &M);
 
-  void recordCtorDtors(Module &M);
-
   std::unique_ptr<ExecutionSession> ES;
   std::unique_ptr<PlatformSupport> PS;
 
@@ -300,8 +299,7 @@ private:
 class LLJITBuilderState {
 public:
   using ObjectLinkingLayerCreator =
-      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &,
-                                                           const Triple &)>;
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(

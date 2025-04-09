@@ -84,9 +84,7 @@ namespace {
 struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   static char ID;
 
-  AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {
-    initializeAArch64MIPeepholeOptPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {}
 
   const AArch64InstrInfo *TII;
   const AArch64RegisterInfo *TRI;
@@ -205,7 +203,7 @@ bool AArch64MIPeepholeOpt::visitAND(
   //
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
-  // bitmask immediates. It makes only two AND instructions intead of multiple
+  // bitmask immediates. It makes only two AND instructions instead of multiple
   // mov + and instructions.
 
   return splitTwoPartImm<T>(
@@ -389,7 +387,7 @@ bool AArch64MIPeepholeOpt::visitADDSUB(
   //
   // The mov pseudo instruction could be expanded to multiple mov instructions
   // later. Let's try to split the constant operand of mov instruction into two
-  // legal add/sub immediates. It makes only two ADD/SUB instructions intead of
+  // legal add/sub immediates. It makes only two ADD/SUB instructions instead of
   // multiple `mov` + `and/sub` instructions.
 
   // We can sometimes have ADDWrr WZR, MULi32imm that have not been constant

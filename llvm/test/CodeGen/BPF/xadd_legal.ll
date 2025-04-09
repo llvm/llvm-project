@@ -1,7 +1,7 @@
-; RUN: llc -march=bpfel -mcpu=v1 < %s 2>&1 | FileCheck --check-prefix=CHECK-64 %s
-; RUN: llc -march=bpfeb -mcpu=v1 < %s 2>&1 | FileCheck --check-prefix=CHECK-64 %s
-; RUN: llc -march=bpfel -mcpu=v1 -mattr=+alu32 < %s 2>&1 | FileCheck --check-prefix=CHECK-32 %s
-; RUN: llc -march=bpfeb -mcpu=v1 -mattr=+alu32 < %s 2>&1 | FileCheck --check-prefix=CHECK-32 %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 < %s 2>&1 | FileCheck --check-prefix=CHECK-64 %s
+; RUN: llc -mtriple=bpfeb -mcpu=v1 < %s 2>&1 | FileCheck --check-prefix=CHECK-64 %s
+; RUN: llc -mtriple=bpfel -mcpu=v1 -mattr=+alu32 < %s 2>&1 | FileCheck --check-prefix=CHECK-32 %s
+; RUN: llc -mtriple=bpfeb -mcpu=v1 -mattr=+alu32 < %s 2>&1 | FileCheck --check-prefix=CHECK-32 %s
 
 ; This file is generated with the source command and source
 ; $ clang -target bpf -O2 -S -emit-llvm t.c

@@ -89,7 +89,7 @@ struct FieldParser<
   }
 };
 
-/// Parse an attribute.
+/// Parse a type.
 template <typename TypeT>
 struct FieldParser<
     TypeT, std::enable_if_t<std::is_base_of<Type, TypeT>::value, TypeT>> {

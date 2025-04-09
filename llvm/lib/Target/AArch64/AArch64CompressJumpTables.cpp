@@ -19,9 +19,7 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/MC/MCContext.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/Debug.h"
 
 using namespace llvm;
 
@@ -49,9 +47,7 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64CompressJumpTables() : MachineFunctionPass(ID) {
-    initializeAArch64CompressJumpTablesPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64CompressJumpTables() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

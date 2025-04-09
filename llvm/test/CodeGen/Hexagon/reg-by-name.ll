@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -hexagon-tfr-cleanup=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -hexagon-tfr-cleanup=0 < %s | FileCheck %s
 
 target triple = "hexagon"
 

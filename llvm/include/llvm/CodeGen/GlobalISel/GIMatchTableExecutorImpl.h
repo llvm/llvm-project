@@ -80,7 +80,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     for (auto MIB : OutMIs) {
       // Set the NoFPExcept flag when no original matched instruction could
       // raise an FP exception, but the new instruction potentially might.
-      uint16_t MIBFlags = Flags;
+      uint16_t MIBFlags = Flags | MIB.getInstr()->getFlags();
       if (NoFPException && MIB->mayRaiseFPException())
         MIBFlags |= MachineInstr::NoFPExcept;
       if (Observer)
@@ -219,12 +219,13 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       unsigned Opcode = State.MIs[InsnID]->getOpcode();
 
-      DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
-                             << "], ExpectedOpcode=" << Expected0;
-                      if (MatcherOpcode == GIM_CheckOpcodeIsEither) dbgs()
-                      << " || " << Expected1;
-                      dbgs() << ") // Got=" << Opcode << "\n";);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(), {
+        dbgs() << CurrentIdx << ": GIM_CheckOpcode(MIs[" << InsnID
+               << "], ExpectedOpcode=" << Expected0;
+        if (MatcherOpcode == GIM_CheckOpcodeIsEither)
+          dbgs() << " || " << Expected1;
+        dbgs() << ") // Got=" << Opcode << "\n";
+      });
 
       if (Opcode != Expected0 && Opcode != Expected1) {
         if (handleReject() == RejectAndGiveUp)

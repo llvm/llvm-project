@@ -64,7 +64,7 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
      COMPILER_RT_LIBCXX_PATH AND
      COMPILER_RT_LIBCXXABI_PATH)
     file(GLOB libfuzzer_headers ../*.h)
-    set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-build ${libfuzzer_headers})
+    set(LIBFUZZER_TEST_RUNTIME_DEPS libcxx_fuzzer_${arch}-install-cmake326-workaround ${libfuzzer_headers})
     set(LIBFUZZER_TEST_RUNTIME_CFLAGS -isystem ${LIBCXX_${arch}_PREFIX}/include/c++/v1)
     set(LIBFUZZER_TEST_RUNTIME_LINK_FLAGS ${LIBCXX_${arch}_PREFIX}/lib/libc++.a)
   endif()

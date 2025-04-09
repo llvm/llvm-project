@@ -8,4 +8,4 @@ float process(float *a) [[clang::nonblocking]] { return *a; }
 int spinlock(int *a) [[clang::blocking]] { return *a; }
 // CHECK: @spinlock{{.*}} #1 {
 // CHECK: attributes #1 = {
-// CHECK-SAME: {{.*sanitize_realtime_unsafe .*}}
+// CHECK-SAME: {{.*sanitize_realtime_blocking .*}}

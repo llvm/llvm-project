@@ -542,7 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
@@ -552,6 +552,7 @@ enum Id { // HwRegCode, (6) [5:0]
 
 enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MEM_VIOL = 8,
+  OFFSET_ME_ID = 8, // in HW_ID2
 };
 
 enum ModeRegisterMasks : uint32_t {
@@ -1048,6 +1049,18 @@ enum Offset_COV5 : unsigned {
 
 } // namespace ImplicitArg
 
+namespace MFMAScaleFormats {
+// Enum value used in cbsz/blgp for F8F6F4 MFMA operations to select the matrix
+// format.
+enum MFMAScaleFormats {
+  FP8_E4M3 = 0,
+  FP8_E5M2 = 1,
+  FP6_E2M3 = 2,
+  FP6_E3M2 = 3,
+  FP4_E2M1 = 4
+};
+} // namespace MFMAScaleFormats
+
 namespace VirtRegFlag {
 // Virtual register flags used for various target specific handlings during
 // codegen.
@@ -1062,7 +1075,13 @@ enum Register_Flag : uint8_t {
 
 namespace AMDGPU {
 namespace Barrier {
+
 enum Type { TRAP = -2, WORKGROUP = -1 };
+
+enum {
+  BARRIER_SCOPE_WORKGROUP = 0,
+};
+
 } // namespace Barrier
 } // namespace AMDGPU
 

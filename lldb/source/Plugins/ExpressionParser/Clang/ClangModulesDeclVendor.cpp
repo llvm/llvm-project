@@ -706,8 +706,9 @@ ClangModulesDeclVendor::Create(Target &target) {
   auto diag_options_up =
       clang::CreateAndPopulateDiagOpts(compiler_invocation_argument_cstrs);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticsEngine> diagnostics_engine =
-      clang::CompilerInstance::createDiagnostics(diag_options_up.release(),
-                                                 new StoringDiagnosticConsumer);
+      clang::CompilerInstance::createDiagnostics(
+          *FileSystem::Instance().GetVirtualFileSystem(),
+          diag_options_up.release(), new StoringDiagnosticConsumer);
 
   Log *log = GetLog(LLDBLog::Expressions);
   LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",

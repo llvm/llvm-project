@@ -136,7 +136,7 @@ bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// to inner. Returns the position in `inputNest` of the AffineForOp that
 /// becomes the new outermost loop of this nest. This method always succeeds,
 /// asserts out on invalid input / specifications.
-unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
+unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
                       ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -301,6 +301,11 @@ separateFullTiles(MutableArrayRef<AffineForOp> nest,
 /// Walk an affine.for to find a band to coalesce.
 LogicalResult coalescePerfectlyNestedAffineLoops(AffineForOp op);
 
+/// Count the number of loops surrounding `operand` such that operand could be
+/// hoisted above.
+/// Stop counting at the first loop over which the operand cannot be hoisted.
+/// This counts any LoopLikeOpInterface, not just affine.for.
+int64_t numEnclosingInvariantLoops(OpOperand &operand);
 } // namespace affine
 } // namespace mlir
 

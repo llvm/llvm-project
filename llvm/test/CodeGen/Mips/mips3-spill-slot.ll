@@ -1,4 +1,4 @@
-; RUN: llc -march=mips64 -mcpu=mips3 < %s 2>&1 | FileCheck %s --check-prefix=CHECK
+; RUN: llc -mtriple=mips64 -mcpu=mips3 < %s 2>&1 | FileCheck %s --check-prefix=CHECK
 ; This testcase is from PR35859.
 ; Check that spill slot has the correct size for mips3 and n64 ABI.
 ; Previously, this test case would fail during register

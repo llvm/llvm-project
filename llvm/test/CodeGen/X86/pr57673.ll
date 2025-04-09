@@ -100,7 +100,7 @@ bb_entry:
   br label %bb_8
 
 bb_8:                                             ; preds = %bb_last, %bb_entry
-  br i1 undef, label %bb_last, label %bb_mid
+  br i1 poison, label %bb_last, label %bb_mid
 
 bb_mid:                                           ; preds = %bb_8
   %i4 = getelementptr inbounds %t10, ptr %i1, i64 0, i32 1, i64 32

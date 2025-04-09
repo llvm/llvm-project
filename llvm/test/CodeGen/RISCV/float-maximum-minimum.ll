@@ -8,6 +8,9 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+d \
 ; RUN:   -verify-machineinstrs -target-abi=ilp32f \
 ; RUN:   | FileCheck -check-prefix=RV32IF %s
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 \
+; RUN:   -verify-machineinstrs -target-abi=ilp32 \
+; RUN:   | FileCheck -check-prefix=RV32I %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+f \
 ; RUN:   -verify-machineinstrs -target-abi=lp64f \
 ; RUN:   | FileCheck -check-prefix=RV64IF %s
@@ -17,6 +20,9 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+d \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d \
 ; RUN:   | FileCheck -check-prefix=RV64IF %s
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 \
+; RUN:   -verify-machineinstrs -target-abi=lp64 \
+; RUN:   | FileCheck -check-prefix=RV64I %s
 
 declare float @llvm.minimum.f32(float, float)
 
@@ -59,6 +65,15 @@ define float @fminimum_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmin.s a0, a1, a2
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fminimum_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fminimumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fminimum_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
@@ -96,6 +111,15 @@ define float @fminimum_f32(float %a, float %b) nounwind {
 ; RV64IZFINX-NEXT:  .LBB0_4:
 ; RV64IZFINX-NEXT:    fmin.s a0, a1, a2
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fminimum_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fminimumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
@@ -141,6 +165,15 @@ define float @fmaximum_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmax.s a0, a1, a2
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fmaximum_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmaximumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fmaximum_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
@@ -178,6 +211,15 @@ define float @fmaximum_f32(float %a, float %b) nounwind {
 ; RV64IZFINX-NEXT:  .LBB1_4:
 ; RV64IZFINX-NEXT:    fmax.s a0, a1, a2
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fmaximum_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmaximumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call float @llvm.maximum.f32(float %a, float %b)
   ret float %1
 }
@@ -193,6 +235,15 @@ define float @fminimum_nnan_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fminimum_nnan_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fminimumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fminimum_nnan_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fmin.s fa0, fa0, fa1
@@ -202,6 +253,15 @@ define float @fminimum_nnan_f32(float %a, float %b) nounwind {
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fminimum_nnan_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fminimumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call nnan float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
@@ -217,6 +277,15 @@ define float @fmaximum_nnan_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmax.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fmaximum_nnan_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fmaximumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fmaximum_nnan_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fmax.s fa0, fa0, fa1
@@ -226,6 +295,15 @@ define float @fmaximum_nnan_f32(float %a, float %b) nounwind {
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    fmax.s a0, a0, a1
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fmaximum_nnan_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fmaximumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call nnan float @llvm.maximum.f32(float %a, float %b)
   ret float %1
 }
@@ -241,6 +319,15 @@ define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind "no-nans-fp-ma
 ; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fminimum_nnan_attr_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    call fminimumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fminimum_nnan_attr_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fmin.s fa0, fa0, fa1
@@ -250,6 +337,15 @@ define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind "no-nans-fp-ma
 ; RV64IZFINX:       # %bb.0:
 ; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fminimum_nnan_attr_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    call fminimumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %1 = call float @llvm.minimum.f32(float %a, float %b)
   ret float %1
 }
@@ -279,6 +375,22 @@ define float @fminimum_nnan_op_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fminimum_nnan_op_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, s0
+; RV32I-NEXT:    call fminimumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fminimum_nnan_op_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    feq.s a0, fa0, fa0
@@ -302,6 +414,22 @@ define float @fminimum_nnan_op_f32(float %a, float %b) nounwind {
 ; RV64IZFINX-NEXT:    fadd.s a1, a0, a0
 ; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fminimum_nnan_op_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -16
+; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a0
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, s0
+; RV64I-NEXT:    call fminimumf
+; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 16
+; RV64I-NEXT:    ret
   %c = fadd nnan float %a, %a
   %1 = call float @llvm.minimum.f32(float %a, float %c)
   ret float %1
@@ -322,6 +450,30 @@ define float @fmaximum_nnan_op_f32(float %a, float %b) nounwind {
 ; RV32IZFINX-NEXT:    fmax.s a0, a2, a0
 ; RV32IZFINX-NEXT:    ret
 ;
+; RV32I-LABEL: fmaximum_nnan_op_f32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -16
+; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    mv s0, a1
+; RV32I-NEXT:    mv s1, a0
+; RV32I-NEXT:    call __addsf3
+; RV32I-NEXT:    mv s2, a0
+; RV32I-NEXT:    mv a0, s1
+; RV32I-NEXT:    mv a1, s0
+; RV32I-NEXT:    call __subsf3
+; RV32I-NEXT:    mv a1, a0
+; RV32I-NEXT:    mv a0, s2
+; RV32I-NEXT:    call fmaximumf
+; RV32I-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 16
+; RV32I-NEXT:    ret
+;
 ; RV64IF-LABEL: fmaximum_nnan_op_f32:
 ; RV64IF:       # %bb.0:
 ; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
@@ -335,6 +487,30 @@ define float @fmaximum_nnan_op_f32(float %a, float %b) nounwind {
 ; RV64IZFINX-NEXT:    fsub.s a0, a0, a1
 ; RV64IZFINX-NEXT:    fmax.s a0, a2, a0
 ; RV64IZFINX-NEXT:    ret
+;
+; RV64I-LABEL: fmaximum_nnan_op_f32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s1, 8(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
+; RV64I-NEXT:    mv s0, a1
+; RV64I-NEXT:    mv s1, a0
+; RV64I-NEXT:    call __addsf3
+; RV64I-NEXT:    mv s2, a0
+; RV64I-NEXT:    mv a0, s1
+; RV64I-NEXT:    mv a1, s0
+; RV64I-NEXT:    call __subsf3
+; RV64I-NEXT:    mv a1, a0
+; RV64I-NEXT:    mv a0, s2
+; RV64I-NEXT:    call fmaximumf
+; RV64I-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
+; RV64I-NEXT:    addi sp, sp, 32
+; RV64I-NEXT:    ret
   %c = fadd nnan float %a, %b
   %d = fsub nnan float %a, %b
   %1 = call float @llvm.maximum.f32(float %c, float %d)

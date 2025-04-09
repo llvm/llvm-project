@@ -96,10 +96,10 @@ body: |
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
+    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: SCHED_BARRIER 1
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR1]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
-    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_1]], [[DEF]], 512, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0
     %0:sreg_64_xexec_xnull = IMPLICIT_DEF
@@ -163,19 +163,19 @@ body: |
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:areg_128 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF2]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
-    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_1:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF2]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
-    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_2:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_1:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_2:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
-    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_3:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_2:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
+    ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_3:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_2]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_4:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_3]], 0, 0, 0, implicit $mode, implicit $exec
     ; CHECK-NEXT: SCHED_BARRIER 4
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_3:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR1]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
-    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_3]], [[DEF]], 512, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_MUL_LO_U32_e64_1]], implicit [[V_MUL_LO_U32_e64_2]], implicit [[V_MFMA_F32_4X4X1F32_e64_4]]
     %0:sreg_64_xexec_xnull = IMPLICIT_DEF
@@ -258,10 +258,10 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:sreg_64_xexec_xnull = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: SCHED_BARRIER 16
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR1]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_1]], [[DEF]], 512, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
@@ -290,10 +290,10 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:sreg_64_xexec_xnull = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
-    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: SCHED_BARRIER 32
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR1]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_1]], [[DEF]], 512, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
@@ -354,9 +354,9 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DS_READ_U16_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_]], [[DS_READ_U16_gfx9_]], implicit $exec
-    ; CHECK-NEXT: [[DS_READ_U16_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: DS_WRITE_B32 [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 16, implicit $m0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 3)
     ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: [[DS_READ_U16_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: SCHED_BARRIER 128
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_1]], [[DS_READ_U16_gfx9_1]], implicit $exec
     ; CHECK-NEXT: dead [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -386,9 +386,9 @@ body: |
     ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DS_READ_U16_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_]], [[DS_READ_U16_gfx9_]], implicit $exec
-    ; CHECK-NEXT: [[DS_READ_U16_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: DS_WRITE_B32 [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 16, implicit $m0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 3)
     ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: [[DS_READ_U16_gfx9_1:%[0-9]+]]:vgpr_32 = DS_READ_U16_gfx9 [[DEF]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 3)
     ; CHECK-NEXT: SCHED_BARRIER 256
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[DS_READ_U16_gfx9_1]], [[DS_READ_U16_gfx9_1]], implicit $exec
     ; CHECK-NEXT: dead [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -453,7 +453,6 @@ body: |
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 0, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:areg_128 = IMPLICIT_DEF
-    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[GLOBAL_LOAD_DWORD_SADDR]], implicit $exec
     ; CHECK-NEXT: [[V_MUL_LO_U32_e64_1:%[0-9]+]]:vgpr_32 = nsw V_MUL_LO_U32_e64 [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF1]], implicit $exec
     ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[DEF2]], 0, 0, 0, implicit $mode, implicit $exec
@@ -462,6 +461,7 @@ body: |
     ; CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR [[DEF1]], [[V_MUL_LO_U32_e64_]], [[DEF]], 0, 0, implicit $exec :: (store (s32) into %ir.out, !noalias !0, addrspace 1)
     ; CHECK-NEXT: SCHED_BARRIER 12
     ; CHECK-NEXT: [[V_MFMA_F32_4X4X1F32_e64_2:%[0-9]+]]:areg_128 = V_MFMA_F32_4X4X1F32_e64 [[DEF1]], [[GLOBAL_LOAD_DWORD_SADDR]], [[V_MFMA_F32_4X4X1F32_e64_1]], 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: SCHED_BARRIER 8
     ; CHECK-NEXT: S_NOP 0
     ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[DEF]], [[DEF1]], 512, 0, implicit $exec :: (load (s32) from %ir.in, !alias.scope !0, addrspace 1)

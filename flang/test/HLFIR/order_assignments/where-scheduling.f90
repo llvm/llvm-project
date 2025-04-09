@@ -134,7 +134,8 @@ end subroutine
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPonly_once ------------
-!CHECK-NEXT: unknown effect: %{{[0-9]+}} = llvm.intr.stacksave : !llvm.ptr
+!CHECK-NEXT: unknown effect: %11 = fir.call @_QPcall_me_only_once() fastmath<contract> : () -> !fir.array<10x!fir.logical<4>>
+!CHECK-NEXT: saving eval because write effect prevents re-evaluation
 !CHECK-NEXT: run 1 save  (w): where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-NEXT: run 3 evaluate: where/region_assign2
@@ -180,6 +181,7 @@ end subroutine
 !CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFwhere_construct_unknown_conflictEmask"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: saving eval because write effect prevents re-evaluation
 !CHECK-NEXT: run 2 save  (w): where/region_assign1/rhs
 !CHECK-NEXT: run 3 evaluate: where/region_assign1
 !CHECK-NEXT: ------------ scheduling where in _QPelsewhere_construct_unknown_conflict ------------
@@ -190,5 +192,6 @@ end subroutine
 !CHECK-NEXT: conflict: R/W: %{{.*}} = hlfir.declare %{{.*}} {uniq_name = "_QFelsewhere_construct_unknown_conflictEmask2"} : (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.box<!fir.array<?x!fir.logical<4>>>) W:<unknown>
 !CHECK-NEXT: run 2 save    : where/elsewhere1/mask
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
+!CHECK-NEXT: saving eval because write effect prevents re-evaluation
 !CHECK-NEXT: run 3 save  (w): where/elsewhere1/region_assign1/rhs
 !CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1

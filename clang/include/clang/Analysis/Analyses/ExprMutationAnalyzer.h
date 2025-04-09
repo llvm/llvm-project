@@ -47,8 +47,6 @@ public:
 
     const Stmt *findPointeeMutation(const Expr *Exp);
     const Stmt *findPointeeMutation(const Decl *Dec);
-    static bool isUnevaluated(const Stmt *Smt, const Stmt &Stm,
-                              ASTContext &Context);
 
   private:
     using MutationFinder = const Stmt *(Analyzer::*)(const Expr *);
@@ -57,8 +55,6 @@ public:
                                      llvm::ArrayRef<MutationFinder> Finders,
                                      Memoized::ResultMap &MemoizedResults);
     const Stmt *tryEachDeclRef(const Decl *Dec, MutationFinder Finder);
-
-    bool isUnevaluated(const Expr *Exp);
 
     const Stmt *findExprMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
     const Stmt *findDeclMutation(ArrayRef<ast_matchers::BoundNodes> Matches);
@@ -75,6 +71,10 @@ public:
     const Stmt *findReferenceMutation(const Expr *Exp);
     const Stmt *findFunctionArgMutation(const Expr *Exp);
 
+    const Stmt *findPointeeValueMutation(const Expr *Exp);
+    const Stmt *findPointeeMemberMutation(const Expr *Exp);
+    const Stmt *findPointeeToNonConst(const Expr *Exp);
+
     const Stmt &Stm;
     ASTContext &Context;
     Memoized &Memorized;
@@ -82,6 +82,10 @@ public:
 
   ExprMutationAnalyzer(const Stmt &Stm, ASTContext &Context)
       : Memorized(), A(Stm, Context, Memorized) {}
+
+  /// check whether stmt is unevaluated. mutation analyzer will ignore the
+  /// content in unevaluated stmt.
+  static bool isUnevaluated(const Stmt *Stm, ASTContext &Context);
 
   bool isMutated(const Expr *Exp) { return findMutation(Exp) != nullptr; }
   bool isMutated(const Decl *Dec) { return findMutation(Dec) != nullptr; }
@@ -99,11 +103,6 @@ public:
   }
   const Stmt *findPointeeMutation(const Decl *Dec) {
     return A.findPointeeMutation(Dec);
-  }
-
-  static bool isUnevaluated(const Stmt *Smt, const Stmt &Stm,
-                            ASTContext &Context) {
-    return Analyzer::isUnevaluated(Smt, Stm, Context);
   }
 
 private:

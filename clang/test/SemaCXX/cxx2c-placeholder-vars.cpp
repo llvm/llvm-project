@@ -1,4 +1,4 @@
-// RUN: %clang -cc1 -fsyntax-only -verify -std=c++2c -Wunused-parameter -Wunused -Wpre-c++26-compat %s
+// RUN: %clang_cc1 -fsyntax-only -verify -ast-dump -std=c++2c -Wunused-parameter -Wunused -Wpre-c++26-compat %s | FileCheck %s
 
 void static_var() {
     static int _; // expected-note {{previous definition is here}} \
@@ -253,4 +253,38 @@ namespace Bases {
                   // expected-error {{a type specifier is required for all declarations}}
         }
     };
+}
+
+namespace GH114069 {
+
+template <class T>
+struct A {
+    T _ = 1;
+    T _ = 2;
+    T : 1;
+    T a = 3;
+    T _ = 4;
+};
+
+void f() {
+    [[maybe_unused]] A<int> a;
+}
+
+// CHECK: NamespaceDecl {{.*}} GH114069
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct A definition
+// CHECK: CXXConstructorDecl {{.*}} implicit used constexpr A 'void () noexcept'
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 1
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 2
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} 'a' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 3
+// CHECK-NEXT: CXXCtorInitializer Field {{.*}} '_' 'int'
+// CHECK-NEXT: CXXDefaultInitExpr {{.*}} 'int' has rewritten init
+// CHECK-NEXT: IntegerLiteral {{.*}} 'int' 4
+// CHECK-NEXT: CompoundStmt {{.*}}
+
 }

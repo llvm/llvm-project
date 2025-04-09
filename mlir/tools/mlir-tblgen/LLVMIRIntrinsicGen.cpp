@@ -76,7 +76,7 @@ static IndicesTy getOverloadableTypeIdxs(const Record &record,
     case llvm::MVT::iAny:
     case llvm::MVT::fAny:
     case llvm::MVT::Any:
-    case llvm::MVT::iPTRAny:
+    case llvm::MVT::pAny:
     case llvm::MVT::vAny:
       overloadedOps.set(r.index());
       break;

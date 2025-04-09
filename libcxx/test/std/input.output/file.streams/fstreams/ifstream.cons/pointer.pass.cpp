@@ -8,6 +8,8 @@
 
 // FILE_DEPENDENCIES: test.dat
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 // <fstream>
 
 // template <class charT, class traits = char_traits<charT> >

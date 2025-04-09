@@ -1,0 +1,129 @@
+# RUN: llc -mtriple=aarch64 -o /dev/null -run-pass=register-coalescer -aarch64-enable-subreg-liveness-tracking -debug-only=regalloc %s 2>&1 | FileCheck %s --check-prefix=CHECK-DBG
+# RUN: llc -mtriple=aarch64 -verify-machineinstrs -o - -run-pass=register-coalescer -aarch64-enable-subreg-liveness-tracking %s | FileCheck %s --check-prefix=CHECK
+# REQUIRES: asserts
+
+# CHECK-DBG: ********** REGISTER COALESCER **********
+# CHECK-DBG: ********** Function: test
+# CHECK-DBG: ********** JOINING INTERVALS ***********
+# CHECK-DBG: ********** INTERVALS **********
+# CHECK-DBG: %0 [16r,32r:0) 0@16r  weight:0.000000e+00
+# CHECK-DBG: %3 [48r,112r:0) 0@48r  L0000000000000040 [48r,112r:0) 0@48r  weight:0.000000e+00
+# CHECK-DBG: %4 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  L0000000000000080 [112e,112d:0) 0@112e  L0000000000000040 [80r,112e:1)[112e,112d:0) 0@112e 1@80r  weight:0.000000e+00
+# CHECK-DBG: %5 [32r,112r:1)[112r,112d:0) 0@112r 1@32r  weight:0.000000e+00
+---
+name:            test
+tracksRegLiveness: true
+fixedStack:      []
+stack:
+  - { id: 0, name: '', type: default, offset: 0, size: 65, alignment: 16,
+      stack-id: default }
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: test
+    ; CHECK: [[ADDXri:%[0-9]+]]:gpr64sp = ADDXri %stack.0, 0, 0
+    ; CHECK-NEXT: [[ADDXri1:%[0-9]+]]:gpr64common = nuw ADDXri [[ADDXri]], 64, 0
+    ; CHECK-NEXT: undef [[MOVi32imm:%[0-9]+]].sub_32:gpr64 = MOVi32imm 64
+    ; CHECK-NEXT: undef [[MOVi32imm1:%[0-9]+]].sub_32:gpr64 = MOVi32imm 64
+    ; CHECK-NEXT: dead [[ADDXri1]]:gpr64common, dead early-clobber [[MOVi32imm1]]:gpr64 = MOPSMemorySetPseudo [[ADDXri1]], [[MOVi32imm1]], [[MOVi32imm]], implicit-def dead $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
+    %1:gpr64sp = ADDXri %stack.0, 0, 0
+    %2:gpr64common = nuw ADDXri killed %1, 64, 0
+    %3:gpr32 = MOVi32imm 64
+    %4:gpr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32
+    %6:gpr64 = COPY %4
+    %5:gpr64common = COPY killed %2
+    dead %5:gpr64common, dead early-clobber %6:gpr64 = MOPSMemorySetPseudo %5, %6, %4, implicit-def dead $nzcv
+    RET_ReallyLR
+
+...
+# CHECK-DBG: ********** REGISTER COALESCER **********
+# CHECK-DBG: ********** Function: reproducer
+# CHECK-DBG: ********** JOINING INTERVALS ***********
+# CHECK-DBG: ********** INTERVALS **********
+# CHECK-DBG: %1 [32r,48B:2)[48B,320r:0)[320r,368B:1) 0@48B-phi 1@320r 2@32r
+# CHECK-DBG-SAME: weight:0.000000e+00
+# CHECK-DBG: %3 [80r,160B:2)[240r,272B:1)[288r,304B:0)[304B,320r:3) 0@288r 1@240r 2@80r 3@304B-phi
+# CHECK-DBG-SAME: L0000000000000080 [288r,304B:0)[304B,320r:3) 0@288r 1@x 2@x 3@304B-phi
+# CHECK-DBG-SAME: L0000000000000040 [80r,160B:2)[240r,272B:1)[288r,304B:0)[304B,320r:3) 0@288r 1@240r 2@80r 3@304B-phi
+# CHECK-DBG-SAME: weight:0.000000e+00
+---
+name:              reproducer
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:gpr32 = MOVi32imm 1
+    %1:gpr64 = IMPLICIT_DEF
+
+  bb.1:
+
+  bb.2:
+    %3:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+
+  bb.3:
+    $nzcv = IMPLICIT_DEF
+    %4:gpr64 = COPY killed %3
+    Bcc 1, %bb.7, implicit killed $nzcv
+
+  bb.4:
+    $nzcv = IMPLICIT_DEF
+    Bcc 1, %bb.6, implicit killed $nzcv
+
+  bb.5:
+    %5:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+    %4:gpr64 = COPY killed %5
+    B %bb.7
+
+  bb.6:
+    %4:gpr64 = COPY $xzr
+
+  bb.7:
+    %7:gpr64 = ADDXrs killed %1, killed %4, 1
+    %1:gpr64 = COPY killed %7
+    B %bb.1
+
+...
+# CHECK-DBG: ********** REGISTER COALESCER **********
+# CHECK-DBG: ********** Function: reproducer2
+# CHECK-DBG: ********** JOINING INTERVALS ***********
+# CHECK-DBG: ********** INTERVALS **********
+# CHECK-DBG: %1 [32r,48B:2)[48B,304r:0)[304r,352B:1) 0@48B-phi 1@304r 2@32r
+# CHECK-DBG-SAME: weight:0.000000e+00
+# CHECK-DBG: %3 [80r,160B:2)[224r,256B:1)[272r,288B:0)[288B,304r:3) 0@272r 1@224r 2@80r 3@288B-phi
+# CHECK-DBG-SAME: L0000000000000080 [224r,256B:1)[272r,288B:0)[288B,304r:3) 0@272r 1@224r 2@x 3@288B-phi
+# CHECK-DBG-SAME: L0000000000000040 [80r,160B:2)[224r,256B:1)[272r,288B:0)[288B,304r:3) 0@272r 1@224r 2@80r 3@288B-phi
+# CHECK-DBG-SAME: weight:0.000000e+00
+---
+name:              reproducer2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    %0:gpr32 = MOVi32imm 1
+    %1:gpr64 = IMPLICIT_DEF
+
+  bb.1:
+
+  bb.2:
+    %3:gpr64all = SUBREG_TO_REG 0, %0, %subreg.sub_32
+
+  bb.3:
+    $nzcv = IMPLICIT_DEF
+    %4:gpr64 = COPY killed %3
+    Bcc 1, %bb.7, implicit killed $nzcv
+
+  bb.4:
+    $nzcv = IMPLICIT_DEF
+    Bcc 1, %bb.6, implicit killed $nzcv
+
+  bb.5:
+    %4:gpr64 = IMPLICIT_DEF
+    B %bb.7
+
+  bb.6:
+    %4:gpr64 = COPY $xzr
+
+  bb.7:
+    %5:gpr64 = ADDXrs killed %1, killed %4, 1
+    %1:gpr64 = COPY killed %5
+    B %bb.1
+
+...

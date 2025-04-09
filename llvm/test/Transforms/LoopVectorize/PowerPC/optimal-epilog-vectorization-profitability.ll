@@ -4,7 +4,7 @@
 ; the future we need to replace this with a more meaningful test of the
 ; epilogue vectorization cost-model.
 ; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-minimum-VF=4 -S | FileCheck %s --check-prefix=CHECK-MIN-4
-; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -S | FileCheck %s --check-prefix=CHECK-MIN-D
+; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -force-vector-interleave=1 -S | FileCheck %s --check-prefix=CHECK-MIN-IC-1
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
@@ -85,14 +85,14 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-; Do not vectorize the epilogue for loops with VF less than the default -epilogue-vectorization-minimum-VF of 16.
-; CHECK-MIN-D-LABEL: @f3
-; CHECK-MIN-D-NOT: vector.main.loop.iter.check
-; CHECK-MIN-D-NOT: vec.epilog.iter.check
-; CHECK-MIN-D-NOT: vec.epilog.ph
-; CHECK-MIN-D-NOT: vec.epilog.vector.body
-; CHECK-MIN-D-NOT: vec.epilog.middle.block
-; CHECK-MIN-D: ret void
+; Do not vectorize the epilogue for loops with VF*IC less than the default -epilogue-vectorization-minimum-VF of 16.
+; CHECK-MIN-IC-1-LABEL: @f3
+; CHECK-MIN-IC-1-NOT: vector.main.loop.iter.check
+; CHECK-MIN-IC-1-NOT: vec.epilog.iter.check
+; CHECK-MIN-IC-1-NOT: vec.epilog.ph
+; CHECK-MIN-IC-1-NOT: vec.epilog.vector.body
+; CHECK-MIN-IC-1-NOT: vec.epilog.middle.block
+; CHECK-MIN-IC-1: ret void
 
 ; Specify a smaller minimum VF (via `-epilogue-vectorization-minimum-VF=4`) and
 ; make sure the epilogue gets vectorized in that case.
@@ -103,6 +103,15 @@ for.end:                                          ; preds = %for.end.loopexit, %
 ; CHECK-MIN-4: vec.epilog.vector.body
 ; CHECK-MIN-4: vec.epilog.middle.block
 ; CHECK-MIN-4: ret void
+
+; Default behaviour is to vectorize the epilogue for this loop.
+; CHECK-LABEL: @f3
+; CHECK: vector.main.loop.iter.check
+; CHECK: vec.epilog.iter.check
+; CHECK: vec.epilog.ph
+; CHECK: vec.epilog.vector.body
+; CHECK: vec.epilog.middle.block
+; CHECK: ret void
 
 define dso_local void @f3(ptr noalias %aa, ptr noalias %bb, ptr noalias %cc, i32 signext %N) {
 entry:

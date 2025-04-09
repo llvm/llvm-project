@@ -16,7 +16,7 @@ int Func64(struct bar* B) {
 }
 
 
-int test(void) {
+void test(void) {
   Func(0);    /* should be renamed to call Func64 */
   Func64(0);
 }

@@ -11,6 +11,7 @@
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Function.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -173,6 +174,28 @@ StructType *ConstantStruct::getTypeForElements(Context &Ctx,
   return StructType::get(Ctx, EltTypes, Packed);
 }
 
+Constant *ConstantVector::get(ArrayRef<Constant *> V) {
+  assert(!V.empty() && "Expected non-empty V!");
+  auto &Ctx = V[0]->getContext();
+  SmallVector<llvm::Constant *, 8> LLVMV;
+  LLVMV.reserve(V.size());
+  for (auto *Elm : V)
+    LLVMV.push_back(cast<llvm::Constant>(Elm->Val));
+  return Ctx.getOrCreateConstant(llvm::ConstantVector::get(LLVMV));
+}
+
+Constant *ConstantVector::getSplat(ElementCount EC, Constant *Elt) {
+  auto *LLVMElt = cast<llvm::Constant>(Elt->Val);
+  auto &Ctx = Elt->getContext();
+  return Ctx.getOrCreateConstant(llvm::ConstantVector::getSplat(EC, LLVMElt));
+}
+
+Constant *ConstantVector::getSplatValue(bool AllowPoison) const {
+  auto *LLVMSplatValue = cast_or_null<llvm::Constant>(
+      cast<llvm::ConstantVector>(Val)->getSplatValue(AllowPoison));
+  return LLVMSplatValue ? Ctx.getOrCreateConstant(LLVMSplatValue) : nullptr;
+}
+
 ConstantAggregateZero *ConstantAggregateZero::get(Type *Ty) {
   auto *LLVMC = llvm::ConstantAggregateZero::get(Ty->LLVMTy);
   return cast<ConstantAggregateZero>(
@@ -300,6 +323,27 @@ template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
                                  GlobalObject, llvm::GlobalObject>;
 template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                                  llvm::GlobalValue>;
+
+#if defined(_MSC_VER) && !defined(__clang__)
+// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
+template LLVM_EXPORT_TEMPLATE GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+template LLVM_EXPORT_TEMPLATE GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
+#endif
 
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()

@@ -73,7 +73,7 @@ define i32 @zext_add_scalar(i1 %x) {
 
 define <2 x i32> @zext_add_vec_splat(<2 x i1> %x) {
 ; CHECK-LABEL: @zext_add_vec_splat(
-; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> <i32 43, i32 43>, <2 x i32> <i32 42, i32 42>
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[X:%.*]], <2 x i32> splat (i32 43), <2 x i32> splat (i32 42)
 ; CHECK-NEXT:    ret <2 x i32> [[ADD]]
 ;
   %zext = zext <2 x i1> %x to <2 x i32>

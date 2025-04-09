@@ -121,7 +121,7 @@ define i64 @ctpop_x_and_negx_nz(i64 %x) {
 
 define <2 x i32> @ctpop_shl1_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl1_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 1)
 ;
   %shl = shl <2 x i32> <i32 1 ,i32 1>, %x
   %cnt = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shl)
@@ -141,7 +141,7 @@ define <2 x i32> @ctpop_shl2_1_vec(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_lshr_intmin_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_lshr_intmin_vec(
-; CHECK-NEXT:    ret <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i32> splat (i32 1)
 ;
   %shr = lshr <2 x i32> <i32 2147483648 ,i32 2147483648>, %x
   %cnt = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %shr)
@@ -162,7 +162,7 @@ define <2 x i32> @ctpop_lshr_intmin_intmin_plus1_vec(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_lshr_intmin_intmin_plus1_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_lshr_intmin_intmin_plus1_vec_nz(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <2 x i32> <i32 -2147483648, i32 -2147483647>, [[X1]]
 ; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHR]])
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
@@ -176,7 +176,7 @@ define <2 x i32> @ctpop_lshr_intmin_intmin_plus1_vec_nz(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_shl2_1_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_shl2_1_vec_nz(
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], <i32 15, i32 15>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 15)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl <2 x i32> <i32 2, i32 1>, [[AND]]
 ; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[SHL]])
 ; CHECK-NEXT:    ret <2 x i32> [[CNT]]
@@ -202,7 +202,7 @@ define <2 x i32> @ctpop_x_and_negx_vec(<2 x i32> %x) {
 
 define <2 x i32> @ctpop_x_and_negx_vec_nz(<2 x i32> %x) {
 ; CHECK-LABEL: @ctpop_x_and_negx_vec_nz(
-; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], <i32 1, i32 1>
+; CHECK-NEXT:    [[X1:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 1)
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[X1]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SUB]], [[X]]
 ; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[AND]])

@@ -15,6 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -150,6 +151,10 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
   auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
+  auto GetEphValuesCache =
+      [&](Function &F) -> EphemeralValuesAnalysis::Result & {
+    return FAM.getResult<EphemeralValuesAnalysis>(F);
+  };
 
   Function &Callee = *CB.getCalledFunction();
   auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
@@ -158,7 +163,8 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
+                         GetEphValuesCache);
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,
@@ -199,13 +205,12 @@ void InlineAdvice::recordInliningWithCalleeDeleted() {
 
 AnalysisKey InlineAdvisorAnalysis::Key;
 AnalysisKey PluginInlineAdvisorAnalysis::Key;
-bool PluginInlineAdvisorAnalysis::HasBeenRegistered = false;
 
 bool InlineAdvisorAnalysis::Result::tryCreate(
     InlineParams Params, InliningAdvisorMode Mode,
     const ReplayInlinerSettings &ReplaySettings, InlineContext IC) {
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  if (PluginInlineAdvisorAnalysis::HasBeenRegistered) {
+  if (MAM.isPassRegistered<PluginInlineAdvisorAnalysis>()) {
     auto &DA = MAM.getResult<PluginInlineAdvisorAnalysis>(M);
     Advisor.reset(DA.Factory(M, FAM, Params, IC));
     return !!Advisor;
@@ -339,7 +344,7 @@ static raw_ostream &operator<<(raw_ostream &R, const ore::NV &Arg) {
 }
 
 template <class RemarkT>
-RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
+decltype(auto) operator<<(RemarkT &&R, const InlineCost &IC) {
   using namespace ore;
   if (IC.isAlways()) {
     R << "(cost=always)";
@@ -351,7 +356,7 @@ RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   }
   if (const char *Reason = IC.getReason())
     R << ": " << ore::NV("Reason", Reason);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 } // namespace llvm
 

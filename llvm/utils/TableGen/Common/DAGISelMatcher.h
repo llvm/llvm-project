@@ -834,13 +834,16 @@ class EmitIntegerMatcher : public Matcher {
   int64_t Val;
   MVT::SimpleValueType VT;
 
+  unsigned ResultNo;
+
 public:
-  EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt)
+  EmitIntegerMatcher(int64_t val, MVT::SimpleValueType vt, unsigned resultNo)
       : Matcher(EmitInteger), Val(SignExtend64(val, MVT(vt).getSizeInBits())),
-        VT(vt) {}
+        VT(vt), ResultNo(resultNo) {}
 
   int64_t getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitInteger; }
 
@@ -858,12 +861,16 @@ class EmitStringIntegerMatcher : public Matcher {
   std::string Val;
   MVT::SimpleValueType VT;
 
+  unsigned ResultNo;
+
 public:
-  EmitStringIntegerMatcher(const std::string &val, MVT::SimpleValueType vt)
-      : Matcher(EmitStringInteger), Val(val), VT(vt) {}
+  EmitStringIntegerMatcher(const std::string &val, MVT::SimpleValueType vt,
+                           unsigned resultNo)
+      : Matcher(EmitStringInteger), Val(val), VT(vt), ResultNo(resultNo) {}
 
   const std::string &getValue() const { return Val; }
   MVT::SimpleValueType getVT() const { return VT; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitStringInteger;
@@ -884,12 +891,16 @@ class EmitRegisterMatcher : public Matcher {
   const CodeGenRegister *Reg;
   MVT::SimpleValueType VT;
 
+  unsigned ResultNo;
+
 public:
-  EmitRegisterMatcher(const CodeGenRegister *reg, MVT::SimpleValueType vt)
-      : Matcher(EmitRegister), Reg(reg), VT(vt) {}
+  EmitRegisterMatcher(const CodeGenRegister *reg, MVT::SimpleValueType vt,
+                      unsigned resultNo)
+      : Matcher(EmitRegister), Reg(reg), VT(vt), ResultNo(resultNo) {}
 
   const CodeGenRegister *getReg() const { return Reg; }
   MVT::SimpleValueType getVT() const { return VT; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) { return N->getKind() == EmitRegister; }
 
@@ -907,11 +918,14 @@ private:
 class EmitConvertToTargetMatcher : public Matcher {
   unsigned Slot;
 
+  unsigned ResultNo;
+
 public:
-  EmitConvertToTargetMatcher(unsigned slot)
-      : Matcher(EmitConvertToTarget), Slot(slot) {}
+  EmitConvertToTargetMatcher(unsigned slot, unsigned resultNo)
+      : Matcher(EmitConvertToTarget), Slot(slot), ResultNo(resultNo) {}
 
   unsigned getSlot() const { return Slot; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitConvertToTarget;
@@ -985,12 +999,17 @@ class EmitNodeXFormMatcher : public Matcher {
   unsigned Slot;
   const Record *NodeXForm;
 
+  unsigned ResultNo;
+
 public:
-  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm)
-      : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm) {}
+  EmitNodeXFormMatcher(unsigned slot, const Record *nodeXForm,
+                       unsigned resultNo)
+      : Matcher(EmitNodeXForm), Slot(slot), NodeXForm(nodeXForm),
+        ResultNo(resultNo) {}
 
   unsigned getSlot() const { return Slot; }
   const Record *getNodeXForm() const { return NodeXForm; }
+  unsigned getResultNo() const { return ResultNo; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitNodeXForm;

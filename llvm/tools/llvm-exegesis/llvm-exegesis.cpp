@@ -274,6 +274,10 @@ static cl::opt<int> BenchmarkProcessCPU(
     cl::desc("The CPU number that the benchmarking process should executon on"),
     cl::cat(BenchmarkOptions), cl::init(-1));
 
+static cl::opt<std::string> MAttr(
+    "mattr", cl::desc("comma-separated list of target architecture features"),
+    cl::value_desc("+feature1,-feature2,..."), cl::cat(Options), cl::init(""));
+
 static ExitOnError ExitOnErr("llvm-exegesis error: ");
 
 // Helper function that logs the error(s) and exits.
@@ -334,6 +338,7 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
       return I->getSecond();
     return 0u;
   };
+
   SmallVector<StringRef, 2> Pieces;
   StringRef(OpcodeNames.getValue())
       .split(Pieces, ",", /* MaxSplit */ -1, /* KeepEmpty */ false);
@@ -352,17 +357,12 @@ static std::vector<unsigned> getOpcodesOrDie(const LLVMState &State) {
 static Expected<std::vector<BenchmarkCode>>
 generateSnippets(const LLVMState &State, unsigned Opcode,
                  const BitVector &ForbiddenRegs) {
-  const Instruction &Instr = State.getIC().getInstr(Opcode);
-  const MCInstrDesc &InstrDesc = Instr.Description;
   // Ignore instructions that we cannot run.
-  if (InstrDesc.isPseudo() || InstrDesc.usesCustomInsertionHook())
-    return make_error<Failure>(
-        "Unsupported opcode: isPseudo/usesCustomInserter");
-  if (InstrDesc.isBranch() || InstrDesc.isIndirectBranch())
-    return make_error<Failure>("Unsupported opcode: isBranch/isIndirectBranch");
-  if (InstrDesc.isCall() || InstrDesc.isReturn())
-    return make_error<Failure>("Unsupported opcode: isCall/isReturn");
+  if (const char *Reason =
+          State.getExegesisTarget().getIgnoredOpcodeReasonOrNull(State, Opcode))
+    return make_error<Failure>(Reason);
 
+  const Instruction &Instr = State.getIC().getInstr(Opcode);
   const std::vector<InstructionTemplate> InstructionVariants =
       State.getExegesisTarget().generateInstructionVariants(
           Instr, MaxConfigsPerOpcode);
@@ -485,8 +485,8 @@ void benchmarkMain() {
   LLVMInitialize##TargetName##AsmParser();
 #include "llvm/Config/TargetExegesis.def"
 
-  const LLVMState State =
-      ExitOnErr(LLVMState::Create(TripleName, MCPU, "", UseDummyPerfCounters));
+  const LLVMState State = ExitOnErr(
+      LLVMState::Create(TripleName, MCPU, MAttr, UseDummyPerfCounters));
 
   // Preliminary check to ensure features needed for requested
   // benchmark mode are present on target CPU and/or OS.
@@ -509,7 +509,7 @@ void benchmarkMain() {
   const auto Opcodes = getOpcodesOrDie(State);
   std::vector<BenchmarkCode> Configurations;
 
-  unsigned LoopRegister =
+  MCRegister LoopRegister =
       State.getExegesisTarget().getDefaultLoopCounterRegister(
           State.getTargetMachine().getTargetTriple());
 

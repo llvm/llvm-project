@@ -67,6 +67,20 @@ def rec7 {
   bits<3> flags = { true, false, true };
 }
 
+// `!and` and `!or` should be short-circuit such that `!tail` on empty list will never
+// be evaluated.
+// CHECK: def rec8
+// CHECK:   list<int> newSeq = [];
+// CHECK:   list<int> newSeq2 = [];
+
+class Foo <list<int> seq = []> {
+  bit unresolved = !ne(!find(NAME, "BAR"), -1);
+  list<int> newSeq  = !if(!and(false, unresolved), !tail(seq), seq);
+  list<int> newSeq2 = !if(!or(-1, unresolved), seq, !tail(seq));
+}
+
+def rec8 : Foo<>;
+
 #ifdef ERROR1
 // ERROR1: Record name '1' is not a string
 

@@ -157,7 +157,8 @@ static bool doesSuffixLookLikeMangledType(StringRef Suffix) {
     return false;
 
   // [pi][0-9]+
-  if (is_contained("pi", Suffix[0]) && all_of(Suffix.drop_front(), isDigit))
+  if (Suffix.size() > 1 && is_contained("pi", Suffix[0]) &&
+      all_of(Suffix.drop_front(), isDigit))
     return true;
 
   // Match one of the named types.
@@ -324,7 +325,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
     IS.ParamTys.push_back(TypeList->getElementAsRecord(Idx));
 
   // Parse the intrinsic properties.
-  ListInit *PropList = R->getValueAsListInit("IntrProperties");
+  const ListInit *PropList = R->getValueAsListInit("IntrProperties");
   for (unsigned i = 0, e = PropList->size(); i != e; ++i) {
     const Record *Property = PropList->getElementAsRecord(i);
     assert(Property->isSubClassOf("IntrinsicProperty") &&

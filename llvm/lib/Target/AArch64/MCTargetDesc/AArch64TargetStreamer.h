@@ -9,7 +9,13 @@
 #ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 #define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64TARGETSTREAMER_H
 
+#include "AArch64MCExpr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
+#include <cstdint>
 
 namespace {
 class AArch64ELFStreamer;
@@ -37,6 +43,11 @@ public:
   /// Callback used to implement the .note.gnu.property section.
   void emitNoteSection(unsigned Flags, uint64_t PAuthABIPlatform = -1,
                        uint64_t PAuthABIVersion = -1);
+
+  /// Callback used to emit AUTH expressions (e.g. signed
+  /// personality function pointer).
+  void emitAuthValue(const MCExpr *Expr, uint16_t Discriminator,
+                     AArch64PACKey::ID Key, bool HasAddressDiversity);
 
   /// Callback used to implement the .inst directive.
   virtual void emitInst(uint32_t Inst);
@@ -83,6 +94,24 @@ public:
   virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
   virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
+  /// Build attributes implementation
+  virtual void
+  emitAtributesSubsection(StringRef VendorName,
+                          AArch64BuildAttributes::SubsectionOptional IsOptional,
+                          AArch64BuildAttributes::SubsectionType ParameterType);
+  virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                             std::string String);
+  void activateAtributesSubsection(StringRef VendorName);
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getActiveAtributesSubsection();
+  std::unique_ptr<MCELFStreamer::AttributeSubSection>
+  getAtributesSubsectionByName(StringRef Name);
+  void
+  insertAttributeInPlace(const MCELFStreamer::AttributeItem &Attr,
+                         MCELFStreamer::AttributeSubSection &AttSubSection);
+
+  SmallVector<MCELFStreamer::AttributeSubSection, 64> AttributeSubSections;
+
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
 };
@@ -91,6 +120,15 @@ class AArch64TargetELFStreamer : public AArch64TargetStreamer {
 private:
   AArch64ELFStreamer &getStreamer();
 
+  MCSection *AttributeSection = nullptr;
+
+  /// Build attributes implementation
+  void emitAtributesSubsection(
+      StringRef VendorName,
+      AArch64BuildAttributes::SubsectionOptional IsOptional,
+      AArch64BuildAttributes::SubsectionType ParameterType) override;
+  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+                     std::string String) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
   void finish() override;
@@ -100,12 +138,6 @@ public:
 };
 
 class AArch64TargetWinCOFFStreamer : public llvm::AArch64TargetStreamer {
-private:
-  // True if we are processing SEH directives in an epilogue.
-  bool InEpilogCFI = false;
-
-  // Symbol of the current epilog for which we are processing SEH directives.
-  MCSymbol *CurrentEpilog = nullptr;
 public:
   AArch64TargetWinCOFFStreamer(llvm::MCStreamer &S)
     : AArch64TargetStreamer(S) {}

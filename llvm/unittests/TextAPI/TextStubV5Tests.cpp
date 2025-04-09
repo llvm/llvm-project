@@ -2077,7 +2077,8 @@ TEST(TBDv5, RemoveIF) {
             "x86_64-macos"
         ],
       "attributes": [
-            "flat_namespace"
+            "flat_namespace",
+            "not_for_dyld_shared_cache"
         ]
     }
   ],
@@ -2242,6 +2243,7 @@ TEST(TBDv5, RemoveIF) {
   EXPECT_EQ(PackedVersion(1, 2, 0), RemovedFile->getCurrentVersion());
   EXPECT_EQ(PackedVersion(1, 1, 0), RemovedFile->getCompatibilityVersion());
   EXPECT_TRUE(RemovedFile->isApplicationExtensionSafe());
+  EXPECT_TRUE(RemovedFile->isOSLibNotForSharedCache());
   EXPECT_FALSE(RemovedFile->isTwoLevelNamespace());
   EXPECT_EQ(0U, RemovedFile->documents().size());
 

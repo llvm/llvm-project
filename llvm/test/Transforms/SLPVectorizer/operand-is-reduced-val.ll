@@ -10,8 +10,8 @@ define i64 @src(i32 %a) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], <i64 4294967297, i64 4294967297, i64 4294967297, i64 4294967297>
-; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i64> [[TMP4]], <i64 1, i64 1, i64 1, i64 1>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <4 x i64> [[TMP3]], splat (i64 4294967297)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i64> [[TMP4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP6]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP16]], i32 0

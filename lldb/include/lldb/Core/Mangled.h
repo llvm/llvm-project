@@ -246,6 +246,8 @@ public:
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
 
+  static bool IsMangledName(llvm::StringRef name);
+
   /// Decode a serialized version of this object from data.
   ///
   /// \param data
@@ -276,10 +278,12 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
 private:
-  /// Mangled member variables.
-  ConstString m_mangled;           ///< The mangled version of the name
-  mutable ConstString m_demangled; ///< Mutable so we can get it on demand with
-                                   ///a const version of this object
+  /// The mangled version of the name.
+  ConstString m_mangled;
+
+  /// Mutable so we can get it on demand with
+  /// a const version of this object.
+  mutable ConstString m_demangled;
 };
 
 Stream &operator<<(Stream &s, const Mangled &obj);

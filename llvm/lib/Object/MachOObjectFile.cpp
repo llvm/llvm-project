@@ -1270,7 +1270,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
                                  size_t MachOFilesetEntryOffset)
     : ObjectFile(getMachOType(IsLittleEndian, Is64bits), Object),
       MachOFilesetEntryOffset(MachOFilesetEntryOffset) {
-  ErrorAsOutParameter ErrAsOutParam(&Err);
+  ErrorAsOutParameter ErrAsOutParam(Err);
   uint64_t SizeOfHeaders;
   uint32_t cputype;
   if (is64Bit()) {

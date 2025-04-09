@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Check for memd(base + #offset), instead of memd(base + reg<<#c).
 ; CHECK: memd(r{{[0-9]+}}+#
 

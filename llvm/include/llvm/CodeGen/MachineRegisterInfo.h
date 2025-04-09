@@ -674,6 +674,12 @@ public:
     return dyn_cast_if_present<const TargetRegisterClass *>(Val);
   }
 
+  /// Return the register bank of \p Reg.
+  /// This shouldn't be used directly unless \p Reg has a register bank.
+  const RegisterBank *getRegBank(Register Reg) const {
+    return cast<const RegisterBank *>(VRegInfo[Reg.id()].first);
+  }
+
   /// Return the register bank of \p Reg, or null if Reg has not been assigned
   /// a register bank or has been assigned a register class.
   /// \note It is possible to get the register bank from the register class via
@@ -754,7 +760,7 @@ public:
   /// Returns register class or bank and low level type of \p Reg. Always safe
   /// to use. Special values are returned when \p Reg does not have some of the
   /// attributes.
-  VRegAttrs getVRegAttrs(Register Reg) {
+  VRegAttrs getVRegAttrs(Register Reg) const {
     return {getRegClassOrRegBank(Reg), getType(Reg)};
   }
 
@@ -804,9 +810,10 @@ public:
   void setRegAllocationHint(Register VReg, unsigned Type, Register PrefReg) {
     assert(VReg.isVirtual());
     RegAllocHints.grow(Register::index2VirtReg(getNumVirtRegs()));
-    RegAllocHints[VReg].first  = Type;
-    RegAllocHints[VReg].second.clear();
-    RegAllocHints[VReg].second.push_back(PrefReg);
+    auto &Hint = RegAllocHints[VReg];
+    Hint.first = Type;
+    Hint.second.clear();
+    Hint.second.push_back(PrefReg);
   }
 
   /// addRegAllocationHint - Add a register allocation hint to the hints
@@ -837,9 +844,9 @@ public:
     assert(VReg.isVirtual());
     if (!RegAllocHints.inBounds(VReg))
       return {0, Register()};
-    Register BestHint = (RegAllocHints[VReg.id()].second.size() ?
-                         RegAllocHints[VReg.id()].second[0] : Register());
-    return {RegAllocHints[VReg.id()].first, BestHint};
+    auto &Hint = RegAllocHints[VReg.id()];
+    Register BestHint = (Hint.second.size() ? Hint.second[0] : Register());
+    return {Hint.first, BestHint};
   }
 
   /// getSimpleHint - same as getRegAllocationHint except it will only return
@@ -938,7 +945,7 @@ public:
     MCRegAliasIterator R(PhysReg, TRI, true);
 
     for (; R.isValid(); ++R)
-      ReservedRegs.set(*R);
+      ReservedRegs.set((*R).id());
   }
 
   /// reservedRegsFrozen - Returns true after freezeReservedRegs() was called
@@ -951,7 +958,7 @@ public:
   /// register.  Any register can be reserved before freezeReservedRegs() is
   /// called.
   bool canReserveReg(MCRegister PhysReg) const {
-    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg);
+    return !reservedRegsFrozen() || ReservedRegs.test(PhysReg.id());
   }
 
   /// getReservedRegs - Returns a reference to the frozen set of reserved
@@ -1095,9 +1102,6 @@ public:
       return !operator==(x);
     }
 
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
-
     // Iterator traversal: forward iteration only
     defusechain_iterator &operator++() {          // Preincrement
       assert(Op && "Cannot increment end iterator!");
@@ -1202,9 +1206,6 @@ public:
     bool operator!=(const defusechain_instr_iterator &x) const {
       return !operator==(x);
     }
-
-    /// atEnd - return true if this iterator is equal to reg_end() on the value.
-    bool atEnd() const { return Op == nullptr; }
 
     // Iterator traversal: forward iteration only
     defusechain_instr_iterator &operator++() {          // Preincrement

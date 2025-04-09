@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/AMDGPUMCExpr.h"
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -22,7 +23,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace llvm;
 

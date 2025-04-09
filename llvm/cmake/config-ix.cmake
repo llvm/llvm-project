@@ -17,6 +17,46 @@ include(CheckCompilerVersion)
 include(CheckProblematicConfigurations)
 include(HandleLLVMStdlib)
 
+if (ANDROID OR CYGWIN OR CMAKE_SYSTEM_NAME MATCHES "AIX|DragonFly|FreeBSD|Haiku|Linux|NetBSD|OpenBSD|SunOS")
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 1)
+  set(HAVE_UNISTD_H 1)
+elseif (APPLE)
+  set(HAVE_MACH_MACH_H 1)
+  set(HAVE_MALLOC_MALLOC_H 1)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 1)
+  set(HAVE_UNISTD_H 1)
+elseif (PURE_WINDOWS)
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 0)
+  set(HAVE_SYS_MMAN_H 0)
+  set(HAVE_SYSEXITS_H 0)
+  set(HAVE_UNISTD_H 0)
+elseif (ZOS)
+  # Confirmed in
+  # https://github.com/llvm/llvm-project/pull/104706#issuecomment-2297109613
+  set(HAVE_MACH_MACH_H 0)
+  set(HAVE_MALLOC_MALLOC_H 0)
+  set(HAVE_PTHREAD_H 1)
+  set(HAVE_SYS_MMAN_H 1)
+  set(HAVE_SYSEXITS_H 0)
+  set(HAVE_UNISTD_H 1)
+else()
+  # Other platforms that we don't promise support for.
+  check_include_file(mach/mach.h HAVE_MACH_MACH_H)
+  check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
+  check_include_file(pthread.h HAVE_PTHREAD_H)
+  check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
+  check_include_file(sysexits.h HAVE_SYSEXITS_H)
+  check_include_file(unistd.h HAVE_UNISTD_H)
+endif()
+
 if( UNIX AND NOT (APPLE OR BEOS OR HAIKU) )
   # Used by check_symbol_exists:
   list(APPEND CMAKE_REQUIRED_LIBRARIES "m")
@@ -40,25 +80,25 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
-# include checks
-check_include_file(dlfcn.h HAVE_DLFCN_H)
-check_include_file(errno.h HAVE_ERRNO_H)
-check_include_file(fcntl.h HAVE_FCNTL_H)
-check_include_file(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
-if( NOT PURE_WINDOWS )
-  check_include_file(pthread.h HAVE_PTHREAD_H)
+# Newer POSIX functions aren't available without the appropriate defines.
+# Usually those are set by the use of -std=gnuXX, but one can also use the
+# newer functions with -std=c(++)XX, i.e. without the GNU language extensions.
+# Keep this at the top to make sure we don't add _GNU_SOURCE dependent checks
+# before adding it.
+check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
+if(LLVM_USING_GLIBC)
+  add_compile_definitions(_GNU_SOURCE)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
+
+  # enable 64bit off_t on 32bit systems using glibc
+  if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    add_compile_definitions(_FILE_OFFSET_BITS=64)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
+  endif()
 endif()
-check_include_file(signal.h HAVE_SIGNAL_H)
-check_include_file(sys/ioctl.h HAVE_SYS_IOCTL_H)
-check_include_file(sys/mman.h HAVE_SYS_MMAN_H)
-check_include_file(sys/resource.h HAVE_SYS_RESOURCE_H)
-check_include_file(sys/stat.h HAVE_SYS_STAT_H)
-check_include_file(sys/time.h HAVE_SYS_TIME_H)
-check_include_file(sysexits.h HAVE_SYSEXITS_H)
-check_include_file(termios.h HAVE_TERMIOS_H)
-check_include_file(unistd.h HAVE_UNISTD_H)
+
+# include checks
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
-check_include_file(fenv.h HAVE_FENV_H)
 check_symbol_exists(FE_ALL_EXCEPT "fenv.h" HAVE_DECL_FE_ALL_EXCEPT)
 check_symbol_exists(FE_INEXACT "fenv.h" HAVE_DECL_FE_INEXACT)
 check_c_source_compiles("
@@ -73,7 +113,6 @@ check_c_source_compiles("
         int main(void) { return 0; }"
         HAVE_BUILTIN_THREAD_POINTER)
 
-check_include_file(mach/mach.h HAVE_MACH_MACH_H)
 check_include_file(CrashReporterClient.h HAVE_CRASHREPORTERCLIENT_H)
 if(APPLE)
   check_c_source_compiles("
@@ -107,7 +146,7 @@ if( NOT PURE_WINDOWS )
     endif()
   endif()
   check_library_exists(dl dlopen "" HAVE_LIBDL)
-  check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+  check_library_exists(rt shm_open "" HAVE_LIBRT)
 endif()
 
 # Check for libpfm.
@@ -277,15 +316,15 @@ check_symbol_exists(_Unwind_Backtrace "unwind.h" HAVE__UNWIND_BACKTRACE)
 check_symbol_exists(getpagesize unistd.h HAVE_GETPAGESIZE)
 check_symbol_exists(sysconf unistd.h HAVE_SYSCONF)
 check_symbol_exists(getrusage sys/resource.h HAVE_GETRUSAGE)
-check_symbol_exists(setrlimit sys/resource.h HAVE_SETRLIMIT)
 check_symbol_exists(isatty unistd.h HAVE_ISATTY)
 check_symbol_exists(futimens sys/stat.h HAVE_FUTIMENS)
 check_symbol_exists(futimes sys/time.h HAVE_FUTIMES)
+check_symbol_exists(getauxval sys/auxv.h HAVE_GETAUXVAL)
 # AddressSanitizer conflicts with lib/Support/Unix/Signals.inc
 # Avoid sigaltstack on Apple platforms, where backtrace() cannot handle it
 # (rdar://7089625) and _Unwind_Backtrace is unusable because it cannot unwind
 # past the signal handler after an assertion failure (rdar://29866587).
-if( HAVE_SIGNAL_H AND NOT LLVM_USE_SANITIZER MATCHES ".*Address.*" AND NOT APPLE )
+if( NOT LLVM_USE_SANITIZER MATCHES ".*Address.*" AND NOT APPLE )
   check_symbol_exists(sigaltstack signal.h HAVE_SIGALTSTACK)
 endif()
 check_symbol_exists(mallctl malloc_np.h HAVE_MALLCTL)
@@ -293,7 +332,6 @@ check_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
 check_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_symbol_exists(malloc_zone_statistics malloc/malloc.h
                     HAVE_MALLOC_ZONE_STATISTICS)
-check_symbol_exists(getrlimit "sys/types.h;sys/time.h;sys/resource.h" HAVE_GETRLIMIT)
 check_symbol_exists(posix_spawn spawn.h HAVE_POSIX_SPAWN)
 check_symbol_exists(pread unistd.h HAVE_PREAD)
 check_symbol_exists(sbrk unistd.h HAVE_SBRK)
@@ -336,17 +374,6 @@ else()
       "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
 endif()
 
-check_symbol_exists(__GLIBC__ stdio.h LLVM_USING_GLIBC)
-if( LLVM_USING_GLIBC )
-  add_compile_definitions(_GNU_SOURCE)
-  list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_GNU_SOURCE")
-# enable 64bit off_t on 32bit systems using glibc
-  if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-    add_compile_definitions(_FILE_OFFSET_BITS=64)
-    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
-  endif()
-endif()
-
 # This check requires _GNU_SOURCE.
 if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
@@ -359,15 +386,18 @@ if (NOT PURE_WINDOWS)
   if (LLVM_PTHREAD_LIB)
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES ${LLVM_PTHREAD_LIB})
   endif()
-endif()
 
-# This check requires _GNU_SOURCE.
-if( HAVE_DLFCN_H )
   if( HAVE_LIBDL )
     list(APPEND CMAKE_REQUIRED_LIBRARIES dl)
   endif()
+  # Add the _XOPEN_SOURCE macro on z/OS, as certain test(s) use dlopen
+  if (ZOS)
+    list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=600")
+  endif()
   check_symbol_exists(dlopen dlfcn.h HAVE_DLOPEN)
-  check_symbol_exists(dladdr dlfcn.h HAVE_DLADDR)
+  if (ZOS)
+    list(REMOVE_ITEM CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=600")
+  endif()
   if( HAVE_LIBDL )
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
   endif()

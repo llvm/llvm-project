@@ -146,11 +146,6 @@ constexpr _Complex int I3 = {15};
 static_assert(__real(I3) == 15, "");
 static_assert(__imag(I3) == 0, "");
 
-constexpr _Complex _BitInt(8) A = {4};
-static_assert(__real(A) == 4, "");
-static_assert(__imag(A) == 0, "");
-
-
 constexpr _Complex double Doubles[4] = {{1.0, 2.0}};
 static_assert(__real(Doubles[0]) == 1.0, "");
 static_assert(__imag(Doubles[0]) == 2.0, "");
@@ -162,9 +157,6 @@ static_assert(__real(Doubles[3]) == 0.0, "");
 static_assert(__imag(Doubles[3]) == 0.0, "");
 
 static_assert(~(0.5 + 1.5j) == (0.5 + -1.5j), "");
-
-static_assert(__extension__ __imag(A) == 0, "");
-static_assert(__imag(__extension__ A) == 0, "");
 
 void func(void) {
   __complex__ int arr;
@@ -407,8 +399,7 @@ namespace ComplexConstexpr {
                                   // ref-note {{cannot access real component of null}} \
                                   // expected-note {{read of dereferenced null pointer}}
   constexpr float pi = __imag *p; // both-error {{constant expr}} \
-                                  // ref-note {{cannot access imaginary component of null}} \
-                                  // expected-note {{cannot perform pointer arithmetic on null pointer}}
+                                  // ref-note {{cannot access imaginary component of null}}
   constexpr const _Complex double *q = &test3 + 1;
   constexpr double qr = __real *q; // ref-error {{constant expr}} \
                                    // ref-note {{cannot access real component of pointer past the end}}

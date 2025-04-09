@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; Looking for 3rd register field to be restricted to r0-r7.
 ; v3:2=vdeal(v3,v2,r1)
 ; CHECK: v{{[0-9]+}}:{{[0-9]+}} = vdeal(v{{[0-9]+}},v{{[0-9]+}},r{{[0-7]+}})

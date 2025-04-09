@@ -16,7 +16,7 @@
 
 #include <stdarg.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, fprintf,
                    (::FILE *__restrict stream, const char *__restrict format,
@@ -29,4 +29,4 @@ LLVM_LIBC_FUNCTION(int, fprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

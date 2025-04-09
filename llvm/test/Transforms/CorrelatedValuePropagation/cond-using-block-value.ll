@@ -13,7 +13,7 @@ define void @test_icmp_from_implied_cond(i32 %a, i32 %b) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L2:%.*]], label [[END]]
 ; CHECK:       l2:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp ult i32 [[B]], 31
+; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp samesign ult i32 [[B]], 31
 ; CHECK-NEXT:    call void @use(i1 [[B_CMP2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
@@ -74,7 +74,7 @@ define void @test_icmp_from_implied_range(i16 %x, i32 %b) {
 ; CHECK-NEXT:    br i1 [[COND]], label [[L1:%.*]], label [[END:%.*]]
 ; CHECK:       l1:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp ult i32 [[B]], 65534
+; CHECK-NEXT:    [[B_CMP2:%.*]] = icmp samesign ult i32 [[B]], 65534
 ; CHECK-NEXT:    call void @use(i1 [[B_CMP2]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       end:
