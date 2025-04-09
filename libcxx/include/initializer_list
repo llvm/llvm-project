@@ -43,7 +43,7 @@ template<class E> const E* end(initializer_list<E> il) noexcept; // constexpr in
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/initializer_list>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
 #  include <__cstddef/size_t.h>
