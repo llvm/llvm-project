@@ -66,8 +66,8 @@ PGO
 ===
 
 Using LLVM's PGO implementation for GPUs, profile data can augment the info
-reported by kernel-info.  In particular, kernel-info can estimate of the number
-of floating point operations executed.
+reported by kernel-info.  In particular, kernel-info can estimate the number of
+floating point operations executed.
 
 For example, the following computes 2\ :sup:`4`\ , so we expect 4 fmul
 instructions to execute at run time:
@@ -94,7 +94,7 @@ instructions to execute at run time:
   }
 
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -o test \
-        -fprofile-generate -fprofile-generate-gpu
+        -fprofile-generate
 
   $ LLVM_PROFILE_FILE=test.profraw ./test 2 4
   16.000000
@@ -102,8 +102,8 @@ instructions to execute at run time:
   $ llvm-profdata merge -output=test.profdata *.profraw
 
   $ clang -O1 -g -fopenmp --offload-arch=native test.c -foffload-lto \
-        -Rpass=kernel-info -fprofile-use-gpu=test.profdata | \
+        -Rpass=kernel-info -fprofile-use=test.profdata | \
       grep "test.c:.*Floating\|double"
-  test.c:13:0: in artificial function '__omp_offloading_35_126b72c_main_l13', FloatingPointOpProfileCount = 0
+  test.c:13:0: in artificial function '__omp_offloading_34_1bc8484_main_l13', FloatingPointOpProfileCount = 0
   test.c:7:9: in function 'test', double 'fmul' ('%9') executed 4 times
   test.c:4:0: in function 'test', FloatingPointOpProfileCount = 4
