@@ -69,6 +69,7 @@ def ExtendedBitOps : BuiltinGroup;
 def BindlessINTEL : BuiltinGroup;
 def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
+def Pipe : BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -632,6 +633,29 @@ defm : DemangledNativeBuiltin<"__spirv_AtomicSMin", OpenCL_std, Atomic, 4, 4, Op
 defm : DemangledNativeBuiltin<"__spirv_AtomicSMax", OpenCL_std, Atomic, 4, 4, OpAtomicSMax>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMin", OpenCL_std, Atomic, 4, 4, OpAtomicUMin>;
 defm : DemangledNativeBuiltin<"__spirv_AtomicUMax", OpenCL_std, Atomic, 4, 4, OpAtomicUMax>;
+
+// Pipe Instruction 
+defm : DemangledNativeBuiltin<"__read_pipe_2", OpenCL_std, Pipe,2, 2, OpReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_2", OpenCL_std, Pipe, 2, 2, OpWritePipe>;
+defm : DemangledNativeBuiltin<"__read_pipe_4", OpenCL_std, Pipe,4, 4, OpReservedReadPipe>;
+defm : DemangledNativeBuiltin<"__write_pipe_4", OpenCL_std, Pipe, 4, 4, OpReservedWritePipe>;
+defm : DemangledNativeBuiltin<"__reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpCommitWritePipe>;
+defm : DemangledNativeBuiltin<"is_valid_reserve_id", OpenCL_std, Pipe, 1, 1, OpIsValidReserveId>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_ro", OpenCL_std, Pipe, 1, 1, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_ro", OpenCL_std, Pipe, 1, 1, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_num_packets_wo", OpenCL_std, Pipe, 1, 1, OpGetNumPipePackets>;
+defm : DemangledNativeBuiltin<"__get_pipe_max_packets_wo", OpenCL_std, Pipe, 1, 1, OpGetMaxPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__work_group_commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__work_group_commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitWritePipe>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveReadPipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_reserve_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupReserveWritePipePackets>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_read_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitReadPipe>;
+defm : DemangledNativeBuiltin<"__sub_group_commit_write_pipe", OpenCL_std, Pipe, 2, 2, OpGroupCommitWritePipe>;
 
 // Barrier builtin records:
 defm : DemangledNativeBuiltin<"barrier", OpenCL_std, Barrier, 1, 3, OpControlBarrier>;
