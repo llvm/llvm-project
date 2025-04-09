@@ -115,7 +115,7 @@ func.func @illegaltype(i21312312323120) // expected-error {{invalid integer widt
 // -----
 
 // Test no nested vector.
-// expected-error@+1 {{failed to verify 'elementType': integer or index or floating-point}}
+// expected-error@+1 {{failed to verify 'elementType': VectorElementTypeInterface instance}}
 func.func @vectors(vector<1 x vector<1xi32>>, vector<2x4xf32>)
 
 // -----
