@@ -230,6 +230,12 @@ class BinaryContext {
   /// Functions injected by BOLT
   std::vector<BinaryFunction *> InjectedBinaryFunctions;
 
+  /// Thunk functions.
+  std::vector<BinaryFunction *> ThunkBinaryFunctions;
+
+  /// Function that precedes thunks in the binary.
+  const BinaryFunction *ThunkLocation{nullptr};
+
   /// Jump tables for all functions mapped by address.
   std::map<uint64_t, JumpTable *> JumpTables;
 
@@ -435,7 +441,18 @@ public:
 
   /// Return size of an entry for the given jump table \p Type.
   uint64_t getJumpTableEntrySize(JumpTable::JumpTableType Type) const {
-    return Type == JumpTable::JTT_PIC ? 4 : AsmInfo->getCodePointerSize();
+    switch (Type) {
+    case JumpTable::JTT_X86_64_PIC4:
+      return 4;
+    case JumpTable::JTT_X86_64_ABS:
+      return AsmInfo->getCodePointerSize();
+    case JumpTable::JTT_AARCH64_REL1:
+      return 1;
+    case JumpTable::JTT_AARCH64_REL2:
+      return 2;
+    case JumpTable::JTT_AARCH64_REL4:
+      return 4;
+    }
   }
 
   /// Return JumpTable containing a given \p Address.
@@ -553,6 +570,16 @@ public:
     return InjectedBinaryFunctions;
   }
 
+  BinaryFunction *createThunkBinaryFunction(const std::string &Name);
+
+  std::vector<BinaryFunction *> &getThunkBinaryFunctions() {
+    return ThunkBinaryFunctions;
+  }
+
+  const BinaryFunction *getThunkLocation() const { return ThunkLocation; }
+
+  void setThunkLocation(const BinaryFunction *BF) { ThunkLocation = BF; }
+
   /// Return vector with all functions, i.e. include functions from the input
   /// binary and functions created by BOLT.
   std::vector<BinaryFunction *> getAllBinaryFunctions();
@@ -574,14 +601,13 @@ public:
   /// If \p NextJTAddress is different from zero, it is used as an upper
   /// bound for jump table memory layout.
   ///
-  /// Optionally, populate \p Address from jump table entries. The entries
-  /// could be partially populated if the jump table detection fails.
+  /// If \p JT is set, populate it with jump table entries. The entries could be
+  /// partially populated if the jump table detection fails.
   bool analyzeJumpTable(const uint64_t Address,
                         const JumpTable::JumpTableType Type,
                         const BinaryFunction &BF,
                         const uint64_t NextJTAddress = 0,
-                        JumpTable::AddressesType *EntriesAsAddress = nullptr,
-                        bool *HasEntryInFragment = nullptr) const;
+                        JumpTable *JT = nullptr) const;
 
   /// After jump table locations are established, this function will populate
   /// their EntriesAsAddress based on memory contents.
@@ -1372,6 +1398,10 @@ public:
   uint64_t
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
+    // FIXME: hack for faster size computation on aarch64.
+    if (isAArch64())
+      return MIB->isPseudo(Inst) ? 0 : 4;
+
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
       return *Size;
 

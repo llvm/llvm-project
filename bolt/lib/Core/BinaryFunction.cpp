@@ -112,6 +112,10 @@ cl::opt<bool>
                             cl::desc("try to preserve basic block alignment"),
                             cl::cat(BoltOptCategory));
 
+static cl::opt<bool> PrintOffsets("print-offsets",
+                                  cl::desc("print basic block offsets"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
+
 static cl::opt<bool> PrintOutputAddressRange(
     "print-output-address-range",
     cl::desc(
@@ -556,6 +560,11 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
       if (BB->isLandingPad())
         OS << "  Landing Pad\n";
 
+      if (opts::PrintOffsets && BB->getOutputStartAddress()) {
+        OS << "  OutputOffset: 0x"
+           << Twine::utohexstr(BB->getOutputStartAddress()) << '\n';
+      }
+
       uint64_t BBExecCount = BB->getExecutionCount();
       if (hasValidProfile()) {
         OS << "  Exec Count : ";
@@ -909,7 +918,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
            "Invalid memory instruction");
     const MCExpr *FixedEntryDispExpr = FixedEntryDispOperand->getExpr();
     const uint64_t EntryAddress = getExprValue(FixedEntryDispExpr);
-    uint64_t EntrySize = BC.getJumpTableEntrySize(JumpTable::JTT_PIC);
+    uint64_t EntrySize = BC.getJumpTableEntrySize(JumpTable::JTT_X86_64_PIC4);
     ErrorOr<int64_t> Value =
         BC.getSignedValueAtAddress(EntryAddress, EntrySize);
     if (!Value)
@@ -979,12 +988,14 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   MemoryContentsType MemType;
   if (JumpTable *JT = BC.getJumpTableContainingAddress(ArrayStart)) {
     switch (JT->Type) {
-    case JumpTable::JTT_NORMAL:
+    case JumpTable::JTT_X86_64_ABS:
       MemType = MemoryContentsType::POSSIBLE_JUMP_TABLE;
       break;
-    case JumpTable::JTT_PIC:
+    case JumpTable::JTT_X86_64_PIC4:
       MemType = MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE;
       break;
+    default:
+      llvm_unreachable("Unhandled jump table type");
     }
   } else {
     MemType = BC.analyzeMemoryAt(ArrayStart, *this);
@@ -995,7 +1006,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
   if (BranchType == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE) {
     if (MemType != MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE)
       return IndirectBranchType::UNKNOWN;
-    JTType = JumpTable::JTT_PIC;
+    JTType = JumpTable::JTT_X86_64_PIC4;
   } else {
     if (MemType == MemoryContentsType::POSSIBLE_PIC_JUMP_TABLE)
       return IndirectBranchType::UNKNOWN;
@@ -1004,7 +1015,7 @@ BinaryFunction::processIndirectBranch(MCInst &Instruction, unsigned Size,
       return IndirectBranchType::POSSIBLE_TAIL_CALL;
 
     BranchType = IndirectBranchType::POSSIBLE_JUMP_TABLE;
-    JTType = JumpTable::JTT_NORMAL;
+    JTType = JumpTable::JTT_X86_64_ABS;
   }
 
   // Convert the instruction into jump table branch.
@@ -1908,7 +1919,8 @@ void BinaryFunction::postProcessJumpTables() {
   // Create labels for all entries.
   for (auto &JTI : JumpTables) {
     JumpTable &JT = *JTI.second;
-    if (JT.Type == JumpTable::JTT_PIC && opts::JumpTables == JTS_BASIC) {
+    if ((JT.Type == JumpTable::JTT_X86_64_PIC4 || BC.isAArch64()) &&
+        opts::JumpTables == JTS_BASIC) {
       opts::JumpTables = JTS_MOVE;
       BC.outs() << "BOLT-INFO: forcing -jump-tables=move as PIC jump table was "
                    "detected in function "
@@ -1952,6 +1964,12 @@ void BinaryFunction::postProcessJumpTables() {
                        : TargetBF->getSymbol();
       }
       JT.Entries.push_back(Label);
+    }
+    // Register jump table base address as a local symbol
+    if (uint64_t BaseAddress = std::get<0>(JT.BaseAddress)) {
+      BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(BaseAddress);
+      assert(BF && "must have a valid jump table base address");
+      JT.BaseAddress = BF->getOrCreateLocalLabel(BaseAddress);
     }
   }
 
@@ -2103,7 +2121,7 @@ bool BinaryFunction::postProcessIndirectBranches(
           BC.MIB->unsetJumpTable(Instr);
 
           JumpTable *JT = BC.getJumpTableContainingAddress(LastJT);
-          if (JT->Type == JumpTable::JTT_NORMAL) {
+          if (JT->Type == JumpTable::JTT_X86_64_ABS) {
             // Invalidating the jump table may also invalidate other jump table
             // boundaries. Until we have/need a support for this, mark the
             // function as non-simple.

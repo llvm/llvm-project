@@ -49,6 +49,10 @@ public:
   /// but before functions are discovered.
   virtual Error sectionInitializer() { return Error::success(); }
 
+  /// Run initialization after the functions are identified but not yet
+  /// disassembled.
+  virtual Error preDisasmInitializer() { return Error::success(); }
+
   /// Interface for modifying/annotating functions in the binary based on the
   /// contents of the section. Functions are in pre-cfg state.
   virtual Error preCFGInitializer() { return Error::success(); }

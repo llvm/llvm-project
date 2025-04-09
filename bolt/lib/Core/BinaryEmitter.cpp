@@ -19,6 +19,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -271,6 +272,14 @@ void BinaryEmitter::emitFunctions() {
 
       if (Emitted)
         Function->setEmitted(/*KeepCFG=*/opts::PrintCacheMetrics);
+
+      // Emit thunks.
+      if (BC.getThunkLocation() != Function)
+        continue;
+
+      for (BinaryFunction *Thunk : BC.getThunkBinaryFunctions()) {
+        emitFunction(*Thunk, Thunk->getLayout().getMainFragment());
+      }
     }
   };
 
@@ -809,57 +818,71 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
     Streamer.switchSection(JT.Count > 0 ? HotSection : ColdSection);
     Streamer.emitValueToAlignment(Align(JT.EntrySize));
   }
-  MCSymbol *LastLabel = nullptr;
+  MCSymbol *JTLabel = nullptr;
+  MCContext &Context = Streamer.getContext();
   uint64_t Offset = 0;
   for (MCSymbol *Entry : JT.Entries) {
     auto LI = JT.Labels.find(Offset);
-    if (LI != JT.Labels.end()) {
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: emitting jump table " << LI->second->getName()
-               << " (originally was at address 0x"
-               << Twine::utohexstr(JT.getAddress() + Offset)
-               << (Offset ? ") as part of larger jump table\n" : ")\n");
-      });
-      if (!LabelCounts.empty()) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: "
-                          << LabelCounts[LI->second] << '\n');
-        if (LabelCounts[LI->second] > 0)
-          Streamer.switchSection(HotSection);
-        else
-          Streamer.switchSection(ColdSection);
-        Streamer.emitValueToAlignment(Align(JT.EntrySize));
-      }
-      // Emit all labels registered at the address of this jump table
-      // to sync with our global symbol table.  We may have two labels
-      // registered at this address if one label was created via
-      // getOrCreateGlobalSymbol() (e.g. LEA instructions referencing
-      // this location) and another via getOrCreateJumpTable().  This
-      // creates a race where the symbols created by these two
-      // functions may or may not be the same, but they are both
-      // registered in our symbol table at the same address. By
-      // emitting them all here we make sure there is no ambiguity
-      // that depends on the order that these symbols were created, so
-      // whenever this address is referenced in the binary, it is
-      // certain to point to the jump table identified at this
-      // address.
-      if (BinaryData *BD = BC.getBinaryDataByName(LI->second->getName())) {
-        for (MCSymbol *S : BD->getSymbols())
-          Streamer.emitLabel(S);
-      } else {
-        Streamer.emitLabel(LI->second);
-      }
-      LastLabel = LI->second;
+    if (LI == JT.Labels.end())
+      goto emitEntry;
+    JTLabel = LI->second;
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: emitting jump table " << JTLabel->getName()
+             << " (originally was at address 0x"
+             << Twine::utohexstr(JT.getAddress() + Offset)
+             << (Offset ? ") as part of larger jump table\n" : ")\n");
+    });
+    if (!LabelCounts.empty()) {
+      uint64_t JTCount = LabelCounts[JTLabel];
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: " << JTCount << '\n');
+      Streamer.switchSection(JTCount ? HotSection : ColdSection);
+      Streamer.emitValueToAlignment(Align(JT.EntrySize));
     }
-    if (JT.Type == JumpTable::JTT_NORMAL) {
+    // Emit all labels registered at the address of this jump table
+    // to sync with our global symbol table.  We may have two labels
+    // registered at this address if one label was created via
+    // getOrCreateGlobalSymbol() (e.g. LEA instructions referencing
+    // this location) and another via getOrCreateJumpTable().  This
+    // creates a race where the symbols created by these two
+    // functions may or may not be the same, but they are both
+    // registered in our symbol table at the same address. By
+    // emitting them all here we make sure there is no ambiguity
+    // that depends on the order that these symbols were created, so
+    // whenever this address is referenced in the binary, it is
+    // certain to point to the jump table identified at this
+    // address.
+    if (BinaryData *BD = BC.getBinaryDataByName(JTLabel->getName())) {
+      for (MCSymbol *S : BD->getSymbols())
+        Streamer.emitLabel(S);
+    } else {
+      Streamer.emitLabel(JTLabel);
+    }
+  emitEntry:
+    switch (JT.Type) {
+    case JumpTable::JTT_X86_64_ABS:
       Streamer.emitSymbolValue(Entry, JT.OutputEntrySize);
-    } else { // JTT_PIC
-      const MCSymbolRefExpr *JTExpr =
-          MCSymbolRefExpr::create(LastLabel, Streamer.getContext());
-      const MCSymbolRefExpr *E =
-          MCSymbolRefExpr::create(Entry, Streamer.getContext());
-      const MCBinaryExpr *Value =
-          MCBinaryExpr::createSub(E, JTExpr, Streamer.getContext());
+      break;
+    case JumpTable::JTT_X86_64_PIC4: {
+      const MCSymbolRefExpr *JTExpr = MCSymbolRefExpr::create(JTLabel, Context);
+      const MCSymbolRefExpr *E = MCSymbolRefExpr::create(Entry, Context);
+      const MCBinaryExpr *Value = MCBinaryExpr::createSub(E, JTExpr, Context);
       Streamer.emitValue(Value, JT.EntrySize);
+      break;
+    }
+    case JumpTable::JTT_AARCH64_REL1:
+    case JumpTable::JTT_AARCH64_REL2:
+    case JumpTable::JTT_AARCH64_REL4: {
+      MCSymbol *BaseSym = std::get<MCSymbol *>(JT.BaseAddress);
+      const MCExpr *Base = MCSymbolRefExpr::create(BaseSym, Context);
+      const MCExpr *E = MCSymbolRefExpr::create(Entry, Context);
+      const MCBinaryExpr *Value = MCBinaryExpr::createSub(E, Base, Context);
+      if (JT.EntrySize != 4)
+        Value = MCBinaryExpr::createLShr(
+            Value, MCConstantExpr::create(2, Context), Context);
+
+      Streamer.emitValue(Value, JT.EntrySize);
+      break;
+    }
     }
     Offset += JT.EntrySize;
   }
