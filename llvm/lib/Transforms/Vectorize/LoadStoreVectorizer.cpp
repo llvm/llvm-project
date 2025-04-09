@@ -1324,20 +1324,17 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
   // casted into.
   MapVector<EqClassKey, Bitset<3>> ClassAllTy;
   for (auto C : EQClasses) {
-    if (all_of(EQClasses[C.first], 
-      [](Instruction *I) {
-        return I->getType()->isIntOrIntVectorTy();
-      }))
+    if (all_of(EQClasses[C.first], [](Instruction *I) {
+          return I->getType()->isIntOrIntVectorTy();
+        }))
       ClassAllTy[C.first].set(0);
-    else if (all_of(EQClasses[C.first],
-      [](Instruction *I) {
-        return I->getType()->isFPOrFPVectorTy();
-      }))
+    else if (all_of(EQClasses[C.first], [](Instruction *I) {
+               return I->getType()->isFPOrFPVectorTy();
+             }))
       ClassAllTy[C.first].set(1);
-    else if (all_of(EQClasses[C.first],
-      [](Instruction *I) {
-        return I->getType()->isPtrOrPtrVectorTy();
-      }))
+    else if (all_of(EQClasses[C.first], [](Instruction *I) {
+               return I->getType()->isPtrOrPtrVectorTy();
+             }))
       ClassAllTy[C.first].set(2);
   }
 
@@ -1381,7 +1378,8 @@ void Vectorizer::insertCastsToMergeClasses(EquivalenceClassMap &EQClasses) {
           NewTy = Type::getFloatTy(Ctx);
         else if (NewTyBits == 64)
           NewTy = Type::getDoubleTy(Ctx);
-      } else if (ClassAllTy[EC1.first].test(2) && ClassAllTy[EC2.first].test(2)) {
+      } else if (ClassAllTy[EC1.first].test(2) &&
+                 ClassAllTy[EC2.first].test(2)) {
         NewTy = PointerType::get(Ctx, AS2);
       }
 
