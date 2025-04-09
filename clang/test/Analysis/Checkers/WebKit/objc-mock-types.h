@@ -1,6 +1,8 @@
 @class NSString;
 @class NSArray;
 @class NSMutableArray;
+@class NSDictionary;
+@class NSMutableDictionary;
 #define nil ((id)0)
 #define CF_BRIDGED_TYPE(T) __attribute__((objc_bridge(T)))
 #define CF_BRIDGED_MUTABLE_TYPE(T) __attribute__((objc_bridge_mutable(T)))
@@ -95,12 +97,14 @@ __attribute__((objc_root_class))
 - (NSEnumerator *)keyEnumerator;
 + (id)dictionary;
 + (id)dictionaryWithObject:(id)object forKey:(id <NSCopying>)key;
+- (NSMutableDictionary *)mutableCopy;
 + (instancetype)dictionaryWithObjects:(const id [])objects forKeys:(const id <NSCopying> [])keys count:(NSUInteger)cnt;
 @end
 
 @interface NSArray : NSObject <NSCopying, NSFastEnumeration>
 - (NSUInteger)count;
 - (NSEnumerator *)objectEnumerator;
+- (NSMutableArray *)mutableCopy;
 + (NSArray *)arrayWithObjects:(const id [])objects count:(NSUInteger)count;
 @end
 
@@ -109,6 +113,7 @@ __attribute__((objc_root_class))
 - (NSString *)stringByAppendingString:(NSString *)aString;
 - ( const char *)UTF8String;
 - (id)initWithUTF8String:(const char *)nullTerminatedCString;
+- (NSString *)copy;
 + (id)stringWithUTF8String:(const char *)nullTerminatedCString;
 @end
 
