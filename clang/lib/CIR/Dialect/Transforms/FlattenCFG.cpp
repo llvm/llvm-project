@@ -13,6 +13,8 @@
 
 #include "PassDetail.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -52,6 +54,67 @@ struct CIRFlattenCFGPass : public CIRFlattenCFGBase<CIRFlattenCFGPass> {
 
   CIRFlattenCFGPass() = default;
   void runOnOperation() override;
+};
+
+struct CIRIfFlattening : public mlir::OpRewritePattern<cir::IfOp> {
+  using OpRewritePattern<IfOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::IfOp ifOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    mlir::Location loc = ifOp.getLoc();
+    bool emptyElse = ifOp.getElseRegion().empty();
+    mlir::Block *currentBlock = rewriter.getInsertionBlock();
+    mlir::Block *remainingOpsBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
+    mlir::Block *continueBlock;
+    if (ifOp->getResults().empty())
+      continueBlock = remainingOpsBlock;
+    else
+      llvm_unreachable("NYI");
+
+    // Inline the region
+    mlir::Block *thenBeforeBody = &ifOp.getThenRegion().front();
+    mlir::Block *thenAfterBody = &ifOp.getThenRegion().back();
+    rewriter.inlineRegionBefore(ifOp.getThenRegion(), continueBlock);
+
+    rewriter.setInsertionPointToEnd(thenAfterBody);
+    if (auto thenYieldOp =
+            dyn_cast<cir::YieldOp>(thenAfterBody->getTerminator())) {
+      rewriter.replaceOpWithNewOp<cir::BrOp>(thenYieldOp, thenYieldOp.getArgs(),
+                                             continueBlock);
+    }
+
+    rewriter.setInsertionPointToEnd(continueBlock);
+
+    // Has else region: inline it.
+    mlir::Block *elseBeforeBody = nullptr;
+    mlir::Block *elseAfterBody = nullptr;
+    if (!emptyElse) {
+      elseBeforeBody = &ifOp.getElseRegion().front();
+      elseAfterBody = &ifOp.getElseRegion().back();
+      rewriter.inlineRegionBefore(ifOp.getElseRegion(), continueBlock);
+    } else {
+      elseBeforeBody = elseAfterBody = continueBlock;
+    }
+
+    rewriter.setInsertionPointToEnd(currentBlock);
+    rewriter.create<cir::BrCondOp>(loc, ifOp.getCondition(), thenBeforeBody,
+                                   elseBeforeBody);
+
+    if (!emptyElse) {
+      rewriter.setInsertionPointToEnd(elseAfterBody);
+      if (auto elseYieldOP =
+              dyn_cast<cir::YieldOp>(elseAfterBody->getTerminator())) {
+        rewriter.replaceOpWithNewOp<cir::BrOp>(
+            elseYieldOP, elseYieldOP.getArgs(), continueBlock);
+      }
+    }
+
+    rewriter.replaceOp(ifOp, continueBlock->getArguments());
+    return mlir::success();
+  }
 };
 
 class CIRScopeOpFlattening : public mlir::OpRewritePattern<cir::ScopeOp> {
@@ -148,23 +211,24 @@ public:
     // driver to customize the order that operations are visited.
 
     // Lower continue statements.
+    mlir::Block *dest = (step ? step : cond);
     op.walkBodySkippingNestedLoops([&](mlir::Operation *op) {
-      // When continue ops are supported, there will be a check for them here
-      // and a call to lowerTerminator(). The call to `advance()` handles the
-      // case where this is not a continue op.
-      assert(!cir::MissingFeatures::continueOp());
-      return mlir::WalkResult::advance();
+      if (!isa<cir::ContinueOp>(op))
+        return mlir::WalkResult::advance();
+
+      lowerTerminator(op, dest, rewriter);
+      return mlir::WalkResult::skip();
     });
 
     // Lower break statements.
     assert(!cir::MissingFeatures::switchOp());
     walkRegionSkipping<cir::LoopOpInterface>(
         op.getBody(), [&](mlir::Operation *op) {
-          // When break ops are supported, there will be a check for them here
-          // and a call to lowerTerminator(). The call to `advance()` handles
-          // the case where this is not a break op.
-          assert(!cir::MissingFeatures::breakOp());
-          return mlir::WalkResult::advance();
+          if (!isa<cir::BreakOp>(op))
+            return mlir::WalkResult::advance();
+
+          lowerTerminator(op, exit, rewriter);
+          return mlir::WalkResult::skip();
         });
 
     // Lower optional body region yield.
@@ -191,8 +255,9 @@ public:
 };
 
 void populateFlattenCFGPatterns(RewritePatternSet &patterns) {
-  patterns.add<CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening>(
-      patterns.getContext());
+  patterns
+      .add<CIRIfFlattening, CIRLoopOpInterfaceFlattening, CIRScopeOpFlattening>(
+          patterns.getContext());
 }
 
 void CIRFlattenCFGPass::runOnOperation() {
@@ -206,7 +271,7 @@ void CIRFlattenCFGPass::runOnOperation() {
     assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::ternaryOp());
     assert(!cir::MissingFeatures::tryOp());
-    if (isa<ScopeOp, LoopOpInterface>(op))
+    if (isa<IfOp, ScopeOp, LoopOpInterface>(op))
       ops.push_back(op);
   });
 

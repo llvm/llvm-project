@@ -149,7 +149,7 @@ void ARMMachObjectWriter::recordARMScatteredHalfRelocation(
   unsigned Type = MachO::ARM_RELOC_HALF;
 
   // See <reloc.h>.
-  const MCSymbol *A = &Target.getSymA()->getSymbol();
+  const MCSymbol *A = Target.getAddSym();
 
   if (!A->getFragment()) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -257,7 +257,7 @@ void ARMMachObjectWriter::recordARMScatteredRelocation(
   unsigned IsPCRel = Writer->isFixupKindPCRel(Asm, Fixup.getKind());
 
   // See <reloc.h>.
-  const MCSymbol *A = &Target.getSymA()->getSymbol();
+  const MCSymbol *A = Target.getAddSym();
 
   if (!A->getFragment()) {
     Asm.getContext().reportError(Fixup.getLoc(),
@@ -386,9 +386,7 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   }
 
   // Get the symbol data, if any.
-  const MCSymbol *A = nullptr;
-  if (Target.getSymA())
-    A = &Target.getSymA()->getSymbol();
+  const MCSymbol *A = Target.getAddSym();
 
   // FIXME: For other platforms, we need to use scattered relocations for
   // internal relocations with offsets.  If this is an internal relocation with
@@ -418,9 +416,17 @@ void ARMMachObjectWriter::recordRelocation(MachObjectWriter *Writer,
   } else {
     // Resolve constant variables.
     if (A->isVariable()) {
-      int64_t Res;
-      if (A->getVariableValue()->evaluateAsAbsolute(
-              Res, Asm, Writer->getSectionAddressMap())) {
+      MCValue Val;
+      bool Relocatable =
+          A->getVariableValue()->evaluateAsRelocatable(Val, &Asm);
+      int64_t Res = Val.getConstant();
+      bool isAbs = Val.isAbsolute();
+      if (Relocatable && Val.getAddSym() && Val.getSubSym()) {
+        Res += Writer->getSymbolAddress(*Val.getAddSym(), Asm) -
+               Writer->getSymbolAddress(*Val.getSubSym(), Asm);
+        isAbs = true;
+      }
+      if (isAbs) {
         FixedValue = Res;
         return;
       }

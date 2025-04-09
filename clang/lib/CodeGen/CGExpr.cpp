@@ -143,6 +143,9 @@ llvm::AllocaInst *CodeGenFunction::CreateTempAlloca(llvm::Type *Ty,
     Alloca =
         new llvm::AllocaInst(Ty, CGM.getDataLayout().getAllocaAddrSpace(),
                              ArraySize, Name, AllocaInsertPt->getIterator());
+  if (SanOpts.Mask & SanitizerKind::Address) {
+    Alloca->addAnnotationMetadata({"alloca_name_altered", Name.str()});
+  }
   if (Allocas) {
     Allocas->Add(Alloca);
   }
@@ -1893,19 +1896,6 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                           lvalue.getTBAAInfo(), lvalue.isNontemporal());
 }
 
-static bool hasBooleanRepresentation(QualType Ty) {
-  if (Ty->isBooleanType())
-    return true;
-
-  if (const EnumType *ET = Ty->getAs<EnumType>())
-    return ET->getDecl()->getIntegerType()->isBooleanType();
-
-  if (const AtomicType *AT = Ty->getAs<AtomicType>())
-    return hasBooleanRepresentation(AT->getValueType());
-
-  return false;
-}
-
 static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
                             llvm::APInt &Min, llvm::APInt &End,
                             bool StrictEnums, bool IsBool) {
@@ -1928,7 +1918,7 @@ static bool getRangeForType(CodeGenFunction &CGF, QualType Ty,
 llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   llvm::APInt Min, End;
   if (!getRangeForType(*this, Ty, Min, End, CGM.getCodeGenOpts().StrictEnums,
-                       hasBooleanRepresentation(Ty)))
+                       Ty->hasBooleanRepresentation()))
     return nullptr;
 
   llvm::MDBuilder MDHelper(getLLVMContext());
@@ -1942,7 +1932,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   if (!HasBoolCheck && !HasEnumCheck)
     return false;
 
-  bool IsBool = hasBooleanRepresentation(Ty) ||
+  bool IsBool = Ty->hasBooleanRepresentation() ||
                 NSAPI(CGM.getContext()).isObjCBOOLType(Ty);
   bool NeedsBoolCheck = HasBoolCheck && IsBool;
   bool NeedsEnumCheck = HasEnumCheck && Ty->getAs<EnumType>();
@@ -2070,7 +2060,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 /// by ConvertType) to its load/store type (as returned by
 /// convertTypeForLoadStore).
 llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
-  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType()) {
+  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
     bool Signed = Ty->isSignedIntegerOrEnumerationType();
     return Builder.CreateIntCast(Value, StoreTy, Signed, "storedv");
@@ -2111,7 +2101,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
-  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType() ||
+  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType() ||
       Ty->isExtVectorBoolType())
     return Builder.CreateTrunc(Value, ResTy, "loadedv");
 
@@ -2598,7 +2588,7 @@ void CodeGenFunction::EmitStoreThroughBitfieldLValue(RValue Src, LValue Dst,
         Builder.CreateLoad(Ptr, Dst.isVolatileQualified(), "bf.load");
 
     // Mask the source value as needed.
-    if (!hasBooleanRepresentation(Dst.getType()))
+    if (!Dst.getType()->hasBooleanRepresentation())
       SrcVal = Builder.CreateAnd(
           SrcVal, llvm::APInt::getLowBitsSet(StorageSize, Info.Size),
           "bf.value");
@@ -3977,16 +3967,19 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
+  llvm::MDBuilder MDHelper(getLLVMContext());
   if (TrapBB && !NoMerge) {
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
     Call->applyMergedLocation(Call->getDebugLoc(),
                               Builder.getCurrentDebugLocation());
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
   } else {
     TrapBB = createBasicBlock("trap");
-    Builder.CreateCondBr(Checked, Cont, TrapBB);
+    Builder.CreateCondBr(Checked, Cont, TrapBB,
+                         MDHelper.createLikelyBranchWeights());
     EmitBlock(TrapBB);
 
     llvm::CallInst *TrapCall =
@@ -4922,6 +4915,9 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
+  if (CGF.getLangOpts().PointerOverflowDefined)
+    return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
+
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }
 
@@ -4979,9 +4975,13 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     if (!UseVolatile) {
       if (!IsInPreservedAIRegion &&
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
-        if (Idx != 0)
+        if (Idx != 0) {
           // For structs, we GEP to the field that the record layout suggests.
-          Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+          if (getLangOpts().PointerOverflowDefined)
+            Addr = Builder.CreateConstGEP2_32(Addr, 0, Idx, field->getName());
+          else
+            Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+        }
       } else {
         llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
             getContext().getRecordType(rec), rec->getLocation());
@@ -5759,6 +5759,12 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   return CGCallee::forDirect(CalleePtr, GD);
 }
 
+static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
+  if (FD->hasAttr<OpenCLKernelAttr>())
+    return GlobalDecl(FD, KernelReferenceKind::Stub);
+  return GlobalDecl(FD);
+}
+
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
@@ -5772,7 +5778,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return EmitDirectCallee(*this, FD);
+      return EmitDirectCallee(*this, getGlobalDeclForDirectCall(FD));
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
@@ -6140,6 +6146,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   }
 
   const auto *FnType = cast<FunctionType>(PointeeType);
+
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+      FD && FD->hasAttr<OpenCLKernelAttr>())
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

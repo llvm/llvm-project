@@ -71,6 +71,9 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (const PointerType *PTy = DerivedType->getAs<PointerType>())
     DerivedType = PTy->getPointeeType();
 
+  while (const ArrayType *ATy = DerivedType->getAsArrayTypeUnsafe())
+    DerivedType = ATy->getElementType();
+
   if (DerivedType->isDependentType())
     return nullptr;
 
@@ -596,7 +599,7 @@ std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context) const {
 std::string SYCLUniqueStableNameExpr::ComputeName(ASTContext &Context,
                                                   QualType Ty) {
   auto MangleCallback = [](ASTContext &Ctx,
-                           const NamedDecl *ND) -> std::optional<unsigned> {
+                           const NamedDecl *ND) -> UnsignedOrNone {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
       return RD->getDeviceLambdaManglingNumber();
     return std::nullopt;
@@ -692,9 +695,9 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
           GD = GlobalDecl(CD, Ctor_Base);
         else if (const CXXDestructorDecl *DD = dyn_cast<CXXDestructorDecl>(ND))
           GD = GlobalDecl(DD, Dtor_Base);
-        else if (ND->hasAttr<CUDAGlobalAttr>())
-          GD = GlobalDecl(cast<FunctionDecl>(ND));
-        else
+        else if (auto FD = dyn_cast<FunctionDecl>(ND)) {
+          GD = FD->isReferenceableKernel() ? GlobalDecl(FD) : GlobalDecl(ND);
+        } else
           GD = GlobalDecl(ND);
         MC->mangleName(GD, Out);
 
