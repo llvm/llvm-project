@@ -8,12 +8,11 @@
 !! resource_dir_with_per_target_subdir as inputs.
 
 ! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by default
-! RUN: %flang %s -### 2>&1 \
+! RUN: %flang -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64-ibm-aix \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefix=AIX64-LD-PER-TARGET-DEFAULT
 
-! AIX64-LD-PER-TARGET-DEFAULT-NOT: warning:
 ! AIX64-LD-PER-TARGET-DEFAULT:     "-fc1" "-triple" "powerpc64-ibm-aix"
 ! AIX64-LD-PER-TARGET-DEFAULT-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! AIX64-LD-PER-TARGET-DEFAULT:     "{{.*}}ld{{(.exe)?}}"
@@ -27,12 +26,11 @@
 
 
 ! Check powerpc64-ibm-aix 64-bit linking to static flang-rt by option 
-! RUN: %flang -static-libflangrt %s -### 2>&1 \
+! RUN: %flang -static-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64-ibm-aix \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefix=AIX64-LD-PER-TARGET-STATIC
 
-! AIX64-LD-PER-TARGET-STATIC-NOT: warning:
 ! AIX64-LD-PER-TARGET-STATIC:     "-fc1" "-triple" "powerpc64-ibm-aix"
 ! AIX64-LD-PER-TARGET-STATIC-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! AIX64-LD-PER-TARGET-STATIC:     "{{.*}}ld{{(.exe)?}}"
@@ -46,12 +44,11 @@
 
 
 ! Check powerpc64-ibm-aix 64-bit linking to shared flang-rt by option 
-! RUN: %flang -shared-libflangrt %s -### 2>&1 \
+! RUN: %flang -shared-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64-ibm-aix \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefix=AIX64-LD-PER-TARGET-SHARED
 
-! AIX64-LD-PER-TARGET-SHARED-NOT: warning:
 ! AIX64-LD-PER-TARGET-SHARED:     "-fc1" "-triple" "powerpc64-ibm-aix"
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! AIX64-LD-PER-TARGET-SHARED:     "{{.*}}ld{{(.exe)?}}"
@@ -65,12 +62,11 @@
 
 
 ! Check powerpc64le-unknown-linux-gnu 64-bit linking to shared flang-rt by default
-! RUN: %flang %s -### 2>&1 \
+! RUN: %flang -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64le-unknown-linux-gnu \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefixes=LOP64-LD-PER-TARGET-DEFAULT
 
-! LOP64-LD-PER-TARGET-DEFAULT-NOT: warning:
 ! LOP64-LD-PER-TARGET-DEFAULT:     "-fc1" "-triple" "powerpc64le-unknown-linux-gnu"
 ! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! LOP64-LD-PER-TARGET-DEFAULT:     "{{.*}}ld{{(.exe)?}}"
@@ -80,13 +76,12 @@
 ! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-lc"
 
 
-! Check powerpc64le-unknown-linux-gnu 64-bit linking to static flang-rt
-! RUN: %flang -static-libflangrt %s -### 2>&1 \
+! Check powerpc64le-unknown-linux-gnu 64-bit linking to static flang-rt by option
+! RUN: %flang -static-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64le-unknown-linux-gnu \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefixes=LOP64-LD-PER-TARGET-STATIC
 
-! LOP64-LD-PER-TARGET-STATIC-NOT: warning:
 ! LOP64-LD-PER-TARGET-STATIC:     "-fc1" "-triple" "powerpc64le-unknown-linux-gnu"
 ! LOP64-LD-PER-TARGET-STATIC-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! LOP64-LD-PER-TARGET-STATIC:     "{{.*}}ld{{(.exe)?}}"
@@ -96,13 +91,12 @@
 ! LOP64-LD-PER-TARGET-STATIC-SAME:     "-lc"
 
 
-! Check powerpc64le-unknown-linux-gnu 64-bit linking to shared flang-rt
-! RUN: %flang -shared-libflangrt %s -### 2>&1 \
+! Check powerpc64le-unknown-linux-gnu 64-bit linking to shared flang-rt by option
+! RUN: %flang -shared-libflangrt -Werror %s -### 2>&1 \
 ! RUN:        --target=powerpc64le-unknown-linux-gnu \
 ! RUN:        -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_per_target_subdir \
 ! RUN:   | FileCheck %s --check-prefixes=LOP64-LD-PER-TARGET-SHARED
 
-! LOP64-LD-PER-TARGET-SHARED-NOT: warning:
 ! LOP64-LD-PER-TARGET-SHARED:     "-fc1" "-triple" "powerpc64le-unknown-linux-gnu"
 ! LOP64-LD-PER-TARGET-SHARED-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! LOP64-LD-PER-TARGET-SHARED:     "{{.*}}ld{{(.exe)?}}"

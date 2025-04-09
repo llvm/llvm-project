@@ -854,8 +854,8 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
 
 void ToolChain::addFlangRTLibPath(const ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs) const {
-  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
-  // On AIX, default to static flang-rt
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so.
+  // On AIX, default to static flang-rt.
   if (Args.hasFlag(options::OPT_static_libflangrt,
                    options::OPT_shared_libflangrt, getTriple().isOSAIX()))
     CmdArgs.push_back(
