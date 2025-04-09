@@ -990,7 +990,7 @@ static void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
   Inst->getAllMetadataOtherThanDebugLoc(Metadata);
-  unsigned SupportedIDs[] = {
+  static const unsigned SupportedIDs[] = {
       LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
       LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
       LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
@@ -999,7 +999,7 @@ static void getMetadataToPropagate(
   // Remove any unsupported metadata kinds from Metadata.
   for (unsigned Idx = 0; Idx != Metadata.size();) {
     if (is_contained(SupportedIDs, Metadata[Idx].first)) {
-      Idx++;
+      ++Idx;
     } else {
       // Swap element to end and remove it.
       std::swap(Metadata[Idx], Metadata.back());
