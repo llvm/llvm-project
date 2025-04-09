@@ -3607,6 +3607,9 @@ void Verifier::visitCallBase(CallBase &Call) {
         "not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.",
         Call);
 
+  Check(CC != CallingConv::AMDGPU_KERNEL && CC != CallingConv::SPIR_KERNEL,
+        "Calls to kernel functions are not supported");
+
   // Disallow passing/returning values with alignment higher than we can
   // represent.
   // FIXME: Consider making DataLayout cap the alignment, so this isn't
