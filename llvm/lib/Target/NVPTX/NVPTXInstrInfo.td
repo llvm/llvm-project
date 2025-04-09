@@ -3043,6 +3043,16 @@ let hasSideEffects = false in {
                              (ins Int64Regs:$s),
                              "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
                              []>;
+  def I64toF32HS : NVPTXInst<(outs Float32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "mov.b64 {{_, $high}}, $s;",
+                             []>,
+                   Requires<[hasPTX<71>]>;
+  def I64toF32LS : NVPTXInst<(outs Float32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "mov.b64 {{$low, _}}, $s;",
+                             []>,
+                   Requires<[hasPTX<71>]>;
 
   // PTX 7.1 lets you avoid a temp register and just use _ as a "sink" for the
   // unused high/low part.
@@ -3085,6 +3095,11 @@ foreach vt = [v2f16, v2bf16, v2i16] in {
   def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
   def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
 }
+
+def : Pat<(extractelt v2f32:$src, 0),
+          (I64toF32LS $src)>, Requires<[hasPTX<71>]>;
+def : Pat<(extractelt v2f32:$src, 1),
+          (I64toF32HS $src)>, Requires<[hasPTX<71>]>;
 
 def : Pat<(extractelt v2f32:$src, 0),
           (I64toF32L $src)>;
