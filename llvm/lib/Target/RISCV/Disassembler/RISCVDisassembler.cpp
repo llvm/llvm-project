@@ -447,16 +447,23 @@ static DecodeStatus decodeSImmNonZeroOperand(MCInst &Inst, uint32_t Imm,
   return decodeSImmOperand<N>(Inst, Imm, Address, Decoder);
 }
 
-template <unsigned N>
+template <unsigned T, unsigned N>
+static DecodeStatus decodeSImmOperandAndLslN(MCInst &Inst, uint64_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<T - N + 1>(Imm) && "Invalid immediate");
+  // Sign-extend the number in the bottom T bits of Imm after accounting for
+  // the fact that the T bit immediate is stored in T-N bits (the LSB is
+  // always zero)
+  Inst.addOperand(MCOperand::createImm(SignExtend64<T>(Imm << N)));
+  return MCDisassembler::Success;
+}
+
+template <unsigned T>
 static DecodeStatus decodeSImmOperandAndLsl1(MCInst &Inst, uint32_t Imm,
                                              int64_t Address,
                                              const MCDisassembler *Decoder) {
-  assert(isUInt<N>(Imm) && "Invalid immediate");
-  // Sign-extend the number in the bottom N bits of Imm after accounting for
-  // the fact that the N bit immediate is stored in N-1 bits (the LSB is
-  // always zero)
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N>(Imm << 1)));
-  return MCDisassembler::Success;
+  return decodeSImmOperandAndLslN<T, 1>(Inst, Imm, Address, Decoder);
 }
 
 static DecodeStatus decodeCLUIImmOperand(MCInst &Inst, uint32_t Imm,
@@ -727,6 +734,8 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadMemPair, RISCV::FeatureVendorXTHeadSync,
     RISCV::FeatureVendorXTHeadVdot};
 
+static constexpr FeatureBitset XAndesGroup = {RISCV::FeatureVendorXAndesPerf};
+
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXVentana32,
@@ -740,6 +749,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXmipscmov32,
      {RISCV::FeatureVendorXMIPSCMov},
      "MIPS mips.ccmov"},
+    {DecoderTableXAndes32, XAndesGroup, "Andes extensions"},
     // Standard Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
