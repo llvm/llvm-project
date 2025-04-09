@@ -454,20 +454,6 @@ m_WidenIntrinsic(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
       {Op0, Op1, Op2, Op3});
 }
 
-/// Intrinsic matchers.
-struct IntrinsicID_match {
-  unsigned ID;
-
-  IntrinsicID_match(Intrinsic::ID IntrID) : ID(IntrID) {}
-
-  template <typename OpTy> bool match(OpTy *V) {
-    if (const auto *CI = dyn_cast<CallInst>(V))
-      if (const auto *F = CI->getCalledFunction())
-        return F->getIntrinsicID() == ID;
-    return false;
-  }
-};
-
 } // namespace VPlanPatternMatch
 } // namespace llvm
 
