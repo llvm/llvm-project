@@ -12,6 +12,7 @@
 #include "DAPForward.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBCompileUnit.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBLineEntry.h"
@@ -196,6 +197,15 @@ GetStringMap(const llvm::json::Object &obj, llvm::StringRef key);
 ///     in as noted in description.
 void FillResponse(const llvm::json::Object &request,
                   llvm::json::Object &response);
+
+/// Set the response to failed and populate the message if there is one.
+///
+/// \param[in,out] response
+///     An llvm::json::Object object that will be populated.
+///
+/// \param[in] error
+///     A LLDB error in the failed state.
+void SetError(llvm::json::Object &response, lldb::SBError error);
 
 /// Converts \a bp to a JSON value and appends the first valid location to the
 /// \a breakpoints array.
