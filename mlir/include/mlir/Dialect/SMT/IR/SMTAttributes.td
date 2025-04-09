@@ -28,8 +28,8 @@ def BitVectorAttr : AttrDef<SMTDialect, "BitVector", [
 
     The constant is as #bX (binary) or #xX (hexadecimal) in SMT-LIB
     where X is the value in the corresponding format without any further
-    prefixing. Here, the bit-vector constant is given as a regular integer
-    literal and the associated bit-vector type indicating the bit-width.
+    prefixing. Here, the bit-vector constant is given as a regular non-negative
+    integer literal and the associated bit-vector type indicating the bit-width.
 
     Examples:
     ```mlir
