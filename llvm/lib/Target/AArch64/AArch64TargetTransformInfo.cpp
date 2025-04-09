@@ -4568,23 +4568,6 @@ getFalkorUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   }
 }
 
-static bool shouldUnrollLoopWithInstruction(Instruction &I,
-                                            AArch64TTIImpl &TTI) {
-  // Don't unroll vectorised loop.
-  if (I.getType()->isVectorTy())
-    return false;
-
-  if (isa<CallBase>(I)) {
-    if (isa<CallInst>(I) || isa<InvokeInst>(I))
-      if (const Function *F = cast<CallBase>(I).getCalledFunction())
-        if (!TTI.isLoweredToCall(F))
-          return true;
-    return false;
-  }
-
-  return true;
-}
-
 // This function returns true if the loop:
 //  1. Has a valid cost, and
 //  2. Has a cost within the supplied budget.
@@ -4791,8 +4774,17 @@ void AArch64TTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
   // unrolling.
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      if (!shouldUnrollLoopWithInstruction(I, *this))
+      // Don't unroll vectorised loop.
+      if (I.getType()->isVectorTy())
         return;
+
+      if (isa<CallBase>(I)) {
+        if (isa<CallInst>(I) || isa<InvokeInst>(I))
+          if (const Function *F = cast<CallBase>(I).getCalledFunction())
+            if (!isLoweredToCall(F))
+              continue;
+        return;
+      }
     }
   }
 
