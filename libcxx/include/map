@@ -807,17 +807,20 @@ public:
     return __nc_ref_pair_type(const_cast<key_type&>(__v.first), __v.second);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __nc_rref_pair_type __move() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __nc_rref_pair_type __move() {
     value_type& __v = __get_value();
     return __nc_rref_pair_type(std::move(const_cast<key_type&>(__v.first)), std::move(__v.second));
   }
 
-  _LIBCPP_HIDE_FROM_ABI __value_type& operator=(const __value_type& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __value_type& operator=(const __value_type& __v) {
     __ref() = __v.__get_value();
+
+    // note: modification of object of const-qualified type 'const int' is not allowed in a constant expression
+    // raised by: libcxx/test/std/containers/associative/map/map.cons/copy_assign.pass.cpp
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __value_type& operator=(__value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __value_type& operator=(__value_type&& __v) {
     __ref() = __v.__move();
     return *this;
   }

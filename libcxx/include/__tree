@@ -1428,6 +1428,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree<_Tp, _Compare, _Allocator>::__assign_m
   if (size() != 0) {
     _DetachedTreeCache __cache(this);
     for (; __cache.__get() && __first != __last; ++__first) {
+      // static_assert(std::is_same_v<decltype(__cache.__get()->__value_), bool>, "fail");
       __cache.__get()->__value_ = *__first;
       __node_insert_multi(__cache.__get());
       __cache.__advance();
