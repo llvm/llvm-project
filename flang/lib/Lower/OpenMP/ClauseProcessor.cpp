@@ -18,6 +18,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 
 namespace Fortran {
@@ -218,6 +219,39 @@ bool ClauseProcessor::processBind(mlir::omp::BindClauseOps &result) const {
     return true;
   }
   return false;
+}
+
+bool ClauseProcessor::processCancelDirectiveName(
+    mlir::omp::CancelDirectiveNameClauseOps &result) const {
+  using ConstructType = mlir::omp::ClauseCancellationConstructType;
+  mlir::MLIRContext *context = &converter.getMLIRContext();
+
+  ConstructType directive;
+  if (auto *clause = findUniqueClause<omp::CancellationConstructType>()) {
+    switch (clause->v) {
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Parallel:
+      directive = mlir::omp::ClauseCancellationConstructType::Parallel;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Loop:
+      directive = mlir::omp::ClauseCancellationConstructType::Loop;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Sections:
+      directive = mlir::omp::ClauseCancellationConstructType::Sections;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_Taskgroup:
+      directive = mlir::omp::ClauseCancellationConstructType::Taskgroup;
+      break;
+    case llvm::omp::OMP_CANCELLATION_CONSTRUCT_None:
+      llvm_unreachable("OMP_CANCELLATION_CONSTRUCT_None");
+      break;
+    }
+  } else {
+    llvm_unreachable("cancel construct missing cancellation construct type");
+  }
+
+  result.cancelDirective =
+      mlir::omp::ClauseCancellationConstructTypeAttr::get(context, directive);
+  return true;
 }
 
 bool ClauseProcessor::processCollapse(
@@ -695,9 +729,10 @@ void TypeInfo::typeScan(mlir::Type ty) {
   } else if (auto pty = mlir::dyn_cast<fir::PointerType>(ty)) {
     typeScan(pty.getEleTy());
   } else {
-    // The scan ends when reaching any built-in or record type.
+    // The scan ends when reaching any built-in, record or boxproc type.
     assert(ty.isIntOrIndexOrFloat() || mlir::isa<mlir::ComplexType>(ty) ||
-           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty));
+           mlir::isa<fir::LogicalType>(ty) || mlir::isa<fir::RecordType>(ty) ||
+           mlir::isa<fir::BoxProcType>(ty));
   }
 }
 

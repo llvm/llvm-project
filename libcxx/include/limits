@@ -462,7 +462,7 @@ protected:
 };
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS numeric_limits : private __libcpp_numeric_limits<_Tp> {
+class numeric_limits : private __libcpp_numeric_limits<_Tp> {
   typedef __libcpp_numeric_limits<_Tp> __base;
   typedef typename __base::type type;
 
@@ -521,13 +521,13 @@ public:
 };
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS numeric_limits<const _Tp> : public numeric_limits<_Tp> {};
+class numeric_limits<const _Tp> : public numeric_limits<_Tp> {};
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS numeric_limits<volatile _Tp> : public numeric_limits<_Tp> {};
+class numeric_limits<volatile _Tp> : public numeric_limits<_Tp> {};
 
 template <class _Tp>
-class _LIBCPP_TEMPLATE_VIS numeric_limits<const volatile _Tp> : public numeric_limits<_Tp> {};
+class numeric_limits<const volatile _Tp> : public numeric_limits<_Tp> {};
 
 _LIBCPP_END_NAMESPACE_STD
 

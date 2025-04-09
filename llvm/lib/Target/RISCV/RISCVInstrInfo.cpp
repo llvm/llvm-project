@@ -2654,9 +2654,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_SIMM(6)
         CASE_OPERAND_SIMM(11)
         CASE_OPERAND_SIMM(12)
-        CASE_OPERAND_SIMM(20)
         CASE_OPERAND_SIMM(26)
-        CASE_OPERAND_SIMM(32)
         // clang-format on
         case RISCVOp::OPERAND_SIMM5_PLUS1:
           Ok = (isInt<5>(Imm) && Imm != -16) || Imm == 16;
@@ -2672,6 +2670,12 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
           break;
         case RISCVOp::OPERAND_SIMM12_LSB00000:
           Ok = isShiftedInt<7, 5>(Imm);
+          break;
+        case RISCVOp::OPERAND_SIMM20_LI:
+          Ok = isInt<20>(Imm);
+          break;
+        case RISCVOp::OPERAND_BARE_SIMM32:
+          Ok = isInt<32>(Imm);
           break;
         case RISCVOp::OPERAND_UIMMLOG2XLEN:
           Ok = STI.is64Bit() ? isUInt<6>(Imm) : isUInt<5>(Imm);
@@ -2702,8 +2706,8 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_RLIST_S0:
           Ok = Imm >= RISCVZC::RA_S0 && Imm <= RISCVZC::RA_S0_S11;
           break;
-        case RISCVOp::OPERAND_SPIMM:
-          Ok = (Imm & 0xf) == 0;
+        case RISCVOp::OPERAND_STACKADJ:
+          Ok = Imm >= 0 && Imm <= 48 && Imm % 16 == 0;
           break;
         case RISCVOp::OPERAND_FRMARG:
           Ok = RISCVFPRndMode::isValidRoundingMode(Imm);

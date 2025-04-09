@@ -66,7 +66,6 @@ namespace LLVM {
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMPPCFP128Type, "llvm.ppc_fp128");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
@@ -111,10 +110,6 @@ bool isCompatibleFloatingPointType(Type type);
 /// integers and floating-point values, LLVM dialect fixed vector types of LLVM
 /// dialect pointers and LLVM dialect scalable vector types.
 bool isCompatibleVectorType(Type type);
-
-/// Returns the element type of any vector type compatible with the LLVM
-/// dialect.
-Type getVectorElementType(Type type);
 
 /// Returns the element count of any LLVM-compatible vector type.
 llvm::ElementCount getVectorNumElements(Type type);
