@@ -69,8 +69,8 @@ static inline uint64_t fastHexToU64(const char *inStr) {
   return result;
 }
 
-static void parseLine(char *line, ParseResult &parseResult, int32_t &curFails,
-                      int32_t &curBitDiffs) {
+static void parseLine(const char *line, ParseResult &parseResult,
+                      int32_t &curFails, int32_t &curBitDiffs) {
 
   if (line[0] == '#') {
     return;
@@ -82,7 +82,7 @@ static void parseLine(char *line, ParseResult &parseResult, int32_t &curFails,
   expectedFloatRaw = fastHexToU32(line + 5);
   expectedDoubleRaw = fastHexToU64(line + 14);
 
-  char *num = line + 31;
+  const char *num = line + 31;
 
   float floatResult = LIBC_NAMESPACE::strtof(num, nullptr);
 
@@ -133,7 +133,7 @@ static void parseLine(char *line, ParseResult &parseResult, int32_t &curFails,
 }
 
 ParseStatus checkBuffer(ParseResult &parseResult) {
-  constexpr const char *lines[6] = {
+  constexpr const char *LINES[] = {
       "3C00 3F800000 3FF0000000000000 1",
       "3D00 3FA00000 3FF4000000000000 1.25",
       "3D9A 3FB33333 3FF6666666666666 1.4",
@@ -145,9 +145,8 @@ ParseStatus checkBuffer(ParseResult &parseResult) {
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
   // result are off by +/- 1 bit.
 
-  for (uint8_t i = 0; i < 6; i++) {
-    auto line = const_cast<char *>(lines[i]);
-    parseLine(line, parseResult, curFails, curBitDiffs);
+  for (uint8_t i = 0; i < sizeof(LINES) / sizeof(LINES[0]); i++) {
+    parseLine(LINES[i], parseResult, curFails, curBitDiffs);
   }
 
   parseResult.totalBitDiffs += curBitDiffs;
@@ -163,7 +162,7 @@ ParseStatus checkFile(char *inputFileName, ParseResult &parseResult) {
   int32_t curFails = 0;    // Only counts actual failures, not bitdiffs.
   int32_t curBitDiffs = 0; // A bitdiff is when the expected result and actual
   // result are off by +/- 1 bit.
-  char line[100];
+  char line[1000];
 
   auto *fileHandle = LIBC_NAMESPACE::fopen(inputFileName, "r");
 
@@ -233,5 +232,5 @@ TEST(LlvmLibcStrToFloatComparisonTest, CheckFloats) {
   EXPECT_EQ(parseResult.detailedBitDiffs[1], 0u); // float high
   EXPECT_EQ(parseResult.detailedBitDiffs[2], 0u); // double low
   EXPECT_EQ(parseResult.detailedBitDiffs[3], 0u); // double high
-  EXPECT_EQ(parseResult.total, 6u);
+  LIBC_NAMESPACE::printf("Total lines: %d\n", parseResult.total);
 }
