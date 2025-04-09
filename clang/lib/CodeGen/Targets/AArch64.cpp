@@ -485,6 +485,24 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     }
     Size = llvm::alignTo(Size, Alignment);
 
+    // If the Aggregate is made up of pointers, use an array of pointers for the
+    // coerced type. This prevents having to convert ptr2int->int2ptr through
+    // the call, allowing alias analysis to produce better code.
+    if (const RecordType *RT = Ty->getAs<RecordType>()) {
+      if (const RecordDecl *RD = RT->getDecl()) {
+        if (all_of(RD->fields(), [](FieldDecl *FD) {
+              return FD->getType()->isPointerOrReferenceType();
+            })) {
+          assert((Size == 64 || Size == 128) &&
+                 "Expected a 64 or 128bit struct containing pointers");
+          llvm::Type *PtrTy = llvm::PointerType::getUnqual(getVMContext());
+          if (Size == 128)
+            PtrTy = llvm::ArrayType::get(PtrTy, 2);
+          return ABIArgInfo::getDirect(PtrTy);
+        }
+      }
+    }
+
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.
     // For aggregates with 16-byte alignment, we use i128.
     llvm::Type *BaseTy = llvm::Type::getIntNTy(getVMContext(), Alignment);
