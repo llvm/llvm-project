@@ -299,31 +299,30 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
     // start root signature header
     Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Header.Flags, 8) << ":\n";
-    OS << indent(Space) << "Version: " << RS.Header.Version << ":\n";
-    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << ":\n";
+    OS << indent(Space) << "Flags: " << format_hex(RS.Header.Flags, 8) << "\n";
+    OS << indent(Space) << "Version: " << RS.Header.Version << "\n";
+    OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << "\n";
     OS << indent(Space) << "RootParametersOffset: " << sizeof(RS.Header)
-       << ":\n";
-    OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
+       << "\n";
+    OS << indent(Space) << "NumStaticSamplers: " << 0 << "\n";
     OS << indent(Space) << "StaticSamplersOffset: "
-       << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
+       << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << "\n";
 
     Space++;
     for (auto const &P : RS.Parameters) {
-      OS << indent(Space) << "Parameter Type: " << &P.Header.ParameterType
-         << ":\n";
-      OS << indent(Space) << "Shader Visibility: " << &P.Header.ShaderVisibility
-         << ":\n";
-      OS << indent(Space) << "Parameter Offset: " << &P.Header.ParameterOffset
-         << ":\n";
+      OS << indent(Space)
+         << "Parameter Type: " << (uint32_t)P.Header.ParameterType << "\n";
+      OS << indent(Space)
+         << "Shader Visibility: " << (uint32_t)P.Header.ShaderVisibility
+         << "\n";
       switch (P.Header.ParameterType) {
       case dxbc::RootParameterType::Constants32Bit:
-        OS << indent(Space) << "Register Space: " << &P.Constants.RegisterSpace
-           << ":\n";
+        OS << indent(Space) << "Register Space: " << P.Constants.RegisterSpace
+           << "\n";
+        OS << indent(Space) << "Shader Register: " << P.Constants.ShaderRegister
+           << "\n";
         OS << indent(Space)
-           << "Shader Register: " << &P.Constants.ShaderRegister << ":\n";
-        OS << indent(Space)
-           << "Num 32 Bit Values: " << &P.Constants.Num32BitValues << ":\n";
+           << "Num 32 Bit Values: " << P.Constants.Num32BitValues << "\n";
         break;
       }
     }
