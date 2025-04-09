@@ -894,9 +894,10 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   Func.indent(2) << "return false;\n}\n";
 
   if (!MCOpPredicates.empty()) {
+    auto IndentLength = ValidatorName.size() + 13;
     OS << "static bool " << ValidatorName << "(const MCOperand &MCOp,\n";
-    OS.indent(46) << "const MCSubtargetInfo &STI,\n";
-    OS.indent(46) << "unsigned PredicateIndex) {\n";
+    OS.indent(IndentLength) << "const MCSubtargetInfo &STI,\n";
+    OS.indent(IndentLength) << "unsigned PredicateIndex) {\n";
     OS << "  switch (PredicateIndex) {\n"
        << "  default:\n"
        << "    llvm_unreachable(\"Unknown MCOperandPredicate kind\");\n"
@@ -909,10 +910,12 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   }
 
   if (!ImmLeafPredicates.empty()) {
+    auto IndentLength = TargetName.size() + 35;
     OS << "static bool " << TargetName
        << "ValidateMachineOperand(const MachineOperand &MO,\n";
-    OS.indent(40) << "const " << TargetName << "Subtarget *Subtarget,\n";
-    OS.indent(40)
+    OS.indent(IndentLength)
+        << "const " << TargetName << "Subtarget *Subtarget,\n";
+    OS.indent(IndentLength)
         << "unsigned PredicateIndex) {\n"
         << "  int64_t Imm = MO.getImm();\n"
         << "  switch (PredicateIndex) {\n"
