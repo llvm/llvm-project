@@ -10,7 +10,7 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olGetDeviceCountTest = offloadPlatformTest;
+using olGetDeviceCountTest = OffloadPlatformTest;
 
 TEST_F(olGetDeviceCountTest, Success) {
   uint32_t Count = 0;
