@@ -19,7 +19,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX26_(
+struct _LIBCPP_DEPRECATED_IN_CXX26_(
     "Consider using is_trivially_copyable<T>::value && is_trivially_default_constructible<T>::value instead.")
     _LIBCPP_NO_SPECIALIZATIONS is_trivial : public integral_constant<bool, __is_trivial(_Tp)> {};
 

@@ -1338,13 +1338,50 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
       checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
-  // TODO OpenACC: Once we get enough of the CodeGen implemented that we have
-  // a source for the list of valid architectures, we need to warn on unknown
-  // identifiers here.
+  // The list of valid device_type values. Flang also has these hardcoded in
+  // openacc_parsers.cpp, as there does not seem to be a reliable backend
+  // source. The list below is sourced from Flang, though NVC++ supports only
+  // 'nvidia', 'host', 'multicore', and 'default'.
+  const std::array<llvm::StringLiteral, 6> ValidValues{
+      "default", "nvidia", "acc_device_nvidia", "radeon", "host", "multicore"};
+  // As an optimization, we have a manually maintained list of valid values
+  // below, rather than trying to calculate from above. These should be kept in
+  // sync if/when the above list ever changes.
+  std::string ValidValuesString =
+      "'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'";
+
+  llvm::SmallVector<DeviceTypeArgument> Architectures{
+      Clause.getDeviceTypeArchitectures()};
+
+  // The parser has ensured that we either have a single entry of just '*'
+  // (represented by a nullptr IdentifierInfo), or a list.
+
+  bool Diagnosed = false;
+  auto FilterPred = [&](const DeviceTypeArgument &Arch) {
+    // The '*' case.
+    if (!Arch.first)
+      return false;
+    return llvm::find_if(ValidValues, [&](StringRef RHS) {
+             return Arch.first->getName().equals_insensitive(RHS);
+           }) == ValidValues.end();
+  };
+
+  auto Diagnose = [&](const DeviceTypeArgument &Arch) {
+    Diagnosed = SemaRef.Diag(Arch.second, diag::err_acc_invalid_default_type)
+                << Arch.first << Clause.getClauseKind() << ValidValuesString;
+  };
+
+  // There aren't stable enumertor versions of 'for-each-then-erase', so do it
+  // here.  We DO keep track of whether we diagnosed something to make sure we
+  // don't do the 'erase_if' in the event that the first list didn't find
+  // anything.
+  llvm::for_each(llvm::make_filter_range(Architectures, FilterPred), Diagnose);
+  if (Diagnosed)
+    llvm::erase_if(Architectures, FilterPred);
 
   return OpenACCDeviceTypeClause::Create(
       Ctx, Clause.getClauseKind(), Clause.getBeginLoc(), Clause.getLParenLoc(),
-      Clause.getDeviceTypeArchitectures(), Clause.getEndLoc());
+      Architectures, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitAutoClause(

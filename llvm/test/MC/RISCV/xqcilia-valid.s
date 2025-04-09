@@ -1,5 +1,5 @@
 # Xqcilia - Qualcomm uC Large Immediate Arithmetic extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilia -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilia -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilia < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcilia -M no-aliases --no-print-imm-hex -d - \

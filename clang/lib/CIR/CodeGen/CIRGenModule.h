@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -91,7 +92,8 @@ public:
 
   /// FIXME: this could likely be a common helper and not necessarily related
   /// with codegen.
-  clang::CharUnits getNaturalTypeAlignment(clang::QualType t);
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
+                                           LValueBaseInfo *baseInfo);
 
   void emitTopLevelDecl(clang::Decl *decl);
 
