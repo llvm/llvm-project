@@ -506,12 +506,12 @@ define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
 define void @masked_gather_scatter_intrinsics(<7 x ptr> %vec, <7 x i1> %mask) {
   ; CHECK:  %[[UNDEF:.+]] = llvm.mlir.undef
   ; CHECK:  %[[VAL1:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[UNDEF]] {alignment = 1 : i32}
-  ; CHECK-SAME:  (!llvm.vec<7 x ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
+  ; CHECK-SAME:  (vector<7x!llvm.ptr>, vector<7xi1>, vector<7xf32>) -> vector<7xf32>
   %1 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 1, <7 x i1> %mask, <7 x float> undef)
   ; CHECK:  %[[VAL2:.+]] = llvm.intr.masked.gather %[[VEC]], %[[MASK]], %[[VAL1]] {alignment = 4 : i32}
   %2 = call <7 x float> @llvm.masked.gather.v7f32.v7p0(<7 x ptr> %vec, i32 4, <7 x i1> %mask, <7 x float> %1)
   ; CHECK:  llvm.intr.masked.scatter %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
-  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.vec<7 x ptr>
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into vector<7x!llvm.ptr>
   call void @llvm.masked.scatter.v7f32.v7p0(<7 x float> %2, <7 x ptr> %vec, i32 8, <7 x i1> %mask)
   ret void
 }
@@ -882,7 +882,7 @@ define void @invariant_group(ptr %0) {
 
 ; CHECK-LABEL: llvm.func @vector_insert
 define void @vector_insert(<vscale x 4 x float> %0, <4 x float> %1) {
-  ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into !llvm.vec<? x 4 x  f32>
+  ; CHECK: llvm.intr.vector.insert %{{.*}}, %{{.*}}[4] : vector<4xf32> into vector<[4]xf32>
   %3 = call <vscale x 4 x float>  @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> %0, <4 x float> %1, i64 4);
   ret void
 }
@@ -898,7 +898,7 @@ define void @vector_extract(<vscale x 4 x float> %0) {
 define void @vector_deinterleave2(<4 x double> %0, <vscale x 8 x i32> %1) {
   ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<4xf64>) -> !llvm.struct<(vector<2xf64>, vector<2xf64>)>
   %3 = call { <2 x double>, <2 x double> } @llvm.vector.deinterleave2.v4f64(<4 x double> %0);
-  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (!llvm.vec<? x 8 x i32>) -> !llvm.struct<(vec<? x 4 x i32>, vec<? x 4 x i32>)>
+  ; CHECK: "llvm.intr.vector.deinterleave2"(%{{.*}}) : (vector<[8]xi32>) -> !llvm.struct<(vector<[4]xi32>, vector<[4]xi32>)>
   %4 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %1);
   ret void
 }
@@ -997,9 +997,9 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %56 = call <8 x i64> @llvm.vp.fptoui.v8i64.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.fptosi"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf64>, vector<8xi1>, i32) -> vector<8xi64>
   %57 = call <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.ptrtoint"(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.vec<8 x ptr>, vector<8xi1>, i32) -> vector<8xi64>
+  ; CHECK: "llvm.intr.vp.ptrtoint"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8x!llvm.ptr>, vector<8xi1>, i32) -> vector<8xi64>
   %58 = call <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0(<8 x ptr> %6, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.inttoptr"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x ptr>
+  ; CHECK: "llvm.intr.vp.inttoptr"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> vector<8x!llvm.ptr>
   %59 = call <8 x ptr> @llvm.vp.inttoptr.v8p0.v8i64(<8 x i64> %4, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.fmuladd"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xf32>, vector<8xf32>, vector<8xf32>, vector<8xi1>, i32) -> vector<8xf32>
   %60 = call <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float> %2, <8 x float> %3, <8 x float> %3, <8 x i1> %11, i32 %12)
@@ -1030,7 +1030,7 @@ define ptr @ptrmask(ptr %0, i64 %1) {
 
 ; CHECK-LABEL:  llvm.func @vector_ptrmask
 define <8 x ptr> @vector_ptrmask(<8 x ptr> %0, <8 x i64> %1) {
-  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (!llvm.vec<8 x ptr>, vector<8xi64>) -> !llvm.vec<8 x ptr>
+  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (vector<8x!llvm.ptr>, vector<8xi64>) -> vector<8x!llvm.ptr>
   %3 = call <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr> %0, <8 x i64> %1)
   ret <8 x ptr> %3
 }
