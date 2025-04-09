@@ -334,8 +334,6 @@ compatible with the LLVM dialect:
 
 -   `bool LLVM::isCompatibleVectorType(Type)` - checks whether a type is a
     vector type compatible with the LLVM dialect;
--   `Type LLVM::getVectorElementType(Type)` - returns the element type of any
-    vector type compatible with the LLVM dialect;
 -   `llvm::ElementCount LLVM::getVectorNumElements(Type)` - returns the number
     of elements in any vector type compatible with the LLVM dialect;
 -   `Type LLVM::getFixedVectorType(Type, unsigned)` - gets a fixed vector type
