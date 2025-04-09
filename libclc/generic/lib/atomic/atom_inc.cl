@@ -10,24 +10,17 @@
 #include <clc/atomic/atom_add.h>
 #include <clc/atomic/atomic_inc.h>
 
+#define IMPL(AS, TYPE) \
+_CLC_OVERLOAD _CLC_DEF TYPE atom_inc(volatile AS TYPE *p) { \
+  return atomic_inc(p); \
+}
+
 // cl_khr_global_int32_base_atomics
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_inc(volatile global TYPE *p) { \
-  return atomic_inc(p); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
-#undef IMPL
-
+IMPL(global, int)
+IMPL(global, unsigned int)
 // cl_khr_local_int32_base_atomics
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_inc(volatile local TYPE *p) { \
-  return atomic_inc(p); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
+IMPL(local, int)
+IMPL(local, unsigned int)
 #undef IMPL
 
 #ifdef cl_khr_int64_base_atomics

@@ -9,24 +9,17 @@
 #include <clc/atomic/atom_cmpxchg.h>
 #include <clc/atomic/atomic_cmpxchg.h>
 
+#define IMPL(AS, TYPE) \
+_CLC_OVERLOAD _CLC_DEF TYPE atom_cmpxchg(volatile AS TYPE *p, TYPE cmp, TYPE val) { \
+  return atomic_cmpxchg(p, cmp, val); \
+}
+
 // cl_khr_global_int32_base_atomics
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_cmpxchg(volatile global TYPE *p, TYPE cmp, TYPE val) { \
-  return atomic_cmpxchg(p, cmp, val); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
-#undef IMPL
-
+IMPL(global, int)
+IMPL(global, unsigned int)
 // cl_khr_local_int32_base_atomics
-#define IMPL(TYPE) \
-_CLC_OVERLOAD _CLC_DEF TYPE atom_cmpxchg(volatile local TYPE *p, TYPE cmp, TYPE val) { \
-  return atomic_cmpxchg(p, cmp, val); \
-}
-
-IMPL(int)
-IMPL(unsigned int)
+IMPL(local, int)
+IMPL(local, unsigned int)
 #undef IMPL
 
 #ifdef cl_khr_int64_base_atomics
