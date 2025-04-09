@@ -146,13 +146,13 @@ static OrderMap orderModule(const Module *M) {
   };
 
   auto OrderConstantFromMetadata = [&](Metadata *MD) {
-      if (const auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+    if (const auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
+      orderConstantValue(VAM->getValue());
+    } else if (const auto *AL = dyn_cast<DIArgList>(MD)) {
+      for (const auto *VAM : AL->getArgs())
         orderConstantValue(VAM->getValue());
-      } else if (const auto *AL = dyn_cast<DIArgList>(MD)) {
-        for (const auto *VAM : AL->getArgs())
-          orderConstantValue(VAM->getValue());
-      }
-    };
+    }
+  };
 
   for (const GlobalVariable &G : M->globals()) {
     if (G.hasInitializer())

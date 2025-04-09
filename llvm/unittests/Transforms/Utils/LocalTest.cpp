@@ -1362,4 +1362,3 @@ TEST(Local, ReplaceDbgVariableRecord) {
   // Teardown.
   RetInst->DebugMarker->eraseFromParent();
 }
-
