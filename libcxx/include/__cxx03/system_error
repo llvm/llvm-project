@@ -152,11 +152,6 @@ template <> struct hash<std::error_condition>;
 #include <__cxx03/__system_error/system_error.h>
 #include <__cxx03/version>
 
-// standard-mandated includes
-
-// [system.error.syn]
-#include <__cxx03/compare>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
