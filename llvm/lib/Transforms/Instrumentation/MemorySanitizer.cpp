@@ -846,9 +846,9 @@ void MemorySanitizer::createKernelApi(Module &M, const TargetLibraryInfo &TLI) {
   }
 
   MsanMetadataPtrForLoadN = getOrInsertMsanMetadataFunction(
-      M, "__msan_metadata_ptr_for_load_n", PtrTy, IRB.getInt64Ty());
+      M, "__msan_metadata_ptr_for_load_n", PtrTy, IntptrTy);
   MsanMetadataPtrForStoreN = getOrInsertMsanMetadataFunction(
-      M, "__msan_metadata_ptr_for_store_n", PtrTy, IRB.getInt64Ty());
+      M, "__msan_metadata_ptr_for_store_n", PtrTy, IntptrTy);
 
   // Functions for poisoning and unpoisoning memory.
   MsanPoisonAllocaFn = M.getOrInsertFunction(
@@ -6551,7 +6551,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     VAArgBase = 8;
     unsigned VAArgOffset = VAArgBase;
     const DataLayout &DL = F.getDataLayout();
-    unsigned IntptrSize = DL.getTypeStoreSize(IRB.getInt32Ty());
+    unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
@@ -6620,7 +6620,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     }
 
     Constant *TotalVAArgSize =
-        ConstantInt::get(IRB.getInt32Ty(), VAArgOffset - VAArgBase);
+        ConstantInt::get(MS.IntptrTy, VAArgOffset - VAArgBase);
     // Here using VAArgOverflowSizeTLS as VAArgSizeTLS to avoid creation of
     // a new class member i.e. it is the total size of all VarArgs.
     IRB.CreateStore(TotalVAArgSize, MS.VAArgOverflowSizeTLS);
@@ -6630,7 +6630,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     assert(!VAArgSize && !VAArgTLSCopy &&
            "finalizeInstrumentation called twice");
     IRBuilder<> IRB(MSV.FnPrologueEnd);
-    VAArgSize = IRB.CreateLoad(IRB.getInt32Ty(), MS.VAArgOverflowSizeTLS);
+    VAArgSize = IRB.CreateLoad(MS.IntptrTy, MS.VAArgOverflowSizeTLS);
     Value *CopySize = VAArgSize;
 
     if (!VAStartInstrumentationList.empty()) {
@@ -6644,7 +6644,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
-          ConstantInt::get(IRB.getInt32Ty(), kParamTLSSize));
+          ConstantInt::get(MS.IntptrTy, kParamTLSSize));
       IRB.CreateMemCpy(VAArgTLSCopy, kShadowTLSAlignment, MS.VAArgTLS,
                        kShadowTLSAlignment, SrcSize);
     }
@@ -6656,22 +6656,22 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
       NextNodeIRBuilder IRB(OrigInst);
       Value *VAListTag = OrigInst->getArgOperand(0);
       Value *RegSaveAreaPtrPtr =
-          IRB.CreatePtrToInt(VAListTag, IRB.getInt32Ty());
+          IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
       Value *RegSaveAreaSize = CopySize;
 
       // In PPC32 va_list_tag is a struct
       RegSaveAreaPtrPtr = IRB.CreateAdd(RegSaveAreaPtrPtr,
-                                        ConstantInt::get(IRB.getInt32Ty(), 8));
+                                        ConstantInt::get(MS.IntptrTy, 8));
 
       // On PPC 32 reg_save_area can only hold 32 bytes of data
       RegSaveAreaSize = IRB.CreateBinaryIntrinsic(
-          Intrinsic::umin, CopySize, ConstantInt::get(IRB.getInt32Ty(), 32));
+          Intrinsic::umin, CopySize, ConstantInt::get(MS.IntptrTy, 32));
 
       RegSaveAreaPtrPtr = IRB.CreateIntToPtr(RegSaveAreaPtrPtr, MS.PtrTy);
       Value *RegSaveAreaPtr = IRB.CreateLoad(MS.PtrTy, RegSaveAreaPtrPtr);
 
       const DataLayout &DL = F.getDataLayout();
-      unsigned IntptrSize = DL.getTypeStoreSize(IRB.getInt32Ty());
+      unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
       const Align Alignment = Align(IntptrSize);
 
       { // Copy reg save area
@@ -6683,14 +6683,14 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
                          Alignment, RegSaveAreaSize);
 
         RegSaveAreaShadowPtr =
-            IRB.CreatePtrToInt(RegSaveAreaShadowPtr, IRB.getInt32Ty());
+            IRB.CreatePtrToInt(RegSaveAreaShadowPtr, MS.IntptrTy);
         Value *FPSaveArea = IRB.CreateAdd(
-            RegSaveAreaShadowPtr, ConstantInt::get(IRB.getInt32Ty(), 32));
+            RegSaveAreaShadowPtr, ConstantInt::get(MS.IntptrTy, 32));
         FPSaveArea = IRB.CreateIntToPtr(FPSaveArea, MS.PtrTy);
         // We fill fp shadow with zeroes as uninitialized fp args should have
         // been found during call base check
         IRB.CreateMemSet(FPSaveArea, ConstantInt::getNullValue(IRB.getInt8Ty()),
-                         ConstantInt::get(IRB.getInt32Ty(), 32), Alignment);
+                         ConstantInt::get(MS.IntptrTy, 32), Alignment);
       }
 
       { // Copy overflow area
@@ -6698,9 +6698,9 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
         Value *OverflowAreaSize = IRB.CreateSub(CopySize, RegSaveAreaSize);
 
         Value *OverflowAreaPtrPtr =
-            IRB.CreatePtrToInt(VAListTag, IRB.getInt32Ty());
+            IRB.CreatePtrToInt(VAListTag, MS.IntptrTy);
         OverflowAreaPtrPtr = IRB.CreateAdd(
-            OverflowAreaPtrPtr, ConstantInt::get(IRB.getInt32Ty(), 4));
+            OverflowAreaPtrPtr, ConstantInt::get(MS.IntptrTy, 4));
         OverflowAreaPtrPtr = IRB.CreateIntToPtr(OverflowAreaPtrPtr, MS.PtrTy);
 
         Value *OverflowAreaPtr = IRB.CreateLoad(MS.PtrTy, OverflowAreaPtrPtr);
@@ -6711,7 +6711,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
                                    Alignment, /*isStore*/ true);
 
         Value *OverflowVAArgTLSCopyPtr =
-            IRB.CreatePtrToInt(VAArgTLSCopy, IRB.getInt32Ty());
+            IRB.CreatePtrToInt(VAArgTLSCopy, MS.IntptrTy);
         OverflowVAArgTLSCopyPtr =
             IRB.CreateAdd(OverflowVAArgTLSCopyPtr, RegSaveAreaSize);
 
