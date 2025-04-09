@@ -49,6 +49,7 @@ struct CallOpSignatureConversion : public OpConversionPattern<CallOp> {
     auto newCallOp = rewriter.create<CallOp>(
         callOp.getLoc(), callOp.getCallee(), convertedResults,
         flattenValues(adaptor.getOperands()));
+    newCallOp->setAttrs(callOp->getAttrs());
     SmallVector<ValueRange> replacements;
     size_t offset = 0;
     for (int i = 0, e = callOp->getNumResults(); i < e; ++i) {
