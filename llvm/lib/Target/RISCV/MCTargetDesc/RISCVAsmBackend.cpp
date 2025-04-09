@@ -569,10 +569,10 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   case RISCV::fixup_riscv_qc_abs20_u: {
     if (!isInt<20>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
-    uint64_t Bit20 = (Value >> 20) & 0x1;
-    uint64_t Bit15_1 = (Value >> 1) & 0x7fff;
-    uint64_t Bit19_16 = (Value >> 16) & 0xf;
-    Value = (Bit20 << 31) | (Bit15_1 << 16) | (Bit19_16 << 12);
+    uint64_t Bit19 = (Value >> 19) & 0x1;
+    uint64_t Bit14_0 = (Value) & 0x7fff;
+    uint64_t Bit18_15 = (Value >> 15) & 0xf;
+    Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
     return Value;
   }
   }
