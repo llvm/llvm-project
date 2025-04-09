@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_INTEL_ternary_bitwise_function -o - | FileCheck %s --check-prefix=CHECK-EXTENSION
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-NO-EXTENSION
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_KHR_SPV_INTEL_ternary_bitwise_function -o - -filetype=obj | spirv-val %} 
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s --spirv-ext=+SPV_INTEL_ternary_bitwise_function -o - -filetype=obj | spirv-val %} 
 ;
 ; CHECK-NO-EXTENSION: LLVM ERROR: OpBitwiseFunctionINTEL instruction requires the following SPIR-V extension: SPV_INTEL_ternary_bitwise_function
 ;
