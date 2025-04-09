@@ -107,6 +107,7 @@ public:
 
   unsigned getInverseCompareOpcode(MachineInstr &MI) const {
     switch (MI.getOpcode()) {
+    // unsigned 32
     case AMDGPU::V_CMP_EQ_U32_e64:
       return AMDGPU::V_CMP_NE_U32_e64;
     case AMDGPU::V_CMP_NE_U32_e64:
@@ -119,19 +120,19 @@ public:
       return AMDGPU::V_CMP_LE_U32_e64;
     case AMDGPU::V_CMP_LT_U32_e64:
       return AMDGPU::V_CMP_GE_U32_e64;
-
-    //   case AMDGPU::V_CMP_EQ_U32_e64:
-    //   return AMDGPU::V_CMP_NE_U32_e64;
-    // case AMDGPU::V_CMP_NE_U32_e64:
-    //   return AMDGPU::V_CMP_EQ_U32_e64;
-    // case AMDGPU::V_CMP_GE_U32_e64:
-    //   return AMDGPU::V_CMP_LT_U32_e64;
-    // case AMDGPU::V_CMP_LE_U32_e64:
-    //   return AMDGPU::V_CMP_GT_U32_e64;
-    // case AMDGPU::V_CMP_GT_U32_e64:
-    //   return AMDGPU::V_CMP_LE_U32_e64;
-    // case AMDGPU::V_CMP_LT_U32_e64:
-    //   return AMDGPU::V_CMP_GE_U32_e64;
+      // float 32
+    case AMDGPU::V_CMP_EQ_F32_e64:
+      return AMDGPU::V_CMP_NEQ_F32_e64;
+    case AMDGPU::V_CMP_NEQ_F32_e64:
+      return AMDGPU::V_CMP_EQ_F32_e64;
+    case AMDGPU::V_CMP_GE_F32_e64:
+      return AMDGPU::V_CMP_LT_F32_e64;
+    case AMDGPU::V_CMP_LE_F32_e64:
+      return AMDGPU::V_CMP_GT_F32_e64;
+    case AMDGPU::V_CMP_GT_F32_e64:
+      return AMDGPU::V_CMP_LE_F32_e64;
+    case AMDGPU::V_CMP_LT_F32_e64:
+      return AMDGPU::V_CMP_GE_F32_e64;
     default:
       return 0;
     }
@@ -139,7 +140,6 @@ public:
 
   bool foldCopyToVGPROfScalarAddOfFrameIndex(Register DstReg, Register SrcReg,
                                              MachineInstr &MI) const;
-
   bool updateOperand(FoldCandidate &Fold) const;
 
   bool canUseImmWithOpSel(FoldCandidate &Fold) const;
@@ -1541,11 +1541,17 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI, Register *RegVCC,
           auto cmpDL = DefMI->getDebugLoc();
           *NewVCC = MRI->createVirtualRegister(MRI->getRegClass(Reg));
           *RegVCC = Reg;
-          MachineInstrBuilder inverseCompare = BuildMI(
+          MachineInstrBuilder InverseCompare = BuildMI(
               *DefMI->getParent(), DefMI, cmpDL, TII->get(Opcode), *NewVCC);
+          InverseCompare->setFlags(DefMI->getFlags());
 
-          inverseCompare.add(DefMI->getOperand(1));
-          inverseCompare.add(DefMI->getOperand(2));
+          unsigned OpNum = DefMI->getNumExplicitOperands();
+          for (unsigned i = 1; i < OpNum; i++) {
+            MachineOperand Op = DefMI->getOperand(i);
+            InverseCompare.add(Op);
+            if (Op.isReg() && Op.isKill())
+              InverseCompare->getOperand(i).setIsKill(false);
+          }
         }
       }
     }

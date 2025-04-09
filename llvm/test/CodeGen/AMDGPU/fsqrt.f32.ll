@@ -2326,12 +2326,12 @@ define float @v_sqrt_f32_ulp2_noncontractable_rcp(float %x) {
 ; GISEL-IEEE:       ; %bb.0:
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x800000
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, v0, v1
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 1, 0, vcc
 ; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v1, -16, 0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x7f800000
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GISEL-IEEE-NEXT:    v_frexp_mant_f32_e32 v1, v0
@@ -2583,12 +2583,12 @@ define float @v_sqrt_f32_ulp2_contractable_fdiv_arcp(float %x, float %y) {
 ; GISEL-IEEE:       ; %bb.0:
 ; GISEL-IEEE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x800000
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v2
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, 1, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, v0, v2
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 1, 0, vcc
 ; GISEL-IEEE-NEXT:    v_lshlrev_b32_e32 v2, 5, v2
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GISEL-IEEE-NEXT:    v_sqrt_f32_e32 v0, v0
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, 0, -16, vcc
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e64 v2, -16, 0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v3, 0x7f800000
 ; GISEL-IEEE-NEXT:    v_ldexp_f32_e32 v0, v0, v2
 ; GISEL-IEEE-NEXT:    v_frexp_mant_f32_e32 v2, v0
@@ -3999,8 +3999,8 @@ define amdgpu_kernel void @elim_redun_check_neg0(ptr addrspace(1) %out, float %i
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v1
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, s2, v1
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
@@ -4061,8 +4061,8 @@ define amdgpu_kernel void @elim_redun_check_neg0(ptr addrspace(1) %out, float %i
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v1, 1
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s2, v1
-; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; GISEL-DAZ-NEXT:    v_cmp_ge_f32_e32 vcc, s2, v1
+; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GISEL-DAZ-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GISEL-DAZ-NEXT:    s_endpgm
@@ -4133,8 +4133,8 @@ define amdgpu_kernel void @elim_redun_check_pos0(ptr addrspace(1) %out, float %i
 ; GISEL-IEEE-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e64 vcc, s2, 0
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e64 vcc, s2, 0
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GISEL-IEEE-NEXT:    s_endpgm
 ;
@@ -4194,8 +4194,8 @@ define amdgpu_kernel void @elim_redun_check_pos0(ptr addrspace(1) %out, float %i
 ; GISEL-DAZ-NEXT:    v_cmp_class_f32_e32 vcc, v0, v2
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e64 vcc, s2, 0
-; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GISEL-DAZ-NEXT:    v_cmp_ge_f32_e64 vcc, s2, 0
+; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    s_mov_b32 s2, -1
 ; GISEL-DAZ-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GISEL-DAZ-NEXT:    s_endpgm
@@ -4434,10 +4434,10 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-IEEE-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-IEEE-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v3
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; GISEL-IEEE-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v3
-; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, s6, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GISEL-IEEE-NEXT:    v_cmp_ge_f32_e32 vcc, s7, v3
+; GISEL-IEEE-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GISEL-IEEE-NEXT:    s_mov_b32 s6, -1
 ; GISEL-IEEE-NEXT:    s_mov_b32 s7, 0xf000
 ; GISEL-IEEE-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
@@ -4530,10 +4530,10 @@ define amdgpu_kernel void @elim_redun_check_v2(ptr addrspace(1) %out, <2 x float
 ; GISEL-DAZ-NEXT:    v_bfrev_b32_e32 v3, 1
 ; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v0, vcc
 ; GISEL-DAZ-NEXT:    v_mov_b32_e32 v4, 0x7fc00000
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s6, v3
-; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v2, v4, vcc
-; GISEL-DAZ-NEXT:    v_cmp_lt_f32_e32 vcc, s7, v3
-; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v1, v4, vcc
+; GISEL-DAZ-NEXT:    v_cmp_ge_f32_e32 vcc, s6, v3
+; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v0, v4, v2, vcc
+; GISEL-DAZ-NEXT:    v_cmp_ge_f32_e32 vcc, s7, v3
+; GISEL-DAZ-NEXT:    v_cndmask_b32_e32 v1, v4, v1, vcc
 ; GISEL-DAZ-NEXT:    s_mov_b32 s6, -1
 ; GISEL-DAZ-NEXT:    s_mov_b32 s7, 0xf000
 ; GISEL-DAZ-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0

@@ -1515,12 +1515,12 @@ define float @v_recip_sqrt_f32_ulp25(float %x) {
 ; CODEGEN-IEEE-GISEL:       ; %bb.0:
 ; CODEGEN-IEEE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CODEGEN-IEEE-GISEL-NEXT:    v_mov_b32_e32 v1, 0x800000
-; CODEGEN-IEEE-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
-; CODEGEN-IEEE-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; CODEGEN-IEEE-GISEL-NEXT:    v_cmp_ge_f32_e32 vcc, v0, v1
+; CODEGEN-IEEE-GISEL-NEXT:    v_cndmask_b32_e64 v1, 1, 0, vcc
 ; CODEGEN-IEEE-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 5, v1
 ; CODEGEN-IEEE-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; CODEGEN-IEEE-GISEL-NEXT:    v_sqrt_f32_e32 v0, v0
-; CODEGEN-IEEE-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, -16, vcc
+; CODEGEN-IEEE-GISEL-NEXT:    v_cndmask_b32_e64 v1, -16, 0, vcc
 ; CODEGEN-IEEE-GISEL-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; CODEGEN-IEEE-GISEL-NEXT:    v_frexp_mant_f32_e32 v1, v0
 ; CODEGEN-IEEE-GISEL-NEXT:    v_rcp_f32_e32 v1, v1
