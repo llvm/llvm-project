@@ -16,6 +16,8 @@
 #include "mlir/IR/Builders.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtOpenACC.h"
+#include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -56,6 +58,19 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return mlir::success();
 
   switch (s->getStmtClass()) {
+  case Stmt::NoStmtClass:
+  case Stmt::CXXCatchStmtClass:
+  case Stmt::SEHExceptStmtClass:
+  case Stmt::SEHFinallyStmtClass:
+  case Stmt::MSDependentExistsStmtClass:
+    llvm_unreachable("invalid statement class to emit generically");
+  case Stmt::BreakStmtClass:
+  case Stmt::NullStmtClass:
+  case Stmt::CompoundStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::DeclStmtClass:
+  case Stmt::ReturnStmtClass:
+    llvm_unreachable("should have emitted these statements as simple");
 
 #define STMT(Type, Base)
 #define ABSTRACT_STMT(Op)
@@ -72,39 +87,57 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
       assert(outgoing && "expression emission cleared block!");
       return mlir::success();
     }
-
+  case Stmt::IfStmtClass:
+    return emitIfStmt(cast<IfStmt>(*s));
   case Stmt::ForStmtClass:
     return emitForStmt(cast<ForStmt>(*s));
-
+  case Stmt::WhileStmtClass:
+    return emitWhileStmt(cast<WhileStmt>(*s));
+  case Stmt::DoStmtClass:
+    return emitDoStmt(cast<DoStmt>(*s));
+  case Stmt::OpenACCComputeConstructClass:
+    return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
+  case Stmt::OpenACCLoopConstructClass:
+    return emitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*s));
+  case Stmt::OpenACCCombinedConstructClass:
+    return emitOpenACCCombinedConstruct(cast<OpenACCCombinedConstruct>(*s));
+  case Stmt::OpenACCDataConstructClass:
+    return emitOpenACCDataConstruct(cast<OpenACCDataConstruct>(*s));
+  case Stmt::OpenACCEnterDataConstructClass:
+    return emitOpenACCEnterDataConstruct(cast<OpenACCEnterDataConstruct>(*s));
+  case Stmt::OpenACCExitDataConstructClass:
+    return emitOpenACCExitDataConstruct(cast<OpenACCExitDataConstruct>(*s));
+  case Stmt::OpenACCHostDataConstructClass:
+    return emitOpenACCHostDataConstruct(cast<OpenACCHostDataConstruct>(*s));
+  case Stmt::OpenACCWaitConstructClass:
+    return emitOpenACCWaitConstruct(cast<OpenACCWaitConstruct>(*s));
+  case Stmt::OpenACCInitConstructClass:
+    return emitOpenACCInitConstruct(cast<OpenACCInitConstruct>(*s));
+  case Stmt::OpenACCShutdownConstructClass:
+    return emitOpenACCShutdownConstruct(cast<OpenACCShutdownConstruct>(*s));
+  case Stmt::OpenACCSetConstructClass:
+    return emitOpenACCSetConstruct(cast<OpenACCSetConstruct>(*s));
+  case Stmt::OpenACCUpdateConstructClass:
+    return emitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*s));
+  case Stmt::OpenACCCacheConstructClass:
+    return emitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*s));
+  case Stmt::OpenACCAtomicConstructClass:
+    return emitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*s));
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
-  case Stmt::NoStmtClass:
-  case Stmt::CXXCatchStmtClass:
-  case Stmt::SEHExceptStmtClass:
-  case Stmt::SEHFinallyStmtClass:
-  case Stmt::MSDependentExistsStmtClass:
-  case Stmt::NullStmtClass:
-  case Stmt::CompoundStmtClass:
-  case Stmt::DeclStmtClass:
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
-  case Stmt::BreakStmtClass:
-  case Stmt::ContinueStmtClass:
   case Stmt::DefaultStmtClass:
   case Stmt::CaseStmtClass:
   case Stmt::SEHLeaveStmtClass:
   case Stmt::SYCLKernelCallStmtClass:
-  case Stmt::IfStmtClass:
   case Stmt::SwitchStmtClass:
-  case Stmt::WhileStmtClass:
-  case Stmt::DoStmtClass:
   case Stmt::CoroutineBodyStmtClass:
   case Stmt::CoreturnStmtClass:
   case Stmt::CXXTryStmtClass:
   case Stmt::CXXForRangeStmtClass:
   case Stmt::IndirectGotoStmtClass:
-  case Stmt::ReturnStmtClass:
   case Stmt::GCCAsmStmtClass:
   case Stmt::MSAsmStmtClass:
   case Stmt::OMPParallelDirectiveClass:
@@ -189,20 +222,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass:
   case Stmt::OMPStripeDirectiveClass:
-  case Stmt::OpenACCComputeConstructClass:
-  case Stmt::OpenACCLoopConstructClass:
-  case Stmt::OpenACCCombinedConstructClass:
-  case Stmt::OpenACCDataConstructClass:
-  case Stmt::OpenACCEnterDataConstructClass:
-  case Stmt::OpenACCExitDataConstructClass:
-  case Stmt::OpenACCHostDataConstructClass:
-  case Stmt::OpenACCWaitConstructClass:
-  case Stmt::OpenACCInitConstructClass:
-  case Stmt::OpenACCShutdownConstructClass:
-  case Stmt::OpenACCSetConstructClass:
-  case Stmt::OpenACCUpdateConstructClass:
-  case Stmt::OpenACCCacheConstructClass:
-  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
     cgm.errorNYI(s->getSourceRange(),
@@ -217,7 +236,6 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
                                                    bool useCurrentScope) {
   switch (s->getStmtClass()) {
   default:
-    // Only compound and return statements are supported right now.
     return mlir::failure();
   case Stmt::DeclStmtClass:
     return emitDeclStmt(cast<DeclStmt>(*s));
@@ -227,6 +245,15 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     else
       emitCompoundStmt(cast<CompoundStmt>(*s));
     break;
+  case Stmt::ContinueStmtClass:
+    return emitContinueStmt(cast<ContinueStmt>(*s));
+
+  // NullStmt doesn't need any handling, but we need to say we handled it.
+  case Stmt::NullStmtClass:
+    break;
+
+  case Stmt::BreakStmtClass:
+    return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
     return emitReturnStmt(cast<ReturnStmt>(*s));
   }
@@ -259,6 +286,68 @@ static void terminateBody(CIRGenBuilderTy &builder, mlir::Region &r,
 
   for (auto *b : eraseBlocks)
     b->erase();
+}
+
+mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
+  mlir::LogicalResult res = mlir::success();
+  // The else branch of a consteval if statement is always the only branch
+  // that can be runtime evaluated.
+  const Stmt *constevalExecuted;
+  if (s.isConsteval()) {
+    constevalExecuted = s.isNegatedConsteval() ? s.getThen() : s.getElse();
+    if (!constevalExecuted) {
+      // No runtime code execution required
+      return res;
+    }
+  }
+
+  // C99 6.8.4.1: The first substatement is executed if the expression
+  // compares unequal to 0.  The condition must be a scalar type.
+  auto ifStmtBuilder = [&]() -> mlir::LogicalResult {
+    if (s.isConsteval())
+      return emitStmt(constevalExecuted, /*useCurrentScope=*/true);
+
+    if (s.getInit())
+      if (emitStmt(s.getInit(), /*useCurrentScope=*/true).failed())
+        return mlir::failure();
+
+    if (s.getConditionVariable())
+      emitDecl(*s.getConditionVariable());
+
+    // If the condition folds to a constant and this is an 'if constexpr',
+    // we simplify it early in CIRGen to avoid emitting the full 'if'.
+    bool condConstant;
+    if (constantFoldsToBool(s.getCond(), condConstant, s.isConstexpr())) {
+      if (s.isConstexpr()) {
+        // Handle "if constexpr" explicitly here to avoid generating some
+        // ill-formed code since in CIR the "if" is no longer simplified
+        // in this lambda like in Clang but postponed to other MLIR
+        // passes.
+        if (const Stmt *executed = condConstant ? s.getThen() : s.getElse())
+          return emitStmt(executed, /*useCurrentScope=*/true);
+        // There is nothing to execute at runtime.
+        // TODO(cir): there is still an empty cir.scope generated by the caller.
+        return mlir::success();
+      }
+    }
+
+    assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+    assert(!cir::MissingFeatures::incrementProfileCounter());
+    return emitIfOnBoolExpr(s.getCond(), s.getThen(), s.getElse());
+  };
+
+  // TODO: Add a new scoped symbol table.
+  // LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
+  // The if scope contains the full source range for IfStmt.
+  mlir::Location scopeLoc = getLoc(s.getSourceRange());
+  builder.create<cir::ScopeOp>(
+      scopeLoc, /*scopeBuilder=*/
+      [&](mlir::OpBuilder &b, mlir::Location loc) {
+        LexicalScope lexScope{*this, scopeLoc, builder.getInsertionBlock()};
+        res = ifStmtBuilder();
+      });
+
+  return res;
 }
 
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
@@ -309,6 +398,25 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
   builder.create<cir::BrOp>(loc, retBlock);
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult
+CIRGenFunction::emitContinueStmt(const clang::ContinueStmt &s) {
+  builder.createContinue(getLoc(s.getContinueLoc()));
+
+  // Insert the new block to continue codegen after the continue statement.
+  builder.createBlock(builder.getBlock()->getParent());
+
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitBreakStmt(const clang::BreakStmt &s) {
+  builder.createBreak(getLoc(s.getBreakLoc()));
+
+  // Insert the new block to continue codegen after the break statement.
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -385,5 +493,112 @@ mlir::LogicalResult CIRGenFunction::emitForStmt(const ForStmt &s) {
     return res;
 
   terminateBody(builder, forOp.getBody(), getLoc(s.getEndLoc()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitDoStmt(const DoStmt &s) {
+  cir::DoWhileOp doWhileOp;
+
+  // TODO: pass in array of attributes.
+  auto doStmtBuilder = [&]() -> mlir::LogicalResult {
+    mlir::LogicalResult loopRes = mlir::success();
+    assert(!cir::MissingFeatures::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!cir::MissingFeatures::requiresCleanups());
+
+    doWhileOp = builder.createDoWhile(
+        getLoc(s.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          mlir::Value condVal = evaluateExprAsBool(s.getCond());
+          builder.createCondition(condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // The scope of the do-while loop body is a nested scope.
+          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+            loopRes = mlir::failure();
+          emitStopPoint(&s);
+        });
+    return loopRes;
+  };
+
+  mlir::LogicalResult res = mlir::success();
+  mlir::Location scopeLoc = getLoc(s.getSourceRange());
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = doStmtBuilder();
+                               });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, doWhileOp.getBody(), getLoc(s.getEndLoc()));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRGenFunction::emitWhileStmt(const WhileStmt &s) {
+  cir::WhileOp whileOp;
+
+  // TODO: pass in array of attributes.
+  auto whileStmtBuilder = [&]() -> mlir::LogicalResult {
+    mlir::LogicalResult loopRes = mlir::success();
+    assert(!cir::MissingFeatures::loopInfoStack());
+    // From LLVM: if there are any cleanups between here and the loop-exit
+    // scope, create a block to stage a loop exit along.
+    // We probably already do the right thing because of ScopeOp, but make
+    // sure we handle all cases.
+    assert(!cir::MissingFeatures::requiresCleanups());
+
+    whileOp = builder.createWhile(
+        getLoc(s.getSourceRange()),
+        /*condBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          assert(!cir::MissingFeatures::createProfileWeightsForLoop());
+          assert(!cir::MissingFeatures::emitCondLikelihoodViaExpectIntrinsic());
+          mlir::Value condVal;
+          // If the for statement has a condition scope,
+          // emit the local variable declaration.
+          if (s.getConditionVariable())
+            emitDecl(*s.getConditionVariable());
+          // C99 6.8.5p2/p4: The first substatement is executed if the
+          // expression compares unequal to 0. The condition must be a
+          // scalar type.
+          condVal = evaluateExprAsBool(s.getCond());
+          builder.createCondition(condVal);
+        },
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // The scope of the while loop body is a nested scope.
+          if (emitStmt(s.getBody(), /*useCurrentScope=*/false).failed())
+            loopRes = mlir::failure();
+          emitStopPoint(&s);
+        });
+    return loopRes;
+  };
+
+  mlir::LogicalResult res = mlir::success();
+  mlir::Location scopeLoc = getLoc(s.getSourceRange());
+  builder.create<cir::ScopeOp>(scopeLoc, /*scopeBuilder=*/
+                               [&](mlir::OpBuilder &b, mlir::Location loc) {
+                                 LexicalScope lexScope{
+                                     *this, loc, builder.getInsertionBlock()};
+                                 res = whileStmtBuilder();
+                               });
+
+  if (res.failed())
+    return res;
+
+  terminateBody(builder, whileOp.getBody(), getLoc(s.getEndLoc()));
   return mlir::success();
 }

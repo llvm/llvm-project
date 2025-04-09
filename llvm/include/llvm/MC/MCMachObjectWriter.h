@@ -141,7 +141,7 @@ private:
 
   std::vector<DataRegionData> DataRegions;
 
-  SectionAddrMap SectionAddress;
+  DenseMap<const MCSection *, uint64_t> SectionAddress;
 
   // List of sections in layout order. Virtual sections are after non-virtual
   // sections.
@@ -203,7 +203,6 @@ public:
   const llvm::SmallVectorImpl<MCSection *> &getSectionOrder() const {
     return SectionOrder;
   }
-  SectionAddrMap &getSectionAddressMap() { return SectionAddress; }
   MCLOHContainer &getLOHContainer() { return LOHContainer; }
 
   uint64_t getSectionAddress(const MCSection *Sec) const {

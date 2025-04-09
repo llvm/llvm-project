@@ -1070,9 +1070,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 
   if (Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.inUnion() && RHS.inUnion()) {
+      // If the pointers point into a union, things are a little more
+      // complicated since the offset we save in interp::Pointer can't be used
+      // to compare the pointers directly.
+      size_t A = LHS.computeOffsetForComparison();
+      size_t B = RHS.computeOffsetForComparison();
+      S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+      return true;
+    }
+
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
-
     // In our Pointer class, a pointer to an array and a pointer to the first
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
@@ -2050,8 +2059,11 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
   if (Result == 0 && Ptr.isOnePastEnd()) {
-    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
-                        Ptr.asBlockPointer().Base);
+    if (Ptr.getFieldDesc()->isArray())
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    else
+      S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                          Ptr.asBlockPointer().Base);
     return true;
   }
 
@@ -2668,8 +2680,16 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2684,8 +2704,16 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }

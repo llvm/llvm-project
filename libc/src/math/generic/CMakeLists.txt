@@ -4117,8 +4117,11 @@ add_header_library(
   HDRS
     atan_utils.h
   DEPENDS
+    libc.src.__support.integer_literals
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.macros.optimization
 )
 
@@ -4166,7 +4169,9 @@ add_entrypoint_object(
     atan2f_float.h
   DEPENDS
     .inv_trigf_utils
+    libc.hdr.fenv_macros
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -4184,6 +4189,7 @@ add_entrypoint_object(
   DEPENDS
     .atan_utils
     libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.nearest_integer
@@ -4198,6 +4204,24 @@ add_entrypoint_object(
     ../atan2l.h
   DEPENDS
     .atan2
+)
+
+add_entrypoint_object(
+  atan2f128
+  SRCS
+    atan2f128.cpp
+  HDRS
+    ../atan2f128.h
+  DEPENDS
+    .atan_utils
+    libc.src.__support.integer_literals
+    libc.src.__support.uint128
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(
