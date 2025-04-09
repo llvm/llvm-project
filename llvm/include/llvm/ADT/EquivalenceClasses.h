@@ -228,18 +228,16 @@ public:
       return false;
     const ECValue *Cur = TheMapping[V];
     const ECValue *Next = Cur->getNext();
-    if (Cur->isLeader()) {
-      // If the current element is the leader and has a successor element,
-      // update the successor element's 'Leader' field to be the last element,
-      // set the successor element's stolen bit, and set the 'Leader' field of
-      // all other elements in same class to be the successor element.
-      if (Next) {
-        Next->Leader = Cur->Leader;
-        Next->Next = (const ECValue *)((intptr_t)Next->Next | (intptr_t)1);
-        const ECValue *newLeader = Next;
-        while ((Next = Next->getNext())) {
-          Next->Leader = newLeader;
-        }
+    // If the current element is the leader and has a successor element,
+    // update the successor element's 'Leader' field to be the last element,
+    // set the successor element's stolen bit, and set the 'Leader' field of
+    // all other elements in same class to be the successor element.
+    if (Cur->isLeader() && Next) {
+      Next->Leader = Cur->Leader;
+      Next->Next = (const ECValue *)((intptr_t)Next->Next | (intptr_t)1);
+      const ECValue *newLeader = Next;
+      while ((Next = Next->getNext())) {
+        Next->Leader = newLeader;
       }
     } else {
       const ECValue *Leader = findLeader(V).Node;
