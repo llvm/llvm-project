@@ -280,6 +280,25 @@ void GCNHazardRecognizer::processBundle() {
   CurrCycleInstr = nullptr;
 }
 
+void GCNHazardRecognizer::reverseProcessBundle() {
+  MachineBasicBlock::instr_iterator MI =
+      std::next(CurrCycleInstr->getIterator());
+  MachineBasicBlock::instr_iterator E =
+      CurrCycleInstr->getParent()->instr_end();
+
+  for (; MI != E && MI->isInsideBundle(); ++MI) {
+    CurrCycleInstr = &*MI;
+    for (unsigned I = 0, E = MaxLookAhead - 1; I < E; ++I) {
+      if (!EmittedInstrs.empty())
+        EmittedInstrs.pop_back();
+    }
+
+    EmittedInstrs.push_back(CurrCycleInstr);
+    EmittedInstrs.resize(MaxLookAhead);
+  }
+  CurrCycleInstr = nullptr;
+}
+
 void GCNHazardRecognizer::runOnInstruction(MachineInstr *MI) {
   assert(IsHazardRecognizerMode);
 
@@ -417,7 +436,32 @@ void GCNHazardRecognizer::AdvanceCycle() {
 }
 
 void GCNHazardRecognizer::RecedeCycle() {
-  llvm_unreachable("hazard recognizer does not support bottom-up scheduling.");
+  if (!CurrCycleInstr) {
+    if (!EmittedInstrs.empty())
+      EmittedInstrs.pop_back();
+    return;
+  }
+
+  if (CurrCycleInstr->isBundle()) {
+    reverseProcessBundle();
+    return;
+  }
+
+  unsigned NumWaitStates = TII.getNumWaitStates(*CurrCycleInstr);
+  if (!NumWaitStates) {
+    CurrCycleInstr = nullptr;
+    return;
+  }
+
+  EmittedInstrs.push_back(CurrCycleInstr);
+  for (unsigned i = 1, e = std::min(NumWaitStates, getMaxLookAhead()); i < e;
+       ++i) {
+    if (!EmittedInstrs.empty())
+      EmittedInstrs.pop_back();
+  }
+
+  EmittedInstrs.resize(getMaxLookAhead());
+  CurrCycleInstr = nullptr;
 }
 
 //===----------------------------------------------------------------------===//
