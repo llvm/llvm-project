@@ -6,8 +6,20 @@ void acc_kernels(void) {
   {}
 
   // CHECK-NEXT: acc.kernels {
-  // CHECK-NEXT:acc.terminator
+  // CHECK-NEXT: acc.terminator
   // CHECK-NEXT:}
+
+#pragma acc kernels default(none)
+  {}
+  // CHECK-NEXT: acc.kernels {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+#pragma acc kernels default(present)
+  {}
+  // CHECK-NEXT: acc.kernels {
+  // CHECK-NEXT: acc.terminator
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
 
 #pragma acc kernels
   while(1){}
@@ -23,7 +35,7 @@ void acc_kernels(void) {
   // CHECK-NEXT: }
   // cir.scope end:
   // CHECK-NEXT: }
-  // CHECK-NEXT:acc.terminator
+  // CHECK-NEXT: acc.terminator
   // CHECK-NEXT:}
 
   // CHECK-NEXT: cir.return
