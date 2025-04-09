@@ -27,7 +27,7 @@ def DeclareFunOp : SMTOp<"declare_fun", [
   let summary = "declare a symbolic value of a given sort";
   let description = [{
     This operation declares a symbolic value just as the `declare-const` and
-    `declare-func` statements in SMT-LIB 2.6. The result type determines the SMT
+    `declare-fun` statements in SMT-LIB 2.6. The result type determines the SMT
     sort of the symbolic value. The returned value can then be used to refer to
     the symbolic value instead of using the identifier like in SMT-LIB.
 
