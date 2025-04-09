@@ -2053,6 +2053,12 @@ def FeatureISAVersion11_5_3 : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority])>;
 
+def FeatureISAVersion11_7_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureRequiredExportPriority])>;
+
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    FeatureAddressableLocalMemorySize65536,
