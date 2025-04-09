@@ -4001,6 +4001,32 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
                DAG->dumpNode(*Dep.getSUnit()));
+
+    // Check to make sure that there are no subreg defintions of the given
+    // register between it's new and old location that are marked as undef. If
+    // so, mark the current instruction as undef instead.
+    SmallVector<MachineOperand *, 1> SubregDefs;
+    for (MachineOperand &MO : Copy->operands()) {
+      if (MO.isReg() && MO.isDef() && MO.getSubReg() != 0) {
+        SubregDefs.push_back(&MO);
+      }
+    }
+    if (SubregDefs.size()) {
+      for (auto CurrInst = InsertPos; CurrInst != Copy; ++CurrInst) {
+        for (MachineOperand &MO : CurrInst->operands()) {
+          if (MO.isReg() && MO.isDef() && MO.isUndef() && MO.getSubReg() != 0) {
+            for (auto *MISubregDef : SubregDefs) {
+              if (MISubregDef->getReg() == MO.getReg()) {
+                assert(!MISubregDef->isUndef() &&
+                       "Register defined as undef twice.");
+                MO.setIsUndef(false);
+                MISubregDef->setIsUndef(true);
+              }
+            }
+          }
+        }
+      }
+    }
     DAG->moveInstruction(Copy, InsertPos);
   }
 }
