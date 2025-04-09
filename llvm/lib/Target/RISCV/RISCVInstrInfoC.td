@@ -234,25 +234,25 @@ def uimm2_opcode : RISCVUImmOp<2> {
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CStackLoad<bits<3> funct3, string OpcodeStr,
-                 RegisterClass cls, DAGOperand opnd>
+                 DAGOperand cls, DAGOperand opnd>
     : RVInst16CI<funct3, 0b10, (outs cls:$rd), (ins SPMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStackStore<bits<3> funct3, string OpcodeStr,
-                  RegisterClass cls, DAGOperand opnd>
+                  DAGOperand cls, DAGOperand opnd>
     : RVInst16CSS<funct3, 0b10, (outs), (ins cls:$rs2, SPMem:$rs1, opnd:$imm),
                   OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class CLoad_ri<bits<3> funct3, string OpcodeStr,
-               RegisterClass cls, DAGOperand opnd>
+               DAGOperand cls, DAGOperand opnd>
     : RVInst16CL<funct3, 0b00, (outs cls:$rd), (ins GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rd, ${imm}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class CStore_rri<bits<3> funct3, string OpcodeStr,
-                 RegisterClass cls, DAGOperand opnd>
+                 DAGOperand cls, DAGOperand opnd>
     : RVInst16CS<funct3, 0b00, (outs), (ins cls:$rs2,GPRCMem:$rs1, opnd:$imm),
                  OpcodeStr, "$rs2, ${imm}(${rs1})">;
 
