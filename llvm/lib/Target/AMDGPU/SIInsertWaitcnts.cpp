@@ -2623,12 +2623,17 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
         else
           *Brackets = *BI.Incoming;
       } else {
-        if (!Brackets)
+        if (!Brackets) {
           Brackets = std::make_unique<WaitcntBrackets>(
               ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
-        else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
-                                      WaitEventMaskForInst, SmemAccessCounter);
+        } else {
+          // Reinitialize in-place. N.B. do not do this by assigning from a
+          // temporary because the WaitcntBrackets class is large and it could
+          // cause this function to use an unreasonable amount of stack space.
+          Brackets->~WaitcntBrackets();
+          new (Brackets.get()) WaitcntBrackets(
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
+        }
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);

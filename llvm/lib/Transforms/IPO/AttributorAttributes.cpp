@@ -5283,7 +5283,7 @@ struct AAAlignImpl : AAAlign {
 
   /// See AbstractAttribute::manifest(...).
   ChangeStatus manifest(Attributor &A) override {
-    ChangeStatus LoadStoreChanged = ChangeStatus::UNCHANGED;
+    ChangeStatus InstrChanged = ChangeStatus::UNCHANGED;
 
     // Check for users that allow alignment annotations.
     Value &AssociatedValue = getAssociatedValue();
@@ -5297,7 +5297,7 @@ struct AAAlignImpl : AAAlign {
             STATS_DECLTRACK(AAAlign, Store,
                             "Number of times alignment added to a store");
             SI->setAlignment(getAssumedAlign());
-            LoadStoreChanged = ChangeStatus::CHANGED;
+            InstrChanged = ChangeStatus::CHANGED;
           }
       } else if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
         if (LI->getPointerOperand() == &AssociatedValue)
@@ -5305,8 +5305,27 @@ struct AAAlignImpl : AAAlign {
             LI->setAlignment(getAssumedAlign());
             STATS_DECLTRACK(AAAlign, Load,
                             "Number of times alignment added to a load");
-            LoadStoreChanged = ChangeStatus::CHANGED;
+            InstrChanged = ChangeStatus::CHANGED;
           }
+      } else if (auto *RMW = dyn_cast<AtomicRMWInst>(U.getUser())) {
+        if (RMW->getPointerOperand() == &AssociatedValue) {
+          if (RMW->getAlign() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, AtomicRMW,
+                            "Number of times alignment added to atomicrmw");
+
+            RMW->setAlignment(getAssumedAlign());
+            InstrChanged = ChangeStatus::CHANGED;
+          }
+        }
+      } else if (auto *CAS = dyn_cast<AtomicCmpXchgInst>(U.getUser())) {
+        if (CAS->getPointerOperand() == &AssociatedValue) {
+          if (CAS->getAlign() < getAssumedAlign()) {
+            STATS_DECLTRACK(AAAlign, AtomicCmpXchg,
+                            "Number of times alignment added to cmpxchg");
+            CAS->setAlignment(getAssumedAlign());
+            InstrChanged = ChangeStatus::CHANGED;
+          }
+        }
       }
     }
 
@@ -5315,8 +5334,8 @@ struct AAAlignImpl : AAAlign {
     Align InheritAlign =
         getAssociatedValue().getPointerAlignment(A.getDataLayout());
     if (InheritAlign >= getAssumedAlign())
-      return LoadStoreChanged;
-    return Changed | LoadStoreChanged;
+      return InstrChanged;
+    return Changed | InstrChanged;
   }
 
   // TODO: Provide a helper to determine the implied ABI alignment and check in

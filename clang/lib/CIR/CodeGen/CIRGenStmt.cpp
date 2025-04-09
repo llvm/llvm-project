@@ -16,6 +16,7 @@
 #include "mlir/IR/Builders.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
+#include "clang/AST/StmtOpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -56,7 +57,14 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return mlir::success();
 
   switch (s->getStmtClass()) {
+  case Stmt::NoStmtClass:
+  case Stmt::CXXCatchStmtClass:
+  case Stmt::SEHExceptStmtClass:
+  case Stmt::SEHFinallyStmtClass:
+  case Stmt::MSDependentExistsStmtClass:
+    llvm_unreachable("invalid statement class to emit generically");
   case Stmt::BreakStmtClass:
+  case Stmt::NullStmtClass:
   case Stmt::CompoundStmtClass:
   case Stmt::ContinueStmtClass:
   case Stmt::DeclStmtClass:
@@ -85,15 +93,36 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
     return emitWhileStmt(cast<WhileStmt>(*s));
   case Stmt::DoStmtClass:
     return emitDoStmt(cast<DoStmt>(*s));
-
+  case Stmt::OpenACCComputeConstructClass:
+    return emitOpenACCComputeConstruct(cast<OpenACCComputeConstruct>(*s));
+  case Stmt::OpenACCLoopConstructClass:
+    return emitOpenACCLoopConstruct(cast<OpenACCLoopConstruct>(*s));
+  case Stmt::OpenACCCombinedConstructClass:
+    return emitOpenACCCombinedConstruct(cast<OpenACCCombinedConstruct>(*s));
+  case Stmt::OpenACCDataConstructClass:
+    return emitOpenACCDataConstruct(cast<OpenACCDataConstruct>(*s));
+  case Stmt::OpenACCEnterDataConstructClass:
+    return emitOpenACCEnterDataConstruct(cast<OpenACCEnterDataConstruct>(*s));
+  case Stmt::OpenACCExitDataConstructClass:
+    return emitOpenACCExitDataConstruct(cast<OpenACCExitDataConstruct>(*s));
+  case Stmt::OpenACCHostDataConstructClass:
+    return emitOpenACCHostDataConstruct(cast<OpenACCHostDataConstruct>(*s));
+  case Stmt::OpenACCWaitConstructClass:
+    return emitOpenACCWaitConstruct(cast<OpenACCWaitConstruct>(*s));
+  case Stmt::OpenACCInitConstructClass:
+    return emitOpenACCInitConstruct(cast<OpenACCInitConstruct>(*s));
+  case Stmt::OpenACCShutdownConstructClass:
+    return emitOpenACCShutdownConstruct(cast<OpenACCShutdownConstruct>(*s));
+  case Stmt::OpenACCSetConstructClass:
+    return emitOpenACCSetConstruct(cast<OpenACCSetConstruct>(*s));
+  case Stmt::OpenACCUpdateConstructClass:
+    return emitOpenACCUpdateConstruct(cast<OpenACCUpdateConstruct>(*s));
+  case Stmt::OpenACCCacheConstructClass:
+    return emitOpenACCCacheConstruct(cast<OpenACCCacheConstruct>(*s));
+  case Stmt::OpenACCAtomicConstructClass:
+    return emitOpenACCAtomicConstruct(cast<OpenACCAtomicConstruct>(*s));
   case Stmt::OMPScopeDirectiveClass:
   case Stmt::OMPErrorDirectiveClass:
-  case Stmt::NoStmtClass:
-  case Stmt::CXXCatchStmtClass:
-  case Stmt::SEHExceptStmtClass:
-  case Stmt::SEHFinallyStmtClass:
-  case Stmt::MSDependentExistsStmtClass:
-  case Stmt::NullStmtClass:
   case Stmt::LabelStmtClass:
   case Stmt::AttributedStmtClass:
   case Stmt::GotoStmtClass:
@@ -192,20 +221,6 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass:
   case Stmt::OMPStripeDirectiveClass:
-  case Stmt::OpenACCComputeConstructClass:
-  case Stmt::OpenACCLoopConstructClass:
-  case Stmt::OpenACCCombinedConstructClass:
-  case Stmt::OpenACCDataConstructClass:
-  case Stmt::OpenACCEnterDataConstructClass:
-  case Stmt::OpenACCExitDataConstructClass:
-  case Stmt::OpenACCHostDataConstructClass:
-  case Stmt::OpenACCWaitConstructClass:
-  case Stmt::OpenACCInitConstructClass:
-  case Stmt::OpenACCShutdownConstructClass:
-  case Stmt::OpenACCSetConstructClass:
-  case Stmt::OpenACCUpdateConstructClass:
-  case Stmt::OpenACCCacheConstructClass:
-  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
     cgm.errorNYI(s->getSourceRange(),
@@ -231,6 +246,11 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     break;
   case Stmt::ContinueStmtClass:
     return emitContinueStmt(cast<ContinueStmt>(*s));
+
+  // NullStmt doesn't need any handling, but we need to say we handled it.
+  case Stmt::NullStmtClass:
+    break;
+
   case Stmt::BreakStmtClass:
     return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
