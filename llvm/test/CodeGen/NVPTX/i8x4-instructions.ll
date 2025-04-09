@@ -1412,7 +1412,7 @@ define void @test_srem_v3i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    prmt.b32 %r10, %r11, %r12, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r13, %r9, %r10, 0x5410U;
 ; CHECK-NEXT:    rem.s16 %rs17, %rs5, %rs10;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs18, tmp}, %r13; }
+; CHECK-NEXT:    mov.b32 {%rs18, _}, %r13;
 ; CHECK-NEXT:    st.u8 [%rd3], %rs18;
 ; CHECK-NEXT:    shr.u16 %rs19, %rs18, 8;
 ; CHECK-NEXT:    st.u8 [%rd3+1], %rs19;
