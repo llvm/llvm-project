@@ -1408,7 +1408,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(key_type const& __key) {
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
-  _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(const_iterator __it) {
     return __tree_.template __node_handle_extract<node_type>(__it.__i_);
   }
   template <class _Compare2>
