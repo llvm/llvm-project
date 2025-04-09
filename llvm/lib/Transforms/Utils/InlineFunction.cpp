@@ -241,7 +241,8 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  BranchInst::Create(Dest, Src);
+  auto *BI = BranchInst::Create(Dest, Src);
+  BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
@@ -1245,8 +1246,7 @@ static void AddAliasScopeMetadata(CallBase &CB, ValueToValueMapTy &VMap,
         SmallVector<const Value *, 4> Objects;
         getUnderlyingObjects(V, Objects, /* LI = */ nullptr);
 
-        for (const Value *O : Objects)
-          ObjSet.insert(O);
+        ObjSet.insert_range(Objects);
       }
 
       // Figure out if we're derived from anything that is not a noalias
@@ -2160,7 +2160,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
         //   call.
         if (IsUnsafeClaimRV) {
           Builder.SetInsertPoint(II);
-          Builder.CreateIntrinsic(Intrinsic::objc_release, {}, RetOpnd);
+          Builder.CreateIntrinsic(Intrinsic::objc_release, RetOpnd);
         }
         II->eraseFromParent();
         InsertRetainCall = false;
@@ -2194,7 +2194,7 @@ inlineRetainOrClaimRVCalls(CallBase &CB, objcarc::ARCInstKind RVCallKind,
       // matching autoreleaseRV or an annotated call in the callee. Emit a call
       // to objc_retain.
       Builder.SetInsertPoint(RI);
-      Builder.CreateIntrinsic(Intrinsic::objc_retain, {}, RetOpnd);
+      Builder.CreateIntrinsic(Intrinsic::objc_retain, RetOpnd);
     }
   }
 }
@@ -2357,7 +2357,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
                                         Function *ForwardVarArgsTo) {
-  if (CtxProf.contexts().empty())
+  if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
                           ForwardVarArgsTo);
 

@@ -145,8 +145,9 @@ void SetVariableRequestHandler::operator()(
     lldb::SBError error;
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
-      VariableDescription desc(variable, dap.enable_auto_variable_summaries);
-      EmplaceSafeString(body, "result", desc.display_value);
+      VariableDescription desc(variable,
+                               dap.configuration.enableAutoVariableSummaries);
+      EmplaceSafeString(body, "value", desc.display_value);
       EmplaceSafeString(body, "type", desc.display_type_name);
 
       // We don't know the index of the variable in our dap.variables

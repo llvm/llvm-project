@@ -23,7 +23,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if __has_builtin(__is_signed)
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_signed : _BoolConstant<__is_signed(_Tp)> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_signed : _BoolConstant<__is_signed(_Tp)> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>
@@ -45,7 +45,7 @@ template <class _Tp>
 struct __libcpp_is_signed<_Tp, false> : public false_type {};
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_signed : public __libcpp_is_signed<_Tp> {};
+struct is_signed : public __libcpp_is_signed<_Tp> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

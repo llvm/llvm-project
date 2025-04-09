@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenModule.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -23,6 +25,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -55,8 +58,75 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   FP80Ty = cir::FP80Type::get(&getMLIRContext());
   FP128Ty = cir::FP128Type::get(&getMLIRContext());
 
+  PointerAlignInBytes =
+      astContext
+          .toCharUnitsFromBits(
+              astContext.getTargetInfo().getPointerAlign(LangAS::Default))
+          .getQuantity();
+
+  // TODO(CIR): Should be updated once TypeSizeInfoAttr is upstreamed
+  const unsigned sizeTypeSize =
+      astContext.getTypeSize(astContext.getSignedSizeType());
+  PtrDiffTy =
+      cir::IntType::get(&getMLIRContext(), sizeTypeSize, /*isSigned=*/true);
+
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
+}
+
+CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
+                                                LValueBaseInfo *baseInfo) {
+  assert(!cir::MissingFeatures::opTBAA());
+
+  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown, but
+  // that doesn't return the information we need to compute baseInfo.
+
+  // Honor alignment typedef attributes even on incomplete types.
+  // We also honor them straight for C++ class types, even as pointees;
+  // there's an expressivity gap here.
+  if (const auto *tt = t->getAs<TypedefType>()) {
+    if (unsigned align = tt->getDecl()->getMaxAlignment()) {
+      if (baseInfo)
+        *baseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
+      return astContext.toCharUnitsFromBits(align);
+    }
+  }
+
+  // Analyze the base element type, so we don't get confused by incomplete
+  // array types.
+  t = astContext.getBaseElementType(t);
+
+  if (t->isIncompleteType()) {
+    // We could try to replicate the logic from
+    // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
+    // type is incomplete, so it's impossible to test. We could try to reuse
+    // getTypeAlignIfKnown, but that doesn't return the information we need
+    // to set baseInfo.  So just ignore the possibility that the alignment is
+    // greater than one.
+    if (baseInfo)
+      *baseInfo = LValueBaseInfo(AlignmentSource::Type);
+    return CharUnits::One();
+  }
+
+  if (baseInfo)
+    *baseInfo = LValueBaseInfo(AlignmentSource::Type);
+
+  CharUnits alignment;
+  if (t.getQualifiers().hasUnaligned()) {
+    alignment = CharUnits::One();
+  } else {
+    assert(!cir::MissingFeatures::alignCXXRecordDecl());
+    alignment = astContext.getTypeAlignInChars(t);
+  }
+
+  // Cap to the global maximum type alignment unless the alignment
+  // was somehow explicit on the type.
+  if (unsigned maxAlign = astContext.getLangOpts().MaxTypeAlign) {
+    if (alignment.getQuantity() > maxAlign &&
+        !astContext.isAlignmentRequired(t))
+      alignment = CharUnits::fromQuantity(maxAlign);
+  }
+  return alignment;
 }
 
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
@@ -77,6 +147,11 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+  if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
+    emitGlobalOpenACCDecl(cd);
+    return;
+  }
+
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -127,7 +202,8 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  mlir::Type type = convertType(vd->getType());
+  const QualType astTy = vd->getType();
+  const mlir::Type type = convertType(vd->getType());
   if (clang::IdentifierInfo *identifier = vd->getIdentifier()) {
     auto varOp = builder.create<cir::GlobalOp>(getLoc(vd->getSourceRange()),
                                                identifier->getName(), type);
@@ -137,46 +213,19 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // certain constant expressions is implemented for now.
     const VarDecl *initDecl;
     const Expr *initExpr = vd->getAnyInitializer(initDecl);
+    mlir::Attribute initializer;
     if (initExpr) {
-      mlir::Attribute initializer;
       if (APValue *value = initDecl->evaluateValue()) {
-        switch (value->getKind()) {
-        case APValue::Int: {
-          if (mlir::isa<cir::BoolType>(type))
-            initializer =
-                builder.getCIRBoolAttr(value->getInt().getZExtValue());
-          else
-            initializer = builder.getAttr<cir::IntAttr>(type, value->getInt());
-          break;
-        }
-        case APValue::Float: {
-          initializer = builder.getAttr<cir::FPAttr>(type, value->getFloat());
-          break;
-        }
-        case APValue::LValue: {
-          if (value->getLValueBase()) {
-            errorNYI(initExpr->getSourceRange(),
-                     "non-null pointer initialization");
-          } else {
-            if (auto ptrType = mlir::dyn_cast<cir::PointerType>(type)) {
-              initializer = builder.getConstPtrAttr(
-                  ptrType, value->getLValueOffset().getQuantity());
-            } else {
-              llvm_unreachable(
-                  "non-pointer variable initialized with a pointer");
-            }
-          }
-          break;
-        }
-        default:
-          errorNYI(initExpr->getSourceRange(), "unsupported initializer kind");
-          break;
-        }
+        ConstantEmitter emitter(*this);
+        initializer = emitter.tryEmitPrivateForMemory(*value, astTy);
       } else {
         errorNYI(initExpr->getSourceRange(), "non-constant initializer");
       }
-      varOp.setInitialValueAttr(initializer);
+    } else {
+      initializer = builder.getZeroInitAttr(convertType(astTy));
     }
+
+    varOp.setInitialValueAttr(initializer);
 
     // Set CIR's linkage type as appropriate.
     cir::GlobalLinkageKind linkage =
@@ -435,6 +484,12 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobal(vd);
     break;
   }
+  case Decl::OpenACCRoutine:
+    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    break;
+  case Decl::OpenACCDeclare:
+    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
   }
 }
 
@@ -486,6 +541,13 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
 
 mlir::Type CIRGenModule::convertType(QualType type) {
   return genTypes.convertType(type);
+}
+
+bool CIRGenModule::verifyModule() const {
+  // Verify the module after we have finished constructing it, this will
+  // check the structural properties of the IR and invoke any specific
+  // verifiers we have on the CIR operations.
+  return mlir::verify(theModule).succeeded();
 }
 
 DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,

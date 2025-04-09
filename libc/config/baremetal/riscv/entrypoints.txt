@@ -119,18 +119,22 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.strtoumax
 
     # stdio.h entrypoints
+    libc.src.stdio.asprintf
     libc.src.stdio.getchar
     libc.src.stdio.printf
     libc.src.stdio.putchar
     libc.src.stdio.puts
     libc.src.stdio.remove
+    libc.src.stdio.scanf
     libc.src.stdio.snprintf
     libc.src.stdio.sprintf
-    libc.src.stdio.asprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.vasprintf
     libc.src.stdio.vprintf
+    libc.src.stdio.vscanf
     libc.src.stdio.vsnprintf
     libc.src.stdio.vsprintf
-    libc.src.stdio.vasprintf
+    libc.src.stdio.vsscanf
 
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc

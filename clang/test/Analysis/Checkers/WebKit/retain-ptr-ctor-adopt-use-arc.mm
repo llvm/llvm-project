@@ -1,3 +1,4 @@
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.RetainPtrCtorAdoptChecker -fobjc-arc -verify %s
 
 #include "objc-mock-types.h"
@@ -95,4 +96,20 @@ static RetainPtr<NS> bridge_cast(RetainPtr<CF>&& ptr)
 RetainPtr<CFArrayRef> create_cf_array();
 RetainPtr<id> return_bridge_cast() {
   return bridge_cast<CFArrayRef, NSArray>(create_cf_array());
+}
+
+void mutable_copy_dictionary() {
+  RetainPtr<NSMutableDictionary> mutableDictionary = adoptNS(@{
+    @"Content-Type": @"text/html",
+  }.mutableCopy);
+}
+
+void mutable_copy_array() {
+  RetainPtr<NSMutableArray> mutableArray = adoptNS(@[
+      @"foo",
+  ].mutableCopy);
+}
+
+void string_copy(NSString *str) {
+  RetainPtr<NSString> copy = adoptNS(str.copy);
 }

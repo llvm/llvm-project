@@ -18,6 +18,13 @@ def testSBAPIAndCommands(func):
     return wrapper
 
 
+def skipIfNoIntelPT(func):
+    """Skip tests if the system does not support tracing."""
+
+    supported = os.path.exists("/sys/bus/event_source/devices/intel_pt/type")
+    return unittest.skipIf(not supported, "intel-pt tracing is unsupported")(func)
+
+
 # Class that should be used by all python Intel PT tests.
 #
 # It has a handy check that skips the test if the intel-pt plugin is not enabled.

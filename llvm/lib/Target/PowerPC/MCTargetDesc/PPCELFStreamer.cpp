@@ -139,7 +139,7 @@ void PPCELFStreamer::emitGOTToPCRelReloc(const MCInst &Inst) {
   // Cast the last operand to MCSymbolRefExpr to get the symbol.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  assert(getVariantKind(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
+  assert(getSpecifier(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
          "Expecting a symbol of type VK_PCREL_OPT");
   MCSymbol *LabelSym =
       getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
@@ -174,7 +174,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
   // Cast the last operand to MCSymbolRefExpr to get the symbol.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  assert(getVariantKind(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
+  assert(getSpecifier(SymExpr) == PPCMCExpr::VK_PCREL_OPT &&
          "Expecting a symbol of type VK_PCREL_OPT");
   MCSymbol *LabelSym =
       getContext().getOrCreateSymbol(SymExpr->getSymbol().getName());
@@ -212,7 +212,7 @@ std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
   // Check for the variant kind VK_PCREL_OPT in this expression.
   const MCExpr *Expr = Operand.getExpr();
   const MCSymbolRefExpr *SymExpr = static_cast<const MCSymbolRefExpr *>(Expr);
-  if (!SymExpr || getVariantKind(SymExpr) != PPCMCExpr::VK_PCREL_OPT)
+  if (!SymExpr || getSpecifier(SymExpr) != PPCMCExpr::VK_PCREL_OPT)
     return std::nullopt;
 
   return (Inst.getOpcode() == PPC::PLDpc);

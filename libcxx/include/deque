@@ -59,7 +59,7 @@ public:
 
     deque& operator=(const deque& c);
     deque& operator=(deque&& c)
-        noexcept((__alloc_traits::propagate_on_container_move_assignment::value &&
+        noexcept((allocator_traits<allocator_type>::propagate_on_container_move_assignment::value &&
                   is_nothrow_move_assignable<allocator_type>::value) ||
                  allocator_traits<allocator_type>::is_always_equal::value);
     deque& operator=(initializer_list<value_type> il);
@@ -283,7 +283,7 @@ template <class _ValueType,
               __deque_block_size<_ValueType, _DiffType>::value
 #  endif
           >
-class _LIBCPP_TEMPLATE_VIS __deque_iterator {
+class __deque_iterator {
   typedef _MapPointer __map_iterator;
 
 public:
@@ -444,9 +444,9 @@ private:
         __ptr_(__p) {}
 
   template <class _Tp, class _Ap>
-  friend class _LIBCPP_TEMPLATE_VIS deque;
+  friend class deque;
   template <class _Vp, class _Pp, class _Rp, class _MP, class _Dp, _Dp>
-  friend class _LIBCPP_TEMPLATE_VIS __deque_iterator;
+  friend class __deque_iterator;
 
   template <class>
   friend struct __segmented_iterator_traits;
@@ -486,7 +486,7 @@ const _DiffType __deque_iterator<_ValueType, _Pointer, _Reference, _MapPointer, 
     __deque_block_size<_ValueType, _DiffType>::value;
 
 template <class _Tp, class _Allocator /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS deque {
+class deque {
 public:
   // types:
 
@@ -677,7 +677,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI deque& operator=(deque&& __c) noexcept(
       (__alloc_traits::propagate_on_container_move_assignment::value &&
        is_nothrow_move_assignable<allocator_type>::value) ||
-      allocator_traits<allocator_type>::is_always_equal::value);
+      __alloc_traits::is_always_equal::value);
 
   _LIBCPP_HIDE_FROM_ABI void assign(initializer_list<value_type> __il) { assign(__il.begin(), __il.end()); }
 #  endif // _LIBCPP_CXX03_LANG
@@ -1382,7 +1382,7 @@ template <class _Tp, class _Allocator>
 inline deque<_Tp, _Allocator>& deque<_Tp, _Allocator>::operator=(deque&& __c) noexcept(
     (__alloc_traits::propagate_on_container_move_assignment::value &&
      is_nothrow_move_assignable<allocator_type>::value) ||
-    allocator_traits<allocator_type>::is_always_equal::value) {
+    __alloc_traits::is_always_equal::value) {
   __move_assign(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   return *this;
 }
@@ -2625,7 +2625,7 @@ struct __container_traits<deque<_Tp, _Allocator> > {
   //  either end, there are no effects. Otherwise, if an exception is thrown by the move constructor of a
   //  non-Cpp17CopyInsertable T, the effects are unspecified.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
-      _Or<is_nothrow_move_constructible<_Tp>, __is_cpp17_copy_insertable<_Allocator> >::value;
+      is_nothrow_move_constructible<_Tp>::value || __is_cpp17_copy_insertable_v<_Allocator>;
 };
 
 _LIBCPP_END_NAMESPACE_STD

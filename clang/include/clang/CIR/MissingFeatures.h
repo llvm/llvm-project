@@ -72,8 +72,18 @@ struct MissingFeatures {
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
 
+  // ScopeOp handling
+  static bool opScopeCleanupRegion() { return false; }
+
+  // Unary operator handling
+  static bool opUnaryPromotionType() { return false; }
+
+  // Clang early optimizations or things defered to LLVM lowering.
+  static bool mayHaveIntegerOverflow() { return false; }
+  static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
+
   // Misc
-  static bool scalarConversionOpts() { return false; }
+  static bool cxxABI() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
@@ -84,8 +94,55 @@ struct MissingFeatures {
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
+  static bool generateDebugInfo() { return false; }
+  static bool pointerOverflowSanitizer() { return false; }
+  static bool fpConstraints() { return false; }
+  static bool sanitizers() { return false; }
+  static bool addHeapAllocSiteMetadata() { return false; }
+  static bool targetCodeGenInfoGetNullPointer() { return false; }
+  static bool loopInfoStack() { return false; }
+  static bool requiresCleanups() { return false; }
+  static bool createProfileWeightsForLoop() { return false; }
+  static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
+  static bool pgoUse() { return false; }
+  static bool cgFPOptionsRAII() { return false; }
+  static bool metaDataNode() { return false; }
+  static bool fastMathFlags() { return false; }
+  static bool alignCXXRecordDecl() { return false; }
+  static bool setNonGC() { return false; }
+  static bool incrementProfileCounter() { return false; }
+  static bool insertBuiltinUnpredictable() { return false; }
+  static bool objCGC() { return false; }
 
+  // Missing types
+  static bool dataMemberType() { return false; }
+  static bool matrixType() { return false; }
+  static bool methodType() { return false; }
+  static bool scalableVectors() { return false; }
   static bool unsizedTypes() { return false; }
+  static bool vectorType() { return false; }
+  static bool complexType() { return false; }
+  static bool fixedPointType() { return false; }
+  static bool stringTypeWithDifferentArraySize() { return false; }
+
+  // Future CIR operations
+  static bool awaitOp() { return false; }
+  static bool callOp() { return false; }
+  static bool complexCreateOp() { return false; }
+  static bool complexImagOp() { return false; }
+  static bool complexRealOp() { return false; }
+  static bool ifOp() { return false; }
+  static bool labelOp() { return false; }
+  static bool ptrDiffOp() { return false; }
+  static bool ptrStrideOp() { return false; }
+  static bool selectOp() { return false; }
+  static bool switchOp() { return false; }
+  static bool ternaryOp() { return false; }
+  static bool tryOp() { return false; }
+  static bool zextOp() { return false; }
+
+  // Future CIR attributes
+  static bool optInfoAttr() { return false; }
 };
 
 } // namespace cir
