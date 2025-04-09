@@ -5525,9 +5525,9 @@ static bool isMaskedLoadCompress(
   // Check for very large distances between elements.
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
-  Align CommonAlignment = computeCommonAlignment<LoadInst>(VL);
   LoadVecTy = getWidenedType(ScalarTy, *Diff + 1);
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
+  Align CommonAlignment = LI->getAlign();
   IsMasked = !isSafeToLoadUnconditionally(
       Ptr0, LoadVecTy, CommonAlignment, DL,
       cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]), &AC, &DT,
@@ -5566,19 +5566,20 @@ static bool isMaskedLoadCompress(
         TTI.getMaskedMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                                   LI->getPointerAddressSpace(), CostKind);
   } else {
-    CommonAlignment = LI->getAlign();
     LoadCost =
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind);
   }
   if (IsStrided) {
     // Check for potential segmented(interleaved) loads.
-    if (TTI.isLegalInterleavedAccessType(LoadVecTy, CompressMask[1],
+    auto *AlignedLoadVecTy = getWidenedType(
+        ScalarTy, getFullVectorNumberOfElements(TTI, ScalarTy, *Diff + 1));
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
-                              Instruction::Load, LoadVecTy, CompressMask[1],
+                              Instruction::Load, AlignedLoadVecTy, CompressMask[1],
                               std::nullopt, CommonAlignment,
                               LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
@@ -5586,6 +5587,7 @@ static bool isMaskedLoadCompress(
                                             VecTy, Mask, CostKind);
       if (InterleavedCost < GatherCost) {
         InterleaveFactor = CompressMask[1];
+        LoadVecTy = AlignedLoadVecTy;
         return true;
       }
     }
@@ -5739,6 +5741,18 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
     // Check that the sorted loads are consecutive.
     if (static_cast<unsigned>(*Diff) == Sz - 1)
       return LoadsState::Vectorize;
+    bool IsMasked;
+    unsigned InterleaveFactor;
+    SmallVector<int> CompressMask;
+    VectorType *LoadVecTy;
+    if (isMaskedLoadCompress(
+            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI,
+            [&](Value *V) {
+              return areAllUsersVectorized(cast<Instruction>(V),
+                                           UserIgnoreList);
+            },
+            IsMasked, InterleaveFactor, CompressMask, LoadVecTy))
+      return LoadsState::CompressVectorize;
     // Simple check if not a strided access - clear order.
     bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
     // Try to generate strided load node.
@@ -5752,18 +5766,6 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
         isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
                       IsAnyPointerUsedOutGraph, *Diff))
       return LoadsState::StridedVectorize;
-    bool IsMasked;
-    unsigned InterleaveFactor;
-    SmallVector<int> CompressMask;
-    VectorType *LoadVecTy;
-    if (isMaskedLoadCompress(
-            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI,
-            [&](Value *V) {
-              return areAllUsersVectorized(cast<Instruction>(V),
-                                           UserIgnoreList);
-            },
-            IsMasked, InterleaveFactor, CompressMask, LoadVecTy))
-      return LoadsState::CompressVectorize;
   }
   if (!TTI->isLegalMaskedGather(VecTy, CommonAlignment) ||
       TTI->forceScalarizeMaskedGather(VecTy, CommonAlignment))
@@ -17558,20 +17560,34 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             *TLI, [](Value *) { return true; }, IsMasked, InterleaveFactor,
             CompressMask, LoadVecTy);
         assert(IsVectorized && "Expected to be vectorized");
-        Align CommonAlignment;
-        if (IsMasked)
-          CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
-        else
-          CommonAlignment = LI->getAlign();
+        Align CommonAlignment = LI->getAlign();
         if (IsMasked) {
+          unsigned VF = getNumElements(LoadVecTy);
           SmallVector<Constant *> MaskValues(
-              getNumElements(LoadVecTy) / getNumElements(LI->getType()),
+              VF / getNumElements(LI->getType()),
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
           Constant *MaskValue = ConstantVector::get(MaskValues);
-          NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
-                                           MaskValue);
+          if (InterleaveFactor) {
+            // FIXME: codegen currently recognizes only vp.load, not
+            // masked.load, as segmented (deinterleaved) loads.
+            Value *Operands[] = {
+                PO, MaskValue,
+                Builder.getInt32(InterleaveFactor * (E->Scalars.size() - 1) +
+                                 1)};
+            Type *Types[] = {LoadVecTy, Operands[0]->getType()};
+            CallInst *WideLoad =
+                Builder.CreateIntrinsic(Intrinsic::vp_load, Types, Operands,
+                                        nullptr, "wide.masked.load");
+            WideLoad->addParamAttr(
+                0, Attribute::getWithAlignment(WideLoad->getContext(),
+                                               CommonAlignment));
+            NewLI = WideLoad;
+          } else {
+            NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
+                                             MaskValue);
+          }
         } else {
           NewLI = Builder.CreateAlignedLoad(LoadVecTy, PO, CommonAlignment);
         }
