@@ -24,7 +24,7 @@ def IntType : SMTTypeDef<"Int"> {
   let description = [{
     This type represents the `Int` sort as described in the
     [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
   let assemblyFormat = "";
 }
@@ -51,7 +51,7 @@ def ArrayType : SMTTypeDef<"Array"> {
     This type represents the `(Array X Y)` sort, where X and Y are any
     sort/type, as described in the
     [SMT ArrayEx theory](https://smtlib.cs.uiowa.edu/Theories/ArraysEx.smt2) of
-    the SMT-LIB standard 2.6.
+    the SMT-LIB standard 2.7.
   }];
 
   let parameters = (ins "mlir::Type":$domainType, "mlir::Type":$rangeType);
@@ -64,7 +64,7 @@ def SMTFuncType : SMTTypeDef<"SMTFunc"> {
   let mnemonic = "func";
   let description = [{
     This type represents the SMT function sort as described in the
-    [SMT-LIB 2.6 standard](https://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+    [SMT-LIB 2.7 standard](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-02-05.pdf).
     It is part of the language itself rather than a theory or logic.
 
     A function in SMT can have an arbitrary domain size, but always has exactly
@@ -111,7 +111,7 @@ def SortType : SMTTypeDef<"Sort"> {
     This type represents concrete use-sites of such declared sorts, in this
     particular case it would be equivalent to `(sort_name Bool other_sort)` in
     SMT-LIB. More details about the semantics can be found in the
-    [SMT-LIB 2.6 standard](https://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+    [SMT-LIB 2.7 standard](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-02-05.pdf).
   }];
 
   let parameters = (ins

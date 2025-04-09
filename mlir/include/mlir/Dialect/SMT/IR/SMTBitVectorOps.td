@@ -65,7 +65,7 @@ class BVArithmeticOrBitwiseOp<string mnemonic, string desc> :
     SMTBVOp<mnemonic, [Pure, SameOperandsAndResultType]> {
   let summary = "equivalent to bv" # mnemonic # " in SMT-LIB";
   let description = "This operation performs " # desc # [{. The semantics are
-    equivalent to the `bv}] # mnemonic # [{` operator defined in the SMT-LIB 2.6
+    equivalent to the `bv}] # mnemonic # [{` operator defined in the SMT-LIB 2.7
     standard. More precisely in the [theory of FixedSizeBitVectors](https://smtlib.cs.uiowa.edu/Theories/FixedSizeBitVectors.smt2)
     and the [QF_BV logic](https://smtlib.cs.uiowa.edu/Logics/QF_BV.smt2)
     describing closed quantifier-free formulas over the theory of fixed-size
@@ -128,7 +128,7 @@ def BVCmpOp : SMTBVOp<"cmp", [Pure, SameTypeOperands]> {
     This operation compares bit-vector values, interpreting them as signed or
     unsigned values depending on the predicate. The semantics are equivalent to
     the `bvslt`, `bvsle`, `bvsgt`, `bvsge`, `bvult`, `bvule`, `bvugt`, or
-    `bvuge` operator defined in the SMT-LIB 2.6 standard depending on the
+    `bvuge` operator defined in the SMT-LIB 2.7 standard depending on the
     specified predicate. More precisely in the
     [theory of FixedSizeBitVectors](https://smtlib.cs.uiowa.edu/Theories/FixedSizeBitVectors.smt2)
     and the [QF_BV logic](https://smtlib.cs.uiowa.edu/Logics/QF_BV.smt2)
@@ -153,7 +153,7 @@ def ConcatOp : SMTBVOp<"concat", [
   let summary = "bit-vector concatenation";
   let description = [{
     This operation concatenates bit-vector values with semantics equivalent to
-    the `concat` operator defined in the SMT-LIB 2.6 standard. More precisely in
+    the `concat` operator defined in the SMT-LIB 2.7 standard. More precisely in
     the [theory of FixedSizeBitVectors](https://smtlib.cs.uiowa.edu/Theories/FixedSizeBitVectors.smt2)
     and the [QF_BV logic](https://smtlib.cs.uiowa.edu/Logics/QF_BV.smt2)
     describing closed quantifier-free formulas over the theory of fixed-size
@@ -177,7 +177,7 @@ def ExtractOp : SMTBVOp<"extract", [Pure]> {
     This operation extracts the range of bits starting at the 'lowBit' index
     (inclusive) up to the 'lowBit' + result-width index (exclusive). The
     semantics are equivalent to the `extract` operator defined in the SMT-LIB
-    2.6 standard. More precisely in the
+    2.7 standard. More precisely in the
     [theory of FixedSizeBitVectors](https://smtlib.cs.uiowa.edu/Theories/FixedSizeBitVectors.smt2)
     and the [QF_BV logic](https://smtlib.cs.uiowa.edu/Logics/QF_BV.smt2)
     describing closed quantifier-free formulas over the theory of fixed-size
@@ -215,7 +215,7 @@ def RepeatOp : SMTBVOp<"repeat", [Pure]> {
     ```
     
     The semantics are equivalent to the `repeat` operator defined in the SMT-LIB
-    2.6 standard. More precisely in the
+    2.7 standard. More precisely in the
     [theory of FixedSizeBitVectors](https://smtlib.cs.uiowa.edu/Theories/FixedSizeBitVectors.smt2)
     and the [QF_BV logic](https://smtlib.cs.uiowa.edu/Logics/QF_BV.smt2)
     describing closed quantifier-free formulas over the theory of fixed-size

@@ -31,7 +31,7 @@ def ArrayStoreOp : SMTArrayOp<"store", [
     except that the value at the given 'index' is changed to the given 'value'.
     The semantics are equivalent to the 'store' operator described in the
     [SMT ArrayEx theory](https://smtlib.cs.uiowa.edu/Theories/ArraysEx.smt2) of
-    the SMT-LIB standard 2.6.
+    the SMT-LIB standard 2.7.
   }];
 
   let arguments = (ins ArrayType:$array, AnySMTType:$index, AnySMTType:$value);
@@ -54,7 +54,7 @@ def ArraySelectOp : SMTArrayOp<"select", [
     This operation is retuns the value stored in the given array at the given
     index. The semantics are equivalent to the `select` operator defined in the
     [SMT ArrayEx theory](https://smtlib.cs.uiowa.edu/Theories/ArraysEx.smt2) of
-    the SMT-LIB standard 2.6.
+    the SMT-LIB standard 2.7.
   }];
 
   let arguments = (ins ArrayType:$array, AnySMTType:$index);

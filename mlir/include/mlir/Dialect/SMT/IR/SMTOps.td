@@ -27,7 +27,7 @@ def DeclareFunOp : SMTOp<"declare_fun", [
   let summary = "declare a symbolic value of a given sort";
   let description = [{
     This operation declares a symbolic value just as the `declare-const` and
-    `declare-fun` statements in SMT-LIB 2.6. The result type determines the SMT
+    `declare-fun` statements in SMT-LIB 2.7. The result type determines the SMT
     sort of the symbolic value. The returned value can then be used to refer to
     the symbolic value instead of using the identifier like in SMT-LIB.
 
@@ -82,7 +82,7 @@ def BoolConstantOp : SMTOp<"constant", [
   let description = [{
     Produces the constant expressions 'true' and 'false' as described in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2) of the SMT-LIB
-    Standard 2.6.
+    Standard 2.7.
   }];
 
   let arguments = (ins BoolAttr:$value);
@@ -241,7 +241,7 @@ def ApplyFuncOp : SMTOp<"apply_func", [
   let summary = "apply a function";
   let description = [{
     This operation performs a function application as described in the
-    [SMT-LIB 2.6 standard](https://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+    [SMT-LIB 2.7 standard](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-02-05.pdf).
     It is part of the language itself rather than a theory or logic.
   }];
 
@@ -259,7 +259,7 @@ def EqOp : SMTOp<"eq", [Pure, SameTypeOperands]> {
   let description = [{
     This operation compares the operands and returns true iff all operands are
     identical. The semantics are equivalent to the `=` operator defined in the
-    SMT-LIB Standard 2.6 in the
+    SMT-LIB Standard 2.7 in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2).
 
     Any SMT sort/type is allowed for the operands and it supports a variadic
@@ -288,7 +288,7 @@ def DistinctOp : SMTOp<"distinct", [Pure, SameTypeOperands]> {
   let description = [{
     This operation compares the operands and returns true iff all operands are
     not identical to any of the other operands. The semantics are equivalent to
-    the `distinct` operator defined in the SMT-LIB Standard 2.6 in the
+    the `distinct` operator defined in the SMT-LIB Standard 2.7 in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2).
 
     Any SMT sort/type is allowed for the operands and it supports a variadic
@@ -334,7 +334,7 @@ def IteOp : SMTOp<"ite", [
     whether its first operand is true or not. The semantics are equivalent to
     the `ite` operator defined in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2) of the SMT-LIB
-    2.6 standard.
+    2.7 standard.
   }];
 
   let arguments = (ins BoolType:$cond,
@@ -353,7 +353,7 @@ def NotOp : SMTOp<"not", [Pure]> {
     This operation performs a boolean negation. The semantics are equivalent to
     the 'not' operator in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2) of the SMT-LIB
-    Standard 2.6.
+    Standard 2.7.
   }];
 
   let arguments = (ins BoolType:$input);
@@ -366,7 +366,7 @@ class VariadicBoolOp<string mnemonic, string desc> : SMTOp<mnemonic, [Pure]> {
   let description = "This operation performs " # desc # [{.
     The semantics are equivalent to the '}] # mnemonic # [{' operator in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2).
-    of the SMT-LIB Standard 2.6.
+    of the SMT-LIB Standard 2.7.
 
     It supports a variadic number of operands, but requires at least two.
     This is because the operator is annotated with the `:left-assoc` attribute
@@ -394,7 +394,7 @@ def ImpliesOp : SMTOp<"implies", [Pure]> {
     This operation performs a boolean implication. The semantics are equivalent
     to the '=>' operator in the
     [Core theory](https://smtlib.cs.uiowa.edu/Theories/Core.smt2) of the SMT-LIB
-    Standard 2.6.
+    Standard 2.7.
   }];
 
   let arguments = (ins BoolType:$lhs, BoolType:$rhs);
@@ -409,7 +409,7 @@ class QuantifierOp<string mnemonic> : SMTOp<mnemonic, [
 ]> {
   let description = [{
     This operation represents the }] # summary # [{ as described in the
-    [SMT-LIB 2.6 standard](https://smtlib.cs.uiowa.edu/papers/smt-lib-reference-v2.6-r2021-05-12.pdf).
+    [SMT-LIB 2.7 standard](https://smt-lib.org/papers/smt-lib-reference-v2.7-r2025-02-05.pdf).
     It is part of the language itself rather than a theory or logic.
 
     The operation specifies the name prefixes (as an optional attribute) and

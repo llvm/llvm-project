@@ -31,7 +31,7 @@ def IntConstantOp : SMTIntOp<"constant", [
     all terms of the form `-n`where n is a numeral other than 0. For more
     information refer to the 
     [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
 
   let arguments = (ins APIntAttr:$value);
@@ -46,7 +46,7 @@ class VariadicIntOp<string mnemonic> : SMTIntOp<mnemonic, [Pure, Commutative]> {
     This operation represents (infinite-precision) }] # summary # [{.
     The semantics are equivalent to the corresponding operator described in
     the [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
 
   let arguments = (ins Variadic<IntType>:$inputs);
@@ -65,7 +65,7 @@ class BinaryIntOp<string mnemonic> : SMTIntOp<mnemonic, [Pure]> {
     This operation represents (infinite-precision) }] # summary # [{.
     The semantics are equivalent to the corresponding operator described in
     the [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
 
   let arguments = (ins IntType:$lhs, IntType:$rhs);
@@ -79,7 +79,7 @@ def IntAbsOp : SMTIntOp<"abs", [Pure]> {
     This operation represents the absolute value function for the `Int` sort.
     The semantics are equivalent to the `abs` operator as described in the
     [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
 
   let arguments = (ins IntType:$input);
@@ -111,7 +111,7 @@ def IntCmpOp : SMTIntOp<"cmp", [Pure]> {
     `> (gt)` operator depending on the predicate (indicated in parentheses) as
     described in the
     [SMT Ints theory](https://smtlib.cs.uiowa.edu/Theories/Ints.smt2) of the
-    SMT-LIB 2.6 standard.
+    SMT-LIB 2.7 standard.
   }];
 
   let arguments = (ins IntPredicate:$pred, IntType:$lhs, IntType:$rhs);
