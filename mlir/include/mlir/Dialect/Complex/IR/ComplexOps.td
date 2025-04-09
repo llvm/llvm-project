@@ -24,21 +24,26 @@ class Complex_Op<string mnemonic, list<Trait> traits = []>
 // one result, all of which must be complex numbers of the same type.
 class ComplexArithmeticOp<string mnemonic, list<Trait> traits = []> :
     Complex_Op<mnemonic, traits # [Pure, SameOperandsAndResultType,
-    Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
-  let arguments = (ins Complex<AnyFloat>:$lhs, Complex<AnyFloat>:$rhs, DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
+    Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>, DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]> {
+  let arguments = (ins 
+        Complex<AnyFloat>:$lhs,
+        Complex<AnyFloat>:$rhs, 
+        DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
+        DefaultValuedAttr<Arith_IntegerOverflowAttr,"::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
   let results = (outs Complex<AnyFloat>:$result);
-  let assemblyFormat = "$lhs `,` $rhs (`fastmath` `` $fastmath^)? attr-dict `:` type($result)";
+  let assemblyFormat = "$lhs `,` $rhs (`fastmath` `` $fastmath^)? (`overflow` `` $overflowFlags^)? attr-dict `:` type($result)";
 }
 
 // Base class for standard unary operations on complex numbers with a
 // floating-point element type. These operations take one operand and return
 // one result; the operand must be a complex number.
 class ComplexUnaryOp<string mnemonic, list<Trait> traits = []> :
-    Complex_Op<mnemonic, traits # [Pure, Elementwise, DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
-  let arguments = (ins Complex<AnyFloat>:$complex, DefaultValuedAttr<
-        Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath);
-  let assemblyFormat = "$complex (`fastmath` `` $fastmath^)? attr-dict `:` type($complex)";
+    Complex_Op<mnemonic, traits # [Pure, Elementwise, 
+      DeclareOpInterfaceMethods<ArithFastMathInterface>, DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]> {
+  let arguments = (ins Complex<AnyFloat>:$complex, 
+        DefaultValuedAttr<Arith_FastMathAttr, "::mlir::arith::FastMathFlags::none">:$fastmath,
+        DefaultValuedAttr<Arith_IntegerOverflowAttr,"::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
+  let assemblyFormat = "$complex (`fastmath` `` $fastmath^)? (`overflow` `` $overflowFlags^)? attr-dict `:` type($complex)";
 }
 
 //===----------------------------------------------------------------------===//
