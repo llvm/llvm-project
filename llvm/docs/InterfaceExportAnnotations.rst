@@ -15,7 +15,7 @@ library with the following configuration:
    LLVM_LINK_LLVM_DYLIB=On
 
 There are three shared library executable formats we're interested in: PE
-Dynamic Link Library (.DLL) on Windows, Mach-O Shared Object (.dylib) on Apple
+Dynamic Link Library (.dll) on Windows, Mach-O Shared Object (.dylib) on Apple
 systems, and ELF Shared Object (.so) on Linux, BSD and other Unix-like systems.
 
 ELF and Mach-O Shared Object files can be built with no additional setup or
