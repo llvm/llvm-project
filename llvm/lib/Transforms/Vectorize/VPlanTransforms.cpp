@@ -70,6 +70,8 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         NewRecipe = new VPWidenIntOrFpInductionRecipe(
             Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
       } else {
+        SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+        getMetadataToPropagate(Inst, Metadata);
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
         assert(!isa<PHINode>(Inst) && "phis should be handled above");
@@ -77,13 +79,13 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenLoadRecipe(
               *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/,
+              false /*Consecutive*/, false /*Reverse*/, Metadata,
               Ingredient.getDebugLoc());
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenStoreRecipe(
               *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
               nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/,
-              Ingredient.getDebugLoc());
+              Metadata, Ingredient.getDebugLoc());
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
           NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
@@ -93,14 +95,16 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
           NewRecipe = new VPWidenIntrinsicRecipe(
               *CI, getVectorIntrinsicIDForCall(CI, &TLI),
               {Ingredient.op_begin(), Ingredient.op_end() - 1}, CI->getType(),
-              CI->getDebugLoc());
+              Metadata, CI->getDebugLoc());
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
+          NewRecipe =
+              new VPWidenSelectRecipe(*SI, Ingredient.operands(), Metadata);
         } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
-          NewRecipe = new VPWidenCastRecipe(
-              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), *CI);
+          NewRecipe =
+              new VPWidenCastRecipe(CI->getOpcode(), Ingredient.getOperand(0),
+                                    CI->getType(), *CI, Metadata);
         } else {
-          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands(), Metadata);
         }
       }
 
@@ -2009,9 +2013,9 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
       .Case<VPWidenSelectRecipe>([&](VPWidenSelectRecipe *Sel) {
         SmallVector<VPValue *> Ops(Sel->operands());
         Ops.push_back(&EVL);
-        return new VPWidenIntrinsicRecipe(Intrinsic::vp_select, Ops,
-                                          TypeInfo.inferScalarType(Sel),
-                                          Sel->getDebugLoc());
+        return new VPWidenIntrinsicRecipe(
+            Intrinsic::vp_select, Ops, TypeInfo.inferScalarType(Sel),
+            Sel->getMetadata(), Sel->getDebugLoc());
       })
       .Case<VPInstruction>([&](VPInstruction *VPI) -> VPRecipeBase * {
         if (VPI->getOpcode() == VPInstruction::FirstOrderRecurrenceSplice) {
@@ -2023,7 +2027,7 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
           Ops.append({MinusOneVPV, &AllOneMask, PrevEVL, &EVL});
           return new VPWidenIntrinsicRecipe(Intrinsic::experimental_vp_splice,
                                             Ops, TypeInfo.inferScalarType(VPI),
-                                            VPI->getDebugLoc());
+                                            {}, VPI->getDebugLoc());
         }
 
         VPValue *LHS, *RHS;
@@ -2038,7 +2042,7 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
         // limited to selects whose condition is a header mask.
         return new VPWidenIntrinsicRecipe(
             Intrinsic::vp_merge, {&AllOneMask, LHS, RHS, &EVL},
-            TypeInfo.inferScalarType(LHS), VPI->getDebugLoc());
+            TypeInfo.inferScalarType(LHS), {}, VPI->getDebugLoc());
       })
       .Default([&](VPRecipeBase *R) { return nullptr; });
 }
@@ -2755,7 +2759,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
       auto *L = new VPWidenLoadRecipe(
           *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
           LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-          /*Reverse=*/false, LoadGroup->getDebugLoc());
+          /*Reverse=*/false, {}, LoadGroup->getDebugLoc());
       L->insertBefore(LoadGroup);
       return L;
     }
@@ -2786,7 +2790,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
         StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
-        /*Reverse=*/false, StoreGroup->getDebugLoc());
+        /*Reverse=*/false, {}, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
   }

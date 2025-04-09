@@ -8599,11 +8599,13 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
+                                 getMetadataToPropagate(Load),
                                  I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, I->getDebugLoc());
+                                Reverse, getMetadataToPropagate(Store),
+                                I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
@@ -8745,6 +8747,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
                 Range);
   if (ShouldUseVectorIntrinsic)
     return new VPWidenIntrinsicRecipe(*CI, ID, Ops, CI->getType(),
+                                      getMetadataToPropagate(CI),
                                       CI->getDebugLoc());
 
   Function *Variant = nullptr;
@@ -8798,7 +8801,8 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(CallInst *CI,
     }
 
     Ops.push_back(Operands.back());
-    return new VPWidenCallRecipe(CI, Variant, Ops, CI->getDebugLoc());
+    return new VPWidenCallRecipe(CI, Variant, Ops, getMetadataToPropagate(CI),
+                                 CI->getDebugLoc());
   }
 
   return nullptr;
@@ -8836,7 +8840,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
           Plan.getOrAddLiveIn(ConstantInt::get(I->getType(), 1u, false));
       auto *SafeRHS = Builder.createSelect(Mask, Ops[1], One, I->getDebugLoc());
       Ops[1] = SafeRHS;
-      return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()));
+      return new VPWidenRecipe(*I, make_range(Ops.begin(), Ops.end()),
+                               getMetadataToPropagate(I));
     }
     [[fallthrough]];
   }
@@ -8882,7 +8887,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
       // For other binops, the legacy cost model only checks the second operand.
       NewOps[1] = GetConstantViaSCEV(NewOps[1]);
     }
-    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()),
+                             getMetadataToPropagate(I));
   }
   case Instruction::ExtractValue: {
     SmallVector<VPValue *> NewOps(Operands);
@@ -8891,7 +8897,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(Instruction *I,
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
     NewOps.push_back(Plan.getOrAddLiveIn(ConstantInt::get(I32Ty, Idx, false)));
-    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()));
+    return new VPWidenRecipe(*I, make_range(NewOps.begin(), NewOps.end()),
+                             getMetadataToPropagate(I));
   }
   };
 }
@@ -9096,6 +9103,13 @@ bool VPRecipeBuilder::getScaledReductions(
   return false;
 }
 
+SmallVector<std::pair<unsigned, MDNode *>>
+VPRecipeBuilder::getMetadataToPropagate(Instruction *I) {
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  ::getMetadataToPropagate(I, Metadata);
+  return Metadata;
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
     Instruction *Instr, ArrayRef<VPValue *> Operands, VFRange &Range) {
   // First, check for specific widening recipes that deal with inductions, Phi
@@ -9168,13 +9182,14 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
                                 make_range(Operands.begin(), Operands.end()));
 
   if (auto *SI = dyn_cast<SelectInst>(Instr)) {
-    return new VPWidenSelectRecipe(
-        *SI, make_range(Operands.begin(), Operands.end()));
+    return new VPWidenSelectRecipe(*SI,
+                                   make_range(Operands.begin(), Operands.end()),
+                                   getMetadataToPropagate(SI));
   }
 
   if (auto *CI = dyn_cast<CastInst>(Instr)) {
     return new VPWidenCastRecipe(CI->getOpcode(), Operands[0], CI->getType(),
-                                 *CI);
+                                 *CI, getMetadataToPropagate(CI));
   }
 
   return tryToWiden(Instr, Operands);
@@ -9200,7 +9215,8 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getOrAddLiveIn(Zero));
     Ops.push_back(BinOp);
-    BinOp = new VPWidenRecipe(*Reduction, make_range(Ops.begin(), Ops.end()));
+    BinOp = new VPWidenRecipe(*Reduction, make_range(Ops.begin(), Ops.end()),
+                              getMetadataToPropagate(Reduction));
     Builder.insert(BinOp->getDefiningRecipe());
     ReductionOpcode = Instruction::Add;
   }
