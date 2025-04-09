@@ -43810,7 +43810,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     case X86ISD::VPERMV: {
       SmallVector<int, 16> Mask;
       SmallVector<SDValue, 2> Ops;
-      if ((VT.is256BitVector() || Subtarget.hasVLX()) &&
+      // We can always split v16i32/v16f32 AVX512 to v8i32/v8f32 AVX2 variants.
+      if ((VT.is256BitVector() || Subtarget.hasVLX() || VT == MVT::v16i32 ||
+           VT == MVT::v16f32) &&
           getTargetShuffleMask(Op, /*AllowSentinelZero=*/false, Ops, Mask)) {
         // For lane-crossing shuffles, only split in half in case we're still
         // referencing higher elements.
