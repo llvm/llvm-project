@@ -1144,6 +1144,79 @@ func.func @test_non_tosa_ops() {
 
 // -----
 
+func.func @test_pad_rank0_pad_const(%arg0: tensor<13x21x3xf8E4M3FN>) -> tensor<13x21x3xf8E5M2> {
+  %padding = tosa.const_shape {values = dense<0> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %cst = "tosa.const"() { values = dense<-0.0> : tensor<f8E4M3FN> } : () -> tensor<f8E4M3FN>
+  // expected-error@+1 {{'tosa.pad' op operand #2 must be tosa-conformant scalar tensor of number values, but got 'tensor<f8E4M3FN>'}}
+  %0 = tosa.pad %arg0, %padding, %cst : (tensor<13x21x3xf8E4M3FN>, !tosa.shape<6>, tensor<f8E4M3FN>) -> tensor<13x21x3xf8E5M2>
+  return %0 : tensor<13x21x3xf8E5M2>
+}
+
+// -----
+
+func.func @test_conv2d_rank0_zp(%arg0: tensor<1x29x29x4xi8>, %arg1: tensor<16x3x3x4xi8>, %arg2: tensor<16xi8>) -> tensor<1x27x27x16xi32> {
+  %input_zp = "tosa.const"() <{values = dense<0> : tensor<i8>}> : () -> tensor<i8>
+  %weight_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // expected-error@+1 {{'tosa.conv2d' op operand #3 must be tosa-conformant scalar tensor of unsigned integer or signless integer or floating-point values, but got 'tensor<i8>'}}
+  %0 = tosa.conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = i32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 1, 1>}
+           : (tensor<1x29x29x4xi8>, tensor<16x3x3x4xi8>, tensor<16xi8>, tensor<i8>, tensor<1xi8>) -> tensor<1x27x27x16xi32>
+  return %0 : tensor<1x27x27x16xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_same_element_type
+func.func @test_negate_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x8xf32> {
+  // expected-error@+1 {{'tosa.negate' op expect input and output to have same element type, got 'f32' and 'i32'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x8xi32>
+  return %0 : tensor<8x8xi32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_same_shape
+func.func @test_negate_same_shape(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xf32>) -> tensor<8x8xf32> {
+  // expected-error@+1 {{'tosa.negate' op requires the same shape for input1 and output}}
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<8x6xf32>
+  return %0 : tensor<8x6xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_input_zp_same_element_type
+func.func @test_negate_input_zp_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1xi32>, %arg2: tensor<1xf32>) -> tensor<8x8xf32> {
+  // expected-error@+1 {{'tosa.negate' op expect both input1 and its zero point are the same element type, got 'f32' and 'i32'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xi32>, tensor<1xf32>) -> tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_negate_output_zp_same_element_type
+func.func @test_negate_output_zp_same_element_type(%arg0: tensor<8x8xf32>, %arg1: tensor<1xf32>, %arg2: tensor<1xi32>) -> tensor<8x8xf32> {
+  // expected-error@+1 {{'tosa.negate' op expect both output and its zero point are the same element type, got 'f32' and 'i32'}}
+  %0 = tosa.negate %arg0, %arg1, %arg2 : (tensor<8x8xf32>, tensor<1xf32>, tensor<1xi32>) -> tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+// -----
+
+func.func @test_sub_with_unequal_operand_ranks(%arg0: tensor<1x21x3xf32>, %arg1: tensor<1x13x21x3xf32>) -> tensor<1x13x21x3xf32> {
+  // expected-error@+1 {{'tosa.sub' op operands don't have matching ranks}}
+  %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xf32>, tensor<1x13x21x3xf32>) -> tensor<1x13x21x3xf32>
+  return %0 : tensor<1x13x21x3xf32>
+}
+
+// -----
+
+func.func @test_sub_with_unequal_result_ranks(%arg0: tensor<1x21x3xf32>, %arg1: tensor<13x21x3xf32>) -> tensor<1x13x21x3xf32> {
+  // expected-error@+1 {{'tosa.sub' op result type has different rank than operands}}
+  %0 = tosa.sub %arg0, %arg1 : (tensor<1x21x3xf32>, tensor<13x21x3xf32>) -> tensor<1x13x21x3xf32>
+  return %0 : tensor<1x13x21x3xf32>
+}
+
+// -----
+
 // expected-error@+1 {{invalid rank (must be >= 0): -1}}
 func.func @test_shape_type(%arg0: !tosa.shape<-1>) -> !tosa.shape<-1> {
   return %arg0 : !tosa.shape<-1>
