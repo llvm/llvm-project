@@ -4633,7 +4633,7 @@ void CodeGenFunction::EmitOMPDispatchDirective(const OMPDispatchDirective &S) {
         Condition =
             getCapturedExprFromImplicitCastExpr(NoContextC->getCondition());
       }
-      OMPLexicalScope Scope(CGF, S, OMPD_unknown);
+      OMPLexicalScope Scope(*this, S, OMPD_dispatch);
       /* OMPC_novariants or OMPC_nocontext present */
       emitIfElse(this, Condition, AssociatedStmt);
     }
