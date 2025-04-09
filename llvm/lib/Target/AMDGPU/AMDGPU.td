@@ -2093,6 +2093,15 @@ def FeatureISAVersion11_5_3 : FeatureSet<
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority])>;
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+def FeatureISAVersion11_7_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureRequiredExportPriority])>;
+
+#endif /* LLPC_BUILD_NPI */
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
 #ifdef LLPC_BUILD_NPI

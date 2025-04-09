@@ -41115,30 +41115,37 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
+  // Peek through any free bitcasts to insert_subvector vector widenings or
+  // extract_subvector nodes back to root size.
+  // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
   for (auto [I, Op] : enumerate(Ops)) {
-    // Peek through vector widenings + set out of bounds mask indices to undef.
-    // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
-    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
-        isNullConstant(Op.getOperand(2))) {
-      Op = Op.getOperand(1);
-      unsigned Scale = RootSizeInBits / Op.getValueSizeInBits();
-      int Lo = I * Mask.size();
-      int Hi = (I + 1) * Mask.size();
-      int NewHi = Lo + (Mask.size() / Scale);
-      for (int &M : Mask) {
-        if (Lo <= M && NewHi <= M && M < Hi)
-          M = SM_SentinelUndef;
-      }
-    }
-
-    // Peek through any free bitcasts/extract_subvector nodes back to root size.
     SDValue BC = Op;
-    if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse())
-      BC = peekThroughOneUseBitcasts(BC);
-    while (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-           (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
-           isNullConstant(BC.getOperand(1))) {
-      Op = BC = BC.getOperand(0);
+    while (1) {
+      if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse()) {
+        BC = BC.getOperand(0);
+        continue;
+      }
+      if (BC.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          BC.getOperand(0).isUndef() && isNullConstant(BC.getOperand(2))) {
+        // Set out of bounds mask indices to undef.
+        Op = BC = BC.getOperand(1);
+        unsigned Scale = RootSizeInBits / Op.getValueSizeInBits();
+        int Lo = I * Mask.size();
+        int Hi = (I + 1) * Mask.size();
+        int NewHi = Lo + (Mask.size() / Scale);
+        for (int &M : Mask) {
+          if (Lo <= M && NewHi <= M && M < Hi)
+            M = SM_SentinelUndef;
+        }
+        continue;
+      }
+      if (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
+          isNullConstant(BC.getOperand(1))) {
+        Op = BC = BC.getOperand(0);
+        continue;
+      }
+      break;
     }
   }
 
