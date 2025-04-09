@@ -391,29 +391,29 @@ bool UnwindPlan::Row::operator==(const UnwindPlan::Row &rhs) const {
 }
 
 void UnwindPlan::AppendRow(Row row) {
-  if (m_row_list.empty() || m_row_list.back()->GetOffset() != row.GetOffset())
-    m_row_list.push_back(std::make_shared<Row>(std::move(row)));
+  if (m_row_list.empty() || m_row_list.back().GetOffset() != row.GetOffset())
+    m_row_list.push_back(std::move(row));
   else
-    *m_row_list.back() = std::move(row);
+    m_row_list.back() = std::move(row);
 }
 
 struct RowLess {
-  bool operator()(addr_t a, const UnwindPlan::RowSP &b) const {
-    return a < b->GetOffset();
+  bool operator()(addr_t a, const UnwindPlan::Row &b) const {
+    return a < b.GetOffset();
   }
-  bool operator()(const UnwindPlan::RowSP &a, addr_t b) const {
-    return a->GetOffset() < b;
+  bool operator()(const UnwindPlan::Row &a, addr_t b) const {
+    return a.GetOffset() < b;
   }
 };
 
 void UnwindPlan::InsertRow(Row row, bool replace_existing) {
   auto it = llvm::lower_bound(m_row_list, row.GetOffset(), RowLess());
-  if (it == m_row_list.end() || it->get()->GetOffset() > row.GetOffset())
-    m_row_list.insert(it, std::make_shared<Row>(std::move(row)));
+  if (it == m_row_list.end() || it->GetOffset() > row.GetOffset())
+    m_row_list.insert(it, std::move(row));
   else {
-    assert(it->get()->GetOffset() == row.GetOffset());
+    assert(it->GetOffset() == row.GetOffset());
     if (replace_existing)
-      **it = std::move(row);
+      *it = std::move(row);
   }
 }
 
@@ -425,7 +425,7 @@ UnwindPlan::GetRowForFunctionOffset(std::optional<int> offset) const {
     return nullptr;
   // upper_bound returns the row strictly greater than our desired offset, which
   // means that the row before it is a match.
-  return std::prev(it)->get();
+  return &*std::prev(it);
 }
 
 bool UnwindPlan::IsValidRowIndex(uint32_t idx) const {
@@ -434,7 +434,7 @@ bool UnwindPlan::IsValidRowIndex(uint32_t idx) const {
 
 const UnwindPlan::Row *UnwindPlan::GetRowAtIndex(uint32_t idx) const {
   if (idx < m_row_list.size())
-    return m_row_list[idx].get();
+    return &m_row_list[idx];
   LLDB_LOG(GetLog(LLDBLog::Unwind),
            "error: UnwindPlan::GetRowAtIndex(idx = {0}) invalid index "
            "(number rows is {1})",
@@ -448,7 +448,7 @@ const UnwindPlan::Row *UnwindPlan::GetLastRow() const {
              "UnwindPlan::GetLastRow() when rows are empty");
     return nullptr;
   }
-  return m_row_list.back().get();
+  return &m_row_list.back();
 }
 
 bool UnwindPlan::PlanValidAtAddress(Address addr) const {
@@ -567,9 +567,9 @@ void UnwindPlan::Dump(Stream &s, Thread *thread, lldb::addr_t base_addr) const {
       range.Dump(&s, target_sp.get(), Address::DumpStyleSectionNameOffset);
     s.EOL();
   }
-  for (const auto &[index, row_sp] : llvm::enumerate(m_row_list)) {
+  for (const auto &[index, row] : llvm::enumerate(m_row_list)) {
     s.Format("row[{0}]: ", index);
-    row_sp->Dump(s, this, thread, base_addr);
+    row.Dump(s, this, thread, base_addr);
     s << "\n";
   }
 }
