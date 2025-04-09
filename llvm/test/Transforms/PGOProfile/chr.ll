@@ -1584,7 +1584,7 @@ define i32 @test_chr_17(i32 %i, i1 %j) !prof !14 {
 ; CHECK-NEXT:    [[S:%.*]] = add nuw nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[I]], [[BBQ]] ], [ [[TMP0]], [[BBE]] ], [ [[S]], [[BB0]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[I]], [[BBQ]] ], [ 0, [[BBE]] ], [ [[S]], [[BB0]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[I]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[BB3]], label [[BB2:%.*]], !prof [[PROF16]]

@@ -1625,6 +1625,44 @@ Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
     return replaceInstUsesWith(PN, &IdenticalPN);
   }
 
+  if (PN.getType()->isIntegerTy()) {
+    BasicBlock *PNBB = PN.getParent();
+    KnownBits Known(PN.getType()->getScalarSizeInBits());
+    bool MadeChange = false;
+    for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+      Value *V = PN.getIncomingValue(I);
+      if (isa<ConstantInt>(V))
+        continue;
+
+      ArrayRef<BranchInst *> BRs = SQ.DC->conditionsFor(V);
+      if (BRs.empty())
+        continue;
+
+      Known.resetAll();
+      Instruction *CtxI = PN.getIncomingBlock(I)->getTerminator();
+      SimplifyQuery Q = SQ.getWithInstruction(CtxI);
+      BranchInst *BI = dyn_cast<BranchInst>(CtxI);
+      if (BI && BI->isConditional() && llvm::is_contained(BRs, BI)) {
+        CondContext CC(BI->getCondition());
+        CC.AffectedValues.insert(V);
+        if (BI->getSuccessor(1) == PNBB)
+          CC.Invert = true;
+        llvm::computeKnownBits(V, Known, /* Depth */ 0,
+                               Q.getWithCondContext(CC));
+      } else {
+        llvm::computeKnownBits(V, Known, /* Depth */ 0, Q);
+      }
+
+      if (Known.isConstant()) {
+        replaceOperand(PN, I,
+                       ConstantInt::get(V->getType(), Known.getConstant()));
+        MadeChange = true;
+      }
+    }
+    if (MadeChange)
+      return &PN;
+  }
+
   // If this is an integer PHI and we know that it has an illegal type, see if
   // it is only used by trunc or trunc(lshr) operations.  If so, we split the
   // PHI into the various pieces being extracted.  This sort of thing is
