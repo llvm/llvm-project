@@ -990,18 +990,21 @@ struct DSEState {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
+    bool FoundPromise = !F.isPresplitCoroutine();
     for (BasicBlock *BB : post_order(&F)) {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
         auto *II = dyn_cast<IntrinsicInst>(&I);
-        if (F.isPresplitCoroutine() && II != nullptr) {
+        if (!FoundPromise && II != nullptr) {
           const auto ID = II->getIntrinsicID();
           if (ID == Intrinsic::coro_begin ||
               ID == Intrinsic::coro_begin_custom_abi) {
             auto *AnyCoroId = cast<CoroBeginInst>(II)->getId();
             auto *CoroId = dyn_cast_if_present<CoroIdInst>(AnyCoroId);
-            if (CoroId)
+            if (CoroId && isa<ConstantPointerNull>(CoroId->getRawInfo())) {
               PresplitCoroPromise = CoroId->getPromise();
+              FoundPromise = true;
+            }
           }
         }
 
