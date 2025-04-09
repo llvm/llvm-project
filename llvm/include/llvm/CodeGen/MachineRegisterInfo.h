@@ -936,7 +936,7 @@ public:
   /// of reserved registers before allocation begins.
   void freezeReservedRegs();
 
-  /// reserveReg -- Mark a register as reserved so checks like isAllocatable 
+  /// reserveReg -- Mark a register as reserved so checks like isAllocatable
   /// will not suggest using it. This should not be used during the middle
   /// of a function walk, or when liveness info is available.
   void reserveReg(MCRegister PhysReg, const TargetRegisterInfo *TRI) {
