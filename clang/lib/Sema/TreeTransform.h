@@ -16450,11 +16450,9 @@ TreeTransform<Derived>::TransformCXXFoldExpr(CXXFoldExpr *E) {
   // Wrap the result in a ParenExpr if it isn't already one (see CWG2611).
   ParenExpr *PE = dyn_cast<ParenExpr>(Result.get());
   if (!PE) {
-    Result = getDerived().RebuildParenExpr(Result.get(), E->getLParenLoc(),
-                                           E->getRParenLoc());
-    if (Result.isInvalid())
-      return true;
-    PE = cast<ParenExpr>(Result.get());
+    PE = new (getSema().Context)
+        ParenExpr(E->getLParenLoc(), E->getRParenLoc(), Result.get());
+    Result = PE;
   }
   PE->setIsProducedByFoldExpansion();
 
