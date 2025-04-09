@@ -21,7 +21,7 @@
 #include "../../from_range_associative_containers.h"
 #include "test_macros.h"
 
-void test_duplicates() {
+TEST_CONSTEXPR_CXX26 void test_duplicates() {
   using T = std::pair<const int, char>;
 
   std::array input    = {T{1, 'a'}, T{2, 'a'}, T{3, 'a'}, T{3, 'b'}, T{3, 'c'}, T{2, 'b'}, T{4, 'a'}};
@@ -40,8 +40,10 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   static_assert(test_map_constraints<std::map, int, int, double, double>());
 
-  test_map_exception_safety_throwing_copy<std::map>();
-  test_map_exception_safety_throwing_allocator<std::map, int, int>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_map_exception_safety_throwing_copy<std::map>();
+    test_map_exception_safety_throwing_allocator<std::map, int, int>();
+  }
 return true;
 }
 
