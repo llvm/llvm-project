@@ -89,42 +89,37 @@ def libc_function(name, **kwargs):
         **kwargs
     )
 
-# LibcLibraryInfo is used to collect all sources and textual headers required
-# to build a particular libc_function or libc_support_library.
 LibcLibraryInfo = provider(
+    "All source files and textual headers for building a particular library.",
     fields = ["srcs", "textual_hdrs"],
 )
 
-def _get_libc_info_aspect_impl(target, ctx):
+def _get_libc_info_aspect_impl(
+        target,  # @unused
+        ctx):
     maybe_srcs = getattr(ctx.rule.attr, "srcs", [])
     maybe_hdrs = getattr(ctx.rule.attr, "hdrs", [])
     maybe_textual_hdrs = getattr(ctx.rule.attr, "textual_hdrs", [])
     maybe_deps = getattr(ctx.rule.attr, "deps", [])
     return LibcLibraryInfo(
         srcs = depset(
-            [
-                f
-                for src in maybe_srcs + maybe_hdrs
-                for f in src.files.to_list()
-                if f.is_source
-            ],
             transitive = [
                 dep[LibcLibraryInfo].srcs
                 for dep in maybe_deps
                 if LibcLibraryInfo in dep
+            ] + [
+                src.files
+                for src in maybe_srcs + maybe_hdrs
             ],
         ),
         textual_hdrs = depset(
-            [
-                f
-                for hdr in maybe_textual_hdrs
-                for f in hdr.files.to_list()
-                if f.is_source
-            ],
             transitive = [
                 dep[LibcLibraryInfo].textual_hdrs
                 for dep in maybe_deps
                 if LibcLibraryInfo in dep
+            ] + [
+                hdr.files
+                for hdr in maybe_textual_hdrs
             ],
         ),
     )
@@ -134,7 +129,7 @@ _get_libc_info_aspect = aspect(
     attr_aspects = ["deps"],
 )
 
-def _get_libc_srcs_impl(ctx):
+def _libc_srcs_filegroup_impl(ctx):
     return DefaultInfo(
         files = depset(transitive = [
             fn[LibcLibraryInfo].srcs
@@ -142,10 +137,9 @@ def _get_libc_srcs_impl(ctx):
         ]),
     )
 
-# get_libc_srcs returns the list of sources required to build all
-# specified libraries.
-get_libc_srcs = rule(
-    implementation = _get_libc_srcs_impl,
+_libc_srcs_filegroup = rule(
+    doc = "Returns all sources for building the specified libraries.",
+    implementation = _libc_srcs_filegroup_impl,
     attrs = {
         "libs": attr.label_list(
             mandatory = True,
@@ -154,7 +148,7 @@ get_libc_srcs = rule(
     },
 )
 
-def _get_libc_textual_hdrs_impl(ctx):
+def _libc_textual_hdrs_filegroup_impl(ctx):
     return DefaultInfo(
         files = depset(transitive = [
             fn[LibcLibraryInfo].textual_hdrs
@@ -162,10 +156,9 @@ def _get_libc_textual_hdrs_impl(ctx):
         ]),
     )
 
-# get_libc_textual_hdrs returns the list of textual headers required to compile
-# all specified libraries.
-get_libc_textual_hdrs = rule(
-    implementation = _get_libc_textual_hdrs_impl,
+_libc_textual_hdrs_filegroup = rule(
+    doc = "Returns all textual headers for compiling the specified libraries.",
+    implementation = _libc_textual_hdrs_filegroup_impl,
     attrs = {
         "libs": attr.label_list(
             mandatory = True,
@@ -189,12 +182,12 @@ def libc_release_library(
         **kwargs: Other arguments relevant to cc_library.
     """
 
-    get_libc_srcs(
+    _libc_srcs_filegroup(
         name = name + "_srcs",
         libs = libc_functions,
     )
 
-    get_libc_textual_hdrs(
+    _libc_textual_hdrs_filegroup(
         name = name + "_textual_hdrs",
         libs = libc_functions,
     )
@@ -229,12 +222,12 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    get_libc_srcs(
+    _libc_srcs_filegroup(
         name = name + "_hdr_deps",
         libs = deps,
     )
 
-    get_libc_textual_hdrs(
+    _libc_textual_hdrs_filegroup(
         name = name + "_textual_hdrs",
         libs = deps,
     )
