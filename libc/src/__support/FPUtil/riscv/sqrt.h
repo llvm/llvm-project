@@ -29,7 +29,7 @@ template <> LIBC_INLINE float sqrt<float>(float x) {
 }
 #endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
 
-#if LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 template <> LIBC_INLINE double sqrt<double>(double x) {
   double result;
   asm("fsqrt.d %0, %1\n\t" : "=f"(result) : "f"(x));
