@@ -12,16 +12,79 @@
 
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/StmtOpenACC.h"
+
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace cir;
+using namespace mlir::acc;
+
+namespace {
+class OpenACCClauseCIREmitter final
+    : public OpenACCClauseVisitor<OpenACCClauseCIREmitter> {
+  CIRGenModule &cgm;
+
+  void clauseNotImplemented(const OpenACCClause &c) {
+    cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
+  }
+
+public:
+  OpenACCClauseCIREmitter(CIRGenModule &cgm) : cgm(cgm) {}
+
+#define VISIT_CLAUSE(CN)                                                       \
+  void Visit##CN##Clause(const OpenACC##CN##Clause &clause) {                  \
+    clauseNotImplemented(clause);                                              \
+  }
+#include "clang/Basic/OpenACCClauses.def"
+};
+} // namespace
+
+template <typename Op, typename TermOp>
+mlir::LogicalResult CIRGenFunction::emitOpenACCComputeOp(
+    mlir::Location start, mlir::Location end,
+    llvm::ArrayRef<const OpenACCClause *> clauses,
+    const Stmt *structuredBlock) {
+  mlir::LogicalResult res = mlir::success();
+
+  OpenACCClauseCIREmitter clauseEmitter(getCIRGenModule());
+  clauseEmitter.VisitClauseList(clauses);
+
+  llvm::SmallVector<mlir::Type> retTy;
+  llvm::SmallVector<mlir::Value> operands;
+  auto op = builder.create<Op>(start, retTy, operands);
+
+  mlir::Block &block = op.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guardCase(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  LexicalScope ls{*this, start, builder.getInsertionBlock()};
+  res = emitStmt(structuredBlock, /*useCurrentScope=*/true);
+
+  builder.create<TermOp>(end);
+  return res;
+}
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Compute Construct");
-  return mlir::failure();
+  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location end = getLoc(s.getSourceRange().getEnd());
+
+  switch (s.getDirectiveKind()) {
+  case OpenACCDirectiveKind::Parallel:
+    return emitOpenACCComputeOp<ParallelOp, mlir::acc::YieldOp>(
+        start, end, s.clauses(), s.getStructuredBlock());
+  case OpenACCDirectiveKind::Serial:
+    return emitOpenACCComputeOp<SerialOp, mlir::acc::YieldOp>(
+        start, end, s.clauses(), s.getStructuredBlock());
+  case OpenACCDirectiveKind::Kernels:
+    return emitOpenACCComputeOp<KernelsOp, mlir::acc::TerminatorOp>(
+        start, end, s.clauses(), s.getStructuredBlock());
+  default:
+    llvm_unreachable("invalid compute construct kind");
+  }
 }
 
 mlir::LogicalResult
