@@ -990,22 +990,15 @@ struct DSEState {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
-    bool FoundPromise = !F.isPresplitCoroutine();
+    const bool IsPresplitCoroutine = F.isPresplitCoroutine();
     for (BasicBlock *BB : post_order(&F)) {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
         auto *II = dyn_cast<IntrinsicInst>(&I);
-        if (!FoundPromise && II != nullptr) {
-          const auto ID = II->getIntrinsicID();
-          if (ID == Intrinsic::coro_begin ||
-              ID == Intrinsic::coro_begin_custom_abi) {
-            auto *AnyCoroId = cast<CoroBeginInst>(II)->getId();
-            auto *CoroId = dyn_cast_if_present<CoroIdInst>(AnyCoroId);
-            if (CoroId && isa<ConstantPointerNull>(CoroId->getRawInfo())) {
-              PresplitCoroPromise = CoroId->getPromise();
-              FoundPromise = true;
-            }
-          }
+        if (IsPresplitCoroutine && PresplitCoroPromise == nullptr &&
+            II != nullptr) {
+          if (auto *CoroId = getPresplitCoroId(II))
+            PresplitCoroPromise = CoroId->getPromise();
         }
 
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
@@ -1240,6 +1233,18 @@ struct DSEState {
       // of stores removed on a large test set in practice.
       I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
     return !I.first->second;
+  }
+
+  CoroIdInst *getPresplitCoroId(IntrinsicInst *II) {
+    const auto ID = II->getIntrinsicID();
+    if (ID != Intrinsic::coro_begin && ID != Intrinsic::coro_begin_custom_abi)
+      return nullptr;
+
+    auto *AnyCoroId = cast<CoroBeginInst>(II)->getId();
+    auto *CoroId = dyn_cast_if_present<CoroIdInst>(AnyCoroId);
+    if (CoroId && isa<ConstantPointerNull>(CoroId->getRawInfo()))
+      return CoroId;
+    return nullptr;
   }
 
   std::optional<MemoryLocation> getLocForWrite(Instruction *I) const {
