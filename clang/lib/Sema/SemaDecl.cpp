@@ -1523,7 +1523,10 @@ void Sema::PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext) {
 
   // Out-of-line definitions shouldn't be pushed into scope in C++, unless they
   // are function-local declarations.
-  if (getLangOpts().CPlusPlus && D->isOutOfLine() && !S->getFnParent())
+  bool OutOfLine = D->isOutOfLine();
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D))
+    OutOfLine = OutOfLine || cast<Decl>(ECD->getDeclContext())->isOutOfLine();
+  if (getLangOpts().CPlusPlus && OutOfLine && !S->getFnParent())
     return;
 
   // Template instantiations should also not be pushed into scope.
