@@ -386,6 +386,10 @@ Bug Fixes to Attribute Support
   or too few attribute argument indicies for the specified callback function.
   (#GH47451)
 
+- No longer crashing on ``__attribute__((align_value(N)))`` during template
+  instantiation when the function parameter type is not a pointer or reference.
+  (#GH26612)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
