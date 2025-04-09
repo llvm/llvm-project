@@ -2035,10 +2035,10 @@ namespace {
 /// Because we know that `offset`and `c0` will hold 0
 /// and `c4` will hold 4.
 ///
-/// If the pattern above does not match, the input of the extract_strided_metadata
-/// is always folded into the input of the reinterpret_cast operator. This allows
-/// for dead code elimination to get rid of the extract_strided_metadata in some
-/// cases.
+/// If the pattern above does not match, the input of the
+/// extract_strided_metadata is always folded into the input of the
+/// reinterpret_cast operator. This allows for dead code elimination to get rid
+/// of the extract_strided_metadata in some cases.
 struct ReinterpretCastOpExtractStridedMetadataFolder
     : public OpRewritePattern<ReinterpretCastOp> {
 public:
@@ -2070,8 +2070,8 @@ public:
 
       // Second, check the sizes.
       assert(extractStridedMetadata.getSizes().size() ==
-                op.getMixedSizes().size() &&
-            "Strides and sizes rank must match");
+                 op.getMixedSizes().size() &&
+             "Strides and sizes rank must match");
       SmallVector<OpFoldResult> extractSizesOfr =
           extractStridedMetadata.getConstifiedMixedSizes();
       SmallVector<OpFoldResult> reinterpretSizesOfr =
@@ -2082,8 +2082,8 @@ public:
       }
       // Finally, check the offset.
       assert(op.getMixedOffsets().size() == 1 &&
-            "reinterpret_cast with more than one offset should have been "
-            "rejected by the verifier");
+             "reinterpret_cast with more than one offset should have been "
+             "rejected by the verifier");
       OpFoldResult extractOffsetOfr =
           extractStridedMetadata.getConstifiedMixedOffset();
       OpFoldResult reinterpretOffsetOfr = op.getConstifiedMixedOffset();
@@ -2094,7 +2094,7 @@ public:
       // If the extract_strided_metadata / reinterpret_cast pair can't be
       // completely folded, then we could fold the input of the
       // extract_strided_metadata into the input of the reinterpret_cast
-      // input. For some cases (e.g., static dimensions) the 
+      // input. For some cases (e.g., static dimensions) the
       // the extract_strided_metadata is eliminated by dead code elimination.
       //
       // reinterpret_cast(extract_strided_metadata(x)) -> reinterpret_cast(x).
