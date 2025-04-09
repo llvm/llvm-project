@@ -40,7 +40,7 @@ STATISTIC(DataMissCounter, "Number of data misses in the vocabulary");
 /// IR2VecKind is used to specify the type of embeddings to generate.
 // FIXME: Currently we support only Symbolic.  Add support for
 // Flow-aware in upcoming patches.
-enum class IR2VecKind { Symbolic, Flowaware };
+enum class IR2VecKind { Symbolic, FlowAware };
 
 static cl::OptionCategory IR2VecAnalysisCategory("IR2Vec Analysis Options");
 
@@ -49,7 +49,7 @@ cl::opt<IR2VecKind>
                cl::desc("Choose type of embeddings to generate:"),
                cl::values(clEnumValN(IR2VecKind::Symbolic, "symbolic",
                                      "Generates symbolic embeddings"),
-                          clEnumValN(IR2VecKind::Flowaware, "flowaware",
+                          clEnumValN(IR2VecKind::FlowAware, "flow-aware",
                                      "Generates flow-aware embeddings")),
                cl::init(IR2VecKind::Symbolic), cl::cat(IR2VecAnalysisCategory));
 
@@ -82,10 +82,10 @@ protected:
   /// in the IR instructions to generate the vector representation.
   // FIXME: Defaults to the values used in the original algorithm. Can be
   // parameterized later.
-  float WO = 1.0, WT = 0.5, WA = 0.2;
+  const float OpcWeight = 1.0, TypeWeight = 0.5, ArgWeight = 0.2;
 
   /// Dimension of the vector representation; captured from the input vocabulary
-  unsigned DIM = 300;
+  const unsigned Dimension = 300;
 
   // Utility maps - these are used to store the vector representations of
   // instructions, basic blocks and functions.
@@ -93,8 +93,8 @@ protected:
   SmallMapVector<const BasicBlock *, Embedding, 16> BBVecMap;
   SmallMapVector<const Instruction *, Embedding, 128> InstVecMap;
 
-  Embeddings(const Function &F, const Vocab &Vocabulary, unsigned DIM)
-      : F(F), Vocabulary(Vocabulary), DIM(DIM) {}
+  Embeddings(const Function &F, const Vocab &Vocabulary, unsigned Dimension)
+      : F(F), Vocabulary(Vocabulary), Dimension(Dimension) {}
 
   /// Lookup vocabulary for a given Key. If the key is not found, it returns a
   /// zero vector.
@@ -141,9 +141,9 @@ private:
   Embedding computeFunc2Vec();
 
 public:
-  Symbolic(const Function &F, const Vocab &Vocabulary, unsigned DIM)
-      : Embeddings(F, Vocabulary, DIM) {
-    FuncVector = Embedding(DIM, 0);
+  Symbolic(const Function &F, const Vocab &Vocabulary, unsigned Dimension)
+      : Embeddings(F, Vocabulary, Dimension) {
+    FuncVector = Embedding(Dimension, 0);
   }
   void computeEmbeddings() override;
 };
@@ -163,14 +163,15 @@ void addVectors(Embedding &Vec, const Embedding &Vec2) {
 // FIXME: Currently lookups are string based. Use numeric Keys
 // for efficiency.
 Embedding Embeddings::lookupVocab(const std::string &Key) {
-  Embedding Vec(DIM, 0);
+  Embedding Vec(Dimension, 0);
   // FIXME: Use zero vectors in vocab and assert failure for
   // unknown entities rather than silently returning zeroes here.
-  if (Vocabulary.find(Key) == Vocabulary.end()) {
+  auto It = Vocabulary.find(Key);
+  if (It == Vocabulary.end()) {
     LLVM_DEBUG(errs() << "cannot find key in map : " << Key << "\n");
-    DataMissCounter++;
+    ++DataMissCounter;
   } else {
-    Vec = Vocabulary[Key];
+    Vec = It->second;
   }
   return Vec;
 }
@@ -179,24 +180,27 @@ void Symbolic::computeEmbeddings() {
   if (F.isDeclaration())
     return;
   for (auto &BB : F) {
-    auto It = BBVecMap.find(&BB);
-    if (It != BBVecMap.end())
+    auto Result = BBVecMap.try_emplace(&BB);
+    if (!Result.second)
       continue;
-    BBVecMap[&BB] = computeBB2Vec(BB);
-    addVectors(FuncVector, BBVecMap[&BB]);
+    auto It = Result.first;
+    It->second = std::move(computeBB2Vec(BB));
+    addVectors(FuncVector, It->second);
   }
 }
 
 Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
-  Embedding BBVector(DIM, 0);
+  Embedding BBVector(Dimension, 0);
 
   for (auto &I : BB) {
-    Embedding InstVector(DIM, 0);
+    Embedding InstVector(Dimension, 0);
 
     auto Vec = lookupVocab(I.getOpcodeName());
-    scaleVector(Vec, WO);
+    scaleVector(Vec, OpcWeight);
     addVectors(InstVector, Vec);
 
+    // FIXME: Currently lookups are string based. Use numeric Keys
+    // for efficiency.
     auto Type = I.getType();
     if (Type->isVoidTy()) {
       Vec = lookupVocab("voidTy");
@@ -225,10 +229,10 @@ Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
     } else {
       Vec = lookupVocab("unknownTy");
     }
-    scaleVector(Vec, WT);
+    scaleVector(Vec, TypeWeight);
     addVectors(InstVector, Vec);
 
-    for (auto &Op : I.operands()) {
+    for (const auto &Op : I.operands()) {
       Embedding Vec;
       if (isa<Function>(Op)) {
         Vec = lookupVocab("function");
@@ -239,7 +243,7 @@ Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
       } else {
         Vec = lookupVocab("variable");
       }
-      scaleVector(Vec, WA);
+      scaleVector(Vec, ArgWeight);
       addVectors(InstVector, Vec);
     }
     InstVecMap[&I] = InstVector;
@@ -253,12 +257,17 @@ Embedding Symbolic::computeBB2Vec(const BasicBlock &BB) {
 // IR2VecVocabResult and IR2VecVocabAnalysis
 //===----------------------------------------------------------------------===//
 
-IR2VecVocabResult::IR2VecVocabResult(ir2vec::Vocab &&Vocabulary, unsigned Dim)
-    : Vocabulary(std::move(Vocabulary)), Valid(true), DIM(Dim) {}
+IR2VecVocabResult::IR2VecVocabResult(ir2vec::Vocab &&Vocabulary)
+    : Vocabulary(std::move(Vocabulary)), Valid(true) {}
 
 const ir2vec::Vocab &IR2VecVocabResult::getVocabulary() const {
   assert(Valid);
   return Vocabulary;
+}
+
+unsigned IR2VecVocabResult::getDimension() const {
+  assert(Valid);
+  return Vocabulary.begin()->second.size();
 }
 
 // For now, assume vocabulary is stable unless explicitly invalidated.
@@ -269,7 +278,7 @@ bool IR2VecVocabResult::invalidate(Module &M, const PreservedAnalyses &PA,
 }
 
 // FIXME: Make this optional. We can avoid file reads
-// by auto-generating the vocabulary during the build time.
+// by auto-generating a default vocabulary during the build time.
 Error IR2VecVocabAnalysis::readVocabulary() {
   auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
   if (!BufOrError) {
@@ -295,7 +304,6 @@ Error IR2VecVocabAnalysis::readVocabulary() {
                        return Entry.second.size() == Dim;
                      }) &&
          "All vectors in the vocabulary are not of the same dimension");
-  this->DIM = Dim;
   return Error::success();
 }
 
@@ -313,7 +321,7 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
     });
     return IR2VecVocabResult();
   }
-  return IR2VecVocabResult(std::move(Vocabulary), DIM);
+  return IR2VecVocabResult(std::move(Vocabulary));
 }
 
 // ==----------------------------------------------------------------------===//
@@ -321,11 +329,11 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 //===----------------------------------------------------------------------===//
 
 IR2VecResult::IR2VecResult(
-    SmallMapVector<const Instruction *, Embedding, 128> &&InstMap,
-    SmallMapVector<const BasicBlock *, Embedding, 16> &&BBMap,
-    Embedding &&FuncVector, unsigned Dim)
+    const SmallMapVector<const Instruction *, Embedding, 128> &&InstMap,
+    const SmallMapVector<const BasicBlock *, Embedding, 16> &&BBMap,
+    const Embedding &&FuncVector)
     : InstVecMap(std::move(InstMap)), BBVecMap(std::move(BBMap)),
-      FuncVector(std::move(FuncVector)), DIM(Dim), Valid(true) {}
+      FuncVector(std::move(FuncVector)), Valid(true) {}
 
 const SmallMapVector<const Instruction *, Embedding, 128> &
 IR2VecResult::getInstVecMap() const {
@@ -341,7 +349,6 @@ const Embedding &IR2VecResult::getFunctionVector() const {
   assert(Valid);
   return FuncVector;
 }
-unsigned IR2VecResult::getDimension() const { return DIM; }
 
 IR2VecAnalysis::Result IR2VecAnalysis::run(Function &F,
                                            FunctionAnalysisManager &FAM) {
@@ -365,19 +372,18 @@ IR2VecAnalysis::Result IR2VecAnalysis::run(Function &F,
   case IR2VecKind::Symbolic:
     Emb = std::make_unique<Symbolic>(F, Vocabulary, Dim);
     break;
-  case IR2VecKind::Flowaware:
+  case IR2VecKind::FlowAware:
     // FIXME: Add support for flow-aware embeddings
-    llvm_unreachable("Flow-aware embeddings are not supported yet");
-    break;
   default:
-    llvm_unreachable("Invalid IR2Vec mode");
+    Ctx->emitError("Invalid IR2Vec mode");
+    return IR2VecResult();
   }
+
   Emb->computeEmbeddings();
-  auto InstMap = Emb->getInstVecMap();
-  auto BBMap = Emb->getBBVecMap();
-  auto FuncVec = Emb->getFunctionVector();
-  return IR2VecResult(std::move(InstMap), std::move(BBMap), std::move(FuncVec),
-                      Dim);
+  auto &InstMap = Emb->getInstVecMap();
+  auto &BBMap = Emb->getBBVecMap();
+  auto &FuncVec = Emb->getFunctionVector();
+  return IR2VecResult(std::move(InstMap), std::move(BBMap), std::move(FuncVec));
 }
 
 // ==----------------------------------------------------------------------===//

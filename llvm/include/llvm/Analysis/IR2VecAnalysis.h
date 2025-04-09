@@ -53,7 +53,6 @@ class IR2VecResult;
 /// mapping between an entity of the IR (like opcode, type, argument, etc.) and
 /// its corresponding embedding.
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
-  unsigned DIM = 0;
   ir2vec::Vocab Vocabulary;
   Error readVocabulary();
 
@@ -67,16 +66,15 @@ public:
 class IR2VecVocabResult {
   ir2vec::Vocab Vocabulary;
   bool Valid = false;
-  unsigned DIM = 0;
 
 public:
   IR2VecVocabResult() = default;
-  IR2VecVocabResult(ir2vec::Vocab &&Vocabulary, unsigned Dim);
+  IR2VecVocabResult(ir2vec::Vocab &&Vocabulary);
 
   // Helper functions
   bool isValid() const { return Valid; }
   const ir2vec::Vocab &getVocabulary() const;
-  unsigned getDimension() const { return DIM; }
+  unsigned getDimension() const;
   bool invalidate(Module &M, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &Inv);
 };
@@ -85,15 +83,15 @@ class IR2VecResult {
   SmallMapVector<const Instruction *, ir2vec::Embedding, 128> InstVecMap;
   SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> BBVecMap;
   ir2vec::Embedding FuncVector;
-  unsigned DIM = 0;
   bool Valid = false;
 
 public:
   IR2VecResult() = default;
   IR2VecResult(
-      SmallMapVector<const Instruction *, ir2vec::Embedding, 128> &&InstMap,
-      SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> &&BBMap,
-      ir2vec::Embedding &&FuncVector, unsigned Dim);
+      const SmallMapVector<const Instruction *, ir2vec::Embedding, 128>
+          &&InstMap,
+      const SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> &&BBMap,
+      const ir2vec::Embedding &&FuncVector);
   bool isValid() const { return Valid; }
 
   const SmallMapVector<const Instruction *, ir2vec::Embedding, 128> &
@@ -101,7 +99,6 @@ public:
   const SmallMapVector<const BasicBlock *, ir2vec::Embedding, 16> &
   getBBVecMap() const;
   const ir2vec::Embedding &getFunctionVector() const;
-  unsigned getDimension() const;
 };
 
 /// This analysis provides the IR2Vec embeddings for instructions, basic blocks,
