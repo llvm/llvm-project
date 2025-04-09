@@ -6,13 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/clc.h>
-#include <clc/misc/clc_shuffle.h>
+#ifndef __CLC_MISC_CLC_SHUFFLE_H__
+#define __CLC_MISC_CLC_SHUFFLE_H__
 
-#define FUNCTION shuffle
+#define __CLC_FUNCTION __clc_shuffle
 
-#define __CLC_BODY <clc/misc/shuffle_def.inc>
+// Integer-type decls
+#define __CLC_BODY <clc/misc/shuffle_decl.inc>
 #include <clc/integer/gentype.inc>
 
-#define __CLC_BODY <clc/misc/shuffle_def.inc>
+// Floating-point decls
+#define __CLC_BODY <clc/misc/shuffle_decl.inc>
 #include <clc/math/gentype.inc>
+
+#undef __CLC_FUNCTION
+
+#endif // __CLC_MISC_CLC_SHUFFLE_H__
