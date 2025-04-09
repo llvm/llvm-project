@@ -6,11 +6,17 @@
 ; RUN: opt -S -denormal-fp-math-f32=preserve-sign %s | FileCheck -check-prefixes=PRESERVESIGNF32,ALL %s
 ; RUN: opt -S -denormal-fp-math-f32=positive-zero %s | FileCheck -check-prefixes=POSITIVEZEROF32,ALL %s
 
+; RUN: opt -S -denormal-fp-math-bf16=ieee %s | FileCheck -check-prefixes=IEEEBF16,ALL %s
+; RUN: opt -S -denormal-fp-math-bf16=preserve-sign %s | FileCheck -check-prefixes=PRESERVESIGNBF16,ALL %s
+; RUN: opt -S -denormal-fp-math-bf16=positive-zero %s | FileCheck -check-prefixes=POSITIVEZEROBF16,ALL %s
+
 ; RUN: opt -S -denormal-fp-math=ieee -denormal-fp-math-f32=ieee %s | FileCheck -check-prefixes=IEEE-BOTH,ALL %s
 ; RUN: opt -S -denormal-fp-math=preserve-sign -denormal-fp-math-f32=preserve-sign %s | FileCheck -check-prefixes=PRESERVESIGN-BOTH,ALL %s
 ; RUN: opt -S -denormal-fp-math=positive-zero -denormal-fp-math-f32=positive-zero %s | FileCheck -check-prefixes=POSITIVEZERO-BOTH,ALL %s
 
-
+; RUN: opt -S -denormal-fp-math=ieee -denormal-fp-math-bf16=ieee %s | FileCheck -check-prefixes=IEEE-BOTH2,ALL %s
+; RUN: opt -S -denormal-fp-math=preserve-sign -denormal-fp-math-bf16=preserve-sign %s | FileCheck -check-prefixes=PRESERVESIGN-BOTH2,ALL %s
+; RUN: opt -S -denormal-fp-math=positive-zero -denormal-fp-math-bf16=positive-zero %s | FileCheck -check-prefixes=POSITIVEZERO-BOTH2,ALL %s
 
 ; ALL: @no_denormal_fp_math_attrs() [[NOATTR:#[0-9]+]] {
 define i32 @no_denormal_fp_math_attrs() #0 {
@@ -24,7 +30,7 @@ entry:
   ret i32 0
 }
 
-; ALL-DAG: attributes [[ATTR]] = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
+; ALL-DAG: attributes [[ATTR]] = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-bf16"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
 
 ; IEEE-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="ieee,ieee" }
 ; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
@@ -34,9 +40,17 @@ entry:
 ; PRESERVESIGNF32-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 ; POSITIVEZEROF32-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="positive-zero,positive-zero" }
 
+; IEEEBF16-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-bf16"="ieee,ieee" }
+; PRESERVESIGNBF16-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-bf16"="preserve-sign,preserve-sign" }
+; POSITIVEZEROBF16-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-bf16"="positive-zero,positive-zero" }
+
 ; IEEE-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="ieee,ieee" }
 ; PRESERVESIGN-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
 ; POSITIVEZERO-BOTH-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="positive-zero,positive-zero" "denormal-fp-math-f32"="positive-zero,positive-zero" }
 
+; IEEE-BOTH2-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-bf16"="ieee,ieee" }
+; PRESERVESIGN-BOTH2-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" "denormal-fp-math-bf16"="preserve-sign,preserve-sign" }
+; POSITIVEZERO-BOTH2-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math"="positive-zero,positive-zero" "denormal-fp-math-bf16"="positive-zero,positive-zero" }
+
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
+attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,ieee" "denormal-fp-math-bf16"="preserve-sign,ieee" "denormal-fp-math-f32"="preserve-sign,ieee" }
