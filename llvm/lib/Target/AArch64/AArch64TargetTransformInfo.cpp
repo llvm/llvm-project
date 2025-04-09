@@ -1496,13 +1496,8 @@ static bool isAllActivePredicate(Value *Pred) {
                       m_ConstantInt<AArch64SVEPredPattern::all>())))
     return true;
 
-  if (Value *Splat = getSplatValue(Pred)) {
-    auto ConstIdx = dyn_cast<ConstantInt>(Splat);
-    if (ConstIdx->getZExtValue() == 1)
-      return true;
-  }
-
-  return false;
+  auto *C = dyn_cast<Constant>(Pred);
+  return (C && C->isAllOnesValue());
 }
 
 // Use SVE intrinsic info to eliminate redundant operands and/or canonicalise
@@ -2643,14 +2638,8 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  IRBuilder<> Builder(&II);
-  auto Type = cast<VectorType>(II.getType());
-  ConstantInt *Pattern;
-  if (match(II.getOperand(0), m_ConstantInt(Pattern)) &&
-      Pattern->getZExtValue() == AArch64SVEPredPattern::all) {
-    Value *One = ConstantInt::get(Builder.getInt1Ty(), APInt(1, 1));
-    Value *SplatOne = Builder.CreateVectorSplat(Type->getElementCount(), One);
-    return IC.replaceInstUsesWith(II, SplatOne);
+  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>())) {
+    return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
   }
   return std::nullopt;
 }
