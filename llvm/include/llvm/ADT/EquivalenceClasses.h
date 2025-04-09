@@ -234,12 +234,14 @@ public:
     // all other elements in same class to be the successor element.
     if (Cur->isLeader() && Next) {
       Next->Leader = Cur->Leader;
-      Next->Next = (const ECValue *)((intptr_t)Next->Next | (intptr_t)1);
+      Next->Next = reinterpret_cast<const ECValue *>(
+          reinterpret_cast<intptr_t>(Next->Next) | static_cast<intptr_t>(1));
+
       const ECValue *newLeader = Next;
       while ((Next = Next->getNext())) {
         Next->Leader = newLeader;
       }
-    } else {
+    } else if (!Cur->isLeader()) {
       const ECValue *Leader = findLeader(V).Node;
       const ECValue *Pre = Leader;
       while (Pre->getNext() != Cur) {
@@ -254,8 +256,9 @@ public:
       } else {
         // If the current element is in the middle of class, then simply
         // connect the predecessor element and the successor element.
-        Pre->Next =
-            (const ECValue *)((intptr_t)Next | (intptr_t)Pre->isLeader());
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            reinterpret_cast<intptr_t>(Next) |
+            static_cast<intptr_t>(Pre->isLeader()));
         Next->Leader = Pre;
       }
     }
