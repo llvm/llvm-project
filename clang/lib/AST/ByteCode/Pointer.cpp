@@ -152,8 +152,15 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
-  if (isFunctionPointer())
-    return asFunctionPointer().toAPValue(ASTCtx);
+  if (isFunctionPointer()) {
+    const FunctionPointer &FP = asFunctionPointer();
+    if (const FunctionDecl *FD = FP.getFunction()->getDecl())
+      return APValue(FD, CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
+    return APValue(FP.getFunction()->getExpr(),
+                   CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
 
   if (isTypeidPointer()) {
     TypeInfoLValue TypeInfo(PointeeStorage.Typeid.TypePtr);
@@ -378,6 +385,9 @@ std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
 
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
+
+  if (isFunctionPointer())
+    return asFunctionPointer().toDiagnosticString(Ctx);
 
   return toAPValue(Ctx).getAsString(Ctx, getType());
 }
