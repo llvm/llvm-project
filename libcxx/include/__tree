@@ -1044,61 +1044,61 @@ public:
   template <class _First,
             class _Second,
             __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_First&& __f, _Second&& __s) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique(_First&& __f, _Second&& __s) {
     return __emplace_unique_key_args(__f, std::forward<_First>(__f), std::forward<_Second>(__s));
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique(_Args&&... __args) {
     return __emplace_unique_impl(std::forward<_Args>(__args)...);
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_fail_tag) {
     return __emplace_unique_impl(std::forward<_Pp>(__x));
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_self_tag) {
     return __emplace_unique_key_args(__x, std::forward<_Pp>(__x));
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool> __emplace_unique_extract_key(_Pp&& __x, __extract_key_first_tag) {
     return __emplace_unique_key_args(__x.first, std::forward<_Pp>(__x));
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _Pp&& __x) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __emplace_hint_unique(const_iterator __p, _Pp&& __x) {
     return __emplace_hint_unique_extract_key(__p, std::forward<_Pp>(__x), __can_extract_key<_Pp, key_type>());
   }
 
   template <class _First,
             class _Second,
             __enable_if_t<__can_extract_map_key<_First, key_type, __container_value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __emplace_hint_unique(const_iterator __p, _First&& __f, _Second&& __s) {
     return __emplace_hint_unique_key_args(__p, __f, std::forward<_First>(__f), std::forward<_Second>(__s)).first;
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI iterator __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __emplace_hint_unique(const_iterator __p, _Args&&... __args) {
     return __emplace_hint_unique_impl(__p, std::forward<_Args>(__args)...);
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
   __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_fail_tag) {
     return __emplace_hint_unique_impl(__p, std::forward<_Pp>(__x));
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
   __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_self_tag) {
     return __emplace_hint_unique_key_args(__p, __x, std::forward<_Pp>(__x)).first;
   }
 
   template <class _Pp>
-  _LIBCPP_HIDE_FROM_ABI iterator
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator
   __emplace_hint_unique_extract_key(const_iterator __p, _Pp&& __x, __extract_key_first_tag) {
     return __emplace_hint_unique_key_args(__p, __x.first, std::forward<_Pp>(__x)).first;
   }
@@ -1129,29 +1129,29 @@ public:
     return __emplace_hint_unique(__p, std::forward<_Vp>(__v));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(__container_value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __insert_multi(__container_value_type&& __v) {
     return __emplace_multi(std::move(__v));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(const_iterator __p, __container_value_type&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __insert_multi(const_iterator __p, __container_value_type&& __v) {
     return __emplace_hint_multi(__p, std::move(__v));
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(_Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __insert_multi(_Vp&& __v) {
     return __emplace_multi(std::forward<_Vp>(__v));
   }
 
   template <class _Vp>
-  _LIBCPP_HIDE_FROM_ABI iterator __insert_multi(const_iterator __p, _Vp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __insert_multi(const_iterator __p, _Vp&& __v) {
     return __emplace_hint_multi(__p, std::forward<_Vp>(__v));
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
   __node_assign_unique(const __container_value_type& __v, __node_pointer __dest);
 
-  _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
-  _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(const_iterator __p, __node_pointer __nd);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __node_insert_multi(__node_pointer __nd);
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __node_insert_multi(const_iterator __p, __node_pointer __nd);
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 iterator __remove_node_pointer(__node_pointer) _NOEXCEPT;
 
@@ -1962,7 +1962,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const __container_value_
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
   __parent_pointer __parent;
   __node_base_pointer& __child = __find_leaf_high(__parent, _NodeTypes::__get_key(__nd->__value_));
@@ -1971,7 +1971,7 @@ __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::iterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterator
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(const_iterator __p, __node_pointer __nd) {
   __parent_pointer __parent;
   __node_base_pointer& __child = __find_leaf(__p, __parent, _NodeTypes::__get_key(__nd->__value_));
