@@ -1179,7 +1179,7 @@ sqrt_hdrs = selects.with_or({
         "src/__support/FPUtil/x86_64/sqrt.h",
     ],
     PLATFORM_CPU_ARM64: sqrt_common_hdrs + [
-        "src/__support/FPUtil/aarch64/sqrt.h",
+        "src/__support/FPUtil/arm/sqrt.h",
     ],
 })
 
@@ -1195,6 +1195,7 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
+        ":__support_macros_properties_cpu_features",
         ":__support_uint128",
     ],
 )
