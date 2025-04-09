@@ -7822,6 +7822,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
       nullptr /*expr*/, is_explicit ? clang::ExplicitSpecKind::ResolvedTrue
                                     : clang::ExplicitSpecKind::ResolvedFalse);
 
+  bool is_ctor_or_dtor = false;
   if (name.starts_with("~")) {
     cxx_dtor_decl = clang::CXXDestructorDecl::CreateDeserialized(
         getASTContext(), GlobalDeclID());
@@ -7834,6 +7835,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_dtor_decl->setInlineSpecified(is_inline);
     cxx_dtor_decl->setConstexprKind(ConstexprSpecKind::Unspecified);
     cxx_method_decl = cxx_dtor_decl;
+    is_ctor_or_dtor = true;
   } else if (decl_name == cxx_record_decl->getDeclName()) {
     cxx_ctor_decl = clang::CXXConstructorDecl::CreateDeserialized(
         getASTContext(), GlobalDeclID(), 0);
@@ -7848,6 +7850,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_ctor_decl->setNumCtorInitializers(0);
     cxx_ctor_decl->setExplicitSpecifier(explicit_spec);
     cxx_method_decl = cxx_ctor_decl;
+    is_ctor_or_dtor = true;
   } else {
     clang::StorageClass SC = is_static ? clang::SC_Static : clang::SC_None;
     clang::OverloadedOperatorKind op_kind = clang::NUM_OVERLOADED_OPERATORS;
@@ -7912,8 +7915,13 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
   if (mangled_name != nullptr) {
-    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), mangled_name, /*literal=*/false));
+    if (is_ctor_or_dtor) {
+      cxx_method_decl->addAttr(clang::StructorNameAttr::CreateImplicit(
+          getASTContext(), mangled_name));
+    } else {
+      cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
+          getASTContext(), mangled_name, /*literal=*/false));
+    }
   }
 
   // Parameters on member function declarations in DWARF generally don't

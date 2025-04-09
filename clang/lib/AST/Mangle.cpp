@@ -125,7 +125,7 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
-  if (D->hasAttr<AsmLabelAttr>())
+  if (D->hasAttr<AsmLabelAttr>() || D->hasAttr<StructorNameAttr>())
     return true;
 
   // Declarations that don't have identifier names always need to be mangled.
@@ -138,6 +138,20 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   const ASTContext &ASTContext = getASTContext();
   const NamedDecl *D = cast<NamedDecl>(GD.getDecl());
+
+  if (const auto *SNA = D->getAttr<StructorNameAttr>()) {
+    Out << SNA->getName() << ':';
+
+    if (isa<CXXConstructorDecl>(D)) {
+      Out << 'C';
+      Out << GD.getCtorType();
+    } else {
+      Out << 'D';
+      Out << GD.getDtorType();
+    }
+
+    return;
+  }
 
   // Any decl can be declared with __asm("foo") on it, and this takes precedence
   // over all other naming in the .o file.
