@@ -9,9 +9,10 @@
 ;   uint16_t3 a6;  // offset  96, size  6 (+10)
 ; };
 %__cblayout_CB = type <{ <3 x float>, <3 x double>, <2 x half>, <3 x i64>, <4 x i32>, <3 x i16> }>
-%struct.S = type { <3 x float>, <3 x double>, <2 x half>, <3 x i64>, <4 x i32>, <3 x i16> }
 
-@CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 136, 0, 16, 40, 48, 80, 96)) poison
+@CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 102, 0, 16, 40, 48, 80, 96)) poison
+; CHECK: @CB.cb =
+; CHECK-NOT: external {{.*}} addrspace(2) global
 @a1 = external local_unnamed_addr addrspace(2) global <3 x float>, align 16
 @a2 = external local_unnamed_addr addrspace(2) global <3 x double>, align 32
 @a3 = external local_unnamed_addr addrspace(2) global <2 x half>, align 4
@@ -19,10 +20,11 @@
 @a5 = external local_unnamed_addr addrspace(2) global <4 x i32>, align 16
 @a6 = external local_unnamed_addr addrspace(2) global <3 x i16>, align 8
 
+; CHECK: define void @f
 define void @f(ptr %dst) {
 entry:
-  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 136, 0, 16, 40, 48, 80, 96)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
-  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 136, 0, 16, 40, 48, 80, 96)) %CB.cb_h.i.i, ptr @CB.cb, align 4
+  %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 102, 0, 16, 40, 48, 80, 96)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
+  store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 102, 0, 16, 40, 48, 80, 96)) %CB.cb_h.i.i, ptr @CB.cb, align 4
 
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb
   ; CHECK: [[LOAD:%.*]] = call { float, float, float, float } @llvm.dx.resource.load.cbufferrow.4.{{.*}}(target("dx.CBuffer", {{.*}})) [[CB]], i32 0)
@@ -111,6 +113,7 @@ entry:
   ret void
 }
 
+; CHECK-NOT: !hlsl.cbs =
 !hlsl.cbs = !{!0}
 
 !0 = !{ptr @CB.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4, ptr addrspace(2) @a5, ptr addrspace(2) @a6}

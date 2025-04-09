@@ -10,25 +10,19 @@
 ;   int64_t a7;   // offset 24, size  8
 ; }
 %__cblayout_CB = type <{ float, i32, i32, half, i16, double, i64 }>
-%struct.Scalars = type { float, i32, i32, half, i16, double, i64 }
 
-; CHECK: @CB.cb =
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 32, 0, 4, 8, 12, 14, 16, 24)) poison
-; CHECK-NOT: @a1 =
+; CHECK: @CB.cb =
+; CHECK-NOT: external {{.*}} addrspace(2) global
 @a1 = external local_unnamed_addr addrspace(2) global float, align 4
-; CHECK-NOT: @a2 =
 @a2 = external local_unnamed_addr addrspace(2) global i32, align 4
-; CHECK-NOT: @a3 =
 @a3 = external local_unnamed_addr addrspace(2) global i32, align 4
-; CHECK-NOT: @a4 =
 @a4 = external local_unnamed_addr addrspace(2) global half, align 2
-; CHECK-NOT: @a5 =
 @a5 = external local_unnamed_addr addrspace(2) global i16, align 2
-; CHECK-NOT: @a6 =
 @a6 = external local_unnamed_addr addrspace(2) global double, align 8
-; CHECK-NOT: @a7 =
 @a7 = external local_unnamed_addr addrspace(2) global i64, align 8
 
+; CHECK: define void @f
 define void @f(ptr %dst) {
 entry:
   %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 32, 0, 4, 8, 12, 14, 16, 24)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -98,6 +92,7 @@ entry:
   ret void
 }
 
+; CHECK-NOT: !hlsl.cbs =
 !hlsl.cbs = !{!0}
 
 !0 = !{ptr @CB.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4, ptr addrspace(2) @a5, ptr addrspace(2) @a6, ptr addrspace(2) @a7}
