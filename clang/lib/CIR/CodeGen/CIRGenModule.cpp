@@ -16,6 +16,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclBase.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -73,6 +74,57 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      builder.getStringAttr(getTriple().str()));
 }
 
+CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t) {
+  assert(!cir::MissingFeatures::opTBAA());
+
+  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
+  // that doesn't return the information we need to compute BaseInfo.
+
+  // Honor alignment typedef attributes even on incomplete types.
+  // We also honor them straight for C++ class types, even as pointees;
+  // there's an expressivity gap here.
+  if (const auto *tt = t->getAs<TypedefType>()) {
+    if (unsigned align = tt->getDecl()->getMaxAlignment()) {
+      assert(!cir::MissingFeatures::lvalueBaseInfo());
+      return astContext.toCharUnitsFromBits(align);
+    }
+  }
+
+  // Analyze the base element type, so we don't get confused by incomplete
+  // array types.
+  t = astContext.getBaseElementType(t);
+
+  if (t->isIncompleteType()) {
+    // We could try to replicate the logic from
+    // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
+    // type is incomplete, so it's impossible to test. We could try to reuse
+    // getTypeAlignIfKnown, but that doesn't return the information we need
+    // to set BaseInfo.  So just ignore the possibility that the alignment is
+    // greater than one.
+    assert(!cir::MissingFeatures::lvalueBaseInfo());
+    return CharUnits::One();
+  }
+
+  assert(!cir::MissingFeatures::lvalueBaseInfo());
+
+  CharUnits alignment;
+  if (t.getQualifiers().hasUnaligned()) {
+    alignment = CharUnits::One();
+  } else {
+    assert(!cir::MissingFeatures::alignCXXRecordDecl());
+    alignment = astContext.getTypeAlignInChars(t);
+  }
+
+  // Cap to the global maximum type alignment unless the alignment
+  // was somehow explicit on the type.
+  if (unsigned maxAlign = astContext.getLangOpts().MaxTypeAlign) {
+    if (alignment.getQuantity() > maxAlign &&
+        !astContext.isAlignmentRequired(t))
+      alignment = CharUnits::fromQuantity(maxAlign);
+  }
+  return alignment;
+}
+
 mlir::Location CIRGenModule::getLoc(SourceLocation cLoc) {
   assert(cLoc.isValid() && "expected valid source location");
   const SourceManager &sm = astContext.getSourceManager();
@@ -91,6 +143,11 @@ mlir::Location CIRGenModule::getLoc(SourceRange cRange) {
 }
 
 void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
+  if (const auto *cd = dyn_cast<clang::OpenACCConstructDecl>(gd.getDecl())) {
+    emitGlobalOpenACCDecl(cd);
+    return;
+  }
+
   const auto *global = cast<ValueDecl>(gd.getDecl());
 
   if (const auto *fd = dyn_cast<FunctionDecl>(global)) {
@@ -423,6 +480,12 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     emitGlobal(vd);
     break;
   }
+  case Decl::OpenACCRoutine:
+    emitGlobalOpenACCDecl(cast<OpenACCRoutineDecl>(decl));
+    break;
+  case Decl::OpenACCDeclare:
+    emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
   }
 }
 
