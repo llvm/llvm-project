@@ -42,8 +42,8 @@ TEST(ObjCLanguage, MethodNameParsing) {
 
   // First, be strict
   for (const auto &test : strict_cases) {
-    std::optional<const ObjCLanguage::MethodName> method =
-        ObjCLanguage::MethodName::Create(test.input, /*strict = */ true);
+    std::optional<const ObjCLanguage::ObjCMethodName> method =
+        ObjCLanguage::ObjCMethodName::Create(test.input, /*strict = */ true);
     EXPECT_TRUE(method.has_value());
     EXPECT_EQ(test.full_name_sans_category,
               method->GetFullNameWithoutCategory());
@@ -56,15 +56,15 @@ TEST(ObjCLanguage, MethodNameParsing) {
 
   // We should make sure strict parsing does not accept lax cases
   for (const auto &test : lax_cases) {
-    std::optional<const ObjCLanguage::MethodName> method =
-        ObjCLanguage::MethodName::Create(test.input, /*strict = */ true);
+    std::optional<const ObjCLanguage::ObjCMethodName> method =
+        ObjCLanguage::ObjCMethodName::Create(test.input, /*strict = */ true);
     EXPECT_FALSE(method.has_value());
   }
 
   // All strict cases should work when not lax
   for (const auto &test : strict_cases) {
-    std::optional<const ObjCLanguage::MethodName> method =
-        ObjCLanguage::MethodName::Create(test.input, /*strict = */ false);
+    std::optional<const ObjCLanguage::ObjCMethodName> method =
+        ObjCLanguage::ObjCMethodName::Create(test.input, /*strict = */ false);
     EXPECT_TRUE(method.has_value());
     EXPECT_EQ(test.full_name_sans_category,
               method->GetFullNameWithoutCategory());
@@ -77,8 +77,8 @@ TEST(ObjCLanguage, MethodNameParsing) {
 
   // Make sure non-strict parsing works
   for (const auto &test : lax_cases) {
-    std::optional<const ObjCLanguage::MethodName> method =
-        ObjCLanguage::MethodName::Create(test.input, /*strict = */ false);
+    std::optional<const ObjCLanguage::ObjCMethodName> method =
+        ObjCLanguage::ObjCMethodName::Create(test.input, /*strict = */ false);
     EXPECT_TRUE(method.has_value());
     EXPECT_EQ(test.full_name_sans_category,
               method->GetFullNameWithoutCategory());
@@ -103,12 +103,12 @@ TEST(ObjCLanguage, InvalidMethodNameParsing) {
                                   "[]"};
 
   for (const auto &name : test_cases) {
-    std::optional<const ObjCLanguage::MethodName> strict_method =
-        ObjCLanguage::MethodName::Create(name, /*strict = */ false);
+    std::optional<const ObjCLanguage::ObjCMethodName> strict_method =
+        ObjCLanguage::ObjCMethodName::Create(name, /*strict = */ false);
     EXPECT_FALSE(strict_method.has_value());
 
-    std::optional<const ObjCLanguage::MethodName> lax_method =
-        ObjCLanguage::MethodName::Create(name, /*strict = */ false);
+    std::optional<const ObjCLanguage::ObjCMethodName> lax_method =
+        ObjCLanguage::ObjCMethodName::Create(name, /*strict = */ false);
     EXPECT_FALSE(lax_method.has_value());
   }
 }
