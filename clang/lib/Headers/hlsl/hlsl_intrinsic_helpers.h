@@ -35,6 +35,11 @@ length_vec_impl(vector<T, N> X) {
 #endif
 }
 
+template <typename T>
+constexpr vector<T, 4> dst_impl(vector<T, 4> Src0, vector<T, 4> Src1) {
+  return {1, Src0[1] * Src1[1], Src0[2], Src1[3]};
+}
+
 template <typename T> constexpr T distance_impl(T X, T Y) {
   return length_impl(X - Y);
 }
@@ -43,6 +48,14 @@ template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return length_vec_impl(X - Y);
+}
+
+constexpr float dot2add_impl(half2 a, half2 b, float c) {
+#if (__has_builtin(__builtin_dx_dot2add))
+  return __builtin_dx_dot2add(a, b, c);
+#else
+  return dot(a, b) + c;
+#endif
 }
 
 template <typename T> constexpr T reflect_impl(T I, T N) {

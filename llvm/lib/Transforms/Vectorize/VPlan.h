@@ -3076,25 +3076,28 @@ class VPScalarIVStepsRecipe : public VPRecipeWithIRFlags,
 
 public:
   VPScalarIVStepsRecipe(VPValue *IV, VPValue *Step, VPValue *VF,
-                        Instruction::BinaryOps Opcode, FastMathFlags FMFs)
+                        Instruction::BinaryOps Opcode, FastMathFlags FMFs,
+                        DebugLoc DL)
       : VPRecipeWithIRFlags(VPDef::VPScalarIVStepsSC,
-                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs),
+                            ArrayRef<VPValue *>({IV, Step, VF}), FMFs, DL),
         InductionOpcode(Opcode) {}
 
   VPScalarIVStepsRecipe(const InductionDescriptor &IndDesc, VPValue *IV,
-                        VPValue *Step, VPValue *VF)
+                        VPValue *Step, VPValue *VF, DebugLoc DL = {})
       : VPScalarIVStepsRecipe(
             IV, Step, VF, IndDesc.getInductionOpcode(),
             dyn_cast_or_null<FPMathOperator>(IndDesc.getInductionBinOp())
                 ? IndDesc.getInductionBinOp()->getFastMathFlags()
-                : FastMathFlags()) {}
+                : FastMathFlags(),
+            DL) {}
 
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
     return new VPScalarIVStepsRecipe(
         getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags());
+        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags(),
+        getDebugLoc());
   }
 
   /// Return true if this VPScalarIVStepsRecipe corresponds to part 0. Note that
@@ -3529,12 +3532,28 @@ public:
 
   /// Returns the 'middle' block of the plan, that is the block that selects
   /// whether to execute the scalar tail loop or the exit block from the loop
-  /// latch.
-  const VPBasicBlock *getMiddleBlock() const {
-    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
-  }
+  /// latch. If there is an early exit from the vector loop, the middle block
+  /// conceptully has the early exit block as third successor, split accross 2
+  /// VPBBs. In that case, the second VPBB selects whether to execute the scalar
+  /// tail loop or the exit bock. If the scalar tail loop or exit block are
+  /// known to always execute, the middle block may branch directly to that
+  /// block. This function cannot be called once the vector loop region has been
+  /// removed.
   VPBasicBlock *getMiddleBlock() {
-    return cast<VPBasicBlock>(getScalarPreheader()->getPredecessors().front());
+    VPRegionBlock *LoopRegion = getVectorLoopRegion();
+    assert(
+        LoopRegion &&
+        "cannot call the function after vector loop region has been removed");
+    auto *RegionSucc = cast<VPBasicBlock>(LoopRegion->getSingleSuccessor());
+    if (RegionSucc->getSingleSuccessor() ||
+        is_contained(RegionSucc->getSuccessors(), getScalarPreheader()))
+      return RegionSucc;
+    // There is an early exit. The successor of RegionSucc is the middle block.
+    return cast<VPBasicBlock>(RegionSucc->getSuccessors()[1]);
+  }
+
+  const VPBasicBlock *getMiddleBlock() const {
+    return const_cast<VPlan *>(this)->getMiddleBlock();
   }
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
@@ -3749,6 +3768,14 @@ public:
   /// successors of the block in VPlan. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
+
+  /// Returns true if the VPlan is based on a loop with an early exit. That is
+  /// the case if the VPlan has either more than one exit block or a single exit
+  /// block with multiple predecessors (one for the exit via the latch and one
+  /// via the other early exit).
+  bool hasEarlyExit() const {
+    return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
