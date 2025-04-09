@@ -21192,7 +21192,14 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
     if (Kind.starts_with("SiFive-CLIC-") && !Subtarget.hasVendorXSfmclic())
       report_fatal_error(
-          "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension");
+          "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension",
+          /*gen_crash_diag=*/false);
+
+    const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
+    if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
+      report_fatal_error("'SiFive-CLIC-preemptible' interrupt kinds cannot "
+                         "have a frame pointer",
+                         /*gen_crash_diag=*/false);
   }
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
