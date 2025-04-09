@@ -602,6 +602,10 @@ class CGFunctionInfo final
   LLVM_PREFERRED_TYPE(bool)
   unsigned CmseNSCall : 1;
 
+  /// Whether this function is a CFI unchecked callee
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CFIUncheckedCallee : 1;
+
   /// Whether this function is noreturn.
   LLVM_PREFERRED_TYPE(bool)
   unsigned NoReturn : 1;
@@ -704,6 +708,8 @@ public:
 
   bool isNoReturn() const { return NoReturn; }
 
+  bool isCFIUncheckedCallee() const { return CFIUncheckedCallee; }
+
   /// In ARC, whether this function retains its return value.  This
   /// is not always reliable for call sites.
   bool isReturnsRetained() const { return ReturnsRetained; }
@@ -740,7 +746,7 @@ public:
     return FunctionType::ExtInfo(isNoReturn(), getHasRegParm(), getRegParm(),
                                  getASTCallingConvention(), isReturnsRetained(),
                                  isNoCallerSavedRegs(), isNoCfCheck(),
-                                 isCmseNSCall());
+                                 isCmseNSCall(), isCFIUncheckedCallee());
   }
 
   CanQualType getReturnType() const { return getArgsBuffer()[0].type; }
@@ -794,6 +800,7 @@ public:
     ID.AddInteger(RegParm);
     ID.AddBoolean(NoCfCheck);
     ID.AddBoolean(CmseNSCall);
+    ID.AddBoolean(CFIUncheckedCallee);
     ID.AddInteger(Required.getOpaqueData());
     ID.AddBoolean(HasExtParameterInfos);
     if (HasExtParameterInfos) {
@@ -821,6 +828,7 @@ public:
     ID.AddInteger(info.getRegParm());
     ID.AddBoolean(info.getNoCfCheck());
     ID.AddBoolean(info.getCmseNSCall());
+    ID.AddBoolean(info.getCFIUncheckedCallee());
     ID.AddInteger(required.getOpaqueData());
     ID.AddBoolean(!paramInfos.empty());
     if (!paramInfos.empty()) {

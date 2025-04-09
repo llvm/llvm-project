@@ -1158,6 +1158,8 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
 
   if (Info.getNoReturn())
     OS << " __attribute__((noreturn))";
+  if (Info.getCFIUncheckedCallee())
+    OS << " __attribute__((cfi_unchecked_callee))";
   if (Info.getCmseNSCall())
     OS << " __attribute__((cmse_nonsecure_call))";
   if (Info.getProducesResult())
@@ -2088,6 +2090,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::NoDeref:
     OS << "noderef";
+    break;
+  case attr::CFIUncheckedCallee:
+    OS << "cfi_unchecked_callee";
     break;
   case attr::AcquireHandle:
     OS << "acquire_handle";
