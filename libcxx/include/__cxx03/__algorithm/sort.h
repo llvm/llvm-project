@@ -24,7 +24,6 @@
 #include <__cxx03/__debug_utils/randomize_range.h>
 #include <__cxx03/__debug_utils/strict_weak_ordering_check.h>
 #include <__cxx03/__functional/operations.h>
-#include <__cxx03/__functional/ranges_operations.h>
 #include <__cxx03/__iterator/iterator_traits.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/disjunction.h>
