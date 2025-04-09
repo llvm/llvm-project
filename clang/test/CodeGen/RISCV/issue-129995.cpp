@@ -13,8 +13,8 @@ public:
 class g {
 public:
   template <class h> g(h);
-  friend g operator^(g, g) { c::f; }
-  friend g operator^=(g i, g j) { i ^ j; }
+  friend g operator^(g, g) { c::f; return g{0}; }
+  friend g operator^=(g i, g j) { i ^ j; return g{0}; }
 };
 template <typename, int> using k = g;
 template <typename l> using m = k<l, sizeof(l)>;
