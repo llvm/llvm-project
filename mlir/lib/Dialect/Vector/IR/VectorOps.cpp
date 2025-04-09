@@ -5777,11 +5777,9 @@ public:
 };
 
 /// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as either
-///
-/// 1) Y = ShapeCast(X), or
-/// 2) Y = Broadcast(X)
-///
-/// If both (1) and (2) are possible, (1) is chosen.
+///   i) Y = ShapeCast(X), or
+///  ii) Y = Broadcast(X)
+/// If both (i) and (ii) are possible, (i) is chosen.
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
