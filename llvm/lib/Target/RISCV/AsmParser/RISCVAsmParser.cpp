@@ -3437,8 +3437,8 @@ void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
   //
   //    SLLI rd, rs, XLEN - Width
   //    SR[A|R]I rd, rd, XLEN - Width
-  MCOperand DestReg = Inst.getOperand(0);
-  MCOperand SourceReg = Inst.getOperand(1);
+  const MCOperand &DestReg = Inst.getOperand(0);
+  const MCOperand &SourceReg = Inst.getOperand(1);
 
   unsigned SecondOpcode = SignExtend ? RISCV::SRAI : RISCV::SRLI;
   int64_t ShAmt = (isRV64() ? 64 : 32) - Width;
