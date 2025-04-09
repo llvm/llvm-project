@@ -21,7 +21,7 @@ define <16 x float> @test_gather_16f32_1(ptr %x, ptr %arr, <16 x i1> %mask, <16 
   %ptrs = getelementptr inbounds %struct.pt, ptr %x, <16 x i64> %zext
   %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
   ret <16 x float> %res
-  }
+}
 
 define <16 x float> @test_gather_16f32_2(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0)  {
 ; CHECK-LABEL: test_gather_16f32_2:
@@ -40,7 +40,7 @@ define <16 x float> @test_gather_16f32_2(ptr %x, ptr %arr, <16 x i1> %mask, <16 
   %ptrs = getelementptr inbounds %struct.pt, ptr %x, <16 x i64> %zext, i32 1
   %res = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> %ptrs, i32 4, <16 x i1> %mask, <16 x float> %src0)
   ret <16 x float> %res
-  }
+}
 
 define {<16 x float>, <16 x float>} @test_gather_16f32_3(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0)  {
 ; CHECK-LABEL: test_gather_16f32_3:
@@ -65,4 +65,6 @@ define {<16 x float>, <16 x float>} @test_gather_16f32_3(ptr %x, ptr %arr, <16 x
   %pair1 = insertvalue {<16 x float>, <16 x float>} undef, <16 x float> %res1, 0
   %pair2 = insertvalue {<16 x float>, <16 x float>} %pair1, <16 x float> %res, 1
   ret {<16 x float>, <16 x float>} %pair2
-  }
+}
+
+declare <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr>, i32, <16 x i1>, <16 x float>)
