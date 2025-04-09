@@ -136,6 +136,8 @@ void Statusline::Redraw(bool update) {
 
   SymbolContext symbol_ctx;
   if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
+    // Check if the process is stopped, and if it is, make sure it remains
+    // stopped until we've computed the symbol context.
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&process_sp->GetRunLock())) {
       if (auto frame_sp = exe_ctx.GetFrameSP())
