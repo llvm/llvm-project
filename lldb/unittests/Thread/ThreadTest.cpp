@@ -49,7 +49,7 @@ public:
     HMODULE hModule = ::LoadLibraryW(L"Kernel32.dll");
     if (hModule) {
       SetThreadName = reinterpret_cast<SetThreadDescriptionFunctionPtr>(
-          ::GetProcAddress(hModule, "SetThreadDescription"));
+          (void *)::GetProcAddress(hModule, "SetThreadDescription"));
     }
     PlatformWindows::Initialize();
 #endif
