@@ -1530,6 +1530,7 @@ cc_library(
         ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
+        ":MemRefUtils",
         ":ROCDLDialect",
         ":SideEffectInterfaces",
         ":ViewLikeInterface",
@@ -5312,6 +5313,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":CallInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":DataLayoutInterfacesTdFiles",

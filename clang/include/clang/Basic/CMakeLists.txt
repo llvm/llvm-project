@@ -13,6 +13,11 @@ macro(clang_diag_gen component)
     -gen-clang-diags-compat-ids -clang-component=${component}
     SOURCE Diagnostic.td
     TARGET ClangDiagnostic${component}CompatIDs)
+
+  clang_tablegen(Diagnostic${component}Interface.inc
+    -gen-clang-diags-iface -clang-component=${component}
+    SOURCE Diagnostic.td
+    TARGET ClangDiagnostic${component}Interface)
 endmacro(clang_diag_gen)
 
 clang_diag_gen(Analysis)
