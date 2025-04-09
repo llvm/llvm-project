@@ -286,7 +286,8 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface,
+                                          DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -302,7 +303,7 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
     or null.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref,
+  let arguments = (ins AnyReferenceLike:$memref,
                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
@@ -315,7 +316,8 @@ def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface,
+                                   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -335,7 +337,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 
   let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   AnyReferenceLike:$memref,
                    OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
   let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
@@ -348,7 +350,7 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   }];
 }
 
-def fir_CopyOp : fir_Op<"copy", []> {
+def fir_CopyOp : fir_Op<"copy", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "copy constant size memory";
 
   let description = [{
@@ -369,8 +371,8 @@ def fir_CopyOp : fir_Op<"copy", []> {
     TODO: add FirAliasTagOpInterface to carry TBAA.
   }];
 
-  let arguments = (ins Arg<AnyRefOfConstantSizeAggregateType, "", [MemRead]>:$source,
-                       Arg<AnyRefOfConstantSizeAggregateType, "", [MemWrite]>:$destination,
+  let arguments = (ins AnyRefOfConstantSizeAggregateType:$source,
+                       AnyRefOfConstantSizeAggregateType:$destination,
                        OptionalAttr<UnitAttr>:$no_overlap);
 
   let builders = [OpBuilder<(ins "mlir::Value":$source,
@@ -1373,7 +1375,8 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
 //   !- Merge the new and old values into the memory for "A"
 //   array_merge_store <updated A> to <A's address>
 
-def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
+def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments,
+                                            DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Load an array as a value.";
 
@@ -1412,7 +1415,7 @@ def fir_ArrayLoadOp : fir_Op<"array_load", [AttrSizedOperandSegments]> {
   }];
 
   let arguments = (ins
-    Arg<AnyRefOrBox, "", [MemRead]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<AnyShapeOrShiftType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
@@ -1624,7 +1627,7 @@ def fir_ArrayAccessOp : fir_Op<"array_access", [AttrSizedOperandSegments,
 
     It is only possible to use `array_access` on an `array_load` result value or
     a value that can be trace back transitively to an `array_load` as the
-    dominating source. Other array operation such as `array_amend` can be in
+    dominating source. Other array operations such as `array_amend` can be in
     between.
 
     TODO: The above restriction is not enforced. The design of the operation
@@ -1685,7 +1688,7 @@ def fir_ArrayAmendOp : fir_Op<"array_amend", [NoMemoryEffect]> {
 }
 
 def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
 
   let summary = "Store merged array value to memory.";
 
@@ -1714,7 +1717,7 @@ def fir_ArrayMergeStoreOp : fir_Op<"array_merge_store",
   let arguments = (ins
     fir_SequenceType:$original,
     fir_SequenceType:$sequence,
-    Arg<AnyRefOrBox, "", [MemWrite]>:$memref,
+    AnyRefOrBox:$memref,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams
   );
@@ -2750,6 +2753,22 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoMemoryEffect]> {
   let results = (outs AnyAddressableLike:$resTy);
 
   let assemblyFormat = "`(` $symbol `)` attr-dict `:` type($resTy)";
+}
+
+def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]> {
+  let summary = "cast between volatile and non-volatile types";
+  let description = [{
+    Cast between volatile and non-volatile types. The types must be otherwise
+    identical. A value's volatility cannot be changed by a fir.convert operation.
+    Reinterpreting a value as volatile must be done explicitly using this operation.
+  }];
+  let arguments = (ins AnyRefOrBox:$value);
+  let results = (outs AnyRefOrBox:$res);
+  let assemblyFormat = [{
+    $value attr-dict `:` functional-type($value, results)
+  }];
+  let hasVerifier = 1;
+  let hasFolder = 1;
 }
 
 def fir_ConvertOp : fir_SimpleOneResultOp<"convert", [NoMemoryEffect]> {
