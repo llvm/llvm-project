@@ -64,25 +64,13 @@ Visibility Macros
   ABI, we should create a new _LIBCPP_HIDE_FROM_ABI_AFTER_XXX macro, and we can
   use it to start removing symbols from the ABI after that stable version.
 
-**_LIBCPP_TEMPLATE_VIS**
-  Mark a type's typeinfo and vtable as having default visibility.
-  This macro has no effect on the visibility of the type's member functions.
-
-  **GCC Behavior**: GCC does not support Clang's `type_visibility(...)`
-  attribute. With GCC the `visibility(...)` attribute is used and member
-  functions are affected.
-
-  **Windows Behavior**: DLLs do not support dllimport/export on class templates.
-  The macro has an empty definition on this platform.
-
 **_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS**
   Mark the member functions, typeinfo, and vtable of the type named in
   an extern template declaration as being exported by the libc++ library.
   This attribute must be specified on all extern class template declarations.
 
-  This macro is used to override the `_LIBCPP_TEMPLATE_VIS` attribute
-  specified on the primary template and to export the member functions produced
-  by the explicit instantiation in the dylib.
+  This macro is used to export the member functions produced by the explicit
+  instantiation in the dylib.
 
   **Windows Behavior**: `extern template` and `dllexport` are fundamentally
   incompatible *on a class template* on Windows; the former suppresses
