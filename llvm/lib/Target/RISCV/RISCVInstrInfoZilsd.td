@@ -30,6 +30,9 @@ def SD_RV32 : Store_rri<0b011, "sd", GPRPairRV32>,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilsd, IsRV32] in {
+def PseudoLD_RV32 : PseudoLoad<"ld", GPRPairRV32>;
+def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
+
 def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;
 def : InstAlias<"sd $rs2, (${rs1})", (SD_RV32 GPRPairRV32:$rs2, GPR:$rs1, 0), 0>;
 }
