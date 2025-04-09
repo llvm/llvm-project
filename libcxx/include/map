@@ -802,7 +802,7 @@ public:
     return std::addressof(__v.__cc_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __nc_ref_pair_type __ref() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __nc_ref_pair_type __ref() {
     value_type& __v = __get_value();
     return __nc_ref_pair_type(const_cast<key_type&>(__v.first), __v.second);
   }
@@ -823,8 +823,26 @@ public:
   }
 
   template <class _ValueTp, __enable_if_t<__is_same_uncvref<_ValueTp, value_type>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI __value_type& operator=(_ValueTp&& __v) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __value_type& operator=(_ValueTp&& __v) {
+    // static_assert(false &&  std::is_same_v<_ValueTp, value_type> && !std::is_same_v<_ValueTp, _ValueTp> 
+    //   ,
+    //   "fail");
+    // static_assert(std::is_same_v<decltype(__ref()), _ValueTp>, "fail");
+    // static_assert(std::is_same_v<decltype(__ref()), decltype(__v.first)>, "fail");
+
+    // note: modification of object of const-qualified type 'const int' is not allowed in a constant expression
+    // raised by: libcxx/test/std/containers/associative/map/map.cons/assign_initializer_list.pass.cpp
     __ref() = std::forward<_ValueTp>(__v);
+    // only shows up at compile time for C++26, not runtime, for C++23
+
+    // make a copy right now to get past above error
+    // __ref() = _ValueTp{__v};
+
+    // value_type& __this_v = __get_value();
+    // const_cast<key_type&>(__this_v.first) = __v.first;
+    // disabled for now, because of above error,
+    // __this_v.first = std::move(__v.first);
+    // __this_v.second = __v.second;
     return *this;
   }
 

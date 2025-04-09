@@ -245,7 +245,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __tree_left_rotate(_Nod
 // Effects:  Makes __x->__left_ the subtree root with __x as its right child
 //           while preserving in-order order.
 template <class _NodePtr>
-_LIBCPP_HIDE_FROM_ABI void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_HIDE_FROM_ABI void __tree_right_rotate(_NodePtr __x) _NOEXCEPT {
   _LIBCPP_ASSERT_INTERNAL(__x != nullptr, "node shouldn't be null");
   _LIBCPP_ASSERT_INTERNAL(__x->__left_ != nullptr, "node should have a left child");
   _NodePtr __y = __x->__left_;
@@ -1147,7 +1147,7 @@ public:
     return __emplace_hint_multi(__p, std::forward<_Vp>(__v));
   }
 
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<iterator, bool>
   __node_assign_unique(const __container_value_type& __v, __node_pointer __dest);
 
   _LIBCPP_HIDE_FROM_ABI iterator __node_insert_multi(__node_pointer __nd);
@@ -1289,22 +1289,22 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(__tree&, false_type) _NOEXCEPT {}
 
   struct _DetachedTreeCache {
-    _LIBCPP_HIDE_FROM_ABI explicit _DetachedTreeCache(__tree* __t) _NOEXCEPT
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 explicit _DetachedTreeCache(__tree* __t) _NOEXCEPT
         : __t_(__t),
           __cache_root_(__detach_from_tree(__t)) {
       __advance();
     }
 
-    _LIBCPP_HIDE_FROM_ABI __node_pointer __get() const _NOEXCEPT { return __cache_elem_; }
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __get() const _NOEXCEPT { return __cache_elem_; }
 
-    _LIBCPP_HIDE_FROM_ABI void __advance() _NOEXCEPT {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void __advance() _NOEXCEPT {
       __cache_elem_ = __cache_root_;
       if (__cache_root_) {
         __cache_root_ = __detach_next(__cache_root_);
       }
     }
 
-    _LIBCPP_HIDE_FROM_ABI ~_DetachedTreeCache() {
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 ~_DetachedTreeCache() {
       __t_->destroy(__cache_elem_);
       if (__cache_root_) {
         while (__cache_root_->__parent_ != nullptr)
@@ -1317,8 +1317,8 @@ private:
     _DetachedTreeCache& operator=(_DetachedTreeCache const&) = delete;
 
   private:
-    _LIBCPP_HIDE_FROM_ABI static __node_pointer __detach_from_tree(__tree* __t) _NOEXCEPT;
-    _LIBCPP_HIDE_FROM_ABI static __node_pointer __detach_next(__node_pointer) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __node_pointer __detach_from_tree(__tree* __t) _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 static __node_pointer __detach_next(__node_pointer) _NOEXCEPT;
 
     __tree* __t_;
     __node_pointer __cache_root_;
@@ -1347,7 +1347,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__tree(const va
 
 // Precondition:  size() != 0
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree* __t) _NOEXCEPT {
   __node_pointer __cache                = static_cast<__node_pointer>(__t->__begin_node());
   __t->__begin_node()                   = __t->__end_node();
@@ -1367,7 +1367,7 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree
 //    __cache->right_ == nullptr
 //    This is no longer a red-black tree
 template <class _Tp, class _Compare, class _Allocator>
-typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
+_LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node_pointer
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_pointer __cache) _NOEXCEPT {
   if (__cache->__parent_ == nullptr)
     return nullptr;
@@ -1945,7 +1945,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree<_Tp, _Compare, _Allocator>::__emplace_hint_
 }
 
 template <class _Tp, class _Compare, class _Allocator>
-pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
+_LIBCPP_CONSTEXPR_SINCE_CXX26 pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
 __tree<_Tp, _Compare, _Allocator>::__node_assign_unique(const __container_value_type& __v, __node_pointer __nd) {
   __parent_pointer __parent;
   __node_base_pointer& __child = __find_equal(__parent, _NodeTypes::__get_key(__v));
