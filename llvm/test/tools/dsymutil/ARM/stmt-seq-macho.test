@@ -1,6 +1,4 @@
 RUN: dsymutil --flat -oso-prepend-path %p/../Inputs %p/../Inputs/private/tmp/stmt_seq/stmt_seq_macho.exe -o %t.stmt_seq_macho.dSYM
-# new test
-XFAIL: *
 RUN: llvm-dwarfdump --debug-info --debug-line -v %t.stmt_seq_macho.dSYM | sort | FileCheck %s -check-prefix=CHECK_DSYM
 
 # CHECK_DSYM: DW_AT_LLVM_stmt_sequence [DW_FORM_sec_offset] ([[OFFSET1:(0x[0-9a-f]+)]])
