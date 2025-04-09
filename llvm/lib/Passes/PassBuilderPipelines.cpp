@@ -1655,9 +1655,12 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   // Now add the optimization pipeline.
   MPM.addPass(buildModuleOptimizationPipeline(Level, Phase));
 
-  if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
-      PGOOpt->Action == PGOOptions::SampleUse)
-    MPM.addPass(PseudoProbeUpdatePass());
+  if (PGOOpt && PGOOpt->PseudoProbeForProfiling) {
+    if (PGOOpt->Action == PGOOptions::SampleUse)
+      MPM.addPass(PseudoProbeUpdatePass());
+    else
+      MPM.addPass(PseudoProbeDescUpdatePass());
+  }
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
@@ -1758,9 +1761,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   if (RunPartialInlining)
     MPM.addPass(PartialInlinerPass());
 
-  if (PGOOpt && PGOOpt->PseudoProbeForProfiling &&
-      PGOOpt->Action == PGOOptions::SampleUse)
-    MPM.addPass(PseudoProbeUpdatePass());
+  if (PGOOpt && PGOOpt->PseudoProbeForProfiling) {
+    if (PGOOpt->Action == PGOOptions::SampleUse)
+      MPM.addPass(PseudoProbeUpdatePass());
+    else
+      MPM.addPass(PseudoProbeDescUpdatePass());
+  }
 
   // Handle Optimizer{Early,Last}EPCallbacks added by clang on PreLink. Actual
   // optimization is going to be done in PostLink stage, but clang can't add
