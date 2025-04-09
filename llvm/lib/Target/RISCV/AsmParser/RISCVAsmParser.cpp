@@ -3746,18 +3746,23 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitLoadTLSGDAddress(Inst, IDLoc, Out);
     return false;
   case RISCV::PseudoLB:
+  case RISCV::PseudoQC_E_LB:
     emitLoadStoreSymbol(Inst, RISCV::LB, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLBU:
+  case RISCV::PseudoQC_E_LBU:
     emitLoadStoreSymbol(Inst, RISCV::LBU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLH:
+  case RISCV::PseudoQC_E_LH:
     emitLoadStoreSymbol(Inst, RISCV::LH, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLHU:
+  case RISCV::PseudoQC_E_LHU:
     emitLoadStoreSymbol(Inst, RISCV::LHU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLW:
+  case RISCV::PseudoQC_E_LW:
     emitLoadStoreSymbol(Inst, RISCV::LW, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLWU:
@@ -3776,12 +3781,15 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitLoadStoreSymbol(Inst, RISCV::FLD, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSB:
+  case RISCV::PseudoQC_E_SB:
     emitLoadStoreSymbol(Inst, RISCV::SB, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSH:
+  case RISCV::PseudoQC_E_SH:
     emitLoadStoreSymbol(Inst, RISCV::SH, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSW:
+  case RISCV::PseudoQC_E_SW:
     emitLoadStoreSymbol(Inst, RISCV::SW, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSD:
