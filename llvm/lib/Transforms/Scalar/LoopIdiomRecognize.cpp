@@ -1809,6 +1809,12 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
 
+  // LoopDeletion only delete invariant loops with known trip-count. We can
+  // update the condition so it will reliablely delete the invariant loop
+  assert(LoopTerm->getNumSuccessors() == 2 &&
+         (LoopTerm->getSuccessor(0) == LoopBody ||
+          LoopTerm->getSuccessor(1) == LoopBody) &&
+         "loop body must have a successor that is it self");
   ConstantInt *NewLoopCond = LoopTerm->getSuccessor(0) == LoopBody
                                  ? Builder.getFalse()
                                  : Builder.getTrue();
