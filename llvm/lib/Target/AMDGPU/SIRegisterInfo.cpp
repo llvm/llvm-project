@@ -1910,8 +1910,10 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     }
 
-    if (NeedSuperRegImpOperand && (IsFirstSubReg || IsLastSubReg))
-      MIB.addReg(ValueReg, RegState::Implicit | SrcDstRegState);
+    if (NeedSuperRegImpOperand && IsFirstSubReg) {
+      unsigned State = RegState::Implicit | SrcDstRegState;
+      MIB.addReg(ValueReg, State);
+    }
 
     // The epilog restore of a wwm-scratch register can cause undesired
     // optimization during machine-cp post PrologEpilogInserter if the same
