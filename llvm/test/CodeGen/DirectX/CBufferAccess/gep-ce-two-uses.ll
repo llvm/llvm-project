@@ -5,9 +5,12 @@
 ; }
 %__cblayout_CB = type <{ [3 x float] }>
 
-@CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 608, 624, 656)) poison
+@CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 36, 0)) poison
+; CHECK: @CB.cb =
+; CHECK-NOT: external {{.*}} addrspace(2) global
 @a1 = external local_unnamed_addr addrspace(2) global [3 x float], align 4
 
+; CHECK: define void @f
 define void @f(ptr %dst) {
 entry:
   ; CHECK: [[CB:%.*]] = load target("dx.CBuffer", {{.*}})), ptr @CB.cb
@@ -27,6 +30,7 @@ entry:
   ret void
 }
 
+; CHECK-NOT: !hlsl.cbs =
 !hlsl.cbs = !{!0}
 
 !0 = !{ptr @CB.cb, ptr addrspace(2) @a1}

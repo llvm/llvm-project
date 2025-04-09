@@ -9,6 +9,7 @@
 #include "DXILCBufferAccess.h"
 #include "DirectX.h"
 #include "llvm/Frontend/HLSL/CBuffer.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/InitializePasses.h"
@@ -93,8 +94,9 @@ static void replaceAccess(LoadInst *LI, GlobalVariable *Global,
   Type *Ty = LI->getType();
   CBufferRowIntrin Intrin(DL, Ty->getScalarType());
   // The cbuffer consists of some number of 16-byte rows.
-  unsigned int CurrentRow = Offset / 16;
-  unsigned int CurrentIndex = (Offset % 16) / Intrin.EltSize;
+  unsigned int CurrentRow = Offset / hlsl::CBufferRowSizeInBytes;
+  unsigned int CurrentIndex =
+      (Offset % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
 
   auto *CBufLoad = Builder.CreateIntrinsic(
       Intrin.RetTy, Intrin.IID,
@@ -111,10 +113,11 @@ static void replaceAccess(LoadInst *LI, GlobalVariable *Global,
     Result = Elt;
 
     // However, if we loaded a <1 x T>, then we need to adjust the type here.
-    if (auto *VT = dyn_cast<FixedVectorType>(LI->getType()))
-      if (VT->getNumElements() == 1)
-        Result = Builder.CreateInsertElement(PoisonValue::get(VT), Result,
-                                             Builder.getInt32(0));
+    if (auto *VT = dyn_cast<FixedVectorType>(LI->getType())) {
+      assert(VT->getNumElements() == 1 && "Can't have multiple elements here");
+      Result = Builder.CreateInsertElement(PoisonValue::get(VT), Result,
+                                           Builder.getInt32(0));
+    }
   } else {
     // Walk each element and extract it, wrapping to new rows as needed.
     SmallVector<Value *> Extracts{Elt};

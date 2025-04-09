@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Frontend/HLSL/CBuffer.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -65,6 +66,6 @@ void CBufferMetadata::eraseFromModule() {
 APInt hlsl::translateCBufArrayOffset(const DataLayout &DL, APInt Offset,
                                      ArrayType *Ty) {
   int64_t TypeSize = DL.getTypeSizeInBits(Ty->getElementType()) / 8;
-  int64_t RoundUp = alignTo(TypeSize, Align(16));
+  int64_t RoundUp = alignTo(TypeSize, Align(CBufferRowSizeInBytes));
   return Offset.udiv(TypeSize) * RoundUp;
 }

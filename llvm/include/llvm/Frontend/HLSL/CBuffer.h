@@ -26,17 +26,17 @@ class NamedMDNode;
 namespace hlsl {
 
 struct CBufferMember {
-  CBufferMember(GlobalVariable *GV, size_t Offset) : GV(GV), Offset(Offset) {}
-
   GlobalVariable *GV;
   size_t Offset;
+
+  CBufferMember(GlobalVariable *GV, size_t Offset) : GV(GV), Offset(Offset) {}
 };
 
 struct CBufferMapping {
-  CBufferMapping(GlobalVariable *Handle) : Handle(Handle) {}
-
   GlobalVariable *Handle;
   SmallVector<CBufferMember> Members;
+
+  CBufferMapping(GlobalVariable *Handle) : Handle(Handle) {}
 };
 
 class CBufferMetadata {

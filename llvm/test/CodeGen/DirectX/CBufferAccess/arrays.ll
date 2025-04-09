@@ -11,9 +11,10 @@
 ;   bool a8[4];
 ; }
 %__cblayout_CB = type <{ [3 x float], [2 x <3 x double>], [2 x [2 x half]], [3 x i64], [2 x [3 x [4 x <4 x i32>]]], [1 x i16], [2 x i64], [4 x i32] }>
-%struct.S = type { float, <3 x double>, half, i64, <4 x i32>, i16, i64, i32, [12 x i8] }
 
 @CB.cb = local_unnamed_addr global target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 608, 624, 656)) poison
+; CHECK: @CB.cb =
+; CHECK-NOT: external {{.*}} addrspace(2) global
 @a1 = external local_unnamed_addr addrspace(2) global [3 x float], align 4
 @a2 = external local_unnamed_addr addrspace(2) global [2 x <3 x double>], align 32
 @a3 = external local_unnamed_addr addrspace(2) global [2 x [2 x half]], align 2
@@ -23,6 +24,7 @@
 @a7 = external local_unnamed_addr addrspace(2) global [2 x i64], align 8
 @a8 = external local_unnamed_addr addrspace(2) global [4 x i32], align 4
 
+; CHECK: define void @f
 define void @f(ptr %dst) {
 entry:
   %CB.cb_h.i.i = tail call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB, 708, 0, 48, 112, 176, 224, 608, 624, 656)) @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
@@ -114,6 +116,7 @@ entry:
   ret void
 }
 
+; CHECK-NOT: !hlsl.cbs =
 !hlsl.cbs = !{!0}
 
 !0 = !{ptr @CB.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4, ptr addrspace(2) @a5, ptr addrspace(2) @a6, ptr addrspace(2) @a7, ptr addrspace(2) @a8}
