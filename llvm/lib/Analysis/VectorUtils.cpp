@@ -998,9 +998,9 @@ static void getMetadataToPropagate(
 
   // Remove any unsupported metadata kinds from Metadata.
   for (unsigned Idx = 0; Idx != Metadata.size();) {
-    if (is_contained(SupportedIDs, Metadata[Idx].first))
+    if (is_contained(SupportedIDs, Metadata[Idx].first)) {
       Idx++;
-    else {
+    } else {
       // Swap element to end and remove it.
       std::swap(Metadata[Idx], Metadata.back());
       Metadata.pop_back();
