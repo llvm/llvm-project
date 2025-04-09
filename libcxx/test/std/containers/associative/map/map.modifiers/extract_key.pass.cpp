@@ -20,7 +20,7 @@
 #include "Counter.h"
 
 template <class Container, class KeyTypeIter>
-void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
+TEST_CONSTEXPR_CXX26 void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
   std::size_t sz = c.size();
   assert((std::size_t)std::distance(first, last) == sz);
 
@@ -28,9 +28,11 @@ void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
     typename Container::node_type t = c.extract(*copy);
     assert(!t.empty());
     --sz;
-    assert(t.key() == *copy);
-    t.key() = *first; // We should be able to mutate key.
-    assert(t.key() == *first);
+    if(!TEST_IS_CONSTANT_EVALUATED) {
+      assert(t.key() == *copy);
+      t.key() = *first; // We should be able to mutate key.
+      assert(t.key() == *first);
+    }
     assert(t.get_allocator() == c.get_allocator());
     assert(sz == c.size());
   }
@@ -50,6 +52,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test(m, std::begin(keys), std::end(keys));
   }
 
+  if(!TEST_IS_CONSTANT_EVALUATED)
   {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     {
