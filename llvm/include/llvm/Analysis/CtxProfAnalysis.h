@@ -61,7 +61,7 @@ public:
 
   const PGOCtxProfile &profiles() const { return Profiles; }
 
-  bool isInSpecializedModule() const { return IsInSpecializedModule; }
+  bool isInSpecializedModule() const;
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;

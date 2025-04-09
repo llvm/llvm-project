@@ -39,6 +39,11 @@ static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
                           "just the yaml representation of the profile")),
     cl::desc("Verbosity level of the contextual profile printer pass."));
 
+static cl::opt<bool> ForceIsInSpecializedModule(
+    "ctx-profile-force-is-specialized", cl::init(false),
+    cl::desc("Treat the given module as-if it were containing the "
+             "post-thinlink module containing the root"));
+
 const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
 PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
@@ -278,6 +283,12 @@ void PGOContextualProfile::initIndex() {
       });
 }
 
+bool PGOContextualProfile::isInSpecializedModule() const {
+  return ForceIsInSpecializedModule.getNumOccurrences() > 0
+             ? ForceIsInSpecializedModule
+             : IsInSpecializedModule;
+}
+
 void PGOContextualProfile::update(Visitor V, const Function &F) {
   assert(isFunctionKnown(F));
   GlobalValue::GUID G = getDefinedFunctionGUID(F);
@@ -299,20 +310,27 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
   CtxProfFlatProfile Flat;
+  auto Accummulate = [](SmallVectorImpl<uint64_t> &Into,
+                        const SmallVectorImpl<uint64_t> &From) {
+    if (Into.empty())
+      Into.resize(From.size());
+    assert(Into.size() == From.size() &&
+           "All contexts corresponding to a function should have the exact "
+           "same number of counters.");
+    for (size_t I = 0, E = Into.size(); I < E; ++I)
+      Into[I] += From[I];
+  };
+
   preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
                 const PGOCtxProfContext>(
       Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
-        auto [It, Ins] = Flat.insert({Ctx.guid(), {}});
-        if (Ins) {
-          llvm::append_range(It->second, Ctx.counters());
-          return;
-        }
-        assert(It->second.size() == Ctx.counters().size() &&
-               "All contexts corresponding to a function should have the exact "
-               "same number of counters.");
-        for (size_t I = 0, E = It->second.size(); I < E; ++I)
-          It->second[I] += Ctx.counters()[I];
+        Accummulate(Flat[Ctx.guid()], Ctx.counters());
       });
+  for (const auto &[_, RC] : Profiles.Contexts)
+    for (const auto &[G, Unh] : RC.getUnhandled())
+      Accummulate(Flat[G], Unh);
+  for (const auto &[G, FC] : Profiles.FlatProfiles)
+    Accummulate(Flat[G], FC);
   return Flat;
 }
 

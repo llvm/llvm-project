@@ -185,7 +185,6 @@ class ProfileAnnotator final {
   // To be accessed through getBBInfo() after construction.
   std::map<const BasicBlock *, BBInfo> BBInfos;
   std::vector<EdgeInfo> EdgeInfos;
-  InstrProfSummaryBuilder &PB;
 
   // This is an adaptation of PGOUseFunc::populateCounters.
   // FIXME(mtrofin): look into factoring the code to share one implementation.
@@ -284,9 +283,8 @@ class ProfileAnnotator final {
   }
 
 public:
-  ProfileAnnotator(Function &F, const SmallVectorImpl<uint64_t> &Counters,
-                   InstrProfSummaryBuilder &PB)
-      : F(F), Counters(Counters), PB(PB) {
+  ProfileAnnotator(Function &F, const SmallVectorImpl<uint64_t> &Counters)
+      : F(F), Counters(Counters) {
     assert(!F.isDeclaration());
     assert(!Counters.empty());
     size_t NrEdges = 0;
@@ -351,8 +349,6 @@ public:
               (TotalCount > TrueCount ? TotalCount - TrueCount : 0U);
           setProfMetadata(F.getParent(), SI, {TrueCount, FalseCount},
                           std::max(TrueCount, FalseCount));
-          PB.addInternalCount(TrueCount);
-          PB.addInternalCount(FalseCount);
         }
       }
     }
@@ -364,7 +360,6 @@ public:
     assert(!Counters.empty());
     propagateCounterValues(Counters);
     F.setEntryCount(Counters[0]);
-    PB.addEntryCount(Counters[0]);
 
     for (auto &BB : F) {
       const auto &BBInfo = getBBInfo(BB);
@@ -381,7 +376,6 @@ public:
         if (EdgeCount > MaxCount)
           MaxCount = EdgeCount;
         EdgeCounts[SuccIdx] = EdgeCount;
-        PB.addInternalCount(EdgeCount);
       }
 
       if (MaxCount != 0)
@@ -431,16 +425,20 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
   // e.g. synthetic weights, etc) because it wouldn't interfere with the
   // contextual - based one (which would be in other modules)
   auto OnExit = llvm::make_scope_exit([&]() {
+    if (IsPreThinlink)
+      return;
     for (auto &F : M)
       removeInstrumentation(F);
   });
   auto &CtxProf = MAM.getResult<CtxProfAnalysis>(M);
-  if (CtxProf.contexts().empty())
+  // post-thinlink, we only reprocess for the module(s) containing the
+  // contextual tree. For everything else, OnExit will just clean the
+  // instrumentation.
+  if (!IsPreThinlink && !CtxProf.isInSpecializedModule())
     return PreservedAnalyses::none();
 
   const auto FlattenedProfile = CtxProf.flatten();
 
-  InstrProfSummaryBuilder PB(ProfileSummaryBuilder::DefaultCutoffs);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -456,15 +454,26 @@ PreservedAnalyses PGOCtxProfFlatteningPass::run(Module &M,
     if (It == FlattenedProfile.end())
       clearColdFunctionProfile(F);
     else {
-      ProfileAnnotator S(F, It->second, PB);
+      ProfileAnnotator S(F, It->second);
       S.assignProfileData();
     }
   }
-
-  auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
+  InstrProfSummaryBuilder PB(ProfileSummaryBuilder::DefaultCutoffs);
+  // use here the flat profiles just so the importer doesn't complain about
+  // how different the PSIs are between the module with the roots and the
+  // various modules it imports.
+  for (auto &C : FlattenedProfile) {
+    PB.addEntryCount(C.second[0]);
+    for (auto V : llvm::drop_begin(C.second))
+      PB.addInternalCount(V);
+  }
 
   M.setProfileSummary(PB.getSummary()->getMD(M.getContext()),
                       ProfileSummary::Kind::PSK_Instr);
-  PSI.refresh();
+  PreservedAnalyses PA;
+  PA.abandon<ProfileSummaryAnalysis>();
+  MAM.invalidate(M, PA);
+  auto &PSI = MAM.getResult<ProfileSummaryAnalysis>(M);
+  PSI.refresh(PB.getSummary());
   return PreservedAnalyses::none();
 }
