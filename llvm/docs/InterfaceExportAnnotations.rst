@@ -1,6 +1,5 @@
 LLVM Interface Export Annotations
 =================================
-
 Symbols that are part of LLVM's public interface must be explicitly annotated
 to support shared library builds with hidden default symbol visibility. This
 document provides background and guidelines for annotating the codebase.
@@ -15,9 +14,14 @@ library with the following configuration:
    LLVM_BUILD_LLVM_DYLIB=On
    LLVM_LINK_LLVM_DYLIB=On
 
-For ELF and Mach-O builds, this configuration works as-is because all symbols
-are exported by default. To build a Windows DLL, however, the situation is more
-complex:
+There are three shared library executable formats we're interested in: PE
+Dynamic Link Library (.DLL) on Windows, Mach-O Shared Object (.dylib) on Apple
+systems, and ELF Shared Object (.so) on Linux, BSD and other Unix-like systems.
+
+ELF and Mach-O Shared Object files can be built with no additional setup or
+configuration. This is because all global symbols in the library are exported by
+default-- the same as when building a static library. However, when building a
+DLL for Windows, the situation is more complex:
 
 - Symbols are not exported from a DLL by default. Symbols must be annotated with
   ``__declspec(dllexport)`` when building the library to be externally visible.
@@ -27,6 +31,9 @@ complex:
 
 - A single Windows DLL can export a maximum of 65,535 symbols.
 
+Because of the requirements for Windows DLLs, additional work must be done to
+ensure the proper set of public symbols is exported and visible to clients.
+
 Annotation Macros
 -----------------
 The distinct DLL import and export annotations required for Windows DLLs
@@ -35,9 +42,9 @@ symbols in header public files. The custom macro resolves to the _export_
 annotation when building the library and the _import_ annotation when building
 the client.
 
-For this purpose, we have defined the `LLVM_ABI` macro in
-`llvm/Support/Compiler.h
-<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/Compiler.h#L152>`__.
+We have defined the `LLVM_ABI` macro in `llvm/Support/Compiler.h
+<https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Support/Compiler.h#L152>`__
+for this purpose:
 
 .. code:: cpp
 
@@ -47,9 +54,8 @@ For this purpose, we have defined the `LLVM_ABI` macro in
    #define LLVM_ABI __declspec(dllimport)
    #endif
 
-Because building LLVM for Windows is less common than ELF and Mach-O platforms,
-Windows DLL symbol visibility requirements are approximated on these platforms
-by setting default symbol visibility to hidden
+Windows DLL symbol visibility requirements are approximated on ELF and Mach-O
+shared library builds by setting default symbol visibility to hidden
 (``-fvisibility-default=hidden``) when building with the following
 configuration:
 
@@ -65,17 +71,22 @@ defined to override the default hidden symbol visibility:
    #define LLVM_ABI __attribute__((visibility("default")))
 
 In addition to ``LLVM_ABI``, there are a few other macros for use in less
-common cases described below. All ``LLVM_`` export macros are only for use with
-symbols defined in the LLVM library. They must not be used to annotate symbols
-defined in other LLVM projects such as lld, lldb, and clang. Their use should
-generally restricted to source code under ``llvm-project/llvm``.
+common cases described below.
+
+Export macros are used to annotate symbols only within their intended shared
+library. This is necessary because of the way Windows handles import/export
+annotations.
+
+For example, ``LLVM_ABI`` resolves to ``__declspec(dllexport)`` only when
+building source that is part of the LLVM shared library (e.g. source under
+``llvm-project/llvm``). If ``LLVM_ABI`` were incorrectly used to annotate a
+symbol from a different LLVM project (such as Clang) it would always resolve to
+``__declspec(dllimport)`` and the symbol would not be properly exported.
 
 Annotating Symbols
 ------------------
-
 Functions
 ~~~~~~~~~
-
 Exported function declarations in header files must be annotated with
 ``LLVM_ABI``.
 
@@ -87,7 +98,6 @@ Exported function declarations in header files must be annotated with
 
 Global Variables
 ~~~~~~~~~~~~~~~~
-
 Exported global variables must be annotated with ``LLVM_ABI`` at their
 ``extern`` declarations.
 
@@ -99,13 +109,13 @@ Exported global variables must be annotated with ``LLVM_ABI`` at their
 
 Classes, Structs, and Unions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 Classes, structs, and unions can be annotated with ``LLVM_ABI`` at their
-declaration, but this option is generally discouraged. Annotating the entire
-class exports unnecessary symbols, such as private functions, vtables, and
-type information. Instead, ``LLVM_ABI`` should be applied only to public and
-protected method declarations without a body in the header, including
-constructors and destructors.
+declaration, but this option is generally discouraged because it will
+export every class member, vtable, and type information. Instead, ``LLVM_ABI``
+should be applied to individual class members that require export.
+
+In the most common case, public and protected methods without a body in the
+class declaration must be annotated with ``LLVM_ABI``.
 
 .. code:: cpp
 
@@ -171,9 +181,47 @@ class.
      }
    };
 
+There are less common cases where you may also need to annotate an inline
+function even though it is fully defined in a header. Annotating an inline
+function for export does not prevent it being inlined into client code. However,
+it does ensure there is a single, stable address for the function exported from
+the shared library.
+
+.. code:: cpp
+
+   #include "llvm/Support/Compiler.h"
+
+   // Annotate the function so it is exported from the library at a fixed
+   // address.
+   LLVM_ABI inline int inlineFunction(int a, int b) {
+     return a + b;
+   }
+
+Similarly, if a stable pointer-to-member function address is required for a
+method in a C++ class, it may be annotated for export.
+
+.. code:: cpp
+
+   #include "llvm/Support/Compiler.h"
+
+   class ExampleClass {
+   public:
+     // Annotate the method so it is exported from the library at a fixed
+     // address.
+     LLVM_ABI inline int inlineMethod(int a, int b) {
+       return a + b;
+     }
+   };
+
+.. note::
+
+   When an inline function is annotated for export, the header containing the
+   function definition **must** be included by at least one of the library's
+   source files or the function will never be compiled with the export
+   annotation.
+
 Friend Functions
 ~~~~~~~~~~~~~~~~
-
 Friend functions declared in a class, struct or union must be annotated with
 ``LLVM_ABI`` if the corresponding function declaration is also annotated. This
 requirement applies even when the class itself is annotated with ``LLVM_ABI``.
@@ -199,7 +247,6 @@ requirement applies even when the class itself is annotated with ``LLVM_ABI``.
 
 VTable and Type Info
 ~~~~~~~~~~~~~~~~~~~~
-
 Classes and structs with exported virtual methods, or child classes that export
 overridden virtual methods, must also export their vtable for ELF and Mach-O
 builds. This can be achieved by annotating the class rather than individual
@@ -252,7 +299,6 @@ constructor and copy assignment operator will resolve the issue.
 
 Templates
 ~~~~~~~~~
-
 Most template classes are entirely header-defined and do not need to be exported
 because they will be instantiated and compiled into the client as needed. Such
 template classes require no export annotations. However, there are some less
@@ -260,7 +306,6 @@ common cases where annotations are required for templates.
 
 Specialized Template Functions
 ++++++++++++++++++++++++++++++
-
 As with any other exported function, an exported specialization of a template
 function not defined in a header file must have its declaration annotated with
 ``LLVM_ABI``.
@@ -297,7 +342,6 @@ its declaration annotated with ``LLVM_ABI``.
 
 Explicitly Instantiated Template Classes
 ++++++++++++++++++++++++++++++++++++++++
-
 Explicitly instantiated template classes must be annotated with
 template-specific annotations at both declaration and definition.
 
