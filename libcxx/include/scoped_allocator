@@ -110,7 +110,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 */
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/scoped_allocator>
+#  include <__cxx03/__config>
 #else
 #  include <__config>
 #  include <__memory/allocator_traits.h>
