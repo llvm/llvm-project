@@ -187,10 +187,6 @@ public:
   llvm::iterator_range<param_header_iterator> param_header() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
-  param_header_iterator param_header_begin() {
-    return ParametersHeaders.begin();
-  }
-  param_header_iterator param_header_end() { return ParametersHeaders.end(); }
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>

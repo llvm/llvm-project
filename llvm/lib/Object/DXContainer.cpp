@@ -20,10 +20,6 @@ static Error parseFailed(const Twine &Msg) {
   return make_error<GenericBinaryError>(Msg.str(), object_error::parse_failed);
 }
 
-static Error validationFailed(const Twine &Msg) {
-  return make_error<StringError>(Msg.str(), inconvertibleErrorCode());
-}
-
 template <typename T>
 static Error readStruct(StringRef Buffer, const char *Src, T &Struct) {
   // Don't read before the beginning or past the end of the file
