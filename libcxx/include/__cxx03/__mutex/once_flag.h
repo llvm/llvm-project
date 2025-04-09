@@ -10,10 +10,10 @@
 #define _LIBCPP___CXX03___MUTEX_ONCE_FLAG_H
 
 #include <__cxx03/__config>
-#include <__cxx03/__functional/invoke.h>
 #include <__cxx03/__memory/shared_ptr.h> // __libcpp_acquire_load
 #include <__cxx03/__tuple/tuple_indices.h>
 #include <__cxx03/__tuple/tuple_size.h>
+#include <__cxx03/__type_traits/invoke.h>
 #include <__cxx03/__utility/forward.h>
 #include <__cxx03/__utility/move.h>
 #include <__cxx03/cstdint>
