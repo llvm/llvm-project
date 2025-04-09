@@ -31,6 +31,10 @@ public:
   /// Run initializers after sections are discovered.
   void runSectionInitializers();
 
+  /// Execute metadata initializers when functions are discovered but not yet
+  /// disassembled.
+  void runInitializersPreDisasm();
+
   /// Execute initialization of rewriters while functions are disassembled, but
   /// CFG is not yet built.
   void runInitializersPreCFG();

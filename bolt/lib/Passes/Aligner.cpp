@@ -77,6 +77,11 @@ static void alignCompact(BinaryFunction &Function,
   size_t HotSize = 0;
   size_t ColdSize = 0;
 
+  if (!Function.hasProfile() && BC.isAArch64()) {
+    Function.setAlignment(Function.getMinAlignment());
+    return;
+  }
+
   for (const BinaryBasicBlock &BB : Function)
     if (BB.isSplit())
       ColdSize += BC.computeCodeSize(BB.begin(), BB.end(), Emitter);

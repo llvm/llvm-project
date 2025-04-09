@@ -84,10 +84,10 @@ void bolt::JumpTable::updateOriginal() {
   const uint64_t BaseOffset = getAddress() - getSection().getAddress();
   uint64_t EntryOffset = BaseOffset;
   for (MCSymbol *Entry : Entries) {
-    const uint32_t RelType =
-        Type == JTT_NORMAL ? ELF::R_X86_64_64 : ELF::R_X86_64_PC32;
+    const uint64_t RelType =
+        Type == JTT_X86_64_ABS ? ELF::R_X86_64_64 : ELF::R_X86_64_PC32;
     const uint64_t RelAddend =
-        Type == JTT_NORMAL ? 0 : EntryOffset - BaseOffset;
+        Type == JTT_X86_64_ABS ? 0 : EntryOffset - BaseOffset;
     // Replace existing relocation with the new one to allow any modifications
     // to the original jump table.
     if (BC.HasRelocations)
@@ -99,7 +99,7 @@ void bolt::JumpTable::updateOriginal() {
 
 void bolt::JumpTable::print(raw_ostream &OS) const {
   uint64_t Offset = 0;
-  if (Type == JTT_PIC)
+  if (Type == JTT_X86_64_PIC4)
     OS << "PIC ";
   ListSeparator LS;
 
