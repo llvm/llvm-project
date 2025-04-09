@@ -3150,16 +3150,6 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
   if (Type->isSamplerT() || Type->isVoidType())
     return;
 
-  // Template instantiations can lack definition. In such case,
-  // we cannot deduce the AS.
-  // FIXME: figure out why RWBuffer<float> yields such declaration.
-  if (const RecordType *RT =
-          dyn_cast<RecordType>(Type->getUnqualifiedDesugaredType())) {
-    CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
-    if (RD && !RD->isCompleteDefinition())
-      return;
-  }
-
   // Resource handles.
   if (isResourceRecordTypeOrArrayOf(Type->getUnqualifiedDesugaredType()))
     return;
