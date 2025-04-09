@@ -12,7 +12,7 @@
 
 // class map
 
-// insert_return_type insert(node_type&&); // constexpr since C++26
+// insert_return_type insert(node_type&&);
 
 #include <map>
 #include <memory>
@@ -96,18 +96,11 @@ void test(Container& c) {
   }
 }
 
-TEST_CONSTEXPR_CXX26 bool test() {
+int main(int, char**) {
   std::map<int, int> m;
   test(m);
   std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
   test(m2);
-return true;
-}
 
-int main(int, char**) {
-assert(test());
-#if TEST_STD_VER >= 26
-  static_assert(test());
-#endif
   return 0;
 }
