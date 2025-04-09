@@ -199,6 +199,8 @@ private:
                   std::is_same<RecipeTy, VPDerivedIVRecipe>::value ||
                   std::is_same<RecipeTy, VPWidenGEPRecipe>::value)
       return DefR;
+    else if constexpr (std::is_same<RecipeTy, VPWidenIntrinsicRecipe>::value)
+      return DefR && DefR->getVectorIntrinsicID() == Opcode;
     else
       return DefR && DefR->getOpcode() == Opcode;
   }
@@ -438,6 +440,33 @@ inline VPDerivedIV_match<Op0_t, Op1_t, Op2_t>
 m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
+
+template <Intrinsic::ID IntrinsicID, typename... OpTys>
+using VPWidenIntrinsicMatch = Recipe_match<std::tuple<OpTys...>, IntrinsicID,
+                                           false, VPWidenIntrinsicRecipe>;
+
+template <Intrinsic::ID IntrinsicID, typename Op0_t, typename Op1_t,
+          typename Op2_t, typename Op3_t>
+inline VPWidenIntrinsicMatch<IntrinsicID, Op0_t, Op1_t, Op2_t, Op3_t>
+m_WidenIntrinsic(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2,
+                 const Op3_t &Op3) {
+  return VPWidenIntrinsicMatch<IntrinsicID, Op0_t, Op1_t, Op2_t, Op3_t>(
+      {Op0, Op1, Op2, Op3});
+}
+
+/// Intrinsic matchers.
+struct IntrinsicID_match {
+  unsigned ID;
+
+  IntrinsicID_match(Intrinsic::ID IntrID) : ID(IntrID) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (const auto *CI = dyn_cast<CallInst>(V))
+      if (const auto *F = CI->getCalledFunction())
+        return F->getIntrinsicID() == ID;
+    return false;
+  }
+};
 
 } // namespace VPlanPatternMatch
 } // namespace llvm
