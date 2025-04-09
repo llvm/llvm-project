@@ -63,9 +63,12 @@ int h(int (&)() noexcept);
 void h(int (*)());
 int k = h(arg);
 
-int a(int (*)()); // expected-note {{candidate function}}
-int a(int (&)()); // expected-note {{candidate function}}
-int x = a(arg); // expected-error {{call to 'a' is ambiguous}}
+int a(int (*)());
+int a(int (&)());
+int x = a(arg);
+// expected-error@-1 {{call to 'a' is ambiguous}}
+//   expected-note@-3 {{candidate function}}
+//   expected-note@-3 {{candidate function}}
 #endif
 } // namespace cwg2815
 
