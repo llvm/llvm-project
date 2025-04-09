@@ -33,13 +33,10 @@ Location MapASTVisitor::getDeclLocation(const NamedDecl *D) const {
   llvm::SmallString<128> File =
       getFile(D, D->getASTContext(), CDCtx.SourceRoot, IsFileInRootDir);
   ASTContext &Context = D->getASTContext();
-  int Start = Context.getSourceManager()
-                  .getPresumedLoc(D->getBeginLoc())
-                  .getLine();
-  int End = Context.getSourceManager()
-                .getPresumedLoc(D->getEndLoc())
-                .getLine();
-  
+  int Start =
+      Context.getSourceManager().getPresumedLoc(D->getBeginLoc()).getLine();
+  int End = Context.getSourceManager().getPresumedLoc(D->getEndLoc()).getLine();
+
   return Location(Start, End, File, IsFileInRootDir);
 }
 

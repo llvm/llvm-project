@@ -37,31 +37,31 @@ namespace serialize {
 // its parent scope. For NamespaceDecl and RecordDecl both elements are not
 // nullptr.
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly);
 
 // Function to hash a given USR value for storage.

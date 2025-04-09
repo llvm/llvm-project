@@ -238,9 +238,8 @@ struct MemberTypeInfo : public FieldTypeInfo {
 };
 
 struct Location {
-  Location(int StartLineNumber = 0, 
-           int EndLineNumber = 0, StringRef Filename = StringRef(),
-           bool IsFileInRootDir = false)
+  Location(int StartLineNumber = 0, int EndLineNumber = 0,
+           StringRef Filename = StringRef(), bool IsFileInRootDir = false)
       : StartLineNumber(StartLineNumber), EndLineNumber(EndLineNumber),
         Filename(Filename), IsFileInRootDir(IsFileInRootDir) {}
 
@@ -263,7 +262,7 @@ struct Location {
            std::tie(Other.StartLineNumber, Other.Filename);
   }
 
-  int StartLineNumber = 0;           // Line number of this Location.
+  int StartLineNumber = 0; // Line number of this Location.
   int EndLineNumber = 0;
   SmallString<32> Filename;     // File for this Location.
   bool IsFileInRootDir = false; // Indicates if file is inside root directory

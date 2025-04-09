@@ -527,8 +527,7 @@ static void populateInfo(Info &I, const T *D, const FullComment *C,
 
 template <typename T>
 static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
-                               Location Loc,
-                               bool &IsInAnonymousNamespace) {
+                               Location Loc, bool &IsInAnonymousNamespace) {
   populateInfo(I, D, C, IsInAnonymousNamespace);
   if (D->isThisDeclarationADefinition())
     I.DefLoc = Loc;
@@ -537,8 +536,7 @@ static void populateSymbolInfo(SymbolInfo &I, const T *D, const FullComment *C,
 }
 
 static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
-                                 const FullComment *FC, 
-                                 Location Loc,
+                                 const FullComment *FC, Location Loc,
                                  bool &IsInAnonymousNamespace) {
   populateSymbolInfo(I, D, FC, Loc, IsInAnonymousNamespace);
   auto &LO = D->getLangOpts();
@@ -569,7 +567,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
 static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
-  ASTContext& Context = D->getASTContext();
+  ASTContext &Context = D->getASTContext();
   // TODO investigate whether we can use ASTContext::getCommentForDecl instead
   // of this logic. See also similar code in Mapper.cpp.
   RawComment *Comment = Context.getRawCommentForDeclNoCache(D);
@@ -639,7 +637,7 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
   auto I = std::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
@@ -660,8 +658,8 @@ emitInfo(const NamespaceDecl *D, const FullComment *FC, Location Loc,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const RecordDecl *D, const FullComment *FC, 
-         Location Loc, bool PublicOnly) {
+emitInfo(const RecordDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly) {
   auto I = std::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*I, D, FC, Loc, IsInAnonymousNamespace);
@@ -726,28 +724,28 @@ emitInfo(const RecordDecl *D, const FullComment *FC,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const FunctionDecl *D, const FullComment *FC,
-         Location Loc, bool PublicOnly) {
+emitInfo(const FunctionDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
   Func.Access = clang::AccessSpecifier::AS_none;
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
-  
+
   // Info is wrapped in its parent scope so is returned in the second position.
   return {nullptr, MakeAndInsertIntoParent<FunctionInfo &&>(std::move(Func))};
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-         Location Loc, bool PublicOnly) {
+emitInfo(const CXXMethodDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, Loc, IsInAnonymousNamespace);
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
-  
+
   Func.IsMethod = true;
 
   const NamedDecl *Parent = nullptr;
@@ -768,21 +766,21 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
-  
+
   TypedefInfo Info;
-  ASTContext& Context = D->getASTContext();
+  ASTContext &Context = D->getASTContext();
   bool IsInAnonymousNamespace = false;
   populateInfo(Info, D, FC, IsInAnonymousNamespace);
-  
+
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
-  
+
   Info.DefLoc = Loc;
   auto &LO = D->getLangOpts();
   Info.Underlying = getTypeInfoForType(D->getUnderlyingType(), LO);
-  
+
   if (Info.Underlying.Type.Name.empty()) {
     // Typedef for an unnamed type. This is like "typedef struct { } Foo;"
     // The record serializer explicitly checks for this syntax and constructs
@@ -804,8 +802,8 @@ emitInfo(const TypedefDecl *D, const FullComment *FC, Location Loc,
 // A type alias is a C++ "using" declaration for a type. It gets mapped to a
 // TypedefInfo with the IsUsing flag set.
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const TypeAliasDecl *D, const FullComment *FC, 
-         Location Loc, bool PublicOnly) {
+emitInfo(const TypeAliasDecl *D, const FullComment *FC, Location Loc,
+         bool PublicOnly) {
   TypedefInfo Info;
 
   bool IsInAnonymousNamespace = false;
@@ -823,15 +821,15 @@ emitInfo(const TypeAliasDecl *D, const FullComment *FC,
 }
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc, 
+emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
          bool PublicOnly) {
   EnumInfo Enum;
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(Enum, D, FC, Loc, IsInAnonymousNamespace);
-  
+
   if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
     return {};
-  
+
   Enum.Scoped = D->isScoped();
   if (D->isFixed()) {
     auto Name = D->getIntegerType().getAsString();
