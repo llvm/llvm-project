@@ -4660,9 +4660,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         From->getExprLoc(), From->getSourceRange(), CStyle,
         MemberPointerConversionDirection::Downcast)) {
     case MemberPointerConversionResult::Success:
-      assert(Kind != CK_NullToMemberPointer ||
+      assert((Kind != CK_NullToMemberPointer ||
              From->isNullPointerConstant(Context,
-                                         Expr::NPC_ValueDependentIsNull) &&
+                                         Expr::NPC_ValueDependentIsNull)) &&
                  "Expr must be null pointer constant!");
       break;
     case MemberPointerConversionResult::Inaccessible:
