@@ -6,7 +6,7 @@
 
 -->
 
-# Flang OpenMP Standards Support
+# Flang OpenMP Support
 
 ```{contents}
 ---
@@ -14,15 +14,17 @@ local:
 ---
 ```
 
-This document summarizes OpenMP standards support in Flang. The information is only provided as a guideline. The
-TODOs/Not Yet Implemented messages emitted by the compiler for unimplemented features should be treated as authoritative.
-As of March 2025, standards support is provided upto OpenMP 4.0. We are actively working towards supporting OpenMP 4.5, OpenMP 5.* and OpenMP 6.0.
+This document outlines the OpenMP API features supported by Flang. It is intended as a general reference.
+For the most accurate information on unimplemented features, rely on the compiler’s TODO or “Not Yet Implemented”
+messages, which are considered authoritative. Flang provides full support for OpenMP 3.1 and partial support for
+OpenMP 4.0. The table below details the current support for OpenMP 4.0 features. Work is ongoing to add support
+for OpenMP 4.5 and newer versions; an official support statement for these will be shared in the future.
 
-The standards support information is provided as a table with three columns that are self explanatory. The Status column uses
+The feature support information is provided as a table with three columns that are self explanatory. The Status column uses
 the letters **P**, **Y**, **N** for the implementation status:
-- **P** : When the implementation is incomplete for a few cases
-- **Y** : When the implementation is complete
-- **N** : When the implementation is absent
+- **P** : Partial. When the implementation is incomplete for a few cases
+- **Y** : Yes. When the implementation is complete
+- **N** : No. When the implementation is absent
 
 Note : No distinction is made between the support in Parser/Semantics, MLIR, Lowering or the OpenMPIRBuilder.
 
@@ -59,4 +61,4 @@ Note : No distinction is made between the support in Parser/Semantics, MLIR, Low
 | target teams distribute parallel loop simd construct       | P      | |
 
 ## OpenMP 3.1, OpenMP 2.5, OpenMP 1.1
-All features except a few corner cases in atomic, copyin constructs/clauses are supported 
+All features except a few corner cases in atomic (complex type, different but compatible types in lhs and rhs), threadprivate (character type) constructs/clauses are supported.
