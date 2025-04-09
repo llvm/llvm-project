@@ -4,6 +4,7 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
+; TODO: Enable gfx13, right now it is asserting in splitBinaryVectorOp
 
 define <3 x float> @bitcast_v3i32_to_v3f32(<3 x i32> %a, i32 %b) {
 ; GCN-LABEL: bitcast_v3i32_to_v3f32:
