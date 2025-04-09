@@ -39827,7 +39827,6 @@ static SDValue combineX86ShuffleChain(
 
     // If we're inserting the low subvector, an insert-subvector 'concat'
     // pattern is quicker than VPERM2X128.
-    // TODO: Add AVX2 support instead of VPERMQ/VPERMPD.
     if (BaseMask[0] == 0 && (BaseMask[1] == 0 || BaseMask[1] == 2) &&
         !Subtarget.hasAVX2()) {
       if (Depth == 0 && RootOpc == ISD::INSERT_SUBVECTOR)
@@ -39838,15 +39837,15 @@ static SDValue combineX86ShuffleChain(
       return insertSubVector(Lo, Hi, NumRootElts / 2, DAG, DL, 128);
     }
 
-    if (Depth == 0 && RootOpc == X86ISD::VPERM2X128)
-      return SDValue(); // Nothing to do!
-
-    // If we have AVX2, prefer to use VPERMQ/VPERMPD for unary shuffles unless
-    // we need to use the zeroing feature.
+    // Don't lower to VPERM2X128 here if we have AVX2+, prefer to use
+    // VPERMQ/VPERMPD for unary shuffles unless we need to use the zeroing
+    // feature.
     // Prefer blends for sequential shuffles unless we are optimizing for size.
     if (UnaryShuffle &&
         !(Subtarget.hasAVX2() && isUndefOrInRange(Mask, 0, 2)) &&
         (OptForSize || !isSequentialOrUndefOrZeroInRange(Mask, 0, 2, 0))) {
+      if (Depth == 0 && RootOpc == X86ISD::VPERM2X128)
+        return SDValue(); // Nothing to do!
       unsigned PermMask = 0;
       PermMask |= ((Mask[0] < 0 ? 0x8 : (Mask[0] & 1)) << 0);
       PermMask |= ((Mask[1] < 0 ? 0x8 : (Mask[1] & 1)) << 4);
@@ -39864,6 +39863,8 @@ static SDValue combineX86ShuffleChain(
              "Unexpected shuffle sentinel value");
       // Prefer blends to X86ISD::VPERM2X128.
       if (!((Mask[0] == 0 && Mask[1] == 3) || (Mask[0] == 2 && Mask[1] == 1))) {
+        if (Depth == 0 && RootOpc == X86ISD::VPERM2X128)
+          return SDValue(); // Nothing to do!
         unsigned PermMask = 0;
         PermMask |= ((Mask[0] & 3) << 0);
         PermMask |= ((Mask[1] & 3) << 4);
@@ -41115,30 +41116,37 @@ static SDValue combineX86ShufflesRecursively(
     }
   }
 
+  // Peek through any free bitcasts to insert_subvector vector widenings or
+  // extract_subvector nodes back to root size.
+  // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
   for (auto [I, Op] : enumerate(Ops)) {
-    // Peek through vector widenings + set out of bounds mask indices to undef.
-    // TODO: Can resolveTargetShuffleInputsAndMask do some of this?
-    if (Op.getOpcode() == ISD::INSERT_SUBVECTOR && Op.getOperand(0).isUndef() &&
-        isNullConstant(Op.getOperand(2))) {
-      Op = Op.getOperand(1);
-      unsigned Scale = RootSizeInBits / Op.getValueSizeInBits();
-      int Lo = I * Mask.size();
-      int Hi = (I + 1) * Mask.size();
-      int NewHi = Lo + (Mask.size() / Scale);
-      for (int &M : Mask) {
-        if (Lo <= M && NewHi <= M && M < Hi)
-          M = SM_SentinelUndef;
-      }
-    }
-
-    // Peek through any free bitcasts/extract_subvector nodes back to root size.
     SDValue BC = Op;
-    if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse())
-      BC = peekThroughOneUseBitcasts(BC);
-    while (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-           (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
-           isNullConstant(BC.getOperand(1))) {
-      Op = BC = BC.getOperand(0);
+    while (1) {
+      if (BC.getOpcode() == ISD::BITCAST && BC.hasOneUse()) {
+        BC = BC.getOperand(0);
+        continue;
+      }
+      if (BC.getOpcode() == ISD::INSERT_SUBVECTOR &&
+          BC.getOperand(0).isUndef() && isNullConstant(BC.getOperand(2))) {
+        // Set out of bounds mask indices to undef.
+        Op = BC = BC.getOperand(1);
+        unsigned Scale = RootSizeInBits / Op.getValueSizeInBits();
+        int Lo = I * Mask.size();
+        int Hi = (I + 1) * Mask.size();
+        int NewHi = Lo + (Mask.size() / Scale);
+        for (int &M : Mask) {
+          if (Lo <= M && NewHi <= M && M < Hi)
+            M = SM_SentinelUndef;
+        }
+        continue;
+      }
+      if (BC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+          (RootSizeInBits % BC.getOperand(0).getValueSizeInBits()) == 0 &&
+          isNullConstant(BC.getOperand(1))) {
+        Op = BC = BC.getOperand(0);
+        continue;
+      }
+      break;
     }
   }
 

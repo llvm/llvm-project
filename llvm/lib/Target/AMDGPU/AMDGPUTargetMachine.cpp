@@ -542,7 +542,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
-  initializeSIPreEmitPeepholePass(*PR);
+  initializeSIPreEmitPeepholeLegacyPass(*PR);
   initializeSILateBranchLoweringLegacyPass(*PR);
   initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
@@ -2173,9 +2173,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less))
     addPass(AMDGPUSetWavePriorityPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None) {
-    // TODO: addPass(SIPreEmitPeepholePass());
-  }
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    addPass(SIPreEmitPeepholePass());
 
   // The hazard recognizer that runs as part of the post-ra scheduler does not
   // guarantee to be able handle all hazards correctly. This is because if there
