@@ -57,10 +57,11 @@ static const unsigned SPIRDefIsPrivMap[] = {
 // Used by both the SPIR and SPIR-V targets.
 static const unsigned SPIRDefIsGenMap[] = {
     4, // Default
-    // OpenCL address space values for this map are dummy and they can't be used
-    0, // opencl_global
+    // Some OpenCL address space values for this map are dummy and they can't be
+    // used
+    1, // opencl_global
     0, // opencl_local
-    0, // opencl_constant
+    2, // opencl_constant
     0, // opencl_private
     0, // opencl_generic
     0, // opencl_global_device
@@ -216,7 +217,8 @@ public:
         /*DefaultIsGeneric=*/Opts.SYCLIsDevice ||
         // The address mapping from HIP/CUDA language for device code is only
         // defined for SPIR-V.
-        (getTriple().isSPIRV() && Opts.CUDAIsDevice));
+        (getTriple().isSPIRV() &&
+         (Opts.CUDAIsDevice || Opts.OpenMPIsTargetDevice)));
   }
 
   void setSupportedOpenCLOpts() override {
