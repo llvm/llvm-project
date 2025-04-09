@@ -4477,6 +4477,26 @@ private:
   /// the current configuration.
   bool supportsUnifiedMemoryImpl() override final { return IsXnackEnabled; }
 
+  /// Get the normalized marketing name of the device.
+  /// It only targets Instinct MI series for now.
+  /// e.g AMD Instinct MI210 => MI210
+  std::string getNormMarketingName() const {
+    char MarketingName[64];
+    hsa_status_t Status = hsa_agent_get_info(
+        Agent, static_cast<hsa_agent_info_t>(HSA_AMD_AGENT_INFO_PRODUCT_NAME),
+        MarketingName);
+
+    if (Status != HSA_STATUS_SUCCESS)
+      return "UNKNOWN";
+
+    // Normalize
+    const char *MIPos = strstr(MarketingName, "MI");
+    if (MIPos)
+      return std::string(MIPos);
+
+    return "UNKNOWN";
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;
