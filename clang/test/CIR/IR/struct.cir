@@ -1,0 +1,9 @@
+// RUN: cir-opt %s | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module  {
+    cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>
+}
+
+// CHECK: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>

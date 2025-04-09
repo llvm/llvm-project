@@ -401,12 +401,125 @@ def VoidPtr : Type<
 }
 
 //===----------------------------------------------------------------------===//
+// StructType
+//
+// The base type for all RecordDecls.
+//===----------------------------------------------------------------------===//
+
+def CIR_StructType : CIR_Type<"Struct", "struct",
+    [
+      DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+      MutableType,
+    ]> {
+  let summary = "CIR struct type";
+  let description = [{
+    Each unique clang::RecordDecl is mapped to a `cir.struct` and any object in
+    C/C++ that has a struct type will have a `cir.struct` in CIR.
+
+    There are three possible formats for this type:
+
+     - Identified and complete structs: unique name and a known body.
+     - Identified and incomplete structs: unique name and unknown body.
+     - Anonymous structs: no name and a known body.
+
+    Identified structs are uniqued by their name, and anonymous structs are
+    uniqued by their body. This means that two anonymous structs with the same
+    body will be the same type, and two identified structs with the same name
+    will be the same type. Attempting to build a struct with an existing name,
+    but a different body will result in an error.
+
+    A few examples:
+
+    ```mlir
+        !complete = !cir.struct<struct "complete" {!cir.int<u, 8>}>
+        !incomplete = !cir.struct<struct "incomplete" incomplete>
+        !anonymous = !cir.struct<struct {!cir.int<u, 8>}>
+    ```
+
+    Incomplete structs are mutable, meaning they can be later completed with a
+    body automatically updating in place every type in the code that uses the
+    incomplete struct. Mutability allows for recursive types to be represented,
+    meaning the struct can have members that refer to itself. This is useful for
+    representing recursive records and is implemented through a special syntax.
+    In the example below, the `Node` struct has a member that is a pointer to a
+    `Node` struct:
+
+    ```mlir
+        !struct = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct
+        "Node">>}>
+    ```
+  }];
+
+  let parameters = (ins
+    OptionalArrayRefParameter<"mlir::Type">:$members,
+    OptionalParameter<"mlir::StringAttr">:$name,
+    "bool":$incomplete,
+    "bool":$packed,
+    "bool":$padded,
+    "StructType::RecordKind":$kind
+  );
+
+  // StorageClass is defined in C++ for mutability.
+  let storageClass = "StructTypeStorage";
+  let genStorageClass = 0;
+
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+
+  let builders = [
+    // Create an identified and incomplete struct type.
+    TypeBuilder<(ins
+      "mlir::StringAttr":$name,
+      "RecordKind":$kind
+    ), [{
+      return $_get($_ctxt, /*members=*/llvm::ArrayRef<Type>{}, name,
+                         /*incomplete=*/true, /*packed=*/false,
+                         /*padded=*/false, kind);
+    }]>];
+
+  let extraClassDeclaration = [{
+    using Base::verifyInvariants;
+
+    enum RecordKind : uint32_t { Class, Union, Struct };
+
+    bool isClass() const { return getKind() == RecordKind::Class; };
+    bool isStruct() const { return getKind() == RecordKind::Struct; };
+    bool isUnion() const { return getKind() == RecordKind::Union; };
+    bool isComplete() const { return !isIncomplete(); };
+    bool isIncomplete() const;
+
+    size_t getNumElements() const { return getMembers().size(); };
+    std::string getKindAsStr() {
+      switch (getKind()) {
+      case RecordKind::Class:
+        return "class";
+      case RecordKind::Union:
+        return "union";
+      case RecordKind::Struct:
+        return "struct";
+      }
+      llvm_unreachable("Invalid value for StructType::getKind()");
+    }
+    std::string getPrefixedName() {
+      return getKindAsStr() + "." + getName().getValue().str();
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+}
+
+// Note CIRStructType is used instead of CIR_StructType
+// because of tablegen conflicts.
+def CIRStructType : Type<
+  CPred<"::mlir::isa<::cir::StructType>($_self)">, "CIR struct type">;
+
+//===----------------------------------------------------------------------===//
 // Global type constraints
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
-  CIR_PointerType, CIR_FuncType
+  CIR_PointerType, CIR_FuncType, CIR_StructType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

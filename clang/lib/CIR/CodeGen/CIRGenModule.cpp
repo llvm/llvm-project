@@ -589,6 +589,10 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
     break;
+
+  case Decl::Record:
+    assert(!cir::MissingFeatures::generateDebugInfo());
+    break;
   }
 }
 

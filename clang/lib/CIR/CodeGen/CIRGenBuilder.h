@@ -20,10 +20,23 @@ namespace clang::CIRGen {
 
 class CIRGenBuilderTy : public cir::CIRBaseBuilderTy {
   const CIRGenTypeCache &typeCache;
+  llvm::StringMap<unsigned> recordNames;
 
 public:
   CIRGenBuilderTy(mlir::MLIRContext &mlirContext, const CIRGenTypeCache &tc)
       : CIRBaseBuilderTy(mlirContext), typeCache(tc) {}
+
+  std::string getUniqueAnonRecordName() { return getUniqueRecordName("anon"); }
+
+  std::string getUniqueRecordName(const std::string &baseName) {
+    auto it = recordNames.find(baseName);
+    if (it == recordNames.end()) {
+      recordNames[baseName] = 0;
+      return baseName;
+    }
+
+    return baseName + "." + std::to_string(recordNames[baseName]++);
+  }
 
   cir::LongDoubleType getLongDoubleTy(const llvm::fltSemantics &format) const {
     if (&format == &llvm::APFloat::IEEEdouble())
@@ -35,6 +48,32 @@ public:
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  /// Get a CIR record kind from a AST declaration tag.
+  cir::StructType::RecordKind getRecordKind(const clang::TagTypeKind kind) {
+    switch (kind) {
+    case clang::TagTypeKind::Struct:
+      return cir::StructType::Struct;
+    case clang::TagTypeKind::Union:
+      return cir::StructType::Union;
+    case clang::TagTypeKind::Class:
+      return cir::StructType::Class;
+    case clang::TagTypeKind::Interface:
+      llvm_unreachable("interface records are NYI");
+    case clang::TagTypeKind::Enum:
+      llvm_unreachable("enum records are NYI");
+    }
+  }
+
+  /// Get an incomplete CIR struct type.
+  cir::StructType getIncompleteStructTy(llvm::StringRef name,
+                                        const clang::RecordDecl *rd) {
+    const mlir::StringAttr nameAttr = getStringAttr(name);
+    cir::StructType::RecordKind kind = cir::StructType::RecordKind::Struct;
+    if (rd)
+      kind = getRecordKind(rd->getTagKind());
+    return getType<cir::StructType>(nameAttr, kind);
   }
 
   bool isSized(mlir::Type ty) {
