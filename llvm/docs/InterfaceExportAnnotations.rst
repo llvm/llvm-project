@@ -246,7 +246,7 @@ requirement applies even when the class itself is annotated with ``LLVM_ABI``.
    required when building ELF or Mach-O shared libraries.
 
 Virtual Table and Type Info
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Classes and structs with exported virtual methods, or child classes that export
 overridden virtual methods, must also export their vtable for ELF and Mach-O
 builds. This can be achieved by annotating the class rather than individual
