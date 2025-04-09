@@ -25,6 +25,7 @@ class Argument;
 class BBIterator;
 class Constant;
 class Module;
+class Region;
 class Value;
 class Use;
 

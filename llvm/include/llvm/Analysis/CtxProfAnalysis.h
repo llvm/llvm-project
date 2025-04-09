@@ -21,6 +21,10 @@ namespace llvm {
 
 class CtxProfAnalysis;
 
+using FlatIndirectTargets = DenseMap<GlobalValue::GUID, uint64_t>;
+using CtxProfFlatIndirectCallProfile =
+    DenseMap<GlobalValue::GUID, DenseMap<uint32_t, FlatIndirectTargets>>;
+
 /// The instrumented contextual profile, produced by the CtxProfAnalysis.
 class PGOContextualProfile {
   friend class CtxProfAnalysis;
@@ -61,7 +65,7 @@ public:
 
   const PGOCtxProfile &profiles() const { return Profiles; }
 
-  bool isInSpecializedModule() const { return IsInSpecializedModule; }
+  bool isInSpecializedModule() const;
 
   bool isFunctionKnown(const Function &F) const {
     return getDefinedFunctionGUID(F) != 0;
@@ -101,6 +105,7 @@ public:
   void visit(ConstVisitor, const Function *F = nullptr) const;
 
   const CtxProfFlatProfile flatten() const;
+  const CtxProfFlatIndirectCallProfile flattenVirtCalls() const;
 
   bool invalidate(Module &, const PreservedAnalyses &PA,
                   ModuleAnalysisManager::Invalidator &) {
