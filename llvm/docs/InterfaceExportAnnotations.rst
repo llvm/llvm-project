@@ -20,7 +20,7 @@ systems, and ELF Shared Object (.so) on Linux, BSD and other Unix-like systems.
 
 ELF and Mach-O Shared Object files can be built with no additional setup or
 configuration. This is because all global symbols in the library are exported by
-default-- the same as when building a static library. However, when building a
+default -- the same as when building a static library. However, when building a
 DLL for Windows, the situation is more complex:
 
 - Symbols are not exported from a DLL by default. Symbols must be annotated with
