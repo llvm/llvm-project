@@ -263,11 +263,11 @@ Retry:
                                 GNUAttrs);
       }
       if (CXX11Attrs.Range.getBegin().isValid()) {
-        // The caller must guarantee that the CXX11Attrs appear before the
-        // GNUAttrs, and we rely on that here.
-        assert(GNUAttrs.Range.getBegin().isInvalid() ||
-               GNUAttrs.Range.getBegin() > CXX11Attrs.Range.getBegin());
-        DeclStart = CXX11Attrs.Range.getBegin();
+        // Order of C++11 and GNU attributes is may be arbitrary.
+        DeclStart = GNUAttrs.Range.getBegin().isInvalid()
+                        ? CXX11Attrs.Range.getBegin()
+                        : std::min(CXX11Attrs.Range.getBegin(),
+                                   GNUAttrs.Range.getBegin());
       } else if (GNUAttrs.Range.getBegin().isValid())
         DeclStart = GNUAttrs.Range.getBegin();
       return Actions.ActOnDeclStmt(Decl, DeclStart, DeclEnd);
