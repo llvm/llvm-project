@@ -31,6 +31,9 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/DILEval.h"
+#include "lldb/ValueObject/DILLexer.h"
+#include "lldb/ValueObject/DILParser.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectMemory.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -523,10 +526,42 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
 ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
     uint32_t options, lldb::VariableSP &var_sp, Status &error) {
-  // This is a place-holder for the calls into the DIL parser and
-  // evaluator.  For now, just call the "real" frame variable implementation.
-  return LegacyGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
-                                                 var_sp, error);
+
+  const bool check_ptr_vs_member =
+      (options & eExpressionPathOptionCheckPtrVsMember) != 0;
+  const bool no_fragile_ivar =
+      (options & eExpressionPathOptionsNoFragileObjcIvar) != 0;
+  const bool no_synth_child =
+      (options & eExpressionPathOptionsNoSyntheticChildren) != 0;
+
+  // Lex the expression.
+  auto lex_or_err = dil::DILLexer::Create(var_expr);
+  if (!lex_or_err) {
+    error = Status::FromError(lex_or_err.takeError());
+    return ValueObjectSP();
+  }
+
+  // Parse the expression.
+  auto tree_or_error = dil::DILParser::Parse(
+      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
+      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
+  if (!tree_or_error) {
+    error = Status::FromError(tree_or_error.takeError());
+    return ValueObjectSP();
+  }
+
+  // Evaluate the parsed expression.
+  lldb::TargetSP target = this->CalculateTarget();
+  dil::Interpreter interpreter(target, var_expr, use_dynamic,
+                               shared_from_this());
+
+  auto valobj_or_error = interpreter.Evaluate((*tree_or_error).get());
+  if (!valobj_or_error) {
+    error = Status::FromError(valobj_or_error.takeError());
+    return ValueObjectSP();
+  }
+
+  return *valobj_or_error;
 }
 
 ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(

@@ -19,6 +19,7 @@
 #include "flang/Runtime/iostat-consts.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include <optional>
 
@@ -266,6 +267,10 @@ struct IntrinsicLibrary {
   mlir::Value genFraction(mlir::Type resultType,
                           mlir::ArrayRef<mlir::Value> args);
   void genFree(mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFseek(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
+  fir::ExtendedValue genFtell(std::optional<mlir::Type>,
+                              mlir::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genGetCwd(std::optional<mlir::Type> resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
   void genGetCommand(mlir::ArrayRef<fir::ExtendedValue> args);
@@ -378,6 +383,8 @@ struct IntrinsicLibrary {
   mlir::Value genPoppar(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genPresent(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genProduct(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genPutenv(std::optional<mlir::Type>,
+                               llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomInit(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomNumber(llvm::ArrayRef<fir::ExtendedValue>);
   void genRandomSeed(llvm::ArrayRef<fir::ExtendedValue>);
@@ -429,6 +436,7 @@ struct IntrinsicLibrary {
                                mlir::ArrayRef<fir::ExtendedValue> args);
   void genSystemClock(llvm::ArrayRef<fir::ExtendedValue>);
   mlir::Value genTand(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  mlir::Value genTime(mlir::Type, llvm::ArrayRef<mlir::Value>);
   mlir::Value genTrailz(mlir::Type, llvm::ArrayRef<mlir::Value>);
   fir::ExtendedValue genTransfer(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
@@ -439,9 +447,12 @@ struct IntrinsicLibrary {
   void genThreadFenceSystem(llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genTrim(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genUbound(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
+  fir::ExtendedValue genUnlink(std::optional<mlir::Type> resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   fir::ExtendedValue genUnpack(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
   fir::ExtendedValue genVerify(mlir::Type, llvm::ArrayRef<fir::ExtendedValue>);
-  mlir::Value genVoteAllSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
+  template <mlir::NVVM::VoteSyncKind kind>
+  mlir::Value genVoteSync(mlir::Type, llvm::ArrayRef<mlir::Value>);
 
   /// Implement all conversion functions like DBLE, the first argument is
   /// the value to convert. There may be an additional KIND arguments that

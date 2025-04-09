@@ -10,20 +10,8 @@
 #ifndef _LIBCPP___CXX03___ITERATOR_MOVE_ITERATOR_H
 #define _LIBCPP___CXX03___ITERATOR_MOVE_ITERATOR_H
 
-#include <__cxx03/__compare/compare_three_way_result.h>
-#include <__cxx03/__compare/three_way_comparable.h>
-#include <__cxx03/__concepts/assignable.h>
-#include <__cxx03/__concepts/convertible_to.h>
-#include <__cxx03/__concepts/derived_from.h>
-#include <__cxx03/__concepts/same_as.h>
 #include <__cxx03/__config>
-#include <__cxx03/__iterator/concepts.h>
-#include <__cxx03/__iterator/incrementable_traits.h>
-#include <__cxx03/__iterator/iter_move.h>
-#include <__cxx03/__iterator/iter_swap.h>
 #include <__cxx03/__iterator/iterator_traits.h>
-#include <__cxx03/__iterator/move_sentinel.h>
-#include <__cxx03/__iterator/readable_traits.h>
 #include <__cxx03/__type_traits/conditional.h>
 #include <__cxx03/__type_traits/enable_if.h>
 #include <__cxx03/__type_traits/is_assignable.h>

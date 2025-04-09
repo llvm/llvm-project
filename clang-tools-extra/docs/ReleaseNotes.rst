@@ -91,8 +91,17 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Changed the :program:`check_clang_tidy.py` tool to use FileCheck's
+  ``--match-full-lines`` instead of ``strict-whitespace`` for ``CHECK-FIXES``
+  clauses. Added a ``--match-partial-fixes`` option to keep previous behavior on
+  specific tests. This may break tests for users with custom out-of-tree checks
+  who use :program:`check_clang_tidy.py` as-is.
+
 - Improved :program:`clang-tidy-diff.py` script. Add the `-warnings-as-errors`
   argument to treat warnings as errors.
+
+- Fixed bug in :program:`clang-tidy` by which `HeaderFilterRegex` did not take
+  effect when passed via the `.clang-tidy` file.
 
 New checks
 ^^^^^^^^^^
@@ -100,8 +109,9 @@ New checks
 - New :doc:`bugprone-capturing-this-in-member-variable
   <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
 
-  Finds lambda captures that capture the ``this`` pointer and store it as class
-  members without handle the copy and move constructors and the assignments.
+  Finds lambda captures and ``bind`` function calls that capture the ``this``
+  pointer and store it as class members without handle the copy and move
+  constructors and the assignments.
 
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.

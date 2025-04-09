@@ -164,22 +164,6 @@ constexpr T saturate_cast(U x) noexcept;                    // freestanding, Sin
 #include <__cxx03/__numeric/iota.h>
 #include <__cxx03/__numeric/partial_sum.h>
 
-#if _LIBCPP_STD_VER >= 17
-#  include <__cxx03/__numeric/exclusive_scan.h>
-#  include <__cxx03/__numeric/gcd_lcm.h>
-#  include <__cxx03/__numeric/inclusive_scan.h>
-#  include <__cxx03/__numeric/pstl.h>
-#  include <__cxx03/__numeric/reduce.h>
-#  include <__cxx03/__numeric/transform_exclusive_scan.h>
-#  include <__cxx03/__numeric/transform_inclusive_scan.h>
-#  include <__cxx03/__numeric/transform_reduce.h>
-#endif
-
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__numeric/midpoint.h>
-#  include <__cxx03/__numeric/saturation_arithmetic.h>
-#endif
-
 #include <__cxx03/version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -187,20 +171,16 @@ constexpr T saturate_cast(U x) noexcept;                    // freestanding, Sin
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 14
-#  include <__cxx03/initializer_list>
 #  include <__cxx03/limits>
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <__cxx03/climits>
 #  include <__cxx03/cmath>
-#  include <__cxx03/concepts>
 #  include <__cxx03/cstdint>
-#  include <__cxx03/execution>
 #  include <__cxx03/functional>
 #  include <__cxx03/iterator>
 #  include <__cxx03/new>
-#  include <__cxx03/optional>
 #  include <__cxx03/type_traits>
 #endif
 

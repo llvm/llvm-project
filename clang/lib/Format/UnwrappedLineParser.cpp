@@ -167,9 +167,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
-}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -1887,8 +1885,11 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->isBinaryOperator())
         nextToken();
       break;
-    case tok::caret:
+    case tok::caret: {
+      const auto *Prev = FormatTok->getPreviousNonComment();
       nextToken();
+      if (Prev && Prev->is(tok::identifier))
+        break;
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
@@ -1903,6 +1904,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
+    }
     case tok::l_brace:
       if (InRequiresExpression)
         FormatTok->setFinalizedType(TT_BracedListLBrace);

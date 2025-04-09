@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CtxProfAnalysis.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -20,6 +21,7 @@
 #include "llvm/ProfileData/PGOCtxProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "ctx_prof"
 
@@ -36,6 +38,11 @@ static cl::opt<CtxProfAnalysisPrinterPass::PrintMode> PrintLevel(
                clEnumValN(CtxProfAnalysisPrinterPass::PrintMode::YAML, "yaml",
                           "just the yaml representation of the profile")),
     cl::desc("Verbosity level of the contextual profile printer pass."));
+
+static cl::opt<bool> ForceIsInSpecializedModule(
+    "ctx-profile-force-is-specialized", cl::init(false),
+    cl::desc("Treat the given module as-if it were containing the "
+             "post-thinlink module containing the root"));
 
 const char *AssignGUIDPass::GUIDMetadataName = "guid";
 
@@ -95,25 +102,41 @@ PGOContextualProfile CtxProfAnalysis::run(Module &M,
     return {};
   }
 
-  DenseSet<GlobalValue::GUID> ProfileRootsInModule;
-  for (const auto &F : M)
-    if (!F.isDeclaration())
-      if (auto GUID = AssignGUIDPass::getGUID(F);
-          MaybeProfiles->Contexts.find(GUID) != MaybeProfiles->Contexts.end())
-        ProfileRootsInModule.insert(GUID);
-
-  // Trim first the roots that aren't in this module.
-  for (auto &[RootGuid, _] :
-       llvm::make_early_inc_range(MaybeProfiles->Contexts))
-    if (!ProfileRootsInModule.contains(RootGuid))
-      MaybeProfiles->Contexts.erase(RootGuid);
-  // If none of the roots are in the module, we have no profile (for this
-  // module)
-  if (MaybeProfiles->Contexts.empty())
-    return {};
-
-  // OK, so we have a valid profile and it's applicable to roots in this module.
+  // FIXME: We should drive this from ThinLTO, but for the time being, use the
+  // module name as indicator.
+  // We want to *only* keep the contextual profiles in modules that capture
+  // context trees. That allows us to compute specific PSIs, for example.
+  auto DetermineRootsInModule = [&M]() -> const DenseSet<GlobalValue::GUID> {
+    DenseSet<GlobalValue::GUID> ProfileRootsInModule;
+    auto ModName = M.getName();
+    auto Filename = sys::path::filename(ModName);
+    // Drop the file extension.
+    Filename = Filename.substr(0, Filename.find_last_of('.'));
+    // See if it parses
+    APInt Guid;
+    // getAsInteger returns true if there are more chars to read other than the
+    // integer. So the "false" test is what we want.
+    if (!Filename.getAsInteger(0, Guid))
+      ProfileRootsInModule.insert(Guid.getZExtValue());
+    return ProfileRootsInModule;
+  };
+  const auto ProfileRootsInModule = DetermineRootsInModule();
   PGOContextualProfile Result;
+
+  // the logic from here on allows for modules that contain - by design - more
+  // than one root. We currently don't support that, because the determination
+  // happens based on the module name matching the root guid, but the logic can
+  // avoid assuming that.
+  if (!ProfileRootsInModule.empty()) {
+    Result.IsInSpecializedModule = true;
+    // Trim first the roots that aren't in this module.
+    for (auto &[RootGuid, _] :
+         llvm::make_early_inc_range(MaybeProfiles->Contexts))
+      if (!ProfileRootsInModule.contains(RootGuid))
+        MaybeProfiles->Contexts.erase(RootGuid);
+    // we can also drop the flat profiles
+    MaybeProfiles->FlatProfiles.clear();
+  }
 
   for (const auto &F : M) {
     if (F.isDeclaration())
@@ -260,6 +283,12 @@ void PGOContextualProfile::initIndex() {
       });
 }
 
+bool PGOContextualProfile::isInSpecializedModule() const {
+  return ForceIsInSpecializedModule.getNumOccurrences() > 0
+             ? ForceIsInSpecializedModule
+             : IsInSpecializedModule;
+}
+
 void PGOContextualProfile::update(Visitor V, const Function &F) {
   assert(isFunctionKnown(F));
   GlobalValue::GUID G = getDefinedFunctionGUID(F);
@@ -281,21 +310,42 @@ void PGOContextualProfile::visit(ConstVisitor V, const Function *F) const {
 
 const CtxProfFlatProfile PGOContextualProfile::flatten() const {
   CtxProfFlatProfile Flat;
+  auto Accummulate = [](SmallVectorImpl<uint64_t> &Into,
+                        const SmallVectorImpl<uint64_t> &From) {
+    if (Into.empty())
+      Into.resize(From.size());
+    assert(Into.size() == From.size() &&
+           "All contexts corresponding to a function should have the exact "
+           "same number of counters.");
+    for (size_t I = 0, E = Into.size(); I < E; ++I)
+      Into[I] += From[I];
+  };
+
   preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
                 const PGOCtxProfContext>(
       Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
-        auto [It, Ins] = Flat.insert({Ctx.guid(), {}});
-        if (Ins) {
-          llvm::append_range(It->second, Ctx.counters());
-          return;
-        }
-        assert(It->second.size() == Ctx.counters().size() &&
-               "All contexts corresponding to a function should have the exact "
-               "same number of counters.");
-        for (size_t I = 0, E = It->second.size(); I < E; ++I)
-          It->second[I] += Ctx.counters()[I];
+        Accummulate(Flat[Ctx.guid()], Ctx.counters());
       });
+  for (const auto &[_, RC] : Profiles.Contexts)
+    for (const auto &[G, Unh] : RC.getUnhandled())
+      Accummulate(Flat[G], Unh);
+  for (const auto &[G, FC] : Profiles.FlatProfiles)
+    Accummulate(Flat[G], FC);
   return Flat;
+}
+
+const CtxProfFlatIndirectCallProfile
+PGOContextualProfile::flattenVirtCalls() const {
+  CtxProfFlatIndirectCallProfile Ret;
+  preorderVisit<const PGOCtxProfContext::CallTargetMapTy,
+                const PGOCtxProfContext>(
+      Profiles.Contexts, [&](const PGOCtxProfContext &Ctx) {
+        auto &Targets = Ret[Ctx.guid()];
+        for (const auto &[ID, SubctxSet] : Ctx.callsites())
+          for (const auto &Subctx : SubctxSet)
+            Targets[ID][Subctx.first] += Subctx.second.getEntrycount();
+      });
+  return Ret;
 }
 
 void CtxProfAnalysis::collectIndirectCallPromotionList(
