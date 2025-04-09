@@ -574,6 +574,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr});
   }
+  case AMDGPU::BI__builtin_amdgcn_global_load_lds: {
+    return emitBuiltinWithOneOverloadedOperand<5>(
+        *this, E, Intrinsic::amdgcn_global_load_lds);
+  }
   case AMDGPU::BI__builtin_amdgcn_get_fpenv: {
     Function *F = CGM.getIntrinsic(Intrinsic::get_fpenv,
                                    {llvm::Type::getInt64Ty(getLLVMContext())});

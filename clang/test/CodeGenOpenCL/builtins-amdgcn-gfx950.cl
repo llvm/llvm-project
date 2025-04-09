@@ -1774,7 +1774,7 @@ void test_cvt_sr_f16_f32(global half2 *out, float src, uint seed)
 // CHECK-NEXT:    store ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[DST_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[SRC_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[DST_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 12, i32 0, i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.global.load.lds.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 12, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_global_load_lds_96(global void* src, local void *dst) {
@@ -1789,7 +1789,7 @@ void test_global_load_lds_96(global void* src, local void *dst) {
 // CHECK-NEXT:    store ptr addrspace(3) [[DST:%.*]], ptr addrspace(5) [[DST_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[SRC_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(3), ptr addrspace(5) [[DST_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.amdgcn.global.load.lds(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 16, i32 0, i32 0)
+// CHECK-NEXT:    call void @llvm.amdgcn.global.load.lds.p1(ptr addrspace(1) [[TMP0]], ptr addrspace(3) [[TMP1]], i32 16, i32 0, i32 0)
 // CHECK-NEXT:    ret void
 //
 void test_global_load_lds_128(global void* src, local void *dst) {
