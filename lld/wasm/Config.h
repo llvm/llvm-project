@@ -32,6 +32,7 @@ class InputTable;
 class InputGlobal;
 class InputFunction;
 class Symbol;
+struct WasmSym;
 
 // For --unresolved-symbols.
 enum class UnresolvedPolicy { ReportError, Warn, Ignore, ImportDynamic };
@@ -140,6 +141,9 @@ struct Ctx {
   llvm::SmallVector<InputFunction *, 0> syntheticFunctions;
   llvm::SmallVector<InputGlobal *, 0> syntheticGlobals;
   llvm::SmallVector<InputTable *, 0> syntheticTables;
+
+  // Linker-generated symbols like __wasm_init_memory, __heap_base, etc.
+  WasmSym sym{};
 
   // True if we are creating position-independent code.
   bool isPic = false;
