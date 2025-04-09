@@ -1,6 +1,6 @@
 // REQUIRES: x86_64-target-arch
 // REQUIRES: !windows
-// RUN: %clang -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -O0 -fsanitize=array-bounds,float-cast-overflow,implicit-integer-sign-change,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,integer-divide-by-zero,pointer-overflow,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,vla-bound %s -o %t1 && %run %t1 2>&1 | FileCheck %s
+// RUN: %clang -Wno-constant-conversion -Wno-array-bounds -Wno-division-by-zero -Wno-shift-negative-value -Wno-shift-count-negative -Wno-int-to-pointer-cast -O0 -fsanitize=array-bounds,float-cast-overflow,implicit-integer-sign-change,implicit-signed-integer-truncation,implicit-unsigned-integer-truncation,integer-divide-by-zero,pointer-overflow,shift-base,shift-exponent,signed-integer-overflow,unsigned-integer-overflow,unsigned-shift-base,vla-bound -fsanitize-address-use-after-return=never %s -o %t1 && %run %t1 2>&1 | FileCheck %s
 
 #include <stdint.h>
 #include <stdio.h>
@@ -47,6 +47,13 @@ uint32_t unsigned_shift_base() {
   unsigned _BitInt(37) x = ~0U << 1;
   // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:32: runtime error: left shift of 4294967295 by 1 places cannot be represented in type
   return x;
+}
+
+uint32_t array_bounds() {
+  _BitInt(37) x[4];
+  _BitInt(37) y = x[10];
+  // CHECK: {{.*}}bit-int.c:[[#@LINE-1]]:19: runtime error: index 10 out of bounds for type
+  return (uint32_t)y;
 }
 
 uint32_t float_cast_overflow() {
@@ -147,6 +154,7 @@ int main(int argc, char **argv) {
       pointer_overflow() +
       vla_bound(argc) +
       unsigned_shift_base() +
+      (uint32_t)array_bounds() +
       float_cast_overflow() +
       implicit_integer_sign_change((unsigned _BitInt(37))(argc - 2)) +
       (uint64_t)implicit_signed_integer_truncation() +
