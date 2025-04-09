@@ -629,9 +629,8 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);
 }
 
-BitVector SIRegisterInfo::AlwaysReservedRegs;
-
 BitVector SIRegisterInfo::getAlwaysReservedRegs() const {
+  static BitVector AlwaysReservedRegs;
   // Already been calculated, so do not compute again.
   if (AlwaysReservedRegs.size() == getNumRegs())
     return AlwaysReservedRegs;
