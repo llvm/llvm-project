@@ -748,6 +748,9 @@ private:
   // Index to the current record in the record array.
   unsigned RecordIndex = 0;
 
+  // Flag to ignore empty (zero-hash) mismatches
+  bool IgnoreEmptyHashMismatches = false;
+
   // Read the profile summary. Return a pointer pointing to one byte past the
   // end of the summary data if it exists or the input \c Cur.
   // \c UseCS indicates whether to use the context-sensitive profile summary.
@@ -854,11 +857,13 @@ public:
   /// Factory method to create an indexed reader.
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(const Twine &Path, vfs::FileSystem &FS,
-         const Twine &RemappingPath = "");
+         const Twine &RemappingPath = "",
+         bool IgnoreEmptyHashMismatches = false);
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,
-         std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr);
+         std::unique_ptr<MemoryBuffer> RemappingBuffer = nullptr,
+         bool IgnoreEmptyHashMismatches = false);
 
   // Used for testing purpose only.
   void setValueProfDataEndianness(llvm::endianness Endianness) {

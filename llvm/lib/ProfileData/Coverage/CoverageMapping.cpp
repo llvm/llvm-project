@@ -1036,8 +1036,10 @@ Error CoverageMapping::loadFromFile(
 Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
     ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
     vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
-    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
-  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs,
+    bool IgnoreEmptyHashMismatches) {
+  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS,
+   "" /* RemappingPath */, IgnoreEmptyHashMismatches);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
