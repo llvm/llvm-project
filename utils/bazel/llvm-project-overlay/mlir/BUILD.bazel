@@ -2237,7 +2237,10 @@ gentbl_cc_library(
 
 td_library(
     name = "X86VectorTdFiles",
-    srcs = ["include/mlir/Dialect/X86Vector/X86Vector.td"],
+    srcs = [
+        "include/mlir/Dialect/X86Vector/X86Vector.td",
+        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
