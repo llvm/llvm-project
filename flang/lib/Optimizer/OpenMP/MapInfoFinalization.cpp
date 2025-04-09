@@ -550,7 +550,9 @@ class MapInfoFinalizationPass
       // iterations from previous function scopes.
       localBoxAllocas.clear();
 
-      // First, walk `omp.map.info` ops to see if any
+      // First, walk `omp.map.info` ops to see if any of them have varPtrs
+      // with an underlying type of fir.char<k, ?>, i.e a character
+      // with dynamic length. If so, check if they need bounds added.
       func->walk([&](mlir::omp::MapInfoOp op) {
         mlir::Value varPtr = op.getVarPtr();
         mlir::Type underlyingVarType = fir::unwrapRefType(varPtr.getType());
@@ -562,6 +564,8 @@ class MapInfoFinalizationPass
         if (!cType.hasDynamicLen())
           return mlir::WalkResult::advance();
 
+        if (!op.getBounds().empty())
+          return mlir::WalkResult::advance();
         // This means varPtr is a BlockArgument. I do not know how to get to a
         // fir.boxchar<> type of mlir::Value for varPtr. So, skipping this for
         // now.
