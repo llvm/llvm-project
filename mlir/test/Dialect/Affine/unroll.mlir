@@ -261,14 +261,14 @@ gpu.module @unroll_full {
 
 // UNROLL-FULL-LABEL: func @thread_partial_execution
 func.func @thread_partial_execution() {
-  %0 = arith.constant 0 :index
-  %1 = arith.constant 2 : index    
+  %c0 = arith.constant 0 :index
+  %c2 = arith.constant 2 : index    
   // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
-  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %1, %sz_by = %1, %sz_bz = %1)
-             threads(%tx, %ty, %tz) in (%sz_tx = %1, %sz_ty = %1, %sz_tz = %1) {
-    affine.for %iv = %tx to 3 step 2 iter_args(%arg = %0) -> index {
-      %3 = arith.addi %arg, %0 : index
-      affine.yield %3 : index
+  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %c2, %sz_by = %c2, %sz_bz = %c2)
+             threads(%tx, %ty, %tz) in (%sz_tx = %c2, %sz_ty = %c2, %sz_tz = %c2) {
+    affine.for %iv = %tx to 3 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
     }
     // UNROLL-FULL: affine.for %{{.*}} = %{{.*}} to 3 step 2 iter_args(%[[ARG:.*]] = %[[C0]]) -> (index) {
     // UNROLL-FULL-NEXT:   %[[SUM:.*]] = arith.addi %[[ARG]], %[[C0]] : index
@@ -281,15 +281,15 @@ func.func @thread_partial_execution() {
 
 // UNROLL-FULL-LABEL: func @unroll_all_thread
 func.func @unroll_all_thread() {
-  %0 = arith.constant 0 :index
-  %1 = arith.constant 2 : index
+  %c0 = arith.constant 0 :index
+  %c2 = arith.constant 2 : index
   // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
-  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %1, %sz_by = %1, %sz_bz = %1)
-             threads(%tx, %ty, %tz) in (%sz_tx = %1, %sz_ty = %1, %sz_tz = %1) {
+  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %c2, %sz_by = %c2, %sz_bz = %c2)
+             threads(%tx, %ty, %tz) in (%sz_tx = %c2, %sz_ty = %c2, %sz_tz = %c2) {
     %threadid = gpu.thread_id x
-    %4 = affine.for %iv = %threadid to 6 step 2 iter_args(%arg = %0) -> index {
-      %3 = arith.addi %arg, %0 : index
-      affine.yield %3 : index
+    affine.for %iv = %threadid to 6 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
     }
     // UNROLL-FULL: %[[SUM_0:.*]] = arith.addi %[[C0]], %[[C0]] : index
     // UNROLL-FULL-NEXT: %[[SUM_1:.*]] = arith.addi %[[SUM_0]], %[[C0]] : index
@@ -301,15 +301,15 @@ func.func @unroll_all_thread() {
 
 // UNROLL-FULL-LABEL: func.func @partial_unroll_factor_4
 func.func @partial_unroll_factor_4() {
-  %0 = arith.constant 0 :index
-  %1 = arith.constant 2 : index
+  %c0 = arith.constant 0 :index
+  %c2 = arith.constant 2 : index
   // UNROLL-FULL: %[[C0:.*]] = arith.constant 0 : index
-  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %1, %sz_by = %1, %sz_bz = %1)
-             threads(%tx, %ty, %tz) in (%sz_tx = %1, %sz_ty = %1, %sz_tz = %1) {
+  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %c2, %sz_by = %c2, %sz_bz = %c2)
+             threads(%tx, %ty, %tz) in (%sz_tx = %c2, %sz_ty = %c2, %sz_tz = %c2) {
     %threadid = gpu.thread_id x
-    affine.for %iv = %threadid to 9 step 2 iter_args(%arg = %0) -> index {
-      %3 = arith.addi %arg, %0 : index
-      affine.yield %3 : index
+    affine.for %iv = %threadid to 9 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
     }
     gpu.terminator
   }
@@ -769,15 +769,15 @@ func.func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 
 
 // UNROLL-BY-4-LABEL: func @gpu_launch_unroll_by_factor_4
 func.func @gpu_launch_unroll_by_factor_4() {
-  %0 = arith.constant 0 :index
-  %1 = arith.constant 2 : index
+  %c0 = arith.constant 0 :index
+  %c2 = arith.constant 2 : index
   // UNROLL-BY-4: %[[C0:.*]] = arith.constant 0 : index
-  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %1, %sz_by = %1, %sz_bz = %1)
-             threads(%tx, %ty, %tz) in (%sz_tx = %1, %sz_ty = %1, %sz_tz = %1) {
+  gpu.launch blocks(%bx, %by, %bz) in (%sz_bx = %c2, %sz_by = %c2, %sz_bz = %c2)
+             threads(%tx, %ty, %tz) in (%sz_tx = %c2, %sz_ty = %c2, %sz_tz = %c2) {
     %threadid = gpu.thread_id x
-    affine.for %iv = %threadid to 11 step 2 iter_args(%arg = %0) -> index {
-      %3 = arith.addi %arg, %0 : index
-      affine.yield %3 : index
+    affine.for %iv = %threadid to 11 step 2 iter_args(%arg = %c0) -> index {
+      %sum = arith.addi %arg, %c0 : index
+      affine.yield %sum : index
     }
     gpu.terminator
   }

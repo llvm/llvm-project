@@ -162,8 +162,7 @@ LogicalResult mlir::affine::promoteIfSingleIteration(AffineForOp forOp) {
   forOp.getBody()->back().erase();
   parentBlock->getOperations().splice(Block::iterator(forOp),
                                       forOp.getBody()->getOperations());
-  IRRewriter b(forOp.getContext());
-  b.eraseOp(forOp);
+  forOp.erase();
   return success();
 }
 
@@ -895,14 +894,14 @@ LogicalResult mlir::affine::loopUnrollFull(AffineForOp forOp) {
     return failure();
 
   uint64_t tripCount = *mayBeConstantTripCount;
-  uint64_t maxTripCount = *maxMayBeConstantTripCount;
 
   // Trip equals 0, this loop cannot unroll.
   if (tripCount <= 0)
     return success();
 
-  if (tripCount == 1 && maxTripCount == 1)
-    return promoteIfSingleIteration(forOp);
+  if (succeeded(promoteIfSingleIteration(forOp)))
+    return success();
+
   return loopUnrollByFactor(forOp, tripCount);
 }
 

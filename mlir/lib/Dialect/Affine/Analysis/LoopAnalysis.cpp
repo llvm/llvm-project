@@ -214,19 +214,21 @@ void mlir::affine::getTripCountMapAndOperands(
                             tripCountValueMap.getOperands().end());
 }
 
-/// Take the min if all trip counts are constant.
+/// The function make map be computed with the given operands to get the value
+/// of trip, which may have a range when a range exists for either operand.
+/// If type is equal to BoundType::LB get the minimum value of the trip, if type
+/// is equal to BoundType::UB get the maximum value of the trip.
 static std::optional<uint64_t>
 getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
                        presburger::BoundType type) {
   std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    AffineMap subMap =
-        AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
+  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
+    AffineMap subMap = map.getSubMap(i);
     ValueBoundsConstraintSet::Variable var(subMap, operands);
     auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
         mlir::presburger::BoundType::LB, var);
     auto ubBound = ValueBoundsConstraintSet::computeConstantBound(
-        mlir::presburger::BoundType::UB, var, nullptr, true);
+        mlir::presburger::BoundType::UB, var, nullptr, /*closedUB*/ true);
     if (failed(lbBound) || failed(ubBound))
       return std::nullopt;
     if (type == presburger::BoundType::LB) {
@@ -238,7 +240,7 @@ getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
     } else if (type == presburger::BoundType::UB) {
       if (tripCount.has_value())
         tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(ubBound.value()));
+            std::max(*tripCount, static_cast<uint64_t>(ubBound.value()));
       else
         tripCount = ubBound.value();
     } else {
@@ -253,7 +255,7 @@ getKnownTripCountBound(AffineMap map, SmallVectorImpl<Value> &operands,
 /// getTripCount) and is able to determine constant trip count in non-trivial
 /// cases.
 std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
+  SmallVector<Value> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
 
@@ -262,12 +264,12 @@ std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   return getKnownTripCountBound(map, operands, presburger::BoundType::LB);
 }
 
-/// Returns the maximum trip count when the operand of forOp has a range. If the
-/// operand of forOp is a constant, the return value is the same as
+/// Returns the maximum trip count when the operand of forOp has a range.
+/// If the operand of forOp is a constant, the return value is the same as
 /// `getConstantTripCount`.
 std::optional<uint64_t>
 mlir::affine::getUpperBoundOnTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
+  SmallVector<Value> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
 
