@@ -4692,9 +4692,9 @@ static uint64_t getReductionDataSize(OpTy &op) {
     collectReductionDecls(op, reductions);
 
     llvm::SmallVector<mlir::Type> members;
-    for (omp::DeclareReductionOp &red : reductions) {
+    members.reserve(reductions.size());
+    for (omp::DeclareReductionOp &red : reductions)
       members.push_back(red.getType());
-    }
     Operation *opp = op.getOperation();
     auto structType = mlir::LLVM::LLVMStructType::getLiteral(
         opp->getContext(), members, /*isPacked=*/false);
