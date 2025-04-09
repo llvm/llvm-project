@@ -571,6 +571,10 @@ public:
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
 private:
+  template <typename Op>
+  mlir::LogicalResult
+  emitOpenACCOp(mlir::Location start,
+                llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
