@@ -36,7 +36,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Casts:
   if (auto const *ce = dyn_cast<CastExpr>(expr)) {
-    if (auto const *ece = dyn_cast<ExplicitCastExpr>(ce)) {
+    if (isa<ExplicitCastExpr>(ce)) {
       cgm.errorNYI(expr->getSourceRange(),
                    "emitPointerWithAlignment: explicit cast");
       return Address::invalid();
