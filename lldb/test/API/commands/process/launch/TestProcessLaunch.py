@@ -220,7 +220,7 @@ class ProcessLaunchTestCase(TestBase):
         mywd = "my_working_dir"
         out_file_name = "my_working_dir_test.out"
 
-        my_working_dir_path = self.getBuildArtifact(mywd)
+        my_working_dir_path = Path(self.getBuildArtifact(mywd)).resolve()
         lldbutil.mkdir_p(my_working_dir_path)
         out_file_path = os.path.join(my_working_dir_path, out_file_name)
         another_working_dir_path = Path(

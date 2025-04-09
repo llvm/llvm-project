@@ -1070,7 +1070,7 @@ bool TargetPassConfig::addISelPasses() {
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addPass(createPreISelIntrinsicLoweringPass());
   addPass(createExpandLargeDivRemPass());
-  addPass(createExpandLargeFpConvertPass());
+  addPass(createExpandFpPass());
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1235,13 +1235,9 @@ void TargetPassConfig::addMachinePasses() {
     addPass(createMIRAddFSDiscriminatorsPass(
         sampleprof::FSDiscriminatorPass::PassLast));
 
-  // Machine function splitter uses the basic block sections feature.
-  // When used along with `-basic-block-sections=`, the basic-block-sections
-  // feature takes precedence. This means functions eligible for
-  // basic-block-sections optimizations (`=all`, or `=list=` with function
-  // included in the list profile) will get that optimization instead.
   if (TM->Options.EnableMachineFunctionSplitter ||
-      EnableMachineFunctionSplitter) {
+      EnableMachineFunctionSplitter || SplitStaticData ||
+      TM->Options.EnableStaticDataPartitioning) {
     const std::string ProfileFile = getFSProfileFile(TM);
     if (!ProfileFile.empty()) {
       if (EnableFSDiscriminator) {
@@ -1256,9 +1252,23 @@ void TargetPassConfig::addMachinePasses() {
                "performance.\n";
       }
     }
+  }
+
+  // Machine function splitter uses the basic block sections feature.
+  // When used along with `-basic-block-sections=`, the basic-block-sections
+  // feature takes precedence. This means functions eligible for
+  // basic-block-sections optimizations (`=all`, or `=list=` with function
+  // included in the list profile) will get that optimization instead.
+  if (TM->Options.EnableMachineFunctionSplitter ||
+      EnableMachineFunctionSplitter)
     addPass(createMachineFunctionSplitterPass());
-    if (SplitStaticData || TM->Options.EnableStaticDataPartitioning)
-      addPass(createStaticDataSplitterPass());
+
+  if (SplitStaticData || TM->Options.EnableStaticDataPartitioning) {
+    // The static data splitter pass is a machine function pass. and
+    // static data annotator pass is a module-wide pass. See the file comment
+    // in StaticDataAnnotator.cpp for the motivation.
+    addPass(createStaticDataSplitterPass());
+    addPass(createStaticDataAnnotatorPass());
   }
   // We run the BasicBlockSections pass if either we need BB sections or BB
   // address map (or both).
