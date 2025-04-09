@@ -6888,42 +6888,6 @@ static void SetNestedNameSpecifier(Sema &S, DeclaratorDecl *DD, Declarator &D) {
   DD->setQualifierInfo(SS.getWithLocInContext(S.Context));
 }
 
-void Sema::deduceHLSLAddressSpace(VarDecl *Decl) {
-  // The variable already has an address space (groupshared for ex).
-  if (Decl->getType().hasAddressSpace())
-    return;
-
-  if (Decl->getType()->isDependentType())
-    return;
-
-  QualType Type = Decl->getType();
-  if (Type->isSamplerT() || Type->isVoidType())
-    return;
-
-  // Template instantiations can lack definition. In such case,
-  // we cannot deduce the AS.
-  // FIXME: figure out why RWBuffer<float> yields such declaration.
-  if (const RecordType *RT =
-          dyn_cast<RecordType>(Type->getUnqualifiedDesugaredType())) {
-    CXXRecordDecl *RD = Type->getAsCXXRecordDecl();
-    if (RD && !RD->isCompleteDefinition())
-      return;
-  }
-
-  // Resource handles.
-  if (Type->isHLSLIntangibleType())
-    return;
-
-  // Only static globals belong to the Private address space.
-  // Non-static globals belongs to the cbuffer.
-  if (Decl->getStorageClass() != SC_Static && !Decl->isStaticDataMember())
-    return;
-
-  LangAS ImplAS = LangAS::hlsl_private;
-  Type = Context.getAddrSpaceQualType(Type, ImplAS);
-  Decl->setType(Type);
-}
-
 void Sema::deduceOpenCLAddressSpace(ValueDecl *Decl) {
   if (Decl->getType().hasAddressSpace())
     return;
@@ -8011,10 +7975,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
   // Handle attributes prior to checking for duplicates in MergeVarDecl
   ProcessDeclAttributes(S, NewVD, D);
 
-  if (getLangOpts().HLSL) {
+  if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
-    deduceHLSLAddressSpace(NewVD);
-  }
 
   if (getLangOpts().OpenACC)
     OpenACC().ActOnVariableDeclarator(NewVD);
@@ -13171,7 +13133,7 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
     deduceOpenCLAddressSpace(VDecl);
 
   if (getLangOpts().HLSL)
-    deduceHLSLAddressSpace(VDecl);
+    HLSL().deduceAddressSpace(VDecl);
 
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.
