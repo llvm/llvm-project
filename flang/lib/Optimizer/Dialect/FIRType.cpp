@@ -678,12 +678,12 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
         return fir::SequenceType::get(seqTy.getShape(), newElementType);
       })
-      .Case<fir::ReferenceType>([&](fir::ReferenceType refTy) -> mlir::Type {
-        auto newEleTy = changeElementType(refTy.getEleTy(), newElementType,
-                                          turnBoxIntoClass);
-        return fir::ReferenceType::get(newEleTy, refTy.isVolatile());
+      .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        auto newEleTy = changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        return FIRT::get(newEleTy, t.isVolatile());
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ClassType>(
+      .Case<fir::PointerType, fir::HeapType>(
           [&](auto t) -> mlir::Type {
             using FIRT = decltype(t);
             return FIRT::get(changeElementType(t.getEleTy(), newElementType,
@@ -692,7 +692,6 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       .Case<fir::BoxType>([&](fir::BoxType t) -> mlir::Type {
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
-        // TODO: volatility on class types
         if (turnBoxIntoClass)
           return fir::ClassType::get(newInnerType);
         return fir::BoxType::get(newInnerType, t.isVolatile());
@@ -1420,12 +1419,12 @@ changeTypeShape(mlir::Type type,
           return fir::SequenceType::get(*newShape, seqTy.getEleTy());
         return seqTy.getEleTy();
       })
-      .Case<fir::ReferenceType, fir::BoxType>([&](auto t) -> mlir::Type {
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
         return FIRT::get(changeTypeShape(t.getEleTy(), newShape),
                          t.isVolatile());
       })
-      .Case<fir::PointerType, fir::HeapType, fir::ClassType>(
+      .Case<fir::PointerType, fir::HeapType>(
           [&](auto t) -> mlir::Type {
             using FIRT = decltype(t);
             return FIRT::get(changeTypeShape(t.getEleTy(), newShape));

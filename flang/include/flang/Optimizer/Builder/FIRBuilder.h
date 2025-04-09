@@ -402,9 +402,9 @@ public:
   mlir::Value createConvertWithVolatileCast(mlir::Location loc, mlir::Type toTy,
                                             mlir::Value val);
 
-  /// Create a fir.volatile_cast op.
+  /// Cast \p value to have \p isVolatile volatility.
   mlir::Value createVolatileCast(mlir::Location loc, bool isVolatile,
-                                 mlir::Value val);
+                                 mlir::Value value);
 
   /// Create a fir.store of \p val into \p addr. A lazy conversion
   /// of \p val to the element type of \p addr is created if needed.
