@@ -10,7 +10,7 @@
 
 // class map
 
-// map& operator=(const map& m);
+// map& operator=(const map& m); // constexpr since C++26
 
 #include <map>
 #include <algorithm>
@@ -131,7 +131,7 @@ bool balanced_allocs() {
 }
 #endif
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::pair<const int, double> V;
     V ar[] = {V(1, 1), V(1, 1.5), V(1, 2), V(2, 1), V(2, 1.5), V(2, 2), V(3, 1), V(3, 1.5), V(3, 2)};
@@ -292,6 +292,13 @@ int main(int, char**) {
   }
   assert(balanced_allocs());
 #endif
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

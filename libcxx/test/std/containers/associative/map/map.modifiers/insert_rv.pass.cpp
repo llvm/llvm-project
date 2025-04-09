@@ -14,7 +14,7 @@
 
 // pair<iterator, bool> insert( value_type&& v);  // C++17 and later
 // template <class P>
-//   pair<iterator, bool> insert(P&& p);
+//   pair<iterator, bool> insert(P&& p); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -58,7 +58,7 @@ void do_insert_rv_test() {
   assert(r.first->second == 3);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   do_insert_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
   do_insert_rv_test<std::map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
 
@@ -101,6 +101,13 @@ int main(int, char**) {
     assert(r.first->first == 3);
     assert(r.first->second == 3);
   }
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

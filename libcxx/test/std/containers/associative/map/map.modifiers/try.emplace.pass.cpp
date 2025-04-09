@@ -19,7 +19,7 @@
 // template <class... Args>
 //  iterator try_emplace(const_iterator hint, const key_type& k, Args&&... args); // C++17
 // template <class... Args>
-//  iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17
+//  iterator try_emplace(const_iterator hint, key_type&& k, Args&&... args);      // C++17 // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -57,7 +57,7 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   { // pair<iterator, bool> try_emplace(const key_type& k, Args&&... args);
     typedef std::map<int, Moveable> M;
     typedef std::pair<M::iterator, bool> R;
@@ -178,6 +178,13 @@ int main(int, char**) {
     assert(r->first.get() == 3);  // key
     assert(r->second.get() == 4); // value
   }
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

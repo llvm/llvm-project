@@ -13,13 +13,13 @@
 // class map
 
 // template <class M>
-//  pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17
+//  pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);            // C++17 // constexpr since C++26
 // template <class M>
-//  pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17
+//  pair<iterator, bool> insert_or_assign(key_type&& k, M&& obj);                 // C++17 // constexpr since C++26
 // template <class M>
-//  iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17
+//  iterator insert_or_assign(const_iterator hint, const key_type& k, M&& obj);   // C++17 // constexpr since C++26
 // template <class M>
-//  iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17
+//  iterator insert_or_assign(const_iterator hint, key_type&& k, M&& obj);        // C++17 // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -57,7 +57,7 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   { // pair<iterator, bool> insert_or_assign(const key_type& k, M&& obj);
     typedef std::map<int, Moveable> M;
     typedef std::pair<M::iterator, bool> R;
@@ -282,6 +282,13 @@ int main(int, char**) {
     assert(r->first.get() == 11);  // key
     assert(r->second.get() == 13); // value
   }
+return true;
+}
 
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

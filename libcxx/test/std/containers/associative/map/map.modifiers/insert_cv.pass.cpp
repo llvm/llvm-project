@@ -10,7 +10,7 @@
 
 // class map
 
-// pair<iterator, bool> insert(const value_type& v);
+// pair<iterator, bool> insert(const value_type& v); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -58,7 +58,7 @@ void do_insert_cv_test() {
   assert(r.first->second == 3.5);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   do_insert_cv_test<std::map<int, double> >();
 #if TEST_STD_VER >= 11
   {
@@ -66,6 +66,13 @@ int main(int, char**) {
     do_insert_cv_test<M>();
   }
 #endif
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

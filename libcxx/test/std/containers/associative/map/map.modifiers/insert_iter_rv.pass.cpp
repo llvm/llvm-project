@@ -13,7 +13,7 @@
 // class map
 
 // template <class P>
-//     iterator insert(const_iterator position, P&& p);
+//     iterator insert(const_iterator position, P&& p); // constexpr since C++26
 
 #include <map>
 #include <cassert>
@@ -52,7 +52,7 @@ void do_insert_iter_rv_test() {
   assert(r->first == 3);
   assert(r->second == 3);
 }
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   do_insert_iter_rv_test<std::map<int, MoveOnly>, std::pair<int, MoveOnly>>();
   do_insert_iter_rv_test<std::map<int, MoveOnly>, std::pair<const int, MoveOnly>>();
 
@@ -91,6 +91,13 @@ int main(int, char**) {
     assert(r->first == 3);
     assert(r->second == 3);
   }
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

@@ -13,7 +13,7 @@
 
 // <map>
 
-// template<class K> bool contains(const K& x) const; // C++20
+// template<class K> bool contains(const K& x) const; // C++20 // constexpr since C++26
 
 struct Comp {
   using is_transparent = void;
@@ -33,9 +33,16 @@ void test() {
   assert(!s.contains(-1));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::map<std::pair<int, int>, int, Comp> >();
   test<std::multimap<std::pair<int, int>, int, Comp> >();
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

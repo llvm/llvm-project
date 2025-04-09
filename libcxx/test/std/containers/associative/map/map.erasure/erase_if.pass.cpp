@@ -11,7 +11,7 @@
 
 // template <class Key, class T, class Compare, class Allocator, class Predicate>
 //   typename map<Key, T, Compare, Allocator>::size_type
-//   erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred);
+//   erase_if(map<Key, T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <map>
 
@@ -36,8 +36,9 @@ void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) 
   assert(s == make<M>(expected));
 }
 
+TEST_CONSTEXPR_CXX26
 template <typename S>
-void test() {
+bool test() {
   auto is1   = [](auto v) { return v.first == 1; };
   auto is2   = [](auto v) { return v.first == 2; };
   auto is3   = [](auto v) { return v.first == 3; };
@@ -61,15 +62,29 @@ void test() {
 
   test0<S>({1, 2, 3}, True, {}, 3);
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
+
+  return true;
 }
 
-int main(int, char**) {
+
+TEST_CONSTEXPR_CXX26
+bool test_upper() {
   test<std::map<int, int>>();
   test<std::map<int, int, std::less<int>, min_allocator<std::pair<const int, int>>>>();
   test<std::map<int, int, std::less<int>, test_allocator<std::pair<const int, int>>>>();
 
   test<std::map<long, short>>();
   test<std::map<short, double>>();
+
+  return true;
+}
+
+int main(int, char**) {
+
+assert(test_upper());
+#if TEST_STD_VER >= 26
+  static_assert(test_upper());
+#endif
 
   return 0;
 }

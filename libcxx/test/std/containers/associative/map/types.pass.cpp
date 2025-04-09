@@ -27,14 +27,14 @@
 //     typedef typename allocator_type::difference_type difference_type;
 //     ...
 // };
-
+ // constexpr since C++26
 #include <map>
 #include <type_traits>
 
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double> C;
     static_assert((std::is_same<C::key_type, int>::value), "");
@@ -66,6 +66,13 @@ int main(int, char**) {
     static_assert((std::is_same<C::difference_type, std::ptrdiff_t>::value), "");
   }
 #endif
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

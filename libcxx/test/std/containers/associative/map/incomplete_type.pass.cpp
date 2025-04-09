@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <map>
+// <map> // constexpr since C++26
 
 // Check that std::map and its iterators can be instantiated with an incomplete
 // type.
@@ -25,8 +25,15 @@ struct A {
 
 inline bool operator==(A const& L, A const& R) { return &L == &R; }
 inline bool operator<(A const& L, A const& R) { return L.data < R.data; }
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   A a;
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
