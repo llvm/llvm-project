@@ -15,6 +15,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
+// TODO: add constexpr to this test as well
+
 // [container.node.overview] Table 83.
 template <class K, class T, class C1, class C2, class H1, class H2, class E1, class E2, class A_set, class A_map>
 struct node_compatibility_table {
