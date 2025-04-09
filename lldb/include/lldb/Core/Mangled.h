@@ -247,6 +247,8 @@ public:
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
 
+  static bool IsMangledName(llvm::StringRef name);
+
   /// Decode a serialized version of this object from data.
   ///
   /// \param data
