@@ -984,19 +984,38 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
   return MDNode::get(Ctx, Intersection);
 }
 
+/// Add metadata from \p Inst to \p Metadata, if it can be preserved after
+/// vectorization.
+static void getMetadataToPropagate(
+    Instruction *Inst,
+    SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
+  Inst->getAllMetadataOtherThanDebugLoc(Metadata);
+  static const unsigned SupportedIDs[] = {
+      LLVMContext::MD_tbaa,         LLVMContext::MD_alias_scope,
+      LLVMContext::MD_noalias,      LLVMContext::MD_fpmath,
+      LLVMContext::MD_nontemporal,  LLVMContext::MD_invariant_load,
+      LLVMContext::MD_access_group, LLVMContext::MD_mmra};
+
+  // Remove any unsupported metadata kinds from Metadata.
+  for (unsigned Idx = 0; Idx != Metadata.size();) {
+    if (is_contained(SupportedIDs, Metadata[Idx].first)) {
+      ++Idx;
+    } else {
+      // Swap element to end and remove it.
+      std::swap(Metadata[Idx], Metadata.back());
+      Metadata.pop_back();
+    }
+  }
+}
+
 /// \returns \p I after propagating metadata from \p VL.
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
-  Instruction *I0 = cast<Instruction>(VL[0]);
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  I0->getAllMetadataOtherThanDebugLoc(Metadata);
+  SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+  getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
-  for (auto Kind : {LLVMContext::MD_tbaa, LLVMContext::MD_alias_scope,
-                    LLVMContext::MD_noalias, LLVMContext::MD_fpmath,
-                    LLVMContext::MD_nontemporal, LLVMContext::MD_invariant_load,
-                    LLVMContext::MD_access_group, LLVMContext::MD_mmra}) {
-    MDNode *MD = I0->getMetadata(Kind);
+  for (auto &[Kind, MD] : Metadata) {
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
