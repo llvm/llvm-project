@@ -1960,9 +1960,9 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-NEXT:    s_movk_i32 s6, 0x7e00
 ; GFX11-NEXT:    s_cmovk_i32 s5, 0x7c00
 ; GFX11-NEXT:    s_cmp_lg_u32 s3, 0
-; GFX11-NEXT:    s_cselect_b32 s3, s6, 0x7c00
+; GFX11-NEXT:    s_cmovk_i32 s6, 0x7c00
 ; GFX11-NEXT:    s_cmpk_eq_i32 s2, 0x40f
-; GFX11-NEXT:    s_cselect_b32 s2, s3, s5
+; GFX11-NEXT:    s_cselect_b32 s2, s6, s5
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_bfi_b32 v0, 0x7fff, s2, v0
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]

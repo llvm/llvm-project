@@ -11,8 +11,8 @@ body:             |
     ; GCN-NEXT: renamable $sgpr1 = S_MOV_B32 0
     ; GCN-NEXT: renamable $sgpr2 = S_MOV_B32 0
     ; GCN-NEXT: renamable $sgpr0 = S_ADD_U32 killed renamable $sgpr0, killed renamable $sgpr1, implicit-def $scc
-    ; GCN-NEXT: renamable $sgpr1 = S_CSELECT_B32 killed renamable $sgpr2, 31744, implicit killed $scc
-    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr1, implicit killed renamable $sgpr0
+    ; GCN-NEXT: renamable $sgpr2 = S_CMOVK_I32 31744, implicit killed $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $sgpr2, implicit killed renamable $sgpr0
     %0:sgpr_32 = S_MOV_B32 0
     %1:sgpr_32 = S_MOV_B32 0
     %2:sgpr_32 = S_MOV_B32 0
