@@ -5617,18 +5617,20 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   if (getSource().getType() == getType())
     return getSource();
 
+  VectorType resultType = getType();
+
   // Canceling shape casts.
   if (auto otherOp = getSource().getDefiningOp<ShapeCastOp>()) {
 
     // Only allows valid transitive folding (expand/collapse dimensions).
     VectorType srcType = otherOp.getSource().getType();
-    if (getType() == srcType)
+    if (resultType == srcType)
       return otherOp.getSource();
-    if (srcType.getRank() < getType().getRank()) {
-      if (!isValidShapeCast(srcType.getShape(), getType().getShape()))
+    if (srcType.getRank() < resultType.getRank()) {
+      if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
         return {};
-    } else if (srcType.getRank() > getType().getRank()) {
-      if (!isValidShapeCast(getType().getShape(), srcType.getShape()))
+    } else if (srcType.getRank() > resultType.getRank()) {
+      if (!isValidShapeCast(resultType.getShape(), srcType.getShape()))
         return {};
     } else {
       return {};
@@ -5639,14 +5641,14 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   // Cancelling broadcast and shape cast ops.
   if (auto bcastOp = getSource().getDefiningOp<BroadcastOp>()) {
-    if (bcastOp.getSourceType() == getType())
+    if (bcastOp.getSourceType() == resultType)
       return bcastOp.getSource();
   }
 
   // shape_cast(constant) -> constant
   if (auto splatAttr =
           llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
-    return DenseElementsAttr::get(getType(),
+    return DenseElementsAttr::get(resultType,
                                   splatAttr.getSplatValue<Attribute>());
   }
 
