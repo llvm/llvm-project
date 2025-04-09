@@ -214,14 +214,16 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
     }
 
 #ifndef NDEBUG
-    // Make sure that the number of chunks does not change as we reduce.
-    std::vector<Chunk> NoChunks = {{0, INT_MAX}};
-    Oracle NoChunksCounter(NoChunks);
-    std::unique_ptr<ReducerWorkItem> Clone =
-      Test.getProgram().clone(Test.getTargetMachine());
-    Pass.Func(NoChunksCounter, *Clone);
-    assert(Targets == NoChunksCounter.count() &&
-           "number of chunks changes when reducing");
+    {
+      // Make sure that the number of chunks does not change as we reduce.
+      std::vector<Chunk> NoChunks = {{0, INT_MAX}};
+      Oracle NoChunksCounter(NoChunks);
+      std::unique_ptr<ReducerWorkItem> Clone =
+          Test.getProgram().clone(Test.getTargetMachine());
+      Pass.Func(NoChunksCounter, *Clone);
+      assert(Targets == NoChunksCounter.count() &&
+             "number of chunks changes when reducing");
+    }
 #endif
   }
   if (!Targets) {
