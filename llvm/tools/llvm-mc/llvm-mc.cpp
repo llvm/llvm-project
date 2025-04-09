@@ -52,9 +52,9 @@ static cl::opt<std::string> InputFilename(cl::Positional,
                                           cl::desc("<input file>"),
                                           cl::init("-"), cl::cat(MCCategory));
 
-static cl::list<std::string>
-    DisassemblerOptions("M", cl::desc("Disassembler options"),
-                        cl::cat(MCCategory));
+static cl::list<std::string> InstPrinterOptions("M",
+                                                cl::desc("InstPrinter options"),
+                                                cl::cat(MCCategory));
 
 static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"),
@@ -397,6 +397,7 @@ int main(int argc, char **argv) {
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;
   MCOptions.MCUseDwarfDirectory = MCTargetOptions::EnableDwarfDirectory;
+  MCOptions.InstPrinterOptions = InstPrinterOptions;
 
   setDwarfDebugFlags(argc, argv);
   setDwarfDebugProducer();
@@ -585,9 +586,9 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    for (StringRef Opt : DisassemblerOptions)
+    for (StringRef Opt : InstPrinterOptions)
       if (!IP->applyTargetSpecificCLOption(Opt)) {
-        WithColor::error() << "invalid disassembler option '" << Opt << "'\n";
+        WithColor::error() << "invalid InstPrinter option '" << Opt << "'\n";
         return 1;
       }
 
