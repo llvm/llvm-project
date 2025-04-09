@@ -135,7 +135,7 @@ llvm::Error decodeRecord(const Record &R,
   if (R[0] > INT_MAX)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "integer too large to parse");
-  Field.emplace_back((int)R[0], Blob, (bool)R[1]);
+  Field.emplace_back((int)R[0], (int)R[1], Blob, (bool)R[2]);
   return llvm::Error::success();
 }
 
