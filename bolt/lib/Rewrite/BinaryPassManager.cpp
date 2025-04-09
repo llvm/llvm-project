@@ -21,6 +21,7 @@
 #include "bolt/Passes/Inliner.h"
 #include "bolt/Passes/Instrumentation.h"
 #include "bolt/Passes/JTFootprintReduction.h"
+#include "bolt/Passes/JumpTableTrampoline.h"
 #include "bolt/Passes/LongJmp.h"
 #include "bolt/Passes/LoopInversionPass.h"
 #include "bolt/Passes/MCF.h"
@@ -74,6 +75,12 @@ static cl::opt<bool> JTFootprintReductionFlag(
              "instructions at jump sites"),
     cl::cat(BoltOptCategory));
 
+static cl::opt<bool> JumpTableTrampoline(
+    "jump-table-trampoline",
+    cl::desc("insert cold target trampolines into the hot section to preserve "
+             "the jump table entry size"),
+    cl::cat(BoltOptCategory));
+
 cl::opt<bool>
     KeepNops("keep-nops",
              cl::desc("keep no-op instructions. By default they are removed."),
@@ -124,6 +131,11 @@ static cl::opt<bool>
 static cl::opt<bool> PrintJTFootprintReduction(
     "print-after-jt-footprint-reduction",
     cl::desc("print function after jt-footprint-reduction pass"), cl::Hidden,
+    cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintJumpTableTrampoline(
+    "print-after-jump-table-trampoline",
+    cl::desc("print function after jump-table-trampoline pass"), cl::Hidden,
     cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
@@ -501,6 +513,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   Manager.registerPass(std::make_unique<AssignSections>());
 
   if (BC.isAArch64()) {
+    Manager.registerPass(
+        std::make_unique<JumpTableTrampoline>(PrintJumpTableTrampoline));
+
     Manager.registerPass(
         std::make_unique<ADRRelaxationPass>(PrintAdrRelaxation));
 
