@@ -2200,7 +2200,9 @@ void IfConverter::CopyAndPredicateBlock(BBInfo &ToBBI, BBInfo &FromBBI,
       // Fallthrough edge can't be transferred.
       if (Succ == FallThrough)
         continue;
-      ToBBI.BB->addSuccessor(Succ);
+
+      if (!ToBBI.BB->isSuccessor(Succ))
+        ToBBI.BB->addSuccessor(Succ);
     }
   }
 
