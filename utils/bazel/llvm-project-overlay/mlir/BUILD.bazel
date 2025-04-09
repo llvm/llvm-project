@@ -2237,7 +2237,10 @@ gentbl_cc_library(
 
 td_library(
     name = "X86VectorTdFiles",
-    srcs = ["include/mlir/Dialect/X86Vector/X86Vector.td"],
+    srcs = [
+        "include/mlir/Dialect/X86Vector/X86Vector.td",
+        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
+    ],
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
@@ -2266,6 +2269,17 @@ gentbl_cc_library(
     deps = [":X86VectorTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "X86VectorInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
+    deps = [":X86VectorTdFiles"],
+)
+
 cc_library(
     name = "X86VectorDialect",
     srcs = ["lib/Dialect/X86Vector/IR/X86VectorDialect.cpp"],
@@ -2278,6 +2292,7 @@ cc_library(
         ":LLVMDialect",
         ":SideEffectInterfaces",
         ":X86VectorIncGen",
+        ":X86VectorInterfacesIncGen",
     ],
 )
 
