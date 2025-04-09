@@ -293,10 +293,9 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   // divisors.
   assert(map.getNumResults() >= 1 && "expected one or more results");
   std::optional<uint64_t> gcd;
-  for (auto resultExpr : map.getResults()) {
+  for (unsigned i = 0, e = map.getResults().size(); i < e; ++i) {
     uint64_t thisGcd;
-    AffineMap subMap =
-        AffineMap::get(map.getNumDims(), map.getNumSymbols(), resultExpr);
+    AffineMap subMap = map.getSubMap(i);
     ValueBoundsConstraintSet::Variable var(subMap, operands);
     auto lbBound = ValueBoundsConstraintSet::computeConstantBound(
         mlir::presburger::BoundType::LB, var);
@@ -310,7 +309,8 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
         thisGcd = tripCount;
     } else {
       // Trip count is not a known constant; return its largest known divisor.
-      thisGcd = resultExpr.getLargestKnownDivisor();
+      thisGcd = map.getResult(i).getLargestKnownDivisor();
+      ;
     }
     if (gcd.has_value())
       gcd = std::gcd(*gcd, thisGcd);

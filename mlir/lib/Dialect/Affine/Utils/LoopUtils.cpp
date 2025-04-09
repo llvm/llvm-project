@@ -1048,7 +1048,10 @@ LogicalResult mlir::affine::loopUnrollByFactor(
   }
 
   // Generate the cleanup loop if trip count isn't a multiple of unrollFactor.
-  if (getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
+  // If the trip count has a range, a clean up loop needs to be generated.
+  if ((mayBeConstantTripCount && maxMayBeConstantTripCount &&
+       *mayBeConstantTripCount != *maxMayBeConstantTripCount) ||
+      getLargestDivisorOfTripCount(forOp) % unrollFactor != 0) {
     // Loops where the lower bound is a max expression or the upper bound is
     // a min expression and the trip count doesn't divide the unroll factor
     // can't be unrolled since the lower bound of the cleanup loop in such cases
