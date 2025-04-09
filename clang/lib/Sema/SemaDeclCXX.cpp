@@ -7324,38 +7324,25 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
       checkCUDADeviceBuiltinTextureClassTemplate(*this, Record);
   }
 
-  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareNewDecls;
-  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareDeleteDecls;
-  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayNewDecls;
-  llvm::SmallVector<const FunctionDecl *, 2> TypeAwareArrayDeleteDecls;
-
+  llvm::SmallDenseMap<OverloadedOperatorKind,
+                      llvm::SmallVector<const FunctionDecl *, 2>, 4>
+      TypeAwareDecls;
+  TypeAwareDecls.insert({OO_New, {}});
+  TypeAwareDecls.insert({OO_Array_New, {}});
+  TypeAwareDecls.insert({OO_Delete, {}});
+  TypeAwareDecls.insert({OO_Array_New, {}});
   for (auto *D : Record->decls()) {
     const FunctionDecl *FnDecl = D->getAsFunction();
     if (!FnDecl || !FnDecl->isTypeAwareOperatorNewOrDelete())
       continue;
-    switch (FnDecl->getOverloadedOperator()) {
-    case OO_New:
-      TypeAwareNewDecls.push_back(FnDecl);
-      break;
-    case OO_Array_New:
-      TypeAwareArrayNewDecls.push_back(FnDecl);
-      break;
-    case OO_Delete:
-      TypeAwareDeleteDecls.push_back(FnDecl);
-      break;
-    case OO_Array_Delete:
-      TypeAwareArrayDeleteDecls.push_back(FnDecl);
-      break;
-    default:
-      continue;
-    }
+    assert(FnDecl->getDeclName().isAnyOperatorNewOrDelete());
+    TypeAwareDecls[FnDecl->getOverloadedOperator()].push_back(FnDecl);
   }
   auto CheckMismatchedTypeAwareAllocators =
-      [this,
-       Record](OverloadedOperatorKind NewKind,
-               const llvm::SmallVector<const FunctionDecl *, 2> &NewDecls,
-               OverloadedOperatorKind DeleteKind,
-               const llvm::SmallVector<const FunctionDecl *, 2> &DeleteDecls) {
+      [this, &TypeAwareDecls, Record](OverloadedOperatorKind NewKind,
+                                      OverloadedOperatorKind DeleteKind) {
+        auto &NewDecls = TypeAwareDecls[NewKind];
+        auto &DeleteDecls = TypeAwareDecls[DeleteKind];
         if (NewDecls.empty() == DeleteDecls.empty())
           return;
         DeclarationName FoundOperator =
@@ -7377,11 +7364,8 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
                diag::note_unmatched_type_aware_allocator_declared)
               << MD;
       };
-  CheckMismatchedTypeAwareAllocators(OO_New, TypeAwareNewDecls, OO_Delete,
-                                     TypeAwareDeleteDecls);
-  CheckMismatchedTypeAwareAllocators(OO_Array_New, TypeAwareArrayNewDecls,
-                                     OO_Array_Delete,
-                                     TypeAwareArrayDeleteDecls);
+  CheckMismatchedTypeAwareAllocators(OO_New, OO_Delete);
+  CheckMismatchedTypeAwareAllocators(OO_Array_New, OO_Array_Delete);
 }
 
 /// Look up the special member function that would be called by a special
@@ -16643,7 +16627,7 @@ static inline bool CheckOperatorNewDeleteTypes(
     if (ExpectedType.isNull()) {
       return SemaRef.Diag(FnDecl->getLocation(), InvalidParamTypeDiag)
              << IsPotentiallyTypeAware << IsPotentiallyDestroyingDelete
-             << FnDecl->getDeclName() << ParamIdx << FallbackType
+             << FnDecl->getDeclName() << (1 + ParamIdx) << FallbackType
              << ParamDecl->getSourceRange();
     }
     CanQualType CanExpectedTy =
@@ -16657,8 +16641,8 @@ static inline bool CheckOperatorNewDeleteTypes(
                               : InvalidParamTypeDiag;
     return SemaRef.Diag(FnDecl->getLocation(), Diagnostic)
            << IsPotentiallyTypeAware << IsPotentiallyDestroyingDelete
-           << FnDecl->getDeclName() << ParamIdx << ExpectedType << FallbackType
-           << ParamDecl->getSourceRange();
+           << FnDecl->getDeclName() << (1 + ParamIdx) << ExpectedType
+           << FallbackType << ParamDecl->getSourceRange();
   };
 
   // Check that the first parameter type is what we expect.

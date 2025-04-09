@@ -13096,6 +13096,7 @@ void ASTContext::setIsDestroyingOperatorDelete(const FunctionDecl *FD,
 bool ASTContext::isDestroyingOperatorDelete(const FunctionDecl *FD) const {
   return DestroyingOperatorDeletes.contains(FD->getCanonicalDecl());
 }
+
 void ASTContext::setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
                                                    bool IsTypeAware) {
   if (!IsTypeAware) {

@@ -43,11 +43,11 @@ template <class T> void operator delete(TYPE_IDENTITY(T), void*, std::size_t, st
 // used, so this is not terrible.
 
 #if INVALID_TYPE_IDENTITY_VERSION==3
-// expected-error@#operator_new {{'operator new' takes type size_t ('unsigned long') as first parameter}}
-// expected-error@#operator_delete {{first parameter of 'operator delete' must have type 'void *'}}
+// expected-error@#operator_new {{'operator new' takes type size_t ('unsigned long') as 1st parameter}}
+// expected-error@#operator_delete {{1st parameter of 'operator delete' must have type 'void *'}}
 #elif INVALID_TYPE_IDENTITY_VERSION==4
-// expected-error@#operator_new {{'operator new' cannot take a dependent type as its first parameter; use size_t ('unsigned long') instead}}
-// expected-error@#operator_delete {{'operator delete' cannot take a dependent type as its first parameter; use 'void *' instead}}
+// expected-error@#operator_new {{'operator new' cannot take a dependent type as its 1st parameter; use size_t ('unsigned long') instead}}
+// expected-error@#operator_delete {{'operator delete' cannot take a dependent type as its 1st parameter; use 'void *' instead}}
 #endif
 
 using size_t = __SIZE_TYPE__;

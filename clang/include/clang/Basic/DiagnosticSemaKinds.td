@@ -9761,23 +9761,23 @@ def warn_operator_new_returns_null : Warning<
   "%select{| or 'noexcept'}1">, InGroup<OperatorNewReturnsNull>;
 
 def err_operator_new_dependent_param_type : Error<
-  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %select{first|second|third|fourth|fifth}3 parameter; "
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %ordinal3 parameter; "
   "use %5 (%4) instead">;
 def err_operator_new_param_type : Error<
-  "%select{|type aware }0%select{|destroying }1%2 takes type %5 (%4) as %select{first|second|third|fourth|fifth}3 parameter">;
+  "%select{|type aware }0%select{|destroying }1%2 takes type %5 (%4) as %ordinal3 parameter">;
 def err_operator_new_default_arg: Error<
   "parameter of %0 cannot have a default argument">;
 def err_operator_delete_dependent_param_type : Error<
-  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %select{first|second|third|fourth|fifth}3 parameter; "
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %ordinal3 parameter; "
   "use %4 instead">;
 def err_operator_delete_param_type : Error<
-  "%select{first|second|third|fourth|fifth}3 parameter of%select{| type aware}0%select{| destroying}1 %2 must have type %4">;
+  "%ordinal3 parameter of%select{| type aware}0%select{| destroying}1 %2 must have type %4">;
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
 
 def err_type_aware_destroying_operator_delete : Error<
-  "type aware destroying delete is not permitted in C++26">;
+  "destroying delete is not permitted to be type aware">;
 
 def ext_cxx26_type_aware_allocators : ExtWarn<
   "type aware allocators are a C++2c extension">, InGroup<CXX26>;

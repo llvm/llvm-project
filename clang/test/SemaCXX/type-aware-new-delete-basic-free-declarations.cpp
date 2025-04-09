@@ -38,10 +38,10 @@ template <typename T> using TypeIdentityAlias3 = std::type_identity<T>;
 template <typename T> void *operator new(TypeIdentityAlias3<T>, size_t, std::align_val_t); // #14
 
 template <typename T> void *operator new(T, size_t, std::align_val_t);
-// expected-error@-1 {{'operator new' cannot take a dependent type as its first parameter}}
+// expected-error@-1 {{'operator new' cannot take a dependent type as its 1st parameter}}
 
 template <typename T> void operator delete(T, void*, size_t, std::align_val_t);
-// expected-error@-1 {{'operator delete' cannot take a dependent type as its first parameter}}
+// expected-error@-1 {{'operator delete' cannot take a dependent type as its 1st parameter}}
 
 template <typename T> struct S {
   typedef std::type_identity<T> type_identity;
@@ -51,13 +51,13 @@ template <typename T> struct S {
 };
 
 template <typename T> void *operator new(typename S<T>::type_identity, size_t, std::align_val_t);
-// expected-error@-1 {{'operator new' cannot take a dependent type as its first parameter}}
+// expected-error@-1 {{'operator new' cannot take a dependent type as its 1st parameter}}
 
 // Invalid type aware declarations
 void *operator new(std::type_identity<int>, size_t); 
 // expected-error@-1 {{type aware 'operator new' must have at least three parameters}}
 void *operator new(std::type_identity<int>, size_t, TestType&);
-// expected-error@-1 {{type aware 'operator new' takes type std::align_val_t ('std::align_val_t') as third parameter}}
+// expected-error@-1 {{type aware 'operator new' takes type std::align_val_t ('std::align_val_t') as 3rd parameter}}
 void operator delete(std::type_identity<int>, void *);
 // expected-error@-1 {{type aware 'operator delete' must have at least four parameters}}
 void operator delete(std::type_identity<int>, void *, size_t);
@@ -73,21 +73,21 @@ template <typename T> void operator delete(std::type_identity<T>, void *, size_t
 template <typename T, typename U> void *operator new(std::type_identity<T>, U);
 // expected-error@-1 {{type aware 'operator new' must have at least three parameters}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, U, size_t, std::align_val_t);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its second parameter; use 'void *' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter; use 'void *' instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, U, std::align_val_t);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its third parameter; use 'unsigned long' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 3rd parameter; use 'unsigned long' instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, size_t, U);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its fourth parameter; use 'std::align_val_t' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 4th parameter; use 'std::align_val_t' instead}}
 template <typename U> void *operator new(std::type_identity<int>, typename S<U>::size_ty, std::align_val_t);
-// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as its second parameter; use size_t ('unsigned long') instead}}
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as its 2nd parameter; use size_t ('unsigned long') instead}}
 template <typename U> void operator delete(std::type_identity<int>, typename S<U>::ptr_ty, size_t, std::align_val_t);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its second parameter; use 'void *' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter; use 'void *' instead}}
 template <typename T, typename U> void *operator new(std::type_identity<T>, typename S<U>::size_ty, std::align_val_t);
-// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as its second parameter; use size_t ('unsigned long') instead}}
+// expected-error@-1 {{type aware 'operator new' cannot take a dependent type as its 2nd parameter; use size_t ('unsigned long') instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, typename S<U>::ptr_ty, size_t, std::align_val_t);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its second parameter; use 'void *' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter; use 'void *' instead}}
 template <typename T, typename U> void operator delete(std::type_identity<T>, void *, size_t, typename S<U>::align_val_ty);
-// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its fourth parameter; use 'std::align_val_t' instead}}
+// expected-error@-1 {{type aware 'operator delete' cannot take a dependent type as its 4th parameter; use 'std::align_val_t' instead}}
 
 template <typename T> using Alias = T;
 template <typename T> using TypeIdentityAlias = std::type_identity<T>;

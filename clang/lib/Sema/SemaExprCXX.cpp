@@ -1779,6 +1779,11 @@ namespace {
       }
       unsigned NumBaseParams = 1;
       if (FD->isTypeAwareOperatorNewOrDelete()) {
+        // If this is a type aware operator delete we instantiate an appropriate
+        // specialization of std::type_identity<>. If we do not know the
+        // type being deallocated, or if the type-identity parameter of the
+        // deallocation function does not match the constructed type_identity
+        // specialization we reject the declaration.
         if (AllocType.isNull()) {
           FD = nullptr;
           return;

@@ -40,34 +40,34 @@ struct S4 {
   template <typename T> void operator delete(std::type_identity<T>, S4 *, std::destroying_delete_t, size_t, std::align_val_t); // #9
   // precxx26-warning@#7 {{type aware allocators are a C++2c extension}}
   // precxx26-warning@#8 {{type aware allocators are a C++2c extension}}
-  // expected-error@#9 {{type aware destroying delete is not permitted in C++26}}
+  // expected-error@#9 {{destroying delete is not permitted to be type aware}}
 };
 
 struct S5 {
   template <typename T> void operator delete(std::type_identity<T>, T *, size_t, std::align_val_t); // #10
-  // expected-error@#10 {{type aware 'operator delete' cannot take a dependent type as its second parameter}}
+  // expected-error@#10 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter}}
   // precxx26-warning@#10 {{type aware allocators are a C++2c extension}}
 };
 
 struct S6 {
   template <typename T> void *operator new(std::type_identity<S6>, T, std::align_val_t); // #11
-  // expected-error@#11 {{type aware 'operator new' cannot take a dependent type as its second parameter}}
+  // expected-error@#11 {{type aware 'operator new' cannot take a dependent type as its 2nd parameter}}
   // precxx26-warning@#11 {{type aware allocators are a C++2c extension}}
   template <typename T> void operator delete(std::type_identity<S6>, T, size_t, std::align_val_t); // #12
-  // expected-error@#12 {{type aware 'operator delete' cannot take a dependent type as its second parameter}}
+  // expected-error@#12 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter}}
   // precxx26-warning@#12 {{type aware allocators are a C++2c extension}}
 };
 
 template <typename U>
 struct S7 {
   template <typename T> void *operator new(std::type_identity<T>, U, std::align_val_t); // #13
-  // expected-error@#13 {{type aware 'operator new' cannot take a dependent type as its second parameter;}}
+  // expected-error@#13 {{type aware 'operator new' cannot take a dependent type as its 2nd parameter;}}
   // precxx26-warning@#13 {{type aware allocators are a C++2c extension}}
   template <typename T> void operator delete(std::type_identity<T>, U, size_t, std::align_val_t); // #14
-  // expected-error@#14 {{type aware 'operator delete' cannot take a dependent type as its second parameter;}}
+  // expected-error@#14 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter;}}
   // precxx26-warning@#14 {{type aware allocators are a C++2c extension}}
   template <typename T> void operator delete(std::type_identity<T>, S7 *, std::destroying_delete_t, U, std::align_val_t); // #15
-  // expected-error@#15 {{type aware destroying delete is not permitted in C++26}}
+  // expected-error@#15 {{destroying delete is not permitted to be type aware}}
   void operator delete(S7 *, std::destroying_delete_t, U); // #16
 };
 
@@ -79,13 +79,13 @@ void f() {
 
 struct S8 {
   template <typename T, typename U> void *operator new(std::type_identity<T>, U, std::align_val_t); // #17
-  // expected-error@#17 {{type aware 'operator new' cannot take a dependent type as its second parameter;}}
+  // expected-error@#17 {{type aware 'operator new' cannot take a dependent type as its 2nd parameter;}}
   // precxx26-warning@#17 {{type aware allocators are a C++2c extension}}
   template <typename T, typename U> void operator delete(std::type_identity<T>, U, size_t, std::align_val_t); // #18
-  // expected-error@#18 {{type aware 'operator delete' cannot take a dependent type as its second parameter;}}
+  // expected-error@#18 {{type aware 'operator delete' cannot take a dependent type as its 2nd parameter;}}
   // precxx26-warning@#18 {{type aware allocators are a C++2c extension}}
   template <typename T, typename U> void operator delete(std::type_identity<T>, S8 *, std::destroying_delete_t, U, std::align_val_t); // #19
-  // expected-error@#19 {{type aware destroying delete is not permitted in C++26}}
+  // expected-error@#19 {{destroying delete is not permitted to be type aware}}
 };
 
 template <typename T> using Alias = T;
