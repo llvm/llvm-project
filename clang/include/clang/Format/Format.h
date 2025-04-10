@@ -887,7 +887,7 @@ struct FormatStyle {
   ///   AllowShortFunctionsOnASingleLine:
   ///     Empty: false
   ///     Inline: true
-  ///     All: false
+  ///     Other: false
   /// \endcode
   struct ShortFunctionStyle {
     /// Merge top-level empty functions.

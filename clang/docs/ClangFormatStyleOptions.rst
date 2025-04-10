@@ -1975,7 +1975,7 @@ the configuration (without a prefix: ``Auto``).
     AllowShortFunctionsOnASingleLine:
       Empty: false
       Inline: true
-      All: false
+      Other: false
 
   * ``bool Empty`` Merge top-level empty functions.
 

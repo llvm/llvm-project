@@ -611,7 +611,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("AllowShortBlocksOnASingleLine: true",
               AllowShortBlocksOnASingleLine, FormatStyle::SBS_Always);
 
-  // Style.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_Inline;
   CHECK_PARSE("AllowShortFunctionsOnASingleLine: None",
               AllowShortFunctionsOnASingleLine,
               FormatStyle::ShortFunctionStyle({}));

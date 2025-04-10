@@ -5687,11 +5687,9 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     if (Right.is(tok::r_brace) && Left.is(tok::l_brace) &&
         !Left.Children.empty()) {
       // Support AllowShortFunctionsOnASingleLine for JavaScript.
-      return (!Style.AllowShortFunctionsOnASingleLine.Inline &&
-              !Style.AllowShortFunctionsOnASingleLine.Other) ||
-             (Left.NestingLevel == 0 && Line.Level == 0 &&
-              Style.AllowShortFunctionsOnASingleLine.Inline &&
-              !Style.AllowShortFunctionsOnASingleLine.Other);
+      return !(Left.NestingLevel == 0 && Line.Level == 0
+                   ? Style.AllowShortFunctionsOnASingleLine.Other
+                   : Style.AllowShortFunctionsOnASingleLine.Inline);
     }
   } else if (Style.Language == FormatStyle::LK_Java) {
     if (Right.is(tok::plus) && Left.is(tok::string_literal) && AfterRight &&
