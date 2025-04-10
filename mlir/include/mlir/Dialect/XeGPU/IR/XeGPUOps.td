@@ -840,7 +840,9 @@ def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>]
     can be represented as `B: vector<8x16x2xf16>`.
 
     In SIMT code, each work-item from a subgroup holds a data fragment for A, B, C and the result,
-    which are represented as 1D vectors.
+    which are represented as 1D vectors. Please refer to [OpenCL Intel extentions]
+    (https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_matrix_multiply_accumulate.html)
+    for more details about the fragment distribution.
 
     Note: on PVC, the hardware can perform load with VNNI transformation when data
           element type is 16-bit or lower precision, taking 2 or 4 elements from

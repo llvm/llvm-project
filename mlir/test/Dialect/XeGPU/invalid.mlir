@@ -80,9 +80,9 @@ func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
 // -----
 func.func @test_load_nd_layout(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16xf32>
-  // expected-error@+1 {{Result shape [8] is not a valid distribution for tensor descriptor}}
+  // expected-error@+1 {{Result shape [3] is not a valid distribution for tensor descriptor}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
-      l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16xf32> -> vector<8xf32>
+      l2_hint = #xegpu.cache_hint<uncached>}> : !xegpu.tensor_desc<16xf32> -> vector<3xf32>
   return
 }
 
@@ -119,10 +119,19 @@ func.func @test_store_nd_vc_2(%dst: memref<16xf16>) {
 }
 
 // -----
-func.func @test_store_nd_simt(%dst: memref<24x32xf32>, %data: vector<4xf32>) {
+func.func @test_store_nd_vc_3(%dst: memref<24x32xf16>) {
+  %1 = arith.constant dense<1.0>: vector<2x24x32xf16>
+  %2 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
+  // expected-error@+1 {{array length is not supported by store_nd}}
+  xegpu.store_nd %1, %2: vector<2x24x32xf16>, !xegpu.tensor_desc<24x32xf16, #xegpu.block_tdesc_attr<array_length = 2>>
+  return
+}
+
+// -----
+func.func @test_store_nd_simt(%dst: memref<24x32xf32>, %data: vector<3xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<16xf32>
-  // expected-error@+1 {{Value shape [4] is not a valid distribution for tensor descriptor}}
-  xegpu.store_nd %data, %1 : vector<4xf32>, !xegpu.tensor_desc<16xf32>
+  // expected-error@+1 {{Value shape [3] is not a valid distribution for tensor descriptor}}
+  xegpu.store_nd %data, %1 : vector<3xf32>, !xegpu.tensor_desc<16xf32>
   return
 }
 
