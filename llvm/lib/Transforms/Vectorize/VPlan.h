@@ -2066,6 +2066,8 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
+  /// The divisor by which the VF of this recipe's output should be divided
+  /// during execution.
   unsigned VFScaleFactor;
 
 public:
