@@ -170,13 +170,12 @@ private:
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
   ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
-  uint32_t ParameterSpaceOffset;
-  StringRef ParameterSpace;
+  StringRef PartData;
 
   using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
 
 public:
-  RootSignature() {}
+  RootSignature(StringRef PD) : PartData(PD) {}
 
   Error parse(StringRef Data);
   uint32_t getVersion() const { return Version; }
@@ -191,10 +190,6 @@ public:
 
   llvm::Expected<RootParameterView>
   getParameter(const dxbc::RootParameterHeader &Header) const {
-    assert(ParameterSpaceOffset != 0 &&
-           "This should be initialized before reading parameters");
-    size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
-    StringRef Data;
     size_t DataSize;
 
     switch (Header.ParameterType) {
@@ -202,12 +197,15 @@ public:
       DataSize = sizeof(dxbc::RootConstants);
       break;
     }
+    auto EndOfSectionByte = getNumStaticSamplers() == 0
+                                ? PartData.size()
+                                : getStaticSamplersOffset();
 
-    if (CorrectOffset + DataSize > ParameterSpace.size())
+    if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
 
-    Data = ParameterSpace.substr(CorrectOffset, DataSize);
-    RootParameterView View = RootParameterView(Header, Data);
+    StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
+    RootParameterView View = RootParameterView(Header, Buff);
     return View;
   }
 };

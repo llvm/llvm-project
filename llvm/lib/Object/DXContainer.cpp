@@ -96,7 +96,7 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature();
+  RootSignature = DirectX::RootSignature(Part);
   if (Error Err = RootSignature->parse(Part))
     return Err;
   return Error::success();
@@ -277,14 +277,6 @@ Error DirectX::RootSignature::parse(StringRef Data) {
 
   ParametersHeaders.Data = Data.substr(
       RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
-
-  ParameterSpaceOffset =
-      RootParametersOffset + NumParameters * sizeof(dxbc::RootParameterHeader);
-  size_t ParameterSpaceEnd =
-      (NumStaticSamplers == 0) ? Data.size() : StaticSamplersOffset;
-
-  ParameterSpace = Data.substr(ParameterSpaceOffset,
-                               ParameterSpaceEnd - ParameterSpaceOffset);
 
   return Error::success();
 }
