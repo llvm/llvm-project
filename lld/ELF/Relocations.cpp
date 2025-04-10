@@ -1984,7 +1984,7 @@ void elf::postScanRelocations(Ctx &ctx) {
   // symbols, move IRELATIVE relocations to the right place:
   // - Relocations for non-demoted ifuncs are added to .rela.dyn
   // - Relocations for demoted ifuncs are turned into RELATIVE relocations
-  //   or static relocations in PDEs
+  //   or static relocations in position-dependent executables
   for (Partition &part : ctx.partitions) {
     for (const auto &v : part.relaDyn->tentativeIRelativeRelocs) {
       auto *inputSec = const_cast<InputSectionBase *>(v.inputSec);

@@ -126,14 +126,6 @@ Type getVectorType(Type elementType, unsigned numElements,
 /// and length.
 Type getVectorType(Type elementType, const llvm::ElementCount &numElements);
 
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getFixedVectorType(Type elementType, unsigned numElements);
-
-/// Creates an LLVM dialect-compatible type with the given element type and
-/// length.
-Type getScalableVectorType(Type elementType, unsigned numElements);
-
 /// Returns the size of the given primitive LLVM dialect-compatible type
 /// (including vectors) in bits, for example, the size of i16 is 16 and
 /// the size of vector<4xi16> is 64. Returns 0 for non-primitive

@@ -1761,6 +1761,8 @@ void RelocationBaseSection::computeRels() {
     llvm::sort(nonRelative, irelative, [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
+    // Sorting irelative is necessary for determinism as they are added under
+    // a lock from multiple threads.
     llvm::sort(irelative, relocs.end(), [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
