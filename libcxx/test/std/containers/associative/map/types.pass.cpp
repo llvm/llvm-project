@@ -27,7 +27,7 @@
 //     typedef typename allocator_type::difference_type difference_type;
 //     ...
 // };
- // constexpr since C++26
+
 #include <map>
 #include <type_traits>
 
