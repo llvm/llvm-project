@@ -4915,6 +4915,9 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
+  if (CGF.getLangOpts().PointerOverflowDefined)
+    return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
+
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }
 
@@ -4972,9 +4975,13 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     if (!UseVolatile) {
       if (!IsInPreservedAIRegion &&
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
-        if (Idx != 0)
+        if (Idx != 0) {
           // For structs, we GEP to the field that the record layout suggests.
-          Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+          if (getLangOpts().PointerOverflowDefined)
+            Addr = Builder.CreateConstGEP2_32(Addr, 0, Idx, field->getName());
+          else
+            Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
+        }
       } else {
         llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
             getContext().getRecordType(rec), rec->getLocation());
@@ -5752,6 +5759,12 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
   return CGCallee::forDirect(CalleePtr, GD);
 }
 
+static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
+  if (FD->hasAttr<OpenCLKernelAttr>())
+    return GlobalDecl(FD, KernelReferenceKind::Stub);
+  return GlobalDecl(FD);
+}
+
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
@@ -5765,7 +5778,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   // Resolve direct calls.
   } else if (auto DRE = dyn_cast<DeclRefExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(DRE->getDecl())) {
-      return EmitDirectCallee(*this, FD);
+      return EmitDirectCallee(*this, getGlobalDeclForDirectCall(FD));
     }
   } else if (auto ME = dyn_cast<MemberExpr>(E)) {
     if (auto FD = dyn_cast<FunctionDecl>(ME->getMemberDecl())) {
@@ -6133,6 +6146,10 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   }
 
   const auto *FnType = cast<FunctionType>(PointeeType);
+
+  if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+      FD && FD->hasAttr<OpenCLKernelAttr>())
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

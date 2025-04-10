@@ -74,7 +74,7 @@ public:
 
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
-  bool isZeroInitializable(clang::QualType t);
+  bool isZeroInitializable(clang::QualType ty);
 };
 
 } // namespace clang::CIRGen

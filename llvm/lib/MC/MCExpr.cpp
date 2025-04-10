@@ -235,9 +235,7 @@ const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
 
 MCSymbolRefExpr::MCSymbolRefExpr(const MCSymbol *Symbol, VariantKind Kind,
                                  const MCAsmInfo *MAI, SMLoc Loc)
-    : MCExpr(MCExpr::SymbolRef, Loc,
-             encodeSubclassData(Kind, MAI->hasSubsectionsViaSymbols())),
-      Symbol(Symbol) {
+    : MCExpr(MCExpr::SymbolRef, Loc, Kind), Symbol(Symbol) {
   assert(Symbol);
 }
 
@@ -507,7 +505,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     // Evaluate recursively if this is a variable.
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
         canExpand(Sym, InSet)) {
-      bool IsMachO = SRE->hasSubsectionsViaSymbols();
+      bool IsMachO =
+          Asm && Asm->getContext().getAsmInfo()->hasSubsectionsViaSymbols();
       if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm,
                                                             InSet || IsMachO)) {
         if (Kind != MCSymbolRefExpr::VK_None) {

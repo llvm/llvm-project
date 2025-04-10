@@ -1506,7 +1506,12 @@ class VPWidenGEPRecipe : public VPRecipeWithIRFlags {
 public:
   template <typename IterT>
   VPWidenGEPRecipe(GetElementPtrInst *GEP, iterator_range<IterT> Operands)
-      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {}
+      : VPRecipeWithIRFlags(VPDef::VPWidenGEPSC, Operands, *GEP) {
+    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+    (void)Metadata;
+    getMetadataToPropagate(GEP, Metadata);
+    assert(Metadata.empty() && "unexpected metadata on GEP");
+  }
 
   ~VPWidenGEPRecipe() override = default;
 
@@ -1813,6 +1818,11 @@ public:
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
+    SmallVector<std::pair<unsigned, MDNode *>> Metadata;
+    (void)Metadata;
+    if (Trunc)
+      getMetadataToPropagate(Trunc, Metadata);
+    assert(Metadata.empty() && "unexpected metadata on Trunc");
   }
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
@@ -3769,6 +3779,14 @@ public:
   /// successors of the block in VPlan. The returned block is owned by the VPlan
   /// and deleted once the VPlan is destroyed.
   VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
+
+  /// Returns true if the VPlan is based on a loop with an early exit. That is
+  /// the case if the VPlan has either more than one exit block or a single exit
+  /// block with multiple predecessors (one for the exit via the latch and one
+  /// via the other early exit).
+  bool hasEarlyExit() const {
+    return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

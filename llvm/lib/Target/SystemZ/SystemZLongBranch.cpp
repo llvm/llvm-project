@@ -135,9 +135,7 @@ class SystemZLongBranch : public MachineFunctionPass {
 public:
   static char ID;
 
-  SystemZLongBranch() : MachineFunctionPass(ID) {
-    initializeSystemZLongBranchPass(*PassRegistry::getPassRegistry());
-  }
+  SystemZLongBranch() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

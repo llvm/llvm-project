@@ -1994,8 +1994,6 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
 
   Instruction *LastInduction = cast<Instruction>(
       Builder.CreateBinOp(AddOp, VecInd, SplatVF, "vec.ind.next"));
-  if (isa<TruncInst>(EntryVal))
-    State.addMetadata(LastInduction, EntryVal);
   LastInduction->setDebugLoc(getDebugLoc());
 
   VecInd->addIncoming(SteppedStart, VectorPH);
@@ -2182,7 +2180,6 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
                                            getGEPNoWrapFlags());
     Value *Splat = State.Builder.CreateVectorSplat(State.VF, NewGEP);
     State.set(this, Splat);
-    State.addMetadata(Splat, GEP);
   } else {
     // If the GEP has at least one loop-varying operand, we are sure to
     // produce a vector of pointers unless VF is scalar.
@@ -2209,7 +2206,6 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
     assert((State.VF.isScalar() || NewGEP->getType()->isVectorTy()) &&
            "NewGEP is not a pointer vector");
     State.set(this, NewGEP);
-    State.addMetadata(NewGEP, GEP);
   }
 }
 

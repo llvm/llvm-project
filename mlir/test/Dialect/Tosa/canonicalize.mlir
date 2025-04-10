@@ -9,6 +9,158 @@ func.func @argmax_nofold(%arg0: tensor<?x1xf32>) -> tensor<1xi32> {
 
 // -----
 
+// CHECK-LABEL: @pad_wh_avg_pool2d_fold
+func.func @pad_wh_avg_pool2d_fold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
+  // CHECK-NOT: tosa.pad
+  // CHECK: tosa.avg_pool2d
+  // CHECK-SAME: pad = array<i64: 1, 1, 1, 1>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x11x9x3xf32>
+  %pool = tosa.avg_pool2d %padded, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x11x9x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x6x5x3xf32>
+  return %pool : tensor<1x6x5x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_avg_pool2d_nofold_pad_const
+func.func @pad_wh_avg_pool2d_nofold_pad_const(%input: tensor<1x10x8x3xi8>) -> tensor<1x6x5x3xi8> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.avg_pool2d
+  // CHECK-SAME: pad = array<i64: 0, 1, 0, 1>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<15> : tensor<1xi8>}> : ()-> tensor<1xi8>
+  %input_zp = "tosa.const"() <{values = dense<10> : tensor<1xi8>}> : ()-> tensor<1xi8>
+  %output_zp = "tosa.const"() <{values = dense<20> : tensor<1xi8>}> : ()-> tensor<1xi8>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xi8>, !tosa.shape<8>, tensor<1xi8>) -> tensor<1x11x9x3xi8>
+  %pool = tosa.avg_pool2d %padded, %input_zp, %output_zp {acc_type = i32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x11x9x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<1x6x5x3xi8>
+  return %pool : tensor<1x6x5x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_avg_pool2d_nofold_pad_larger_than_kernel
+func.func @pad_wh_avg_pool2d_nofold_pad_larger_than_kernel(%input: tensor<1x10x8x3xf32>) -> tensor<1x7x5x3xf32> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.avg_pool2d
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 3, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %output_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x13x9x3xf32>
+  %pool = tosa.avg_pool2d %padded, %input_zp, %output_zp {acc_type = f32, kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x13x9x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x7x5x3xf32>
+  return %pool : tensor<1x7x5x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_conv2d_fold
+func.func @pad_wh_conv2d_fold(%input: tensor<1x8x4x3xf32>, %weight: tensor<1x3x3x3xf32>, %bias: tensor<1xf32>) -> tensor<1x10x8x1xf32> {
+  // CHECK-NOT: tosa.pad
+  // CHECK: tosa.conv2d
+  // CHECK-SAME: pad = array<i64: 2, 2, 3, 3>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 1, 2, 2, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x8x4x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x10x8x3xf32>
+  %conv = tosa.conv2d %padded, %weight, %bias, %input_zp, %weight_zp {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<1x10x8x3xf32>, tensor<1x3x3x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x10x8x1xf32>
+  return %conv : tensor<1x10x8x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_bwh_conv2d_nofold
+func.func @pad_bwh_conv2d_nofold(%input: tensor<1x8x4x3xf32>, %weight: tensor<1x3x3x3xf32>, %bias: tensor<1xf32>) -> tensor<3x10x8x1xf32> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.conv2d
+  // CHECK-SAME: pad = array<i64: 1, 1, 1, 1>
+  %pad_shape = tosa.const_shape { values = dense<[1, 1, 1, 1, 2, 2, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x8x4x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<3x10x8x3xf32>
+  %conv = tosa.conv2d %padded, %weight, %bias, %input_zp, %weight_zp {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<3x10x8x3xf32>, tensor<1x3x3x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<3x10x8x1xf32>
+  return %conv : tensor<3x10x8x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_conv2d_nofold_pad_const
+func.func @pad_wh_conv2d_nofold_pad_const(%input: tensor<1x8x4x3xf32>, %weight: tensor<1x3x3x3xf32>, %bias: tensor<1xf32>) -> tensor<1x10x8x1xf32> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.conv2d
+  // CHECK-SAME: pad = array<i64: 1, 1, 1, 1>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 1, 2, 2, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<1.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x8x4x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x10x8x3xf32>
+  %conv = tosa.conv2d %padded, %weight, %bias, %input_zp, %weight_zp {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<1x10x8x3xf32>, tensor<1x3x3x3xf32>, tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x10x8x1xf32>
+  return %conv : tensor<1x10x8x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_depthwise_conv2d_fold
+func.func @pad_wh_depthwise_conv2d_fold(%input: tensor<1x8x4x3xf32>, %weight: tensor<3x3x3x1xf32>, %bias: tensor<3xf32>) -> tensor<1x10x8x3xf32> {
+  // CHECK-NOT: tosa.pad
+  // CHECK: tosa.depthwise_conv2d
+  // CHECK-SAME: pad = array<i64: 2, 2, 3, 3>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 1, 2, 2, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %input_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %weight_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x8x4x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x10x8x3xf32>
+  %conv = tosa.depthwise_conv2d %padded, %weight, %bias, %input_zp, %weight_zp {acc_type = f32, pad = array<i64: 1, 1, 1, 1>, stride = array<i64: 1, 1>, dilation = array<i64: 1, 1>} : (tensor<1x10x8x3xf32>, tensor<3x3x3x1xf32>, tensor<3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x10x8x3xf32>
+  return %conv : tensor<1x10x8x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_max_pool2d_fold
+func.func @pad_wh_max_pool2d_fold(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
+  // CHECK-NOT: tosa.pad
+  // CHECK: tosa.max_pool2d
+  // CHECK-SAME: pad = array<i64: 1, 1, 1, 1>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<-3.4028235e+38> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x11x9x3xf32>
+  %pool = tosa.max_pool2d %padded {kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x11x9x3xf32>) -> tensor<1x6x5x3xf32>
+  return %pool : tensor<1x6x5x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_max_pool2d_nofold_pad_const
+func.func @pad_wh_max_pool2d_nofold_pad_const(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x5x3xf32> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.max_pool2d
+  // CHECK-SAME: pad = array<i64: 0, 1, 0, 1>
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 1, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x11x9x3xf32>
+  %pool = tosa.max_pool2d %padded {kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x11x9x3xf32>) -> tensor<1x6x5x3xf32>
+  return %pool : tensor<1x6x5x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @pad_wh_max_pool2d_no_fold_8k_limit
+func.func @pad_wh_max_pool2d_no_fold_8k_limit(%input: tensor<1x10x8x3xf32>) -> tensor<1x6x4101x3xf32> {
+  // CHECK: tosa.pad
+  // CHECK: tosa.max_pool2d
+  %pad_shape = tosa.const_shape { values = dense<[0, 0, 1, 0, 8193, 0, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  %pad_const = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : ()-> tensor<1xf32>
+  %padded = tosa.pad %input, %pad_shape, %pad_const : (tensor<1x10x8x3xf32>, !tosa.shape<8>, tensor<1xf32>) -> tensor<1x11x8201x3xf32>
+  %pool = tosa.max_pool2d %padded {kernel = array<i64: 2, 2>, pad = array<i64: 0, 1, 0, 1>, stride = array<i64: 2, 2>} : (tensor<1x11x8201x3xf32>) -> tensor<1x6x4101x3xf32>
+  return %pool : tensor<1x6x4101x3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @add_bcast_zero_int
 func.func @add_bcast_zero_int(%arg0: tensor<4x2x3xi32>) -> tensor<4x2x3xi32> {
   // CHECK-NOT: tosa.add

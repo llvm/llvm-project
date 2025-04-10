@@ -1824,6 +1824,27 @@ LogicalResult ModuleTranslation::convertComdats() {
   return success();
 }
 
+LogicalResult ModuleTranslation::convertUnresolvedBlockAddress() {
+  for (auto &[blockAddressOp, llvmCst] : unresolvedBlockAddressMapping) {
+    BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
+    BlockTagOp blockTagOp = lookupBlockTag(blockAddressAttr);
+    assert(blockTagOp && "expected all block tags to be already seen");
+
+    llvm::BasicBlock *llvmBlock = lookupBlock(blockTagOp->getBlock());
+    assert(llvmBlock && "expected LLVM blocks to be already translated");
+
+    // Update mapping with new block address constant.
+    auto *llvmBlockAddr = llvm::BlockAddress::get(
+        lookupFunction(blockAddressAttr.getFunction().getValue()), llvmBlock);
+    llvmCst->replaceAllUsesWith(llvmBlockAddr);
+    mapValue(blockAddressOp.getResult(), llvmBlockAddr);
+    assert(llvmCst->use_empty() && "expected all uses to be replaced");
+    cast<llvm::GlobalVariable>(llvmCst)->eraseFromParent();
+  }
+  unresolvedBlockAddressMapping.clear();
+  return success();
+}
+
 void ModuleTranslation::setAccessGroupsMetadata(AccessGroupOpInterface op,
                                                 llvm::Instruction *inst) {
   if (llvm::MDNode *node = loopAnnotationTranslation->getAccessGroups(op))
@@ -2234,6 +2255,11 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   // after the top-level operations they refer to are declared, so we do it
   // last.
   if (failed(translator.convertFunctions()))
+    return nullptr;
+
+  // Now that all MLIR blocks are resolved into LLVM ones, patch block address
+  // constants to point to the correct blocks.
+  if (failed(translator.convertUnresolvedBlockAddress()))
     return nullptr;
 
   // Once we've finished constructing elements in the module, we should convert

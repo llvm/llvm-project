@@ -29,7 +29,7 @@
 #include "llvm/Support/ManagedStatic.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_REDUCTIONTREE
+#define GEN_PASS_DEF_REDUCTIONTREEPASS
 #include "mlir/Reducer/Passes.h.inc"
 } // namespace mlir
 
@@ -191,10 +191,10 @@ public:
 /// This class defines the Reduction Tree Pass. It provides a framework to
 /// to implement a reduction pass using a tree structure to keep track of the
 /// generated reduced variants.
-class ReductionTreePass : public impl::ReductionTreeBase<ReductionTreePass> {
+class ReductionTreePass
+    : public impl::ReductionTreePassBase<ReductionTreePass> {
 public:
-  ReductionTreePass() = default;
-  ReductionTreePass(const ReductionTreePass &pass) = default;
+  using Base::Base;
 
   LogicalResult initialize(MLIRContext *context) override;
 
@@ -255,8 +255,4 @@ LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
-}
-
-std::unique_ptr<Pass> mlir::createReductionTreePass() {
-  return std::make_unique<ReductionTreePass>();
 }

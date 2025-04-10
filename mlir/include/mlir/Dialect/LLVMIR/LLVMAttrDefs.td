@@ -1225,6 +1225,25 @@ def LLVM_DSOLocalEquivalentAttr : LLVM_Attr<"DSOLocalEquivalent",
 }
 
 //===----------------------------------------------------------------------===//
+// BlockAddressAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_BlockTagAttr : LLVM_Attr<"BlockTag", "blocktag"> {
+  let parameters = (ins "uint32_t":$id);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+/// Folded into from LLVM_BlockAddressAttr.
+def LLVM_BlockAddressAttr : LLVM_Attr<"BlockAddress", "blockaddress"> {
+  let description = [{
+    Describes a block address identified by a pair of `$function` and `$tag`.
+  }];
+  let parameters = (ins "FlatSymbolRefAttr":$function,
+                        "BlockTagAttr":$tag);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // VecTypeHintAttr
 //===----------------------------------------------------------------------===//
 

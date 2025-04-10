@@ -262,7 +262,7 @@ public:
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
   /// occur in a non-dependent, canonical template argument list.
-  TemplateArgument(Expr *E, bool IsDefaulted = false) {
+  explicit TemplateArgument(Expr *E, bool IsDefaulted = false) {
     TypeOrValue.Kind = Expression;
     TypeOrValue.IsDefaulted = IsDefaulted;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
