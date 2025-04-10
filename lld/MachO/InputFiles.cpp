@@ -2159,7 +2159,8 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
 void ArchiveFile::addLazySymbols() {
   // Avoid calling getMemoryBufferRef() on zero-symbol archive
   // since that crashes.
-  if (file->isEmpty())
+  if (file->isEmpty() ||
+      (file->hasSymbolTable() && file->getNumberOfSymbols() == 0))
     return;
 
   if (!file->hasSymbolTable()) {
