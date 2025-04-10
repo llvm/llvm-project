@@ -194,10 +194,12 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   }
 
   CIRGenFunction cgf(*this, builder);
+  curCGF = &cgf;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     cgf.generateCode(gd, funcOp, funcType);
   }
+  curCGF = nullptr;
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
@@ -533,8 +535,18 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
+    // Some global emissions are triggered while emitting a function, e.g.
+    // void s() { x.method() }
+    //
+    // Be sure to insert a new function before a current one.
+    CIRGenFunction *cgf = this->curCGF;
+    if (cgf)
+      builder.setInsertionPoint(cgf->curFn);
+
     func = builder.create<cir::FuncOp>(loc, name, funcType);
-    theModule.push_back(func);
+
+    if (!cgf)
+      theModule.push_back(func);
   }
   return func;
 }
