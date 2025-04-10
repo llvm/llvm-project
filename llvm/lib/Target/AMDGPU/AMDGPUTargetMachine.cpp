@@ -1386,6 +1386,15 @@ ScheduleDAGInstrs *GCNPassConfig::createMachineScheduler(
   if (SchedStrategy == "max-memory-clause")
     return createGCNMaxMemoryClauseMachineScheduler(C);
 
+  if (SchedStrategy == "iterative-ilp")
+    return createIterativeILPMachineScheduler(C);
+
+  if (SchedStrategy == "iterative-minreg")
+    return createMinRegScheduler(C);
+
+  if (SchedStrategy == "iterative-maxocc")
+    return createIterativeGCNMaxOccupancyMachineScheduler(C);
+
   return createGCNMaxOccupancyMachineScheduler(C);
 }
 
