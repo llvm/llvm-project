@@ -126,6 +126,14 @@ names match module files in multiple search directories, as well as to
 detect dependent modules whose recompilation has rendered a module file
 obsolete.
 
+The hash codes used in module files also serve as a means of protection from
+updates to code in other packages.
+If a project A uses module files from package B, and package B is updated in
+a way that causes its module files to be updated, then the modules in A that
+depend on those modules in B will no longer be accepted for use until they
+have also been regenerated.
+This feature can catch errors that other compilers cannot.
+
 When processing `.mod` files we know they are valid Fortran with these properties:
 1. The input (without the header) is already in the "cooked input" format.
 2. No preprocessing is necessary.
