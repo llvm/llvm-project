@@ -1,4 +1,4 @@
-//-- SystemZScheduleZ16.td - SystemZ Scheduling Definitions ----*- tblgen -*-=//
+//--- SystemZScheduleZ17.td - SystemZ Scheduling Definitions ---*- tblgen -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines the machine model for Z16 to support instruction
+// This file defines the machine model for Z17 to support instruction
 // scheduling and other instruction cost heuristics.
 //
 // Pseudos expanded right after isel do not need to be modelled here.
 //
 //===----------------------------------------------------------------------===//
 
-def Z16Model : SchedMachineModel {
+def Z17Model : SchedMachineModel {
 
-    let UnsupportedFeatures = Arch14UnsupportedFeatures.List;
+    let UnsupportedFeatures = Arch15UnsupportedFeatures.List;
 
     let IssueWidth = 6;             // Number of instructions decoded per cycle.
     let MicroOpBufferSize = 60;     // Issue queues
@@ -27,7 +27,7 @@ def Z16Model : SchedMachineModel {
     let MispredictPenalty = 20;
 }
 
-let SchedModel = Z16Model in  {
+let SchedModel = Z17Model in  {
 // These definitions need the SchedModel value. They could be put in a
 // subtarget common include file, but it seems the include system in Tablegen
 // currently (2016) rejects multiple includes of same file.
@@ -73,44 +73,44 @@ let NumMicroOps = 0 in {
 }
 
 // Execution units.
-def Z16_FXaUnit     : ProcResource<2>;
-def Z16_FXbUnit     : ProcResource<2>;
-def Z16_LSUnit      : ProcResource<2>;
-def Z16_VecUnit     : ProcResource<2>;
-def Z16_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
-def Z16_VBUnit      : ProcResource<2>;
-def Z16_MCD         : ProcResource<1>;
+def Z17_FXaUnit     : ProcResource<2>;
+def Z17_FXbUnit     : ProcResource<2>;
+def Z17_LSUnit      : ProcResource<2>;
+def Z17_VecUnit     : ProcResource<2>;
+def Z17_VecFPdUnit  : ProcResource<2> { let BufferSize = 1; /* blocking */ }
+def Z17_VBUnit      : ProcResource<2>;
+def Z17_MCD         : ProcResource<1>;
 
 // Subtarget specific definitions of scheduling resources.
 let NumMicroOps = 0 in {
-  def : WriteRes<FXa, [Z16_FXaUnit]>;
-  def : WriteRes<FXb, [Z16_FXbUnit]>;
-  def : WriteRes<LSU, [Z16_LSUnit]>;
-  def : WriteRes<VecBF,  [Z16_VecUnit]>;
-  def : WriteRes<VecDF,  [Z16_VecUnit]>;
-  def : WriteRes<VecDFX, [Z16_VecUnit]>;
-  def : WriteRes<VecMul,  [Z16_VecUnit]>;
-  def : WriteRes<VecStr,  [Z16_VecUnit]>;
-  def : WriteRes<VecXsPm, [Z16_VecUnit]>;
+  def : WriteRes<FXa, [Z17_FXaUnit]>;
+  def : WriteRes<FXb, [Z17_FXbUnit]>;
+  def : WriteRes<LSU, [Z17_LSUnit]>;
+  def : WriteRes<VecBF,  [Z17_VecUnit]>;
+  def : WriteRes<VecDF,  [Z17_VecUnit]>;
+  def : WriteRes<VecDFX, [Z17_VecUnit]>;
+  def : WriteRes<VecMul,  [Z17_VecUnit]>;
+  def : WriteRes<VecStr,  [Z17_VecUnit]>;
+  def : WriteRes<VecXsPm, [Z17_VecUnit]>;
   foreach Num = 2-5 in { let ReleaseAtCycles = [Num] in {
-    def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z16_FXaUnit]>;
-    def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z16_FXbUnit]>;
-    def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z16_LSUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecBF"#Num), [Z16_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecDF"#Num), [Z16_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecDFX"#Num), [Z16_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecMul"#Num), [Z16_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecStr"#Num), [Z16_VecUnit]>;
-    def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z16_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("FXa"#Num), [Z17_FXaUnit]>;
+    def : WriteRes<!cast<SchedWrite>("FXb"#Num), [Z17_FXbUnit]>;
+    def : WriteRes<!cast<SchedWrite>("LSU"#Num), [Z17_LSUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecBF"#Num), [Z17_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDF"#Num), [Z17_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecDFX"#Num), [Z17_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecMul"#Num), [Z17_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecStr"#Num), [Z17_VecUnit]>;
+    def : WriteRes<!cast<SchedWrite>("VecXsPm"#Num), [Z17_VecUnit]>;
   }}
 
-  def : WriteRes<VecFPd,   [Z16_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
-  def : WriteRes<VecFPd20, [Z16_VecFPdUnit]> { let ReleaseAtCycles = [20]; }
+  def : WriteRes<VecFPd,   [Z17_VecFPdUnit]> { let ReleaseAtCycles = [30]; }
+  def : WriteRes<VecFPd20, [Z17_VecFPdUnit]> { let ReleaseAtCycles = [20]; }
 
-  def : WriteRes<VBU,     [Z16_VBUnit]>; // Virtual Branching Unit
+  def : WriteRes<VBU,     [Z17_VBUnit]>; // Virtual Branching Unit
 }
 
-def : WriteRes<MCD, [Z16_MCD]> { let NumMicroOps = 3;
+def : WriteRes<MCD, [Z17_MCD]> { let NumMicroOps = 3;
                                  let BeginGroup  = 1;
                                  let EndGroup    = 1; }
 
@@ -315,6 +315,9 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "LA(Y|RL)?$")>;
 // Load the Global Offset Table address ( -> larl )
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "GOT$")>;
 
+// Load (logical) indexed address.
+def : InstRW<[WLat2, FXa2, NormalGr], (instregex "(L)?LXA(B|H|F|G|Q)$")>;
+
 //===----------------------------------------------------------------------===//
 // Absolute and Negation
 //===----------------------------------------------------------------------===//
@@ -478,29 +481,29 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "NX(G)?RK$")>;
 // Multiplication
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat5LSU, RegReadAdv, FXa, LSU, NormalGr],
+def : InstRW<[WLat4LSU, RegReadAdv, FXa, LSU, NormalGr],
              (instregex "MS(GF|Y)?$")>;
-def : InstRW<[WLat5, FXa, NormalGr], (instregex "MS(R|FI)$")>;
-def : InstRW<[WLat7LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "MSG$")>;
-def : InstRW<[WLat7, FXa, NormalGr], (instregex "MSGR$")>;
-def : InstRW<[WLat5, FXa, NormalGr], (instregex "MSGF(I|R)$")>;
-def : InstRW<[WLat8LSU, RegReadAdv, FXa2, LSU, GroupAlone], (instregex "MLG$")>;
-def : InstRW<[WLat8, FXa2, GroupAlone], (instregex "MLGR$")>;
+def : InstRW<[WLat4, FXa, NormalGr], (instregex "MS(R|FI)$")>;
+def : InstRW<[WLat4LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "MSG$")>;
+def : InstRW<[WLat4, FXa, NormalGr], (instregex "MSGR$")>;
+def : InstRW<[WLat4, FXa, NormalGr], (instregex "MSGF(I|R)$")>;
+def : InstRW<[WLat5LSU, RegReadAdv, FXa2, LSU, GroupAlone], (instregex "MLG$")>;
+def : InstRW<[WLat5, FXa2, GroupAlone], (instregex "MLGR$")>;
 def : InstRW<[WLat4, FXa, NormalGr], (instregex "MGHI$")>;
 def : InstRW<[WLat4, FXa, NormalGr], (instregex "MHI$")>;
 def : InstRW<[WLat4LSU, RegReadAdv, FXa, LSU, NormalGr], (instregex "MH(Y)?$")>;
-def : InstRW<[WLat6, FXa2, GroupAlone], (instregex "M(L)?R$")>;
-def : InstRW<[WLat6LSU, RegReadAdv, FXa2, LSU, GroupAlone],
+def : InstRW<[WLat5, FXa2, GroupAlone], (instregex "M(L)?R$")>;
+def : InstRW<[WLat5LSU, RegReadAdv, FXa2, LSU, GroupAlone],
              (instregex "M(FY|L)?$")>;
 def : InstRW<[WLat8, RegReadAdv, FXa, LSU, NormalGr], (instregex "MGH$")>;
-def : InstRW<[WLat12, RegReadAdv, FXa2, LSU, GroupAlone], (instregex "MG$")>;
-def : InstRW<[WLat8, FXa2, GroupAlone], (instregex "MGRK$")>;
-def : InstRW<[WLat6LSU, WLat6LSU, RegReadAdv, FXa, LSU, NormalGr],
+def : InstRW<[WLat9, RegReadAdv, FXa2, LSU, GroupAlone], (instregex "MG$")>;
+def : InstRW<[WLat5, FXa2, GroupAlone], (instregex "MGRK$")>;
+def : InstRW<[WLat4LSU, WLat4LSU, RegReadAdv, FXa, LSU, NormalGr],
              (instregex "MSC$")>;
-def : InstRW<[WLat8LSU, WLat8LSU, RegReadAdv, FXa, LSU, NormalGr],
+def : InstRW<[WLat4LSU, WLat4LSU, RegReadAdv, FXa, LSU, NormalGr],
              (instregex "MSGC$")>;
-def : InstRW<[WLat6, WLat6, FXa, NormalGr], (instregex "MSRKC$")>;
-def : InstRW<[WLat8, WLat8, FXa, NormalGr], (instregex "MSGRKC$")>;
+def : InstRW<[WLat4, WLat4, FXa, NormalGr], (instregex "MSRKC$")>;
+def : InstRW<[WLat4, WLat4, FXa, NormalGr], (instregex "MSGRKC$")>;
 
 //===----------------------------------------------------------------------===//
 // Division and remainder
@@ -649,6 +652,12 @@ def : InstRW<[WLat1, FXb2, LSU, GroupAlone], (instregex "STPQ$")>;
 // Load pair disjoint
 def : InstRW<[WLat1LSU, WLat1LSU, LSU2, GroupAlone], (instregex "LPD(G)?$")>;
 
+// Compare and load
+def : InstRW<[WLat30, MCD], (instregex "CAL(G|GF)?$")>;
+
+// Perform functions with concurrent results
+def : InstRW<[WLat30, MCD], (instregex "PFCR$")>;
+
 //===----------------------------------------------------------------------===//
 // Translate and convert
 //===----------------------------------------------------------------------===//
@@ -671,7 +680,7 @@ def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "(CUUTF|CUTFU)(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, WLat30, MCD],
              (instregex "KM(C|F|O|CTR|A)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD],
-             (instregex "(KIMD|KLMD|KMAC|KDSA)$")>;
+             (instregex "(KIMD|KLMD|KMAC|KDSA)(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD],
              (instregex "(PCC|PPNO|PRNO)$")>;
 
@@ -773,11 +782,17 @@ def : InstRW<[WLat1, FXb, GroupAlone], (instregex "PPA$")>;
 // Miscellaneous Instructions.
 //===----------------------------------------------------------------------===//
 
+// Count leading/trailing zeros.
+def : InstRW<[WLat3, FXa, NormalGr], (instregex "C(L|T)ZG$")>;
+
 // Find leftmost one
 def : InstRW<[WLat5, WLat5, FXa2, GroupAlone], (instregex "FLOGR$")>;
 
 // Population count
 def : InstRW<[WLat3, WLat3, FXa, NormalGr], (instregex "POPCNT(Opt)?$")>;
+
+// Bit deposit and bit extract.
+def : InstRW<[WLat4, FXa, NormalGr], (instregex "(BDEPG|BEXTG)$")>;
 
 // String instructions
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "SRST(U)?$")>;
@@ -1285,6 +1300,7 @@ def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPDI$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VBPERM$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VREP(B|F|G|H)?$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSEL$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VBLEND(B|F|G|H|Q)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Widening and narrowing
@@ -1296,10 +1312,11 @@ def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VPKS(F|G|H)S$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPKLS(F|G|H)?$")>;
 def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VPKLS(F|G|H)S$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VSEG(B|F|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPH(B|F|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPL(B|F)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLH(B|F|H|W)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLL(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VGEM(B|H|F|G|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPH(B|F|H|G)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPL(B|F|G)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLH(B|F|H|G|W)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLL(B|F|H|G)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Vector: Integer arithmetic
@@ -1307,40 +1324,44 @@ def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VUPLL(B|F|H)?$")>;
 
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VA(B|F|G|H|Q|C|CQ)?$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VACC(B|F|G|H|Q|C|CQ)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVG(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVGL(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVG(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VAVGL(B|F|G|H|Q)?$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VN(C|O|N|X)?$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VO(C)?$")>;
 def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VCKSM$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCLZ(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCTZ(B|F|G|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCLZ(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCTZ(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VD(L)?(F|G|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VEVAL$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VX$")>;
 def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFM?$")>;
 def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFMA(B|F|G|H)?$")>;
 def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VGFM(B|F|G|H)$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLC(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLP(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMX(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMXL(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMN(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMNL(B|F|G|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAL(B|F)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALE(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALH(B|F|H|W)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALO(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAO(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAE(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAH(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VME(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMH(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VML(B|F)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLE(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLH(B|F|H|W)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLO(B|F|H)?$")>;
-def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMO(B|F|H)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLC(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VLP(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMX(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMXL(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMN(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VMNL(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAL(B|F|G|Q)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALE(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALH(B|F|H|G|Q|W)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMALO(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAO(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAE(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMAH(B|F|H|G|Q)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VME(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMH(B|F|H|G|Q)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VML(B|F|G|Q)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLE(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLH(B|F|H|G|Q|W)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMLO(B|F|H|G)?$")>;
+def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VMO(B|F|H|G)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VMSL(G)?$")>;
 
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VPOPCT(B|F|G|H)?$")>;
+
+def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VR(L)?(F|G|Q)?$")>;
 
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VERLL(B|F|G|H)?$")>;
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VERLLV(B|F|G|H)?$")>;
@@ -1371,14 +1392,14 @@ def : InstRW<[WLat4, VecMul, NormalGr], (instregex "VSUMQ(F|G)?$")>;
 // Vector: Integer comparison
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VEC(B|F|G|H)?$")>;
-def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VECL(B|F|G|H)?$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H)?$")>;
-def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H)S$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H)?$")>;
-def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H)S$")>;
-def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H)?$")>;
-def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H)S$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VEC(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat3, VecXsPm, NormalGr], (instregex "VECL(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCEQ(B|F|G|H|Q)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCH(B|F|G|H|Q)S$")>;
+def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H|Q)?$")>;
+def : InstRW<[WLat3, WLat3, VecXsPm, NormalGr], (instregex "VCHL(B|F|G|H|Q)S$")>;
 def : InstRW<[WLat4, VecStr, NormalGr], (instregex "VTM$")>;
 
 //===----------------------------------------------------------------------===//
@@ -1405,12 +1426,12 @@ def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFL(L|R)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFL(LS|RD)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFL(LS|RD)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFLLD$")>;
-def : InstRW<[WLat10, VecDF2, NormalGr], (instregex "WFLRX$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "WFLRX$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFI(DB)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFIDB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFISB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFISB$")>;
-def : InstRW<[WLat10, VecDF2, NormalGr], (instregex "WFIXB$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "WFIXB$")>;
 
 // Sign operations
 def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VFPSO$")>;
@@ -1441,19 +1462,19 @@ def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(A|S)DB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)DB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(A|S)SB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(A|S)SB$")>;
-def : InstRW<[WLat10, VecDF2, NormalGr], (instregex "WF(A|S)XB$")>;
+def : InstRW<[WLat8, VecDF, NormalGr], (instregex "WF(A|S)XB$")>;
 
 // Multiply / multiply-and-add/subtract
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFM(DB)?$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WFM(D|S)B$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VFMSB$")>;
-def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WFMXB$")>;
+def : InstRW<[WLat20, VecDF, NormalGr], (instregex "WFMXB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)DB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)DB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "VF(N)?M(A|S)SB$")>;
 def : InstRW<[WLat6, VecBF, NormalGr], (instregex "WF(N)?M(A|S)SB$")>;
-def : InstRW<[WLat20, VecDF2, NormalGr], (instregex "WF(N)?M(A|S)XB$")>;
+def : InstRW<[WLat20, VecDF, NormalGr], (instregex "WF(N)?M(A|S)XB$")>;
 
 // Divide / square root
 def : InstRW<[WLat30, VecFPd, NormalGr], (instregex "VFD$")>;
@@ -1541,23 +1562,22 @@ def : InstRW<[WLat2, VecXsPm, NormalGr], (instregex "VC(R)?NF$")>;
 def : InstRW<[WLat2, VecDFX, NormalGr], (instregex "VLIP$")>;
 def : InstRW<[WLat6, VecDFX, LSU, GroupAlone2], (instregex "VPKZ$")>;
 def : InstRW<[WLat1, VecDFX, FXb, LSU2, GroupAlone2], (instregex "VUPKZ$")>;
-def : InstRW<[WLat20, WLat20, VecDF2, FXb, GroupAlone],
-             (instregex "VCVB(G)?(Opt)?$")>;
-def : InstRW<[WLat15, WLat15, VecDF2, FXb, GroupAlone],
-             (instregex "VCVD(G)?$")>;
+def : InstRW<[WLat20, WLat20, VecDF, FXb, GroupAlone],
+             (instregex "VCVB(G|Q)?(Opt)?$")>;
+def : InstRW<[WLat15, WLat15, VecDF, FXb, GroupAlone],
+             (instregex "VCVD(G|Q)?$")>;
 def : InstRW<[WLat4, WLat4, VecDFX, NormalGr], (instregex "V(A|S)P$")>;
-def : InstRW<[WLat30, WLat30, VecDF2, GroupAlone], (instregex "VM(S)?P$")>;
-def : InstRW<[WLat30, WLat30, VecDF2, GroupAlone], (instregex "V(D|R)P$")>;
-def : InstRW<[WLat30, WLat30, VecDF2, GroupAlone], (instregex "VSDP$")>;
-def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRP$")>;
+def : InstRW<[WLat30, WLat30, VecDF, GroupAlone], (instregex "VM(S)?P$")>;
+def : InstRW<[WLat30, WLat30, VecDF, GroupAlone], (instregex "V(D|R)P$")>;
+def : InstRW<[WLat30, WLat30, VecDF, GroupAlone], (instregex "VSDP$")>;
+def : InstRW<[WLat8, WLat8, VecDF, NormalGr], (instregex "VSRP(R)?$")>;
 def : InstRW<[WLat4, WLat4, VecDFX, NormalGr], (instregex "VPSOP$")>;
-def : InstRW<[WLat2, VecDFX, NormalGr], (instregex "V(T|C)P$")>;
+def : InstRW<[WLat2, VecDFX, NormalGr], (instregex "V(T|C)(P|Z)(Opt)?$")>;
 
-def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCH(S|D|X)?P$")>;
-def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCSHP$")>;
-def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VCSPH$")>;
+def : InstRW<[WLat20, VecDF, NormalGr], (instregex "VSCH(S|D|X)?P$")>;
+def : InstRW<[WLat30, VecDF, NormalGr], (instregex "VSCSHP$")>;
+def : InstRW<[WLat30, VecDF, NormalGr], (instregex "VCSPH$")>;
 def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VCLZDP$")>;
-def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRPR$")>;
 def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VPKZR$")>;
 def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZH$")>;
 def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZL$")>;
@@ -1694,7 +1714,8 @@ def : InstRW<[WLat30, WLat30, MCD], (instregex "QPACI$")>;
 def : InstRW<[WLat30, MCD], (instregex "SVC$")>;
 def : InstRW<[WLat1, FXb, GroupAlone], (instregex "MC$")>;
 def : InstRW<[WLat30, MCD], (instregex "DIAG$")>;
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "TRAC(E|G)$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "TRACE$")>;
+def : InstRW<[WLat1, FXb, GroupAlone], (instregex "TRACG$")>;
 def : InstRW<[WLat30, MCD], (instregex "TRAP(2|4)$")>;
 def : InstRW<[WLat30, MCD], (instregex "SIG(P|A)$")>;
 def : InstRW<[WLat30, MCD], (instregex "SIE$")>;
