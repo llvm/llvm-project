@@ -18,8 +18,8 @@ define float @test_s32(float %a) #0 {
 ; GCN-LABEL: test_s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt float %a, 0.0
@@ -111,10 +111,10 @@ define <2 x float> @test_v2s32(<2 x float> %a) #0 {
 ; GCN-LABEL: test_v2s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <2 x float> %a, zeroinitializer
@@ -126,14 +126,14 @@ define <4 x float> @test_v4s32(<4 x float> %a) #0 {
 ; GCN-LABEL: test_v4s32:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v2
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GCN-NEXT:    v_cmp_gt_f32_e32 vcc, 0, v3
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v3, 0, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v2
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-NEXT:    v_cmp_le_f32_e32 vcc, 0, v3
+; GCN-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %fcmp = fcmp olt <4 x float> %a, zeroinitializer
