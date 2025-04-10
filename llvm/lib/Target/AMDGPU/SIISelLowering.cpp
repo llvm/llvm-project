@@ -6905,8 +6905,9 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
         SDValue Src32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Src, Flags);
         return DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, Src32, Flags);
       } else {
-        SDValue FpToFp16 = LowerF64ToF16(Src, MVT::i16, DL, DAG);
-        return DAG.getNode(ISD::BITCAST, DL, MVT::f16, FpToFp16);
+        SDValue FpToFp16 = LowerF64ToF16(Src, DL, DAG);
+        SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
+        return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
       }
     } else {
       SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);

@@ -3578,11 +3578,10 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) con
     return SDValue();
   }
 
-  return LowerF64ToF16(N0, Op.getValueType(), DL, DAG);
+  return LowerF64ToF16(N0, DL, DAG);
 }
 
-SDValue AMDGPUTargetLowering::LowerF64ToF16(SDValue Src, EVT ResTy,
-                                            const SDLoc &DL,
+SDValue AMDGPUTargetLowering::LowerF64ToF16(SDValue Src, const SDLoc &DL,
                                             SelectionDAG &DAG) const {
   assert(Src.getSimpleValueType() == MVT::f64);
 
@@ -3667,8 +3666,7 @@ SDValue AMDGPUTargetLowering::LowerF64ToF16(SDValue Src, EVT ResTy,
   Sign = DAG.getNode(ISD::AND, DL, MVT::i32, Sign,
                      DAG.getConstant(0x8000, DL, MVT::i32));
 
-  V = DAG.getNode(ISD::OR, DL, MVT::i32, Sign, V);
-  return DAG.getZExtOrTrunc(V, DL, ResTy);
+  return DAG.getNode(ISD::OR, DL, MVT::i32, Sign, V);
 }
 
 SDValue AMDGPUTargetLowering::LowerFP_TO_INT(const SDValue Op,
