@@ -17610,6 +17610,18 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
+          if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+            assert(SLPReVec && "Only supported by REVEC.");
+            unsigned VecTyNumElements = VecTy->getNumElements();
+            SmallVector<Constant *> NewMaskValues(
+                MaskValues.size() * VecTyNumElements,
+                ConstantInt::getFalse(VecTy->getContext()));
+            for (auto [I, V] : enumerate(MaskValues))
+              if (V->isOneValue())
+                std::fill_n(NewMaskValues.begin() + I * VecTyNumElements,
+                            VecTyNumElements, V);
+            MaskValues.swap(NewMaskValues);
+          }
           Constant *MaskValue = ConstantVector::get(MaskValues);
           NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
                                            MaskValue);
@@ -17618,6 +17630,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         NewLI = ::propagateMetadata(NewLI, E->Scalars);
         // TODO: include this cost into CommonCost.
+        if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType()))
+          transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
+                                                 CompressMask);
         NewLI =
             cast<Instruction>(Builder.CreateShuffleVector(NewLI, CompressMask));
       } else if (E->State == TreeEntry::StridedVectorize) {
