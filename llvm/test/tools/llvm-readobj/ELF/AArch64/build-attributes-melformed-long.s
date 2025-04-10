@@ -20,7 +20,8 @@
 # CHECK-NEXT:     Tag_Feature_GCS: 1
 # CHECK-NEXT: unable to dump attributes from the Unknown section with index 1: unable to decode LEB128 at offset 0x0000003d: malformed uleb128, extends past end
 
-
+# Indicated size is longer than actual size.
+# The size is indicated by the '99' in the sequence '...0101020199...' should be 23
 --- !ELF
 FileHeader:
   Class: ELFCLASS64

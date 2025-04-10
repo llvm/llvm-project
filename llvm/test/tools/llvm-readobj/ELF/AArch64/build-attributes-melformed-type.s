@@ -6,6 +6,8 @@
 # CHECK-NEXT: unable to dump attributes from the Unknown section with index 1: 
 # CHECK-NEXT: invalid Type at offset 12: 9 (Options are 1|0)
 
+# Type are not 0 or 1
+# Type is indicated by the '09' in the sequence '...69000109...' should be 00 or 01
 --- !ELF
 FileHeader:
   Class: ELFCLASS64

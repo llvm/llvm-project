@@ -5,6 +5,7 @@
 # CHECK-NEXT:  FormatVersion: 0x37
 # CHECK-NEXT:  unable to dump attributes from the Unknown section with index 1: unrecognized format-version: 0x37
 
+# Version is 37 instead of 41, this is the first byte.
 --- !ELF
 FileHeader:
   Class: ELFCLASS64

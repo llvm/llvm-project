@@ -21,7 +21,8 @@
 # CHECK-NEXT: }
 # CHECK-NEXT: unable to dump attributes from the Unknown section with index 1: invalid Extended Build Attributes subsection size at offset: 3B
 
-
+# Indicated size is shorter than actual size.
+# The size is indicated by the '20' in the sequence '...0101020120...' should be 23
 --- !ELF
 FileHeader:
   Class: ELFCLASS64

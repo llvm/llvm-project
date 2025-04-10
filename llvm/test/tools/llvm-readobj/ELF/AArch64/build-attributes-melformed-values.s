@@ -22,7 +22,8 @@
 # CHECK-NEXT:  }
 # CHECK-NEXT: unable to dump attributes from the Unknown section with index 1: invalid Extended Build Attributes subsection size at offset: 3D
 
-
+# ULEB values are overflowing.
+# Those are the trailing '000' in the sequence '...00010101020000' should be '...000101010201'
 --- !ELF
 FileHeader:
   Class: ELFCLASS64
