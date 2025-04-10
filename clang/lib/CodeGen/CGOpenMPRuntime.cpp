@@ -4993,9 +4993,11 @@ void CGOpenMPRuntime::emitPrivateReduction(
       continue;
 
     BinaryOperatorKind BO = BO_Comma;
-    if (const auto *BORHS =
-            dyn_cast<BinaryOperator>(RHSExpr->IgnoreParenImpCasts())) {
+    const Expr *StripRHS = RHSExpr->IgnoreParenImpCasts();
+    if (const auto *BORHS = dyn_cast<BinaryOperator>(StripRHS)) {
       BO = BORHS->getOpcode();
+    } else if (const auto *OpCall = dyn_cast<CXXOperatorCallExpr>(StripRHS)) {
+      BO = BinaryOperator::getOverloadedOpcode(OpCall->getOperator());
     }
 
     LValue SharedLV = CGF.MakeAddrLValue(SharedResult, PrivateType);
