@@ -4654,7 +4654,8 @@ static bool isElementRotate(const std::array<std::pair<int, int>, 2> &SrcInfo,
 }
 
 static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                          ArrayRef<int> Mask, bool RequiredPolarity) {
+                          ArrayRef<int> Mask, unsigned Factor,
+                          bool RequiredPolarity) {
   int NumElts = Mask.size();
   for (int i = 0; i != NumElts; ++i) {
     int M = Mask[i];
@@ -4665,7 +4666,7 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
     bool C = Src == SrcInfo[1].first && Diff == SrcInfo[1].second;
     assert(C != (Src == SrcInfo[0].first && Diff == SrcInfo[0].second) &&
            "Must match exactly one of the two slides");
-    if (RequiredPolarity != (C == i % 2))
+    if (RequiredPolarity != (C == (i / Factor) % 2))
       return false;
   }
   return true;
@@ -4677,9 +4678,11 @@ static bool isAlternating(const std::array<std::pair<int, int>, 2> &SrcInfo,
 /// vs1: b0 b1 b2 b3
 /// vd:  a0 b0 a2 b2
 static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                      ArrayRef<int> Mask) {
-  return SrcInfo[0].second == 0 && SrcInfo[1].second == 1 &&
-         isAlternating(SrcInfo, Mask, true);
+                      ArrayRef<int> Mask, unsigned &Factor) {
+  Factor = SrcInfo[1].second;
+  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
+         Mask.size() % Factor == 0 &&
+         isAlternating(SrcInfo, Mask, Factor, true);
 }
 
 /// Given a shuffle which can be represented as a pair of two slides,
@@ -4690,9 +4693,11 @@ static bool isZipEven(const std::array<std::pair<int, int>, 2> &SrcInfo,
 /// Note that the operand order is swapped due to the way we canonicalize
 /// the slides, so SrCInfo[0] is vs1, and SrcInfo[1] is vs2.
 static bool isZipOdd(const std::array<std::pair<int, int>, 2> &SrcInfo,
-                     ArrayRef<int> Mask) {
-  return SrcInfo[0].second == 0 && SrcInfo[1].second == -1 &&
-         isAlternating(SrcInfo, Mask, false);
+                     ArrayRef<int> Mask, unsigned &Factor) {
+  Factor = -SrcInfo[1].second;
+  return SrcInfo[0].second == 0 && isPowerOf2_32(Factor) &&
+         Mask.size() % Factor == 0 &&
+         isAlternating(SrcInfo, Mask, Factor, false);
 }
 
 // Lower a deinterleave shuffle to SRL and TRUNC.  Factor must be
@@ -5779,16 +5784,33 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
       return convertFromScalableVector(VT, Res, DAG, Subtarget);
     }
 
-    if (Subtarget.hasVendorXRivosVizip() && isZipEven(SrcInfo, Mask)) {
-      SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
-      SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
-      return lowerVZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
-                       Subtarget);
-    }
-    if (Subtarget.hasVendorXRivosVizip() && isZipOdd(SrcInfo, Mask)) {
-      SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
-      SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
-      return lowerVZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG, Subtarget);
+    if (Subtarget.hasVendorXRivosVizip()) {
+      bool TryWiden = false;
+      unsigned Factor;
+      if (isZipEven(SrcInfo, Mask, Factor)) {
+        if (Factor == 1) {
+          SDValue Src1 = SrcInfo[0].first == 0 ? V1 : V2;
+          SDValue Src2 = SrcInfo[1].first == 0 ? V1 : V2;
+          return lowerVZIP(RISCVISD::RI_VZIPEVEN_VL, Src1, Src2, DL, DAG,
+                           Subtarget);
+        }
+        TryWiden = true;
+      }
+      if (isZipOdd(SrcInfo, Mask, Factor)) {
+        if (Factor == 1) {
+          SDValue Src1 = SrcInfo[1].first == 0 ? V1 : V2;
+          SDValue Src2 = SrcInfo[0].first == 0 ? V1 : V2;
+          return lowerVZIP(RISCVISD::RI_VZIPODD_VL, Src1, Src2, DL, DAG,
+                           Subtarget);
+        }
+        TryWiden = true;
+      }
+      // If we found a widening oppurtunity which would let us form a
+      // zipeven or zipodd, use the generic code to widen the shuffle
+      // and recurse through this logic.
+      if (TryWiden)
+        if (SDValue V = tryWidenMaskForShuffle(Op, DAG))
+          return V;
     }
 
     // Build the mask.  Note that vslideup unconditionally preserves elements
