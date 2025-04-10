@@ -15,8 +15,6 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-// TODO: add constexpr to this test as well
-
 // [container.node.overview] Table 83.
 template <class K, class T, class C1, class C2, class H1, class H2, class E1, class E2, class A_set, class A_map>
 struct node_compatibility_table {
@@ -109,7 +107,7 @@ static_assert(
     "");
 
 template <class Container>
-void test_node_handle_operations() {
+TEST_CONSTEXPR_CXX26 bool test_node_handle_operations() {
   Container c;
 
   typename Container::node_type nt1, nt2 = c.extract(c.emplace().first);
@@ -119,10 +117,12 @@ void test_node_handle_operations() {
   std::swap(nt1, nt2);
   assert(nt1.get_allocator() == c.get_allocator());
   assert(nt2.empty());
+
+  return true;
 }
 
 template <class Container>
-void test_node_handle_operations_multi() {
+TEST_CONSTEXPR_CXX26 bool test_node_handle_operations_multi() {
   Container c;
 
   typename Container::node_type nt1, nt2 = c.extract(c.emplace());
@@ -132,18 +132,26 @@ void test_node_handle_operations_multi() {
   std::swap(nt1, nt2);
   assert(nt1.get_allocator() == c.get_allocator());
   assert(nt2.empty());
+
+  return true;
 }
 
 template <class>
-void test_typedef() {}
+TEST_CONSTEXPR_CXX26 bool test_typedef() { return true; }
 
 template <class Container>
-void test_insert_return_type() {
+TEST_CONSTEXPR_CXX26 bool test_insert_return_type() {
   test_typedef<typename Container::insert_return_type>();
+  return true;
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
+
   test_node_handle_operations<std::map<int, int>>();
+
+  // FIXME: update when other containers are made constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED)
+  {
   test_node_handle_operations_multi<std::multimap<int, int>>();
   test_node_handle_operations<std::set<int>>();
   test_node_handle_operations_multi<std::multiset<int>>();
@@ -151,11 +159,24 @@ int main(int, char**) {
   test_node_handle_operations_multi<std::unordered_multimap<int, int>>();
   test_node_handle_operations<std::unordered_set<int>>();
   test_node_handle_operations_multi<std::unordered_multiset<int>>();
+  }
 
   test_insert_return_type<std::map<int, int>>();
+
+  // FIXME: update when other containers are made constexpr
+  if (!TEST_IS_CONSTANT_EVALUATED)
+  {
   test_insert_return_type<std::set<int>>();
   test_insert_return_type<std::unordered_map<int, int>>();
   test_insert_return_type<std::unordered_set<int>>();
+  }
+return true;
+}
 
+int main(int, char**) {
+assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
