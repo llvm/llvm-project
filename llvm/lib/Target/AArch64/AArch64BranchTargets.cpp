@@ -86,15 +86,14 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
     // non-guarded pages (which might be non-BTI-aware code) are allowed to
     // branch to a "BTI c" using any register.
     //
-    // For SysV targets, this is enough, because SYSVABI64 says that if the
-    // static linker later wants to use an indirect branch instruction in a
+    // For ELF targets, this is enough, because AAELF64 says that if the static
+    // linker later wants to use an indirect branch instruction in a
     // long-branch thunk, it's also responsible for adding a 'landing pad' with
-    // a BTI, and pointing the indirect branch at that. However, at present
-    // this guarantee only holds for targets complying with SYSVABI64, so for
-    // other targets we must assume that `CouldCall` is _always_ true due to
-    // the risk of long-branch thunks at link time.
+    // a BTI, and pointing the indirect branch at that. For non-ELF targets we
+    // can't rely on that, so we assume that `CouldCall` is _always_ true due
+    // to the risk of long-branch thunks at link time.
     if (&MBB == &*MF.begin() &&
-        (!MF.getSubtarget<AArch64Subtarget>().isTargetLinux() ||
+        (!MF.getSubtarget<AArch64Subtarget>().isTargetELF() ||
          (F.hasAddressTaken() || !F.hasLocalLinkage())))
       CouldCall = true;
 

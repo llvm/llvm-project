@@ -147,7 +147,7 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
 bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF";
+         FunctionName == "adoptCF" || FunctionName == "retainPtr";
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {

@@ -4067,9 +4067,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return true;
   }
 
-  case Intrinsic::nvvm_atomic_load_inc_32:
-  case Intrinsic::nvvm_atomic_load_dec_32:
-
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
   case Intrinsic::nvvm_atomic_add_gen_f_sys:
   case Intrinsic::nvvm_atomic_add_gen_i_cta:
@@ -6141,6 +6138,18 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     case 64:
       if (STI.hasAtomMinMax64())
         return AtomicExpansionKind::None;
+      return AtomicExpansionKind::CmpXChg;
+    default:
+      llvm_unreachable("unsupported width encountered");
+    }
+  case AtomicRMWInst::BinOp::UIncWrap:
+  case AtomicRMWInst::BinOp::UDecWrap:
+    switch (ITy->getBitWidth()) {
+    case 32:
+      return AtomicExpansionKind::None;
+    case 8:
+    case 16:
+    case 64:
       return AtomicExpansionKind::CmpXChg;
     default:
       llvm_unreachable("unsupported width encountered");

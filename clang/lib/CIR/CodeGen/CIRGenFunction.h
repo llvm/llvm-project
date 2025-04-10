@@ -24,6 +24,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -160,11 +161,35 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// An abstract representation of regular/ObjC call/message targets.
+  class AbstractCallee {
+    /// The function declaration of the callee.
+    const clang::Decl *calleeDecl;
+
+  public:
+    AbstractCallee() : calleeDecl(nullptr) {}
+    AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+  };
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
   /// that it requires no code to be generated.
   bool isTrivialInitializer(const Expr *init);
+
+  /// If the specified expression does not fold to a constant, or if it does but
+  /// contains a label, return false.  If it constant folds return true and set
+  /// the boolean result in Result.
+  bool constantFoldsToBool(const clang::Expr *cond, bool &resultBool,
+                           bool allowLabels = false);
+  bool constantFoldsToSimpleInteger(const clang::Expr *cond,
+                                    llvm::APSInt &resultInt,
+                                    bool allowLabels = false);
+
+  /// Return true if the statement contains a label in it.  If
+  /// this statement is not executed normally, it not containing a label means
+  /// that we can just remove the code.
+  bool containsLabel(const clang::Stmt *s, bool ignoreCaseStmts = false);
 
   struct AutoVarEmission {
     const clang::VarDecl *Variable;
@@ -227,10 +252,21 @@ public:
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
   Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
-                                       CharUnits alignment) {
+                                       CharUnits alignment,
+                                       bool forPointeeType = false,
+                                       LValueBaseInfo *baseInfo = nullptr) {
     if (alignment.isZero())
-      alignment = cgm.getNaturalTypeAlignment(t);
+      alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty,
+                        AlignmentSource source = AlignmentSource::Type) {
+    return makeAddrLValue(addr, ty, LValueBaseInfo(source));
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
+    return LValue::makeAddr(addr, ty, baseInfo);
   }
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -413,6 +449,15 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
+                  mlir::Location loc);
+  RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
+                  const clang::CallExpr *e);
+  RValue emitCallExpr(const clang::CallExpr *e);
+  CIRGenCallee emitCallee(const clang::Expr *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
@@ -461,6 +506,25 @@ public:
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
+  /// Emit an `if` on a boolean condition to the specified blocks.
+  /// FIXME: Based on the condition, this might try to simplify the codegen of
+  /// the conditional based on the branch.
+  /// In the future, we may apply code generation simplifications here,
+  /// similar to those used in classic LLVM  codegen
+  /// See `EmitBranchOnBoolExpr` for inspiration.
+  mlir::LogicalResult emitIfOnBoolExpr(const clang::Expr *cond,
+                                       const clang::Stmt *thenS,
+                                       const clang::Stmt *elseS);
+  cir::IfOp emitIfOnBoolExpr(const clang::Expr *cond,
+                             BuilderCallbackRef thenBuilder,
+                             mlir::Location thenLoc,
+                             BuilderCallbackRef elseBuilder,
+                             std::optional<mlir::Location> elseLoc = {});
+
+  mlir::Value emitOpOnBoolExpr(mlir::Location loc, const clang::Expr *cond);
+
+  mlir::LogicalResult emitIfStmt(const clang::IfStmt &s);
+
   /// Emit code to compute the specified expression,
   /// ignoring the result.
   void emitIgnoredExpr(const clang::Expr *e);
@@ -491,7 +555,8 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address emitPointerWithAlignment(const clang::Expr *expr);
+  Address emitPointerWithAlignment(const clang::Expr *expr,
+                                   LValueBaseInfo *baseInfo);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
@@ -538,6 +603,19 @@ public:
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
+private:
+  template <typename Op>
+  mlir::LogicalResult
+  emitOpenACCOp(mlir::Location start,
+                llvm::ArrayRef<const OpenACCClause *> clauses);
+  // Function to do the basic implementation of an operation with an Associated
+  // Statement.  Models AssociatedStmtConstruct.
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult
+  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+                              llvm::ArrayRef<const OpenACCClause *> clauses,
+                              const Stmt *associatedStmt);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);

@@ -1451,11 +1451,11 @@ define void @test_sext_v4i1_to_v4i8(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    bfe.u32 %r9, %r2, 24, 8;
 ; CHECK-NEXT:    bfe.u32 %r10, %r1, 24, 8;
 ; CHECK-NEXT:    setp.hi.u32 %p4, %r10, %r9;
-; CHECK-NEXT:    selp.s32 %r11, -1, 0, %p4;
-; CHECK-NEXT:    selp.s32 %r12, -1, 0, %p3;
+; CHECK-NEXT:    selp.b32 %r11, -1, 0, %p4;
+; CHECK-NEXT:    selp.b32 %r12, -1, 0, %p3;
 ; CHECK-NEXT:    prmt.b32 %r13, %r12, %r11, 0x3340U;
-; CHECK-NEXT:    selp.s32 %r14, -1, 0, %p2;
-; CHECK-NEXT:    selp.s32 %r15, -1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r14, -1, 0, %p2;
+; CHECK-NEXT:    selp.b32 %r15, -1, 0, %p1;
 ; CHECK-NEXT:    prmt.b32 %r16, %r15, %r14, 0x3340U;
 ; CHECK-NEXT:    prmt.b32 %r17, %r16, %r13, 0x5410U;
 ; CHECK-NEXT:    st.u32 [%rd3], %r17;

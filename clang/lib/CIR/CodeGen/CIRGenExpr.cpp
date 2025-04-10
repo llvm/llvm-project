@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -28,7 +29,8 @@ using namespace cir;
 
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
+Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
+                                                 LValueBaseInfo *baseInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(expr->getType()->isPointerType() ||
          expr->getType()->isObjCObjectPointerType());
@@ -36,7 +38,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Casts:
   if (auto const *ce = dyn_cast<CastExpr>(expr)) {
-    if (auto const *ece = dyn_cast<ExplicitCastExpr>(ce)) {
+    if (isa<ExplicitCastExpr>(ce)) {
       cgm.errorNYI(expr->getSourceRange(),
                    "emitPointerWithAlignment: explicit cast");
       return Address::invalid();
@@ -164,7 +166,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Otherwise, use the alignment of the type.
   return makeNaturalAddressForPointer(
-      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits());
+      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits(),
+      /*forPointeeType=*/true, baseInfo);
 }
 
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
@@ -300,7 +303,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
-    return LValue::makeAddr(addr, ty);
+    return makeAddrLValue(addr, ty, AlignmentSource::Type);
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
@@ -338,9 +341,9 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType t = e->getSubExpr()->getType()->getPointeeType();
     assert(!t.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
 
-    assert(!cir::MissingFeatures::lvalueBaseInfo());
     assert(!cir::MissingFeatures::opTBAA());
-    Address addr = emitPointerWithAlignment(e->getSubExpr());
+    LValueBaseInfo baseInfo;
+    Address addr = emitPointerWithAlignment(e->getSubExpr(), &baseInfo);
 
     // Tag 'load' with deref attribute.
     // FIXME: This misses some derefence cases and has problematic interactions
@@ -350,7 +353,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
     }
 
-    LValue lv = LValue::makeAddr(addr, t);
+    LValue lv = makeAddrLValue(addr, t, baseInfo);
     assert(!cir::MissingFeatures::addressSpace());
     assert(!cir::MissingFeatures::setNonGC());
     return lv;
@@ -600,6 +603,107 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
   llvm_unreachable("bad evaluation kind");
 }
 
+static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::weakRefReference());
+  return cgm.getAddrOfFunction(gd);
+}
+
+static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+
+  assert(!cir::MissingFeatures::hip());
+
+  return CIRGenCallee::forDirect(callee, gd);
+}
+
+RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
+                                const CIRGenCallee &callee,
+                                const clang::CallExpr *e) {
+  // Get the actual function type. The callee type will always be a pointer to
+  // function type or a block pointer type.
+  assert(calleeTy->isFunctionPointerType() &&
+         "Callee must have function pointer type!");
+
+  calleeTy = getContext().getCanonicalType(calleeTy);
+
+  if (getLangOpts().CPlusPlus)
+    assert(!cir::MissingFeatures::sanitizers());
+
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  const CIRGenFunctionInfo &funcInfo = cgm.getTypes().arrangeFreeFunctionCall();
+
+  assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
+  assert(!cir::MissingFeatures::opCallChainCall());
+  assert(!cir::MissingFeatures::hip());
+  assert(!cir::MissingFeatures::opCallMustTail());
+
+  cir::CIRCallOpInterface callOp;
+  RValue callResult =
+      emitCall(funcInfo, callee, &callOp, getLoc(e->getExprLoc()));
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return callResult;
+}
+
+CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
+  e = e->IgnoreParens();
+
+  // Look through function-to-pointer decay.
+  if (const auto *implicitCast = dyn_cast<ImplicitCastExpr>(e)) {
+    if (implicitCast->getCastKind() == CK_FunctionToPointerDecay ||
+        implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
+      return emitCallee(implicitCast->getSubExpr());
+    }
+  } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
+    // Resolve direct calls.
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
+      return emitDirectCallee(cgm, funcDecl);
+  }
+
+  cgm.errorNYI(e->getSourceRange(), "Unsupported callee kind");
+  return {};
+}
+
+RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
+  assert(!cir::MissingFeatures::objCBlocks());
+
+  if (isa<CXXMemberCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to member function");
+    return RValue::get(nullptr);
+  }
+
+  if (isa<CUDAKernelCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
+    return RValue::get(nullptr);
+  }
+
+  if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
+    if (isa_and_nonnull<CXXMethodDecl>(operatorCall->getCalleeDecl())) {
+      cgm.errorNYI(e->getSourceRange(), "call to member operator");
+      return RValue::get(nullptr);
+    }
+  }
+
+  CIRGenCallee callee = emitCallee(e->getCallee());
+
+  if (e->getBuiltinCallee()) {
+    cgm.errorNYI(e->getSourceRange(), "call to builtin functions");
+  }
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
+    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
+  }
+  assert(!cir::MissingFeatures::opCallPseudoDtor());
+
+  return emitCall(e->getCallee()->getType(), callee, e);
+}
+
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
@@ -610,6 +714,90 @@ void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
 
   // Just emit it as an l-value and drop the result.
   emitLValue(e);
+}
+
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+mlir::LogicalResult CIRGenFunction::emitIfOnBoolExpr(const Expr *cond,
+                                                     const Stmt *thenS,
+                                                     const Stmt *elseS) {
+  mlir::Location thenLoc = getLoc(thenS->getSourceRange());
+  std::optional<mlir::Location> elseLoc;
+  if (elseS)
+    elseLoc = getLoc(elseS->getSourceRange());
+
+  mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+  emitIfOnBoolExpr(
+      cond, /*thenBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        LexicalScope lexScope{*this, thenLoc, builder.getInsertionBlock()};
+        resThen = emitStmt(thenS, /*useCurrentScope=*/true);
+      },
+      thenLoc,
+      /*elseBuilder=*/
+      [&](mlir::OpBuilder &, mlir::Location) {
+        assert(elseLoc && "Invalid location for elseS.");
+        LexicalScope lexScope{*this, *elseLoc, builder.getInsertionBlock()};
+        resElse = emitStmt(elseS, /*useCurrentScope=*/true);
+      },
+      elseLoc);
+
+  return mlir::LogicalResult::success(resThen.succeeded() &&
+                                      resElse.succeeded());
+}
+
+/// Emit an `if` on a boolean condition, filling `then` and `else` into
+/// appropriated regions.
+cir::IfOp CIRGenFunction::emitIfOnBoolExpr(
+    const clang::Expr *cond, BuilderCallbackRef thenBuilder,
+    mlir::Location thenLoc, BuilderCallbackRef elseBuilder,
+    std::optional<mlir::Location> elseLoc) {
+  // Attempt to be as accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
+  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
+  if (elseLoc)
+    ifLocs.push_back(*elseLoc);
+  mlir::Location loc = mlir::FusedLoc::get(&getMLIRContext(), ifLocs);
+
+  // Emit the code with the fully general case.
+  mlir::Value condV = emitOpOnBoolExpr(loc, cond);
+  return builder.create<cir::IfOp>(loc, condV, elseLoc.has_value(),
+                                   /*thenBuilder=*/thenBuilder,
+                                   /*elseBuilder=*/elseBuilder);
+}
+
+/// TODO(cir): see EmitBranchOnBoolExpr for extra ideas).
+mlir::Value CIRGenFunction::emitOpOnBoolExpr(mlir::Location loc,
+                                             const Expr *cond) {
+  assert(!cir::MissingFeatures::pgoUse());
+  assert(!cir::MissingFeatures::generateDebugInfo());
+  cond = cond->IgnoreParens();
+
+  // In LLVM the condition is reversed here for efficient codegen.
+  // This should be done in CIR prior to LLVM lowering, if we do now
+  // we can make CIR based diagnostics misleading.
+  //  cir.ternary(!x, t, f) -> cir.ternary(x, f, t)
+  assert(!cir::MissingFeatures::shouldReverseUnaryCondOnBoolExpr());
+
+  if (isa<ConditionalOperator>(cond)) {
+    cgm.errorNYI(cond->getExprLoc(), "Ternary NYI");
+    assert(!cir::MissingFeatures::ternaryOp());
+    return createDummyValue(loc, cond->getType());
+  }
+
+  if (isa<CXXThrowExpr>(cond)) {
+    cgm.errorNYI("NYI");
+    return createDummyValue(loc, cond->getType());
+  }
+
+  // If the branch has a condition wrapped by __builtin_unpredictable,
+  // create metadata that specifies that the branch is unpredictable.
+  // Don't bother if not optimizing because that metadata would not be used.
+  assert(!cir::MissingFeatures::insertBuiltinUnpredictable());
+
+  // Emit the code with the fully general case.
+  return evaluateExprAsBool(cond);
 }
 
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,

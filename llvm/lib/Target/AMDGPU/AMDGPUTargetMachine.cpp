@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -2184,7 +2185,7 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   //
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
-  // TODO: addPass(PostRAHazardRecognizerPass());
+  addPass(PostRAHazardRecognizerPass());
   addPass(AMDGPUWaitSGPRHazardsPass());
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {

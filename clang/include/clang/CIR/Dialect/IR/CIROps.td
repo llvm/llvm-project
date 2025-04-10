@@ -472,8 +472,8 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
-                                              "WhileOp", "ForOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
+                                              "DoWhileOp", "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -508,6 +508,58 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+
+def IfOp : CIR_Op<"if",
+     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]>{
+
+  let summary = "the if-then-else operation";
+  let description = [{
+    The `cir.if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand is a `cir.bool`
+    type.
+
+    Examples:
+
+    ```mlir
+    cir.if %cond  {
+      ...
+    } else {
+      ...
+    }
+
+    cir.if %cond  {
+      ...
+    }
+
+    cir.if %cond  {
+      ...
+      cir.br ^a
+    ^a:
+      cir.yield
+    }
+    ```
+
+    `cir.if` defines no values and the 'else' can be omitted. The if/else
+    regions must be terminated. If the region has only one block, the terminator
+    can be left out, and `cir.yield` terminator will be inserted implictly.
+    Otherwise, the region must be explicitly terminated.
+  }];
+  let arguments = (ins CIR_BoolType:$condition);
+  let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
+  let hasCustomAssemblyFormat=1;
+  let hasVerifier=1;
+  let skipDefaultBuilders=1;
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion,
+      CArg<"BuilderCallbackRef", "buildTerminatedBody">:$thenBuilder,
+      CArg<"BuilderCallbackRef", "nullptr">:$elseBuilder)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -560,8 +612,8 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp", "WhileOp", "ForOp",
-                                            "DoWhileOp"]>]> {
+                               ParentOneOf<["IfOp", "ScopeOp", "WhileOp",
+                                            "ForOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -1288,6 +1340,48 @@ def FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
+    : Op<CIR_Dialect, mnemonic,
+         !listconcat(extra_traits,
+                     [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+                      DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+  let hasVerifier = 0;
+
+  // TODO(cir): for now cir.call is just a tiny shell of what it will become.
+  // More attributes, arguments, and properties will be added in the future as
+  // the upstreaming process moves on. The verifiers is also missing for now,
+  // will add in the future.
+
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+}
+
+def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
+  let summary = "call a function";
+  let description = [{
+    The `cir.call` operation represents a direct call to a function that is
+    within the same symbol scope as the call. The callee is encoded as a symbol
+    reference attribute named `callee`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.call @foo()
+    ```
+  }];
+
+  let arguments = commonArgs;
+
+  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee), [{
+      $_state.addAttribute("callee", callee);
+    }]>];
 }
 
 //===----------------------------------------------------------------------===//

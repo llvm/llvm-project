@@ -8,6 +8,7 @@
 //
 
 #include "llvm/Transforms/Instrumentation/PGOCtxProfLowering.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
@@ -206,6 +207,17 @@ PreservedAnalyses PGOCtxProfLoweringPass::run(Module &M,
 bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
   if (F.isDeclaration())
     return false;
+
+  // Probably pointless to try to do anything here, unlikely to be
+  // performance-affecting.
+  if (F.doesNotReturn()) {
+    for (auto &BB : F)
+      for (auto &I : make_early_inc_range(BB))
+        if (isa<InstrProfCntrInstBase>(&I))
+          I.eraseFromParent();
+    return true;
+  }
+
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 

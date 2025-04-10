@@ -74,18 +74,20 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                      builder.getStringAttr(getTriple().str()));
 }
 
-CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t) {
+CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t,
+                                                LValueBaseInfo *baseInfo) {
   assert(!cir::MissingFeatures::opTBAA());
 
-  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown. But
-  // that doesn't return the information we need to compute BaseInfo.
+  // FIXME: This duplicates logic in ASTContext::getTypeAlignIfKnown, but
+  // that doesn't return the information we need to compute baseInfo.
 
   // Honor alignment typedef attributes even on incomplete types.
   // We also honor them straight for C++ class types, even as pointees;
   // there's an expressivity gap here.
   if (const auto *tt = t->getAs<TypedefType>()) {
     if (unsigned align = tt->getDecl()->getMaxAlignment()) {
-      assert(!cir::MissingFeatures::lvalueBaseInfo());
+      if (baseInfo)
+        *baseInfo = LValueBaseInfo(AlignmentSource::AttributedType);
       return astContext.toCharUnitsFromBits(align);
     }
   }
@@ -99,13 +101,15 @@ CharUnits CIRGenModule::getNaturalTypeAlignment(QualType t) {
     // ASTContext::getTypeAlignIfKnown, but nothing uses the alignment if the
     // type is incomplete, so it's impossible to test. We could try to reuse
     // getTypeAlignIfKnown, but that doesn't return the information we need
-    // to set BaseInfo.  So just ignore the possibility that the alignment is
+    // to set baseInfo.  So just ignore the possibility that the alignment is
     // greater than one.
-    assert(!cir::MissingFeatures::lvalueBaseInfo());
+    if (baseInfo)
+      *baseInfo = LValueBaseInfo(AlignmentSource::Type);
     return CharUnits::One();
   }
 
-  assert(!cir::MissingFeatures::lvalueBaseInfo());
+  if (baseInfo)
+    *baseInfo = LValueBaseInfo(AlignmentSource::Type);
 
   CharUnits alignment;
   if (t.getQualifiers().hasUnaligned()) {
@@ -190,10 +194,12 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   }
 
   CIRGenFunction cgf(*this, builder);
+  curCGF = &cgf;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
     cgf.generateCode(gd, funcOp, funcType);
   }
+  curCGF = nullptr;
 }
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
@@ -529,8 +535,18 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
 
+    // Some global emissions are triggered while emitting a function, e.g.
+    // void s() { x.method() }
+    //
+    // Be sure to insert a new function before a current one.
+    CIRGenFunction *cgf = this->curCGF;
+    if (cgf)
+      builder.setInsertionPoint(cgf->curFn);
+
     func = builder.create<cir::FuncOp>(loc, name, funcType);
-    theModule.push_back(func);
+
+    if (!cgf)
+      theModule.push_back(func);
   }
   return func;
 }
