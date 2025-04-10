@@ -1696,7 +1696,7 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
              sym, 0, R_ABS, addendRelType);
 }
 
-void RelocationBaseSection::mergeRels() {
+void RelocationBaseSection::mergeRels(Ctx &ctx) {
   size_t newSize = relocs.size();
   for (const auto &v : relocsVec)
     newSize += v.size();
@@ -1707,13 +1707,9 @@ void RelocationBaseSection::mergeRels() {
 }
 
 void RelocationBaseSection::partitionRels() {
-  const RelType relativeRel = ctx.target->relativeRel;
-  const RelType iRelativeRel = ctx.target->iRelativeRel;
-  for (auto &r : relocs)
-    if (r.type == relativeRel && r.sym->isGnuIFunc())
-      r.type = iRelativeRel;
   if (!combreloc)
     return;
+  const RelType relativeRel = ctx.target->relativeRel;
   numRelativeRelocs =
       std::stable_partition(relocs.begin(), relocs.end(),
                             [=](auto &r) { return r.type == relativeRel; }) -
@@ -1763,6 +1759,9 @@ void RelocationBaseSection::computeRels() {
                  [&](auto &a, auto &b) { return a.r_offset < b.r_offset; });
     // Non-relative relocations are few, so don't bother with parallelSort.
     llvm::sort(nonRelative, irelative, [&](auto &a, auto &b) {
+      return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
+    });
+    llvm::sort(irelative, relocs.end(), [&](auto &a, auto &b) {
       return std::tie(a.r_sym, a.r_offset) < std::tie(b.r_sym, b.r_offset);
     });
   }
@@ -4321,14 +4320,20 @@ InputSection *ThunkSection::getTargetInputSection() const {
 
 bool ThunkSection::assignOffsets() {
   uint64_t off = 0;
+  bool changed = false;
   for (Thunk *t : thunks) {
+    if (t->alignment > addralign) {
+      addralign = t->alignment;
+      changed = true;
+    }
     off = alignToPowerOf2(off, t->alignment);
     t->setOffset(off);
     uint32_t size = t->size();
     t->getThunkTargetSym()->size = size;
     off += size;
   }
-  bool changed = off != size;
+  if (off != size)
+    changed = true;
   size = off;
   return changed;
 }

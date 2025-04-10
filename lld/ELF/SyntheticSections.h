@@ -553,12 +553,13 @@ public:
   }
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
-  void mergeRels();
+  void mergeRels(Ctx &ctx);
   void partitionRels();
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> tentativeIRelativeRelocs;
 
 protected:
   void computeRels();

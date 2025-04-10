@@ -335,6 +335,49 @@ protected:
     });
   }
 
+  BitVector getClobberedRegs(const MCInst &Point) const {
+    BitVector Clobbered(NumRegs, false);
+    // Assume a call can clobber all registers, including callee-saved
+    // registers. There's a good chance that callee-saved registers will be
+    // saved on the stack at some point during execution of the callee.
+    // Therefore they should also be considered as potentially modified by an
+    // attacker/written to.
+    // Also, not all functions may respect the AAPCS ABI rules about
+    // caller/callee-saved registers.
+    if (BC.MIB->isCall(Point))
+      Clobbered.set();
+    else
+      BC.MIB->getClobberedRegs(Point, Clobbered);
+    return Clobbered;
+  }
+
+  // Returns all registers that can be treated as if they are written by an
+  // authentication instruction.
+  SmallVector<MCPhysReg> getRegsMadeSafeToDeref(const MCInst &Point,
+                                                const State &Cur) const {
+    SmallVector<MCPhysReg> Regs;
+    const MCPhysReg NoReg = BC.MIB->getNoRegister();
+
+    // A signed pointer can be authenticated, or
+    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
+    if (AutReg && *AutReg != NoReg)
+      Regs.push_back(*AutReg);
+
+    // ... a safe address can be materialized, or
+    MCPhysReg NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point);
+    if (NewAddrReg != NoReg)
+      Regs.push_back(NewAddrReg);
+
+    // ... an address can be updated in a safe manner, producing the result
+    // which is as trusted as the input address.
+    if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
+      if (Cur.SafeToDerefRegs[DstAndSrc->second])
+        Regs.push_back(DstAndSrc->first);
+    }
+
+    return Regs;
+  }
+
   State computeNext(const MCInst &Point, const State &Cur) {
     PacStatePrinter P(BC);
     LLVM_DEBUG({
@@ -355,19 +398,16 @@ protected:
       return State();
     }
 
+    // First, compute various properties of the instruction, taking the state
+    // before its execution into account, if necessary.
+
+    BitVector Clobbered = getClobberedRegs(Point);
+    SmallVector<MCPhysReg> NewSafeToDerefRegs =
+        getRegsMadeSafeToDeref(Point, Cur);
+
+    // Then, compute the state after this instruction is executed.
     State Next = Cur;
-    BitVector Clobbered(NumRegs, false);
-    // Assume a call can clobber all registers, including callee-saved
-    // registers. There's a good chance that callee-saved registers will be
-    // saved on the stack at some point during execution of the callee.
-    // Therefore they should also be considered as potentially modified by an
-    // attacker/written to.
-    // Also, not all functions may respect the AAPCS ABI rules about
-    // caller/callee-saved registers.
-    if (BC.MIB->isCall(Point))
-      Clobbered.set();
-    else
-      BC.MIB->getClobberedRegs(Point, Clobbered);
+
     Next.SafeToDerefRegs.reset(Clobbered);
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:
@@ -375,17 +415,18 @@ protected:
       if (Clobbered[Reg])
         lastWritingInsts(Next, Reg) = {&Point};
 
-    ErrorOr<MCPhysReg> AutReg = BC.MIB->getAuthenticatedReg(Point);
-    if (AutReg && *AutReg != BC.MIB->getNoRegister()) {
-      // The sub-registers of *AutReg are also trusted now, but not its
-      // super-registers (as they retain untrusted register units).
-      BitVector AuthenticatedSubregs =
-          BC.MIB->getAliases(*AutReg, /*OnlySmaller=*/true);
-      for (MCPhysReg Reg : AuthenticatedSubregs.set_bits()) {
-        Next.SafeToDerefRegs.set(Reg);
-        if (RegsToTrackInstsFor.isTracked(Reg))
-          lastWritingInsts(Next, Reg).clear();
-      }
+    // After accounting for clobbered registers in general, override the state
+    // according to authentication and other *special cases* of clobbering.
+
+    // The sub-registers are also safe-to-dereference now, but not their
+    // super-registers (as they retain untrusted register units).
+    BitVector NewSafeSubregs(NumRegs);
+    for (MCPhysReg SafeReg : NewSafeToDerefRegs)
+      NewSafeSubregs |= BC.MIB->getAliases(SafeReg, /*OnlySmaller=*/true);
+    for (MCPhysReg Reg : NewSafeSubregs.set_bits()) {
+      Next.SafeToDerefRegs.set(Reg);
+      if (RegsToTrackInstsFor.isTracked(Reg))
+        lastWritingInsts(Next, Reg).clear();
     }
 
     LLVM_DEBUG({
@@ -401,11 +442,11 @@ protected:
 
 public:
   std::vector<MCInstReference>
-  getLastClobberingInsts(const MCInst Ret, BinaryFunction &BF,
+  getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
                          const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
-    auto MaybeState = getStateAt(Ret);
+    auto MaybeState = getStateBefore(Inst);
     if (!MaybeState)
       llvm_unreachable("Expected State to be present");
     const State &S = *MaybeState;
@@ -453,6 +494,31 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return std::make_shared<GadgetReport>(RetKind, Inst, RetReg);
 }
 
+static std::shared_ptr<Report>
+shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
+                       const State &S) {
+  static const GadgetKind CallKind("non-protected call found");
+  if (!BC.MIB->isIndirectCall(Inst) && !BC.MIB->isIndirectBranch(Inst))
+    return nullptr;
+
+  bool IsAuthenticated = false;
+  MCPhysReg DestReg =
+      BC.MIB->getRegUsedAsIndirectBranchDest(Inst, IsAuthenticated);
+  if (IsAuthenticated)
+    return nullptr;
+
+  assert(DestReg != BC.MIB->getNoRegister());
+  LLVM_DEBUG({
+    traceInst(BC, "Found call inst", Inst);
+    traceReg(BC, "Call destination reg", DestReg);
+    traceRegMask(BC, "SafeToDerefRegs", S.SafeToDerefRegs);
+  });
+  if (S.SafeToDerefRegs[DestReg])
+    return nullptr;
+
+  return std::make_shared<GadgetReport>(CallKind, Inst, DestReg);
+}
+
 FunctionAnalysisResult
 Analysis::findGadgets(BinaryFunction &BF,
                       MCPlusBuilder::AllocatorIdTy AllocatorId) {
@@ -469,7 +535,7 @@ Analysis::findGadgets(BinaryFunction &BF,
   for (BinaryBasicBlock &BB : BF) {
     for (int64_t I = 0, E = BB.size(); I < E; ++I) {
       MCInstReference Inst(&BB, I);
-      const State &S = *PRA.getStateAt(Inst);
+      const State &S = *PRA.getStateBefore(Inst);
 
       // If non-empty state was never propagated from the entry basic block
       // to Inst, assume it to be unreachable and report a warning.
@@ -480,6 +546,12 @@ Analysis::findGadgets(BinaryFunction &BF,
       }
 
       if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+        Result.Diagnostics.push_back(Report);
+
+      if (PacRetGadgetsOnly)
+        continue;
+
+      if (auto Report = shouldReportCallGadget(BC, Inst, S))
         Result.Diagnostics.push_back(Report);
     }
   }

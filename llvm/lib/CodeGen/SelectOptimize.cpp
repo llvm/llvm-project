@@ -451,8 +451,7 @@ void SelectOptimizeImpl::optimizeSelectsInnerLoops(Function &F,
   SmallVector<Loop *, 4> Loops(LI->begin(), LI->end());
   // Need to check size on each iteration as we accumulate child loops.
   for (unsigned long i = 0; i < Loops.size(); ++i)
-    for (Loop *ChildL : Loops[i]->getSubLoops())
-      Loops.push_back(ChildL);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (Loop *L : Loops) {
     if (!L->isInnermost())

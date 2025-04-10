@@ -260,8 +260,7 @@ void IRPartitionLayer::emitPartition(
     {
       std::vector<const GlobalValue *> HashGVs;
       HashGVs.reserve(GVsToExtract->size());
-      for (const auto *GV : *GVsToExtract)
-        HashGVs.push_back(GV);
+      llvm::append_range(HashGVs, *GVsToExtract);
       llvm::sort(HashGVs, [](const GlobalValue *LHS, const GlobalValue *RHS) {
         return LHS->getName() < RHS->getName();
       });

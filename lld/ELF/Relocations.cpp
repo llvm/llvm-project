@@ -178,7 +178,7 @@ static RelType getMipsPairType(RelType type, bool isLocal) {
 // True if non-preemptable symbol always has the same value regardless of where
 // the DSO is loaded.
 static bool isAbsolute(const Symbol &sym) {
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
   if (const auto *dr = dyn_cast<Defined>(&sym))
     return dr->section == nullptr; // Absolute symbol.
@@ -466,7 +466,7 @@ private:
   template <class ELFT, class RelTy>
   int64_t computeMipsAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
   bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
-                                uint64_t relOff) const;
+                                uint64_t relOff, bool canWrite) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
   unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
@@ -847,9 +847,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   Partition &part = isec.getPartition(ctx);
 
   if (sym.isTagged()) {
-    std::lock_guard<std::mutex> lock(ctx.relocMutex);
-    part.relaDyn->addRelativeReloc(ctx.target->relativeRel, isec, offsetInSec,
-                                   sym, addend, type, expr);
+    part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
+                                          offsetInSec, sym, addend, type, expr);
     // With MTE globals, we always want to derive the address tag by `ldg`-ing
     // the symbol. When we have a RELATIVE relocation though, we no longer have
     // a reference to the symbol. Because of this, when we have an addend that
@@ -863,14 +862,21 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     return;
   }
 
+  if (sym.isGnuIFunc()) {
+    std::lock_guard<std::mutex> lock(ctx.relocMutex);
+    part.relaDyn->tentativeIRelativeRelocs.push_back(
+        {ctx.target->iRelativeRel, &isec, offsetInSec,
+         DynamicReloc::AddendOnlyWithTargetVA, sym, addend, expr});
+    return;
+  }
+
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
   // the relrDyn section, otherwise add it to the relaDyn section.
   // relrDyn sections don't support odd offsets. Also, relrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
-  if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0 &&
-      !sym.isGnuIFunc()) {
+  if (part.relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
     isec.addReloc({expr, type, offsetInSec, addend, &sym});
     if (shard)
       part.relrDyn->relocsVec[parallel::getThreadIndex()].push_back(
@@ -976,7 +982,8 @@ static bool canDefineSymbolInExecutable(Ctx &ctx, Symbol &sym) {
 // dynamic relocation so that the relocation will be fixed at load-time.
 bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
-                                                 uint64_t relOff) const {
+                                                 uint64_t relOff,
+                                                 bool canWrite) const {
   // These expressions always compute a constant
   if (oneof<
           R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
@@ -997,6 +1004,11 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
   if (sym.isPreemptible || e == RE_AARCH64_AUTH)
     return false;
+  // Absolute IFUNC references are emitted as IRELATIVE if possible.
+  // See getIRelativeSection for why we check androidPackDynRelocs here.
+  if (sym.isGnuIFunc() && type == ctx.target->symbolicRel && canWrite &&
+      !ctx.arg.androidPackDynRelocs)
+    return false;
   if (!ctx.arg.isPic)
     return true;
 
@@ -1006,7 +1018,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym);
+  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -1022,7 +1034,7 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
   // calls to such symbols (e.g. glibc/stdlib/exit.c:__run_exit_handlers).
   // Normally such a call will be guarded with a comparison, which will load a
   // zero from the GOT.
-  if (sym.isUndefWeak())
+  if (sym.isUndefined())
     return true;
 
   // We set the final symbols values for linker script defined symbols later.
@@ -1067,7 +1079,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym)) {
+    } else if (!isAbsoluteValue(sym) ||
+               (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
@@ -1110,6 +1123,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     sym.setFlags(NEEDS_PLT);
   }
 
+  bool canWrite = (sec->flags & SHF_WRITE) ||
+                  !(ctx.arg.zText ||
+                    (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
+
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
@@ -1124,8 +1141,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // -shared matches the spirit of its -z undefs default. -pie has freedom on
   // choices, and we choose dynamic relocations to be consistent with the
   // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
+  if (isStaticLinkTimeConstant(expr, type, sym, offset, canWrite) ||
       (!ctx.arg.isPic && sym.isUndefWeak())) {
+    if (LLVM_UNLIKELY(isIfunc && !needsGot(expr) && !needsPlt(expr)))
+      sym.setFlags(HAS_DIRECT_RELOC);
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
   }
@@ -1136,9 +1155,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
-  bool canWrite = (sec->flags & SHF_WRITE) ||
-                  !(ctx.arg.zText ||
-                    (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
     if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
@@ -1192,9 +1208,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
       return;
     }
   }
-
-  if (LLVM_UNLIKELY(isIfunc && !needsGot(expr) && !needsPlt(expr)))
-    sym.setFlags(HAS_DIRECT_RELOC);
 
   // When producing an executable, we can perform copy relocations (for
   // STT_OBJECT) and canonical PLT (for STT_FUNC) if sym is defined by a DSO.
@@ -1377,6 +1390,11 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
+  // LoongArch supports IE to LE optimization in non-extreme code model.
+  bool execOptimizeInLoongArch =
+      ctx.arg.emachine == EM_LOONGARCH &&
+      (type == R_LARCH_TLS_IE_PC_HI20 || type == R_LARCH_TLS_IE_PC_LO12);
+
   // ARM, Hexagon, LoongArch and RISC-V do not support GD/LD to IE/LE
   // optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
@@ -1384,7 +1402,8 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
   // optimization as well.
   bool execOptimize =
       !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
-      ctx.arg.emachine != EM_HEXAGON && ctx.arg.emachine != EM_LOONGARCH &&
+      ctx.arg.emachine != EM_HEXAGON &&
+      (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL) &&
       !sec->file->ppc64DisableTLSRelax;
 
@@ -1475,6 +1494,15 @@ unsigned RelocationScanner::handleTlsRelocation(RelExpr expr, RelType type,
       else
         sec->addReloc({expr, type, offset, addend, &sym});
     }
+    return 1;
+  }
+
+  // LoongArch TLS GD/LD relocs reuse the RE_LOONGARCH_GOT, in which
+  // NEEDS_TLSIE shouldn't set. So we check independently.
+  if (ctx.arg.emachine == EM_LOONGARCH && expr == RE_LOONGARCH_GOT &&
+      execOptimize && isLocalInExecutable) {
+    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+    sec->addReloc({R_RELAX_TLS_IE_TO_LE, type, offset, addend, &sym});
     return 1;
   }
 
@@ -1951,6 +1979,26 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  // Now that we have checked all ifunc symbols for demotion to regular function
+  // symbols, move IRELATIVE relocations to the right place:
+  // - Relocations for non-demoted ifuncs are added to .rela.dyn
+  // - Relocations for demoted ifuncs are turned into RELATIVE relocations
+  //   or static relocations in PDEs
+  for (Partition &part : ctx.partitions) {
+    for (const auto &v : part.relaDyn->tentativeIRelativeRelocs) {
+      auto *inputSec = const_cast<InputSectionBase *>(v.inputSec);
+      if (v.sym->isGnuIFunc())
+        part.relaDyn->relocs.push_back(v);
+      else if (ctx.arg.isPic)
+        addRelativeReloc(ctx, *inputSec, v.offsetInSec, *v.sym, v.addend, R_ABS,
+                         ctx.target->symbolicRel);
+      else
+        inputSec->addReloc(
+            {R_ABS, ctx.target->symbolicRel, v.offsetInSec, v.addend, v.sym});
+    }
+    part.relaDyn->tentativeIRelativeRelocs.clear();
+  }
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {

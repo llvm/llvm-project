@@ -374,10 +374,10 @@ class LSX2RI10_Load<bits<32> op, Operand ImmOpnd = simm10_lsl2>
 class LSX2RI11_Load<bits<32> op, Operand ImmOpnd = simm11_lsl1>
     : Fmt2RI11_VRI<op, (outs LSX128:$vd), (ins GPR:$rj, ImmOpnd:$imm11),
                   "$vd, $rj, $imm11">;
-class LSX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12>
+class LSX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_VRI<op, (outs LSX128:$vd), (ins GPR:$rj, ImmOpnd:$imm12),
                   "$vd, $rj, $imm12">;
-class LSX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12>
+class LSX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_VRI<op, (outs), (ins LSX128:$vd, GPR:$rj, ImmOpnd:$imm12),
                   "$vd, $rj, $imm12">;
 
