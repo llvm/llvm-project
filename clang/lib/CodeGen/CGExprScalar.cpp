@@ -3968,8 +3968,6 @@ Value *ScalarExprEmitter::EmitRem(const BinOpInfo &Ops) {
   if (CGF.getLangOpts().HLSL && Ops.Ty->hasFloatingRepresentation())
     return Builder.CreateFRem(Ops.LHS, Ops.RHS, "rem");
 
-  assert(Ops.Ty->hasSignedIntegerRepresentation() &&
-         "Srem expected a signed integer representation.");
   return Builder.CreateSRem(Ops.LHS, Ops.RHS, "rem");
 }
 
