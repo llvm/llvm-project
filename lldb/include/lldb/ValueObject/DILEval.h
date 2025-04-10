@@ -38,18 +38,6 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
                                            lldb::DynamicValueType use_dynamic,
                                            CompilerType *scope_ptr = nullptr);
 
-class FlowAnalysis {
-public:
-  FlowAnalysis(bool address_of_is_pending)
-      : m_address_of_is_pending(address_of_is_pending) {}
-
-  bool AddressOfIsPending() const { return m_address_of_is_pending; }
-  void DiscardAddressOf() { m_address_of_is_pending = false; }
-
-private:
-  bool m_address_of_is_pending;
-};
-
 class Interpreter : Visitor {
 public:
   Interpreter(lldb::TargetSP target, llvm::StringRef expr,
@@ -60,28 +48,12 @@ public:
 
 private:
   llvm::Expected<lldb::ValueObjectSP>
-  EvaluateNode(const ASTNode *node, FlowAnalysis *flow = nullptr);
-
-  llvm::Expected<lldb::ValueObjectSP>
   Visit(const IdentifierNode *node) override;
   llvm::Expected<lldb::ValueObjectSP> Visit(const UnaryOpNode *node) override;
-
-  lldb::ValueObjectSP EvaluateDereference(lldb::ValueObjectSP rhs);
-
-  FlowAnalysis *flow_analysis() { return m_flow_analysis_chain.back(); }
 
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
-  // Flow analysis chain represents the expression evaluation flow for the
-  // current code branch. Each node in the chain corresponds to an AST node,
-  // describing the semantics of the evaluation for it. Currently, flow analysis
-  // propagates the information about the pending address-of operator, so that
-  // combination of address-of and a subsequent dereference can be eliminated.
-  // End of the chain (i.e. `back()`) contains the flow analysis instance for
-  // the current node. It may be `nullptr` if no relevant information is
-  // available, the caller/user is supposed to check.
-  std::vector<FlowAnalysis *> m_flow_analysis_chain;
   lldb::ValueObjectSP m_scope;
   lldb::DynamicValueType m_default_dynamic;
   std::shared_ptr<StackFrame> m_exe_ctx_scope;

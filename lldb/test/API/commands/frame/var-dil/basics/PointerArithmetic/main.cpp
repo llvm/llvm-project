@@ -6,6 +6,8 @@ int main(int argc, char **argv) {
   my_char_ptr my_p_char1 = p_char1;
 
   int offset = 5;
+  int *offset_p = &offset;
+  int *&offset_pref = offset_p;
   int array[10];
   array[0] = 0;
   array[offset] = offset;

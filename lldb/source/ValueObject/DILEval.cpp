@@ -18,22 +18,6 @@
 
 namespace lldb_private::dil {
 
-static lldb::ValueObjectSP
-ArrayToPointerConversion(lldb::ValueObjectSP valobj,
-                         std::shared_ptr<ExecutionContextScope> ctx) {
-  assert(valobj->IsArrayType() &&
-         "an argument to array-to-pointer conversion must be an array");
-
-  uint64_t addr = valobj->GetLoadAddress();
-  llvm::StringRef name = "result";
-  ExecutionContext exe_ctx;
-  ctx->CalculateExecutionContext(exe_ctx);
-  return ValueObject::CreateValueObjectFromAddress(
-      name, addr, exe_ctx,
-      valobj->GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
-      /* do_deref */ false);
-}
-
 static lldb::ValueObjectSP LookupStaticIdentifier(
     VariableList &variable_list, std::shared_ptr<StackFrame> exe_scope,
     llvm::StringRef name_ref, llvm::StringRef unqualified_name) {
@@ -222,22 +206,9 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
     : m_target(std::move(target)), m_expr(expr), m_default_dynamic(use_dynamic),
       m_exe_ctx_scope(frame_sp) {}
 
-llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *tree) {
+llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
   // Evaluate an AST.
-  auto value_or_error = EvaluateNode(tree);
-
-  // Return the computed result-or-error.
-  return value_or_error;
-}
-
-llvm::Expected<lldb::ValueObjectSP>
-Interpreter::EvaluateNode(const ASTNode *node, FlowAnalysis *flow) {
-  // Set up the evaluation context for the current node.
-  m_flow_analysis_chain.push_back(flow);
-  // Traverse an AST pointed by the `node`.
   auto value_or_error = node->Accept(this);
-  // Cleanup the context.
-  m_flow_analysis_chain.pop_back();
   // Return the computed value-or-error. The caller is responsible for
   // checking if an error occured during the evaluation.
   return value_or_error;
@@ -265,33 +236,29 @@ Interpreter::Visit(const IdentifierNode *node) {
 
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const UnaryOpNode *node) {
-  FlowAnalysis rhs_flow(
-      /* address_of_is_pending */ node->kind() == UnaryOpKind::AddrOf);
-
   Status error;
-  auto rhs_or_err = EvaluateNode(node->rhs(), &rhs_flow);
+  auto rhs_or_err = Evaluate(node->rhs());
   if (!rhs_or_err) {
     return rhs_or_err;
   }
   lldb::ValueObjectSP rhs = *rhs_or_err;
 
-  CompilerType rhs_type = rhs->GetCompilerType();
   switch (node->kind()) {
   case UnaryOpKind::Deref: {
-    if (rhs_type.IsArrayType())
-      rhs = ArrayToPointerConversion(rhs, m_exe_ctx_scope);
-
     lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_default_dynamic);
     if (dynamic_rhs)
       rhs = dynamic_rhs;
 
-    if (rhs->GetCompilerType().IsPointerType()) {
-      if (rhs->GetCompilerType().IsPointerToVoid()) {
-        return llvm::make_error<DILDiagnosticError>(
-            m_expr, "indirection not permitted on operand of type 'void *'",
-            node->GetLocation(), 1);
-      }
-      return EvaluateDereference(rhs);
+    CompilerType rhs_type = rhs->GetCompilerType();
+    if (!rhs_type.IsReferenceType() && !rhs_type.IsPointerType())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "not a pointer or reference type",
+          node->rhs()->GetLocation());
+
+    if (rhs_type.IsPointerToVoid()) {
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "indirection not permitted on operand of type 'void *'",
+          node->GetLocation());
     }
     lldb::ValueObjectSP child_sp = rhs->Dereference(error);
     if (error.Success())
@@ -300,68 +267,19 @@ Interpreter::Visit(const UnaryOpNode *node) {
     return rhs;
   }
   case UnaryOpKind::AddrOf: {
-    if (node->rhs()->is_rvalue()) {
-      std::string errMsg =
-          llvm::formatv("cannot take the address of an rvalue of type {0}",
-                        rhs_type.TypeDescription());
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+    Status error;
+    lldb::ValueObjectSP value = rhs->AddressOf(error);
+    if (error.Fail()) {
+      return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
                                                   node->GetLocation());
     }
-    if (rhs->IsBitfield()) {
-      return llvm::make_error<DILDiagnosticError>(
-          m_expr, "address of bit-field requested", node->GetLocation());
-    }
-    // If the address-of operation wasn't cancelled during the evaluation of
-    // RHS (e.g. because of the address-of-a-dereference elision), apply it
-    // here.
-    if (rhs_flow.AddressOfIsPending()) {
-      Status error;
-      lldb::ValueObjectSP value = rhs->AddressOf(error);
-      if (error.Fail()) {
-        return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
-                                                    node->GetLocation());
-      }
-      return value;
-    }
-    return rhs;
+    return value;
   }
   }
 
   // Unsupported/invalid operation.
   return llvm::make_error<DILDiagnosticError>(
-      m_expr, "invalid ast: unexpected binary operator", node->GetLocation(),
-      1);
-}
-
-lldb::ValueObjectSP Interpreter::EvaluateDereference(lldb::ValueObjectSP rhs) {
-  // If rhs is a reference, dereference it first.
-  Status error;
-  if (rhs->GetCompilerType().IsReferenceType())
-    rhs = rhs->Dereference(error);
-
-  assert(rhs->GetCompilerType().IsPointerType() &&
-         "invalid ast: must be a pointer type");
-
-  if (rhs->GetDerefValobj())
-    return rhs->GetDerefValobj()->GetSP();
-
-  CompilerType pointer_type = rhs->GetCompilerType();
-  lldb::addr_t base_addr = rhs->GetValueAsUnsigned(0);
-
-  llvm::StringRef name = "result";
-  ExecutionContext exe_ctx(m_target.get(), false);
-  lldb::ValueObjectSP value = ValueObject::CreateValueObjectFromAddress(
-      name, base_addr, exe_ctx, pointer_type,
-      /* do_deref */ false);
-
-  // If we're in the address-of context, skip the dereference and cancel the
-  // pending address-of operation as well.
-  if (flow_analysis() && flow_analysis()->AddressOfIsPending()) {
-    flow_analysis()->DiscardAddressOf();
-    return value;
-  }
-
-  return value->Dereference(error);
+      m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
 }
 
 } // namespace lldb_private::dil

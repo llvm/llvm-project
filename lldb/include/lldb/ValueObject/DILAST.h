@@ -51,8 +51,6 @@ public:
 
   virtual llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const = 0;
 
-  virtual bool is_rvalue() const { return false; }
-
   uint32_t GetLocation() const { return m_location; }
   NodeKind GetKind() const { return m_kind; }
 
@@ -97,7 +95,6 @@ public:
         m_rhs(std::move(rhs)) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
-  bool is_rvalue() const override { return m_kind != UnaryOpKind::Deref; }
 
   UnaryOpKind kind() const { return m_kind; }
   ASTNode *rhs() const { return m_rhs.get(); }
