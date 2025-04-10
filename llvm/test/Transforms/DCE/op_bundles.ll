@@ -4,6 +4,7 @@
 define void @dead_readfirstlane_convergencetoken(<2 x i32> %src) convergent {
 ; CHECK-LABEL: define void @dead_readfirstlane_convergencetoken(
 ; CHECK-SAME: <2 x i32> [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[T:%.*]] = tail call token @llvm.experimental.convergence.entry()
 ; CHECK-NEXT:    ret void
 ;
   %t = tail call token @llvm.experimental.convergence.entry()

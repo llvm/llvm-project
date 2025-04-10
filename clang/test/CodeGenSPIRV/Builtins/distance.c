@@ -9,6 +9,7 @@ typedef float float4 __attribute__((ext_vector_type(4)));
 // CHECK-LABEL: define spir_func float @test_distance_float2(
 // CHECK-SAME: <2 x float> noundef [[X:%.*]], <2 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_DISTANCE:%.*]] = tail call float @llvm.spv.distance.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
 // CHECK-NEXT:    ret float [[SPV_DISTANCE]]
 //
@@ -17,6 +18,7 @@ float test_distance_float2(float2 X, float2 Y) { return __builtin_spirv_distance
 // CHECK-LABEL: define spir_func float @test_distance_float3(
 // CHECK-SAME: <3 x float> noundef [[X:%.*]], <3 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_DISTANCE:%.*]] = tail call float @llvm.spv.distance.v3f32(<3 x float> [[X]], <3 x float> [[Y]])
 // CHECK-NEXT:    ret float [[SPV_DISTANCE]]
 //
@@ -25,6 +27,7 @@ float test_distance_float3(float3 X, float3 Y) { return __builtin_spirv_distance
 // CHECK-LABEL: define spir_func float @test_distance_float4(
 // CHECK-SAME: <4 x float> noundef [[X:%.*]], <4 x float> noundef [[Y:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call token @llvm.experimental.convergence.entry()
 // CHECK-NEXT:    [[SPV_DISTANCE:%.*]] = tail call float @llvm.spv.distance.v4f32(<4 x float> [[X]], <4 x float> [[Y]])
 // CHECK-NEXT:    ret float [[SPV_DISTANCE]]
 //

@@ -20,6 +20,7 @@
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z16test_length_halfDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.fabs.f16(half [[P0]])
 // SPVCHECK-NEXT:    ret half [[ELT_ABS_I]]
 //
@@ -42,6 +43,7 @@ half test_length_half(half p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z17test_length_half2Dv2_Dh(
 // SPVCHECK-SAME: <2 x half> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v2f16(<2 x half> [[P0]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
@@ -61,6 +63,7 @@ half test_length_half2(half2 p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z17test_length_half3Dv3_Dh(
 // SPVCHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v3f16(<3 x half> [[P0]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
@@ -80,6 +83,7 @@ half test_length_half3(half3 p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z17test_length_half4Dv4_Dh(
 // SPVCHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.length.v4f16(<4 x half> [[P0]])
 // SPVCHECK-NEXT:    ret half [[SPV_LENGTH_I]]
 //
@@ -98,6 +102,7 @@ half test_length_half4(half4 p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z17test_length_floatf(
 // SPVCHECK-SAME: float noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[ELT_ABS_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.fabs.f32(float [[P0]])
 // SPVCHECK-NEXT:    ret float [[ELT_ABS_I]]
 //
@@ -117,6 +122,7 @@ float test_length_float(float p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z18test_length_float2Dv2_f(
 // SPVCHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v2f32(<2 x float> [[P0]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //
@@ -136,6 +142,7 @@ float test_length_float2(float2 p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z18test_length_float3Dv3_f(
 // SPVCHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v3f32(<3 x float> [[P0]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //
@@ -155,6 +162,7 @@ float test_length_float3(float3 p0)
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z18test_length_float4Dv4_f(
 // SPVCHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[P0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_LENGTH_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.length.v4f32(<4 x float> [[P0]])
 // SPVCHECK-NEXT:    ret float [[SPV_LENGTH_I]]
 //

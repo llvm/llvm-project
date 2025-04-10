@@ -22,6 +22,7 @@
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) half @_Z20test_smoothstep_halfDhDhDh(
 // SPVCHECK-SAME: half noundef nofpclass(nan inf) [[MIN:%.*]], half noundef nofpclass(nan inf) [[MAX:%.*]], half noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef half @llvm.spv.smoothstep.f16(half [[MIN]], half [[MAX]], half [[X]])
 // SPVCHECK-NEXT:    ret half [[SPV_SMOOTHSTEP_I]]
 //
@@ -43,6 +44,7 @@ half test_smoothstep_half(half Min, half Max, half X) { return smoothstep(Min, M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <2 x half> @_Z21test_smoothstep_half2Dv2_DhS_S_(
 // SPVCHECK-SAME: <2 x half> noundef nofpclass(nan inf) [[MIN:%.*]], <2 x half> noundef nofpclass(nan inf) [[MAX:%.*]], <2 x half> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x half> @llvm.spv.smoothstep.v2f16(<2 x half> [[MIN]], <2 x half> [[MAX]], <2 x half> [[X]])
 // SPVCHECK-NEXT:    ret <2 x half> [[SPV_SMOOTHSTEP_I]]
 //
@@ -64,6 +66,7 @@ half2 test_smoothstep_half2(half2 Min, half2 Max, half2 X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <3 x half> @_Z21test_smoothstep_half3Dv3_DhS_S_(
 // SPVCHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[MIN:%.*]], <3 x half> noundef nofpclass(nan inf) [[MAX:%.*]], <3 x half> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x half> @llvm.spv.smoothstep.v3f16(<3 x half> [[MIN]], <3 x half> [[MAX]], <3 x half> [[X]])
 // SPVCHECK-NEXT:    ret <3 x half> [[SPV_SMOOTHSTEP_I]]
 //
@@ -85,6 +88,7 @@ half3 test_smoothstep_half3(half3 Min, half3 Max, half3 X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <4 x half> @_Z21test_smoothstep_half4Dv4_DhS_S_(
 // SPVCHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[MIN:%.*]], <4 x half> noundef nofpclass(nan inf) [[MAX:%.*]], <4 x half> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x half> @llvm.spv.smoothstep.v4f16(<4 x half> [[MIN]], <4 x half> [[MAX]], <4 x half> [[X]])
 // SPVCHECK-NEXT:    ret <4 x half> [[SPV_SMOOTHSTEP_I]]
 //
@@ -106,6 +110,7 @@ half4 test_smoothstep_half4(half4 Min, half4 Max, half4 X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) float @_Z21test_smoothstep_floatfff(
 // SPVCHECK-SAME: float noundef nofpclass(nan inf) [[MIN:%.*]], float noundef nofpclass(nan inf) [[MAX:%.*]], float noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef float @llvm.spv.smoothstep.f32(float [[MIN]], float [[MAX]], float [[X]])
 // SPVCHECK-NEXT:    ret float [[SPV_SMOOTHSTEP_I]]
 //
@@ -127,6 +132,7 @@ float test_smoothstep_float(float Min, float Max, float X) { return smoothstep(M
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <2 x float> @_Z22test_smoothstep_float2Dv2_fS_S_(
 // SPVCHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[MIN:%.*]], <2 x float> noundef nofpclass(nan inf) [[MAX:%.*]], <2 x float> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x float> @llvm.spv.smoothstep.v2f32(<2 x float> [[MIN]], <2 x float> [[MAX]], <2 x float> [[X]])
 // SPVCHECK-NEXT:    ret <2 x float> [[SPV_SMOOTHSTEP_I]]
 //
@@ -148,6 +154,7 @@ float2 test_smoothstep_float2(float2 Min, float2 Max, float2 X) { return smooths
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <3 x float> @_Z22test_smoothstep_float3Dv3_fS_S_(
 // SPVCHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[MIN:%.*]], <3 x float> noundef nofpclass(nan inf) [[MAX:%.*]], <3 x float> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x float> @llvm.spv.smoothstep.v3f32(<3 x float> [[MIN]], <3 x float> [[MAX]], <3 x float> [[X]])
 // SPVCHECK-NEXT:    ret <3 x float> [[SPV_SMOOTHSTEP_I]]
 //
@@ -169,6 +176,7 @@ float3 test_smoothstep_float3(float3 Min, float3 Max, float3 X) { return smooths
 // SPVCHECK-LABEL: define spir_func noundef nofpclass(nan inf) <4 x float> @_Z22test_smoothstep_float4Dv4_fS_S_(
 // SPVCHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[MIN:%.*]], <4 x float> noundef nofpclass(nan inf) [[MAX:%.*]], <4 x float> noundef nofpclass(nan inf) [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
+// SPVCHECK-NEXT:    {{.*}} = tail call token @llvm.experimental.convergence.entry()
 // SPVCHECK-NEXT:    [[SPV_SMOOTHSTEP_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.spv.smoothstep.v4f32(<4 x float> [[MIN]], <4 x float> [[MAX]], <4 x float> [[X]])
 // SPVCHECK-NEXT:    ret <4 x float> [[SPV_SMOOTHSTEP_I]]
 //
