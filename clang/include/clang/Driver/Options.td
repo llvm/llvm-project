@@ -7747,6 +7747,10 @@ def import_call_optimization : Flag<["-"], "import-call-optimization">,
              "by the Windows kernel to enable import call optimization">,
     MarshallingInfoFlag<CodeGenOpts<"ImportCallOptimization">>;
 
+def epilog_unwind : Flag<["-"], "winx64-eh-unwindv2">,
+  HelpText<"Enable unwind v2 (epilog) information for x64 Windows">,
+  MarshallingInfoFlag<CodeGenOpts<"WinX64EHUnwindV2">>;
+
 } // let Visibility = [CC1Option]
 
 //===----------------------------------------------------------------------===//
@@ -8859,6 +8863,8 @@ def _SLASH_M_Group : OptionGroup<"</M group>">, Group<cl_compile_Group>;
 def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
   Group<cl_compile_Group>;
 
+def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
+  HelpText<"Enable unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
