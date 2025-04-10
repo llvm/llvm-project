@@ -9,10 +9,15 @@
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -139,57 +144,64 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
     Location loc = readOp.getLoc();
     Value src = readOp.getSource();
-    MemRefType memRefType = cast<MemRefType>(src.getType());
-    ArrayRef<int64_t> shape = memRefType.getShape();
 
-    Value linearIndex = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    Value stride = one;
-
-    // Compute the linear index by linearIndex += indices[i] * stride
-    for (int i = shape.size() - 1; i >= 0; --i) {
-      Value currentIndex = readOp.getIndices()[i];
-      Value strideIndexed =
-          rewriter.create<arith::MulIOp>(loc, currentIndex, stride);
-      linearIndex =
-          rewriter.create<arith::AddIOp>(loc, linearIndex, strideIndexed);
-
-      if (i == 0)
-        break;
-
-      // Update stride for the next dimension
-      Value nextStride;
-      if (shape[i] != ShapedType::kDynamic) {
-        nextStride = rewriter.create<arith::ConstantIndexOp>(loc, shape[i]);
-      } else {
-        nextStride = rewriter.create<memref::DimOp>(loc, src, i);
-      }
-      stride = rewriter.create<arith::MulIOp>(loc, stride, nextStride);
-    }
-
-    Value totalSize = one;
-    for (size_t i = 0; i < shape.size(); ++i) {
-      Value dimensionSize;
-      if (shape[i] != ShapedType::kDynamic) {
-        dimensionSize = rewriter.create<arith::ConstantIndexOp>(loc, shape[i]);
-      } else {
-        dimensionSize = rewriter.create<memref::DimOp>(loc, src, i);
-      }
-      totalSize = rewriter.create<arith::MulIOp>(loc, totalSize, dimensionSize);
-    }
-
-    // delta = bufferSize - linearizedOffset
-    // 1) check if delta < vectorSize
     VectorType vectorType = readOp.getVectorType();
     int64_t vectorSize = vectorType.getNumElements();
+    int64_t elementBitWidth = vectorType.getElementTypeBitWidth();
+    // Value linearIndex = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    SmallVector<OpFoldResult> indices = readOp.getIndices();
+
+    auto stridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(loc, src);
+    memref::LinearizedMemRefInfo linearizedInfo;
+    OpFoldResult linearizedIndices;
+    std::tie(linearizedInfo, linearizedIndices) =
+        memref::getLinearizedMemRefOffsetAndSize(
+            rewriter, loc, elementBitWidth, elementBitWidth,
+            stridedMetadata.getConstifiedMixedOffset(),
+            stridedMetadata.getConstifiedMixedSizes(),
+            stridedMetadata.getConstifiedMixedStrides(), indices);
+    // OpFoldResult linearIndexSize = linearizedInfo.linearizedSize;
+    Value linearIndex =
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+
+    // Note below doesn't give the correct result for the linearized size.
+    // It compute the mutiplied sizes of all dimensions instead of taking
+    // the maximum of each dimension size * stride.
+    // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
+    // Value totalSize = getValueOrCreateConstantIndexOp(
+    //    rewriter, loc, linearizedInfo.linearizedSize);
+    SmallVector<AffineExpr> productExpressions;
+    SmallVector<Value> productResults;
+    unsigned sourceRank =
+        cast<ShapedType>(readOp.getSource().getType()).getRank();
+
+    SmallVector<AffineExpr> symbols(2 * sourceRank);
+    SmallVector<Value> offsetValues(2 * sourceRank);
+    bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
+    for (size_t i = 0; i < sourceRank; ++i) {
+      unsigned offsetIdx = 2 * i;
+      productExpressions.push_back(symbols[offsetIdx] * symbols[offsetIdx + 1]);
+      offsetValues[offsetIdx] = stridedMetadata.getStrides()[i];
+      offsetValues[offsetIdx + 1] = stridedMetadata.getSizes()[i];
+    }
+
+    AffineMap maxMap = AffineMap::get(
+        /*dimCount=*/0, /*symbolCount=*/symbols.size(), productExpressions,
+        rewriter.getContext());
+    Value totalSize =
+        rewriter.create<affine::AffineMaxOp>(loc, maxMap, offsetValues);
+
+    // delta = bufferSize - linearizedOffset
     Value vectorSizeOffset =
         rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
     Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
+
+    // 1) check if delta < vectorSize
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ule, delta, vectorSizeOffset);
 
     // 2) check if (detla(bytes) % (32 / elementBitwidth) != 0)
-    int64_t elementBitWidth = vectorType.getElementTypeBitWidth();
     Value deltaBytes = rewriter.create<arith::MulIOp>(
         loc, delta,
         rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
