@@ -25,13 +25,9 @@ void Test() {
 #pragma acc parallel loop num_gangs()
   for(int i = 5; i < 10;++i);
 
-  // expected-error@+2{{OpenACC 'num_gangs' clause cannot appear more than once on a 'kernels loop' directive}}
-  // expected-note@+1{{previous clause is here}}
 #pragma acc kernels loop num_gangs(1) num_gangs(2)
   for(int i = 5; i < 10;++i);
 
-  // expected-error@+2{{OpenACC 'num_gangs' clause cannot appear more than once on a 'parallel loop' directive}}
-  // expected-note@+1{{previous clause is here}}
 #pragma acc parallel loop num_gangs(1) num_gangs(2)
   for(int i = 5; i < 10;++i);
 

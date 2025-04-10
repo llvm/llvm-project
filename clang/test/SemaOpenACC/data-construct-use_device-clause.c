@@ -52,14 +52,14 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc host_data use_device((float)ArrayParam[2])
   ;
 
-  // expected-error@+2{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+  // expected-error@+2{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
   // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'data' directive}}
 #pragma acc data use_device(LocalInt)
   ;
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'enter data' directive}}
 #pragma acc enter data use_device(LocalInt)
-  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete' or 'detach' clause}}
+  // expected-error@+2{{OpenACC 'exit data' construct must have at least one 'copyout', 'delete', or 'detach' clause}}
   // expected-error@+1{{OpenACC 'use_device' clause is not valid on 'exit data' directive}}
 #pragma acc exit data use_device(LocalInt)
 }

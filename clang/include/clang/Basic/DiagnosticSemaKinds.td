@@ -12929,9 +12929,6 @@ def note_acc_reduction_composite_member_loc : Note<"invalid field is here">;
 def err_acc_loop_not_for_loop
     : Error<"OpenACC '%0' construct can only be applied to a 'for' loop">;
 def note_acc_construct_here : Note<"'%0' construct is here">;
-def err_acc_loop_spec_conflict
-    : Error<"OpenACC clause '%0' on '%1' construct conflicts with previous "
-            "data dependence clause">;
 def err_acc_collapse_loop_count
     : Error<"OpenACC 'collapse' clause loop count must be a %select{constant "
             "expression|positive integer value, evaluated to %1}0">;

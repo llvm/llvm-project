@@ -34,10 +34,10 @@ void uses() {
 #pragma acc kernels dtype(MACRO)
   while(1);
 
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{OpenACC 'device_type' clause is not valid on 'enter data' directive}}
 #pragma acc enter data device_type(I)
-  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'copyin', 'create' or 'attach' clause}}
+  // expected-error@+2{{OpenACC 'enter data' construct must have at least one 'attach', 'copyin', or 'create' clause}}
   // expected-error@+1{{OpenACC 'dtype' clause is not valid on 'enter data' directive}}
 #pragma acc enter data dtype(I)
 

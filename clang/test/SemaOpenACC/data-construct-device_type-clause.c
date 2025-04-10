@@ -47,7 +47,7 @@ void uses() {
   // expected-note@+1{{previous clause is here}}
 #pragma acc data default(none) device_type(radeon) attach(Var)
   ;
-  // expected-error@+3{{OpenACC 'data' construct must have at least one 'copy', 'copyin', 'copyout', 'create', 'no_create', 'present', 'deviceptr', 'attach' or 'default' clause}}
+  // expected-error@+3{{OpenACC 'data' construct must have at least one 'attach', 'copy', 'copyin', 'copyout', 'create', 'default', 'deviceptr', 'no_create', or 'present' clause}}
   // expected-error@+2{{OpenACC clause 'default' may not follow a 'device_type' clause in a 'data' construct}}
   // expected-note@+1{{previous clause is here}}
 #pragma acc data device_type(radeon) default(none)
