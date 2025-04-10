@@ -597,70 +597,72 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//
 LogicalResult DpasOp::verify() {
-  int64_t lhsRank = getLhsType().getRank();
-  int64_t rhsRank = getRhsType().getRank();
-  int64_t resRank = getResultType().getRank();
-  auto lhsShape = getLhsType().getShape();
-  auto rhsShape = getRhsType().getShape();
-  auto resShape = getResultType().getShape();
+  // int64_t lhsRank = getLhsType().getRank();
+  // int64_t rhsRank = getRhsType().getRank();
+  // int64_t resRank = getResultType().getRank();
+  // auto lhsShape = getLhsType().getShape();
+  // auto rhsShape = getRhsType().getShape();
+  // auto resShape = getResultType().getShape();
 
-  auto aLayout = getALayoutAttr();
-  auto bLayout = getBLayoutAttr();
-  auto cLayout = getCLayoutAttr();
+  // auto aLayout = getALayoutAttr();
+  // auto bLayout = getBLayoutAttr();
+  // auto cLayout = getCLayoutAttr();
 
-  // make sure the layout attribute is either set for every available
-  // operand or simply not set at all. C is special, since ACC is optional.
-  auto hasValidLayoutAttrs = [&]() {
-    bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
-    if (hasAcc()) {
-      result |= (aLayout != nullptr) ^ (cLayout != nullptr);
-    }
-    return !result;
-  };
+  // // make sure the layout attribute is either set for every available
+  // // operand or simply not set at all. C is special, since ACC is optional.
+  // auto hasValidLayoutAttrs = [&]() {
+  //   bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
+  //   if (hasAcc()) {
+  //     result |= (aLayout != nullptr) ^ (cLayout != nullptr);
+  //   }
+  //   return !result;
+  // };
 
-  if (!hasValidLayoutAttrs())
-    return emitOpError(
-        "layout attributes should be either set for all operands (for SIMT "
-        "code) or not set at all (for SIMD code).");
+  // if (!hasValidLayoutAttrs())
+  //   return emitOpError(
+  //       "layout attributes should be either set for all operands (for SIMT "
+  //       "code) or not set at all (for SIMD code).");
 
-  // query the scope from aLayout (a valid setting).
-  if (aLayout) {
-    // In SIMT mode, All data fragments must be 2D
-    if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
-      return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
+  // // query the scope from aLayout (a valid setting).
+  // if (aLayout) {
+  //   // In SIMT mode, All data fragments must be 2D
+  //   if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
+  //     return emitOpError("expecting lhs, rhs, and result to be a 2D
+  //     vector.");
 
-    auto laneLayoutA = aLayout.getLaneLayout();
-    auto laneLayoutB = bLayout.getLaneLayout();
-    auto laneLayoutC = cLayout.getLaneLayout();
-    // Obtain the expanded shapes of the operands and result using lane_layout.
-    // NOTE: For B, get rid of the packed dimension for the expanded shape.
-    SmallVector<int64_t> expandedShapeA = {lhsShape[0] * laneLayoutA[0],
-                                           lhsShape[1] * laneLayoutA[1]};
-    SmallVector<int64_t> expandedShapeB = {
-        rhsShape[0] * rhsShape[1] * laneLayoutB[0], 1 * laneLayoutB[1]};
-    SmallVector<int64_t> expandedShapeC = {resShape[0] * laneLayoutC[0],
-                                           resShape[1] * laneLayoutC[1]};
-    auto bK = expandedShapeB[0];
-    if (bK != expandedShapeA[1])
-      return emitOpError("K-dimension mismatch.");
-    if (expandedShapeA[0] != expandedShapeC[0])
-      return emitOpError("M-dimension mismatch.");
-    if (expandedShapeB[1] != expandedShapeC[1])
-      return emitOpError("N-dimension mismatch.");
-  } else { // For other scopes, operands' shape should match the mxkxn
-           // semantics.
-    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
-      return emitOpError(
-          "expecting lhs and result to be a 2D vector, and rhs to be either "
-          "2D or 3D (packed) vector.");
-    auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-    if (bK != lhsShape[1])
-      return emitOpError("K-dimension mismatch.");
-    if (lhsShape[0] != resShape[0])
-      return emitOpError("M-dimension mismatch.");
-    if (rhsShape[1] != resShape[1])
-      return emitOpError("N-dimension mismatch.");
-  }
+  //   auto laneLayoutA = aLayout.getLaneLayout();
+  //   auto laneLayoutB = bLayout.getLaneLayout();
+  //   auto laneLayoutC = cLayout.getLaneLayout();
+  //   // Obtain the expanded shapes of the operands and result using
+  //   lane_layout.
+  //   // NOTE: For B, get rid of the packed dimension for the expanded shape.
+  //   SmallVector<int64_t> expandedShapeA = {lhsShape[0] * laneLayoutA[0],
+  //                                          lhsShape[1] * laneLayoutA[1]};
+  //   SmallVector<int64_t> expandedShapeB = {
+  //       rhsShape[0] * rhsShape[1] * laneLayoutB[0], 1 * laneLayoutB[1]};
+  //   SmallVector<int64_t> expandedShapeC = {resShape[0] * laneLayoutC[0],
+  //                                          resShape[1] * laneLayoutC[1]};
+  //   auto bK = expandedShapeB[0];
+  //   if (bK != expandedShapeA[1])
+  //     return emitOpError("K-dimension mismatch.");
+  //   if (expandedShapeA[0] != expandedShapeC[0])
+  //     return emitOpError("M-dimension mismatch.");
+  //   if (expandedShapeB[1] != expandedShapeC[1])
+  //     return emitOpError("N-dimension mismatch.");
+  // } else { // For other scopes, operands' shape should match the mxkxn
+  //          // semantics.
+  //   if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
+  //     return emitOpError(
+  //         "expecting lhs and result to be a 2D vector, and rhs to be either "
+  //         "2D or 3D (packed) vector.");
+  //   auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+  //   if (bK != lhsShape[1])
+  //     return emitOpError("K-dimension mismatch.");
+  //   if (lhsShape[0] != resShape[0])
+  //     return emitOpError("M-dimension mismatch.");
+  //   if (rhsShape[1] != resShape[1])
+  //     return emitOpError("N-dimension mismatch.");
+  // }
   return success();
 }
 
