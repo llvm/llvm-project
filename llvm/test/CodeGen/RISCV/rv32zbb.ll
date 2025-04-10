@@ -1693,15 +1693,24 @@ define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 %x, i32 %y, ptr %z) {
-; CHECK-LABEL: sub_if_uge_multiuse_cmp_store_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a3, a0, a1
-; CHECK-NEXT:    xori a4, a3, 1
-; CHECK-NEXT:    addi a3, a3, -1
-; CHECK-NEXT:    and a1, a3, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    sw a4, 0(a2)
-; CHECK-NEXT:    ret
+; RV32I-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    sltu a3, a0, a1
+; RV32I-NEXT:    xori a4, a3, 1
+; RV32I-NEXT:    addi a3, a3, -1
+; RV32I-NEXT:    and a1, a3, a1
+; RV32I-NEXT:    sub a0, a0, a1
+; RV32I-NEXT:    sw a4, 0(a2)
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    sltu a3, a0, a1
+; RV32ZBB-NEXT:    sub a1, a0, a1
+; RV32ZBB-NEXT:    xori a3, a3, 1
+; RV32ZBB-NEXT:    minu a0, a0, a1
+; RV32ZBB-NEXT:    sw a3, 0(a2)
+; RV32ZBB-NEXT:    ret
   %cmp = icmp uge i32 %x, %y
   %conv = zext i1 %cmp to i32
   store i32 %conv, ptr %z, align 4
