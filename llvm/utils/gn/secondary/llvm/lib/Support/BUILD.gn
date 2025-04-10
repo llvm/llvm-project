@@ -31,6 +31,7 @@ static_library("Support") {
   include_dirs = [
     "Unix",
     "Windows",
+    "//third-party/siphash/include",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
@@ -102,6 +103,7 @@ static_library("Support") {
     "IntervalMap.cpp",
     "JSON.cpp",
     "KnownBits.cpp",
+    "KnownFPClass.cpp",
     "LEB128.cpp",
     "LineIterator.cpp",
     "Locale.cpp",

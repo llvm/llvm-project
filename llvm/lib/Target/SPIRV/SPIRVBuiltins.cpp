@@ -1058,6 +1058,24 @@ static bool buildBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return true;
 }
 
+/// Helper function for building Intel's OpBitwiseFunctionINTEL instruction.
+static bool buildTernaryBitwiseFunctionINTELInst(
+    const SPIRV::IncomingCall *Call, unsigned Opcode,
+    MachineIRBuilder &MIRBuilder, SPIRVGlobalRegistry *GR) {
+  // Generate SPIRV instruction accordingly.
+  if (Call->isSpirvOp())
+    return buildOpFromWrapper(MIRBuilder, Opcode, Call,
+                              GR->getSPIRVTypeID(Call->ReturnType));
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned i = 0; i < Call->Arguments.size(); ++i)
+    MIB.addUse(Call->Arguments[i]);
+
+  return true;
+}
+
 static unsigned getNumComponentsForDim(SPIRV::Dim::Dim dim) {
   switch (dim) {
   case SPIRV::Dim::DIM_1D:
@@ -2264,6 +2282,18 @@ static bool generateBindlessImageINTELInst(const SPIRV::IncomingCall *Call,
   return buildBindlessImageINTELInst(Call, Opcode, MIRBuilder, GR);
 }
 
+static bool
+generateTernaryBitwiseFunctionINTELInst(const SPIRV::IncomingCall *Call,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  // Lookup the instruction opcode in the TableGen records.
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  unsigned Opcode =
+      SPIRV::lookupNativeBuiltin(Builtin->Name, Builtin->Set)->Opcode;
+
+  return buildTernaryBitwiseFunctionINTELInst(Call, Opcode, MIRBuilder, GR);
+}
+
 static bool buildNDRange(const SPIRV::IncomingCall *Call,
                          MachineIRBuilder &MIRBuilder,
                          SPIRVGlobalRegistry *GR) {
@@ -2845,6 +2875,8 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateExtendedBitOpsInst(Call.get(), MIRBuilder, GR);
   case SPIRV::BindlessINTEL:
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::TernaryBitwiseINTEL:
+    return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -3048,7 +3080,7 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
   auto Opcode = ExtensionType->getIntParameter(0);
 
   SmallVector<MCOperand> Operands;
-  for (llvm::Type *Param : ExtensionType->type_params()) {
+  for (Type *Param : ExtensionType->type_params()) {
     if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
       if (ParamEType->getName() == "spirv.IntegralConstant") {
         assert(ParamEType->getNumTypeParameters() == 1 &&
@@ -3088,6 +3120,22 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
 
   return GR->getOrCreateUnknownType(ExtensionType, MIRBuilder, Opcode,
                                     Operands);
+}
+
+static SPIRVType *getVulkanBufferType(const TargetExtType *ExtensionType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "Vulkan buffers have exactly one type for the type of the buffer.");
+  assert(ExtensionType->getNumIntParameters() == 2 &&
+         "Vulkan buffer have 2 integer parameters: storage class and is "
+         "writable.");
+
+  auto *T = ExtensionType->getTypeParameter(0);
+  auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
+      ExtensionType->getIntParameter(0));
+  bool IsWritable = ExtensionType->getIntParameter(1);
+  return GR->getOrCreateVulkanBufferType(MIRBuilder, T, SC, IsWritable);
 }
 
 namespace SPIRV {
@@ -3165,6 +3213,8 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
   SPIRVType *TargetType;
   if (Name == "spirv.Type") {
     TargetType = getInlineSpirvType(BuiltinType, MIRBuilder, GR);
+  } else if (Name == "spirv.VulkanBuffer") {
+    TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else {
     // Lookup the demangled builtin type in the TableGen records.
     const SPIRV::BuiltinType *TypeRecord = SPIRV::lookupBuiltinType(Name);
