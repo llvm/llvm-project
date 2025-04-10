@@ -2154,19 +2154,23 @@ ParseStatus RISCVAsmParser::parsePseudoQCJumpSymbol(OperandVector &Operands) {
 
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
+
   std::string Identifier(getTok().getIdentifier());
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
   if (getLexer().peekTok().is(AsmToken::At)) {
     Lex();
     Lex();
+    SMLoc PLTLoc = getLoc();
     StringRef PLT;
     if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return ParseStatus::Failure;
+      return Error(PLTLoc,
+                   "'@plt' is the only valid operand for this instruction");
+    E = SMLoc::getFromPointer(S.getPointer() + /*@plt*/ 4);
   } else {
     Lex();
   }
 
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
   RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_QC_E_JUMP_PLT;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
