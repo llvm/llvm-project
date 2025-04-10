@@ -3091,8 +3091,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace());
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
-            PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL,
-                                                             BasePtrOffset);
+        PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
     bool CanBeNull, CanBeFreed;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
         DL, CanBeNull, CanBeFreed);
@@ -3120,7 +3119,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   // These rewrites is trying to preserve inbounds/nuw attributes. So we want to
   // do this after having tried to derive "nuw" above.
   if (GEP.getNumIndices() == 1) {
-    auto GetPreservedNoWrapFlags = [&](bool AddIsNUW, Value *Idx1, Value *Idx2) {
+    auto GetPreservedNoWrapFlags = [&](bool AddIsNUW, Value *Idx1,
+                                       Value *Idx2) {
       // Preserve "inbounds nuw" if the original gep is "inbounds nuw", and the
       // add is "nuw". Preserve "nuw" if the original gep is "nuw", and the add
       // is "nuw".
@@ -3160,8 +3160,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
       // %newgep = getelementptr i32, ptr %newptr, i32 idx2
-      bool NUW = match(GEP.getOperand(1), m_NNegZExt(m_NUWAddLike(m_Value(),
-                                                                  m_Value())));
+      bool NUW = match(GEP.getOperand(1),
+                       m_NNegZExt(m_NUWAddLike(m_Value(), m_Value())));
       GEPNoWrapFlags NWFlags = GetPreservedNoWrapFlags(NUW, Idx1, C);
       auto *NewPtr = Builder.CreateGEP(
           GEP.getSourceElementType(), GEP.getPointerOperand(),
