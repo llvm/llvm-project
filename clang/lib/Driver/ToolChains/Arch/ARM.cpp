@@ -684,13 +684,12 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
     if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
         getARMSubArchVersionNumber(Triple) >= 7) {
       FPUKind = llvm::ARM::parseFPU("neon");
-      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     } else {
       llvm::ARM::ArchKind ArchKind =
           arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
       FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
-      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
     }
+    (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   }
 
   // Now we've finished accumulating features from arch, cpu and fpu,
