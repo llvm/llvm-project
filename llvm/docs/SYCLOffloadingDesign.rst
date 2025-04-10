@@ -234,6 +234,29 @@ Integration header generation
   runtime implementation, so the header must be available before the host
   compilation starts.
 
+****************************
+Device code packaging
+****************************
+When dealing with multiple device binaries, an additional step is performed to
+package the multiple device binaries before being added to the host object. This
+additional step is performed with the clang-offload-packager taking image inputs
+containing information relating to the target triple, architecture setting and
+offloading kind.
+
+The clang-offload-packager is run during ‘fat object’ generation regardless of
+the number of device binaries being added to the conglomerate fat object. The
+device binaries are contained in what is designated as an ‘Offload Binary’.
+These binaries can reside in a variety of binary formats including Bitcode
+files, ELF objects, executables and shared objects, COFF objects, archives or
+simply stored as an offload binary.
+
+Example usage of clang-offload-packager:
+
+  .. code-block:: console
+
+    $ clang-offload-packager --image=file=<name>,triple=<triple>,kind=<kind>
+    $ clang-offload-packager --image=file=test.bc,triple=spirv64,kind=sycl
+
 **************************
 Front-end host compilation
 **************************
@@ -291,11 +314,11 @@ Linking of device objects
   1. All the inputs of LLVM IR bitcode type are gathered and linked together using
   the llvm-link tool.
 
-  2. If the user provides device library files, the ouput of the previous step is
+  1. If the user provides device library files, the ouput of the previous step is
   linked with such files to get the final fully linked LLVM IR device bitcode
   image.
 
-  3. The fully linked LLVM IR device bitcode image undergoes several post-link
+  1. The fully linked LLVM IR device bitcode image undergoes several post-link
   steps. This include device code splitting, specialization constant lowering,
   symbol table generation, and property sets generation.
 
