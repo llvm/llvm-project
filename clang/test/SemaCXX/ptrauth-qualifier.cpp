@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++11  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -std=c++20  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20  -fptrauth-calls -fptrauth-intrinsics -verify -fsyntax-only %s
 
 #define AQ __ptrauth(1,1,50)
 #define AQ2 __ptrauth(1,1,51)
@@ -139,4 +139,58 @@ int test_call_diag() {
   test_bad_call_diag(&ptr2); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
   test_bad_call_diag(&ptr3); // expected-error {{no matching function for call to 'test_bad_call_diag'}}
   test_bad_call_diag2(&ptr1); // expected-error {{no matching function for call to 'test_bad_call_diag2'}}
+}
+
+namespace test_constexpr {
+  constexpr int i = 100;
+  constexpr const int * AQ p = &i;
+  constexpr const int * const AQ *pp = &p;
+  constexpr int i1 = **((const int * const AQ *)pp);
+  constexpr int i2 = **((const int * const AQ2 *)pp);
+  // expected-error@-1 {{constexpr variable 'i2' must be initialized by a constant expression}}
+  // expected-note@-2 {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
+namespace test_lambda {
+  void test() {
+    int * AQ v0;
+    int * AQ *v1;
+
+    [v0, v1]() {
+      static_assert(__is_same(decltype(v0), int * AQ));
+      static_assert(__is_same(decltype(v1), int * AQ *));
+    }();
+
+    [v2 = v0, v3 = v1]() {
+      static_assert(__is_same(decltype(v2), int *));
+      static_assert(__is_same(decltype(v3), int * AQ *));
+    }();
+  }
+}
+
+namespace test_concept {
+  template <typename T> struct is_qualified {
+    static constexpr bool value = false;
+  };
+
+  template <typename T> struct is_qualified<T * AQ> {
+    static constexpr bool value = true;
+  };
+
+  template <typename T>
+  concept Ptrauthable = is_qualified<T>::value;
+  // expected-note@-1 {{because 'is_qualified<int *>::value' evaluated to false}}
+  // expected-note@-2 {{because 'is_qualified<int *__ptrauth(1,1,51)>::value' evaluated to false}}
+
+  template <typename T>
+    requires(Ptrauthable<T>)
+  struct S {};
+  // expected-note@-2 {{because 'int *' does not satisfy 'Ptrauthable'}}
+  // expected-note@-3 {{because 'int *__ptrauth(1,1,51)' does not satisfy 'Ptrauthable'}}
+
+  S<int * AQ> s0;
+  S<int *> s1;
+  // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *]}}
+  S<int * AQ2> s1;
+  // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *__ptrauth(1,1,51)]}}
 }

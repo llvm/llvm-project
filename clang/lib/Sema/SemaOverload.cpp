@@ -3657,6 +3657,10 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
     ToQuals.removeObjCGCAttr();
   }
 
+  // __ptrauth qualifiers must match exactly.
+  if (FromQuals.getPointerAuth() != ToQuals.getPointerAuth())
+    return false;
+
   //   -- for every j > 0, if const is in cv 1,j then const is in cv
   //      2,j, and similarly for volatile.
   if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals, Ctx))
