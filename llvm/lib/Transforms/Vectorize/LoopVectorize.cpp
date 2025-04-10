@@ -10679,7 +10679,7 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                     [](const VPUser *U) {
                       return isa<VPScalarIVStepsRecipe>(U) ||
                              isa<VPDerivedIVRecipe>(U) ||
-                             VPInstruction::isCast(U) ||
+                             cast<VPRecipeBase>(U)->isScalarCast() ||
                              cast<VPInstruction>(U)->getOpcode() ==
                                  Instruction::Add;
                     }) &&

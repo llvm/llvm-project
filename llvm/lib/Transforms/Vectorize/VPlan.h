@@ -457,6 +457,9 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
+  /// Return true if the recipe is a scalar cast.
+  bool isScalarCast() const;
+
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -1022,17 +1025,13 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
-
-  /// Return true if \p U is a cast.
-  static bool isCast(const VPUser *U) {
-    auto *VPI = dyn_cast<VPInstruction>(U);
-    return VPI && Instruction::isCast(VPI->getOpcode());
-  }
 };
 
 /// A specialization of VPInstruction augmenting it with a dedicated result
 /// type, to be used when the opcode and operands of the VPInstruction don't
-/// directly determine the result type.
+/// directly determine the result type. Note that there is no separate VPDef ID
+/// for VPInstructionWithType; it shares the same ID as VPInstruction and is
+/// distinguished purely by the opcode.
 class VPInstructionWithType : public VPInstruction {
   /// Scalar result type produced by the recipe.
   Type *ResultTy;
@@ -1042,7 +1041,11 @@ public:
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
 
-  static inline bool classof(const VPRecipeBase *R) { return isCast(R); }
+  static inline bool classof(const VPRecipeBase *R) {
+    // VPInstructionWithType are VPInstructions with specific opcodes requiring
+    // type information.
+    return R->isScalarCast();
+  }
 
   static inline bool classof(const VPUser *R) {
     return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));

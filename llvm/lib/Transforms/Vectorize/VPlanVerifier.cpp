@@ -148,7 +148,7 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPInstructionWithType>(
-            [&](const auto *S) { return VerifyEVLUse(*S, 0); })
+            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI)
             return VerifyEVLUse(*I, 1);

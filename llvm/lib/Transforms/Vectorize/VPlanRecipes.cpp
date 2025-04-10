@@ -277,6 +277,11 @@ bool VPRecipeBase::isPhi() const {
           cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
 }
 
+bool VPRecipeBase::isScalarCast() const {
+  auto *VPI = dyn_cast<VPInstruction>(this);
+  return VPI && Instruction::isCast(VPI->getOpcode());
+}
+
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
