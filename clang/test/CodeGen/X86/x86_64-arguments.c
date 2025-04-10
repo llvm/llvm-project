@@ -551,6 +551,27 @@ struct s68 {
 void f68(struct s68 x) {
 }
 
+// CHECK-LABEL: define{{.*}} i128 @f69(i128 noundef %a)
+__int128_t f69(__int128_t a) {
+  return a;
+}
+
+// CHECK-LABEL: define{{.*}} i128 @f70(i128 noundef %a)
+__uint128_t f70(__uint128_t a) {
+  return a;
+}
+
+// check that registers are correctly counted for (u)int128_t arguments
+struct s71 {
+  long long a, b;
+};
+// CHECK-LABEL: define{{.*}} void @f71(i128 noundef %a, i128 noundef %b, i64 noundef %c, ptr noundef byval(%struct.s71) align 8 %d)
+void f71(__int128_t a, __int128_t b, long long c, struct s71 d) {
+}
+// CHECK-LABEL: define{{.*}} void @f72(i128 noundef %a, i128 noundef %b, i64 %d.coerce0, i64 %d.coerce1)
+void f72(__int128_t a, __int128_t b, struct s71 d) {
+}
+
 /// The synthesized __va_list_tag does not have file/line fields.
 // CHECK:      = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "__va_list_tag",
 // CHECK-NOT:  file:
