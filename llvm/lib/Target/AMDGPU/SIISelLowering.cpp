@@ -5030,11 +5030,21 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const DebugLoc &DL = MI.getDebugLoc();
   const SIInstrInfo *TII = ST.getInstrInfo();
-
+  const MachineFunction *MF = BB.getParent();
+  const TargetRegisterInfo *TrgtRegInfo = MF->getSubtarget().getRegisterInfo();
   // Reduction operations depend on whether the input operand is SGPR or VGPR.
   Register SrcReg = MI.getOperand(1).getReg();
-  bool isSGPR = TRI->isSGPRClass(MRI.getRegClass(SrcReg));
+  auto SrcRegClass = MRI.getRegClass(SrcReg);
+  llvm::errs() << TrgtRegInfo->getRegClassName(SrcRegClass) << "\n";
+  bool isSGPR = TRI->isSGPRClass(SrcRegClass);
   Register DstReg = MI.getOperand(0).getReg();
+  llvm::errs() << TrgtRegInfo->getRegClassName(MRI.getRegClass(DstReg)) << "\n";
+  Register MaskReg = MI.getOperand(2).getReg();
+  llvm::errs() << TrgtRegInfo->getRegClassName(MRI.getRegClass(MaskReg)) << "\n";
+
+  // llvm::errs() << "srcreg:" << MRI.getRegClassName(MRI.getRegClass(SrcReg)) << "\n";
+  // llvm::errs() << "DstReg:" << MRI.getRegClassName(MRI.getRegClass(DstReg)) << "\n";
+  // llvm::errs() << "MaskReg:" << MRI.getRegClassName(MRI.getRegClass(MaskReg)) << "\n";
   MachineBasicBlock *RetBB = nullptr;
   if (isSGPR) {
     // These operations with a uniform value i.e. SGPR are idempotent.
@@ -5065,15 +5075,19 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
     const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
     Register LoopIterator = MRI.createVirtualRegister(WaveMaskRegClass);
-    Register InitalValReg = MRI.createVirtualRegister(DstRegClass);
+    Register InitalValReg = MRI.createVirtualRegister(DstRegClass);//MRI.getRegClass(SrcReg)
 
-    Register AccumulatorReg = MRI.createVirtualRegister(DstRegClass);
+    Register AccumulatorReg = MRI.createVirtualRegister(DstRegClass);//MRI.getRegClass(SrcReg)
     Register ActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
     Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register TempRegMaskReg = MRI.createVirtualRegister(WaveMaskRegClass);
 
     Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
+    Register FF1MaskReg = MRI.createVirtualRegister(DstRegClass);
     Register LaneValueReg =
         MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+    Register MaskLaneValueReg =
+        MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
 
     bool IsWave32 = ST.isWave32();
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
@@ -5084,9 +5098,11 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     uint32_t InitalValue =
         (Opc == AMDGPU::S_MIN_U32) ? std::numeric_limits<uint32_t>::max() : 0;
     auto TmpSReg =
-        BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
+        BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg); //s_mov_b64 s[2:3], exec
+    // auto TmpMaskSReg =
+        // BuildMI(BB, I, DL, TII->get(MovOpc), TempRegMaskReg).addReg(MaskReg); //s_mov_b64 s[2:3], exec
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
-        .addImm(InitalValue);
+        .addImm(InitalValue);//s_mov_b32 s4, 0 | %17:sgpr_32 = S_MOV_B32 0
     // clang-format off
     BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH))
         .addMBB(ComputeLoop);
@@ -5106,14 +5122,20 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     // Perform the computations
     unsigned SFFOpc = IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64;
     auto FF1 = BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
-                   .addReg(ActiveBits->getOperand(0).getReg());
+                   .addReg(ActiveBits->getOperand(0).getReg());//%index.sgpr = S_FF1_I32_B64 %exec_copy.sreg
     auto LaneValue = BuildMI(*ComputeLoop, I, DL,
                              TII->get(AMDGPU::V_READLANE_B32), LaneValueReg)
                          .addReg(SrcReg)
-                         .addReg(FF1->getOperand(0).getReg());
+                         .addReg(FF1->getOperand(0).getReg());//%value_at_lane_index.sreg = V_READLANE %value.vgpr %index.sgpr
+    auto MaskLaneValue = BuildMI(*ComputeLoop, I, DL,
+                          TII->get(AMDGPU::V_READLANE_B32), MaskLaneValueReg)
+                      .addReg(MaskReg)
+                      .addReg(FF1->getOperand(0).getReg());//%mask_at_lane_index.sreg = V_READLANE %mask.vgpr %index.sgpr
+    auto FF2 = BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_FF1_I32_B64), FF1Reg)
+                      .addReg(MaskLaneValue->getOperand(0).getReg());//%subgroupindex.sgpr = S_FF1_I32_B64 %mask_at_lane_index.sreg
     auto NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
                               .addReg(Accumulator->getOperand(0).getReg())
-                              .addReg(LaneValue->getOperand(0).getReg());
+                              .addReg(LaneValue->getOperand(0).getReg());//%acc.sgpr = max %acc.sgpr %value_at_lane_index.sreg
 
     // Manipulate the iterator to get the next active lane
     unsigned BITSETOpc =
@@ -5121,7 +5143,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
     auto NewActiveBits =
         BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
             .addReg(FF1->getOperand(0).getReg())
-            .addReg(ActiveBits->getOperand(0).getReg());
+            .addReg(ActiveBits->getOperand(0).getReg());//%bitsetresult = S_BITSET0_B64 %exec_copy
 
     // Add phi nodes
     Accumulator.addReg(NewAccumulator->getOperand(0).getReg())
