@@ -466,7 +466,7 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
-- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Arch.
+- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 
 Android Support
 ^^^^^^^^^^^^^^^
