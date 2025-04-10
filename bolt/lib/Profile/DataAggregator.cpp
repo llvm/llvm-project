@@ -1018,19 +1018,20 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     return EC;
   StringRef MispredStr = MispredStrRes.get();
   // SPE brstack mispredicted flags might be two characters long: 'PN' or 'MN'.
-  bool ValidStrSize = opts::ArmSPE ?
-    MispredStr.size() >= 1 && MispredStr.size() <= 2 : MispredStr.size() == 1;
+  bool ValidStrSize = opts::ArmSPE
+                          ? MispredStr.size() >= 1 && MispredStr.size() <= 2
+                          : MispredStr.size() == 1;
   bool SpeTakenBitErr =
-         (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
+      (opts::ArmSPE && MispredStr.size() == 2 && MispredStr[1] != 'N');
   bool PredictionBitErr =
-         !ValidStrSize ||
-         (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
+      !ValidStrSize ||
+      (MispredStr[0] != 'P' && MispredStr[0] != 'M' && MispredStr[0] != '-');
   if (SpeTakenBitErr)
     reportError("expected 'N' as SPE prediction bit for a not-taken branch");
   if (PredictionBitErr)
     reportError("expected 'P', 'M' or '-' char as a prediction bit");
 
- if (SpeTakenBitErr || PredictionBitErr) {
+  if (SpeTakenBitErr || PredictionBitErr) {
     Diag << "Found: " << MispredStr << "\n";
     return make_error_code(llvm::errc::io_error);
   }
