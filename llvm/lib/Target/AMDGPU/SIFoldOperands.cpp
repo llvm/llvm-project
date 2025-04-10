@@ -1161,8 +1161,10 @@ void SIFoldOperandsImpl::foldOperand(
 
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
-        else
+        else if(OpToFold.isFI())
           UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
+        else if(OpToFold.isGlobal())
+          return;
         UseMI->removeOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
