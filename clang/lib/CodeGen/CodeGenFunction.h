@@ -2294,6 +2294,8 @@ public:
   void pushLifetimeExtendedDestroy(CleanupKind kind, Address addr,
                                    QualType type, Destroyer *destroyer,
                                    bool useEHCleanupForArray);
+  void pushLifetimeExtendedDestroy(QualType::DestructionKind dtorKind,
+                                   Address addr, QualType type);
   void pushCallObjectDeleteCleanup(const FunctionDecl *OperatorDelete,
                                    llvm::Value *CompletePtr,
                                    QualType ElementType);
