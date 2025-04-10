@@ -113,15 +113,10 @@ define amdgpu_ps float @and_and_not_and(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @and_and_and(i32 %a, i32 %b, i32 %c) {
-; GFX950-SDAG-LABEL: and_and_and:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: and_and_and:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: and_and_and:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
+; GCN-NEXT:    ; return to shader part epilog
   %and1 = and i32 %a, %c
   %and2 = and i32 %and1, %b
   %ret_cast = bitcast i32 %and2 to float
@@ -131,15 +126,10 @@ define amdgpu_ps float @and_and_and(i32 %a, i32 %b, i32 %c) {
 ; ========= Multi bit functions =========
 
 define amdgpu_ps float @test_12(i32 %a, i32 %b) {
-; GFX950-SDAG-LABEL: test_12:
-; GFX950-SDAG:       ; %bb.0:
-; GFX950-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
-; GFX950-SDAG-NEXT:    ; return to shader part epilog
-;
-; GFX950-GISEL-LABEL: test_12:
-; GFX950-GISEL:       ; %bb.0:
-; GFX950-GISEL-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
-; GFX950-GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: test_12:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; GCN-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %and1 = and i32 %nota, %b
   %ret_cast = bitcast i32 %and1 to float
