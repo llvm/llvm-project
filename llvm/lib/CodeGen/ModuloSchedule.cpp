@@ -2137,7 +2137,8 @@ MachineInstr *ModuloScheduleExpanderMVE::cloneInstr(MachineInstr *OldMI) {
 /// If it is already dedicated exit, return it. Otherwise, insert a new
 /// block between them and return the new block.
 static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
-                                              MachineBasicBlock *Exit) {
+                                              MachineBasicBlock *Exit,
+                                              LiveIntervals &LIS) {
   if (Exit->pred_size() == 1)
     return Exit;
 
@@ -2147,6 +2148,7 @@ static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
   MachineBasicBlock *NewExit =
       MF->CreateMachineBasicBlock(Loop->getBasicBlock());
   MF->insert(Loop->getIterator(), NewExit);
+  LIS.insertMBBInMaps(NewExit);
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -2282,12 +2284,17 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   NewPreheader = MF.CreateMachineBasicBlock(OrigKernel->getBasicBlock());
 
   MF.insert(OrigKernel->getIterator(), Check);
+  LIS.insertMBBInMaps(Check);
   MF.insert(OrigKernel->getIterator(), Prolog);
+  LIS.insertMBBInMaps(Prolog);
   MF.insert(OrigKernel->getIterator(), NewKernel);
+  LIS.insertMBBInMaps(NewKernel);
   MF.insert(OrigKernel->getIterator(), Epilog);
+  LIS.insertMBBInMaps(Epilog);
   MF.insert(OrigKernel->getIterator(), NewPreheader);
+  LIS.insertMBBInMaps(NewPreheader);
 
-  NewExit = createDedicatedExit(OrigKernel, OrigExit);
+  NewExit = createDedicatedExit(OrigKernel, OrigExit, LIS);
 
   NewPreheader->transferSuccessorsAndUpdatePHIs(OrigPreheader);
   TII->insertUnconditionalBranch(*NewPreheader, OrigKernel, DebugLoc());
@@ -2371,9 +2378,10 @@ void ModuloScheduleExpanderMVE::updateInstrUse(
       UseMO.setReg(NewReg);
     else {
       Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-      BuildMI(*OrigKernel, MI, MI->getDebugLoc(), TII->get(TargetOpcode::COPY),
-              SplitReg)
-          .addReg(NewReg);
+      MachineInstr *NewCopy = BuildMI(*OrigKernel, MI, MI->getDebugLoc(),
+                                      TII->get(TargetOpcode::COPY), SplitReg)
+                                  .addReg(NewReg);
+      LIS.InsertMachineInstrInMaps(*NewCopy);
       UseMO.setReg(SplitReg);
     }
   }
@@ -2457,12 +2465,14 @@ void ModuloScheduleExpanderMVE::generatePhi(
 
     assert(CorrespondReg.isValid());
     Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-    BuildMI(*NewKernel, NewKernel->getFirstNonPHI(), DebugLoc(),
-            TII->get(TargetOpcode::PHI), PhiReg)
-        .addReg(NewReg->second)
-        .addMBB(NewKernel)
-        .addReg(CorrespondReg)
-        .addMBB(Prolog);
+    MachineInstr *NewPhi =
+        BuildMI(*NewKernel, NewKernel->getFirstNonPHI(), DebugLoc(),
+                TII->get(TargetOpcode::PHI), PhiReg)
+            .addReg(NewReg->second)
+            .addMBB(NewKernel)
+            .addReg(CorrespondReg)
+            .addMBB(Prolog);
+    LIS.InsertMachineInstrInMaps(*NewPhi);
     PhiVRMap[UnrollNum][OrigReg] = PhiReg;
   }
 }
@@ -2500,18 +2510,22 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
   // remaining iterations) with the route that execute the original loop.
   if (!UsesAfterLoop.empty()) {
     Register PhiReg = MRI.createVirtualRegister(MRI.getRegClass(OrigReg));
-    BuildMI(*NewExit, NewExit->getFirstNonPHI(), DebugLoc(),
-            TII->get(TargetOpcode::PHI), PhiReg)
-        .addReg(OrigReg)
-        .addMBB(OrigKernel)
-        .addReg(NewReg)
-        .addMBB(Epilog);
+    MachineInstr *NewPhi =
+        BuildMI(*NewExit, NewExit->getFirstNonPHI(), DebugLoc(),
+                TII->get(TargetOpcode::PHI), PhiReg)
+            .addReg(OrigReg)
+            .addMBB(OrigKernel)
+            .addReg(NewReg)
+            .addMBB(Epilog);
+    LIS.InsertMachineInstrInMaps(*NewPhi);
 
     for (MachineOperand *MO : UsesAfterLoop)
       MO->setReg(PhiReg);
 
-    if (!LIS.hasInterval(PhiReg))
-      LIS.createEmptyInterval(PhiReg);
+    // The interval of OrigReg is invalid and should be recalculated when
+    // LiveInterval::getInterval() is called.
+    if (LIS.hasInterval(OrigReg))
+      LIS.removeInterval(OrigReg);
   }
 
   // Merge routes from the pipelined loop and the bypassed route before the
@@ -2521,12 +2535,14 @@ void ModuloScheduleExpanderMVE::mergeRegUsesAfterPipeline(Register OrigReg,
       Register InitReg, LoopReg;
       getPhiRegs(*Phi, OrigKernel, InitReg, LoopReg);
       Register NewInit = MRI.createVirtualRegister(MRI.getRegClass(InitReg));
-      BuildMI(*NewPreheader, NewPreheader->getFirstNonPHI(), Phi->getDebugLoc(),
-              TII->get(TargetOpcode::PHI), NewInit)
-          .addReg(InitReg)
-          .addMBB(Check)
-          .addReg(NewReg)
-          .addMBB(Epilog);
+      MachineInstr *NewPhi =
+          BuildMI(*NewPreheader, NewPreheader->getFirstNonPHI(),
+                  Phi->getDebugLoc(), TII->get(TargetOpcode::PHI), NewInit)
+              .addReg(InitReg)
+              .addMBB(Check)
+              .addReg(NewReg)
+              .addMBB(Epilog);
+      LIS.InsertMachineInstrInMaps(*NewPhi);
       replacePhiSrc(*Phi, InitReg, NewInit, NewPreheader);
     }
   }
@@ -2549,6 +2565,7 @@ void ModuloScheduleExpanderMVE::generateProlog(
       updateInstrDef(NewMI, PrologVRMap[PrologNum], false);
       NewMIMap[NewMI] = {PrologNum, StageNum};
       Prolog->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 
@@ -2587,6 +2604,7 @@ void ModuloScheduleExpanderMVE::generateKernel(
       generatePhi(MI, UnrollNum, PrologVRMap, KernelVRMap, PhiVRMap);
       NewMIMap[NewMI] = {UnrollNum, StageNum};
       NewKernel->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 
@@ -2625,6 +2643,7 @@ void ModuloScheduleExpanderMVE::generateEpilog(
       updateInstrDef(NewMI, EpilogVRMap[EpilogNum], StageNum - 1 == EpilogNum);
       NewMIMap[NewMI] = {EpilogNum, StageNum};
       Epilog->push_back(NewMI);
+      LIS.InsertMachineInstrInMaps(*NewMI);
     }
   }
 
