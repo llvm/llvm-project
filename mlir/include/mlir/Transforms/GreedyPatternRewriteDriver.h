@@ -50,6 +50,10 @@ public:
   ///
   /// Note: Only applicable when simplifying entire regions.
   bool useTopDownTraversal = false;
+  GreedyRewriteConfig &setUseTopDownTraversal(bool use = true) {
+    useTopDownTraversal = use;
+    return *this;
+  }
 
   /// Perform control flow optimizations to the region tree after applying all
   /// patterns.
@@ -57,6 +61,11 @@ public:
   /// Note: Only applicable when simplifying entire regions.
   GreedySimplifyRegionLevel enableRegionSimplification =
       GreedySimplifyRegionLevel::Aggressive;
+  GreedyRewriteConfig &
+  setEnableRegionSimplification(GreedySimplifyRegionLevel level) {
+    enableRegionSimplification = level;
+    return *this;
+  }
 
   /// This specifies the maximum number of times the rewriter will iterate
   /// between applying patterns and simplifying regions. Use `kNoLimit` to
@@ -64,10 +73,18 @@ public:
   ///
   /// Note: Only applicable when simplifying entire regions.
   int64_t maxIterations = 10;
+  GreedyRewriteConfig &setMaxIterations(int64_t iterations) {
+    maxIterations = iterations;
+    return *this;
+  }
 
   /// This specifies the maximum number of rewrites within an iteration. Use
   /// `kNoLimit` to disable this limit.
   int64_t maxNumRewrites = kNoLimit;
+  GreedyRewriteConfig &setMaxNumRewrites(int64_t limit) {
+    maxNumRewrites = limit;
+    return *this;
+  }
 
   static constexpr int64_t kNoLimit = -1;
 
@@ -76,6 +93,10 @@ public:
   /// (or the specified region, depending on which greedy rewrite entry point
   /// is used) is used as a scope.
   Region *scope = nullptr;
+  GreedyRewriteConfig &setScope(Region *scope) {
+    this->scope = scope;
+    return *this;
+  }
 
   /// Strict mode can restrict the ops that are added to the worklist during
   /// the rewrite.
@@ -88,16 +109,32 @@ public:
   ///   were on the worklist at the very beginning) enqueued. All other ops are
   ///   excluded.
   GreedyRewriteStrictness strictMode = GreedyRewriteStrictness::AnyOp;
+  GreedyRewriteConfig &setStrictMode(GreedyRewriteStrictness mode) {
+    strictMode = mode;
+    return *this;
+  }
 
   /// An optional listener that should be notified about IR modifications.
   RewriterBase::Listener *listener = nullptr;
+  GreedyRewriteConfig &setListener(RewriterBase::Listener *listener) {
+    this->listener = listener;
+    return *this;
+  }
 
   /// Whether this should fold while greedily rewriting.
   bool fold = true;
+  GreedyRewriteConfig &setFold(bool enable = true) {
+    fold = enable;
+    return *this;
+  }
 
   /// If set to "true", constants are CSE'd (even across multiple regions that
   /// are in a parent-ancestor relationship).
   bool cseConstants = true;
+  GreedyRewriteConfig &setCSEConstants(bool enable = true) {
+    cseConstants = enable;
+    return *this;
+  }
 };
 
 //===----------------------------------------------------------------------===//
