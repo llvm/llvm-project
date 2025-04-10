@@ -13,6 +13,8 @@
 
 #include <map>
 
+#include <cassert>
+
 #include "test_macros.h"
 
 struct A {
