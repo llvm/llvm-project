@@ -7866,6 +7866,17 @@ The attributes in this metadata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
 
+'``llvm.loop.estimated_trip_count``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata records the loop's estimated trip count.  If it is not present, a
+loop's estimated trip count should be computed from any ``branch_weights``
+metadata attached to the latch block's branch instruction.
+
+Thus, this metadata frees loop transformations to compute latch branch weights
+solely for the purpose of maintaining accurate block frequencies instead of
+requiring the branch weights to always serve both roles.
+
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
