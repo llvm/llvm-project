@@ -82,9 +82,6 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::DeviceOnlyINTEL:
   case SPIRV::StorageClass::HostOnlyINTEL:
     return false;
-  default:
-    llvm_unreachable("Unknown storage class");
-    return false;
   }
 }
 
