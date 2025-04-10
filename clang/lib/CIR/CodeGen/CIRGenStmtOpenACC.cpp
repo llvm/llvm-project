@@ -75,12 +75,11 @@ public:
     }
   }
 
-  mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *II) {
-
+  mlir::acc::DeviceType decodeDeviceType(const IdentifierInfo *ii) {
     // '*' case leaves no identifier-info, just a nullptr.
-    if (!II)
+    if (!ii)
       return mlir::acc::DeviceType::Star;
-    return llvm::StringSwitch<mlir::acc::DeviceType>(II->getName())
+    return llvm::StringSwitch<mlir::acc::DeviceType>(ii->getName())
         .CaseLower("default", mlir::acc::DeviceType::Default)
         .CaseLower("host", mlir::acc::DeviceType::Host)
         .CaseLower("multicore", mlir::acc::DeviceType::Multicore)
@@ -97,8 +96,8 @@ public:
       // Device type has a list that is either a 'star' (emitted as 'star'),
       // or an identifer list, all of which get added for attributes.
 
-      for (const DeviceTypeArgument &Arg : clause.getArchitectures())
-        attrData.deviceTypeArchs.push_back(decodeDeviceType(Arg.first));
+      for (const DeviceTypeArgument &arg : clause.getArchitectures())
+        attrData.deviceTypeArchs.push_back(decodeDeviceType(arg.first));
       break;
     }
     default:
@@ -113,6 +112,8 @@ public:
     if (attrData.defaultVal.has_value()) {
       // FIXME: OpenACC: as we implement this for other directive kinds, we have
       // to expand this list.
+      // This type-trait checks if 'op'(the first arg) is one of the mlir::acc
+      // operations listed in the rest of the arguments.
       if constexpr (isOneOfTypes<Op, ParallelOp, SerialOp, KernelsOp, DataOp>)
         op.setDefaultAttr(*attrData.defaultVal);
       else
@@ -123,6 +124,7 @@ public:
       // FIXME: OpenACC: as we implement this for other directive kinds, we have
       // to expand this list, or more likely, have a 'noop' branch as most other
       // uses of this apply to the operands instead.
+      // This type-trait checks if 'op'(the first arg) is one of the mlir::acc
       if constexpr (isOneOfTypes<Op, InitOp, ShutdownOp>) {
         llvm::SmallVector<mlir::Attribute> deviceTypes;
         for (mlir::acc::DeviceType DT : attrData.deviceTypeArchs)
@@ -143,8 +145,8 @@ public:
 
 template <typename Op, typename TermOp>
 mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
-    OpenACCDirectiveKind dirKind, SourceLocation dirLoc, mlir::Location start,
-    mlir::Location end, llvm::ArrayRef<const OpenACCClause *> clauses,
+    mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+    SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
     const Stmt *associatedStmt) {
   mlir::LogicalResult res = mlir::success();
 
@@ -172,10 +174,9 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOpAssociatedStmt(
 }
 
 template <typename Op>
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCOp(OpenACCDirectiveKind dirKind,
-                              SourceLocation dirLoc, mlir::Location start,
-                              llvm::ArrayRef<const OpenACCClause *> clauses) {
+mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
+    mlir::Location start, OpenACCDirectiveKind dirKind, SourceLocation dirLoc,
+    llvm::ArrayRef<const OpenACCClause *> clauses) {
   mlir::LogicalResult res = mlir::success();
 
   llvm::SmallVector<mlir::Type> retTy;
@@ -199,15 +200,15 @@ CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
   switch (s.getDirectiveKind()) {
   case OpenACCDirectiveKind::Parallel:
     return emitOpenACCOpAssociatedStmt<ParallelOp, mlir::acc::YieldOp>(
-        s.getDirectiveKind(), s.getDirectiveLoc(), start, end, s.clauses(),
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
         s.getStructuredBlock());
   case OpenACCDirectiveKind::Serial:
     return emitOpenACCOpAssociatedStmt<SerialOp, mlir::acc::YieldOp>(
-        s.getDirectiveKind(), s.getDirectiveLoc(), start, end, s.clauses(),
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
         s.getStructuredBlock());
   case OpenACCDirectiveKind::Kernels:
     return emitOpenACCOpAssociatedStmt<KernelsOp, mlir::acc::TerminatorOp>(
-        s.getDirectiveKind(), s.getDirectiveLoc(), start, end, s.clauses(),
+        start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
         s.getStructuredBlock());
   default:
     llvm_unreachable("invalid compute construct kind");
@@ -220,21 +221,22 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
-      s.getDirectiveKind(), s.getDirectiveLoc(), start, end, s.clauses(),
+      start, end, s.getDirectiveKind(), s.getDirectiveLoc(), s.clauses(),
       s.getStructuredBlock());
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getEnd());
-  return emitOpenACCOp<InitOp>(s.getDirectiveKind(), s.getDirectiveLoc(), start,
+  return emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                                s.clauses());
 }
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
   mlir::Location start = getLoc(s.getSourceRange().getEnd());
-  return emitOpenACCOp<ShutdownOp>(s.getDirectiveKind(), s.getDirectiveLoc(),
-                                   start, s.clauses());
+  return emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
+                                   s.getDirectiveLoc(), s.clauses());
 }
 
 mlir::LogicalResult
