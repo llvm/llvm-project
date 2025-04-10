@@ -3981,6 +3981,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
   const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_res_may_alias,
                                          options::OPT_D,
                                          options::OPT_I,
                                          options::OPT_O,
