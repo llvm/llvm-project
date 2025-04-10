@@ -4778,6 +4778,13 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
                                   Base.getBaseInfo(), TBAAAccessInfo());
 }
 
+bool CodeGenFunction::isUnderlyingBasePointerConstantNull(const Expr *E) {
+  const Expr *UnderlyingBaseExpr = E->IgnoreParens();
+  while (auto *BaseMemberExpr = dyn_cast<MemberExpr>(UnderlyingBaseExpr))
+    UnderlyingBaseExpr = BaseMemberExpr->getBase()->IgnoreParens();
+  return getContext().isSentinelNullExpr(UnderlyingBaseExpr);
+}
+
 LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
     EmitIgnoredExpr(E->getBase());
@@ -4785,16 +4792,11 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   }
 
   Expr *BaseExpr = E->getBase();
-  bool IsInBounds = !getLangOpts().PointerOverflowDefined;
-  if (IsInBounds) {
-    // Check whether the underlying base pointer is a constant null.
-    // If so, we do not set inbounds flag for GEP to avoid breaking some
-    // old-style offsetof idioms.
-    Expr *UnderlyingBaseExpr = BaseExpr->IgnoreParens();
-    while (auto *BaseMemberExpr = dyn_cast<MemberExpr>(UnderlyingBaseExpr))
-      UnderlyingBaseExpr = BaseMemberExpr->getBase()->IgnoreParens();
-    IsInBounds = !getContext().isSentinelNullExpr(UnderlyingBaseExpr);
-  }
+  // Check whether the underlying base pointer is a constant null.
+  // If so, we do not set inbounds flag for GEP to avoid breaking some
+  // old-style offsetof idioms.
+  bool IsInBounds = !getLangOpts().PointerOverflowDefined &&
+                    !isUnderlyingBasePointerConstantNull(BaseExpr);
   // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a scalar.
   LValue BaseLV;
   if (E->isArrow()) {
