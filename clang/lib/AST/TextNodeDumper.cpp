@@ -738,6 +738,10 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
+    } else if (B.is<TypeInfoLValue>()) {
+      OS << "TypeInfoLValue";
+    } else if (B.is<DynamicAllocLValue>()) {
+      OS << "DynamicAllocLValue";
     } else {
       const auto *VDB = B.get<const ValueDecl *>();
       OS << VDB->getDeclKindName() << "Decl";
