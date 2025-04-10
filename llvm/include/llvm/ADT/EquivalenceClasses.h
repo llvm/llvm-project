@@ -222,7 +222,7 @@ public:
   }
 
   /// erase - Erase a value from the union/find set, return "true" if erase
-  /// succeeded.
+  /// succeeded, or "false" when the value was not found.
   bool erase(const ElemTy &V) {
     if (!TheMapping.contains(V))
       return false;
@@ -237,9 +237,9 @@ public:
       Next->Next = reinterpret_cast<const ECValue *>(
           reinterpret_cast<intptr_t>(Next->Next) | static_cast<intptr_t>(1));
 
-      const ECValue *newLeader = Next;
+      const ECValue *NewLeader = Next;
       while ((Next = Next->getNext())) {
-        Next->Leader = newLeader;
+        Next->Leader = NewLeader;
       }
     } else if (!Cur->isLeader()) {
       const ECValue *Leader = findLeader(V).Node;
