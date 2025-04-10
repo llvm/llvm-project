@@ -268,7 +268,9 @@ static llvm::LogicalResult processPayloadBuffer(
   context.allowUnregisteredDialects(clOptions->allowUnregisteredDialects);
   mlir::ParserConfig config(&context);
   TransformSourceMgr sourceMgr(
-      /*verifyDiagnostics=*/clOptions->verifyDiagnostics);
+      /*verifyDiagnostics=*/clOptions->verifyDiagnostics.getNumOccurrences()
+          ? std::optional{clOptions->verifyDiagnostics.getValue()}
+          : std::nullopt);
 
   // Parse the input buffer that will be used as transform payload.
   mlir::OwningOpRef<mlir::Operation *> payloadRoot =
