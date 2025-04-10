@@ -1357,6 +1357,8 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
+  if (TA.isCanonicalExpr())
+    OS << " canonical";
   dumpTemplateArgument(TA);
 }
 

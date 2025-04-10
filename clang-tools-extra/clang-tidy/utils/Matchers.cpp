@@ -32,7 +32,7 @@ bool MatchesAnyListedTypeNameMatcher::matches(
 
   PrintingPolicy PrintingPolicyWithSuppressedTag(
       Finder->getASTContext().getLangOpts());
-  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes = true;
+  PrintingPolicyWithSuppressedTag.PrintAsCanonical = true;
   PrintingPolicyWithSuppressedTag.SuppressElaboration = true;
   PrintingPolicyWithSuppressedTag.SuppressScope = false;
   PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
