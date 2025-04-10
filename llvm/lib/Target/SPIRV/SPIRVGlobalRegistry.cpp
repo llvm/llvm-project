@@ -83,6 +83,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   case SPIRV::StorageClass::HostOnlyINTEL:
     return false;
   }
+  llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
