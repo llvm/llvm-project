@@ -16,3 +16,6 @@ breaks aompSmoke:
 [Clang][AMDGPU] Remove special handling for COV4 libraries 
 huber,saiyed
 ---
+Revert "[clang-doc][NFC] refactor out file helpers (#134298)"
+This reverts commit e10f67a8270c7745b8a9306a9910b06cfc8d2c55.
+---
