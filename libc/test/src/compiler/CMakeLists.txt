@@ -10,6 +10,7 @@ add_libc_unittest(
     libc.hdr.signal_macros
     libc.src.__support.macros.sanitizer
     libc.src.compiler.__stack_chk_fail
+    libc.src.compiler.__stack_chk_guard
     libc.src.string.memset
   COMPILE_OPTIONS
     -fstack-protector-all

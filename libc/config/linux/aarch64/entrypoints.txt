@@ -836,6 +836,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # compiler entrypoints (no corresponding header)
     libc.src.compiler.__stack_chk_fail
+    libc.src.compiler.__stack_chk_guard
 
     # dirent.h entrypoints
     libc.src.dirent.closedir

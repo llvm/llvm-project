@@ -1,0 +1,11 @@
+add_entrypoint_object(
+  __stack_chk_guard
+  SRCS
+    __stack_chk_guard.cpp
+  HDRS
+    ../__stack_chk_guard.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+  COMPILE_OPTIONS
+    -Wno-global-constructors
+)
