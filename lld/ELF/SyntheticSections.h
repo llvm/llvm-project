@@ -559,6 +559,7 @@ public:
 
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
+  SmallVector<DynamicReloc, 0> tentativeIRelativeRelocs;
 
 protected:
   void computeRels();

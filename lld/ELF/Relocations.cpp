@@ -466,7 +466,7 @@ private:
   template <class ELFT, class RelTy>
   int64_t computeMipsAddend(const RelTy &rel, RelExpr expr, bool isLocal) const;
   bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
-                                uint64_t relOff) const;
+                                uint64_t relOff, bool canWrite) const;
   void processAux(RelExpr expr, RelType type, uint64_t offset, Symbol &sym,
                   int64_t addend) const;
   unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
@@ -862,6 +862,14 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
     return;
   }
 
+  if (sym.isGnuIFunc()) {
+    std::lock_guard<std::mutex> lock(ctx.relocMutex);
+    part.relaDyn->tentativeIRelativeRelocs.push_back(
+        {ctx.target->iRelativeRel, &isec, offsetInSec,
+         DynamicReloc::AddendOnlyWithTargetVA, sym, addend, expr});
+    return;
+  }
+
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
   // the relrDyn section, otherwise add it to the relaDyn section.
@@ -974,7 +982,8 @@ static bool canDefineSymbolInExecutable(Ctx &ctx, Symbol &sym) {
 // dynamic relocation so that the relocation will be fixed at load-time.
 bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
                                                  const Symbol &sym,
-                                                 uint64_t relOff) const {
+                                                 uint64_t relOff,
+                                                 bool canWrite) const {
   // These expressions always compute a constant
   if (oneof<
           R_GOTPLT, R_GOT_OFF, R_RELAX_HINT, RE_MIPS_GOT_LOCAL_PAGE,
@@ -994,6 +1003,11 @@ bool RelocationScanner::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // R_AARCH64_AUTH_ABS64 requires a dynamic relocation.
   if (sym.isPreemptible || e == RE_AARCH64_AUTH)
+    return false;
+  // Absolute IFUNC references are emitted as IRELATIVE if possible.
+  // See getIRelativeSection for why we check androidPackDynRelocs here.
+  if (sym.isGnuIFunc() && type == ctx.target->symbolicRel && canWrite &&
+      !ctx.arg.androidPackDynRelocs)
     return false;
   if (!ctx.arg.isPic)
     return true;
@@ -1107,9 +1121,11 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
     }
   } else if (needsPlt(expr)) {
     sym.setFlags(NEEDS_PLT);
-  } else if (LLVM_UNLIKELY(isIfunc)) {
-    sym.setFlags(HAS_DIRECT_RELOC);
   }
+
+  bool canWrite = (sec->flags & SHF_WRITE) ||
+                  !(ctx.arg.zText ||
+                    (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
 
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
@@ -1125,8 +1141,10 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // -shared matches the spirit of its -z undefs default. -pie has freedom on
   // choices, and we choose dynamic relocations to be consistent with the
   // handling of GOT-generating relocations.
-  if (isStaticLinkTimeConstant(expr, type, sym, offset) ||
+  if (isStaticLinkTimeConstant(expr, type, sym, offset, canWrite) ||
       (!ctx.arg.isPic && sym.isUndefWeak())) {
+    if (LLVM_UNLIKELY(isIfunc && !needsGot(expr) && !needsPlt(expr)))
+      sym.setFlags(HAS_DIRECT_RELOC);
     sec->addReloc({expr, type, offset, addend, &sym});
     return;
   }
@@ -1137,9 +1155,6 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   //
   // For MIPS, we don't implement GNU ld's DW_EH_PE_absptr to DW_EH_PE_pcrel
   // conversion. We still emit a dynamic relocation.
-  bool canWrite = (sec->flags & SHF_WRITE) ||
-                  !(ctx.arg.zText ||
-                    (isa<EhInputSection>(sec) && ctx.arg.emachine != EM_MIPS));
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
     if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
@@ -1964,6 +1979,26 @@ void elf::postScanRelocations(Ctx &ctx) {
   for (ELFFileBase *file : ctx.objectFiles)
     for (Symbol *sym : file->getLocalSymbols())
       fn(*sym);
+
+  // Now that we have checked all ifunc symbols for demotion to regular function
+  // symbols, move IRELATIVE relocations to the right place:
+  // - Relocations for non-demoted ifuncs are added to .rela.dyn
+  // - Relocations for demoted ifuncs are turned into RELATIVE relocations
+  //   or static relocations in position-dependent executables
+  for (Partition &part : ctx.partitions) {
+    for (const auto &v : part.relaDyn->tentativeIRelativeRelocs) {
+      auto *inputSec = const_cast<InputSectionBase *>(v.inputSec);
+      if (v.sym->isGnuIFunc())
+        part.relaDyn->relocs.push_back(v);
+      else if (ctx.arg.isPic)
+        addRelativeReloc(ctx, *inputSec, v.offsetInSec, *v.sym, v.addend, R_ABS,
+                         ctx.target->symbolicRel);
+      else
+        inputSec->addReloc(
+            {R_ABS, ctx.target->symbolicRel, v.offsetInSec, v.addend, v.sym});
+    }
+    part.relaDyn->tentativeIRelativeRelocs.clear();
+  }
 }
 
 static bool mergeCmp(const InputSection *a, const InputSection *b) {
