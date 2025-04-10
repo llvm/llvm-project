@@ -125,6 +125,16 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isSmartPtrClass(const std::string &Name) {
+  return isRefType(Name) || isCheckedPtr(Name) || isRetainPtr(Name) ||
+         Name == "WeakPtr" || Name == "WeakPtr" || Name == "WeakPtrFactory" ||
+         Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
+         Name == "WeakPtrImplBaseSingleThread" || Name == "ThreadSafeWeakPtr" ||
+         Name == "ThreadSafeWeakOrStrongPtr" ||
+         Name == "ThreadSafeWeakPtrControlBlock" ||
+         Name == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr";
+}
+
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
   const std::string &FunctionName = safeGetName(F);
@@ -222,8 +232,13 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
 
   auto PointeeQT = QT->getPointeeType();
   const RecordType *RT = PointeeQT->getAs<RecordType>();
-  if (!RT)
+  if (!RT) {
+    if (TD->hasAttr<ObjCBridgeAttr>() || TD->hasAttr<ObjCBridgeMutableAttr>()) {
+      if (auto *Type = TD->getTypeForDecl())
+        RecordlessTypes.insert(Type);
+    }
     return;
+  }
 
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
     if (Redecl->getAttr<ObjCBridgeAttr>() ||
@@ -240,6 +255,17 @@ bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
   auto CanonicalType = QT.getCanonicalType();
   auto PointeeType = CanonicalType->getPointeeType();
   auto *RT = dyn_cast_or_null<RecordType>(PointeeType.getTypePtrOrNull());
+  if (!RT) {
+    auto *Type = QT.getTypePtrOrNull();
+    while (Type) {
+      if (RecordlessTypes.contains(Type))
+        return true;
+      auto *ET = dyn_cast_or_null<ElaboratedType>(Type);
+      if (!ET)
+        break;
+      Type = ET->desugar().getTypePtrOrNull();
+    }
+  }
   return RT && CFPointees.contains(RT);
 }
 

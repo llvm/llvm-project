@@ -69,7 +69,7 @@ public:
       }
 
       bool TraverseClassTemplateDecl(ClassTemplateDecl *Decl) override {
-        if (isRefType(safeGetName(Decl)))
+        if (isSmartPtrClass(safeGetName(Decl)))
           return true;
         return DynamicRecursiveASTVisitor::TraverseClassTemplateDecl(Decl);
       }
