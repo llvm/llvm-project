@@ -31,6 +31,7 @@ static_library("Support") {
   include_dirs = [
     "Unix",
     "Windows",
+    "//third-party/siphash/include",
   ]
   sources = [
     "AArch64AttributeParser.cpp",
