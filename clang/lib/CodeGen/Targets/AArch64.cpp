@@ -489,6 +489,8 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     // coerced type. This prevents having to convert ptr2int->int2ptr through
     // the call, allowing alias analysis to produce better code.
     std::function<bool(QualType Ty)> ContainsOnlyPointers = [&](QualType Ty) {
+      if (isEmptyRecord(getContext(), Ty, true))
+        return false;
       const RecordType *RT = Ty->getAs<RecordType>();
       if (!RT)
         return false;
