@@ -123,10 +123,10 @@ define i32 @cmpxchg_private_i32(ptr addrspace(5) %ptr) {
 ; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v1, 1, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 1, v1, vcc
 ; GCN-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 offen
-; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 1, 0, vcc
 ; GCN-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; GCN-NEXT:    s_waitcnt expcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, v1
