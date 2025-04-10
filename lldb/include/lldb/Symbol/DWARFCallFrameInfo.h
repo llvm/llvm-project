@@ -128,7 +128,7 @@ private:
 
   void GetFDEIndex();
 
-  // Parsed representation of a Frame Descriptor Entry.
+  /// Parsed representation of a Frame Descriptor Entry.
   struct FDE {
     AddressRange range;
     bool for_signal_trap = false;
