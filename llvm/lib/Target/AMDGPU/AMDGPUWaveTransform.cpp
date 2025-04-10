@@ -2108,6 +2108,19 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
+  // TODO-WAVETRANSFORM: This pass should not add PHI instructions.
+  // MachineFunctionProperties getSetProperties() const override {
+  //   return MachineFunctionProperties().set(
+  //       MachineFunctionProperties::Property::NoPHIs);
+  // }
+
+  MachineFunctionProperties getClearedProperties() const override {
+    // New virtual registers will be introduced.
+    return MachineFunctionProperties()
+        .set(MachineFunctionProperties::Property::IsSSA)
+        .set(MachineFunctionProperties::Property::NoVRegs);
+  }
+
 private:
   MachineDominatorTree *DomTree = nullptr;
   // MachineConvergenceInfo ConvergenceInfo;
