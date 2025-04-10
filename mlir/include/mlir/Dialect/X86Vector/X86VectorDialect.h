@@ -18,8 +18,12 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+/// Include the generated interface declarations.
+#include "mlir/Dialect/X86Vector/X86VectorInterfaces.h.inc"
 
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h.inc"
 

@@ -18,8 +18,8 @@ define void @foo(ptr %a, ptr %b, ptr %r1, ptr %r2) {
   %res = icmp slt <2 x i32> %aval, %bval
   %t1 = extractelement <2 x i1> %res, i32 0
   %t2 = extractelement <2 x i1> %res, i32 1
-; CHECK: selp.u32        %r{{[0-9]+}}, 1, 0
-; CHECK: selp.u32        %r{{[0-9]+}}, 1, 0
+; CHECK: selp.b32        %r{{[0-9]+}}, 1, 0
+; CHECK: selp.b32        %r{{[0-9]+}}, 1, 0
   %t1a = zext i1 %t1 to i32
   %t2a = zext i1 %t2 to i32
 ; CHECK: st.u32
