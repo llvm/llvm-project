@@ -1513,6 +1513,12 @@ static bool areCandidatesToMergeOrPair(MachineInstr &FirstMI, MachineInstr &MI,
   if (OpcA == OpcB)
     return !AArch64InstrInfo::isPreLdSt(FirstMI);
 
+  // Bail out if one of the opcodes is SVE fill/spill, as we currently don't
+  // allow pairing them with other instructions.
+  if (OpcA == AArch64::LDR_ZXI || OpcA == AArch64::STR_ZXI ||
+      OpcB == AArch64::LDR_ZXI || OpcB == AArch64::STR_ZXI)
+    return false;
+
   // Two pre ld/st of different opcodes cannot be merged either
   if (AArch64InstrInfo::isPreLdSt(FirstMI) && AArch64InstrInfo::isPreLdSt(MI))
     return false;
