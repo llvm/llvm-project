@@ -1338,6 +1338,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDeviceTypeClause(
       checkAlreadyHasClauseOfKind(SemaRef, ExistingClauses, Clause))
     return nullptr;
 
+  // Based on discussions, having more than 1 'architecture' on a 'set' is
+  // nonsensical, so we're going to fix the standard to reflect this.  Implement
+  // the limitation, since the Dialect requires this.
+  if (Clause.getDirectiveKind() == OpenACCDirectiveKind::Set &&
+      Clause.getDeviceTypeArchitectures().size() > 1) {
+    SemaRef.Diag(Clause.getDeviceTypeArchitectures()[1].second,
+                 diag::err_acc_device_type_multiple_archs);
+    return nullptr;
+  }
+
   // The list of valid device_type values. Flang also has these hardcoded in
   // openacc_parsers.cpp, as there does not seem to be a reliable backend
   // source. The list below is sourced from Flang, though NVC++ supports only
