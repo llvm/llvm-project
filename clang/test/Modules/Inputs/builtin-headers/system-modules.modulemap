@@ -59,11 +59,6 @@ module cstd [system] [no_undeclared_includes] {
     export *
   }
 
-  module tgmath {
-    header "tgmath.h"
-    export *
-  }
-
   module unwind {
     header "unwind.h"
     export *

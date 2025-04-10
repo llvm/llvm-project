@@ -20,7 +20,6 @@
 @import _Builtin_stddef;
 @import _Builtin_stdint;
 @import _Builtin_stdnoreturn;
-@import _Builtin_tgmath;
 @import _Builtin_unwind;
 
 #ifdef SYSTEM_MODULES

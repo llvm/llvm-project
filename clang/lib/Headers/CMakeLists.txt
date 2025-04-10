@@ -33,7 +33,6 @@ set(core_files
   __stddef_wint_t.h
   stdint.h
   stdnoreturn.h
-  tgmath.h
   unwind.h
   varargs.h
   )

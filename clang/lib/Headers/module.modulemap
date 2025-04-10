@@ -305,11 +305,6 @@ module _Builtin_stdnoreturn [system] {
   export *
 }
 
-module _Builtin_tgmath [system] {
-  header "tgmath.h"
-  export *
-}
-
 module _Builtin_unwind [system] {
   header "unwind.h"
   export *

@@ -122,6 +122,9 @@ C Language Changes
 - Clang now allows an ``inline`` specifier on a typedef declaration of a
   function type in Microsoft compatibility mode. #GH124869
 - Clang now allows ``restrict`` qualifier for array types with pointer elements (#GH92847).
+- Clang no longer provides the ``tgmath.h`` header as part of the compiler-
+  provided header files. This file needs to be provided by the C Standard
+  Library being compiled against.
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^

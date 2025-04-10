@@ -262,7 +262,6 @@ static bool isBuiltinHeaderName(StringRef FileName) {
            .Case("stdbool.h", true)
            .Case("stddef.h", true)
            .Case("stdint.h", true)
-           .Case("tgmath.h", true)
            .Case("unwind.h", true)
            .Default(false);
 }
