@@ -79,8 +79,8 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 
     if (retXnack == EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4 ||
         (retXnack != EF_AMDGPU_FEATURE_XNACK_ANY_V4 &&
-         (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4) !=
-             EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
+            (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)
+                != EF_AMDGPU_FEATURE_XNACK_ANY_V4)) {
       if (retXnack != (getEFlags(f) & EF_AMDGPU_FEATURE_XNACK_V4)) {
         Err(ctx) << "incompatible xnack: " << f;
         return 0;
@@ -92,8 +92,8 @@ uint32_t AMDGPU::calcEFlagsV4() const {
 
     if (retSramEcc == EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4 ||
         (retSramEcc != EF_AMDGPU_FEATURE_SRAMECC_ANY_V4 &&
-         (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
-             EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
+            (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4) !=
+                EF_AMDGPU_FEATURE_SRAMECC_ANY_V4)) {
       if (retSramEcc != (getEFlags(f) & EF_AMDGPU_FEATURE_SRAMECC_V4)) {
         Err(ctx) << "incompatible sramecc: " << f;
         return 0;
@@ -143,7 +143,7 @@ uint32_t AMDGPU::calcEFlags() const {
   case ELFABIVERSION_AMDGPU_HSA_V6:
     return calcEFlagsV6();
   default:
-    Err(ctx) << "unknown amd-hsa abi version: " << static_cast<int>(abiVersion);
+    Err(ctx) << "unknown AMDHSA ABI version: " << static_cast<int>(abiVersion);
     return 0;
   }
 }
