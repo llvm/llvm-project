@@ -1,8 +1,8 @@
 // REQUIRES: aarch64
 
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=aarch64 %S/Inputs/plt-aarch64.s -o %t2.o
-// RUN: ld.lld -shared %t2.o -o %t2.so
+// RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %S/Inputs/plt-aarch64.s -o %t2.o
+// RUN: ld.lld -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: ld.lld %t.o %t2.so -o %t
 // RUN: llvm-readelf -S -l %t | FileCheck %s
 
