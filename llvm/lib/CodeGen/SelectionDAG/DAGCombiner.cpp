@@ -845,6 +845,13 @@ namespace {
       return TLI.isOperationLegalOrCustom(Opcode, VT, LegalOperations);
     }
 
+    bool hasUMin(EVT VT) const {
+      auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
+      return (LK.first == TargetLoweringBase::TypeLegal ||
+              LK.first == TargetLoweringBase::TypePromoteInteger) &&
+        TLI.isOperationLegal(ISD::UMIN, LK.second);
+    }
+
   public:
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
@@ -4253,10 +4260,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
 
   // (sub x, (select (ult x, y), 0, y)) -> (umin x, (sub x, y))
   // (sub x, (select (uge x, y), y, 0)) -> (umin x, (sub x, y))
-  auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
-  if ((LK.first == TargetLoweringBase::TypeLegal ||
-       LK.first == TargetLoweringBase::TypePromoteInteger) &&
-      TLI.isOperationLegal(ISD::UMIN, LK.second)) {
+  if (hasUMin(VT)) {
     SDValue Y;
     if (sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
                                                m_SpecificCondCode(ISD::SETULT)),
