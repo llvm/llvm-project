@@ -196,8 +196,6 @@ public:
   enum VariantKind : uint16_t {
     VK_None,
 
-    VK_GOT,
-    VK_GOTPCREL,
     VK_SECREL,
     VK_WEAKREF, // The link between the symbols in .weakref foo, bar
 

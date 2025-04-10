@@ -770,7 +770,7 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
       if (isAssumedType)
         boxTy = fir::BoxType::get(elementType, isVolatile);
       else
-        boxTy = fir::ClassType::get(elementType);
+        boxTy = fir::ClassType::get(elementType, isVolatile);
     }
   }
 

@@ -42,7 +42,9 @@ template <> LIBC_INLINE double sqrt<double>(double x) {
 // Use inline assembly when __builtin_elementwise_sqrt is not available.
 #if defined(LIBC_TARGET_CPU_HAS_SSE2)
 #include "x86_64/sqrt.h"
-#elif defined(LIBC_TARGET_ARCH_IS_ANY_ARM)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "aarch64/sqrt.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
 #include "arm/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/sqrt.h"

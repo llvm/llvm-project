@@ -32,6 +32,7 @@ inline void addVolatileMemoryEffects(
                            fir::VolatileMemoryResource::get());
       effects.emplace_back(mlir::MemoryEffects::Write::get(),
                            fir::VolatileMemoryResource::get());
+      break;
     }
   }
 }

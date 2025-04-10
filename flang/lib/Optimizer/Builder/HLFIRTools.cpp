@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Builder/Runtime/Allocatable.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/Support/LLVM.h"
@@ -382,7 +383,8 @@ hlfir::Entity hlfir::genVariableBox(mlir::Location loc,
   mlir::Value addr = var.getBase();
   if (mlir::isa<fir::BoxCharType>(var.getType()))
     addr = genVariableRawAddress(loc, builder, var);
-  mlir::Type boxType = fir::BoxType::get(var.getElementOrSequenceType());
+  mlir::Type boxType = fir::BoxType::get(var.getElementOrSequenceType(),
+                                         fir::isa_volatile_type(var.getType()));
   if (forceBoxType) {
     boxType = forceBoxType;
     mlir::Type baseType =

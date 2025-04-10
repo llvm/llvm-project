@@ -680,15 +680,15 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
       })
       .Case<fir::ReferenceType, fir::ClassType>([&](auto t) -> mlir::Type {
         using FIRT = decltype(t);
-        auto newEleTy = changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
+        auto newEleTy =
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass);
         return FIRT::get(newEleTy, t.isVolatile());
       })
-      .Case<fir::PointerType, fir::HeapType>(
-          [&](auto t) -> mlir::Type {
-            using FIRT = decltype(t);
-            return FIRT::get(changeElementType(t.getEleTy(), newElementType,
-                                               turnBoxIntoClass));
-          })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(
+            changeElementType(t.getEleTy(), newElementType, turnBoxIntoClass));
+      })
       .Case<fir::BoxType>([&](fir::BoxType t) -> mlir::Type {
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
@@ -1419,16 +1419,16 @@ changeTypeShape(mlir::Type type,
           return fir::SequenceType::get(*newShape, seqTy.getEleTy());
         return seqTy.getEleTy();
       })
-      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>([&](auto t) -> mlir::Type {
-        using FIRT = decltype(t);
-        return FIRT::get(changeTypeShape(t.getEleTy(), newShape),
-                         t.isVolatile());
-      })
-      .Case<fir::PointerType, fir::HeapType>(
+      .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
           [&](auto t) -> mlir::Type {
             using FIRT = decltype(t);
-            return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+            return FIRT::get(changeTypeShape(t.getEleTy(), newShape),
+                             t.isVolatile());
           })
+      .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
+        using FIRT = decltype(t);
+        return FIRT::get(changeTypeShape(t.getEleTy(), newShape));
+      })
       .Default([&](mlir::Type t) -> mlir::Type {
         assert((fir::isa_trivial(t) || llvm::isa<fir::RecordType>(t) ||
                 llvm::isa<mlir::NoneType>(t) ||

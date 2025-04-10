@@ -609,10 +609,6 @@ template <class T>
 #include <__cxx03/__atomic/memory_order.h>
 #include <__cxx03/version>
 
-#if _LIBCPP_STD_VER >= 20
-#  include <__cxx03/__atomic/atomic_ref.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -623,7 +619,6 @@ template <class T>
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <__cxx03/cmath>
-#  include <__cxx03/compare>
 #  include <__cxx03/cstdlib>
 #  include <__cxx03/cstring>
 #  include <__cxx03/type_traits>

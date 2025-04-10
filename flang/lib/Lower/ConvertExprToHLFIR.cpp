@@ -432,15 +432,15 @@ private:
         .Case<fir::SequenceType>([&](fir::SequenceType seqTy) -> mlir::Type {
           return fir::SequenceType::get(seqTy.getShape(), newEleTy);
         })
-        .Case<fir::PointerType, fir::HeapType, fir::ClassType>(
+        .Case<fir::ReferenceType, fir::BoxType, fir::ClassType>(
             [&](auto t) -> mlir::Type {
               using FIRT = decltype(t);
-              return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
+              return FIRT::get(changeElementType(t.getEleTy(), newEleTy),
+                               t.isVolatile());
             })
-        .Case<fir::ReferenceType, fir::BoxType>([&](auto t) -> mlir::Type {
+        .Case<fir::PointerType, fir::HeapType>([&](auto t) -> mlir::Type {
           using FIRT = decltype(t);
-          return FIRT::get(changeElementType(t.getEleTy(), newEleTy),
-                           t.isVolatile());
+          return FIRT::get(changeElementType(t.getEleTy(), newEleTy));
         })
         .Default([newEleTy](mlir::Type t) -> mlir::Type { return newEleTy; });
   }

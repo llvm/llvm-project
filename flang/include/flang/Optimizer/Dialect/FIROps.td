@@ -2759,7 +2759,8 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [NoMemoryEffect]
   let summary = "cast between volatile and non-volatile types";
   let description = [{
     Cast between volatile and non-volatile types. The types must be otherwise
-    identical.
+    identical. A value's volatility cannot be changed by a fir.convert operation.
+    Reinterpreting a value as volatile must be done explicitly using this operation.
   }];
   let arguments = (ins AnyRefOrBox:$value);
   let results = (outs AnyRefOrBox:$res);

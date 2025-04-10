@@ -858,8 +858,7 @@ void fir::ArrayLoadOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -950,8 +949,7 @@ void fir::ArrayMergeStoreOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Write::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -1861,6 +1859,10 @@ llvm::LogicalResult fir::EmboxOp::verify() {
     return emitOpError("slice must not be provided for a scalar");
   if (getSourceBox() && !mlir::isa<fir::ClassType>(getResult().getType()))
     return emitOpError("source_box must be used with fir.class result type");
+  if (fir::isa_volatile_type(getMemref().getType()) !=
+      fir::isa_volatile_type(getResult().getType()))
+    return emitOpError("cannot convert between volatile and non-volatile "
+                       "types, use fir.volatile_cast instead");
   return mlir::success();
 }
 
@@ -2677,8 +2679,7 @@ void fir::LoadOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -4039,8 +4040,7 @@ void fir::StoreOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Write::get(),
-                       &getOperation()->getOpOperand(1),
+  effects.emplace_back(mlir::MemoryEffects::Write::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
 }
@@ -4069,11 +4069,10 @@ void fir::CopyOp::getEffects(
     llvm::SmallVectorImpl<
         mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
         &effects) {
-  effects.emplace_back(mlir::MemoryEffects::Read::get(),
-                       &getOperation()->getOpOperand(0),
+  effects.emplace_back(mlir::MemoryEffects::Read::get(), &getSourceMutable(),
                        mlir::SideEffects::DefaultResource::get());
   effects.emplace_back(mlir::MemoryEffects::Write::get(),
-                       &getOperation()->getOpOperand(1),
+                       &getDestinationMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getDestination().getType(), getSource().getType()},
                            effects);
