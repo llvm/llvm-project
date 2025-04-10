@@ -443,6 +443,90 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::FlatSymbolRefAttr calleeAttr;
+
+  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+           .has_value())
+    return mlir::failure();
+
+  if (parser.parseLParen())
+    return mlir::failure();
+
+  // TODO(cir): parse argument list here
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  mlir::FunctionType opsFnTy;
+  if (parser.parseType(opsFnTy))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+static void printCallCommon(mlir::Operation *op,
+                            mlir::FlatSymbolRefAttr calleeSym,
+                            mlir::OpAsmPrinter &printer) {
+  printer << ' ';
+
+  printer.printAttributeWithoutType(calleeSym);
+  printer << "(";
+  // TODO(cir): print call args here
+  assert(!cir::MissingFeatures::opCallArgs());
+  printer << ")";
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+
+  printer << " : ";
+  printer.printFunctionalType(op->getOperands().getTypes(),
+                              op->getResultTypes());
+}
+
+mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
+                                     mlir::OperationState &result) {
+  return parseCallCommon(parser, result);
+}
+
+void cir::CallOp::print(mlir::OpAsmPrinter &p) {
+  printCallCommon(*this, getCalleeAttr(), p);
+}
+
+static LogicalResult
+verifyCallCommInSymbolUses(mlir::Operation *op,
+                           SymbolTableCollection &symbolTable) {
+  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return mlir::failure();
+
+  auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
+  if (!fn)
+    return op->emitOpError() << "'" << fnAttr.getValue()
+                             << "' does not reference a valid function";
+
+  // TODO(cir): verify function arguments and return type
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  return mlir::success();
+}
+
+LogicalResult
+cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
