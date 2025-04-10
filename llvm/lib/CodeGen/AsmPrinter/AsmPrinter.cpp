@@ -3496,10 +3496,12 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
           LHSGV, RHSGV, Addend, PCRelativeOffset, TM);
 
       // (ELF-specific) If the generic symbol difference does not apply, and
-      // LHS is a dso_local_equivalent of a dso_preemptable function,
-      // reference the PLT entry instead.
-      if (DSOEquiv && TM.getTargetTriple().isOSBinFormatELF() &&
-          !(LHSGV->isDSOLocal() || LHSGV->isImplicitDSOLocal()))
+      // LHS is a dso_local_equivalent of a function, reference the PLT entry
+      // instead. Note: A default visibility symbol is by default preemptible
+      // during linking, and should not be referenced with PC-relative
+      // relocations. Therefore, use a PLT relocation even if the function is
+      // dso_local.
+      if (DSOEquiv && TM.getTargetTriple().isOSBinFormatELF())
         Res = getObjFileLowering().lowerDSOLocalEquivalent(
             LHSSym, RHSSym, Addend, PCRelativeOffset, TM);
 
