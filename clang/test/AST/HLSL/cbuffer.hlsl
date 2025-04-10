@@ -149,7 +149,7 @@ _Static_assert(__builtin_hlsl_is_scalarized_layout_compatible(TwoFloats, __cblay
 cbuffer CB {
   // CHECK: FunctionDecl {{.*}} f 'void ()'
   void f() {}
-  // CHECK: VarDecl {{.*}} SV 'float' static
+  // CHECK: VarDecl {{.*}} SV 'hlsl_private float' static
   static float SV;
   // CHECK: VarDecl {{.*}} s7 'EmptyStruct' callinit
   EmptyStruct s7;

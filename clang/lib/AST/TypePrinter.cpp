@@ -2581,6 +2581,8 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "groupshared";
   case LangAS::hlsl_constant:
     return "hlsl_constant";
+  case LangAS::hlsl_private:
+    return "hlsl_private";
   case LangAS::wasm_funcref:
     return "__funcref";
   default:
