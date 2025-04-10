@@ -488,19 +488,32 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
     // If the Aggregate is made up of pointers, use an array of pointers for the
     // coerced type. This prevents having to convert ptr2int->int2ptr through
     // the call, allowing alias analysis to produce better code.
-    if (const RecordType *RT = Ty->getAs<RecordType>()) {
-      if (const RecordDecl *RD = RT->getDecl()) {
-        if (all_of(RD->fields(), [](FieldDecl *FD) {
-              return FD->getType()->isPointerOrReferenceType();
-            })) {
-          assert((Size == 64 || Size == 128) &&
-                 "Expected a 64 or 128bit struct containing pointers");
-          llvm::Type *PtrTy = llvm::PointerType::getUnqual(getVMContext());
-          if (Size == 128)
-            PtrTy = llvm::ArrayType::get(PtrTy, 2);
-          return ABIArgInfo::getDirect(PtrTy);
-        }
+    std::function<bool(QualType Ty)> ContainsOnlyPointers = [&](QualType Ty) {
+      const RecordType *RT = Ty->getAs<RecordType>();
+      if (!RT)
+        return false;
+      const RecordDecl *RD = RT->getDecl();
+      if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+        for (const auto &I : CXXRD->bases())
+          if (!ContainsOnlyPointers(I.getType()))
+            return false;
       }
+      return all_of(RD->fields(), [&](FieldDecl *FD) {
+        QualType FDTy = FD->getType();
+        return FDTy->isPointerOrReferenceType() ||
+               (FDTy->isArrayType() &&
+                FDTy->getBaseElementTypeUnsafe()->isPointerOrReferenceType()) ||
+               ContainsOnlyPointers(FDTy);
+      });
+    };
+    if (getTarget().getTriple().getArch() != llvm::Triple::aarch64_32 &&
+        ContainsOnlyPointers(Ty)) {
+      assert((Size == 64 || Size == 128) &&
+             "Expected a 64 or 128bit struct containing pointers");
+      llvm::Type *PtrTy = llvm::PointerType::getUnqual(getVMContext());
+      if (Size == 128)
+        PtrTy = llvm::ArrayType::get(PtrTy, 2);
+      return ABIArgInfo::getDirect(PtrTy);
     }
 
     // We use a pair of i64 for 16-byte aggregate with 8-byte alignment.

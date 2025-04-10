@@ -17,11 +17,12 @@ struct Sp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z2Tp2Sp(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SP:%.*]], align 4
 // CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
+// CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
@@ -43,11 +44,10 @@ struct Spp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z3Tpp3Spp(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPP:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 4
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SPP]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
@@ -69,10 +69,12 @@ struct Sppp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z4Tppp4Sppp(
-// CHECK-A64_32-SAME: [2 x ptr] [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: [2 x i64] [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPPP:%.*]], align 4
-// CHECK-A64_32-NEXT:    store [2 x ptr] [[S_COERCE]], ptr [[S]], align 4
+// CHECK-A64_32-NEXT:    [[TMP_COERCE:%.*]] = alloca [2 x i64], align 8
+// CHECK-A64_32-NEXT:    store [2 x i64] [[S_COERCE]], ptr [[TMP_COERCE]], align 8
+// CHECK-A64_32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[S]], ptr align 8 [[TMP_COERCE]], i32 12, i1 false)
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SPPP]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
@@ -119,11 +121,10 @@ struct Srp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z3Trp3Srp(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SRP:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SRP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 4
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SRP]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
@@ -145,11 +146,10 @@ struct __attribute__((__packed__)) Spp_packed {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z10Tpp_packed10Spp_packed(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPP_PACKED:%.*]], align 1
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPP_PACKED]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 1
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 1
 // CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SPP_PACKED]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 1
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
@@ -172,11 +172,12 @@ union Upp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z11Tupp_packed3Upp(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[UNION_UPP:%.*]], align 4
 // CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[UNION_UPP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 4
+// CHECK-A64_32-NEXT:    [[COERCE_VAL_II:%.*]] = trunc i64 [[S_COERCE]] to i32
+// CHECK-A64_32-NEXT:    store i32 [[COERCE_VAL_II]], ptr [[COERCE_DIVE]], align 4
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CHECK-A64_32-NEXT:    ret void
@@ -271,10 +272,10 @@ struct SSpSp {
     struct Sp a, b;
 };
 // CHECK-A64-LABEL: define dso_local void @_Z5TSpSp5SSpSp(
-// CHECK-A64-SAME: [2 x i64] [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: [2 x ptr] [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SSPSP:%.*]], align 8
-// CHECK-A64-NEXT:    store [2 x i64] [[S_COERCE]], ptr [[S]], align 8
+// CHECK-A64-NEXT:    store [2 x ptr] [[S_COERCE]], ptr [[S]], align 8
 // CHECK-A64-NEXT:    [[A:%.*]] = getelementptr inbounds nuw [[STRUCT_SSPSP]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP:%.*]], ptr [[A]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 8
@@ -308,13 +309,11 @@ struct SSp : public Sp {
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z3TSp3SSp(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SSP:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SSP]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SP:%.*]], ptr [[COERCE_DIVE]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE1]], align 4
-// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 4
+// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SP:%.*]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[TMP0]], align 4
 // CHECK-A64_32-NEXT:    ret void
@@ -328,22 +327,20 @@ struct SSpi : public Si {
     int* y;
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4TSpi4SSpi(
-// CHECK-A64-SAME: [2 x ptr] [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: [2 x i64] [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SSPI:%.*]], align 8
-// CHECK-A64-NEXT:    store [2 x ptr] [[S_COERCE]], ptr [[S]], align 8
+// CHECK-A64-NEXT:    store [2 x i64] [[S_COERCE]], ptr [[S]], align 8
 // CHECK-A64-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SI:%.*]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    store i32 1, ptr [[X]], align 8
 // CHECK-A64-NEXT:    ret void
 //
 // CHECK-A64_32-LABEL: define void @_Z4TSpi4SSpi(
-// CHECK-A64_32-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64_32-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64_32-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64_32-NEXT:    [[S:%.*]] = alloca [[STRUCT_SSPI:%.*]], align 4
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SSPI]], ptr [[S]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    [[COERCE_DIVE1:%.*]] = getelementptr inbounds nuw [[STRUCT_SI:%.*]], ptr [[COERCE_DIVE]], i32 0, i32 0
-// CHECK-A64_32-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE1]], align 4
-// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SI]], ptr [[S]], i32 0, i32 0
+// CHECK-A64_32-NEXT:    store i64 [[S_COERCE]], ptr [[S]], align 4
+// CHECK-A64_32-NEXT:    [[X:%.*]] = getelementptr inbounds nuw [[STRUCT_SI:%.*]], ptr [[S]], i32 0, i32 0
 // CHECK-A64_32-NEXT:    store i32 1, ptr [[X]], align 4
 // CHECK-A64_32-NEXT:    ret void
 //
@@ -353,11 +350,11 @@ struct Spa {
     int* xs[1];
 };
 // CHECK-A64-LABEL: define dso_local void @_Z3Tpa3Spa(
-// CHECK-A64-SAME: i64 [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: ptr [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPA:%.*]], align 8
 // CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPA]], ptr [[S]], i32 0, i32 0
-// CHECK-A64-NEXT:    store i64 [[S_COERCE]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    store ptr [[S_COERCE]], ptr [[COERCE_DIVE]], align 8
 // CHECK-A64-NEXT:    [[XS:%.*]] = getelementptr inbounds nuw [[STRUCT_SPA]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [1 x ptr], ptr [[XS]], i64 0, i64 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
@@ -383,11 +380,11 @@ struct Spa2 {
     int* xs[2];
 };
 // CHECK-A64-LABEL: define dso_local void @_Z4Tpa24Spa2(
-// CHECK-A64-SAME: [2 x i64] [[S_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-A64-SAME: [2 x ptr] [[S_COERCE:%.*]]) #[[ATTR0]] {
 // CHECK-A64-NEXT:  [[ENTRY:.*:]]
 // CHECK-A64-NEXT:    [[S:%.*]] = alloca [[STRUCT_SPA2:%.*]], align 8
 // CHECK-A64-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_SPA2]], ptr [[S]], i32 0, i32 0
-// CHECK-A64-NEXT:    store [2 x i64] [[S_COERCE]], ptr [[COERCE_DIVE]], align 8
+// CHECK-A64-NEXT:    store [2 x ptr] [[S_COERCE]], ptr [[COERCE_DIVE]], align 8
 // CHECK-A64-NEXT:    [[XS:%.*]] = getelementptr inbounds nuw [[STRUCT_SPA2]], ptr [[S]], i32 0, i32 0
 // CHECK-A64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x ptr], ptr [[XS]], i64 0, i64 0
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[ARRAYIDX]], align 8
