@@ -933,8 +933,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (isLTOPreLink(Phase) && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
@@ -1031,8 +1030,7 @@ PassBuilder::buildModuleInlinerPipeline(OptimizationLevel Level,
   //
   // [1] Note the cost of a function could be below zero due to erased
   // prologue / epilogue.
-  if (isLTOPreLink(Phase) && PGOOpt &&
-      PGOOpt->Action == PGOOptions::SampleUse)
+  if (isLTOPreLink(Phase) && PGOOpt && PGOOpt->Action == PGOOptions::SampleUse)
     IP.HotCallSiteThreshold = 0;
 
   if (PGOOpt)
