@@ -2147,7 +2147,7 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
 
   llvm::Type *ResTy = ConvertType(Ty);
   bool IsSafe = isSafeNUWTrunc(Value, ResTy);
-  if (hasBooleanRepresentation(Ty) || Ty->isBitIntType() ||
+  if (Ty->hasBooleanRepresentation() || Ty->isBitIntType() ||
       Ty->isExtVectorBoolType()) {
     return Builder.CreateTrunc(Value, ResTy, "loadedv", /*IsNUW*/ IsSafe);
   }
