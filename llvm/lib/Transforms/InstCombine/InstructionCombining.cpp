@@ -3086,66 +3086,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (GEPType->isVectorTy())
     return nullptr;
 
-  if (GEP.getNumIndices() == 1) {
-    auto CanPreserveNoWrapFlags = [&](bool AddIsNSW, bool AddIsNUW, Value *Idx1,
-                                      Value *Idx2) {
-      // Preserve "inbounds nuw" if the original gep is "inbounds nuw",
-      // and the add is "nuw".
-      if (GEP.isInBounds() && GEP.hasNoUnsignedWrap() && AddIsNUW)
-        return GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap();
-      // Preserve "inbounds" if the original gep is "inbounds", the add
-      // is "nsw", and the add operands are non-negative.
-      SimplifyQuery Q = SQ.getWithInstruction(&GEP);
-      if (GEP.isInBounds() && AddIsNSW && isKnownNonNegative(Idx1, Q) &&
-          isKnownNonNegative(Idx2, Q))
-        return GEPNoWrapFlags::inBounds();
-      // Preserve "nuw" if the original gep is "nuw", and the add is "nuw".
-      if (GEP.hasNoUnsignedWrap() && AddIsNUW)
-        return GEPNoWrapFlags::noUnsignedWrap();
-      return GEPNoWrapFlags::none();
-    };
-
-    // Try to replace ADD + GEP with GEP + GEP.
-    Value *Idx1, *Idx2;
-    if (match(GEP.getOperand(1),
-              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
-      //   %idx = add i64 %idx1, %idx2
-      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
-      // as:
-      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
-      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
-      bool NSW = match(GEP.getOperand(1), m_NSWAddLike(m_Value(), m_Value()));
-      bool NUW = match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()));
-      GEPNoWrapFlags NWFlags = CanPreserveNoWrapFlags(NSW, NUW, Idx1, Idx2);
-      auto *NewPtr =
-          Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
-                            Idx1, "", NWFlags);
-      return replaceInstUsesWith(GEP,
-                                 Builder.CreateGEP(GEP.getSourceElementType(),
-                                                   NewPtr, Idx2, "", NWFlags));
-    }
-    ConstantInt *C;
-    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
-                                     m_Value(Idx1), m_ConstantInt(C))))))) {
-      // %add = add nsw i32 %idx1, idx2
-      // %sidx = sext i32 %add to i64
-      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
-      // as:
-      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
-      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
-      GEPNoWrapFlags NWFlags = CanPreserveNoWrapFlags(
-          /*IsNSW=*/true, /*IsNUW=*/false, Idx1, C);
-      auto *NewPtr = Builder.CreateGEP(
-          GEP.getSourceElementType(), GEP.getPointerOperand(),
-          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "", NWFlags);
-      return replaceInstUsesWith(
-          GEP,
-          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
-                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
-                            "", NWFlags));
-    }
-  }
-
   if (!GEP.isInBounds()) {
     unsigned IdxWidth =
         DL.getIndexSizeInBits(PtrOp->getType()->getPointerAddressSpace());
@@ -3175,6 +3115,63 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       })) {
     GEP.setNoWrapFlags(GEP.getNoWrapFlags() | GEPNoWrapFlags::noUnsignedWrap());
     return &GEP;
+  }
+
+  // These rewrites is trying to preserve inbounds/nuw attributes. So we want to
+  // do this after having tried to derive "nuw" above.
+  if (GEP.getNumIndices() == 1) {
+    auto GetPreservedNoWrapFlags = [&](bool AddIsNUW, Value *Idx1, Value *Idx2) {
+      // Preserve "inbounds nuw" if the original gep is "inbounds nuw", and the
+      // add is "nuw". Preserve "nuw" if the original gep is "nuw", and the add
+      // is "nuw".
+      GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+      if (GEP.hasNoUnsignedWrap() && AddIsNUW) {
+        Flags |= GEPNoWrapFlags::noUnsignedWrap();
+        if (GEP.isInBounds())
+          Flags |= GEPNoWrapFlags::inBounds();
+      }
+      return Flags;
+    };
+
+    // Try to replace ADD + GEP with GEP + GEP.
+    Value *Idx1, *Idx2;
+    if (match(GEP.getOperand(1),
+              m_OneUse(m_Add(m_Value(Idx1), m_Value(Idx2))))) {
+      //   %idx = add i64 %idx1, %idx2
+      //   %gep = getelementptr i32, ptr %ptr, i64 %idx
+      // as:
+      //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
+      //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
+      bool NUW = match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()));
+      GEPNoWrapFlags NWFlags = GetPreservedNoWrapFlags(NUW, Idx1, Idx2);
+      auto *NewPtr =
+          Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
+                            Idx1, "", NWFlags);
+      return replaceInstUsesWith(GEP,
+                                 Builder.CreateGEP(GEP.getSourceElementType(),
+                                                   NewPtr, Idx2, "", NWFlags));
+    }
+    ConstantInt *C;
+    if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
+                                     m_Value(Idx1), m_ConstantInt(C))))))) {
+      // %add = add nsw i32 %idx1, idx2
+      // %sidx = sext i32 %add to i64
+      // %gep = getelementptr i32, ptr %ptr, i64 %sidx
+      // as:
+      // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
+      // %newgep = getelementptr i32, ptr %newptr, i32 idx2
+      bool NUW = match(GEP.getOperand(1), m_NNegZExt(m_NUWAddLike(m_Value(),
+                                                                  m_Value())));
+      GEPNoWrapFlags NWFlags = GetPreservedNoWrapFlags(NUW, Idx1, C);
+      auto *NewPtr = Builder.CreateGEP(
+          GEP.getSourceElementType(), GEP.getPointerOperand(),
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "", NWFlags);
+      return replaceInstUsesWith(
+          GEP,
+          Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
+                            Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
+                            "", NWFlags));
+    }
   }
 
   if (Instruction *R = foldSelectGEP(GEP, Builder))
