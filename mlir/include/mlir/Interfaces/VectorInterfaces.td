@@ -126,6 +126,14 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the type of the vector that this operation operates on.
+      }],
+      /*retTy=*/"::mlir::VectorType",
+      /*methodName=*/"getVectorType",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the indices that specify the starting offsets into the source
         operand. The starting offsets are guaranteed to be in-bounds.
       }],
@@ -133,6 +141,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*methodName=*/"getIndices",
       /*args=*/(ins)
     >,
+
     InterfaceMethod<
       /*desc=*/[{
         Return the permutation map that describes the mapping of vector
@@ -200,11 +209,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     /// Return the number of dimensions that participate in the permutation map.
     unsigned getTransferRank() {
       return $_op.getPermutationMap().getNumResults();
-    }
-
-    /// Return the type of the vector that this operation operates on.
-    ::mlir::VectorType getVectorType() {
-      return ::llvm::cast<::mlir::VectorType>($_op.getVector().getType());
     }
 
     /// Return "true" if at least one of the vector dimensions is a broadcasted

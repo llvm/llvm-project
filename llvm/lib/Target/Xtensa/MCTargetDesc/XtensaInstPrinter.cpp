@@ -100,7 +100,7 @@ void XtensaInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }
@@ -115,7 +115,7 @@ void XtensaInstPrinter::printJumpTarget(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
   ;
@@ -131,7 +131,7 @@ void XtensaInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }
@@ -149,7 +149,7 @@ void XtensaInstPrinter::printL32RTarget(const MCInst *MI, int OpNum,
     O << ". ";
     O << Value;
   } else if (MC.isExpr())
-    MC.getExpr()->print(O, &MAI, true);
+    MC.getExpr()->print(O, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }

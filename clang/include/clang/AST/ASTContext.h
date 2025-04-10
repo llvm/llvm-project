@@ -364,9 +364,6 @@ class ASTContext : public RefCountedBase<ASTContext> {
                                      const ASTContext&>
     CanonTemplateTemplateParms;
 
-  TemplateTemplateParmDecl *
-    getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
-
   /// The typedef for the __int128_t type.
   mutable TypedefDecl *Int128Decl = nullptr;
 
@@ -1795,12 +1792,10 @@ public:
       QualType Wrapped, QualType Contained,
       const HLSLAttributedResourceType::Attributes &Attrs);
 
-  QualType
-  getSubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                               unsigned Index,
-                               std::optional<unsigned> PackIndex,
-                               SubstTemplateTypeParmTypeFlag Flag =
-                                   SubstTemplateTypeParmTypeFlag::None) const;
+  QualType getSubstTemplateTypeParmType(QualType Replacement,
+                                        Decl *AssociatedDecl, unsigned Index,
+                                        UnsignedOrNone PackIndex,
+                                        bool Final) const;
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
@@ -1810,22 +1805,26 @@ public:
                           bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
-  QualType getTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgument> Args,
-                                         QualType Canon = QualType()) const;
+  QualType getCanonicalTemplateSpecializationType(
+      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
-  getCanonicalTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgument> Args) const;
+  getTemplateSpecializationType(TemplateName T,
+                                ArrayRef<TemplateArgument> SpecifiedArgs,
+                                ArrayRef<TemplateArgument> CanonicalArgs,
+                                QualType Underlying = QualType()) const;
 
-  QualType getTemplateSpecializationType(TemplateName T,
-                                         ArrayRef<TemplateArgumentLoc> Args,
-                                         QualType Canon = QualType()) const;
+  QualType
+  getTemplateSpecializationType(TemplateName T,
+                                ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
+                                ArrayRef<TemplateArgument> CanonicalArgs,
+                                QualType Canon = QualType()) const;
 
-  TypeSourceInfo *
-  getTemplateSpecializationTypeInfo(TemplateName T, SourceLocation TLoc,
-                                    const TemplateArgumentListInfo &Args,
-                                    QualType Canon = QualType()) const;
+  TypeSourceInfo *getTemplateSpecializationTypeInfo(
+      TemplateName T, SourceLocation TLoc,
+      const TemplateArgumentListInfo &SpecifiedArgs,
+      ArrayRef<TemplateArgument> CanonicalArgs,
+      QualType Canon = QualType()) const;
 
   QualType getParenType(QualType NamedType) const;
 
@@ -1837,15 +1836,14 @@ public:
                              TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
                                 NestedNameSpecifier *NNS,
-                                const IdentifierInfo *Name,
-                                QualType Canon = QualType()) const;
+                                const IdentifierInfo *Name) const;
 
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgumentLoc> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgumentLoc> Args) const;
   QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
-      const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args) const;
+      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
+      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
@@ -1856,8 +1854,7 @@ public:
   ///        expansion is used in a context where the arity is inferred from
   ///        elsewhere, such as if the pattern contains a placeholder type or
   ///        if this is the canonical type of another pack expansion type.
-  QualType getPackExpansionType(QualType Pattern,
-                                std::optional<unsigned> NumExpansions,
+  QualType getPackExpansionType(QualType Pattern, UnsignedOrNone NumExpansions,
                                 bool ExpectPackInType = true) const;
 
   QualType getObjCInterfaceType(const ObjCInterfaceDecl *Decl,
@@ -1901,7 +1898,7 @@ public:
   QualType getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                bool FullySubstituted = false,
                                ArrayRef<QualType> Expansions = {},
-                               int Index = -1) const;
+                               UnsignedOrNone Index = std::nullopt) const;
 
   /// Unary type transforms
   QualType getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
@@ -2393,15 +2390,14 @@ public:
   TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
-
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        const IdentifierInfo *Name) const;
-  TemplateName getDependentTemplateName(NestedNameSpecifier *NNS,
-                                        OverloadedOperatorKind Operator) const;
   TemplateName
-  getSubstTemplateTemplateParm(TemplateName replacement, Decl *AssociatedDecl,
-                               unsigned Index,
-                               std::optional<unsigned> PackIndex) const;
+  getDependentTemplateName(const DependentTemplateStorage &Name) const;
+
+  TemplateName getSubstTemplateTemplateParm(TemplateName replacement,
+                                            Decl *AssociatedDecl,
+                                            unsigned Index,
+                                            UnsignedOrNone PackIndex,
+                                            bool Final) const;
   TemplateName getSubstTemplateTemplateParmPack(const TemplateArgument &ArgPack,
                                                 Decl *AssociatedDecl,
                                                 unsigned Index,
@@ -2916,6 +2912,14 @@ public:
   ///
   /// Use of 'requires' isn't mandatory, works with constraints expressed in
   /// other ways too.
+  bool isSameAssociatedConstraint(const AssociatedConstraint &ACX,
+                                  const AssociatedConstraint &ACY) const;
+
+  /// Determine whether two 'requires' expressions are similar enough that they
+  /// may be used in re-declarations.
+  ///
+  /// Use of 'requires' isn't mandatory, works with constraints expressed in
+  /// other ways too.
   bool isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const;
 
   /// Determine whether two type contraint are similar enough that they could
@@ -2935,6 +2939,21 @@ public:
   /// expresses the value of the argument.
   TemplateArgument getCanonicalTemplateArgument(const TemplateArgument &Arg)
     const;
+
+  /// Canonicalize the given template argument list.
+  ///
+  /// Returns true if any arguments were non-canonical, false otherwise.
+  bool
+  canonicalizeTemplateArguments(MutableArrayRef<TemplateArgument> Args) const;
+
+  /// Canonicalize the given TemplateTemplateParmDecl.
+  TemplateTemplateParmDecl *
+  getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
+
+  TemplateTemplateParmDecl *findCanonicalTemplateTemplateParmDeclInternal(
+      TemplateTemplateParmDecl *TTP) const;
+  TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
+      TemplateTemplateParmDecl *CanonTTP) const;
 
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This

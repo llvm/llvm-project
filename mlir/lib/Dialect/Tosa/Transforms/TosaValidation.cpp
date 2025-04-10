@@ -1018,15 +1018,8 @@ void TosaValidation::runOnOperation() {
     if (op->getDialect() != tosaDialect)
       return;
 
-    // Profile-Extension based validation should be performed at the beginning.
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkProfile(op, targetEnv)))
-      return signalPassFailure();
-
-    if (strictOpSpecAlignment &&
-        failed(profileComp.checkExtension(op, targetEnv)))
-      return signalPassFailure();
-
+    // perform valid element type check at the beginning to
+    // protect rest of code against quantized element types
     for (Value operand : op->getOperands()) {
       auto elementTy = getElementTypeOrSelf(operand);
       if (!isValidElementType(elementTy)) {
@@ -1043,6 +1036,14 @@ void TosaValidation::runOnOperation() {
         return signalPassFailure();
       }
     }
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkProfile(op, targetEnv)))
+      return signalPassFailure();
+
+    if (strictOpSpecAlignment &&
+        failed(profileComp.checkExtension(op, targetEnv)))
+      return signalPassFailure();
 
     if (!allowInvalidOpDatatypeCombinations &&
         failed(profileComp.checkInvalid(op))) {

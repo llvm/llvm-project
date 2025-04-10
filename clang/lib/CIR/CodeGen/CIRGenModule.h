@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -40,6 +41,8 @@ class TargetInfo;
 class VarDecl;
 
 namespace CIRGen {
+
+class CIRGenFunction;
 
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
@@ -75,6 +78,10 @@ private:
 
   CIRGenTypes genTypes;
 
+  /// Per-function codegen information. Updated everytime emitCIR is called
+  /// for FunctionDecls's.
+  CIRGenFunction *curCGF = nullptr;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
@@ -88,6 +95,11 @@ public:
   /// MLIR Location.
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
+
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
+                                           LValueBaseInfo *baseInfo);
 
   void emitTopLevelDecl(clang::Decl *decl);
 
@@ -112,6 +124,12 @@ public:
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
+
+  /// Return the result of value-initializing the given type, i.e. a null
+  /// expression of the given type.
+  mlir::Value emitNullConstant(QualType t, mlir::Location loc);
 
   cir::FuncOp
   getOrCreateCIRFunction(llvm::StringRef mangledName, mlir::Type funcType,

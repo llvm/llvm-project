@@ -566,6 +566,21 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   if (ComplexType complexTy = dyn_cast<ComplexType>(eltType)) {
     eltType = complexTy.getElementType();
     isComplex = true;
+    // Complex types have N*2 elements or complex splat.
+    // Empty shape may mean a splat or empty literal, only validate splats.
+    bool isSplat = shape.empty() && type.getNumElements() != 0;
+    if (isSplat && storage.size() != 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << complexTy << ") expected 2 elements";
+      return nullptr;
+    }
+    if (!shape.empty() &&
+        storage.size() != static_cast<size_t>(type.getNumElements()) * 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << type << ") expected " << type.getNumElements() * 2
+                       << " elements";
+      return nullptr;
+    }
   }
 
   // Handle integer and index types.

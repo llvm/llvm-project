@@ -207,7 +207,7 @@ ContextNode *__llvm_ctx_profile_get_context(__ctx_profile::FunctionData *FData,
 
 /// Prepares for collection. Currently this resets counter values but preserves
 /// internal context tree structure.
-void __llvm_ctx_profile_start_collection();
+void __llvm_ctx_profile_start_collection(unsigned AutodetectDuration = 0);
 
 /// Completely free allocated memory.
 void __llvm_ctx_profile_free();

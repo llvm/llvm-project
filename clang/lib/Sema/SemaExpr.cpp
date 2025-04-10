@@ -2183,7 +2183,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
 
   case LOLR_Template: {
     TemplateArgumentListInfo ExplicitArgs;
-    TemplateArgument Arg(Lit);
+    TemplateArgument Arg(Lit, /*IsCanonical=*/false);
     TemplateArgumentLocInfo ArgInfo(Lit);
     ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
@@ -2684,7 +2684,7 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
   // perform name lookup during template instantiation.
   CXXScopeSpec SS;
   auto *NNS =
-      NestedNameSpecifier::Create(Context, nullptr, true, RD->getTypeForDecl());
+      NestedNameSpecifier::Create(Context, nullptr, RD->getTypeForDecl());
   SS.MakeTrivial(Context, NNS, SourceRange(Loc, Loc));
   return DependentScopeDeclRefExpr::Create(
       Context, SS.getWithLocInContext(Context), TemplateKWLoc, NameInfo,
@@ -6508,9 +6508,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn);
       ULE && ULE->hasExplicitTemplateArgs() &&
       ULE->decls_begin() == ULE->decls_end()) {
-    Diag(Fn->getExprLoc(), getLangOpts().CPlusPlus20
-                               ? diag::compat_cxx20_adl_only_template_id
-                               : diag::compat_pre_cxx20_adl_only_template_id)
+    DiagCompat(Fn->getExprLoc(), diag_compat::adl_only_template_id)
         << ULE->getName();
   }
 
@@ -15329,8 +15327,10 @@ static void DetectPrecisionLossInComplexDivision(Sema &S, SourceLocation OpLoc,
           Ctx.getFloatTypeSemantics(ElementType);
       const llvm::fltSemantics &HigherElementTypeSemantics =
           Ctx.getFloatTypeSemantics(HigherElementType);
-      if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
-          llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if ((llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 >
+           llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) ||
+          (HigherElementType == Ctx.LongDoubleTy &&
+           !Ctx.getTargetInfo().hasLongDoubleType())) {
         // Retain the location of the first use of higher precision type.
         if (!S.LocationOfExcessPrecisionNotSatisfied.isValid())
           S.LocationOfExcessPrecisionNotSatisfied = OpLoc;
@@ -21086,8 +21086,22 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     Diag(Temp->getLocation(), diag::note_referenced_type_template)
         << IsTypeAliasTemplateDecl;
 
-    QualType TST =
-        Context.getTemplateSpecializationType(TN, ULE->template_arguments());
+    TemplateArgumentListInfo TAL(ULE->getLAngleLoc(), ULE->getRAngleLoc());
+    bool HasAnyDependentTA = false;
+    for (const TemplateArgumentLoc &Arg : ULE->template_arguments()) {
+      HasAnyDependentTA |= Arg.getArgument().isDependent();
+      TAL.addArgument(Arg);
+    }
+
+    QualType TST;
+    {
+      SFINAETrap Trap(*this);
+      TST = CheckTemplateIdType(TN, NameInfo.getBeginLoc(), TAL);
+    }
+    if (TST.isNull())
+      TST = Context.getTemplateSpecializationType(
+          TN, ULE->template_arguments(), /*CanonicalArgs=*/std::nullopt,
+          HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},

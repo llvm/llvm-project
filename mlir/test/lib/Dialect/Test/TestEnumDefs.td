@@ -77,6 +77,7 @@ def TestBitEnumVerticalBar
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Multi-result Ops)
+//===----------------------------------------------------------------------===//
 
 def MultiResultOpKind1: I64EnumAttrCase<"kind1", 1>;
 def MultiResultOpKind2: I64EnumAttrCase<"kind2", 2>;

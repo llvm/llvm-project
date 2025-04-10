@@ -616,8 +616,7 @@ static bool compileBitcodeFiles() {
         lto->add(*bitcodeFile);
 
   std::vector<ObjFile *> compiled = lto->compile();
-  for (ObjFile *file : compiled)
-    inputFiles.insert(file);
+  inputFiles.insert_range(compiled);
 
   return !compiled.empty();
 }

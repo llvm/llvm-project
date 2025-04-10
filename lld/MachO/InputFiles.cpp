@@ -1879,6 +1879,9 @@ DylibFile::DylibFile(const InterfaceFile &interface, DylibFile *umbrella,
   installName = saver().save(interface.getInstallName());
   compatibilityVersion = interface.getCompatibilityVersion().rawValue();
   currentVersion = interface.getCurrentVersion().rawValue();
+  for (const auto &rpath : interface.rpaths())
+    if (rpath.first == config->platformInfo.target)
+      rpaths.push_back(saver().save(rpath.second));
 
   if (config->printEachFile)
     message(toString(this));

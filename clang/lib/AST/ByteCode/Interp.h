@@ -173,6 +173,8 @@ static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
 bool handleFixedPointOverflow(InterpState &S, CodePtr OpPC,
                               const FixedPoint &FP);
 
+bool isConstexprUnknown(const Pointer &P);
+
 enum class ShiftDir { Left, Right };
 
 /// Checks if the shift operation is legal.
@@ -977,20 +979,6 @@ bool CmpHelperEQ(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   return CmpHelper<T>(S, OpPC, Fn);
 }
 
-/// Function pointers cannot be compared in an ordered way.
-template <>
-inline bool CmpHelper<FunctionPointer>(InterpState &S, CodePtr OpPC,
-                                       CompareFn Fn) {
-  const auto &RHS = S.Stk.pop<FunctionPointer>();
-  const auto &LHS = S.Stk.pop<FunctionPointer>();
-
-  const SourceInfo &Loc = S.Current->getSource(OpPC);
-  S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
-      << LHS.toDiagnosticString(S.getASTContext())
-      << RHS.toDiagnosticString(S.getASTContext());
-  return false;
-}
-
 template <>
 inline bool CmpHelperEQ<FunctionPointer>(InterpState &S, CodePtr OpPC,
                                          CompareFn Fn) {
@@ -1017,18 +1005,27 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   const Pointer &RHS = S.Stk.pop<Pointer>();
   const Pointer &LHS = S.Stk.pop<Pointer>();
 
+  // Function pointers cannot be compared in an ordered way.
+  if (LHS.isFunctionPointer() || RHS.isFunctionPointer()) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+        << LHS.toDiagnosticString(S.getASTContext())
+        << RHS.toDiagnosticString(S.getASTContext());
+    return false;
+  }
+
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
         << LHS.toDiagnosticString(S.getASTContext())
         << RHS.toDiagnosticString(S.getASTContext());
     return false;
-  } else {
-    unsigned VL = LHS.getByteOffset();
-    unsigned VR = RHS.getByteOffset();
-    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
-    return true;
   }
+
+  unsigned VL = LHS.getByteOffset();
+  unsigned VR = RHS.getByteOffset();
+  S.Stk.push<BoolT>(BoolT::from(Fn(Compare(VL, VR))));
+  return true;
 }
 
 static inline bool IsOpaqueConstantCall(const CallExpr *E) {
@@ -1062,10 +1059,30 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     }
   }
 
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(LHS) || isConstexprUnknown(RHS))
+      return false;
+  }
+
+  if (LHS.isFunctionPointer() && RHS.isFunctionPointer()) {
+    S.Stk.push<BoolT>(BoolT::from(Fn(Compare(LHS.getIntegerRepresentation(),
+                                             RHS.getIntegerRepresentation()))));
+    return true;
+  }
+
   if (Pointer::hasSameBase(LHS, RHS)) {
+    if (LHS.inUnion() && RHS.inUnion()) {
+      // If the pointers point into a union, things are a little more
+      // complicated since the offset we save in interp::Pointer can't be used
+      // to compare the pointers directly.
+      size_t A = LHS.computeOffsetForComparison();
+      size_t B = RHS.computeOffsetForComparison();
+      S.Stk.push<BoolT>(BoolT::from(Fn(Compare(A, B))));
+      return true;
+    }
+
     unsigned VL = LHS.getByteOffset();
     unsigned VR = RHS.getByteOffset();
-
     // In our Pointer class, a pointer to an array and a pointer to the first
     // element in the same array are NOT equal. They have the same Base value,
     // but a different Offset. This is a pretty rare case, so we fix this here
@@ -2043,8 +2060,11 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
   // useful thing we can do. Any other index has been diagnosed before and
   // we don't get here.
   if (Result == 0 && Ptr.isOnePastEnd()) {
-    S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
-                        Ptr.asBlockPointer().Base);
+    if (Ptr.getFieldDesc()->isArray())
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    else
+      S.Stk.push<Pointer>(Ptr.asBlockPointer().Pointee,
+                          Ptr.asBlockPointer().Base);
     return true;
   }
 
@@ -2661,8 +2681,16 @@ inline bool ArrayElemPtr(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2677,8 +2705,16 @@ inline bool ArrayElemPtrPop(InterpState &S, CodePtr OpPC) {
       return false;
   }
 
-  if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
-    return false;
+  if (Offset.isZero()) {
+    if (Ptr.getFieldDesc()->isArray() && Ptr.getIndex() == 0) {
+      S.Stk.push<Pointer>(Ptr.atIndex(0));
+    } else {
+      S.Stk.push<Pointer>(Ptr);
+    }
+  } else {
+    if (!OffsetHelper<T, ArithOp::Add>(S, OpPC, Offset, Ptr))
+      return false;
+  }
 
   return NarrowPtr(S, OpPC);
 }
@@ -2752,7 +2788,7 @@ inline bool ArrayDecay(InterpState &S, CodePtr OpPC) {
 
 inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func);
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 
@@ -2787,7 +2823,7 @@ inline bool GetMemberPtrDecl(InterpState &S, CodePtr OpPC) {
   const auto *FD = cast<FunctionDecl>(MP.getDecl());
   const auto *Func = S.getContext().getOrCreateFunction(FD);
 
-  S.Stk.push<FunctionPointer>(Func);
+  S.Stk.push<Pointer>(Func);
   return true;
 }
 

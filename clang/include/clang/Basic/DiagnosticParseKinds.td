@@ -11,6 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 let Component = "Parse" in {
+let CategoryName = "Parse Issue" in {
+// C++11 compatibility with C++98.
+defm enum_fixed_underlying_type : CXX11Compat<
+  "enumeration types with a fixed underlying type are",
+  /*ext_warn=*/false>;
+}
 
 def err_asm_qualifier_ignored : Error<
   "expected 'volatile', 'inline', 'goto', or '('">, CatInlineAsm;
@@ -107,9 +113,6 @@ def err_enumerator_list_missing_comma : Error<
   "missing ',' between enumerators">;
 def err_enumerator_unnamed_no_def : Error<
   "unnamed enumeration must be a definition">;
-def ext_cxx11_enum_fixed_underlying_type : Extension<
-  "enumeration types with a fixed underlying type are a C++11 extension">,
-  InGroup<CXX11>;
 def ext_ms_c_enum_fixed_underlying_type : Extension<
   "enumeration types with a fixed underlying type are a Microsoft extension">,
   InGroup<MicrosoftFixedEnum>;
@@ -119,9 +122,6 @@ def ext_c23_enum_fixed_underlying_type : Extension<
 def warn_c17_compat_enum_fixed_underlying_type : Warning<
   "enumeration types with a fixed underlying type are incompatible with C standards before C23">,
   DefaultIgnore, InGroup<CPre23Compat>;
-def warn_cxx98_compat_enum_fixed_underlying_type : Warning<
-  "enumeration types with a fixed underlying type are incompatible with C++98">,
-  InGroup<CXX98Compat>, DefaultIgnore;
 def ext_enum_base_in_type_specifier : ExtWarn<
   "non-defining declaration of enumeration with a fixed underlying type is "
   "only permitted as a standalone declaration"
@@ -1458,6 +1458,9 @@ def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
 def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_modifier
+    : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
+            "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
@@ -1829,5 +1832,9 @@ def err_hlsl_virtual_function
     : Error<"virtual functions are unsupported in HLSL">;
 def err_hlsl_virtual_inheritance
     : Error<"virtual inheritance is unsupported in HLSL">;
+
+// HLSL Root Siganture diagnostic messages
+def err_hlsl_unexpected_end_of_params
+    : Error<"expected %0 to denote end of parameters, or, another valid parameter of %1">;
 
 } // end of Parser diagnostics

@@ -56,7 +56,7 @@ struct ExceptionBreakpointsFilter {
 };
 llvm::json::Value toJSON(const ExceptionBreakpointsFilter &);
 
-enum ColumnType {
+enum ColumnType : unsigned {
   eColumnTypeString,
   eColumnTypeNumber,
   eColumnTypeBoolean,
@@ -90,7 +90,7 @@ llvm::json::Value toJSON(const ColumnDescriptor &);
 
 /// Names of checksum algorithms that may be supported by a debug adapter.
 /// Values: ‘MD5’, ‘SHA1’, ‘SHA256’, ‘timestamp’.
-enum ChecksumAlgorithm {
+enum ChecksumAlgorithm : unsigned {
   eChecksumAlgorithmMD5,
   eChecksumAlgorithmSHA1,
   eChecksumAlgorithmSHA256,
@@ -101,7 +101,7 @@ llvm::json::Value toJSON(const ChecksumAlgorithm &);
 /// Describes one or more type of breakpoint a BreakpointMode applies to. This
 /// is a non-exhaustive enumeration and may expand as future breakpoint types
 /// are added.
-enum BreakpointModeApplicability {
+enum BreakpointModeApplicability : unsigned {
   /// In `SourceBreakpoint`'s.
   eBreakpointModeApplicabilitySource,
   /// In exception breakpoints applied in the `ExceptionFilterOptions`.
@@ -133,7 +133,7 @@ struct BreakpointMode {
 llvm::json::Value toJSON(const BreakpointMode &);
 
 /// Debug Adapter Features flags supported by lldb-dap.
-enum AdapterFeature {
+enum AdapterFeature : unsigned {
   /// The debug adapter supports ANSI escape sequences in styling of
   /// `OutputEvent.output` and `Variable.value` fields.
   eAdapterFeatureANSIStyling,
@@ -268,7 +268,7 @@ struct Capabilities {
 };
 llvm::json::Value toJSON(const Capabilities &);
 
-enum PresentationHint {
+enum PresentationHint : unsigned {
   ePresentationHintNormal,
   ePresentationHintEmphasize,
   ePresentationHintDeemphasize,

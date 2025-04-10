@@ -748,7 +748,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
       return failure();
 
     // Only vector sources are supported for now.
-    auto insertSrcType = dyn_cast<VectorType>(insertOp.getSourceType());
+    auto insertSrcType = dyn_cast<VectorType>(insertOp.getValueToStoreType());
     if (!insertSrcType)
       return failure();
 
@@ -759,7 +759,7 @@ struct BubbleUpBitCastForInsert : public OpRewritePattern<vector::BitCastOp> {
     VectorType newCastSrcType =
         VectorType::get(srcDims, castDstType.getElementType());
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims(insertOp.getDestVectorType().getShape());
     dstDims.back() =
@@ -850,7 +850,7 @@ struct BubbleUpBitCastForStridedSliceInsert
         VectorType::get(srcDims, castDstType.getElementType());
 
     auto newCastSrcOp = rewriter.create<vector::BitCastOp>(
-        bitcastOp.getLoc(), newCastSrcType, insertOp.getSource());
+        bitcastOp.getLoc(), newCastSrcType, insertOp.getValueToStore());
 
     SmallVector<int64_t> dstDims =
         llvm::to_vector<4>(insertOp.getDestVectorType().getShape());
