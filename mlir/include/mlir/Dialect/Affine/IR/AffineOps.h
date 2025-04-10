@@ -53,6 +53,11 @@ Region *getAffineScope(Operation *op);
 /// analysis scope.
 Region *getAffineAnalysisScope(Operation *op);
 
+/// Return the product of `terms`, creating an `affine.apply` if any of them are
+/// non-constant values. If any of `terms` is `nullptr`, return `nullptr`.
+OpFoldResult computeProduct(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> terms);
+
 /// AffineDmaStartOp starts a non-blocking DMA operation that transfers data
 /// from a source memref to a destination memref. The source and destination
 /// memref need not be of the same dimensionality, but need to have the same
