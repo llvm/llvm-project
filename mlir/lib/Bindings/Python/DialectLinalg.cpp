@@ -56,7 +56,7 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
       "Fill the region for `op`, which is assumed to be a builtin named Linalg "
       "op.");
 
-  m.def("isa_contraction_op", &mlirLinalgIsaContractionOp,
+  m.def("isa_contraction_op", &mlirLinalgIsAContractionOp,
         "Checks if the given operation is a Linalg contraction operation.",
         nb::arg("op"));
 
@@ -80,7 +80,7 @@ static void populateDialectLinalgSubmodule(nb::module_ m) {
         "op.",
         nb::arg("op"));
 
-  m.def("isa_convolution_op", &mlirLinalgIsaConvolutionOp,
+  m.def("isa_convolution_op", &mlirLinalgIsAConvolutionOp,
         "Checks if the given operation is a Linalg convolution operation.",
         nb::arg("op"));
 

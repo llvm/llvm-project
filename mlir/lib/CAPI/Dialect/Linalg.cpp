@@ -41,7 +41,7 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   fun(b, *body, op->getAttrs());
 }
 
-MLIR_CAPI_EXPORTED bool mlirLinalgIsaContractionOp(MlirOperation op) {
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAContractionOp(MlirOperation op) {
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
   // isaContractionOpInterface handles null linalgOp internally.
   return linalg::isaContractionOpInterface(linalgOp);
@@ -75,7 +75,7 @@ mlirLinalgInferContractionDimensions(MlirOperation op) {
   return result;
 }
 
-MLIR_CAPI_EXPORTED bool mlirLinalgIsaConvolutionOp(MlirOperation op) {
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op) {
   auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
   if (!linalgOp)
     return false;

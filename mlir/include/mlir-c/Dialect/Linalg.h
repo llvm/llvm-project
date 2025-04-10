@@ -22,7 +22,7 @@ extern "C" {
 MLIR_CAPI_EXPORTED void
 mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp);
 
-MLIR_CAPI_EXPORTED bool mlirLinalgIsaContractionOp(MlirOperation op);
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAContractionOp(MlirOperation op);
 
 struct MlirLinalgContractionDimensions {
   MlirAttribute batch;
@@ -34,7 +34,7 @@ struct MlirLinalgContractionDimensions {
 MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
 mlirLinalgInferContractionDimensions(MlirOperation op);
 
-MLIR_CAPI_EXPORTED bool mlirLinalgIsaConvolutionOp(MlirOperation op);
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op);
 
 struct MlirLinalgConvolutionDimensions {
   MlirAttribute batch;
