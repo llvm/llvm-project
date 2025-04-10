@@ -170,7 +170,7 @@ int main(int Argc, char *Argv[]) {
     Status = amd_comgr_get_data_name(DataElement, &NameSize, &Name[0]);
     checkError(Status, "amd_comgr_get_data_name");
 
-    char *ExpectedName = "square-host-x86_64-unknown-linux-gnu.bc";
+    const char *ExpectedName = "square-host-x86_64-unknown-linux-gnu.bc";
     if (strcmp(Name, ExpectedName)) {
       printf("Bitcode host element name mismatch: %s (expected %s)\n", Name,
              ExpectedName);
