@@ -312,6 +312,37 @@ void NVPTXDAGToDAGISel::SelectTcgen05Ld(SDNode *N, bool hasOffset) {
   }
 }
 
+void NVPTXDAGToDAGISel::SelectClusterLaunchControl(SDNode *N) {
+  SDLoc DL(N);
+  unsigned IID = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
+  unsigned Opcode;
+  switch (IID) {
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+    Opcode = NVPTX::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_IS_CANCELED;
+    break;
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid:
+    Opcode = NVPTX::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID;
+    break;
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+    Opcode = NVPTX::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_x;
+    break;
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+    Opcode = NVPTX::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_y;
+    break;
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z:
+    Opcode = NVPTX::CLUSTERLAUNCHCONTROL_QUERY_CANCEL_GET_FIRST_CTAID_z;
+    break;
+  }
+
+  SDValue Operands[] = {
+      N->getOperand(2), // TryCancelResponse_0
+      N->getOperand(3), // TryCancelResponse_1
+      N->getOperand(0), // Chain
+  };
+
+  ReplaceNode(N, CurDAG->getMachineNode(Opcode, DL, N->getVTList(), Operands));
+}
+
 bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   unsigned IID = N->getConstantOperandVal(1);
   switch (IID) {
@@ -364,6 +395,15 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x64:
   case Intrinsic::nvvm_tcgen05_ld_16x32bx2_x128: {
     SelectTcgen05Ld(N, /* hasOffset */ true);
+    return true;
+  }
+
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
+  case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_z: {
+    SelectClusterLaunchControl(N);
     return true;
   }
   }

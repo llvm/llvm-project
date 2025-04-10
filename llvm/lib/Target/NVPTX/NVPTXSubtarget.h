@@ -112,6 +112,20 @@ public:
     return HasTcgen05 && PTXVersion >= 86;
   }
 
+  bool isBlackwellArchAccelerated() const {
+    auto HasRequiredSM = [&]() {
+      if (FullSmVersion == 1001)
+        return true;
+      if (FullSmVersion == 1011)
+        return true;
+      if (FullSmVersion == 1201)
+        return true;
+      return false;
+    };
+
+    return HasRequiredSM() && PTXVersion >= 86;
+  }
+
   // Prior to CUDA 12.3 ptxas did not recognize that the trap instruction
   // terminates a basic block. Instead, it would assume that control flow
   // continued to the next instruction. The next instruction could be in the
