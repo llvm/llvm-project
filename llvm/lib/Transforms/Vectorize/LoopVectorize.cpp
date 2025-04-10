@@ -4834,9 +4834,9 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(R))
           continue;
-          if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
-              Phi && Phi->isInLoop())
-              continue;
+        if (auto *Phi = dyn_cast<VPReductionPHIRecipe>(R);
+            Phi && Phi->isInLoop())
+          continue;
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
@@ -7456,8 +7456,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
     SmallVector<ElementCount, 1> LegacyVFs = {LegacyVF.Width};
     SmallVector<ElementCount, 1> VFs = {BestFactor.Width};
 
-    auto LegacyRUs =
-        ::calculateRegisterUsage(getPlanFor(LegacyVF.Width), LegacyVFs, TTI, CM.ValuesToIgnore);
+    auto LegacyRUs = ::calculateRegisterUsage(
+        getPlanFor(LegacyVF.Width), LegacyVFs, TTI, CM.ValuesToIgnore);
     auto RUs = ::calculateRegisterUsage(BestPlan, VFs, TTI, CM.ValuesToIgnore);
 
     auto GetMaxUsage = [](SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers) {
