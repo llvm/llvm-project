@@ -5375,29 +5375,32 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
                            false, Builder.saveIP(), "scan"));
   Loops = loopsVec;
   EXPECT_EQ(Loops.size(), 2U);
-  auto inputLoop = Loops.front();
-  auto scanLoop = Loops.back();
-  Builder.restoreIP(scanLoop->getAfterIP());
-  inputLoop->assertOK();
-  scanLoop->assertOK();
+  CanonicalLoopInfo *InputLoop = Loops.front();
+  CanonicalLoopInfo  *ScanLoop = Loops.back();
+  Builder.restoreIP(ScanLoop->getAfterIP());
+  InputLoop->assertOK();
+  ScanLoop->assertOK();
 
-  //// Verify control flow structure (in addition to Loop->assertOK()).
-  EXPECT_EQ(inputLoop->getPreheader()->getSinglePredecessor(),
+  EXPECT_EQ(InputLoop->getPreheader()->getSinglePredecessor(),
             &F->getEntryBlock());
-  EXPECT_EQ(scanLoop->getAfter(), Builder.GetInsertBlock());
+  EXPECT_EQ(ScanLoop->getAfter(), Builder.GetInsertBlock());
   EXPECT_EQ(NumBodiesGenerated, 2U);
   SmallVector<OpenMPIRBuilder::ReductionInfo> reductionInfos = {
       {Builder.getFloatTy(), origVar, scanVar,
        /*EvaluationKind=*/OpenMPIRBuilder::EvalKind::Scalar, sumReduction,
        /*ReductionGenClang=*/nullptr, sumAtomicReduction}};
-  auto FinalizeIP = scanLoop->getAfterIP();
-  OpenMPIRBuilder::LocationDescription RedLoc({inputLoop->getAfterIP(), DL});
+  auto FinalizeIP = ScanLoop->getAfterIP();
+  OpenMPIRBuilder::LocationDescription RedLoc({InputLoop->getAfterIP(), DL});
   llvm::BasicBlock *Cont = splitBB(Builder, false, "omp.scan.loop.cont");
   ASSERT_EXPECTED_INIT(
       InsertPointTy, retIp,
       OMPBuilder.emitScanReduction(RedLoc, FinalizeIP, reductionInfos));
   Builder.restoreIP(retIp);
   Builder.CreateBr(Cont);
+  SmallVector<CallInst *> MaskedCalls;
+  findCalls(F, omp::RuntimeFunction::OMPRTL___kmpc_masked, OMPBuilder,
+            MaskedCalls);
+  ASSERT_EQ(MaskedCalls.size(), 1u);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTwoReductions) {

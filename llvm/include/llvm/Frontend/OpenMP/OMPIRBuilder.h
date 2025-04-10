@@ -2711,7 +2711,7 @@ public:
   /// \param ScanVars Scan Variables.
   /// \param IsInclusive Whether it is an inclusive or exclusive scan.
   ///
-  /// \returns The insertion position *after* the masked.
+  /// \returns The insertion position *after* the scan.
   InsertPointOrErrorTy createScan(const LocationDescription &Loc,
                                   InsertPointTy AllocaIP,
                                   ArrayRef<llvm::Value *> ScanVars,

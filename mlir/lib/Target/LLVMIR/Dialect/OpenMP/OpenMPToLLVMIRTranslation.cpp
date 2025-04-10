@@ -47,7 +47,8 @@
 
 using namespace mlir;
 
-llvm::SmallDenseMap<llvm::Value *, llvm::Type *> ReductionVarToType;
+llvm::SmallDenseMap<llvm::Value *, llvm::Type *> ReductionVarToType; 
+llvm::OpenMPIRBuilder::InsertPointTy parallelAllocaIP;// TODO: change this alloca IP to point to originalvar allocaIP. ReductionDecl need to be linked to scan var.
 namespace {
 static llvm::omp::ScheduleKind
 convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
@@ -2492,6 +2493,7 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
       findAllocaInsertPoint(builder, moduleTranslation);
+  parallelAllocaIP = allocaIP;
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
@@ -2533,9 +2535,13 @@ convertOmpScan(Operation &opInst, llvm::IRBuilderBase &builder,
     llvm::Value *llvmVal = moduleTranslation.lookupValue(val);
     llvmScanVars.push_back(llvmVal);
     llvmScanVarsType.push_back(ReductionVarToType[llvmVal]);
+    val.getDefiningOp();
   }
-  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
-      findAllocaInsertPoint(builder, moduleTranslation);
+  auto parallelOp = scanOp->getParentOfType<omp::ParallelOp>();
+  if (!parallelOp) {
+    return failure();
+  }
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP = parallelAllocaIP;
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
       moduleTranslation.getOpenMPBuilder()->createScan(

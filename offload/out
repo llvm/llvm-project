@@ -1,0 +1,424 @@
+grep: ./out: input file is also the output
+./test/offloading/fortran/target-map-nested-dtype-alloca-array.f90:!$omp target map(tofrom: one_l%nest%array_k)
+./test/offloading/fortran/target-map-nested-dtype-alloca-array.f90:!$omp end target
+./test/offloading/fortran/target-map-derived-type-full-1.f90:  !$omp target map(from:out) map(to:in)
+./test/offloading/fortran/target-map-derived-type-full-1.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target enter data map(alloc: arg_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(from: arg_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(delete: arg_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target enter data map(alloc: local_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(from: local_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(delete: local_alloc)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target enter data map(alloc: map_ptr)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(from: map_ptr)
+./test/offloading/fortran/target-map-pointer-scopes-enter-exit.f90:  !$omp target exit data map(delete: map_ptr)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target data map(ompx_hold, tofrom: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target exit data map(delete: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target map(present, tofrom: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp end target
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp end target data
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target data map(tofrom: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target exit data map(delete: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp target map(present, tofrom: presence_check)
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp end target
+./test/offloading/fortran/target_map_ompx_hold.f90:!$omp end target data
+./test/offloading/fortran/target-map-nullary-pointer.f90:!$omp target map(Set)
+./test/offloading/fortran/target-map-nullary-pointer.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(5))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(4)%elements(3))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(5)%elements(3:5))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(3:5))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(4)%num_chars%number%float_elements(8))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(4)%num_chars%number%float_elements(5:10))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp target map(tofrom: array_dtype(4)%internal_dtypes(3)%float_elements(4))
+./test/offloading/fortran/dtype-member-map-syntax-1.f90:  !$omp end target
+./test/offloading/fortran/target-map-two-dtype-mixed-implicit-explicit-capture-1.f90:  !$omp target map(tofrom:scalar_arr1%break_1)
+./test/offloading/fortran/target-map-two-dtype-mixed-implicit-explicit-capture-1.f90:  !$omp end target
+./test/offloading/fortran/target-map-nested-alloca-dtype-3d-alloca-array-bounds.f90:!$omp target map(tofrom: one_l%nest%array_k(1:3, 1:3, 2:2)) map(to: inArray(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-nested-alloca-dtype-3d-alloca-array-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-member.f90:  !$omp target map(tofrom:scalar_arr%array_x, scalar_arr%array_y)
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-member.f90:  !$omp end target
+./test/offloading/fortran/target-map-derived-type-full-2.f90:  !$omp target map(from:out) map(to:in)
+./test/offloading/fortran/target-map-derived-type-full-2.f90:  !$omp end target
+./test/offloading/fortran/target-map-double-nested-dtype-single-member.f90:!$omp target map(tofrom: top_dtype%nested%array_i2, top_dtype2%nested%array_j2)
+./test/offloading/fortran/target-map-double-nested-dtype-single-member.f90:!$omp end target
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp target map(tofrom: arg_alloc)
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp target map(tofrom: local_alloc)
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp target map(tofrom: map_ptr)
+./test/offloading/fortran/target-map-pointer-target-scopes.f90:  !$omp end target
+./test/offloading/fortran/basic-target-parallel-region.f90:   !$omp target parallel map(from: x)
+./test/offloading/fortran/basic-target-parallel-region.f90:   !$omp end target parallel
+./test/offloading/fortran/target-map-enter-exit-allocatables.f90:   !$omp target enter data map(alloc: A)
+./test/offloading/fortran/target-map-enter-exit-allocatables.f90:    !$omp target
+./test/offloading/fortran/target-map-enter-exit-allocatables.f90:    !$omp end target
+./test/offloading/fortran/target-map-enter-exit-allocatables.f90:    !$omp target exit data map(from: A)
+./test/offloading/fortran/target-map-enter-exit-allocatables.f90:    !$omp target exit data map(delete: A)
+./test/offloading/fortran/target-use-dev-ptr.f90:   !$omp target data map(tofrom: x) use_device_ptr(x)
+./test/offloading/fortran/target-use-dev-ptr.f90:   !$omp end target data
+./test/offloading/fortran/target-map-pointer-to-dtype-allocatable-member.f90:    !$omp target enter data map(to:my_instance, my_instance%values)
+./test/offloading/fortran/target-map-pointer-to-dtype-allocatable-member.f90:    !$omp target
+./test/offloading/fortran/target-map-pointer-to-dtype-allocatable-member.f90:    !$omp end target
+./test/offloading/fortran/target-map-pointer-to-dtype-allocatable-member.f90:    !$omp target exit data map(from:my_instance%values)
+./test/offloading/fortran/target-map-pointer-to-dtype-allocatable-member.f90:    !$omp target exit data map(release:my_instance)
+./test/offloading/fortran/target_map_present_fail.f90:!$omp target data map(present,alloc:arr)
+./test/offloading/fortran/target_map_present_fail.f90:!$omp target
+./test/offloading/fortran/target_map_present_fail.f90:!$omp end target
+./test/offloading/fortran/target_map_present_fail.f90:!$omp end target data
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp declare target link(arr1) enter(arr2)
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp declare target link(scalar)
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp target map(tofrom:arr1, i, j)
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp end target
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp target map(i, j)
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp end target
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp target map(i, j)
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp end target
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp target
+./test/offloading/fortran/declare-target-vars-in-target-region.f90:  !$omp end target
+./test/offloading/fortran/dtype-array-constant-index-map.f90:!$omp target map(tofrom: array_dtype(5))
+./test/offloading/fortran/dtype-array-constant-index-map.f90:!$omp end target
+./test/offloading/fortran/dtype-array-constant-index-map.f90:!$omp target map(tofrom: array_dtype(5))
+./test/offloading/fortran/dtype-array-constant-index-map.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-alloca-array-of-dtype.f90:!$omp target map(tofrom: dtyped%array_dtype)
+./test/offloading/fortran/target-map-dtype-alloca-array-of-dtype.f90:!$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-alloca-array-of-dtype.f90:!$omp target map(tofrom: dtyped%array_dtype)
+./test/offloading/fortran/target-map-alloca-dtype-alloca-array-of-dtype.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-dtype-alloca-and-non-alloca-array.f90:    !$omp target map(tofrom: one_l%nest%array_i, one_l%nest%array_k)
+./test/offloading/fortran/target-map-nested-dtype-alloca-and-non-alloca-array.f90:    !$omp end target
+./test/offloading/fortran/target-map-first-common-block-member.f90:  !$omp target map(tofrom: var1)
+./test/offloading/fortran/target-map-first-common-block-member.f90:  !$omp end target
+./test/offloading/fortran/target-map-first-common-block-member.f90:!$omp target map(tofrom: var1)
+./test/offloading/fortran/target-map-first-common-block-member.f90:!$omp end target
+./test/offloading/fortran/target-map-first-common-block-member.f90:!$omp target map(tofrom: var1)
+./test/offloading/fortran/target-map-first-common-block-member.f90:!$omp end target
+./test/offloading/fortran/target-map-two-dtype-mixed-implicit-explicit-capture-2.f90:  !$omp target map(tofrom:scalar_arr2%array_x(3:6))
+./test/offloading/fortran/target-map-two-dtype-mixed-implicit-explicit-capture-2.f90:  !$omp end target
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target enter data map(alloc:sbuf31)
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp end target
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target update from(sbuf31)
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target exit data map(delete:sbuf31)
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target enter data map(to:p)
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp end target
+./test/offloading/fortran/local-descriptor-map-regress.f90:!$omp target update from(p)
+./test/offloading/fortran/local-descriptor-map-regress.f90:!!$omp target exit data map(delete:p)
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp target enter data map(to: x)
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp target data use_device_addr(x)
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp end target data
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp target map(to: x) map(from: res1, res2) &
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp & has_device_addr(first_scalar_device_addr)
+./test/offloading/fortran/target-has-device-addr1.f90:    !$omp end target
+./test/offloading/fortran/target-region-implicit-array.f90:  !$omp target
+./test/offloading/fortran/target-region-implicit-array.f90:  !$omp end target
+./test/offloading/fortran/target-map-local-intrinisc-sized-param.f90:!$omp target map(tofrom: b)
+./test/offloading/fortran/target-map-local-intrinisc-sized-param.f90:!$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-and-alloca-array-v2.f90:!$omp target map(tofrom: alloca_dtype%array_j, alloca_dtype)
+./test/offloading/fortran/target-map-alloca-dtype-and-alloca-array-v2.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-3d-alloca-array-with-bounds.f90:!$omp target map(tofrom: one_l%array_j(1:3, 1:3, 2:2)) map(to: inArray(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-dtype-3d-alloca-array-with-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-explicit-individual-array-member.f90:  !$omp target map(tofrom:scalar_arr%array_y)
+./test/offloading/fortran/target-map-dtype-explicit-individual-array-member.f90:  !$omp end target
+./test/offloading/fortran/target-map-pointer-target-array-section-3d-bounds.f90:!$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-pointer-target-array-section-3d-bounds.f90:!$omp end target
+./test/offloading/fortran/dump_map_tables.f90:!$omp target enter data map(to:A(:N))
+./test/offloading/fortran/dump_map_tables.f90:!$omp target parallel do
+./test/offloading/fortran/dump_map_tables.f90:!$omp target exit data map(from:A)
+./test/offloading/fortran/basic-target-region-3D-array-section.f90:!$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3), j, k, j2, k2)
+./test/offloading/fortran/basic-target-region-3D-array-section.f90:!$omp end target
+./test/offloading/fortran/target-map-enter-exit-array.f90:   !$omp target enter data map(alloc: A)
+./test/offloading/fortran/target-map-enter-exit-array.f90:    !$omp target
+./test/offloading/fortran/target-map-enter-exit-array.f90:    !$omp end target
+./test/offloading/fortran/target-map-enter-exit-array.f90:    !$omp target exit data map(from: A)
+./test/offloading/fortran/target-map-enter-exit-array.f90:    !$omp target exit data map(delete: A)
+./test/offloading/fortran/target-map-dtype-alloca-array-and-non-alloca-dtype.f90:!$omp target map(tofrom: one_l%nest, one_l%array_j)
+./test/offloading/fortran/target-map-dtype-alloca-array-and-non-alloca-dtype.f90:!$omp end target
+./test/offloading/fortran/target-map-two-dtype-explicit-member.f90:  !$omp target map(tofrom:scalar_arr1%break_1, scalar_arr2%break_3)
+./test/offloading/fortran/target-map-two-dtype-explicit-member.f90:  !$omp end target
+./test/offloading/fortran/target-map-two-dtype-multi-member-array-1D-bounds.f90:  !$omp target map(tofrom:scalar_arr1%array_x(3:6), scalar_arr1%array_y(3:6), scalar_arr2%array_x(3:6), scalar_arr2%array_y(3:6))
+./test/offloading/fortran/target-map-two-dtype-multi-member-array-1D-bounds.f90:  !$omp end target
+./test/offloading/fortran/target-map-all-common-block-members.f90:  !$omp target map(tofrom: var1, var2, var3)
+./test/offloading/fortran/target-map-all-common-block-members.f90:  !$omp end target
+./test/offloading/fortran/target-map-all-common-block-members.f90:!$omp target map(tofrom: var2, var1, var3)
+./test/offloading/fortran/target-map-all-common-block-members.f90:!$omp end target
+./test/offloading/fortran/target-map-all-common-block-members.f90:!$omp target map(tofrom: var2, var3, var1)
+./test/offloading/fortran/target-map-all-common-block-members.f90:!$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-array-and-scalar.f90:!$omp target map(tofrom: alloca_dtype%nested_dtype%array_i, alloca_dtype%k)
+./test/offloading/fortran/target-map-alloca-dtype-array-and-scalar.f90:!$omp end target
+./test/offloading/fortran/target-map-second-common-block-member.f90:  !$omp target map(tofrom: var2)
+./test/offloading/fortran/target-map-second-common-block-member.f90:  !$omp end target
+./test/offloading/fortran/target-map-second-common-block-member.f90:!$omp target map(tofrom: var2)
+./test/offloading/fortran/target-map-second-common-block-member.f90:!$omp end target
+./test/offloading/fortran/target-map-second-common-block-member.f90:!$omp target map(tofrom: var2)
+./test/offloading/fortran/target-map-second-common-block-member.f90:!$omp end target
+./test/offloading/fortran/double-target-call-with-declare-target.f90:    !$omp declare target link(sp)
+./test/offloading/fortran/double-target-call-with-declare-target.f90:!$omp target map(tofrom:sp) map(to: i, j)
+./test/offloading/fortran/double-target-call-with-declare-target.f90:!$omp end target
+./test/offloading/fortran/double-target-call-with-declare-target.f90:!$omp target map(tofrom:sp) map(to: i, j)
+./test/offloading/fortran/double-target-call-with-declare-target.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-3D-member-bounds.f90:  !$omp target map(tofrom:scalar_arr%array_x(1:3, 1:3, 2:2), scalar_arr%array_y(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-3D-member-bounds.f90:  !$omp end target
+./test/offloading/fortran/target-map-dtype-allocatable-scalar-and-array.f90:    !$omp target map(tofrom: one_l%array_j, one_l%j)
+./test/offloading/fortran/target-map-dtype-allocatable-scalar-and-array.f90:    !$omp end target
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit.f90:    !$omp target enter data map(to: scalar_arr%array(3:6))
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit.f90:   !$omp target
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit.f90:  !$omp end target
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit.f90:  !$omp target exit data map(from: scalar_arr%array(3:6))
+./test/offloading/fortran/basic-target-region-3D-array.f90:!$omp target map(tofrom:x, counter) map(to: i, j, k, i2, j2, k2)
+./test/offloading/fortran/basic-target-region-3D-array.f90:!$omp end target
+./test/offloading/fortran/basic_target_region.f90:!$omp target map(from:x)
+./test/offloading/fortran/basic_target_region.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-dtype-multi-member.f90:!$omp target map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%array_i2)
+./test/offloading/fortran/target-map-nested-dtype-multi-member.f90:!$omp end target
+./test/offloading/fortran/constant-arr-index.f90:  !$omp target map(tofrom:sp)
+./test/offloading/fortran/constant-arr-index.f90:  !$omp end target
+./test/offloading/fortran/usm_map_close.f90:  !$omp requires unified_shared_memory
+./test/offloading/fortran/usm_map_close.f90:!$omp target data map(tofrom: a, device_alloc)
+./test/offloading/fortran/usm_map_close.f90:!$omp target map(tofrom: device_alloc)
+./test/offloading/fortran/usm_map_close.f90:!$omp end target
+./test/offloading/fortran/usm_map_close.f90:!$omp end target data
+./test/offloading/fortran/usm_map_close.f90:!$omp target data map(close, tofrom: a) map(tofrom: device_alloc)
+./test/offloading/fortran/usm_map_close.f90:!$omp target map(tofrom: device_alloc)
+./test/offloading/fortran/usm_map_close.f90:!$omp end target
+./test/offloading/fortran/usm_map_close.f90:!$omp end target data
+./test/offloading/fortran/usm_map_close.f90:!$omp target data map(tofrom: a) use_device_ptr(a)
+./test/offloading/fortran/usm_map_close.f90:!$omp end target data
+./test/offloading/fortran/usm_map_close.f90:!$omp target enter data map(close, to: a)
+./test/offloading/fortran/usm_map_close.f90:!$omp target map(from: device_alloc)
+./test/offloading/fortran/usm_map_close.f90:!$omp end target
+./test/offloading/fortran/usm_map_close.f90:!$omp target exit data map(from: a)
+./test/offloading/fortran/target-map-two-dtype-individual-member-array-1D-bounds.f90:  !$omp target map(tofrom:scalar_arr1%array_x(3:6), scalar_arr2%array_x(3:6))
+./test/offloading/fortran/target-map-two-dtype-individual-member-array-1D-bounds.f90:  !$omp end target
+./test/offloading/fortran/target_map_present_success.f90:!$omp target data map(tofrom:arr)
+./test/offloading/fortran/target_map_present_success.f90:!$omp target data map(present,alloc:arr)
+./test/offloading/fortran/target_map_present_success.f90:!$omp target
+./test/offloading/fortran/target_map_present_success.f90:!$omp end target
+./test/offloading/fortran/target_map_present_success.f90:!$omp end target data
+./test/offloading/fortran/target_map_present_success.f90:!$omp end target data
+./test/offloading/fortran/target-map-literal-write.f90:!$omp target
+./test/offloading/fortran/target-map-literal-write.f90:!$omp end target
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-alloca-members.f90:!$omp target map(tofrom: top_dtype%array_i, top_dtype%nested%nest2%array_j, top_dtype%nested%nest%array_ptr) &
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-alloca-members.f90:!$omp map(tofrom: top_dtype2%array_i, top_dtype2%nested%nest2%array_j, top_dtype2%nested%nest%array_ptr)
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-alloca-members.f90:!$omp end target
+./test/offloading/fortran/target-map-double-nested-dtype-double-array-bounds.f90:!$omp target map(tofrom: top_dtype%nested%array_i2(4:8), top_dtype2%nested%array_j2(4:8))
+./test/offloading/fortran/target-map-double-nested-dtype-double-array-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-large-nested-dtype-multi-member.f90:!$omp target map(tofrom: top_dtype%nested%nest%j4, top_dtype%nested%nest%i4, top_dtype%nested%nest%k4) &
+./test/offloading/fortran/target-map-large-nested-dtype-multi-member.f90:!$omp map(tofrom: top_dtype%array_i, top_dtype%nested%nest2%i3, top_dtype%nested%i2, top_dtype%nested%nest2%k3, top_dtype%nested%nest2%j3)
+./test/offloading/fortran/target-map-large-nested-dtype-multi-member.f90:!$omp end target
+./test/offloading/fortran/target_map_common_block2.f90:  !$omp target map(tofrom:var4)
+./test/offloading/fortran/target_map_common_block2.f90:  !$omp end target
+./test/offloading/fortran/target-nested-target-data.f90:   !$omp target data map(to: A, B) map(alloc: C)
+./test/offloading/fortran/target-nested-target-data.f90:   !$omp target map(from: C)
+./test/offloading/fortran/target-nested-target-data.f90:   !$omp end target
+./test/offloading/fortran/target-nested-target-data.f90:   !$omp target update from(C) ! updates C device -> host
+./test/offloading/fortran/target-nested-target-data.f90:   !$omp end target data
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-member-bounds.f90:  !$omp target map(tofrom:scalar_arr%array_x(3:6), scalar_arr%array_y(3:6))
+./test/offloading/fortran/target-map-dtype-multi-explicit-array-member-bounds.f90:  !$omp end target
+./test/offloading/fortran/target-map-allocatable-array-section-1d-bounds.f90:    !$omp target map(tofrom:sp_read(2:6)) map(tofrom:sp_write(2:6))
+./test/offloading/fortran/target-map-allocatable-array-section-1d-bounds.f90:    !$omp end target
+./test/offloading/fortran/target-map-dtype-allocatable-array.f90:    !$omp target map(tofrom: one_l%array_j)
+./test/offloading/fortran/target-map-dtype-allocatable-array.f90:    !$omp end target
+./test/offloading/fortran/target-map-enter-exit-array-bounds.f90:    !$omp target enter data map(to: array(3:6))
+./test/offloading/fortran/target-map-enter-exit-array-bounds.f90:   !$omp target
+./test/offloading/fortran/target-map-enter-exit-array-bounds.f90:  !$omp end target
+./test/offloading/fortran/target-map-enter-exit-array-bounds.f90:  !$omp target exit data map(from: array(3:6))
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp target data map(tofrom: b(1:3)) use_device_addr(b)
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp target has_device_addr(b(2)%x)
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp end target
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp end target data
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp target data map(tofrom: b(1:3)) use_device_addr(b)
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp target has_device_addr(b(2)%x)
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp end target
+./test/offloading/fortran/target-has-device-addr2.f90:  !$omp end target data
+./test/offloading/fortran/target-depend.f90:      !$omp parallel num_threads(3)
+./test/offloading/fortran/target-depend.f90:      !$omp single
+./test/offloading/fortran/target-depend.f90:      !$omp task depend(out: z) shared(z)
+./test/offloading/fortran/target-depend.f90:      !$omp end task
+./test/offloading/fortran/target-depend.f90:      !$omp target map(tofrom: z) depend(in:z)
+./test/offloading/fortran/target-depend.f90:      !$omp end target
+./test/offloading/fortran/target-depend.f90:      !$omp end single
+./test/offloading/fortran/target-depend.f90:      !$omp end parallel
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit-update.f90:  !$omp target enter data map(to: scalar_arr%array(3:6))
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit-update.f90:  !$omp target update to(scalar_arr%array(3:6))
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit-update.f90:   !$omp target
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit-update.f90:  !$omp end target
+./test/offloading/fortran/target-map-dtype-arr-bounds-member-enter-exit-update.f90:  !$omp target exit data map(from: scalar_arr%array(3:6))
+./test/offloading/fortran/target-map-common-block.f90:  !$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-common-block.f90:  !$omp end target
+./test/offloading/fortran/target-map-common-block.f90:!$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-common-block.f90:!$omp end target
+./test/offloading/fortran/target-map-common-block.f90:!$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-common-block.f90:!$omp end target
+./test/offloading/fortran/target-map-dtype-alloca-and-non-alloca-array.f90:!$omp target map(tofrom: one_l%array_i, one_l%array_j)
+./test/offloading/fortran/target-map-dtype-alloca-and-non-alloca-array.f90:!$omp end target
+./test/offloading/fortran/target-data-map-if-present.f90:       !$omp target data if(present(a)) map(alloc:a)
+./test/offloading/fortran/target-data-map-if-present.f90:       !$omp end target data
+./test/offloading/fortran/target-parallel-do-collapse.f90:   !$omp target parallel do map(from:array) collapse(2)
+./test/offloading/fortran/target-parallel-do-collapse.f90:    !$omp end target parallel do
+./test/offloading/fortran/target-map-nested-dtype-complex-member.f90:!$omp target map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%j2, top_dtype%nested%array_i2, top_dtype%l)
+./test/offloading/fortran/target-map-nested-dtype-complex-member.f90:!$omp end target
+./test/offloading/fortran/target-map-derived-type-full-implicit-2.f90:  !$omp target
+./test/offloading/fortran/target-map-derived-type-full-implicit-2.f90:  !$omp end target
+./test/offloading/fortran/target-map-enter-exit-array-2.f90:    !$omp target enter data map(to: array)
+./test/offloading/fortran/target-map-enter-exit-array-2.f90:   !$omp target
+./test/offloading/fortran/target-map-enter-exit-array-2.f90:  !$omp end target
+./test/offloading/fortran/target-map-enter-exit-array-2.f90:  !$omp target exit data map(from: array)
+./test/offloading/fortran/basic-target-parallel-do.f90:   !$omp target parallel do map(from: x)
+./test/offloading/fortran/basic-target-parallel-do.f90:   !$omp end target parallel do
+./test/offloading/fortran/target-map-dtype-multi-explicit-member.f90:    !$omp target map(from:scalar_struct%rx, scalar_struct%ry)
+./test/offloading/fortran/target-map-dtype-multi-explicit-member.f90:    !$omp end target
+./test/offloading/fortran/target-map-dynamic.f90:    !$omp target enter data map(to: A)
+./test/offloading/fortran/target-map-dynamic.f90:    !$omp target
+./test/offloading/fortran/target-map-dynamic.f90:    !$omp end target
+./test/offloading/fortran/target-map-dynamic.f90:    !$omp target exit data map(from: A)
+./test/offloading/fortran/target_map_common_block1.f90:  !$omp target map(tofrom:devices) map(tofrom:var1)
+./test/offloading/fortran/target_map_common_block1.f90:  !$omp end target
+./test/offloading/fortran/target-with-threadprivate.f90:!$omp threadprivate(pointer2)
+./test/offloading/fortran/target-with-threadprivate.f90:!$omp target
+./test/offloading/fortran/target-with-threadprivate.f90:!$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(tofrom:devices)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(tofrom:var1)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(tofrom:var2)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(tofrom:var3)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(to:var4) map(from:tmp)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target_map_common_block.f90:  !$omp target map(tofrom: var6)
+./test/offloading/fortran/target_map_common_block.f90:  !$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-and-alloca-array.f90:!$omp target map(tofrom: alloca_dtype, alloca_dtype%array_j)
+./test/offloading/fortran/target-map-alloca-dtype-and-alloca-array.f90:!$omp end target
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp target map(from: top_dtype%nested%nest%j4, top_dtype%nested%nest%i4, top_dtype%nested%nest%k4) &
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp map(from: top_dtype%array_i, top_dtype%nested%nest2%i3, top_dtype%nested%i2) &
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp map(from: top_dtype%nested%nest2%k3, top_dtype%nested%nest2%j3) &
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp map(to: top_dtype2%nested%nest%j4, top_dtype2%nested%nest%i4, top_dtype2%nested%nest%k4) &
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp map(to: top_dtype2%array_i, top_dtype2%nested%nest2%i3, top_dtype2%nested%i2) &
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp map(to: top_dtype2%nested%nest2%k3, top_dtype2%nested%nest2%j3)
+./test/offloading/fortran/target-map-double-large-nested-dtype-multi-member.f90:!$omp end target
+./test/offloading/fortran/target-map-derived-type-full-implicit-1.f90:  !$omp target map(from:out)
+./test/offloading/fortran/target-map-derived-type-full-implicit-1.f90:  !$omp end target
+./test/offloading/fortran/target-map-dtype-alloca-array-with-bounds.f90:!$omp target map(tofrom: one_l%array_j(2:6))
+./test/offloading/fortran/target-map-dtype-alloca-array-with-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-dtype-single-member.f90:!$omp target map(tofrom: top_dtype%nested%array_i2)
+./test/offloading/fortran/target-map-nested-dtype-single-member.f90:!$omp end target
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:    !$omp target map(tofrom: var2)
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:    !$omp end target
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:  !$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:  !$omp end target
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:  !$omp target map(tofrom: copy)
+./test/offloading/fortran/target-map-mix-imp-exp-common-block-members.f90:  !$omp end target
+./test/offloading/fortran/target-map-nested-dtype-derived-member.f90:!$omp target map(tofrom: top_dtype%k, top_dtype%nested2%array_i2, top_dtype%nested)
+./test/offloading/fortran/target-map-nested-dtype-derived-member.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-alloca-dtype-alloca-array-bounds.f90:!$omp target map(tofrom: one_l%nest%array_k(2:6))
+./test/offloading/fortran/target-map-nested-alloca-dtype-alloca-array-bounds.f90:!$omp end target
+./test/offloading/fortran/basic-target-region-1D-array-section.f90:    !$omp target map(to:read_arr(2:5)) map(from:write_arr(2:5)) map(to:i,j)
+./test/offloading/fortran/basic-target-region-1D-array-section.f90:    !$omp end target
+./test/offloading/fortran/target-map-two-nested-dtype-member-array-map.f90:  !$omp target map(tofrom:scalar_arr1%nested%array_z(3:6), scalar_arr1%nested%array_ix(3:6), scalar_arr2%nested%array_z(3:6), scalar_arr2%nested%array_ix(3:6))
+./test/offloading/fortran/target-map-two-nested-dtype-member-array-map.f90:  !$omp end target
+./test/offloading/fortran/target-custom-mapper.f90:   !$omp declare mapper(my_mapper1 : mytype :: t) map(to: t%data(1 : n))
+./test/offloading/fortran/target-custom-mapper.f90:   !$omp declare mapper(my_mapper2 : mytype2 :: t) map(mapper(my_mapper1): t%my_data)
+./test/offloading/fortran/target-custom-mapper.f90:   !$omp target map(tofrom: sum_device) map(mapper(my_mapper2) : obj)
+./test/offloading/fortran/target-custom-mapper.f90:   !$omp end target
+./test/offloading/fortran/target-map-nested-dtype-3d-alloca-array-with-bounds.f90:!$omp target map(tofrom: one_l%nest%array_k(1:3, 1:3, 2:2)) map(to: inArray(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-nested-dtype-3d-alloca-array-with-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-allocatable-array-section-3d-bounds.f90:!$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3))
+./test/offloading/fortran/target-map-allocatable-array-section-3d-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-dtype-alloca-array-and-non-alloca-dtype.f90:    !$omp target map(tofrom: one_l%nest%nest2, one_l%nest%array_k)
+./test/offloading/fortran/target-map-nested-dtype-alloca-array-and-non-alloca-dtype.f90:    !$omp end target
+./test/offloading/fortran/target-map-individual-dtype-member-map.f90:  !$omp target map(from:scalar_struct%rx)
+./test/offloading/fortran/target-map-individual-dtype-member-map.f90:  !$omp end target
+./test/offloading/fortran/target-map-allocatable-dtype.f90:!$omp target map(tofrom: alloca_dtype)
+./test/offloading/fortran/target-map-allocatable-dtype.f90:!$omp end target
+./test/offloading/fortran/target-map-nested-dtype-alloca-array-with-bounds.f90:!$omp target map(tofrom: one_l%nest%array_k(2:6))
+./test/offloading/fortran/target-map-nested-dtype-alloca-array-with-bounds.f90:!$omp end target
+./test/offloading/fortran/implicit-record-field-mapping.f90:  !$omp target map(from: dst_sum)
+./test/offloading/fortran/implicit-record-field-mapping.f90:  !$omp end target
+./test/offloading/fortran/target-has-device-addr3.f90:  !$omp target data map(tofrom: x) use_device_addr(x)
+./test/offloading/fortran/target-has-device-addr3.f90:  !$omp target has_device_addr(x) map(tofrom: y)
+./test/offloading/fortran/target-has-device-addr3.f90:  !$omp end target
+./test/offloading/fortran/target-has-device-addr3.f90:  !$omp end target data
+./test/offloading/fortran/target-map-double-nested-dtype-array-bounds.f90:!$omp target map(tofrom: top_dtype%nested%array_i2(4:8), top_dtype2%nested%array_j2(4:8))
+./test/offloading/fortran/target-map-double-nested-dtype-array-bounds.f90:!$omp end target
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp target map(tofrom: arg_alloc)
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp end target
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp target map(tofrom: local_alloc)
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp end target
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp target map(tofrom: map_ptr)
+./test/offloading/fortran/target-map-allocatable-map-scopes.f90:  !$omp end target
+./test/offloading/fortran/target-map-enter-exit-scalar.f90:    !$omp target enter data map(to: scalar)
+./test/offloading/fortran/target-map-enter-exit-scalar.f90:   !$omp target
+./test/offloading/fortran/target-map-enter-exit-scalar.f90:   !$omp end target
+./test/offloading/fortran/target-map-enter-exit-scalar.f90:  !$omp target exit data map(from: scalar)
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-mixed-members.f90:!$omp target map(tofrom: top_dtype%nested%nest%i4, top_dtype%nested%array_j2) &
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-mixed-members.f90:!$omp map(tofrom: top_dtype%nested%nest%k4, top_dtype%array_i, top_dtype%nested%nest2%i3) &
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-mixed-members.f90:!$omp map(tofrom: top_dtype%nested%i2, top_dtype%nested%nest2%j3, top_dtype%array_j)
+./test/offloading/fortran/target-map-multi-alloca-dtypes-with-multi-mixed-members.f90:!$omp end target
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp target enter data map(alloc:       &
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp  chunk%tiles(2)%field%density0)
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp target
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp end target
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp target exit data map(from:         &
+./test/offloading/fortran/explicit-and-implicit-record-field-mapping.f90:  !$omp  chunk%tiles(2)%field%density0)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype%vertexes(N1)%test)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype%vertexes(N1)%test, alloca_dtype%vertexes(N2)%test)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype%test_tile(N1)%field%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%test_tile(N1)%field%vertexy)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom:  alloca_dtype%test_tile(N1)%field%test, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                     alloca_dtype%test_tile(N2)%field%test, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                     alloca_dtype%test_tile(N1)%field%vertexy, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                     alloca_dtype%test_tile(N2)%field%vertexy)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom:  alloca_dtype%test_tile(N2)%field%vertexy)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype%vertexes(N1)%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N1)%vertexy, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N2)%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N2)%vertexy)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype%vertexes(N1)%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N1)%vertexy, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(4)%vertexy, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(4)%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N2)%vertexx, &
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp                    alloca_dtype%vertexes(N2)%vertexy)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp target map(tofrom: alloca_dtype_arr(N2)%array_i)
+./test/offloading/fortran/dtype-member-map-syntax-2.f90:!$omp end target
+./test/offloading/fortran/target_update.f90:!$omp target enter data map(to:x, device_id)
+./test/offloading/fortran/target_update.f90:!$omp target
+./test/offloading/fortran/target_update.f90:!$omp end target
+./test/offloading/fortran/target_update.f90:!$omp target
+./test/offloading/fortran/target_update.f90:!$omp end target
+./test/offloading/fortran/target_update.f90:!$omp target update from(x, device_id)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:    !$omp declare target link(/var_common/)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:  !$omp target map(tofrom: var2)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:  !$omp end target
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp end target
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp target map(tofrom: copy)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp end target
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp target map(tofrom: /var_common/)
+./test/offloading/fortran/target-map-declare-target-link-common-block.f90:!$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-alloca-array.f90:!$omp target map(tofrom: alloca_dtype%array_j)
+./test/offloading/fortran/target-map-alloca-dtype-alloca-array.f90:!$omp end target
+./test/offloading/fortran/target-map-alloca-dtype-array-of-dtype.f90:!$omp target map(tofrom: dtyped%array_dtype)
+./test/offloading/fortran/target-map-alloca-dtype-array-of-dtype.f90:!$omp end target
+./test/Inputs/basic_array.f90:    !$omp declare target
