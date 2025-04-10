@@ -23,8 +23,8 @@
 
 struct Key {
   template <typename T>
-  Key(const T&) {}
-  bool operator<(const Key&) const { return false; }
+  TEST_CONSTEXPR_CXX26 Key(const T&) {}
+  TEST_CONSTEXPR_CXX26 bool operator<(const Key&) const { return false; }
 };
 
 TEST_CONSTEXPR_CXX26 bool test() {
