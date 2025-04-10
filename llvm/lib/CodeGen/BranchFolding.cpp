@@ -147,6 +147,13 @@ PreservedAnalyses BranchFolderPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses();
 }
 
+void BranchFolderPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  OS << MapClassName2PassName(name());
+  if (EnableTailMerge)
+    OS << "<enable-tail-merge>";
+}
+
 bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
