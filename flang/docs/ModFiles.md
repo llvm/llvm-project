@@ -14,8 +14,8 @@ local:
 ---
 ```
 
-Module files hold information from a module that is necessary to compile
-program units in other source files that depend on that module.
+Module files hold information from a module (or submodule) that is
+necessary to compile program units in other source files that depend on that module.
 Program units in the same source file as the module do not read
 module files, as this compiler parses entire source files and processes
 the program units it contains in dependency order.
@@ -25,6 +25,13 @@ the program units it contains in dependency order.
 Module files are named according to the module's name, suffixed with `.mod`.
 This is consistent with other compilers and expected by makefiles and
 other build systems.
+
+Module files for submodules are named with their ancestor module's name
+as a prefix, separated by a hyphen.
+E.g., `module-submod.mod` is generated for submodule `submod' of module
+`module`.
+Some other compilers use a distinct filename suffix for submodules,
+but this one doesn't.
 
 The disadvantage of using the same name as other compilers is that it is not
 clear which compiler created a `.mod` file and files from multiple compilers
@@ -39,17 +46,6 @@ Module files are Fortran free form source code.
 and obtain a matching `foo.mod` file.)
 They include the declarations of all visible locally defined entities along
 with the private entities on which thef depend.
-
-Declarations of objects, interfaces, types, and other entities are
-regenerated from the compiler's symbol table.
-So entity declarations that spanned multiple statements in the source
-program are effectivel collapsed into a single *type-declaration-statement*.
-Constant expressions that appear in initializers, bounds, and other sites
-appear in the module file in as their folded values.
-Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
-of names are also included in the module file.
-
-Executable statements are omitted.
 
 ### Header
 
@@ -67,11 +63,25 @@ The header comments do not contain timestamps or original source file paths.
 
 ### Body
 
-The body comprises  minimal Fortran source for the required declarations.
-The order generally matches the order they appeared in the original
+The body comprises minimal Fortran source for the required declarations.
+Their order generally matches the order they appeared in the original
 source code for the module.
 All types are explicit, and all non-character literal constants are
 marked with explicit kind values.
+
+Declarations of objects, interfaces, types, and other entities are
+regenerated from the compiler's symbol table.
+So entity declarations that spanned multiple statements in the source
+program are effectivel collapsed into a single *type-declaration-statement*.
+Constant expressions that appear in initializers, bounds, and other sites
+appear in the module file in as their folded values.
+Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
+of names are also included in the module file.
+
+Executable statements are omitted.
+If we ever want to do Fortran-level inline expansion of procedures
+in the future,
+we will have to "unparse" the executable parts of their definitions.
 
 #### Symbols included
 
@@ -84,10 +94,11 @@ In addition, some private symbols are needed:
 
 #### USE association
 
-A module that contains `USE` statements needs them represented in the
-`.mod` file.
-Each use-associated symbol will be written as a separate *use-only* statement,
-possibly with renaming.
+Entities that have been included in a module by means of USE association
+are represented in the module file with `USE` statements.
+Name aliases are sometimes necessary when an entity from another
+module is needed for a declaration and conflicts with another
+entity of the same name.
 
 ## Reading and writing module files
 
