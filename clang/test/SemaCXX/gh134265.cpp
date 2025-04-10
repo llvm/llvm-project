@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -verify=expected -fsyntax-only
-// RUN: %clang_cc1 %s -verify=expected -fsyntax-only -std=c++20
+// RUN: %clang_cc1 %s -verify=expected -fsyntax-only -triple=x86_64-unknown-linux-gnu
+// RUN: %clang_cc1 %s -verify=expected -fsyntax-only -triple=x86_64-unknown-linux-gnu -std=c++20
 // RUN: %clang_cc1 %s -verify=expected,ms -fms-extensions -fms-compatibility -triple=x86_64-pc-windows-msvc -DMS
 
 struct Foo {
