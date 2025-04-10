@@ -583,42 +583,12 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                      m_objfile.GetSectionList());
   range.SetByteSize(range_len);
 
-  addr_t lsda_data_file_address = LLDB_INVALID_ADDRESS;
+  // Skip the LSDA, if present.
+  if (cie->augmentation[0] == 'z')
+    offset += (uint32_t)m_cfi_data.GetULEB128(&offset);
 
-  if (cie->augmentation[0] == 'z') {
-    uint32_t aug_data_len = (uint32_t)m_cfi_data.GetULEB128(&offset);
-    if (aug_data_len != 0 && cie->lsda_addr_encoding != DW_EH_PE_omit) {
-      lldb::offset_t saved_offset = offset;
-      lsda_data_file_address =
-          GetGNUEHPointer(m_cfi_data, &offset, cie->lsda_addr_encoding,
-                          pc_rel_addr, text_addr, data_addr);
-      if (offset - saved_offset != aug_data_len) {
-        // There is more in the augmentation region than we know how to process;
-        // don't read anything.
-        lsda_data_file_address = LLDB_INVALID_ADDRESS;
-      }
-      offset = saved_offset;
-    }
-    offset += aug_data_len;
-  }
   unwind_plan.SetUnwindPlanForSignalTrap(
     strchr(cie->augmentation, 'S') ? eLazyBoolYes : eLazyBoolNo);
-
-  Address lsda_data;
-  Address personality_function_ptr;
-
-  if (lsda_data_file_address != LLDB_INVALID_ADDRESS &&
-      cie->personality_loc != LLDB_INVALID_ADDRESS) {
-    m_objfile.GetModule()->ResolveFileAddress(lsda_data_file_address,
-                                              lsda_data);
-    m_objfile.GetModule()->ResolveFileAddress(cie->personality_loc,
-                                              personality_function_ptr);
-  }
-
-  if (lsda_data.IsValid() && personality_function_ptr.IsValid()) {
-    unwind_plan.SetLSDAAddress(lsda_data);
-    unwind_plan.SetPersonalityFunctionPtr(personality_function_ptr);
-  }
 
   uint32_t code_align = cie->code_align;
   int32_t data_align = cie->data_align;
