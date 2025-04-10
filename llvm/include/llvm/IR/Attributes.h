@@ -1162,6 +1162,13 @@ public:
     return getRawIntAttr(Attribute::DereferenceableOrNull).value_or(0);
   }
 
+  /// Retrieve the bitmask for nofpclass, if the nofpclass attribute exists
+  /// (fcNone is returned otherwise).
+  FPClassTest getNoFPClass() const {
+    std::optional<uint64_t> Raw = getRawIntAttr(Attribute::NoFPClass);
+    return static_cast<FPClassTest>(Raw.value_or(0));
+  }
+
   /// Retrieve type for the given type attribute.
   Type *getTypeAttr(Attribute::AttrKind Kind) const;
 
