@@ -531,7 +531,7 @@ void LoopVersioningLICM::setNoAliasToLoop(Loop *VerLoop) {
       // We can only add noalias to pointers that we've inserted checks for
       Value *V = getLoadStorePointerOperand(&Inst);
       if (!V || !any_of(Pointers, [&](auto &P) { return P.PointerValue == V; }))
-	continue;
+        continue;
       // Set no-alias for current instruction.
       Inst.setMetadata(
           LLVMContext::MD_noalias,
