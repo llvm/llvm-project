@@ -6658,9 +6658,12 @@ void Verifier::visit(DbgVariableRecord &DVR) {
           "invalid #dbg record address/value", &DVR, MD);
   if (auto *VAM = dyn_cast<ValueAsMetadata>(MD)) {
     visitValueAsMetadata(*VAM, F);
-    if (DVR.isDbgDeclare())
-      CheckDI(VAM->getValue()->getType()->isPointerTy(),
-              "location of #dbg_declare must be a pointer", &DVR, MD);
+    if (DVR.isDbgDeclare()) {
+      // Allow integers here to support inttoptr salvage.
+      Type *Ty = VAM->getValue()->getType();
+      CheckDI(Ty->isPointerTy() || Ty->isIntegerTy(),
+              "location of #dbg_declare must be a pointer or int", &DVR, MD);
+    }
   } else if (auto *AL = dyn_cast<DIArgList>(MD)) {
     visitDIArgList(*AL, F);
   }
