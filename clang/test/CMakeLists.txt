@@ -86,6 +86,7 @@ list(APPEND CLANG_TEST_DEPS
 
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
+    cir-link
     cir-opt
     cir-translate
     mlir-translate
