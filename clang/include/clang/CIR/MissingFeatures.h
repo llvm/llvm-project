@@ -35,6 +35,7 @@ struct MissingFeatures {
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
+  static bool opGlobalWeakRef() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -136,6 +137,10 @@ struct MissingFeatures {
   static bool objCGC() { return false; }
   static bool weakRefReference() { return false; }
   static bool hip() { return false; }
+  static bool setObjCGCLValueClass() { return false; }
+  static bool mangledNames() { return false; }
+  static bool setDLLStorageClass() { return false; }
+  static bool openMP() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
