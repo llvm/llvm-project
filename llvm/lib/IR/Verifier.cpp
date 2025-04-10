@@ -2629,9 +2629,7 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
 
 /// Verify that statepoint intrinsic is well formed.
 void Verifier::verifyStatepoint(const CallBase &Call) {
-  assert(Call.getCalledFunction() &&
-         Call.getCalledFunction()->getIntrinsicID() ==
-             Intrinsic::experimental_gc_statepoint);
+  assert(Call.getIntrinsicID() == Intrinsic::experimental_gc_statepoint);
 
   Check(!Call.doesNotAccessMemory() && !Call.onlyReadsMemory() &&
             !Call.onlyAccessesArgMemory(),
@@ -3635,8 +3633,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   }
 
   if (Attrs.hasFnAttr(Attribute::Preallocated)) {
-    Check(Call.getCalledFunction()->getIntrinsicID() ==
-              Intrinsic::call_preallocated_arg,
+    Check(Call.getIntrinsicID() == Intrinsic::call_preallocated_arg,
           "preallocated as a call site attribute can only be on "
           "llvm.call.preallocated.arg");
   }
@@ -3734,9 +3731,7 @@ void Verifier::visitCallBase(CallBase &Call) {
 
       // Statepoint intrinsic is vararg but the wrapped function may be not.
       // Allow sret here and check the wrapped function in verifyStatepoint.
-      if (!Call.getCalledFunction() ||
-          Call.getCalledFunction()->getIntrinsicID() !=
-              Intrinsic::experimental_gc_statepoint)
+      if (Call.getIntrinsicID() != Intrinsic::experimental_gc_statepoint)
         Check(!ArgAttrs.hasAttribute(Attribute::StructRet),
               "Attribute 'sret' cannot be used for vararg call arguments!",
               Call);
@@ -3765,9 +3760,8 @@ void Verifier::visitCallBase(CallBase &Call) {
           "Return type cannot be x86_amx for indirect call!");
   }
 
-  if (Function *F = Call.getCalledFunction())
-    if (Intrinsic::ID ID = (Intrinsic::ID)F->getIntrinsicID())
-      visitIntrinsicCall(ID, Call);
+  if (Intrinsic::ID ID = Call.getIntrinsicID())
+    visitIntrinsicCall(ID, Call);
 
   // Verify that a callsite has at most one "deopt", at most one "funclet", at
   // most one "gc-transition", at most one "cfguardtarget", at most one
@@ -3980,7 +3974,7 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   // - The caller and callee prototypes must match.  Pointer types of
   //   parameters or return types may differ in pointee type, but not
   //   address space.
-  if (!CI.getCalledFunction() || !CI.getCalledFunction()->isIntrinsic()) {
+  if (!CI.getIntrinsicID()) {
     Check(CallerTy->getNumParams() == CalleeTy->getNumParams(),
           "cannot guarantee tail call due to mismatched parameter counts", &CI);
     for (unsigned I = 0, E = CallerTy->getNumParams(); I != E; ++I) {
@@ -5647,8 +5641,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto *UseCall = dyn_cast<CallBase>(U);
       Check(UseCall != nullptr,
             "Uses of llvm.call.preallocated.setup must be calls");
-      const Function *Fn = UseCall->getCalledFunction();
-      if (Fn && Fn->getIntrinsicID() == Intrinsic::call_preallocated_arg) {
+      Intrinsic::ID IID = UseCall->getIntrinsicID();
+      if (IID == Intrinsic::call_preallocated_arg) {
         auto *AllocArgIndex = dyn_cast<ConstantInt>(UseCall->getArgOperand(1));
         Check(AllocArgIndex != nullptr,
               "llvm.call.preallocated.alloc arg index must be a constant");
@@ -5658,8 +5652,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
               "llvm.call.preallocated.alloc arg index must be between 0 and "
               "corresponding "
               "llvm.call.preallocated.setup's argument count");
-      } else if (Fn && Fn->getIntrinsicID() ==
-                           Intrinsic::call_preallocated_teardown) {
+      } else if (IID == Intrinsic::call_preallocated_teardown) {
         // nothing to do
       } else {
         Check(!FoundCall, "Can have at most one call corresponding to a "
@@ -5700,8 +5693,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::call_preallocated_arg: {
     auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
-    Check(Token && Token->getCalledFunction()->getIntrinsicID() ==
-                       Intrinsic::call_preallocated_setup,
+    Check(Token &&
+              Token->getIntrinsicID() == Intrinsic::call_preallocated_setup,
           "llvm.call.preallocated.arg token argument must be a "
           "llvm.call.preallocated.setup");
     Check(Call.hasFnAttr(Attribute::Preallocated),
@@ -5711,8 +5704,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   }
   case Intrinsic::call_preallocated_teardown: {
     auto *Token = dyn_cast<CallBase>(Call.getArgOperand(0));
-    Check(Token && Token->getCalledFunction()->getIntrinsicID() ==
-                       Intrinsic::call_preallocated_setup,
+    Check(Token &&
+              Token->getIntrinsicID() == Intrinsic::call_preallocated_setup,
           "llvm.call.preallocated.teardown token argument must be a "
           "llvm.call.preallocated.setup");
     break;
@@ -5804,11 +5797,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
 
     // Are we tied to a statepoint properly?
     const auto *StatepointCall = dyn_cast<CallBase>(Statepoint);
-    const Function *StatepointFn =
-        StatepointCall ? StatepointCall->getCalledFunction() : nullptr;
-    Check(StatepointFn && StatepointFn->isDeclaration() &&
-              StatepointFn->getIntrinsicID() ==
-                  Intrinsic::experimental_gc_statepoint,
+    Check(StatepointCall && StatepointCall->getIntrinsicID() ==
+                                Intrinsic::experimental_gc_statepoint,
           "gc.result operand #1 must be from a statepoint", Call,
           Call.getArgOperand(0));
 

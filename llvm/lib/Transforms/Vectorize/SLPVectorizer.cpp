@@ -5491,12 +5491,16 @@ static bool isMaskedLoadCompress(
   const unsigned Sz = VL.size();
   auto *VecTy = getWidenedType(ScalarTy, Sz);
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  SmallVector<int> Mask;
+  if (!Order.empty())
+    inversePermutation(Order, Mask);
   // Check external uses.
   for (const auto [I, V] : enumerate(VL)) {
     if (AreAllUsersVectorized(V))
       continue;
     InstructionCost ExtractCost =
-        TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind, I);
+        TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                               Mask.empty() ? I : Mask[I]);
     InstructionCost ScalarCost =
         TTI.getInstructionCost(cast<Instruction>(V), CostKind);
     if (ExtractCost <= ScalarCost)
@@ -5536,8 +5540,11 @@ static bool isMaskedLoadCompress(
   bool IsStrided =
       buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask);
   assert(CompressMask.size() >= 2 && "At least two elements are required");
+  SmallVector<Value *> OrderedPointerOps(PointerOps);
+  if (!Order.empty())
+    reorderScalars(OrderedPointerOps, Mask);
   auto [ScalarGEPCost, VectorGEPCost] =
-      getGEPCosts(TTI, PointerOps, PointerOps.front(),
+      getGEPCosts(TTI, OrderedPointerOps, OrderedPointerOps.front(),
                   Instruction::GetElementPtr, CostKind, ScalarTy, LoadVecTy);
   // The cost of scalar loads.
   InstructionCost ScalarLoadsCost =
@@ -5564,17 +5571,16 @@ static bool isMaskedLoadCompress(
         TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind);
   }
-  SmallVector<int> Mask;
-  if (!Order.empty())
-    inversePermutation(Order, Mask);
   if (IsStrided) {
     // Check for potential segmented(interleaved) loads.
     if (TTI.isLegalInterleavedAccessType(LoadVecTy, CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
-      InstructionCost InterleavedCost = TTI.getInterleavedMemoryOpCost(
-          Instruction::Load, LoadVecTy, CompressMask[1], std::nullopt,
-          CommonAlignment, LI->getPointerAddressSpace(), CostKind, IsMasked);
+      InstructionCost InterleavedCost =
+          VectorGEPCost + TTI.getInterleavedMemoryOpCost(
+                              Instruction::Load, LoadVecTy, CompressMask[1],
+                              std::nullopt, CommonAlignment,
+                              LI->getPointerAddressSpace(), CostKind, IsMasked);
       if (!Mask.empty())
         InterleavedCost += ::getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
                                             VecTy, Mask, CostKind);

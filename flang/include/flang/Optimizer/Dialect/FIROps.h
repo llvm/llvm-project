@@ -50,12 +50,6 @@ struct DebuggingResource
   mlir::StringRef getName() final { return "DebuggingResource"; }
 };
 
-/// Model operations which read from/write to volatile memory
-struct VolatileMemoryResource
-    : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {
-  mlir::StringRef getName() final { return "VolatileMemoryResource"; }
-};
-
 class CoordinateIndicesAdaptor;
 using IntOrValue = llvm::PointerUnion<mlir::IntegerAttr, mlir::Value>;
 

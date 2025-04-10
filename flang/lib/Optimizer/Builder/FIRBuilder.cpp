@@ -577,17 +577,6 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
   return createConvert(loc, toTy, val);
 }
 
-mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
-                                                             mlir::Type toTy,
-                                                             mlir::Value val) {
-  if (fir::isa_volatile_type(val.getType()) != fir::isa_volatile_type(toTy)) {
-    mlir::Type volatileAdjustedType = fir::updateTypeWithVolatility(
-        val.getType(), fir::isa_volatile_type(toTy));
-    val = create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
-  }
-  return createConvert(loc, toTy, val);
-}
-
 mlir::Value fir::factory::createConvert(mlir::OpBuilder &builder,
                                         mlir::Location loc, mlir::Type toTy,
                                         mlir::Value val) {
@@ -750,20 +739,19 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         << itemAddr.getType();
     llvm_unreachable("not a memory reference type");
   }
-  const bool isVolatile = fir::isa_volatile_type(itemAddr.getType());
   mlir::Type boxTy;
   mlir::Value tdesc;
   // Avoid to wrap a box/class with box/class.
   if (mlir::isa<fir::BaseBoxType>(elementType)) {
     boxTy = elementType;
   } else {
-    boxTy = fir::BoxType::get(elementType, isVolatile);
+    boxTy = fir::BoxType::get(elementType);
     if (isPolymorphic) {
       elementType = fir::updateTypeForUnlimitedPolymorphic(elementType);
       if (isAssumedType)
-        boxTy = fir::BoxType::get(elementType, isVolatile);
+        boxTy = fir::BoxType::get(elementType);
       else
-        boxTy = fir::ClassType::get(elementType, isVolatile);
+        boxTy = fir::ClassType::get(elementType);
     }
   }
 

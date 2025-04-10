@@ -246,7 +246,7 @@ llvm.func @matrix_transpose_intr_wrong_type(%matrix : f32) -> vector<48xf32> {
 // -----
 
 llvm.func @active_lane_intr_wrong_type(%base : i64, %n : vector<7xi64>) -> vector<7xi1> {
-  // expected-error @below{{invalid kind of type specified}}
+  // expected-error @below{{invalid kind of type specified: expected builtin.integer, but found 'vector<7xi64>'}}
   %0 = llvm.intr.get.active.lane.mask %base, %n : i64, vector<7xi64> to vector<7xi1>
   llvm.return %0 : vector<7xi1>
 }

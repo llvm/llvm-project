@@ -241,7 +241,8 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  BranchInst::Create(Dest, Src);
+  auto *BI = BranchInst::Create(Dest, Src);
+  BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
