@@ -31,7 +31,7 @@ class RetainPtrCtorAdoptChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
   BugType Bug;
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable llvm::DenseSet<const ValueDecl *> CreateOrCopyOutArguments;
   mutable RetainTypeChecker RTC;
@@ -111,6 +111,7 @@ public:
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -169,6 +170,7 @@ public:
 
   void visitConstructExpr(const CXXConstructExpr *CE,
                           const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -356,6 +358,7 @@ public:
       Os << " " << condition;
     Os << ".";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -376,6 +379,7 @@ public:
       Os << " " << condition;
     Os << ".";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
