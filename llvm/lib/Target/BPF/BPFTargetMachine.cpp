@@ -110,7 +110,8 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new BPFPassConfig(*this, PM);
 }
 
-static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
+static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params,
+                                                          const PassBuilder &) {
   return PassBuilder::parseSinglePassOption(Params, "allow-partial",
                                             "BPFPreserveStaticOffsetPass");
 }

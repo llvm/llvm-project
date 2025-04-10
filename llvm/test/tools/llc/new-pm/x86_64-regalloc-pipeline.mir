@@ -1,6 +1,23 @@
 # REQUIRES x86_64-registered-target
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=fast -print-pipeline-passes %s -o - 2>&1 | FileCheck %s
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=greedy -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY
+# Test default pipeline
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -print-pipeline-passes %s -o - 2>&1 | FileCheck %s
 
-# CHECK: regallocfast
+# Test the -regalloc-npm option
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm=regallocfast -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-FAST
+
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='greedy<tile-reg>' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-GREEDY-FILTER
+
+# This test attempts to bypass the tile register filter pass, inserts the default greedy<all> pass and then 
+# attempts to insert an extraneous pass.
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='default,default,basic' 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -O3 -regalloc-npm='invalidpass' -print-pipeline-passes %s -o - 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
+
+# CHECK: greedy<tile-reg>
+# CHECK: greedy<all>
+
+# CHECK-FAST: regallocfast
 # CHECK-GREEDY: greedy<all>
+# CHECK-GREEDY-FILTER: greedy<tile-reg>
+# CHECK-ERROR: Extra passes in regalloc pipeline: basic
+# CHECK-INVALID: Unknown register allocator pass: invalidpass

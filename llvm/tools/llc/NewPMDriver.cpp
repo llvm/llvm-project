@@ -48,10 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<RegAllocType, false, RegAllocTypeParser>
+static cl::opt<std::string>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init(RegAllocType::Unset));
+             cl::Hidden);
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -105,7 +105,7 @@ int llvm::compileModuleWithNewPM(
   CGPassBuilderOption Opt = getCGPassBuilderOption();
   Opt.DisableVerify = VK != VerifierKind::InputOutput;
   Opt.DebugPM = DebugPM;
-  Opt.RegAlloc = RegAlloc;
+  Opt.RegAllocPipeline = RegAlloc;
 
   MachineModuleInfo MMI(Target.get());
 
@@ -155,7 +155,7 @@ int llvm::compileModuleWithNewPM(
 
   } else {
     ExitOnErr(Target->buildCodeGenPipeline(
-        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
+        MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC, PB));
   }
 
   // If user only wants to print the pipeline, print it before parsing the MIR.

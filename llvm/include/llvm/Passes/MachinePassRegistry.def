@@ -222,8 +222,8 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "branch-folder", "BranchFolderPass",
     [](bool EnableTailMerge) { return BranchFolderPass(EnableTailMerge); },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "enable-tail-merge",
+    [](StringRef Params, const PassBuilder &) {
+      return PassBuilder::parseSinglePassOption(Params, "enable-tail-merge",
                                    "BranchFolderPass");
     },
     "enable-tail-merge")
@@ -233,8 +233,8 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
     [](bool ShouldEmitDebugEntryValues) {
       return LiveDebugValuesPass(ShouldEmitDebugEntryValues);
     },
-    [](StringRef Params) {
-      return parseSinglePassOption(Params, "emit-debug-entry-values",
+    [](StringRef Params, const PassBuilder &) {
+      return PassBuilder::parseSinglePassOption(Params, "emit-debug-entry-values",
                                    "LiveDebugValuesPass");
     },
     "emit-debug-entry-values")
@@ -249,8 +249,8 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "regallocfast", "RegAllocFastPass",
     [](RegAllocFastPass::Options Opts) { return RegAllocFastPass(Opts); },
-    [PB = this](StringRef Params) {
-      return parseRegAllocFastPassOptions(*PB, Params);
+    [](StringRef Params, const PassBuilder &PB) {
+      return parseRegAllocFastPassOptions(PB, Params);
     },
     "filter=reg-filter;no-clear-vregs")
 
@@ -258,8 +258,8 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "greedy", "RAGreedyPass",
     [](RAGreedyPass::Options Opts) { return RAGreedyPass(Opts); },
-    [PB = this](StringRef Params) {
-      return parseRegAllocGreedyFilterFunc(*PB, Params);
+    [](StringRef Params, const PassBuilder &PB) {
+      return parseRegAllocGreedyFilterFunc(PB, Params);
     }, "reg-filter"
 )
 

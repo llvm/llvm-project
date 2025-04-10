@@ -773,7 +773,7 @@ void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
 }
 
 static Expected<ScanOptions>
-parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
+parseAMDGPUAtomicOptimizerStrategy(StringRef Params, const PassBuilder &) {
   if (Params.empty())
     return ScanOptions::Iterative;
   Params.consume_front("strategy=");
@@ -787,8 +787,8 @@ parseAMDGPUAtomicOptimizerStrategy(StringRef Params) {
   return make_error<StringError>("invalid parameter", inconvertibleErrorCode());
 }
 
-Expected<AMDGPUAttributorOptions>
-parseAMDGPUAttributorPassOptions(StringRef Params) {
+static Expected<AMDGPUAttributorOptions>
+parseAMDGPUAttributorPassOptions(StringRef Params, const PassBuilder &PB) {
   AMDGPUAttributorOptions Result;
   while (!Params.empty()) {
     StringRef ParamName;
@@ -1076,8 +1076,8 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
 Error GCNTargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
     CodeGenFileType FileType, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC) {
-  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
+    PassInstrumentationCallbacks *PIC, PassBuilder &PB) {
+  AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC, PB);
   return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
 }
 
@@ -1963,8 +1963,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
 AMDGPUCodeGenPassBuilder::AMDGPUCodeGenPassBuilder(
     GCNTargetMachine &TM, const CGPassBuilderOption &Opts,
-    PassInstrumentationCallbacks *PIC)
-    : CodeGenPassBuilder(TM, Opts, PIC) {
+    PassInstrumentationCallbacks *PIC, PassBuilder &PB)
+    : CodeGenPassBuilder(TM, Opts, PIC, PB) {
   Opt.MISchedPostRA = true;
   Opt.RequiresCodeGenSCCOrder = true;
   // Exceptions and StackMaps are not supported, so these passes will never do
@@ -2251,6 +2251,44 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   }
 
   addPass(BranchRelaxationPass());
+}
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
+    AddMachinePass &addPass) const {
+  addPass(GCNPreRALongBranchRegPass());
+
+  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateSGPRs, "sgpr"}));
+
+  // Commit allocated register changes. This is mostly necessary because too
+  // many things rely on the use lists of the physical registers, such as the
+  // verifier. This is only necessary with allocators which use LiveIntervals,
+  // since FastRegAlloc does the replacements itself.
+  // TODO: addPass(VirtRegRewriterPass(false));
+
+  // At this point, the sgpr-regalloc has been done and it is good to have the
+  // stack slot coloring to try to optimize the SGPR spill stack indices before
+  // attempting the custom SGPR spill lowering.
+  addPass(StackSlotColoringPass());
+
+  // Equivalent of PEI for SGPRs.
+  addPass(SILowerSGPRSpillsPass());
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addPass(SIPreAllocateWWMRegsPass());
+
+  // For allocating other wwm register operands.
+  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateWWMRegs, "wwm"}));
+  addPass(SILowerWWMCopiesPass());
+  addPass(VirtRegRewriterPass(false));
+  addPass(AMDGPUReserveWWMRegsPass());
+
+  // For allocating per-thread VGPRs.
+  addRegAllocPassOrOpt(addPass, RAGreedyPass({onlyAllocateVGPRs, "vgpr"}));
+
+  // TODO: addPreRewrite();
+  addPass(VirtRegRewriterPass(false));
+
+  // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
+  return Error::success();
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,
