@@ -91,6 +91,23 @@ add_unittest_framework_library(
     ${libc_death_test_srcs}
   HDRS
     ExecuteFunction.h
+  DEPENDS
+    libc.hdr.sys_epoll_macros
+    libc.hdr.sys_wait_macros
+    libc.src.__support.CPP.new
+    libc.src.__support.common
+    libc.src.__support.libc_assert
+    libc.src.signal.kill
+    libc.src.stdio.fflush
+    libc.src.stdlib.exit
+    libc.src.string.strsignal
+    libc.src.sys.epoll.epoll_create1
+    libc.src.sys.epoll.epoll_ctl
+    libc.src.sys.epoll.epoll_wait
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.pipe
 )
 
 add_unittest_framework_library(
