@@ -626,12 +626,12 @@ struct SourceMgrDiagnosticVerifierHandlerImpl;
 /// corresponding line of the source file.
 class SourceMgrDiagnosticVerifierHandler : public SourceMgrDiagnosticHandler {
 public:
-  SourceMgrDiagnosticVerifierHandler(
-      llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out,
-      bool verifyOnlyExpectedDiagnostics = false);
-  SourceMgrDiagnosticVerifierHandler(
-      llvm::SourceMgr &srcMgr, MLIRContext *ctx,
-      bool verifyOnlyExpectedDiagnostics = false);
+  enum class Level { None = 0, All, OnlyExpected };
+  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
+                                     raw_ostream &out,
+                                     Level level = Level::All);
+  SourceMgrDiagnosticVerifierHandler(llvm::SourceMgr &srcMgr, MLIRContext *ctx,
+                                     Level level = Level::All);
   ~SourceMgrDiagnosticVerifierHandler();
 
   /// Returns the status of the handler and verifies that all expected
@@ -648,9 +648,7 @@ private:
 
   std::unique_ptr<detail::SourceMgrDiagnosticVerifierHandlerImpl> impl;
 
-  /// Set whether to check that emitted diagnostics match *only specified*
-  /// `expected-*` lines on the corresponding line.
-  bool verifyOnlyExpectedDiagnostics = false;
+  Level level = Level::All;
 };
 
 //===----------------------------------------------------------------------===//

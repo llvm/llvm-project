@@ -38,17 +38,20 @@ struct MlirTransformOptCLOptions {
       cl::desc("Allow operations coming from an unregistered dialect"),
       cl::init(false)};
 
-  cl::opt<bool> verifyDiagnostics{
-      "verify-diagnostics",
-      cl::desc("Check that emitted diagnostics match expected-* lines "
-               "on the corresponding line"),
-      cl::init(false)};
-  cl::opt<bool> verifyOnlyExpectedDiagnostics{
-      "verify-only-expected-diagnostics",
-      cl::desc("Check that emitted diagnostics match only specified expected-* "
-               "lines "
-               "on the corresponding line"),
-      cl::init(false)};
+  cl::opt<mlir::SourceMgrDiagnosticVerifierHandler::Level> verifyDiagnostics{
+      "verify-diagnostics", llvm::cl::ValueOptional,
+      cl::desc("Check that emitted diagnostics match "
+               "expected-* lines on the corresponding line"),
+      cl::values(
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "all",
+              "Check all diagnostics (expected, unexpected, near-misses)"),
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "",
+              "Check all diagnostics (expected, unexpected, near-misses)"),
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected,
+              "only-expected", "Check only expected diagnostics"))};
 
   cl::opt<std::string> payloadFilename{cl::Positional, cl::desc("<input file>"),
                                        cl::init("-")};
@@ -108,14 +111,17 @@ public:
 
   /// Constructs the diagnostic handler of the specified kind of the given
   /// source manager and context.
-  DiagnosticHandlerWrapper(Kind kind, llvm::SourceMgr &mgr,
-                           mlir::MLIRContext *context,
-                           bool verifyOnlyExpectedDiagnostics = false) {
-    if (kind == Kind::EmitDiagnostics)
+  DiagnosticHandlerWrapper(
+      Kind kind, llvm::SourceMgr &mgr, mlir::MLIRContext *context,
+      std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level> level =
+          {}) {
+    if (kind == Kind::EmitDiagnostics) {
       handler = new mlir::SourceMgrDiagnosticHandler(mgr, context);
-    else
-      handler = new mlir::SourceMgrDiagnosticVerifierHandler(
-          mgr, context, verifyOnlyExpectedDiagnostics);
+    } else {
+      assert(level.has_value() && "expected level");
+      handler =
+          new mlir::SourceMgrDiagnosticVerifierHandler(mgr, context, *level);
+    }
   }
 
   /// This object is non-copyable but movable.
@@ -158,10 +164,10 @@ class TransformSourceMgr {
 public:
   /// Constructs the source manager indicating whether diagnostic messages will
   /// be verified later on.
-  explicit TransformSourceMgr(bool verifyDiagnostics,
-                              bool verifyOnlyExpectedDiagnostics)
-      : verifyDiagnostics(verifyDiagnostics),
-        verifyOnlyExpectedDiagnostics(verifyOnlyExpectedDiagnostics) {}
+  explicit TransformSourceMgr(
+      std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level>
+          verifyDiagnostics)
+      : verifyDiagnostics(verifyDiagnostics) {}
 
   /// Deconstructs the source manager. Note that `checkResults` must have been
   /// called on this instance before deconstructing it.
@@ -190,7 +196,7 @@ public:
     if (verifyDiagnostics) {
       diagHandlers.emplace_back(
           DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context,
-          verifyOnlyExpectedDiagnostics);
+          verifyDiagnostics);
     } else {
       diagHandlers.emplace_back(DiagnosticHandlerWrapper::Kind::EmitDiagnostics,
                                 mgr, &context);
@@ -215,10 +221,8 @@ public:
 
 private:
   /// Indicates whether diagnostic message verification is requested.
-  const bool verifyDiagnostics;
-  /// Indicates whether *only specified* diagnostic message verification is
-  /// requested.
-  const bool verifyOnlyExpectedDiagnostics;
+  const std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level>
+      verifyDiagnostics;
 
   /// Indicates that diagnostic message verification has taken place, and the
   /// deconstruction is therefore safe.
@@ -262,8 +266,7 @@ static llvm::LogicalResult processPayloadBuffer(
   context.allowUnregisteredDialects(clOptions->allowUnregisteredDialects);
   mlir::ParserConfig config(&context);
   TransformSourceMgr sourceMgr(
-      /*verifyDiagnostics=*/clOptions->verifyDiagnostics,
-      clOptions->verifyOnlyExpectedDiagnostics);
+      /*verifyDiagnostics=*/clOptions->verifyDiagnostics);
 
   // Parse the input buffer that will be used as transform payload.
   mlir::OwningOpRef<mlir::Operation *> payloadRoot =
