@@ -3486,7 +3486,8 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
   return GV;
 }
 
-llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V) {
+llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V,
+                                             bool &MayReadFromPtrToInt) {
   llvm::Type *TargetTy = IntPtrTy;
 
   if (V->getType() == TargetTy)
@@ -3512,6 +3513,7 @@ llvm::Value *CodeGenFunction::EmitCheckValue(llvm::Value *V) {
     Builder.CreateStore(V, Ptr);
     V = Ptr.getPointer();
   }
+  MayReadFromPtrToInt = true;
   return Builder.CreatePtrToInt(V, TargetTy);
 }
 
@@ -3617,7 +3619,8 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
                                  ArrayRef<llvm::Value *> FnArgs,
                                  SanitizerHandler CheckHandler,
                                  CheckRecoverableKind RecoverKind, bool IsFatal,
-                                 llvm::BasicBlock *ContBB, bool NoMerge) {
+                                 llvm::BasicBlock *ContBB, bool NoMerge,
+                                 bool MayReadFromPtrToInt) {
   assert(IsFatal || RecoverKind != CheckRecoverableKind::Unrecoverable);
   std::optional<ApplyDebugLocation> DL;
   if (!CGF.Builder.getCurrentDebugLocation()) {
@@ -3650,9 +3653,14 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && MayReturn) {
     // __ubsan_handle_dynamic_type_cache_miss reads the vtable, which is also
     // accessible by the current module.
-    if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss)
-      B.addMemoryAttr(llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
-                      llvm::MemoryEffects::inaccessibleMemOnly());
+    if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss) {
+      llvm::MemoryEffects ME =
+          llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
+          llvm::MemoryEffects::inaccessibleMemOnly();
+      if (MayReadFromPtrToInt)
+        ME |= llvm::MemoryEffects::readOnly();
+      B.addMemoryAttr(ME);
+    }
     // If the handler does not return, it must interact with the environment in
     // an observable way.
     B.addAttribute(llvm::Attribute::MustProgress);
@@ -3753,6 +3761,7 @@ void CodeGenFunction::EmitCheck(
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
+  bool MayReadFromPtrToInt = false;
   if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
     Args.reserve(DynamicArgs.size() + 1);
     ArgTypes.reserve(DynamicArgs.size() + 1);
@@ -3772,7 +3781,7 @@ void CodeGenFunction::EmitCheck(
     }
 
     for (size_t i = 0, n = DynamicArgs.size(); i != n; ++i) {
-      Args.push_back(EmitCheckValue(DynamicArgs[i]));
+      Args.push_back(EmitCheckValue(DynamicArgs[i], MayReadFromPtrToInt));
       ArgTypes.push_back(IntPtrTy);
     }
   }
@@ -3784,7 +3793,8 @@ void CodeGenFunction::EmitCheck(
     // Simple case: we need to generate a single handler call, either
     // fatal, or non-fatal.
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind,
-                         (FatalCond != nullptr), Cont, NoMerge);
+                         (FatalCond != nullptr), Cont, NoMerge,
+                         MayReadFromPtrToInt);
   } else {
     // Emit two handler calls: first one for set of unrecoverable checks,
     // another one for recoverable.
@@ -3794,10 +3804,10 @@ void CodeGenFunction::EmitCheck(
     Builder.CreateCondBr(FatalCond, NonFatalHandlerBB, FatalHandlerBB);
     EmitBlock(FatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, true,
-                         NonFatalHandlerBB, NoMerge);
+                         NonFatalHandlerBB, NoMerge, MayReadFromPtrToInt);
     EmitBlock(NonFatalHandlerBB);
     emitCheckHandlerCall(*this, FnType, Args, CheckHandler, RecoverKind, false,
-                         Cont, NoMerge);
+                         Cont, NoMerge, MayReadFromPtrToInt);
   }
 
   EmitBlock(Cont);
