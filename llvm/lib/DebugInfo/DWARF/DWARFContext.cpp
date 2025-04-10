@@ -1730,13 +1730,14 @@ DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
   return Result;
 }
 
-DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
-                                               DILineInfoSpecifier Spec) {
-  DILineInfo Result;
+std::optional<DILineInfo>
+DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
+                                    DILineInfoSpecifier Spec) {
   DWARFCompileUnit *CU = getCompileUnitForCodeAddress(Address.Address);
   if (!CU)
-    return Result;
+    return std::nullopt;
 
+  DILineInfo Result;
   getFunctionNameAndStartLineForAddress(
       CU, Address.Address, Spec.FNKind, Spec.FLIKind, Result.FunctionName,
       Result.StartFileName, Result.StartLine, Result.StartAddress);
@@ -1751,7 +1752,7 @@ DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,
   return Result;
 }
 
-DILineInfo
+std::optional<DILineInfo>
 DWARFContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   DILineInfo Result;
   DWARFCompileUnit *CU = getCompileUnitForDataAddress(Address.Address);

@@ -61,7 +61,7 @@ public:
     // A different pattern will kick in for InsertStridedSlice with matching
     // ranks.
     auto stridedSliceInnerOp = rewriter.create<InsertStridedSliceOp>(
-        loc, op.getSource(), extracted,
+        loc, op.getValueToStore(), extracted,
         getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff),
         getI64SubArray(op.getStrides(), /*dropFront=*/0));
 
@@ -111,7 +111,7 @@ public:
       return failure();
 
     if (srcType == dstType) {
-      rewriter.replaceOp(op, op.getSource());
+      rewriter.replaceOp(op, op.getValueToStore());
       return success();
     }
 
@@ -131,8 +131,8 @@ public:
       SmallVector<int64_t> offsets(nDest, 0);
       for (int64_t i = 0; i < nSrc; ++i)
         offsets[i] = i;
-      Value scaledSource = rewriter.create<ShuffleOp>(loc, op.getSource(),
-                                                      op.getSource(), offsets);
+      Value scaledSource = rewriter.create<ShuffleOp>(
+          loc, op.getValueToStore(), op.getValueToStore(), offsets);
 
       // 2. Create a mask where we take the value from scaledSource of dest
       // depending on the offset.
@@ -156,7 +156,7 @@ public:
          off += stride, ++idx) {
       // 1. extract the proper subvector (or element) from source
       Value extractedSource =
-          rewriter.create<ExtractOp>(loc, op.getSource(), idx);
+          rewriter.create<ExtractOp>(loc, op.getValueToStore(), idx);
       if (isa<VectorType>(extractedSource.getType())) {
         // 2. If we have a vector, extract the proper subvector from destination
         // Otherwise we are at the element level and no need to recurse.

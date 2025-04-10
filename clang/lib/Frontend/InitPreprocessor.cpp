@@ -394,6 +394,10 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
     // HLSL Version
     Builder.defineMacro("__HLSL_VERSION",
                         Twine((unsigned)LangOpts.getHLSLVersion()));
+    Builder.defineMacro("__HLSL_202x",
+                        Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202x));
+    Builder.defineMacro("__HLSL_202y",
+                        Twine((unsigned)LangOptions::HLSLLangStd::HLSL_202y));
 
     if (LangOpts.NativeHalfType)
       Builder.defineMacro("__HLSL_ENABLE_16_BIT", "1");
@@ -1564,9 +1568,7 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   if (InitOpts.UsePredefines) {
     // FIXME: This will create multiple definitions for most of the predefined
     // macros. This is not the right way to handle this.
-    if ((LangOpts.CUDA || LangOpts.OpenMPIsTargetDevice ||
-         LangOpts.SYCLIsDevice) &&
-        PP.getAuxTargetInfo())
+    if ((LangOpts.CUDA || LangOpts.isTargetDevice()) && PP.getAuxTargetInfo())
       InitializePredefinedMacros(*PP.getAuxTargetInfo(), LangOpts, FEOpts,
                                  PP.getPreprocessorOpts(), Builder);
 

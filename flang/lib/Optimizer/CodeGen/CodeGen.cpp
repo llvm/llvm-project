@@ -47,6 +47,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/AddComdats.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -835,10 +836,20 @@ struct ConvertOpConversion : public fir::FIROpConversion<fir::ConvertOp> {
         return mlir::success();
       }
       if (mlir::isa<mlir::IntegerType>(toTy)) {
-        if (toTy.isUnsignedInteger())
-          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToUIOp>(convert, toTy, op0);
-        else
-          rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(convert, toTy, op0);
+        // NOTE: We are checking the fir type here because toTy is an LLVM type
+        // which is signless, and we need to use the intrinsic that matches the
+        // sign of the output in fir.
+        if (toFirTy.isUnsignedInteger()) {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptoui.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
+        } else {
+          auto intrinsicName =
+              mlir::StringAttr::get(convert.getContext(), "llvm.fptosi.sat");
+          rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+              convert, toTy, intrinsicName, op0);
+        }
         return mlir::success();
       }
     } else if (mlir::isa<mlir::IntegerType>(fromTy)) {
@@ -3135,6 +3146,11 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
         }
       }
     }
+
+    if (global.getDataAttr() &&
+        *global.getDataAttr() == cuf::DataAttribute::Shared)
+      g.setAddrSpace(mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+
     rewriter.eraseOp(global);
     return mlir::success();
   }

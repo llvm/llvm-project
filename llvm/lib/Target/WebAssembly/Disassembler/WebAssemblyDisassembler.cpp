@@ -14,6 +14,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -238,7 +239,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         auto *WasmSym = cast<MCSymbolWasm>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
-            WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, getContext());
+            WasmSym, WebAssembly::S_TYPEINDEX, getContext());
         MI.addOperand(MCOperand::createExpr(Expr));
       }
       break;

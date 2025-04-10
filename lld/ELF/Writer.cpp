@@ -2181,17 +2181,13 @@ template <class ELFT> void Writer<ELFT>::checkExecuteOnly() {
 // Check which input sections of RX output sections don't have the
 // SHF_AARCH64_PURECODE or SHF_ARM_PURECODE flag set.
 template <class ELFT> void Writer<ELFT>::checkExecuteOnlyReport() {
-  if (ctx.arg.zExecuteOnlyReport == "none")
+  if (ctx.arg.zExecuteOnlyReport == ReportPolicy::None)
     return;
 
   auto reportUnless = [&](bool cond) -> ELFSyncStream {
     if (cond)
       return {ctx, DiagLevel::None};
-    if (ctx.arg.zExecuteOnlyReport == "error")
-      return {ctx, DiagLevel::Err};
-    if (ctx.arg.zExecuteOnlyReport == "warning")
-      return {ctx, DiagLevel::Warn};
-    return {ctx, DiagLevel::None};
+    return {ctx, toDiagLevel(ctx.arg.zExecuteOnlyReport)};
   };
 
   uint64_t purecodeFlag =
@@ -2383,10 +2379,16 @@ Writer<ELFT>::createPhdrs(Partition &part) {
     // so when hasSectionsCommand, since we cannot introduce the extra alignment
     // needed to create a new LOAD)
     uint64_t newFlags = computeFlags(ctx, sec->getPhdrFlags());
-    // When --no-rosegment is specified, RO and RX sections are compatible.
-    uint32_t incompatible = flags ^ newFlags;
-    if (ctx.arg.singleRoRx && !(newFlags & PF_W))
-      incompatible &= ~PF_X;
+    uint64_t incompatible = flags ^ newFlags;
+    if (!(newFlags & PF_W)) {
+      // When --no-rosegment is specified, RO and RX sections are compatible.
+      if (ctx.arg.singleRoRx)
+        incompatible &= ~PF_X;
+      // When --no-xosegment is specified (the default), XO and RX sections are
+      // compatible.
+      if (ctx.arg.singleXoRx)
+        incompatible &= ~PF_R;
+    }
     if (incompatible)
       load = nullptr;
 

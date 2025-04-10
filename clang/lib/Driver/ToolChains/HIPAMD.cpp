@@ -292,11 +292,15 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
     checkTargetID(*DAL);
   }
 
+  if (!Args.hasArg(options::OPT_flto_partitions_EQ))
+    DAL->AddJoinedArg(nullptr, Opts.getOption(options::OPT_flto_partitions_EQ),
+                      "8");
+
   return DAL;
 }
 
 Tool *HIPAMDToolChain::buildLinker() const {
-  assert(getTriple().getArch() == llvm::Triple::amdgcn ||
+  assert(getTriple().isAMDGCN() ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }
@@ -387,9 +391,6 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     }
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
-
-    // Add the HIP specific bitcode library.
-    BCLibs.emplace_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
     for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))

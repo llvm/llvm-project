@@ -284,6 +284,15 @@ def EmptyTensorToAllocTensorPass : Pass<"empty-tensor-to-alloc-tensor"> {
   let dependentDialects = ["tensor::TensorDialect"];
 }
 
+def layoutMapClValues {
+  string values = [{
+  ::llvm::cl::values(
+    clEnumValN(LayoutMapOption::InferLayoutMap, "infer-layout-map", ""),
+    clEnumValN(LayoutMapOption::IdentityLayoutMap, "identity-layout-map", ""),
+    clEnumValN(LayoutMapOption::FullyDynamicLayoutMap, "fully-dynamic-layout-map", "")
+    )}];
+}
+
 def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
@@ -424,9 +433,10 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
                   "Skip analysis of functions with these symbol names."
                   "Set copyBeforeWrite to true when bufferizing them.">,
        Option<"functionBoundaryTypeConversion",
-              "function-boundary-type-conversion", "std::string",
-              /*default=*/"\"infer-layout-map\"",
-              "Controls layout maps when bufferizing function signatures.">,
+              "function-boundary-type-conversion", "LayoutMapOption",
+              /*default=*/"LayoutMapOption::InferLayoutMap",
+              "Controls layout maps when bufferizing function signatures.",
+              layoutMapClValues.values>,
        Option<"mustInferMemorySpace", "must-infer-memory-space", "bool",
               /*default=*/"false",
               "The memory space of an memref types must always be inferred. If "
@@ -444,9 +454,10 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
               /*default=*/"false",
               "Test only: Annotate IR with RaW conflicts. Requires "
               "test-analysis-only.">,
-       Option<"unknownTypeConversion", "unknown-type-conversion", "std::string",
-              /*default=*/"\"fully-dynamic-layout-map\"",
-              "Controls layout maps for non-inferrable memref types.">,
+       Option<"unknownTypeConversion", "unknown-type-conversion", "LayoutMapOption",
+              /*default=*/"LayoutMapOption::FullyDynamicLayoutMap",
+              "Controls layout maps for non-inferrable memref types.",
+              layoutMapClValues.values>,
        Option<"bufferAlignment", "buffer-alignment", "uint64_t",
               /*default=*/"64",
               "Sets the alignment of newly allocated buffers.">,

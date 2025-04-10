@@ -52,7 +52,13 @@ def InstFormatCLB    : InstFormat<18>;
 def InstFormatCLH    : InstFormat<19>;
 def InstFormatCSB    : InstFormat<20>;
 def InstFormatCSH    : InstFormat<21>;
-def InstFormatOther  : InstFormat<22>;
+def InstFormatQC_EAI : InstFormat<22>;
+def InstFormatQC_EI  : InstFormat<23>;
+def InstFormatQC_EB  : InstFormat<24>;
+def InstFormatQC_EJ  : InstFormat<25>;
+def InstFormatQC_ES  : InstFormat<26>;
+def InstFormatOther  : InstFormat<31>;
+
 
 class RISCVVConstraint<bits<3> val> {
   bits<3> Value = val;
@@ -295,8 +301,8 @@ class PseudoQuietFCMP<DAGOperand Ty>
 }
 
 // Pseudo load instructions.
-class PseudoLoad<string opcodestr>
-    : Pseudo<(outs GPR:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
+class PseudoLoad<string opcodestr, DAGOperand rdty = GPR>
+    : Pseudo<(outs rdty:$rd), (ins bare_symbol:$addr), [], opcodestr, "$rd, $addr"> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -314,7 +320,7 @@ class PseudoFloatLoad<string opcodestr, RegisterClass rdty>
 }
 
 // Pseudo store instructions.
-class PseudoStore<string opcodestr, RegisterClass rsty = GPR>
+class PseudoStore<string opcodestr, DAGOperand rsty = GPR>
     : Pseudo<(outs GPR:$tmp), (ins rsty:$rs, bare_symbol:$addr), [], opcodestr, "$rs, $addr, $tmp"> {
   let hasSideEffects = 0;
   let mayLoad = 0;
