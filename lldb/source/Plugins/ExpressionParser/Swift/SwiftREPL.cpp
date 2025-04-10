@@ -303,7 +303,16 @@ Status SwiftREPL::DoInitialization() {
   std::static_pointer_cast<TypeSystemSwiftTypeRefForExpressions>(
       *type_system_or_err)
       ->SetCompilerOptions(m_compiler_options.c_str());
-  return Status();
+
+  std::string format_str = "${ansi.negative}Swift " +
+                           swift::version::getCompilerVersion() +
+                           "{ | {${progress.count} }${progress.message}}";
+  FormatEntity::Entry format_entry;
+  Status error = FormatEntity::Parse(format_str, format_entry);
+  if (error.Success())
+    m_target.GetDebugger().SetStatuslineFormat(format_entry);
+
+  return error;
 }
 
 llvm::StringRef SwiftREPL::GetSourceFileBasename() {
