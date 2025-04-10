@@ -5,8 +5,8 @@
 ; don't crash.
 
 
-define <7 x i9> @load_elem_i9_access_8xi9() {
-; CHECK-LABEL: @load_elem_i9_access_8xi9(
+define <7 x i9> @load_elem_i9_access_7xi9() {
+; CHECK-LABEL: @load_elem_i9_access_7xi9(
 ; CHECK-NEXT:    [[P:%.*]] = alloca <16 x i9>, align 1, addrspace(5)
 ; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr addrspace(5) [[P]], i64 4
 ; CHECK-NEXT:    [[L:%.*]] = load <7 x i9>, ptr addrspace(5) [[G]], align 1

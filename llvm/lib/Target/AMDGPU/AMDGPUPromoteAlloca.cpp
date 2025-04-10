@@ -728,12 +728,12 @@ static bool isSupportedAccessType(FixedVectorType *VecTy, Type *AccessTy,
   // We could handle more complicated cases, but it'd make things a lot more
   // complicated.
   if (isa<FixedVectorType>(AccessTy)) {
+    TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
     // If the type size and the store size don't match, we would need to do more
     // than just bitcast to translate between an extracted/insertable subvectors
     // and the accessed value.
-    if (!DL.typeSizeEqualsStoreSize(AccessTy))
+    if (AccTS * 8 != DL.getTypeSizeInBits(AccessTy))
       return false;
-    TypeSize AccTS = DL.getTypeStoreSize(AccessTy);
     TypeSize VecTS = DL.getTypeStoreSize(VecTy->getElementType());
     return AccTS.isKnownMultipleOf(VecTS);
   }
