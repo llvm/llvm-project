@@ -330,8 +330,8 @@ private:
     if (!Style.isVerilog()) {
       if (FormatToken *MaybeSel = OpeningParen.Previous) {
         // @selector( starts a selector.
-        if (MaybeSel->isObjCAtKeyword(tok::objc_selector) &&
-            MaybeSel->Previous && MaybeSel->Previous->is(tok::at)) {
+        if (MaybeSel->is(tok::objc_selector) && MaybeSel->Previous &&
+            MaybeSel->Previous->is(tok::at)) {
           StartsObjCMethodExpr = true;
         }
       }
@@ -4505,7 +4505,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
   if (Left.is(Keywords.kw_assert) && Style.Language == FormatStyle::LK_Java)
     return true;
   if (Style.ObjCSpaceAfterProperty && Line.Type == LT_ObjCProperty &&
-      Left.Tok.getObjCKeywordID() == tok::objc_property) {
+      Left.is(tok::objc_property)) {
     return true;
   }
   if (Right.is(tok::hashhash))
@@ -4899,7 +4899,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     }
     return false;
   }
-  if (Left.is(tok::at) && Right.Tok.getObjCKeywordID() != tok::objc_not_keyword)
+  if (Left.is(tok::at) && Right.isNot(tok::objc_not_keyword))
     return false;
   if (Right.is(TT_UnaryOperator)) {
     return !Left.isOneOf(tok::l_paren, tok::l_square, tok::at) &&
@@ -6220,9 +6220,7 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Right.is(TT_TemplateCloser))
     return Style.BreakBeforeTemplateCloser;
 
-  if (Left.is(tok::at))
-    return false;
-  if (Left.Tok.getObjCKeywordID() == tok::objc_interface)
+  if (Left.isOneOf(tok::at, tok::objc_interface))
     return false;
   if (Left.isOneOf(TT_JavaAnnotation, TT_LeadingJavaAnnotation))
     return Right.isNot(tok::l_paren);
