@@ -1920,31 +1920,31 @@ define <8 x double> @double8_inselt_vec(<8 x double> %vec, i32 %sel) {
 ; GCN-LABEL: double8_inselt_vec:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v16
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v16
 ; GCN-NEXT:    v_mov_b32_e32 v17, 0x3ff00000
-; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v1, v1, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v3, v3, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 2, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v4, v4, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v5, v5, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 3, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v6, v6, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v7, v7, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 4, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v8, v8, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v9, v9, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 5, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v10, v10, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v11, v11, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 6, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v12, v12, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v13, v13, v17, vcc
-; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 7, v16
-; GCN-NEXT:    v_cndmask_b32_e64 v14, v14, 0, vcc
-; GCN-NEXT:    v_cndmask_b32_e32 v15, v15, v17, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v17, v1, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v3, v17, v3, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 2, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v5, v17, v5, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 3, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v6, 0, v6, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v7, v17, v7, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 4, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v8, 0, v8, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v9, v17, v9, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 5, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v10, 0, v10, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v11, v17, v11, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 6, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v12, 0, v12, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v13, v17, v13, vcc
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 7, v16
+; GCN-NEXT:    v_cndmask_b32_e32 v14, 0, v14, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v15, v17, v15, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %v = insertelement <8 x double> %vec, double 1.000000e+00, i32 %sel

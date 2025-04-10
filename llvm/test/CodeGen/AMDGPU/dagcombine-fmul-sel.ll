@@ -323,8 +323,8 @@ define float @fmul_select_f32_test6(float %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, 0x41000000
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xc0400000, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xc0400000, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -342,9 +342,9 @@ define float @fmul_select_f32_test6(float %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0x41000000
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xc0400000, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xc0400000, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -358,8 +358,8 @@ define float @fmul_select_f32_test7_sel_log2val_pos59_pos92(float %x, i32 %bool.
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v3, 0x5c
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v3, 59, vcc
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 59, v3, vcc
 ; GFX7-NEXT:    v_ldexp_f32_e32 v0, v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -367,8 +367,8 @@ define float @fmul_select_f32_test7_sel_log2val_pos59_pos92(float %x, i32 %bool.
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v3, 0x5c
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, v3, 59, vcc
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, 59, v3, vcc
 ; GFX9-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -448,8 +448,8 @@ define float @fmul_select_f32_test8(float %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, 0xc1000000
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0x41800000, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x41800000, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -467,9 +467,9 @@ define float @fmul_select_f32_test8(float %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0xc1000000
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0x41800000, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x41800000, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -653,8 +653,8 @@ define float @fmul_select_f32_test12_sel_log2val_neg48_pos68(float %x, i32 %bool
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, 0x44
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xffffffd0, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xffffffd0, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -672,9 +672,9 @@ define float @fmul_select_f32_test12_sel_log2val_neg48_pos68(float %x, i32 %bool
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0x44
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xffffffd0, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xffffffd0, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -946,8 +946,8 @@ define double @fmul_select_f64_test7(double %x, i32 %bool.arg1, i32 %bool.arg2) 
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v4, 0xbff00000
-; GFX7-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v3, v4, 2.0, vcc
+; GFX7-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v3, 2.0, v4, vcc
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -956,9 +956,9 @@ define double @fmul_select_f64_test7(double %x, i32 %bool.arg1, i32 %bool.arg2) 
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v5, 0xbff00000
-; GFX7-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX7-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, 2.0, vcc
+; GFX7-GISEL-NEXT:    v_cndmask_b32_e32 v5, 2.0, v5, vcc
 ; GFX7-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -966,8 +966,8 @@ define double @fmul_select_f64_test7(double %x, i32 %bool.arg1, i32 %bool.arg2) 
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v4, 0xbff00000
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v4, 2.0, vcc
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, 2.0, v4, vcc
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -976,9 +976,9 @@ define double @fmul_select_f64_test7(double %x, i32 %bool.arg1, i32 %bool.arg2) 
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v5, 0xbff00000
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, 2.0, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v5, 2.0, v5, vcc
 ; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1170,9 +1170,9 @@ define <2 x double> @fmul_select_v2f64_test10(<2 x double> %x, <2 x i32> %bool.a
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v9, 0xbff00000
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v6
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v4, v6
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v8, 0
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v9, v9, 0x3fe00000, vcc_lo
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v9, 0x3fe00000, v9, vcc_lo
 ; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
 ; GFX10-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
@@ -1197,9 +1197,9 @@ define <2 x double> @fmul_select_v2f64_test10(<2 x double> %x, <2 x i32> %bool.a
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v9, 0xbff00000 :: v_dual_mov_b32 v8, 0
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v6
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v4, v6
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v9, v9, 0x3fe00000, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v9, 0x3fe00000, v9, vcc_lo
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v5, v7
 ; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc_lo
@@ -1217,8 +1217,8 @@ define double @fmul_select_f64_test11(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX7-SDAG:       ; %bb.0:
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-SDAG-NEXT:    v_bfrev_b32_e32 v4, 1
-; GFX7-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e64 v3, v4, -2.0, vcc
+; GFX7-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v3, -2.0, v4, vcc
 ; GFX7-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX7-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1227,9 +1227,9 @@ define double @fmul_select_f64_test11(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX7-GISEL:       ; %bb.0:
 ; GFX7-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-GISEL-NEXT:    v_bfrev_b32_e32 v5, 1
-; GFX7-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX7-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX7-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, -2.0, vcc
+; GFX7-GISEL-NEXT:    v_cndmask_b32_e32 v5, -2.0, v5, vcc
 ; GFX7-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX7-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1237,8 +1237,8 @@ define double @fmul_select_f64_test11(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX9-SDAG:       ; %bb.0:
 ; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-SDAG-NEXT:    v_bfrev_b32_e32 v4, 1
-; GFX9-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e64 v3, v4, -2.0, vcc
+; GFX9-SDAG-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, -2.0, v4, vcc
 ; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX9-SDAG-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1247,9 +1247,9 @@ define double @fmul_select_f64_test11(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX9-GISEL:       ; %bb.0:
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-GISEL-NEXT:    v_bfrev_b32_e32 v5, 1
-; GFX9-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX9-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v5, v5, -2.0, vcc
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v5, -2.0, v5, vcc
 ; GFX9-GISEL-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1282,9 +1282,9 @@ define double @fmul_select_f64_test12(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_bfrev_b32_e32 v5, 1
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX7-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1292,9 +1292,9 @@ define double @fmul_select_f64_test12(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_bfrev_b32_e32 v5, 1
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1327,9 +1327,9 @@ define double @fmul_select_f64_test13(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v5, 0x40300000
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX7-NEXT:    v_mov_b32_e32 v4, 0
-; GFX7-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX7-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX7-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1337,9 +1337,9 @@ define double @fmul_select_f64_test13(double %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v5, 0x40300000
-; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, v2, v3
+; GFX9-NEXT:    v_cmp_ne_u32_e32 vcc, v2, v3
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0
-; GFX9-NEXT:    v_cndmask_b32_e64 v5, v5, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v5, 0, v5, vcc
 ; GFX9-NEXT:    v_mul_f64 v[0:1], v[0:1], v[4:5]
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1421,8 +1421,8 @@ define double @fmul_select_f64_test14_sel_log2val_pos92_neg27(double %x, i32 %bo
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_not_b32_e32 v4, 26
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v2, v4, 0x5c, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v3
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0x5c, v4, vcc_lo
 ; GFX10-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1440,9 +1440,9 @@ define double @fmul_select_f64_test14_sel_log2val_pos92_neg27(double %x, i32 %bo
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_not_b32_e32 v4, 26
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v3
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v2, v4, 0x5c, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0x5c, v4, vcc_lo
 ; GFX11-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -1505,8 +1505,8 @@ define double @fmul_select_f64_test15_sel_log2val_neg42_neg33(double %x, i32 %bo
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_not_b32_e32 v4, 32
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v2, v4, 0xffffffd6, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v3
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0xffffffd6, v4, vcc_lo
 ; GFX10-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1524,9 +1524,9 @@ define double @fmul_select_f64_test15_sel_log2val_neg42_neg33(double %x, i32 %bo
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_not_b32_e32 v4, 32
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v2, v3
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v2, v4, 0xffffffd6, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0xffffffd6, v4, vcc_lo
 ; GFX11-GISEL-NEXT:    v_ldexp_f64 v[0:1], v[0:1], v2
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -2073,8 +2073,8 @@ define half @fmul_select_f16_test6(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, 0x4200
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xc800, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xc800, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2092,9 +2092,9 @@ define half @fmul_select_f16_test6(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0x4200
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0xc800, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0xc800, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -2161,8 +2161,8 @@ define half @fmul_select_f16_test7(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v3, 0xc400
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0x4800, vcc_lo
+; GFX10-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x4800, v3, vcc_lo
 ; GFX10-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2180,9 +2180,9 @@ define half @fmul_select_f16_test7(half %x, i32 %bool.arg1, i32 %bool.arg2) {
 ; GFX11-GISEL:       ; %bb.0:
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v3, 0xc400
-; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX11-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-NEXT:    v_cndmask_b32_e64 v1, v3, 0x4800, vcc_lo
+; GFX11-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0x4800, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %bool = icmp eq i32 %bool.arg1, %bool.arg2
@@ -2876,8 +2876,8 @@ define bfloat @fmul_select_bf16_test5(bfloat %x, i32 %bool.arg1, i32 %bool.arg2)
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_mul_f32_e32 v0, 1.0, v0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, 0x41000000
-; GFX7-NEXT:    v_cmp_eq_u32_e32 vcc, v1, v2
-; GFX7-NEXT:    v_cndmask_b32_e64 v1, v3, 2.0, vcc
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, v1, v2
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 2.0, v3, vcc
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
 ; GFX7-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
