@@ -202,6 +202,102 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
   curCGF = nullptr;
 }
 
+mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
+  return mlir::SymbolTable::lookupSymbolIn(theModule, name);
+}
+
+/// If the specified mangled name is not in the module,
+/// create and return an mlir GlobalOp with the specified type (TODO(cir):
+/// address space).
+///
+/// TODO(cir):
+/// 1. If there is something in the module with the specified name, return
+/// it potentially bitcasted to the right type.
+///
+/// 2. If \p d is non-null, it specifies a decl that correspond to this.  This
+/// is used to set the attributes on the global when it is first created.
+///
+/// 3. If \p isForDefinition is true, it is guaranteed that an actual global
+/// with type \p ty will be returned, not conversion of a variable with the same
+/// mangled name but some other type.
+cir::GlobalOp
+CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
+                                   LangAS langAS, const VarDecl *d,
+                                   ForDefinition_t isForDefinition) {
+  // Lookup the entry, lazily creating it if necessary.
+  cir::GlobalOp entry;
+  if (mlir::Operation *v = getGlobalValue(mangledName)) {
+    if (!isa<cir::GlobalOp>(v))
+      errorNYI(d->getSourceRange(), "global with non-GlobalOp type");
+    entry = cast<cir::GlobalOp>(v);
+  }
+
+  if (entry) {
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::opGlobalWeakRef());
+
+    assert(!cir::MissingFeatures::setDLLStorageClass());
+    assert(!cir::MissingFeatures::openMP());
+
+    if (entry.getSymType() == ty)
+      return entry;
+
+    // If there are two attempts to define the same mangled name, issue an
+    // error.
+    //
+    // TODO(cir): look at mlir::GlobalValue::isDeclaration for all aspects of
+    // recognizing the global as a declaration, for now only check if
+    // initializer is present.
+    if (isForDefinition && !entry.isDeclaration()) {
+      errorNYI(d->getSourceRange(), "global with conflicting type");
+    }
+
+    // Address space check removed because it is unnecessary because CIR records
+    // address space info in types.
+
+    // (If global is requested for a definition, we always need to create a new
+    // global, not just return a bitcast.)
+    if (!isForDefinition)
+      return entry;
+  }
+
+  errorNYI(d->getSourceRange(), "reference of undeclared global");
+}
+
+cir::GlobalOp
+CIRGenModule::getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
+                                   ForDefinition_t isForDefinition) {
+  assert(d->hasGlobalStorage() && "Not a global variable");
+  QualType astTy = d->getType();
+  if (!ty)
+    ty = getTypes().convertTypeForMem(astTy);
+
+  assert(!cir::MissingFeatures::mangledNames());
+  return getOrCreateCIRGlobal(d->getIdentifier()->getName(), ty,
+                              astTy.getAddressSpace(), d, isForDefinition);
+}
+
+/// Return the mlir::Value for the address of the given global variable. If
+/// \p ty is non-null and if the global doesn't exist, then it will be created
+/// with the specified type instead of whatever the normal requested type would
+/// be. If \p isForDefinition is true, it is guaranteed that an actual global
+/// with type \p ty will be returned, not conversion of a variable with the same
+/// mangled name but some other type.
+mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
+                                             ForDefinition_t isForDefinition) {
+  assert(d->hasGlobalStorage() && "Not a global variable");
+  QualType astTy = d->getType();
+  if (!ty)
+    ty = getTypes().convertTypeForMem(astTy);
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
+  mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
+  return builder.create<cir::GetGlobalOp>(getLoc(d->getSourceRange()), ptrTy,
+                                          g.getSymName());
+}
+
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
   const QualType astTy = vd->getType();
@@ -507,6 +603,7 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
     funcType = convertType(fd->getType());
   }
 
+  assert(!cir::MissingFeatures::mangledNames());
   cir::FuncOp func = getOrCreateCIRFunction(
       cast<NamedDecl>(gd.getDecl())->getIdentifier()->getName(), funcType, gd,
       forVTable, dontDefer, /*isThunk=*/false, isForDefinition);

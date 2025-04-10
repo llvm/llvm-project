@@ -144,3 +144,28 @@ void f5(void) {
 // OGCG:   br label %[[LOOP:.*]]
 // OGCG: [[LOOP]]:
 // OGCG:   br label %[[LOOP]]
+
+int gv;
+int f6(void) {
+  return gv;
+}
+
+//      CIR: cir.func @f6() -> !s32i
+// CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
+// CIR-NEXT:   %[[GV_PTR:.*]] = cir.get_global @gv : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[GV:.*]] = cir.load %[[GV_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.store %[[GV]], %[[RV]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[R:.*]] = cir.load %[[RV]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   cir.return %[[R]] : !s32i
+
+// LLVM:      define i32 @f6()
+// LLVM-NEXT:   %[[RV_PTR:.*]] = alloca i32, i64 1, align 4
+// LLVM-NEXT:   %[[GV:.*]] = load i32, ptr @gv, align 4
+// LLVM-NEXT:   store i32 %[[GV]], ptr %[[RV_PTR]], align 4
+// LLVM-NEXT:   %[[RV:.*]] = load i32, ptr %[[RV_PTR]], align 4
+// LLVM-NEXT:   ret i32 %[[RV]]
+
+// OGCG:      define{{.*}} i32 @f6()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   %[[GV:.*]] = load i32, ptr @gv, align 4
+// OGCG-NEXT:   ret i32 %[[GV]]

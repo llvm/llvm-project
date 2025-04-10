@@ -1280,6 +1280,37 @@ def GlobalOp : CIR_Op<"global"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+def GetGlobalOp : CIR_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the address of a global variable";
+  let description = [{
+    The `cir.get_global` operation retrieves the address pointing to a
+    named global variable. If the global variable is marked constant, writing
+    to the resulting address (such as through a `cir.store` operation) is
+    undefined. The resulting type must always be a `!cir.ptr<...>` type with the
+    same address space as the global variable.
+
+    Example:
+    ```mlir
+    %x = cir.get_global @gv : !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs Res<CIR_PointerType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    $name `:` qualified(type($addr)) attr-dict
+  }];
+
+  // `GetGlobalOp` is fully verified by its traits.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
