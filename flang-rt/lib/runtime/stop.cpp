@@ -23,7 +23,7 @@
 
 extern "C" {
 
-static void DescribeIEEESignaledExceptions() {
+[[maybe_unused]] static void DescribeIEEESignaledExceptions() {
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
@@ -82,15 +82,7 @@ static void CloseAllExternalUnits(const char *why) {
     }
     std::printf("\n");
   }
-#if defined(__CUDACC__)
-  // NVCC supports __trap().
-  __trap();
-#elif defined(__clang__)
-  // Clang supports __builtin_trap().
-  __builtin_trap();
-#else
-#error "unsupported compiler"
-#endif
+  Fortran::runtime::DeviceTrap();
 #else
   CloseAllExternalUnits("STOP statement");
   if (Fortran::runtime::executionEnvironment.noStopMessage && code == 0) {
@@ -119,17 +111,7 @@ static void CloseAllExternalUnits(const char *why) {
           "Fortran %s: %s\n", isErrorStop ? "ERROR STOP" : "STOP", code);
     }
   }
-  if (isErrorStop) {
-#if defined(__CUDACC__)
-    // NVCC supports __trap().
-    __trap();
-#elif defined(__clang__)
-    // Clang supports __builtin_trap().
-    __builtin_trap();
-#else
-#error "unsupported compiler"
-#endif
-  }
+  Fortran::runtime::DeviceTrap();
 #else
   CloseAllExternalUnits("STOP statement");
   if (!quiet) {
