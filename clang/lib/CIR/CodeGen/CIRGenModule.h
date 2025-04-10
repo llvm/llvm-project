@@ -42,6 +42,8 @@ class VarDecl;
 
 namespace CIRGen {
 
+class CIRGenFunction;
+
 enum ForDefinition_t : bool { NotForDefinition = false, ForDefinition = true };
 
 /// This class organizes the cross-function state that is used while generating
@@ -75,6 +77,10 @@ private:
   const clang::TargetInfo &target;
 
   CIRGenTypes genTypes;
+
+  /// Per-function codegen information. Updated everytime emitCIR is called
+  /// for FunctionDecls's.
+  CIRGenFunction *curCGF = nullptr;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "CIRGenFunctionInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "clang/AST/Type.h"
@@ -33,6 +34,7 @@ class Type;
 
 namespace clang::CIRGen {
 
+class CallArgList;
 class CIRGenBuilderTy;
 class CIRGenModule;
 
@@ -42,6 +44,11 @@ class CIRGenTypes {
   CIRGenModule &cgm;
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
+
+  /// Hold memoized CIRGenFunctionInfo results
+  llvm::FoldingSet<CIRGenFunctionInfo> functionInfos;
+
+  llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> functionsBeingProcessed;
 
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
@@ -75,6 +82,10 @@ public:
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
   bool isZeroInitializable(clang::QualType ty);
+
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall();
+
+  const CIRGenFunctionInfo &arrangeCIRFunctionInfo();
 };
 
 } // namespace clang::CIRGen
