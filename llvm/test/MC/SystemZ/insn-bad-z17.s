@@ -1,5 +1,5 @@
-# For arch15 only.
-# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=arch15 < %s 2> %t
+# For z17 only.
+# RUN: not llvm-mc -triple s390x-linux-gnu -mcpu=z17 < %s 2> %t
 # RUN: FileCheck < %t %s
 
 #CHECK: error: invalid use of indexed addressing
