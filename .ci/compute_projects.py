@@ -25,6 +25,7 @@ PROJECT_DEPENDENCIES = {
     "libc": {"clang", "lld"},
     "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
+    "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
     "libclc": {"llvm", "clang"},
     "lld": {"llvm"},
@@ -51,6 +52,7 @@ DEPENDENTS_TO_TEST = {
     # TODO(issues/132795): LLDB should be enabled on clang changes.
     "clang": {"clang-tools-extra", "compiler-rt", "cross-project-tests"},
     "clang-tools-extra": {"libc"},
+    "flang": {"flang-rt"},
     "mlir": {"flang"},
 }
 
@@ -104,6 +106,7 @@ PROJECT_CHECK_TARGETS = {
     "bolt": "check-bolt",
     "lld": "check-lld",
     "flang": "check-flang",
+    "flang-rt": "check-flang",
     "libc": "check-libc",
     "lld": "check-lld",
     "lldb": "check-lldb",
