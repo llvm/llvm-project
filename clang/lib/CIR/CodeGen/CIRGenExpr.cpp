@@ -183,6 +183,43 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getScalarVal(), dst, isInit);
 }
 
+static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
+                                      const VarDecl *vd) {
+  QualType T = e->getType();
+
+  // If it's thread_local, emit a call to its wrapper function instead.
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (vd->getTLSKind() == VarDecl::TLS_Dynamic)
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitGlobalVarDeclLValue: thread_local variable");
+
+  // Check if the variable is marked as declare target with link clause in
+  // device codegen.
+  if (cgf.getLangOpts().OpenMP)
+    cgf.cgm.errorNYI(e->getSourceRange(), "emitGlobalVarDeclLValue: OpenMP");
+
+  // Traditional LLVM codegen handles thread local separately, CIR handles
+  // as part of getAddrOfGlobalVar.
+  mlir::Value v = cgf.cgm.getAddrOfGlobalVar(vd);
+
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Type realVarTy = cgf.convertTypeForMem(vd->getType());
+  cir::PointerType realPtrTy = cgf.getBuilder().getPointerTo(realVarTy);
+  if (realPtrTy != v.getType())
+    v = cgf.getBuilder().createBitcast(v.getLoc(), v, realPtrTy);
+
+  CharUnits alignment = cgf.getContext().getDeclAlign(vd);
+  Address addr(v, realVarTy, alignment);
+  LValue lv;
+  if (vd->getType()->isReferenceType())
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "emitGlobalVarDeclLValue: reference type");
+  else
+    lv = cgf.makeAddrLValue(addr, T, AlignmentSource::Decl);
+  assert(!cir::MissingFeatures::setObjCGCLValueClass());
+  return lv;
+}
+
 void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
                                        bool isVolatile, QualType ty,
                                        bool isInit, bool isNontemporal) {
@@ -288,7 +325,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
     // Check if this is a global variable
     if (vd->hasLinkage() || vd->isStaticDataMember())
-      cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: global variable");
+      return emitGlobalVarDeclLValue(*this, e, vd);
 
     Address addr = Address::invalid();
 
@@ -299,7 +336,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     } else {
       // Otherwise, it might be static local we haven't emitted yet for some
       // reason; most likely, because it's in an outer function.
-      cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: static local");
+      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
     return makeAddrLValue(addr, ty, AlignmentSource::Type);
