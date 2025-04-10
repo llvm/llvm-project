@@ -45,6 +45,6 @@ void dr335(void) {
   // CHECK-NEXT: %[[CLEAR2:.+]] = and i8 %[[LOAD2]], -2
   // CHECK-NEXT: %[[SET:.+]] = or i8 %[[CLEAR2]], %[[ZERO]]
   // CHECK-NEXT: store i8 %[[SET]], ptr {{.+}}, align 1
-  // CHECK-NEXT: {{.+}} = trunc i8 %[[ZERO]] to i1
+  // CHECK-NEXT: {{.+}} = trunc nuw i8 %[[ZERO]] to i1
 }
 

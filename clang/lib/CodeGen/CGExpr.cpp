@@ -2093,6 +2093,57 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
   return Value;
 }
 
+static bool isSafeNUWTrunc(llvm::Value *V, llvm::Type *DestTy) {
+  if (!V || !DestTy || !DestTy->isIntegerTy())
+    return false;
+
+  unsigned SrcBits = V->getType()->getIntegerBitWidth();
+  unsigned DestBits = DestTy->getIntegerBitWidth();
+
+  if (DestBits >= SrcBits)
+    return false;
+  if (V->getType()->isIntegerTy(1))
+    return true;
+  if (llvm::ZExtInst *Zext = dyn_cast<llvm::ZExtInst>(V)) {
+    if (Zext->getSrcTy()->isIntegerTy(1) && DestBits == 1)
+      return true;
+  }
+  if (llvm::LoadInst *I = dyn_cast<llvm::LoadInst>(V)) {
+    if (llvm::MDNode *RangeMD = I->getMetadata(llvm::LLVMContext::MD_range)) {
+      if (RangeMD->getNumOperands() == 2) {
+        llvm::ConstantAsMetadata *LowMD =
+            cast<llvm::ConstantAsMetadata>(RangeMD->getOperand(0));
+        llvm::ConstantAsMetadata *HighMD =
+            cast<llvm::ConstantAsMetadata>(RangeMD->getOperand(1));
+
+        if (LowMD && HighMD) {
+          llvm::ConstantInt *LowConst =
+              dyn_cast<llvm::ConstantInt>(LowMD->getValue());
+          llvm::ConstantInt *HighConst =
+              dyn_cast<llvm::ConstantInt>(HighMD->getValue());
+
+          if (LowConst && HighConst) {
+            llvm::APInt HighVal = HighConst->getValue();
+            llvm::APInt MaxVal =
+                llvm::APInt(HighVal.getBitWidth(), 1ULL << DestBits);
+
+            if (HighVal.ule(MaxVal)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (llvm::ConstantInt *CI = dyn_cast<llvm::ConstantInt>(V)) {
+    llvm::APInt Val = CI->getValue();
+    return Val.ule(llvm::APInt::getMaxValue(DestBits));
+  }
+
+  return false;
+}
+
 /// Converts a scalar value from its load/store type (as returned
 /// by convertTypeForLoadStore) to its primary IR type (as returned
 /// by ConvertType).
@@ -2111,9 +2162,12 @@ llvm::Value *CodeGenFunction::EmitFromMemory(llvm::Value *Value, QualType Ty) {
   }
 
   llvm::Type *ResTy = ConvertType(Ty);
+  bool IsSafe = isSafeNUWTrunc(Value, ResTy);
+
   if (hasBooleanRepresentation(Ty) || Ty->isBitIntType() ||
-      Ty->isExtVectorBoolType())
-    return Builder.CreateTrunc(Value, ResTy, "loadedv");
+      Ty->isExtVectorBoolType()) {
+    return Builder.CreateTrunc(Value, ResTy, "loadedv", /*IsNUW*/ IsSafe);
+  }
 
   return Value;
 }

@@ -10,7 +10,7 @@ void f(_Bool *x, _Bool *y) {
 
 // CHECK-LABEL: define{{.*}} void @f(
 // CHECK: [[FROMMEM:%.*]] = load i8, ptr %
-// CHECK: [[BOOLVAL:%.*]] = trunc i8 [[FROMMEM]] to i1
+// CHECK: [[BOOLVAL:%.*]] = trunc nuw i8 [[FROMMEM]] to i1
 // CHECK: [[TOMEM:%.*]] = zext i1 [[BOOLVAL]] to i8
 // CHECK: store i8 [[TOMEM]]
 // CHECK: ret void

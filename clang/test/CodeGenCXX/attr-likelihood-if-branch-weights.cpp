@@ -10,7 +10,7 @@ extern bool B();
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2:![0-9]+]], !range [[RNG6:![0-9]+]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 true)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -37,7 +37,7 @@ bool f() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -65,7 +65,7 @@ bool g() {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -90,7 +90,7 @@ bool h() {
 // CHECK-LABEL: @_Z8NullStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
@@ -113,7 +113,7 @@ void NullStmt() {
 // CHECK-LABEL: @_Z6IfStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END2:%.*]]
 // CHECK:       if.then:
@@ -125,7 +125,7 @@ void NullStmt() {
 // CHECK-NEXT:    br label [[IF_END2]]
 // CHECK:       if.end2:
 // CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL3:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[TOBOOL3:%.*]] = trunc nuw i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[TOBOOL3]], label [[IF_THEN4:%.*]], label [[IF_END8:%.*]]
 // CHECK:       if.then4:
 // CHECK-NEXT:    [[CALL5:%.*]] = call noundef zeroext i1 @_Z1Bv()
@@ -152,7 +152,7 @@ void IfStmt() {
 // CHECK-LABEL: @_Z9WhileStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -166,7 +166,7 @@ void IfStmt() {
 // CHECK-NEXT:    br label [[IF_END]]
 // CHECK:       if.end:
 // CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc nuw i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END7:%.*]]
 // CHECK:       if.then2:
 // CHECK-NEXT:    br label [[WHILE_COND3:%.*]]
@@ -194,7 +194,7 @@ void WhileStmt() {
 // CHECK-LABEL: @_Z6DoStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -208,7 +208,7 @@ void WhileStmt() {
 // CHECK-NEXT:    br label [[IF_END]]
 // CHECK:       if.end:
 // CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc nuw i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END7:%.*]]
 // CHECK:       if.then2:
 // CHECK-NEXT:    br label [[DO_BODY3:%.*]]
@@ -237,7 +237,7 @@ void DoStmt() {
 // CHECK-LABEL: @_Z7ForStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
@@ -251,7 +251,7 @@ void DoStmt() {
 // CHECK-NEXT:    br label [[IF_END]]
 // CHECK:       if.end:
 // CHECK-NEXT:    [[TMP1:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc nuw i8 [[TMP1]] to i1
 // CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_END7:%.*]]
 // CHECK:       if.then2:
 // CHECK-NEXT:    br label [[FOR_COND3:%.*]]
@@ -278,7 +278,7 @@ void ForStmt() {
 // CHECK-LABEL: @_Z8GotoStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
@@ -304,7 +304,7 @@ end:;
 // CHECK-LABEL: @_Z10ReturnStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
@@ -327,7 +327,7 @@ void ReturnStmt() {
 // CHECK-LABEL: @_Z10SwitchStmtv(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc nuw i8 [[TMP0]] to i1
 // CHECK-NEXT:    [[TOBOOL_EXPVAL:%.*]] = call i1 @llvm.expect.i1(i1 [[TOBOOL]], i1 false)
 // CHECK-NEXT:    br i1 [[TOBOOL_EXPVAL]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
@@ -341,7 +341,7 @@ void ReturnStmt() {
 // CHECK-NEXT:    br label [[IF_END]]
 // CHECK:       if.end:
 // CHECK-NEXT:    [[TMP2:%.*]] = load volatile i8, ptr @b, align 1, !tbaa [[TBAA2]], !range [[RNG6]]
-// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc i8 [[TMP2]] to i1
+// CHECK-NEXT:    [[TOBOOL1:%.*]] = trunc nuw i8 [[TMP2]] to i1
 // CHECK-NEXT:    br i1 [[TOBOOL1]], label [[IF_THEN2:%.*]], label [[IF_ELSE4:%.*]]
 // CHECK:       if.then2:
 // CHECK-NEXT:    [[TMP3:%.*]] = load volatile i32, ptr @i, align 4, !tbaa [[TBAA15]]
