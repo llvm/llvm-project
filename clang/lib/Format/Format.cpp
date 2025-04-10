@@ -3078,7 +3078,7 @@ private:
       for (const FormatToken *FormatTok = Line->First; FormatTok;
            FormatTok = FormatTok->Next) {
         if ((FormatTok->Previous && FormatTok->Previous->is(tok::at) &&
-             (FormatTok->Tok.getObjCKeywordID() != tok::objc_not_keyword ||
+             (FormatTok->isNot(tok::objc_not_keyword) ||
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&

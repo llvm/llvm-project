@@ -986,7 +986,7 @@ MDNode *llvm::intersectAccessGroups(const Instruction *Inst1,
 
 /// Add metadata from \p Inst to \p Metadata, if it can be preserved after
 /// vectorization.
-static void getMetadataToPropagate(
+void llvm::getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata) {
   Inst->getAllMetadataOtherThanDebugLoc(Metadata);
