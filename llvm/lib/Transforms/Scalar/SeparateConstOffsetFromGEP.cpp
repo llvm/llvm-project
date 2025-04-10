@@ -269,13 +269,6 @@ private:
   APInt findInEitherOperand(BinaryOperator *BO, bool SignExtended,
                             bool ZeroExtended);
 
-  /// A helper function to check if a subsequent call to rebuildWithoutConst
-  /// will allow preserving the GEP's nuw flag. That is the case if all
-  /// reassociated binary operations are add nuw and no non-nuw trunc is
-  /// distributed through an add.
-  /// Can only be called after find has populated the UserChain.
-  bool checkRebuildingPreservesNUW() const;
-
   /// After finding the constant offset C from the GEP index I, we build a new
   /// index I' s.t. I' + C = I. This function builds and returns the new
   /// index I' according to UserChain produced by function "find".
@@ -685,30 +678,6 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
   return Current;
 }
 
-bool ConstantOffsetExtractor::checkRebuildingPreservesNUW() const {
-  auto AllowsPreservingNUW = [](User *U) {
-    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
-      auto Opcode = BO->getOpcode();
-      if (Opcode == BinaryOperator::Or) {
-        // Ors are only considered here if they are disjoint. The addition that
-        // they represent in this case is NUW.
-        assert(cast<PossiblyDisjointInst>(BO)->isDisjoint());
-        return true;
-      }
-      return Opcode == BinaryOperator::Add && BO->hasNoUnsignedWrap();
-    }
-    // UserChain can only contain ConstantInt, CastInst, or BinaryOperator.
-    // Among the possible CastInsts, only trunc without nuw is a problem: If it
-    // is distributed through an add nuw, wrapping may occur:
-    // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
-    if (TruncInst *TI = dyn_cast<TruncInst>(U))
-      return TI->hasNoUnsignedWrap();
-    return true;
-  };
-
-  return all_of(UserChain, AllowsPreservingNUW);
-}
-
 Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
   distributeExtsAndCloneChain(UserChain.size() - 1);
   // Remove all nullptrs (used to be s/zext) from UserChain.
@@ -811,6 +780,30 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   return NewBO;
 }
 
+/// A helper function to check if reassociating through an entry in the user
+/// chain would invalidate the GEP's nuw flag.
+static bool allowsPreservingNUW(User *U) {
+  assert(isa<BinaryOperator>(U) || isa<CastInst>(U) || isa<ConstantInt>(U));
+  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+    // Binary operations needd to be effectively add nuw.
+    auto Opcode = BO->getOpcode();
+    if (Opcode == BinaryOperator::Or) {
+      // Ors are only considered here if they are disjoint. The addition that
+      // they represent in this case is NUW.
+      assert(cast<PossiblyDisjointInst>(BO)->isDisjoint());
+      return true;
+    }
+    return Opcode == BinaryOperator::Add && BO->hasNoUnsignedWrap();
+  }
+  // UserChain can only contain ConstantInt, CastInst, or BinaryOperator.
+  // Among the possible CastInsts, only trunc without nuw is a problem: If it
+  // is distributed through an add nuw, wrapping may occur:
+  // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
+  if (TruncInst *TI = dyn_cast<TruncInst>(U))
+    return TI->hasNoUnsignedWrap();
+  return true;
+}
+
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail,
                                         bool &PreservesNUW) {
@@ -825,7 +818,7 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
     return nullptr;
   }
 
-  PreservesNUW = Extractor.checkRebuildingPreservesNUW();
+  PreservesNUW = all_of(Extractor.UserChain, allowsPreservingNUW);
 
   // Separates the constant offset from the GEP index.
   Value *IdxWithoutConstOffset = Extractor.rebuildWithoutConstOffset();
