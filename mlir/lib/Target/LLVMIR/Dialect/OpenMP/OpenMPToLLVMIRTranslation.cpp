@@ -2761,6 +2761,8 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findAllocaInsertPoint(builder, moduleTranslation);
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -2773,7 +2775,7 @@ convertOmpAtomicRead(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::AtomicOpValue V = {v, elementType, false, false};
   llvm::OpenMPIRBuilder::AtomicOpValue X = {x, elementType, false, false};
-  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO));
+  builder.restoreIP(ompBuilder->createAtomicRead(ompLoc, X, V, AO, allocaIP));
   return success();
 }
 
@@ -4688,12 +4690,18 @@ static uint64_t getTypeByteSize(mlir::Type type, const DataLayout &dl) {
 template <typename OpTy>
 static uint64_t getReductionDataSize(OpTy &op) {
   if (op.getNumReductionVars() > 0) {
-    assert(op.getNumReductionVars() == 1 &&
-           "Only 1 reduction variable currently supported");
-    mlir::Type reductionVarTy = op.getReductionVars()[0].getType();
+    SmallVector<omp::DeclareReductionOp> reductions;
+    collectReductionDecls(op, reductions);
+
+    llvm::SmallVector<mlir::Type> members;
+    members.reserve(reductions.size());
+    for (omp::DeclareReductionOp &red : reductions)
+      members.push_back(red.getType());
     Operation *opp = op.getOperation();
+    auto structType = mlir::LLVM::LLVMStructType::getLiteral(
+        opp->getContext(), members, /*isPacked=*/false);
     DataLayout dl = DataLayout(opp->getParentOfType<ModuleOp>());
-    return getTypeByteSize(reductionVarTy, dl);
+    return getTypeByteSize(structType, dl);
   }
   return 0;
 }
@@ -4789,8 +4797,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
       (maxThreadsVal >= 0 && maxThreadsVal < combinedMaxThreadsVal))
     combinedMaxThreadsVal = maxThreadsVal;
 
-  // Calculate reduction data size, limited to single reduction variable for
-  // now.
   int32_t reductionDataSize = 0;
   if (isGPU && capturedOp) {
     if (auto teamsOp = castOrGetParentOfType<omp::TeamsOp>(capturedOp))

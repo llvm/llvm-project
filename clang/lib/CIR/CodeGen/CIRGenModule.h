@@ -16,6 +16,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
+#include "CIRGenValue.h"
 
 #include "clang/AST/CharUnits.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -89,6 +90,11 @@ public:
   mlir::Location getLoc(clang::SourceLocation cLoc);
   mlir::Location getLoc(clang::SourceRange cRange);
 
+  /// FIXME: this could likely be a common helper and not necessarily related
+  /// with codegen.
+  clang::CharUnits getNaturalTypeAlignment(clang::QualType t,
+                                           LValueBaseInfo *baseInfo);
+
   void emitTopLevelDecl(clang::Decl *decl);
 
   bool verifyModule() const;
@@ -112,6 +118,8 @@ public:
   void emitGlobalFunctionDefinition(clang::GlobalDecl gd, mlir::Operation *op);
   void emitGlobalVarDefinition(const clang::VarDecl *vd,
                                bool isTentative = false);
+
+  void emitGlobalOpenACCDecl(const clang::OpenACCConstructDecl *cd);
 
   /// Return the result of value-initializing the given type, i.e. a null
   /// expression of the given type.

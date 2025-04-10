@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class, class>
-struct _LIBCPP_TEMPLATE_VIS pair;
+struct pair;
 
 template <size_t _Ip, class _T1, class _T2>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&

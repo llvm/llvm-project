@@ -2546,17 +2546,16 @@ void JumpThreadingPass::updateBlockFreqAndEdgeWeight(BasicBlock *PredBB,
   // frequency of BB.
   auto BBOrigFreq = BFI->getBlockFreq(BB);
   auto NewBBFreq = BFI->getBlockFreq(NewBB);
-  auto BB2SuccBBFreq = BBOrigFreq * BPI->getEdgeProbability(BB, SuccBB);
   auto BBNewFreq = BBOrigFreq - NewBBFreq;
   BFI->setBlockFreq(BB, BBNewFreq);
 
   // Collect updated outgoing edges' frequencies from BB and use them to update
   // edge probabilities.
   SmallVector<uint64_t, 4> BBSuccFreq;
-  for (BasicBlock *Succ : successors(BB)) {
-    auto SuccFreq = (Succ == SuccBB)
-                        ? BB2SuccBBFreq - NewBBFreq
-                        : BBOrigFreq * BPI->getEdgeProbability(BB, Succ);
+  for (succ_iterator I = succ_begin(BB), E = succ_end(BB); I != E; ++I) {
+    auto BB2SuccBBFreq =
+        BBOrigFreq * BPI->getEdgeProbability(BB, I.getSuccessorIndex());
+    auto SuccFreq = (*I == SuccBB) ? BB2SuccBBFreq - NewBBFreq : BB2SuccBBFreq;
     BBSuccFreq.push_back(SuccFreq.getFrequency());
   }
 

@@ -281,7 +281,7 @@ func.func @test_assign_type_mismatch(%arg1: f32) {
 
 func.func @test_assign_to_array(%arg1: !emitc.array<4xi32>) {
   %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.array<4xi32>
-  // expected-error @+1 {{invalid kind of Type specified}}
+  // expected-error @+1 {{invalid kind of type specified: expected emitc.lvalue, but found '!emitc.array<4xi32>'}}
   emitc.assign %arg1 : !emitc.array<4xi32> to %v : !emitc.array<4xi32>
   return
 }
