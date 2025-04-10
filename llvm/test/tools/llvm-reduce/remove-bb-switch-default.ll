@@ -16,6 +16,7 @@
 ; RESULT0-NEXT: br i1 %arg0, label %bb1, label %bb2
 
 ; RESULT0: bb1:
+; RESULT0: %bb1.phi = phi i32 [ %bb.load, %bb ], [ %bb.load, %bb2 ], [ %bb.load, %bb2 ]
 ; RESULT0-NEXT: store i32 1, ptr null, align 4
 ; RESULT0-NEXT: ret void
 
