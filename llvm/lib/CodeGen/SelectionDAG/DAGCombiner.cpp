@@ -12078,6 +12078,12 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
     if (SDValue NewSel = SimplifySelect(DL, N0, N1, N2))
       return NewSel;
+
+    // (select (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+    APInt C;
+    if (CC == ISD::SETUGT && Cond0 == N2 && sd_match(Cond1, m_ConstInt(C)) &&
+        sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C))) && hasUMin(VT))
+      return DAG.getNode(ISD::UMIN, DL, VT, N1, N2);
   }
 
   if (!VT.isVector())
