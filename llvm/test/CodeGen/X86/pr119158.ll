@@ -5,9 +5,10 @@ define dso_local void @foo() #1 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %newFuncRoot
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} ymm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [64,64,64,64,64,64,64,64]
-; CHECK-NEXT:    vpdpwssd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
-; CHECK-NEXT:    vpsrld $7, %ymm1, %ymm0
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [18,0,18,0,18,0,18,0,18,0,18,0,18,0,18,0]
+; CHECK-NEXT:    vpmaddwd        %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; CHECK-NEXT:    vpsrld $7, %ymm0, %ymm0
 ; CHECK-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; CHECK-NEXT:    vmovdqu %ymm0, (%rax)
