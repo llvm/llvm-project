@@ -150,6 +150,95 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     DeadInstructions.push_back(LI);
   }
 
+  // Creates an spv_insertelt instruction (equivalent to llvm's insertelement).
+  Value *makeInsertElement(IRBuilder<> &B, Value *Vector, Value *Element,
+                           unsigned Index) {
+    Type *Int32Ty = Type::getInt32Ty(B.getContext());
+    SmallVector<Type *, 4> Types = {Vector->getType(), Vector->getType(),
+                                    Element->getType(), Int32Ty};
+    SmallVector<Value *> Args = {Vector, Element, B.getInt32(Index)};
+    Instruction *NewI =
+        B.CreateIntrinsic(Intrinsic::spv_insertelt, {Types}, {Args});
+    buildAssignType(B, Vector->getType(), NewI);
+    return NewI;
+  }
+
+  // Creates an spv_extractelt instruction (equivalent to llvm's
+  // extractelement).
+  Value *makeExtractElement(IRBuilder<> &B, Type *ElementType, Value *Vector,
+                            unsigned Index) {
+    Type *Int32Ty = Type::getInt32Ty(B.getContext());
+    SmallVector<Type *, 3> Types = {ElementType, Vector->getType(), Int32Ty};
+    SmallVector<Value *> Args = {Vector, B.getInt32(Index)};
+    Instruction *NewI =
+        B.CreateIntrinsic(Intrinsic::spv_extractelt, {Types}, {Args});
+    buildAssignType(B, ElementType, NewI);
+    return NewI;
+  }
+
+  // Stores the given Src vector operand into the Dst vector, adjusting the size
+  // if required.
+  Value *storeVectorFromVector(IRBuilder<> &B, Value *Src, Value *Dst,
+                               Align Alignment) {
+    FixedVectorType *SrcType = cast<FixedVectorType>(Src->getType());
+    FixedVectorType *DstType =
+        cast<FixedVectorType>(GR->findDeducedElementType(Dst));
+    assert(DstType->getNumElements() >= SrcType->getNumElements());
+
+    LoadInst *LI = B.CreateLoad(DstType, Dst);
+    LI->setAlignment(Alignment);
+    Value *OldValues = LI;
+    buildAssignType(B, OldValues->getType(), OldValues);
+    Value *NewValues = Src;
+
+    for (unsigned I = 0; I < SrcType->getNumElements(); ++I) {
+      Value *Element =
+          makeExtractElement(B, SrcType->getElementType(), NewValues, I);
+      OldValues = makeInsertElement(B, OldValues, Element, I);
+    }
+
+    StoreInst *SI = B.CreateStore(OldValues, Dst);
+    SI->setAlignment(Alignment);
+    return SI;
+  }
+
+  // Stores the given Src value into the first entry of the Dst aggregate.
+  Value *storeToFirstValueAggregate(IRBuilder<> &B, Value *Src, Value *Dst,
+                                    Align Alignment) {
+    SmallVector<Type *, 2> Types = {Dst->getType(), Dst->getType()};
+    SmallVector<Value *, 3> Args{/* isInBounds= */ B.getInt1(true), Dst,
+                                 B.getInt32(0), B.getInt32(0)};
+    auto *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+    GR->buildAssignPtr(B, Src->getType(), GEP);
+    StoreInst *SI = B.CreateStore(Src, GEP);
+    SI->setAlignment(Alignment);
+    return SI;
+  }
+
+  // Transforms a store instruction (or SPV intrinsic) using a ptrcast as
+  // operand into a valid logical SPIR-V store with no ptrcast.
+  void transformStore(IRBuilder<> &B, Instruction *BadStore, Value *Src,
+                      Value *Dst, Align Alignment) {
+    Type *ToTy = GR->findDeducedElementType(Dst);
+    Type *FromTy = Src->getType();
+
+    auto *SVT = dyn_cast<FixedVectorType>(FromTy);
+    auto *DST = dyn_cast<StructType>(ToTy);
+    auto *DVT = dyn_cast<FixedVectorType>(ToTy);
+
+    B.SetInsertPoint(BadStore);
+    if (DST && DST->getTypeAtIndex(0u) == FromTy)
+      storeToFirstValueAggregate(B, Src, Dst, Alignment);
+    else if (DVT && SVT)
+      storeVectorFromVector(B, Src, Dst, Alignment);
+    else if (DVT && !SVT && FromTy == DVT->getElementType())
+      storeToFirstValueAggregate(B, Src, Dst, Alignment);
+    else
+      llvm_unreachable("Unsupported ptrcast use in store. Please fix.");
+
+    DeadInstructions.push_back(BadStore);
+  }
+
   void legalizePointerCast(IntrinsicInst *II) {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
@@ -165,6 +254,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
         continue;
       }
 
+      if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
+        transformStore(B, SI, SI->getValueOperand(), OriginalOperand,
+                       SI->getAlign());
+        continue;
+      }
+
       if (IntrinsicInst *Intrin = dyn_cast<IntrinsicInst>(User)) {
         if (Intrin->getIntrinsicID() == Intrinsic::spv_assign_ptr_type) {
           DeadInstructions.push_back(Intrin);
@@ -174,6 +269,15 @@ class SPIRVLegalizePointerCast : public FunctionPass {
         if (Intrin->getIntrinsicID() == Intrinsic::spv_gep) {
           GR->replaceAllUsesWith(CastedOperand, OriginalOperand,
                                  /* DeleteOld= */ false);
+          continue;
+        }
+
+        if (Intrin->getIntrinsicID() == Intrinsic::spv_store) {
+          Align Alignment;
+          if (ConstantInt *C = dyn_cast<ConstantInt>(Intrin->getOperand(3)))
+            Alignment = Align(C->getZExtValue());
+          transformStore(B, Intrin, Intrin->getArgOperand(0), OriginalOperand,
+                         Alignment);
           continue;
         }
       }
