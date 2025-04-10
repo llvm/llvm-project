@@ -167,8 +167,8 @@ ClangTidyContext::ClangTidyContext(
       AllowEnablingAnalyzerAlphaCheckers(AllowEnablingAnalyzerAlphaCheckers),
       EnableModuleHeadersParsing(EnableModuleHeadersParsing) {
   // Before the first translation unit we can get errors related to command-line
-  // parsing, use empty string for the file name in this case.
-  setCurrentFile("");
+  // parsing, use dummy string for the file name in this case.
+  setCurrentFile("dummy");
 }
 
 ClangTidyContext::~ClangTidyContext() = default;

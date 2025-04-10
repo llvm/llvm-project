@@ -6360,6 +6360,12 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
   Value *KernelLaunchEnvironment = DebugKernelWrapper->getArg(0);
+  Type *KernelLaunchEnvParamTy = Fn->getFunctionType()->getParamType(1);
+  KernelLaunchEnvironment =
+      KernelLaunchEnvironment->getType() == KernelLaunchEnvParamTy
+          ? KernelLaunchEnvironment
+          : Builder.CreateAddrSpaceCast(KernelLaunchEnvironment,
+                                        KernelLaunchEnvParamTy);
   CallInst *ThreadKind =
       Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
@@ -8631,7 +8637,7 @@ bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
                                   AtomicOpValue &X, AtomicOpValue &V,
-                                  AtomicOrdering AO) {
+                                  AtomicOrdering AO, InsertPointTy AllocaIP) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -8659,7 +8665,7 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
         LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X.Var);
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X.Var);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     XRead = AtomicLoadRes.first;
     OldVal->eraseFromParent();
@@ -8824,7 +8830,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
 
     OpenMPIRBuilder::AtomicInfo atomicInfo(
         &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X);
+        OldVal->getAlign(), true /* UseLibcall */, AllocaIP, X);
     auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
     BasicBlock *CurBB = Builder.GetInsertBlock();
     Instruction *CurBBTI = CurBB->getTerminator();
