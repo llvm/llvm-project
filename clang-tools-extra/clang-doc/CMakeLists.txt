@@ -24,7 +24,6 @@ add_clang_library(clangDoc STATIC
 
 clang_target_link_libraries(clangDoc
   PRIVATE
-  clangDocSupport        
   clangAnalysis
   clangAST
   clangASTMatchers
@@ -34,6 +33,11 @@ clang_target_link_libraries(clangDoc
   clangLex
   clangTooling
   clangToolingCore
+  )
+
+target_link_libraries(clangDoc
+  PRIVATE
+  clangDocSupport      
   )
 
 add_subdirectory(tool)
