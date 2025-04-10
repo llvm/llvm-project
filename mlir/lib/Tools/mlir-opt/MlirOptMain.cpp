@@ -163,11 +163,26 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Split marker to use for merging the ouput"),
         cl::location(outputSplitMarkerFlag), cl::init(kDefaultSplitMarker));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> verifyDiagnostics(
-        "verify-diagnostics",
-        cl::desc("Check that emitted diagnostics match "
-                 "expected-* lines on the corresponding line"),
-        cl::location(verifyDiagnosticsFlag), cl::init(false));
+    static cl::opt<SourceMgrDiagnosticVerifierHandler::Level,
+                   /*ExternalStorage=*/true>
+        verifyDiagnostics{
+            "verify-diagnostics", llvm::cl::ValueOptional,
+            cl::desc("Check that emitted diagnostics match expected-* lines on "
+                     "the corresponding line"),
+            cl::location(verifyDiagnosticsFlag),
+            cl::values(
+                clEnumValN(SourceMgrDiagnosticVerifierHandler::Level::All,
+                           "all",
+                           "Check all diagnostics (expected, unexpected, "
+                           "near-misses)"),
+                // Implicit value: when passed with no arguments, e.g.
+                // `--verify-diagnostics` or `--verify-diagnostics=`.
+                clEnumValN(SourceMgrDiagnosticVerifierHandler::Level::All, "",
+                           "Check all diagnostics (expected, unexpected, "
+                           "near-misses)"),
+                clEnumValN(
+                    SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected,
+                    "only-expected", "Check only expected diagnostics"))};
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyPasses(
         "verify-each",
@@ -537,7 +552,8 @@ static LogicalResult processBuffer(raw_ostream &os,
     return performActions(os, sourceMgr, &context, config);
   }
 
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &context);
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+      *sourceMgr, &context, config.verifyDiagnosticsLevel());
 
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce
