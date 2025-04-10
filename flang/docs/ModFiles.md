@@ -45,7 +45,7 @@ Module files are Fortran free form source code.
 (One can, in principle, copy `foo.mod` into `tmp.f90`, recompile it,
 and obtain a matching `foo.mod` file.)
 They include the declarations of all visible locally defined entities along
-with the private entities on which thef depend.
+with the private entities on which they depend.
 
 ### Header
 
@@ -72,9 +72,9 @@ marked with explicit kind values.
 Declarations of objects, interfaces, types, and other entities are
 regenerated from the compiler's symbol table.
 So entity declarations that spanned multiple statements in the source
-program are effectivel collapsed into a single *type-declaration-statement*.
+program are effectively collapsed into a single *type-declaration-statement*.
 Constant expressions that appear in initializers, bounds, and other sites
-appear in the module file in as their folded values.
+appear in the module file as their folded values.
 Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
 of names are also included in the module file.
 
