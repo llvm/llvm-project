@@ -1696,7 +1696,7 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
              sym, 0, R_ABS, addendRelType);
 }
 
-void RelocationBaseSection::mergeRels(Ctx &ctx) {
+void RelocationBaseSection::mergeRels() {
   size_t newSize = relocs.size();
   for (const auto &v : relocsVec)
     newSize += v.size();

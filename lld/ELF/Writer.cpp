@@ -2076,7 +2076,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // symbol table section (dynSymTab) must be the first one.
     for (Partition &part : ctx.partitions) {
       if (part.relaDyn) {
-        part.relaDyn->mergeRels(ctx);
+        part.relaDyn->mergeRels();
         // Compute DT_RELACOUNT to be used by part.dynamic.
         part.relaDyn->partitionRels();
         finalizeSynthetic(ctx, part.relaDyn.get());

@@ -553,7 +553,7 @@ public:
   }
   size_t getSize() const override { return relocs.size() * this->entsize; }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
-  void mergeRels(Ctx &ctx);
+  void mergeRels();
   void partitionRels();
   void finalizeContents() override;
 
