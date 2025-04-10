@@ -75,9 +75,9 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t deafultStream = 0;
+  cudaStream_t defaultStream = 0;
   CUDA_REPORT_IF_ERROR(cudaLaunchKernel(kernel, gridDim, blockDim, params, smem,
-      stream != kNoAsyncId ? (cudaStream_t)stream : deafultStream));
+      stream != kNoAsyncId ? (cudaStream_t)stream : defaultStream));
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
@@ -217,10 +217,10 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t deafultStream = 0;
+  cudaStream_t defaultStream = 0;
   CUDA_REPORT_IF_ERROR(
       cudaLaunchCooperativeKernel(kernel, gridDim, blockDim, params, smem,
-          stream != kNoAsyncId ? (cudaStream_t)stream : deafultStream));
+          stream != kNoAsyncId ? (cudaStream_t)stream : defaultStream));
 }
 
 } // extern "C"
