@@ -11,3 +11,12 @@ struct U *p;
 // CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
+
+void f(void) {
+  struct U2 *p;
+}
+
+// CIR: cir.func @f()
+// CIR-NEXT: cir.alloca !cir.ptr<!cir.struct<struct "U2" incomplete>>,
+// CIR-SAME:     !cir.ptr<!cir.ptr<!cir.struct<struct "U2" incomplete>>>, ["p"]
+// CIR-NEXT: cir.return

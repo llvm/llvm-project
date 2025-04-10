@@ -97,10 +97,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   policy.SuppressInlineNamespace = false;
 
   if (recordDecl->getIdentifier()) {
-    if (recordDecl->getDeclContext())
-      recordDecl->printQualifiedName(outStream, policy);
-    else
-      recordDecl->printName(outStream, policy);
+    recordDecl->printQualifiedName(outStream, policy);
 
     // Ensure each template specialization has a unique name.
     if (auto *templateSpecialization =
@@ -116,10 +113,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
       outStream << '>';
     }
   } else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl()) {
-    if (typedefNameDecl->getDeclContext())
-      typedefNameDecl->printQualifiedName(outStream, policy);
-    else
-      typedefNameDecl->printName(outStream);
+    typedefNameDecl->printQualifiedName(outStream, policy);
   } else {
     outStream << builder.getUniqueAnonRecordName();
   }
