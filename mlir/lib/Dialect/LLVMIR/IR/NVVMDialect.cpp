@@ -36,6 +36,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -1222,7 +1223,7 @@ llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
             : CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, dim, tile)
 
 #define GET_CP_ASYNC_BULK_TENSOR_ID(op, dims, is_im2col)                       \
-  [&]() -> auto {                                                              \
+  [&]() -> auto{                                                               \
     switch (dims) {                                                            \
     case 1:                                                                    \
       return CP_ASYNC_BULK_TENSOR_REDUCE_MODE(op, 1, tile);                    \
@@ -1237,7 +1238,8 @@ llvm::Intrinsic::ID CpAsyncBulkTensorPrefetchOp::getIntrinsicID(int tensorDims,
     default:                                                                   \
       llvm_unreachable("Invalid TensorDim in CpAsyncBulkTensorReduceOp.");     \
     }                                                                          \
-  }()
+  }                                                                            \
+  ()
 
 llvm::Intrinsic::ID CpAsyncBulkTensorReduceOp::getIntrinsicID(
     int tensorDims, NVVM::TMAReduxKind kind, bool isIm2Col) {
@@ -1367,13 +1369,14 @@ Tcgen05CommitOp::getIntrinsicIDAndArgs(Operation &op,
           : TCGEN05_CP_IMPL(shape_mc, src_fmt, _cg1)
 
 #define GET_TCGEN05_CP_ID(shape_mc, src_fmt, is_2cta)                          \
-  [&]() -> auto {                                                              \
+  [&]() -> auto{                                                               \
     if (src_fmt == Tcgen05CpSrcFormat::B6x16_P32)                              \
       return TCGEN05_CP_2CTA(shape_mc, _b6x16_p32, is_2cta);                   \
     if (src_fmt == Tcgen05CpSrcFormat::B4x16_P64)                              \
       return TCGEN05_CP_2CTA(shape_mc, _b4x16_p64, is_2cta);                   \
     return TCGEN05_CP_2CTA(shape_mc, , is_2cta);                               \
-  }()
+  }                                                                            \
+  ()
 
 llvm::Intrinsic::ID Tcgen05CpOp::getIntrinsicID(Operation &op) {
   auto curOp = cast<NVVM::Tcgen05CpOp>(op);
@@ -1537,6 +1540,24 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   }
 
   return success();
+}
+
+LogicalResult PMEventOp::verify() {
+  if (!getMaskedEventId() && !getEventId()) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (getMaskedEventId() && getEventId()) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (getEventId()) {
+    if (getEventId() < 0 || getEventId() > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
 }
 
 //===----------------------------------------------------------------------===//
