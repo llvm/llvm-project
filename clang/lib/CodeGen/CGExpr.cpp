@@ -4990,7 +4990,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
         if (Idx != 0) {
           // For structs, we GEP to the field that the record layout suggests.
-          if (getLangOpts().PointerOverflowDefined)
+          if (!IsInBounds)
             Addr = Builder.CreateConstGEP2_32(Addr, 0, Idx, field->getName());
           else
             Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());

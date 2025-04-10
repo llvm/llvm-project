@@ -4460,7 +4460,7 @@ public:
   llvm::Value *EmitIvarOffsetAsPointerDiff(const ObjCInterfaceDecl *Interface,
                                            const ObjCIvarDecl *Ivar);
   LValue EmitLValueForField(LValue Base, const FieldDecl *Field,
-                            bool IsInBounds = false);
+                            bool IsInBounds = true);
   LValue EmitLValueForLambdaField(const FieldDecl *Field);
   LValue EmitLValueForLambdaField(const FieldDecl *Field,
                                   llvm::Value *ThisValue);
