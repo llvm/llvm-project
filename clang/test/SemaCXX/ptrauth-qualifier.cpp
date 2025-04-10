@@ -179,8 +179,8 @@ namespace test_concept {
 
   template <typename T>
   concept Ptrauthable = is_qualified<T>::value;
-  // expected-note@-1 {{because 'is_qualified<int *>::value' evaluated to false}}
-  // expected-note@-2 {{because 'is_qualified<int *__ptrauth(1,1,51)>::value' evaluated to false}}
+  // expected-note@-1 2 {{because 'is_qualified<int *>::value' evaluated to false}}
+  // expected-note@-2 2 {{because 'is_qualified<int *__ptrauth(1,1,51)>::value' evaluated to false}}
 
   template <typename T>
     requires(Ptrauthable<T>)
@@ -193,4 +193,21 @@ namespace test_concept {
   // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *]}}
   S<int * AQ2> s1;
   // expected-error@-1 {{constraints not satisfied for class template 'S' [with T = int *__ptrauth(1,1,51)]}}
+
+  template <typename T>
+    requires(Ptrauthable<T>)
+  void func(T *);
+  // expected-note@-1 {{candidate template ignored: constraints not satisfied [with T = int *]}}
+  // expected-note@-3 {{because 'int *' does not satisfy 'Ptrauthable'}}
+  // expected-note@-3 {{candidate template ignored: constraints not satisfied [with T = int *__ptrauth(1,1,51)]}}
+  // expected-note@-5 {{because 'int *__ptrauth(1,1,51)' does not satisfy 'Ptrauthable'}}
+
+  void test() {
+    int * AQ p0;
+    int *p1;
+    int * AQ2 p2;
+    func(&p0);
+    func(&p1); // expected-error {{no matching function for call to 'func'}}
+    func(&p2); // expected-error {{no matching function for call to 'func'}}
+  }
 }
