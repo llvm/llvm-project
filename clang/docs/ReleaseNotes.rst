@@ -38,8 +38,8 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
-- For ARM targets, when using cc1as, the features included in the selected CPU or
-  Architecture's FPU are now loaded and utilized. If you wish not to use a specific feature,
+- For ARM targets when compiling assembly files, the features included in the selected CPU
+  or Architecture's FPU are included. If you wish not to use a specific feature,
   the relevant ``+no`` option will need to be amended to the command line option.
 
 C/C++ Language Potentially Breaking Changes
