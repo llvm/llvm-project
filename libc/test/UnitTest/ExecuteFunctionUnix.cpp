@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef LIBC_HERMETIC_TEST_FRAMEWORK
+// new goes first to provide needed operators
 #include "src/__support/CPP/new.h"
+#include "ExecuteFunction.h"
+
 // TODO: for now, we use epoll directly. Use poll for unix compatibility when it
 // is available.
 #include "hdr/sys_epoll_macros.h"
