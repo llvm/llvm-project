@@ -209,7 +209,7 @@ static void updateSupportedARMFeatures(Ctx &ctx,
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
-struct KnownAArch64BuildAttrSubsections {
+struct AArch64BuildAttrSubsections {
   struct PauthSubSection {
     unsigned tagPlatform = 0;
     unsigned tagSchema = 0;
@@ -221,10 +221,10 @@ struct KnownAArch64BuildAttrSubsections {
   } fAndB;
 };
 
-static KnownAArch64BuildAttrSubsections
+static AArch64BuildAttrSubsections
 extractBuildAttributesSubsections(const AArch64AttributeParser &attributes) {
 
-  KnownAArch64BuildAttrSubsections subSections;
+  AArch64BuildAttrSubsections subSections;
   subSections.pauth.tagPlatform =
       attributes
           .getAttributeValue("aeabi_pauthabi",
@@ -832,7 +832,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         } else {
           bool writePauth = false;
           bool wrtieFeatures = false;
-          KnownAArch64BuildAttrSubsections subSections =
+          AArch64BuildAttrSubsections subSections =
               extractBuildAttributesSubsections(attributes);
           if (hasGnuProperties) {
             if (!gnuPropertiesInformation.aarch64PauthAbiCoreInfo.empty()) {
