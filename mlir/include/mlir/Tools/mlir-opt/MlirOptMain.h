@@ -191,6 +191,16 @@ public:
   }
   bool shouldVerifyDiagnostics() const { return verifyDiagnosticsFlag; }
 
+  /// Set whether to check that emitted diagnostics match *only specified*
+  /// `expected-*` lines on the corresponding line.
+  MlirOptMainConfig &verifyOnlyExpectedDiagnostics(bool verify) {
+    verifyOnlyExpectedDiagnosticsFlag = verify;
+    return *this;
+  }
+  bool shouldVerifyOnlyExpectedDiagnostics() const {
+    return verifyOnlyExpectedDiagnosticsFlag;
+  }
+
   /// Set whether to run the verifier after each transformation pass.
   MlirOptMainConfig &verifyPasses(bool verify) {
     verifyPassesFlag = verify;
@@ -277,6 +287,9 @@ protected:
   /// Set whether to check that emitted diagnostics match `expected-*` lines on
   /// the corresponding line. This is meant for implementing diagnostic tests.
   bool verifyDiagnosticsFlag = false;
+  /// Set whether to check that emitted diagnostics match *only specified*
+  /// `expected-*` lines on the corresponding line.
+  bool verifyOnlyExpectedDiagnosticsFlag = false;
 
   /// Run the verifier after each transformation pass.
   bool verifyPassesFlag = true;

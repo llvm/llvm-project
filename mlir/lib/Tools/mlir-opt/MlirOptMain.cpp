@@ -168,6 +168,14 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         cl::desc("Check that emitted diagnostics match "
                  "expected-* lines on the corresponding line"),
         cl::location(verifyDiagnosticsFlag), cl::init(false));
+    static cl::opt<bool, /*ExternalStorage=*/true>
+        verifyOnlyExpectedDiagnostics{
+            "verify-only-expected-diagnostics",
+            cl::desc("Check that emitted diagnostics match only specified "
+                     "expected-* "
+                     "lines "
+                     "on the corresponding line"),
+            cl::location(verifyOnlyExpectedDiagnosticsFlag), cl::init(false)};
 
     static cl::opt<bool, /*ExternalStorage=*/true> verifyPasses(
         "verify-each",
@@ -537,7 +545,8 @@ static LogicalResult processBuffer(raw_ostream &os,
     return performActions(os, sourceMgr, &context, config);
   }
 
-  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr, &context);
+  SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+      *sourceMgr, &context, config.shouldVerifyOnlyExpectedDiagnostics());
 
   // Do any processing requested by command line flags.  We don't care whether
   // these actions succeed or fail, we only care what diagnostics they produce

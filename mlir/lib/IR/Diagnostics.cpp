@@ -803,9 +803,11 @@ SourceMgrDiagnosticVerifierHandlerImpl::computeExpectedDiags(
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
-    llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out)
+    llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out,
+    bool verifyOnlyExpectedDiagnostics)
     : SourceMgrDiagnosticHandler(srcMgr, ctx, out),
-      impl(new SourceMgrDiagnosticVerifierHandlerImpl()) {
+      impl(new SourceMgrDiagnosticVerifierHandlerImpl()),
+      verifyOnlyExpectedDiagnostics(verifyOnlyExpectedDiagnostics) {
   // Compute the expected diagnostics for each of the current files in the
   // source manager.
   for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
@@ -823,8 +825,10 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
 }
 
 SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
-    llvm::SourceMgr &srcMgr, MLIRContext *ctx)
-    : SourceMgrDiagnosticVerifierHandler(srcMgr, ctx, llvm::errs()) {}
+    llvm::SourceMgr &srcMgr, MLIRContext *ctx,
+    bool verifyOnlyExpectedDiagnostics)
+    : SourceMgrDiagnosticVerifierHandler(srcMgr, ctx, llvm::errs(),
+                                         verifyOnlyExpectedDiagnostics) {}
 
 SourceMgrDiagnosticVerifierHandler::~SourceMgrDiagnosticVerifierHandler() {
   // Ensure that all expected diagnostics were handled.
@@ -897,6 +901,9 @@ void SourceMgrDiagnosticVerifierHandler::process(LocationAttr loc,
       nearMiss = &e;
     }
   }
+
+  if (verifyOnlyExpectedDiagnostics)
+    return;
 
   // Otherwise, emit an error for the near miss.
   if (nearMiss)

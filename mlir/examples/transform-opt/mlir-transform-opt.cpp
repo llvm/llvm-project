@@ -43,6 +43,12 @@ struct MlirTransformOptCLOptions {
       cl::desc("Check that emitted diagnostics match expected-* lines "
                "on the corresponding line"),
       cl::init(false)};
+  cl::opt<bool> verifyOnlyExpectedDiagnostics{
+      "verify-only-expected-diagnostics",
+      cl::desc("Check that emitted diagnostics match only specified expected-* "
+               "lines "
+               "on the corresponding line"),
+      cl::init(false)};
 
   cl::opt<std::string> payloadFilename{cl::Positional, cl::desc("<input file>"),
                                        cl::init("-")};
@@ -103,11 +109,13 @@ public:
   /// Constructs the diagnostic handler of the specified kind of the given
   /// source manager and context.
   DiagnosticHandlerWrapper(Kind kind, llvm::SourceMgr &mgr,
-                           mlir::MLIRContext *context) {
+                           mlir::MLIRContext *context,
+                           bool verifyOnlyExpectedDiagnostics = false) {
     if (kind == Kind::EmitDiagnostics)
       handler = new mlir::SourceMgrDiagnosticHandler(mgr, context);
     else
-      handler = new mlir::SourceMgrDiagnosticVerifierHandler(mgr, context);
+      handler = new mlir::SourceMgrDiagnosticVerifierHandler(
+          mgr, context, verifyOnlyExpectedDiagnostics);
   }
 
   /// This object is non-copyable but movable.
@@ -150,8 +158,10 @@ class TransformSourceMgr {
 public:
   /// Constructs the source manager indicating whether diagnostic messages will
   /// be verified later on.
-  explicit TransformSourceMgr(bool verifyDiagnostics)
-      : verifyDiagnostics(verifyDiagnostics) {}
+  explicit TransformSourceMgr(bool verifyDiagnostics,
+                              bool verifyOnlyExpectedDiagnostics)
+      : verifyDiagnostics(verifyDiagnostics),
+        verifyOnlyExpectedDiagnostics(verifyOnlyExpectedDiagnostics) {}
 
   /// Deconstructs the source manager. Note that `checkResults` must have been
   /// called on this instance before deconstructing it.
@@ -179,7 +189,8 @@ public:
     // verification needs to happen and store it.
     if (verifyDiagnostics) {
       diagHandlers.emplace_back(
-          DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context);
+          DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context,
+          verifyOnlyExpectedDiagnostics);
     } else {
       diagHandlers.emplace_back(DiagnosticHandlerWrapper::Kind::EmitDiagnostics,
                                 mgr, &context);
@@ -205,6 +216,9 @@ public:
 private:
   /// Indicates whether diagnostic message verification is requested.
   const bool verifyDiagnostics;
+  /// Indicates whether *only specified* diagnostic message verification is
+  /// requested.
+  const bool verifyOnlyExpectedDiagnostics;
 
   /// Indicates that diagnostic message verification has taken place, and the
   /// deconstruction is therefore safe.
@@ -248,7 +262,8 @@ static llvm::LogicalResult processPayloadBuffer(
   context.allowUnregisteredDialects(clOptions->allowUnregisteredDialects);
   mlir::ParserConfig config(&context);
   TransformSourceMgr sourceMgr(
-      /*verifyDiagnostics=*/clOptions->verifyDiagnostics);
+      /*verifyDiagnostics=*/clOptions->verifyDiagnostics,
+      clOptions->verifyOnlyExpectedDiagnostics);
 
   // Parse the input buffer that will be used as transform payload.
   mlir::OwningOpRef<mlir::Operation *> payloadRoot =

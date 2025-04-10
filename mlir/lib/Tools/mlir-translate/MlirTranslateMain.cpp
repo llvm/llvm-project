@@ -58,7 +58,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
   static llvm::cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
-      llvm::cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"),
+      llvm::cl::desc("Allow operation with no registered dialects "
+                     "(discouraged: testing only!)"),
       llvm::cl::init(false));
 
   static llvm::cl::opt<std::string> inputSplitMarker{
@@ -77,6 +78,13 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
       llvm::cl::desc("Check that emitted diagnostics match "
                      "expected-* lines on the corresponding line"),
       llvm::cl::init(false));
+  static llvm::cl::opt<bool> verifyOnlyExpectedDiagnostics{
+      "verify-only-expected-diagnostics",
+      llvm::cl::desc(
+          "Check that emitted diagnostics match only specified expected-* "
+          "lines "
+          "on the corresponding line"),
+      llvm::cl::init(false)};
 
   static llvm::cl::opt<bool> errorDiagnosticsOnly(
       "error-diagnostics-only",
@@ -158,8 +166,8 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
         // translation failed (in most cases, it is expected to fail) and we do
         // not filter non-error diagnostics even if `errorDiagnosticsOnly` is
         // set. Instead, we check if the diagnostics were produced as expected.
-        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(*sourceMgr,
-                                                            &context);
+        SourceMgrDiagnosticVerifierHandler sourceMgrHandler(
+            *sourceMgr, &context, verifyOnlyExpectedDiagnostics);
         (void)(*translationRequested)(sourceMgr, os, &context);
         result = sourceMgrHandler.verify();
       } else if (errorDiagnosticsOnly) {
