@@ -6776,7 +6776,7 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
 
   if (Value == "TH_DEFAULT")
     TH = AMDGPU::CPol::TH_RT;
-  else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_RT_WB" ||
+  else if (Value == "TH_STORE_LU" || Value == "TH_LOAD_WB" ||
            Value == "TH_LOAD_NT_WB") {
     return Error(StringLoc, "invalid th value");
   } else if (Value.consume_front("TH_ATOMIC_")) {
@@ -6811,7 +6811,7 @@ ParseStatus AMDGPUAsmParser::parseTH(OperandVector &Operands, int64_t &TH) {
                 .Case("NT", AMDGPU::CPol::TH_NT)
                 .Case("HT", AMDGPU::CPol::TH_HT)
                 .Case("LU", AMDGPU::CPol::TH_LU)
-                .Case("RT_WB", AMDGPU::CPol::TH_RT_WB)
+                .Case("WB", AMDGPU::CPol::TH_WB)
                 .Case("NT_RT", AMDGPU::CPol::TH_NT_RT)
                 .Case("RT_NT", AMDGPU::CPol::TH_RT_NT)
                 .Case("NT_HT", AMDGPU::CPol::TH_NT_HT)
