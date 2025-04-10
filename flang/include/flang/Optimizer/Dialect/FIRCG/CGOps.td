@@ -1,4 +1,4 @@
-//===-- CGOps.td - FIR operation definitions ---------------*- tablegen -*-===//
+//===-- CGOps.td - FIR CodeGen operation definitions -------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +28,7 @@ def fircg_Dialect : Dialect {
 // Base class for FIR CG operations.
 // All operations automatically get a prefix of "fircg.".
 class fircg_Op<string mnemonic, list<Trait> traits>
-  : Op<fircg_Dialect, mnemonic, traits>;
+    : Op<fircg_Dialect, mnemonic, traits>;
 
 // Extended embox operation.
 def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
@@ -55,17 +55,12 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
     The memref and shape arguments are mandatory. The rest are optional.
   }];
 
-  let arguments = (ins
-    AnyReferenceLike:$memref,
-    Variadic<AnyIntegerType>:$shape,
-    Variadic<AnyIntegerType>:$shift,
-    Variadic<AnyIntegerType>:$slice,
-    Variadic<AnyCoordinateType>:$subcomponent,
-    Variadic<AnyIntegerType>:$substr,
-    Variadic<AnyIntegerType>:$lenParams,
-    Optional<fir_ClassType>:$sourceBox,
-    OptionalAttr<I32Attr>:$allocator_idx
-  );
+  let arguments = (ins AnyReferenceLike:$memref,
+      Variadic<AnyIntegerType>:$shape, Variadic<AnyIntegerType>:$shift,
+      Variadic<AnyIntegerType>:$slice,
+      Variadic<AnyCoordinateType>:$subcomponent,
+      Variadic<AnyIntegerType>:$substr, Variadic<AnyIntegerType>:$lenParams,
+      Optional<fir_ClassType>:$sourceBox, OptionalAttr<I32Attr>:$allocator_idx);
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
@@ -125,14 +120,10 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     There must not both be a shape and slice/subcomponent arguments
   }];
 
-  let arguments = (ins
-    BoxOrClassType:$box,
-    Variadic<AnyIntegerType>:$shape,
-    Variadic<AnyIntegerType>:$shift,
-    Variadic<AnyIntegerType>:$slice,
-    Variadic<AnyCoordinateType>:$subcomponent,
-    Variadic<AnyIntegerType>:$substr
-  );
+  let arguments = (ins BoxOrClassType:$box, Variadic<AnyIntegerType>:$shape,
+      Variadic<AnyIntegerType>:$shift, Variadic<AnyIntegerType>:$slice,
+      Variadic<AnyCoordinateType>:$subcomponent,
+      Variadic<AnyIntegerType>:$substr);
   let results = (outs BoxOrClassType);
 
   let assemblyFormat = [{
@@ -163,9 +154,9 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
   }];
 }
 
-
 // Extended array coordinate operation.
-def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> {
+def fircg_XArrayCoorOp
+    : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> {
   let summary = "for internal conversion only";
 
   let description = [{
@@ -190,15 +181,11 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
     omitted otherwise. The rest of the arguments are optional.
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Variadic<AnyIntegerType>:$shape,
-    Variadic<AnyIntegerType>:$shift,
-    Variadic<AnyIntegerType>:$slice,
-    Variadic<AnyCoordinateType>:$subcomponent,
-    Variadic<AnyCoordinateType>:$indices,
-    Variadic<AnyIntegerType>:$lenParams
-  );
+  let arguments = (ins AnyRefOrBox:$memref, Variadic<AnyIntegerType>:$shape,
+      Variadic<AnyIntegerType>:$shift, Variadic<AnyIntegerType>:$slice,
+      Variadic<AnyCoordinateType>:$subcomponent,
+      Variadic<AnyCoordinateType>:$indices,
+      Variadic<AnyIntegerType>:$lenParams);
   let results = (outs fir_ReferenceType);
 
   let assemblyFormat = [{
@@ -239,14 +226,9 @@ def fircg_XDeclareOp : fircg_Op<"ext_declare", [AttrSizedOperandSegments]> {
     be converted to an extended DeclareOp.
   }];
 
-  let arguments = (ins
-    AnyRefOrBox:$memref,
-    Variadic<AnyIntegerType>:$shape,
-    Variadic<AnyIntegerType>:$shift,
-    Variadic<AnyIntegerType>:$typeparams,
-    Optional<fir_DummyScopeType>:$dummy_scope,
-    Builtin_StringAttr:$uniq_name
-  );
+  let arguments = (ins AnyRefOrBox:$memref, Variadic<AnyIntegerType>:$shape,
+      Variadic<AnyIntegerType>:$shift, Variadic<AnyIntegerType>:$typeparams,
+      Optional<fir_DummyScopeType>:$dummy_scope, Builtin_StringAttr:$uniq_name);
   let results = (outs AnyRefOrBox);
 
   let assemblyFormat = [{

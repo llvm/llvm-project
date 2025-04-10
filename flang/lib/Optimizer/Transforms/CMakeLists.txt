@@ -47,6 +47,7 @@ add_flang_library(FIRTransforms
   FIRAnalysis
   FIRBuilder
   FIRCodeGen
+  FIRCodeGenDialect
   FIRDialect
   FIRDialectSupport
   FIRSupport
