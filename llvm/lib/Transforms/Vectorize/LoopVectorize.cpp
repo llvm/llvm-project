@@ -9156,7 +9156,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (auto ScaleFactor = getScalingForReduction(Instr))
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
     return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
