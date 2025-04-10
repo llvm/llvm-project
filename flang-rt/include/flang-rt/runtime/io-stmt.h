@@ -156,7 +156,7 @@ public:
       if (at_ && at_ < limit_) {
         return *at_;
       } else {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
     RT_API_ATTRS void NextRecord(IoStatementState &io) {
@@ -200,7 +200,7 @@ public:
         byteCount = ch ? 1 : 0;
         return ch;
       } else if (!field->MustUseSlowPath()) {
-        return std::nullopt;
+        return Fortran::common::nullopt;
       }
     }
     return GetCurrentCharSlow(byteCount);
