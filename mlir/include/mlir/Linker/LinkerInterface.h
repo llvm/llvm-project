@@ -63,10 +63,10 @@ public:
   LinkerInterface(Dialect *dialect)
       : DialectInterface::Base<ConcreteType>(dialect) {}
 
-  /// TODO comment
-  virtual LogicalResult initialize(ModuleOp src) = 0;
+  /// Runs initialization of alinker before summarization for the given module
+  virtual LogicalResult initialize(ModuleOp src) { return success(); }
 
-  /// TODO comment
+  /// Link operations from current summary using state builder
   virtual LogicalResult link(LinkState &state) const = 0;
 };
 
@@ -111,8 +111,10 @@ public:
   /// Records a non-conflicting operation for linking.
   virtual void registerForLink(Operation *op) = 0;
 
-  /// Materialize new operation for the given conflict pair.
-  virtual Operation *materialize(Operation *src, LinkState &state) const = 0;
+  /// Materialize new operation for the given conflict src operation.
+  virtual Operation *materialize(Operation *src, LinkState &state) const {
+    return state.clone(src);
+  }
 
   /// Dependencies of the given operation required to be linked.
   virtual SmallVector<Operation *> dependencies(Operation *op) const = 0;
@@ -139,14 +141,27 @@ class SymbolAttrLinkerInterface : public SymbolLinkerInterface {
 public:
   using SymbolLinkerInterface::SymbolLinkerInterface;
 
+  /// Link operations from current summary using state builder
+  LogicalResult link(LinkState &state) const override;
+
   /// Returns the symbol for the given operation.
   StringRef getSymbol(Operation *op) const override;
 
   /// Checks if an operation conflicts with existing linked operations.
   Conflict findConflict(Operation *src) const override;
 
+  /// Records a non-conflicting operation for linking.
+  void registerForLink(Operation *op) override;
+
+  /// Dependencies of the given operation required to be linked.
+  SmallVector<Operation *> dependencies(Operation *op) const override;
+
 protected:
+  // Operations that are to be linked with the original name.
   llvm::StringMap<Operation *> summary;
+
+  // Operations that are to be linked with unique names.
+  SetVector<Operation *> uniqued;
 };
 
 //===----------------------------------------------------------------------===//
