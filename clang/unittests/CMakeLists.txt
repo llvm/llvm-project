@@ -47,10 +47,10 @@ function(add_distinct_clang_unittest test_name)
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
 endfunction()
 
-define_property(GLOBAL PROPERTY CLANG_UNITTEST_SRCS)
-define_property(GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS)
-define_property(GLOBAL PROPERTY CLANG_UNITTEST_CLANG_LIBS)
-define_property(GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS)
+define_property(GLOBAL PROPERTY CLANG_UNITTEST_SRCS BRIEF_DOCS "<internal setting>")
+define_property(GLOBAL PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS BRIEF_DOCS "<internal setting>")
+define_property(GLOBAL PROPERTY CLANG_UNITTEST_CLANG_LIBS BRIEF_DOCS "<internal setting>")
+define_property(GLOBAL PROPERTY CLANG_UNITTEST_LINK_LIBS BRIEF_DOCS "<internal setting>")
 
 # add_clang_unittest(test_name file1.cpp file2.cpp)
 #
