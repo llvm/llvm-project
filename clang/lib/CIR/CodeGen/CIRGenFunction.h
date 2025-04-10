@@ -570,6 +570,16 @@ public:
   //===--------------------------------------------------------------------===//
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
+private:
+  // Function to do the basic implementation of a 'compute' operation, including
+  // the clauses/etc. This might be generalizable in the future to work for
+  // other constructs, or at least be the base for construct emission.
+  template <typename Op, typename TermOp>
+  mlir::LogicalResult
+  emitOpenACCComputeOp(mlir::Location start, mlir::Location end,
+                       llvm::ArrayRef<const OpenACCClause *> clauses,
+                       const Stmt *structuredBlock);
+
 public:
   mlir::LogicalResult
   emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s);
