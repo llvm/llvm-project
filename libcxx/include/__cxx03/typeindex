@@ -50,9 +50,6 @@ struct hash<type_index>
 #include <__cxx03/typeinfo>
 #include <__cxx03/version>
 
-// standard-mandated includes
-#include <__cxx03/compare>
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif

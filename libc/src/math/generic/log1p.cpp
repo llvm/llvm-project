@@ -910,7 +910,12 @@ LLVM_LIBC_FUNCTION(double, log1p, (double x)) {
           return FPBits_t::quiet_nan().get_val();
         }
         // x is +Inf or NaN
-        return x;
+        if (xbits.is_inf() && xbits.is_pos())
+          return x;
+
+        if (xbits.is_signaling_nan())
+          fputil::raise_except_if_required(FE_INVALID);
+        return FPBits_t::quiet_nan().get_val();
       }
       x_dd.hi = x;
     } else {
