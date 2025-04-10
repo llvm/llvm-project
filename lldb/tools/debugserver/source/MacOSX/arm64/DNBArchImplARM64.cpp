@@ -2956,8 +2956,8 @@ kern_return_t DNBArchMachARM64::SetRegisterState(int set) {
     kern_return_t ret =
         SetGPRState() | SetVFPState() | SetEXCState() | SetDBGState(false);
     if (CPUHasSME()) {
-      ret |= SetSVEState();
-      ret |= SetSMEState();
+      SetSVEState();
+      SetSMEState();
     }
     return ret;
   }
@@ -3126,21 +3126,16 @@ uint32_t DNBArchMachARM64::SaveRegisterState() {
                                  "error: GPR regs failed to read: %u ",
                      kret);
   } else if ((kret = GetVFPState(force)) != KERN_SUCCESS) {
-    DNBLogThreadedIf(LOG_THREAD,
-                     "DNBArchMachARM64::SaveRegisterState () "
-                     "error: %s regs failed to read: %u",
+    DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::SaveRegisterState () "
+                                 "error: %s regs failed to read: %u",
                      "VFP", kret);
-  } else if (CPUHasSME() && (kret = SetSVEState() != KERN_SUCCESS)) {
-    DNBLogThreadedIf(LOG_THREAD,
-                     "DNBArchMachARM64::SaveRegisterState () "
-                     "error: %s regs failed to read: %u",
-                     "SVE", kret);
-  } else if (CPUHasSME() && (kret = SetSMEState() != KERN_SUCCESS)) {
-    DNBLogThreadedIf(LOG_THREAD,
-                     "DNBArchMachARM64::SaveRegisterState () "
-                     "error: %s regs failed to read: %u",
-                     "SME", kret);
   } else {
+    if (CPUHasSME()) {
+      // These can fail when processor is not in streaming SVE mode,
+      // and that failure should be ignored.
+      GetSVEState(force);
+      GetSMEState(force);
+    }
     const uint32_t save_id = GetNextRegisterStateSaveID();
     m_saved_register_states[save_id] = m_state.context;
     return save_id;
@@ -3162,26 +3157,17 @@ bool DNBArchMachARM64::RestoreRegisterState(uint32_t save_id) {
                        save_id, kret);
       success = false;
     } else if ((kret = SetVFPState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD,
-                       "DNBArchMachARM64::RestoreRegisterState "
-                       "(save_id = %u) error: %s regs failed to "
-                       "write: %u",
+      DNBLogThreadedIf(LOG_THREAD, "DNBArchMachARM64::RestoreRegisterState "
+                                   "(save_id = %u) error: %s regs failed to "
+                                   "write: %u",
                        save_id, "VFP", kret);
       success = false;
-    } else if ((kret = SetSVEState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD,
-                       "DNBArchMachARM64::RestoreRegisterState "
-                       "(save_id = %u) error: %s regs failed to "
-                       "write: %u",
-                       save_id, "SVE", kret);
-      success = false;
-    } else if ((kret = SetSMEState()) != KERN_SUCCESS) {
-      DNBLogThreadedIf(LOG_THREAD,
-                       "DNBArchMachARM64::RestoreRegisterState "
-                       "(save_id = %u) error: %s regs failed to "
-                       "write: %u",
-                       save_id, "SME", kret);
-      success = false;
+    }
+    if (CPUHasSME()) {
+      // These can fail when processor is not in streaming SVE mode,
+      // and that failure should be ignored.
+      SetSVEState();
+      SetSMEState();
     }
     m_saved_register_states.erase(pos);
     return success;
