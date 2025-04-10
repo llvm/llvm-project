@@ -398,10 +398,10 @@ void UnwindPlan::AppendRow(Row row) {
 }
 
 struct RowLess {
-  bool operator()(addr_t a, const UnwindPlan::Row &b) const {
+  bool operator()(int64_t a, const UnwindPlan::Row &b) const {
     return a < b.GetOffset();
   }
-  bool operator()(const UnwindPlan::Row &a, addr_t b) const {
+  bool operator()(const UnwindPlan::Row &a, int64_t b) const {
     return a.GetOffset() < b;
   }
 };
@@ -418,7 +418,7 @@ void UnwindPlan::InsertRow(Row row, bool replace_existing) {
 }
 
 const UnwindPlan::Row *
-UnwindPlan::GetRowForFunctionOffset(std::optional<int> offset) const {
+UnwindPlan::GetRowForFunctionOffset(std::optional<int64_t> offset) const {
   auto it = offset ? llvm::upper_bound(m_row_list, *offset, RowLess())
                    : m_row_list.end();
   if (it == m_row_list.begin())
