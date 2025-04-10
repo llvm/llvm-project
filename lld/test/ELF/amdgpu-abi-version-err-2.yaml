@@ -1,0 +1,15 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: ld.lld: error: unknown AMDHSA ABI version: 42
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_AMDGPU_HSA
+  ABIVersion:      0x2A # ABI=42
+  Type:            ET_REL
+  Machine:         EM_AMDGPU
+  Flags:           [ EF_AMDGPU_MACH_AMDGCN_GFX900 ]
+...
