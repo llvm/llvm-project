@@ -16287,8 +16287,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
   SmallVector<SDValue> Ops(N0->ops());
-  // TODO: ISD::UNDEF and ISD::POISON should get separate handling, but best
-  // leave for a future patch.
+  // Special-handle ISD::UNDEF, each single one of them can be it's own thing.
   for (SDValue &Op : Ops) {
     if (Op.isUndef())
       Op = DAG.getFreeze(Op);
