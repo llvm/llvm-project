@@ -3534,8 +3534,7 @@ bool OmpStructureChecker::CheckReductionOperator(
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
       if (!valid) {
-        auto *reductionDetails{name->symbol->detailsIf<UserReductionDetails>()};
-        valid = reductionDetails != nullptr;
+        valid = name->symbol->detailsIf<UserReductionDetails>();
       }
     }
     if (!valid) {
@@ -3663,7 +3662,7 @@ static bool IsReductionAllowedForType(
         const auto *reductionDetails{symbol->detailsIf<UserReductionDetails>()};
         assert(reductionDetails && "Expected to find reductiondetails");
 
-        return reductionDetails->SupportsType(&type);
+        return reductionDetails->SupportsType(type);
       }
       return false;
     }
@@ -3700,7 +3699,7 @@ static bool IsReductionAllowedForType(
       // supported.
       if (const auto *reductionDetails{
               name->symbol->detailsIf<UserReductionDetails>()}) {
-        return reductionDetails->SupportsType(&type);
+        return reductionDetails->SupportsType(type);
       }
 
       // We also need to check for mangled names (max, min, iand, ieor and ior)
@@ -3709,7 +3708,7 @@ static bool IsReductionAllowedForType(
       if (const auto &symbol{scope.FindSymbol(mangledName)}) {
         if (const auto *reductionDetails{
                 symbol->detailsIf<UserReductionDetails>()}) {
-          return reductionDetails->SupportsType(&type);
+          return reductionDetails->SupportsType(type);
         }
       }
     }

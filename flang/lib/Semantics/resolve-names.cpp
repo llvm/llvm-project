@@ -1468,12 +1468,12 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpMetadirectiveDirective &x) {
+  bool Pre(const parser::OmpMetadirectiveDirective &x) { //
     metaDirective_ = &x;
     ++metaLevel_;
     return true;
   }
-  void Post(const parser::OmpMetadirectiveDirective &) {
+  void Post(const parser::OmpMetadirectiveDirective &) { //
     metaDirective_ = nullptr;
     --metaLevel_;
   }
@@ -1838,7 +1838,7 @@ parser::CharBlock MakeNameFromOperator(
   }
 }
 
-parser::CharBlock MangleSpecialFunctions(const parser::CharBlock name) {
+parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
   return llvm::StringSwitch<parser::CharBlock>(name.ToString())
       .Case("max", {"op.max", 6})
       .Case("min", {"op.min", 6})
@@ -1933,7 +1933,7 @@ void OmpVisitor::ProcessReductionSpecifier(
     // Only process types we can find. There will be an error later on when
     // a type isn't found.
     if (const DeclTypeSpec * typeSpec{GetDeclTypeSpec()}) {
-      reductionDetails->AddType(typeSpec);
+      reductionDetails->AddType(*typeSpec);
 
       for (auto &nm : ompVarNames) {
         ObjectEntityDetails details{};
