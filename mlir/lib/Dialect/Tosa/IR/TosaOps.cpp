@@ -653,6 +653,13 @@ LogicalResult tosa::ClampOp::verify() {
         (intMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const APInt minVal = intMinValAttr.getValue();
+    const APInt maxVal = intMaxValAttr.getValue();
+    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   } else {
     // otherwise, input datatype is float, check that the min_val/max_val
     // attributes share the same type and that their type is the same as the
@@ -664,6 +671,16 @@ LogicalResult tosa::ClampOp::verify() {
         (floatMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const APFloat minVal = floatMinValAttr.getValue();
+    const APFloat maxVal = floatMaxValAttr.getValue();
+    if (minVal.isNaN() || maxVal.isNaN())
+      return emitOpError("min/max attributes should not be 'NaN', got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
+
+    if (maxVal < minVal)
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   }
 
   return success();
