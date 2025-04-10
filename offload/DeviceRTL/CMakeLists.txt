@@ -255,7 +255,7 @@ function(compileDeviceRTLLibrary target_name target_triple)
 endfunction()
 
 add_custom_target(omptarget.devicertl.amdgpu)
-compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa)
+compileDeviceRTLLibrary(amdgpu amdgcn-amd-amdhsa -Xclang -mcode-object-version=none)
 
 add_custom_target(omptarget.devicertl.nvptx)
 compileDeviceRTLLibrary(nvptx nvptx64-nvidia-cuda --cuda-feature=+ptx63)

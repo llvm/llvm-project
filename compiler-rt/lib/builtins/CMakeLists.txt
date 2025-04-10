@@ -833,6 +833,12 @@ else ()
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
                    -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
+    endif()
   endif()
 
   set(BUILTIN_DEFS "")

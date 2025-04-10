@@ -22,6 +22,7 @@ builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC
 builtin_check_c_compiler_flag(-nogpulib             COMPILER_RT_HAS_NOGPULIB_FLAG)
 builtin_check_c_compiler_flag(-flto                 COMPILER_RT_HAS_FLTO_FLAG)
 builtin_check_c_compiler_flag(-fconvergent-functions COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG)
+builtin_check_c_compiler_flag("-Xclang -mcode-object-version=none" COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG)
 builtin_check_c_compiler_flag(-Wbuiltin-declaration-mismatch COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG)
 builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 builtin_check_c_compiler_flag(-fcf-protection=full COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
