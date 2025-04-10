@@ -13063,6 +13063,9 @@ def err_acc_invalid_modifier
     : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
 def err_acc_invalid_default_type
     : Error<"invalid value %0 in '%1' clause; valid values are %2">;
+def err_acc_device_type_multiple_archs
+    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+            "one architecture">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
