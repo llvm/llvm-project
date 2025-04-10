@@ -10,7 +10,7 @@ define i32 @pr135182() {
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    br i1 false, label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret i32 131048
+; CHECK-NEXT:    ret i32 65512
 ;
 entry:
   br label %for.body
