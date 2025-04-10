@@ -149,3 +149,15 @@ public:
   // CHECK-FIXES-STRICT: static float test4;
 };
 }
+
+namespace ns {
+class B
+{
+public:
+  ~B();
+};
+
+inline B::~B() = default;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: function '~B' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
+// CHECK-FIXES: B::~B() = default;
+}
