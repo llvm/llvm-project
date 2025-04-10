@@ -156,6 +156,7 @@ public:
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
+  mlir::Value VisitCallExpr(const CallExpr *e);
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
@@ -1445,6 +1446,18 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                    "CastExpr: ", ce->getCastKindName());
   }
   return {};
+}
+
+mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
+    cgf.getCIRGenModule().errorNYI(
+        e->getSourceRange(), "call to function with non-void return type");
+    return {};
+  }
+
+  auto v = cgf.emitCallExpr(e).getScalarVal();
+  assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
+  return v;
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,

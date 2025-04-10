@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Arg>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_assignable
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_assignable
     : public integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {};
 
 #if _LIBCPP_STD_VER >= 17
@@ -30,7 +30,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_assignable_v = __is_
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_copy_assignable
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_copy_assignable
     : public integral_constant<
           bool,
           __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_lvalue_reference_t<const _Tp>)> {};
@@ -41,7 +41,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_copy_assignable_v = 
 #endif
 
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS is_nothrow_move_assignable
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_move_assignable
     : public integral_constant<bool,
                                __is_nothrow_assignable(__add_lvalue_reference_t<_Tp>, __add_rvalue_reference_t<_Tp>)> {
 };
