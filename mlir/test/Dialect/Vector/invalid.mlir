@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 func.func @broadcast_to_scalar(%arg0: f32) -> f32 {
-  // expected-error@+1 {{custom op 'vector.broadcast' invalid kind of type specified}}
+  // expected-error@+1 {{custom op 'vector.broadcast' invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = vector.broadcast %arg0 : f32 to f32
 }
 
@@ -144,7 +144,7 @@ func.func @extract_element(%arg0: vector<4x4xf32>) {
 // -----
 
 func.func @extract_vector_type(%arg0: index) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'index'}}
   %1 = vector.extract %arg0[] : index from index
 }
 
@@ -1174,7 +1174,7 @@ func.func @shape_cast_scalability_flag_is_dropped(%arg0 : vector<2x[15]x[2]xf32>
 // -----
 
 func.func @bitcast_not_vector(%arg0 : vector<5x1x3x2xf32>) {
-  // expected-error@+1 {{'vector.bitcast' invalid kind of type specified}}
+  // expected-error@+1 {{'vector.bitcast' invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = vector.bitcast %arg0 : vector<5x1x3x2xf32> to f32
 }
 
@@ -1628,7 +1628,7 @@ func.func @scan_unsupported_kind(%arg0: vector<2x3xf32>, %arg1: vector<3xf32>) -
 // -----
 
 func.func @invalid_splat(%v : f32) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'memref<8xf32>'}}
   vector.splat %v : memref<8xf32>
   return
 }

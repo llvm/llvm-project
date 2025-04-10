@@ -1316,11 +1316,13 @@ public:
     switch (C->getClauseKind()) {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #include "clang/Basic/OpenACCClauses.def"
 
@@ -1333,7 +1335,7 @@ public:
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(                                             \
       const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
-    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
+    return getDerived().VisitClause(Clause);                                   \
   }
 
 #include "clang/Basic/OpenACCClauses.def"
