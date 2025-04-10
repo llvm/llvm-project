@@ -895,6 +895,13 @@ public:
            is_contained(AddSub, getAltOpcode());
   }
 
+  /// Checks if main/alt instructions are cmp operations.
+  bool isCmpOp() const {
+    return (getOpcode() == Instruction::ICmp ||
+            getOpcode() == Instruction::FCmp) &&
+           getAltOpcode() == getOpcode();
+  }
+
   /// Checks if the current state is valid, i.e. has non-null MainOp
   bool valid() const { return MainOp && AltOp; }
 
@@ -9277,6 +9284,16 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   // as alternate ops.
   if (NumParts >= VL.size())
     return false;
+  constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
+  InstructionCost InsertCost = ::getShuffleCost(
+      *TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
+  FixedVectorType *SubVecTy =
+      getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size()));
+  InstructionCost NewShuffleCost =
+      ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, Kind);
+  if (!LocalState.isCmpOp() && NumParts <= 1 &&
+      (Mask.empty() || InsertCost >= NewShuffleCost))
+    return false;
   if ((LocalState.getMainOp()->isBinaryOp() &&
        LocalState.getAltOp()->isBinaryOp() &&
        (LocalState.isShiftOp() || LocalState.isBitwiseLogicOp() ||
@@ -9284,15 +9301,6 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       (LocalState.getMainOp()->isCast() && LocalState.getAltOp()->isCast()) ||
       (LocalState.getMainOp()->isUnaryOp() &&
        LocalState.getAltOp()->isUnaryOp())) {
-    constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
-    InstructionCost InsertCost = ::getShuffleCost(
-        *TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
-    FixedVectorType *SubVecTy =
-        getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size()));
-    InstructionCost NewShuffleCost =
-        ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, Kind);
-    if (NumParts <= 1 && (Mask.empty() || InsertCost >= NewShuffleCost))
-      return false;
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, Kind) +
         TTI->getArithmeticInstrCost(Opcode1, VecTy, Kind);
@@ -9428,18 +9436,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     OrdersType ReorderIndices;
     if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
       return false;
-
-    // Any value is used in split node already - just gather.
-    if (any_of(VL, [&](Value *V) {
-          return ScalarsInSplitNodes.contains(V) || isVectorized(V);
-        })) {
-      if (TryToFindDuplicates(S)) {
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndices);
-      }
-      return true;
-    }
 
     SmallVector<Value *> NewVL(VL.size());
     copy(Op1, NewVL.begin());
@@ -9616,9 +9612,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, Kind) +
           ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
                                      /*Insert=*/false, /*Extract=*/true, Kind);
-      InstructionCost ScalarizeCostEstimate =
-          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Vectorized,
-                                     /*Insert=*/true, /*Extract=*/false, Kind);
+      InstructionCost ScalarizeCostEstimate = ::getScalarizationOverhead(
+          *TTI, ScalarTy, VecTy, Vectorized,
+          /*Insert=*/true, /*Extract=*/false, Kind, /*ForPoisonSrc=*/false);
       PreferScalarize = VectorizeCostEstimate > ScalarizeCostEstimate;
     }
     if (PreferScalarize) {
