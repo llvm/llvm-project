@@ -25,7 +25,7 @@ entry:
   %and = and i32 %or, %arg2
   %shr = lshr i32 %and, 2
 
-  %sgpr128_0 = insertelement <4 x i32> undef, i32 %shr, i32 0
+  %sgpr128_0 = insertelement <4 x i32> poison, i32 %shr, i32 0
   %sgpr128_1 = insertelement <4 x i32> %sgpr128_0, i32 %or, i32 1
   %sgpr128_2 = insertelement <4 x i32> %sgpr128_1, i32 %and, i32 2
   %sgpr128_3 = insertelement <4 x i32> %sgpr128_2, i32 %shr, i32 3
