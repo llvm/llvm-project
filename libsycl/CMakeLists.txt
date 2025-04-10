@@ -120,9 +120,6 @@ endif()
 if(LIBSYCL_ENABLE_WERROR)
   if(MSVC)
     set(CMAKE_CXX_FLAGS "/WX ${CMAKE_CXX_FLAGS}")
-    add_definitions(
-      -wd4996 # Suppress 'function': was declared deprecated'
-    )
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
   endif()
@@ -130,7 +127,7 @@ endif()
 
 # This is a workaround to detect changes (add or modify) in subtree which
 # are not detected by copy_directory command.
-# TODO: detect and process remove header/directory case
+# TODO: Detect removal in the source tree and reflect in the install directory.
 file(GLOB_RECURSE HEADERS_IN_SYCL_DIR CONFIGURE_DEPENDS "${LIBSYCL_INCLUDE_DIR}/sycl/*")
 
 string(REPLACE "${LIBSYCL_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
@@ -138,7 +135,7 @@ string(REPLACE "${LIBSYCL_INCLUDE_DIR}" "${LIBSYCL_BUILD_INCLUDE_DIR}"
 
 # Copy SYCL headers from sources to build directory
 add_custom_target(sycl-headers
-DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
+  DEPENDS ${OUT_HEADERS_IN_SYCL_DIR})
 
 add_custom_command(
   OUTPUT  ${OUT_HEADERS_IN_SYCL_DIR}
@@ -146,7 +143,6 @@ add_custom_command(
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBSYCL_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl
   COMMENT "Copying SYCL headers...")
 
-message(WARNING "${LIBSYCL_INCLUDE_DIR}/sycl ${LIBSYCL_BUILD_INCLUDE_DIR}/sycl")
 install(DIRECTORY "${LIBSYCL_INCLUDE_DIR}/sycl" DESTINATION ${LIBSYCL_INSTALL_INCLUDE_DIR} COMPONENT sycl-headers)
 
 if (WIN32)

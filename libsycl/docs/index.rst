@@ -39,12 +39,13 @@ support for a simple SYCL application with device code using Unified Shared Memo
      });
      q.wait();
    
+     bool error = false;
      for (int i = 0; i < dataSize; ++i)
-       if (dataPtr[i] != i) return 1;
+       if (dataPtr[i] != i) error = true;
    
      free(dataPtr, q);
    
-     return 0;
+     return error;
    }
 
 This requires at least partial support of the following functionality on the libsycl side:
@@ -55,5 +56,5 @@ This requires at least partial support of the following functionality on the lib
   * sycl::handler class
   * sycl::id and sycl::range classes
   * Unified shared memory allocation/deallocation
-  * Program manager, an internal component for retrieving and using device images from the fat binary
+  * Program manager, an internal component for retrieving and using device images from the multi-architectural binaries
   

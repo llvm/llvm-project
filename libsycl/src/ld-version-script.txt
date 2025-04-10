@@ -14,9 +14,6 @@
     _ZTSN4sycl*; /* typeinfo name */
     _ZTVN4sycl*; /* vtable */
 
-    /* Some functions are also in __host_std, export them as well */
-    _ZN10__host_std*;
-
   local:
     *;
 };

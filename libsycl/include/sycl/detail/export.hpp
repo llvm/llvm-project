@@ -6,16 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#pragma once
+#ifndef __LIBSYCL_DETAIL_EXPORT_HPP
+#define __LIBSYCL_DETAIL_EXPORT_HPP
 
 #ifndef __SYCL_DEVICE_ONLY__
 #ifndef __SYCL_EXPORT
 #ifdef _WIN32
-
-// MSVC discourages export of classes, that use STL class in API. This
-// results in a warning, treated as compile error. Silence C4251 to workaround.
-#pragma warning(disable : 4251)
-#pragma warning(disable : 4275)
 
 #define __SYCL_DLL_LOCAL
 
@@ -26,6 +22,7 @@
 #define __SYCL_EXPORT __declspec(dllimport)
 #define __SYCL_EXPORT_DEPRECATED(x) __declspec(dllimport, deprecated(x))
 #endif //__SYCL_BUILD_SYCL_DLL
+
 #else  // _WIN32
 
 #define __SYCL_DLL_LOCAL __attribute__((visibility("hidden")))
@@ -33,12 +30,18 @@
 #define __SYCL_EXPORT __attribute__((visibility("default")))
 #define __SYCL_EXPORT_DEPRECATED(x)                                            \
   __attribute__((visibility("default"), deprecated(x)))
+
 #endif // _WIN32
 #endif // __SYCL_EXPORT
-#else
+
+#else // __SYCL_DEVICE_ONLY__
+
 #ifndef __SYCL_EXPORT
 #define __SYCL_EXPORT
 #define __SYCL_EXPORT_DEPRECATED(x)
 #define __SYCL_DLL_LOCAL
 #endif
+
 #endif // __SYCL_DEVICE_ONLY__
+
+#endif // __LIBSYCL_DETAIL_EXPORT_HPP

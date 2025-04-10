@@ -96,13 +96,6 @@ function(add_sycl_rt_library LIB_NAME LIB_OBJ_NAME)
       ${CMAKE_THREAD_LIBS_INIT}
   )
 
-  # Workaround for a bug in GCC version 5 and higher.
-  # More information https://bugs.launchpad.net/ubuntu/+source/gcc-5/+bug/1568899
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
-      CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 5.0)
-    target_link_libraries(${ARGV0} PRIVATE gcc_s gcc)
-  endif()
-
   set_target_properties(${LIB_NAME} PROPERTIES
                         VERSION ${LIBSYCL_VERSION_STRING}
                         SOVERSION ${LIBSYCL_VERSION_STRING})

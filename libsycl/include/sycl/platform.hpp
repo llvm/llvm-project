@@ -5,7 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#pragma once
+
+#ifndef __LIBSYCL_PLATFORM_HPP
+#define __LIBSYCL_PLATFORM_HPP
 
 #include <sycl/detail/export.hpp>
 
@@ -22,3 +24,5 @@ public:
 }; // class platform
 } // namespace _V1
 } // namespace sycl
+
+#endif // __LIBSYCL_PLATFORM_HPP
