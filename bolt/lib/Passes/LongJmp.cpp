@@ -557,6 +557,10 @@ Error LongJmpPass::relax(BinaryFunction &Func, bool &Modified) {
   const BinaryContext &BC = Func.getBinaryContext();
 
   assert(BC.isAArch64() && "Unsupported arch");
+
+  if (Func.isIgnored())
+    return Error::success();
+
   constexpr int InsnSize = 4; // AArch64
   std::vector<std::pair<BinaryBasicBlock *, std::unique_ptr<BinaryBasicBlock>>>
       Insertions;
