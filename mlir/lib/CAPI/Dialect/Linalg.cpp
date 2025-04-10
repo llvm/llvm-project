@@ -41,4 +41,38 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   fun(b, *body, op->getAttrs());
 }
 
+MLIR_CAPI_EXPORTED bool mlirLinalgIsContractionOp(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  // isaContractionOpInterface handles null linalgOp internally.
+  return linalg::isaContractionOpInterface(linalgOp);
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
+mlirLinalgInferContractionDimensions(MlirOperation op) {
+  MlirLinalgContractionDimensions result{};
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return result;
+
+  FailureOr<linalg::ContractionDimensions> maybeDims =
+      linalg::inferContractionDims(linalgOp);
+  if (failed(maybeDims))
+    return result;
+
+  linalg::ContractionDimensions contractionDims = *maybeDims;
+  MLIRContext *ctx = linalgOp.getContext();
+
+  auto toAttr = [&ctx](const SmallVector<unsigned, 2> &vals) -> MlirAttribute {
+    return wrap(
+        DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t, 2>(vals)));
+  };
+
+  result.batch = toAttr(contractionDims.batch);
+  result.m = toAttr(contractionDims.m);
+  result.n = toAttr(contractionDims.n);
+  result.k = toAttr(contractionDims.k);
+
+  return result;
+}
+
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Linalg, linalg, LinalgDialect)

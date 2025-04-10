@@ -183,6 +183,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
 
+    case BuiltinType::NullPtr:
+      // Add proper CIR type for it? this looks mostly useful for sema related
+      // things (like for overloads accepting void), for now, given that
+      // `sizeof(std::nullptr_t)` is equal to `sizeof(void *)`, model
+      // std::nullptr_t as !cir.ptr<!void>
+      resultType = builder.getVoidPtrTy();
+      break;
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.SInt32Ty;
@@ -280,4 +288,34 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
   }
 
   return true;
+}
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo() {
+  // Lookup or create unique function info.
+  llvm::FoldingSetNodeID id;
+  CIRGenFunctionInfo::Profile(id);
+
+  void *insertPos = nullptr;
+  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  if (fi)
+    return *fi;
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+
+  // Construction the function info. We co-allocate the ArgInfos.
+  fi = CIRGenFunctionInfo::create();
+  functionInfos.InsertNode(fi, insertPos);
+
+  bool inserted = functionsBeingProcessed.insert(fi).second;
+  (void)inserted;
+  assert(inserted && "Are functions being processed recursively?");
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  bool erased = functionsBeingProcessed.erase(fi);
+  (void)erased;
+  assert(erased && "Not in set?");
+
+  return *fi;
 }

@@ -3441,4 +3441,16 @@ def TestMultiSlotAlloca : TEST_Op<"multi_slot_alloca",
   let assemblyFormat = "attr-dict `:` functional-type(operands, results)";
 }
 
+//===----------------------------------------------------------------------===//
+// Test allocation Ops
+//===----------------------------------------------------------------------===//
+
+def TestAllocWithMultipleResults : TEST_Op<"alloc_with_multiple_results"> {
+  let results = (outs Index:$index,
+                      Res<AnyMemRef, "", [MemAlloc]>:$memref);
+  let assemblyFormat = [{
+     attr-dict `:` type($index) `,` type($memref)
+  }];
+}
+
 #endif // TEST_OPS

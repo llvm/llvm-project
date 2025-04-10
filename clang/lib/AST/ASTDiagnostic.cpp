@@ -508,6 +508,14 @@ void clang::FormatASTNodeDiagnosticArgument(
       NeedQuotes = false;
       break;
     }
+    case DiagnosticsEngine::ak_expr: {
+      const Expr *E = reinterpret_cast<Expr *>(Val);
+      assert(E && "Received null Expr!");
+      E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      // FIXME: Include quotes when printing expressions.
+      NeedQuotes = false;
+      break;
+    }
   }
 
   if (NeedQuotes) {

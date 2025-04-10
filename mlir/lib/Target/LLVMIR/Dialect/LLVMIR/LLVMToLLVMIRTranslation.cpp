@@ -555,6 +555,59 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
 
+  // Emit blockaddress. We first need to find the LLVM block referenced by this
+  // operation and then create a LLVM block address for it.
+  if (auto blockAddressOp = dyn_cast<LLVM::BlockAddressOp>(opInst)) {
+    // getBlockTagOp() walks a function to search for block labels. Check
+    // whether it's in cache first.
+    BlockAddressAttr blockAddressAttr = blockAddressOp.getBlockAddr();
+    BlockTagOp blockTagOp = moduleTranslation.lookupBlockTag(blockAddressAttr);
+    if (!blockTagOp) {
+      blockTagOp = blockAddressOp.getBlockTagOp();
+      moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
+    }
+
+    llvm::Value *llvmValue = nullptr;
+    StringRef fnName = blockAddressAttr.getFunction().getValue();
+    if (llvm::BasicBlock *llvmBlock =
+            moduleTranslation.lookupBlock(blockTagOp->getBlock())) {
+      llvm::Function *llvmFn = moduleTranslation.lookupFunction(fnName);
+      llvmValue = llvm::BlockAddress::get(llvmFn, llvmBlock);
+    } else {
+      // The matching LLVM block is not yet emitted, a placeholder is created
+      // in its place. When the LLVM block is emitted later in translation,
+      // the llvmValue is replaced with the actual llvm::BlockAddress.
+      // A GlobalVariable is chosen as placeholder because in general LLVM
+      // constants are uniqued and are not proper for RAUW, since that could
+      // harm unrelated uses of the constant.
+      llvmValue = new llvm::GlobalVariable(
+          *moduleTranslation.getLLVMModule(),
+          llvm::PointerType::getUnqual(moduleTranslation.getLLVMContext()),
+          /*isConstant=*/true, llvm::GlobalValue::LinkageTypes::ExternalLinkage,
+          /*Initializer=*/nullptr,
+          Twine("__mlir_block_address_")
+              .concat(Twine(fnName))
+              .concat(Twine((uint64_t)blockAddressOp.getOperation())));
+      moduleTranslation.mapUnresolvedBlockAddress(blockAddressOp, llvmValue);
+    }
+
+    moduleTranslation.mapValue(blockAddressOp.getResult(), llvmValue);
+    return success();
+  }
+
+  // Emit block label. If this label is seen before BlockAddressOp is
+  // translated, go ahead and already map it.
+  if (auto blockTagOp = dyn_cast<LLVM::BlockTagOp>(opInst)) {
+    auto funcOp = blockTagOp->getParentOfType<LLVMFuncOp>();
+    BlockAddressAttr blockAddressAttr = BlockAddressAttr::get(
+        &moduleTranslation.getContext(),
+        FlatSymbolRefAttr::get(&moduleTranslation.getContext(),
+                               funcOp.getName()),
+        blockTagOp.getTag());
+    moduleTranslation.mapBlockTag(blockAddressAttr, blockTagOp);
+    return success();
+  }
+
   return failure();
 }
 

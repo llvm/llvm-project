@@ -550,7 +550,8 @@ struct CheckFallThroughDiagnostics {
   unsigned FunKind; // TODO: use diag::FalloffFunctionKind
   SourceLocation FuncLoc;
 
-  static CheckFallThroughDiagnostics MakeForFunction(const Decl *Func) {
+  static CheckFallThroughDiagnostics MakeForFunction(Sema &S,
+                                                     const Decl *Func) {
     CheckFallThroughDiagnostics D;
     D.FuncLoc = Func->getLocation();
     D.diag_FallThrough_HasNoReturn = diag::warn_noreturn_has_return_expr;
@@ -564,8 +565,13 @@ struct CheckFallThroughDiagnostics {
 
     // Don't suggest that template instantiations be marked "noreturn"
     bool isTemplateInstantiation = false;
-    if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(Func))
+    if (const FunctionDecl *Function = dyn_cast<FunctionDecl>(Func)) {
       isTemplateInstantiation = Function->isTemplateInstantiation();
+      if (!S.getLangOpts().CPlusPlus && !S.getLangOpts().C99 &&
+          Function->isMain()) {
+        D.diag_FallThrough_ReturnsNonVoid = diag::ext_main_no_return;
+      }
+    }
 
     if (!isVirtualMethod && !isTemplateInstantiation)
       D.diag_NeverFallThroughOrReturn = diag::warn_suggest_noreturn_function;
@@ -2737,15 +2743,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   // Warning: check missing 'return'
   if (P.enableCheckFallThrough) {
     const CheckFallThroughDiagnostics &CD =
-        (isa<BlockDecl>(D)
-             ? CheckFallThroughDiagnostics::MakeForBlock()
-             : (isa<CXXMethodDecl>(D) &&
-                cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
-                cast<CXXMethodDecl>(D)->getParent()->isLambda())
-                   ? CheckFallThroughDiagnostics::MakeForLambda()
-                   : (fscope->isCoroutine()
-                          ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
-                          : CheckFallThroughDiagnostics::MakeForFunction(D)));
+        (isa<BlockDecl>(D) ? CheckFallThroughDiagnostics::MakeForBlock()
+         : (isa<CXXMethodDecl>(D) &&
+            cast<CXXMethodDecl>(D)->getOverloadedOperator() == OO_Call &&
+            cast<CXXMethodDecl>(D)->getParent()->isLambda())
+             ? CheckFallThroughDiagnostics::MakeForLambda()
+             : (fscope->isCoroutine()
+                    ? CheckFallThroughDiagnostics::MakeForCoroutine(D)
+                    : CheckFallThroughDiagnostics::MakeForFunction(S, D)));
     CheckFallThroughForBody(S, D, Body, BlockType, CD, AC);
   }
 

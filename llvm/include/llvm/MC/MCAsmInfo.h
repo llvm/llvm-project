@@ -65,10 +65,13 @@ public:
                             /// quote, e.g., `'A`.
   };
 
-  struct VariantKindDesc {
+  // This describes a @ style relocation specifier (expr@specifier) supported by
+  // AsmParser::parsePrimaryExpr.
+  struct AtSpecifier {
     uint32_t Kind;
     StringRef Name;
   };
+  using VariantKindDesc = AtSpecifier;
 
 protected:
   //===------------------------------------------------------------------===//

@@ -579,7 +579,7 @@ struct VectorInsertToArmSMELowering
     auto loc = insertOp.getLoc();
     auto position = insertOp.getMixedPosition();
 
-    Value source = insertOp.getSource();
+    Value source = insertOp.getValueToStore();
 
     // Overwrite entire vector with value. Should be handled by folder, but
     // just to be safe.

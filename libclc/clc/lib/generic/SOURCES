@@ -89,6 +89,8 @@ math/clc_tanh.cl
 math/clc_tanpi.cl
 math/clc_tgamma.cl
 math/clc_trunc.cl
+misc/clc_shuffle.cl
+misc/clc_shuffle2.cl
 relational/clc_all.cl
 relational/clc_any.cl
 relational/clc_bitselect.cl

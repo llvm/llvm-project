@@ -609,11 +609,22 @@ static void genNamelistIO(Fortran::lower::AbstractConverter &converter,
   ok = builder.create<fir::CallOp>(loc, funcOp, args).getResult(0);
 }
 
+/// Is \p type a derived type or an array of derived type?
+static bool containsDerivedType(mlir::Type type) {
+  mlir::Type argTy = fir::unwrapPassByRefType(fir::unwrapRefType(type));
+  if (mlir::isa<fir::RecordType>(argTy))
+    return true;
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(argTy))
+    if (mlir::isa<fir::RecordType>(seqTy.getEleTy()))
+      return true;
+  return false;
+}
+
 /// Get the output function to call for a value of the given type.
 static mlir::func::FuncOp getOutputFunc(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
                                         mlir::Type type, bool isFormatted) {
-  if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(type)))
+  if (containsDerivedType(type))
     return fir::runtime::getIORuntimeFunc<mkIOKey(OutputDerivedType)>(loc,
                                                                       builder);
   if (!isFormatted)
@@ -710,7 +721,7 @@ static void genOutputItemList(
     if (mlir::isa<fir::BoxType>(argType)) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
       outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-      if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(itemTy)))
+      if (containsDerivedType(itemTy))
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
       fir::ExtendedValue exv = converter.genExprAddr(loc, expr, stmtCtx);
@@ -745,7 +756,7 @@ static void genOutputItemList(
 static mlir::func::FuncOp getInputFunc(mlir::Location loc,
                                        fir::FirOpBuilder &builder,
                                        mlir::Type type, bool isFormatted) {
-  if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(type)))
+  if (containsDerivedType(type))
     return fir::runtime::getIORuntimeFunc<mkIOKey(InputDerivedType)>(loc,
                                                                      builder);
   if (!isFormatted)
@@ -817,7 +828,7 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
     auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
     assert(boxTy && "must be previously emboxed");
     inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
-    if (mlir::isa<fir::RecordType>(fir::unwrapPassByRefType(boxTy)))
+    if (containsDerivedType(boxTy))
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {
     mlir::Value itemAddr = fir::getBase(item);

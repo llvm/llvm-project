@@ -2789,8 +2789,19 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       return true;
   }
 
+  // new[] will force emission of vector deleting dtor which needs delete[].
+  bool MaybeVectorDeletingDtor = false;
+  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
+    if (AllocElemType->isRecordType() && IsArray) {
+      auto *RD =
+          cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
+      CXXDestructorDecl *DD = RD->getDestructor();
+      MaybeVectorDeletingDtor = DD && DD->isVirtual() && !DD->isDeleted();
+    }
+  }
+
   // We don't need an operator delete if we're running under -fno-exceptions.
-  if (!getLangOpts().Exceptions) {
+  if (!getLangOpts().Exceptions && !MaybeVectorDeletingDtor) {
     OperatorDelete = nullptr;
     return false;
   }
@@ -3290,8 +3301,11 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous())
+  if (Found.isAmbiguous()) {
+    if (!Diagnose)
+      Found.suppressDiagnostics();
     return true;
+  }
 
   Found.suppressDiagnostics();
 
@@ -4651,9 +4665,9 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
         From->getExprLoc(), From->getSourceRange(), CStyle,
         MemberPointerConversionDirection::Downcast)) {
     case MemberPointerConversionResult::Success:
-      assert(Kind != CK_NullToMemberPointer ||
+      assert((Kind != CK_NullToMemberPointer ||
              From->isNullPointerConstant(Context,
-                                         Expr::NPC_ValueDependentIsNull) &&
+                                         Expr::NPC_ValueDependentIsNull)) &&
                  "Expr must be null pointer constant!");
       break;
     case MemberPointerConversionResult::Inaccessible:
