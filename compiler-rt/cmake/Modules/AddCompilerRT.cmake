@@ -172,7 +172,7 @@ function(add_compiler_rt_runtime name type)
   cmake_parse_arguments(LIB
     ""
     "PARENT_TARGET"
-    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS;C_STANDARD;CXX_STANDARD"
+    "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS;EXTENSIONS"
     ${ARGN})
   set(libnames)
   # Until we support this some other way, build compiler-rt runtime without LTO
@@ -360,12 +360,6 @@ function(add_compiler_rt_runtime name type)
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
       set_property(TARGET ${libname} APPEND PROPERTY
                    COMPILE_DEFINITIONS ${LIB_DEFS})
-      if(LIB_C_STANDARD)
-        set_property(TARGET ${libname} PROPERTY C_STANDARD ${LIB_C_STANDARD})
-      endif()
-      if(LIB_CXX_STANDARD)
-        set_property(TARGET ${libname} PROPERTY CXX_STANDARD ${LIB_CXX_STANDARD})
-      endif()
       set_target_output_directories(${libname} ${output_dir_${libname}})
       install(TARGETS ${libname}
         ARCHIVE DESTINATION ${install_dir_${libname}}

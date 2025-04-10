@@ -6,7 +6,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   cmake_minimum_required(VERSION 3.20.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
-  project(CompilerRTBuiltins C CXX ASM)
+  project(CompilerRTBuiltins C ASM)
   set(COMPILER_RT_STANDALONE_BUILD TRUE)
   set(COMPILER_RT_BUILTINS_STANDALONE_BUILD TRUE)
 
@@ -63,8 +63,6 @@ include(CMakePushCheckState)
 
 option(COMPILER_RT_BUILTINS_HIDE_SYMBOLS
   "Do not export any symbols from the static library." ON)
-
-include_directories(../../../third-party/siphash/include)
 
 # TODO: Need to add a mechanism for logging errors when builtin source files are
 # added to a sub-directory and not this CMakeLists file.
@@ -572,7 +570,6 @@ set(aarch64_SOURCES
   ${GENERIC_TF_SOURCES}
   ${GENERIC_SOURCES}
   cpu_model/aarch64.c
-  aarch64/emupac.cpp
   aarch64/fp_mode.c
 )
 
@@ -805,7 +802,7 @@ else ()
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
   endif()
 
-  append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ BUILTIN_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
   append_list_if(COMPILER_RT_HAS_WBUILTIN_DECLARATION_MISMATCH_FLAG -Werror=builtin-declaration-mismatch BUILTIN_CFLAGS)
 
   # Don't embed directives for picking any specific CRT
@@ -836,6 +833,12 @@ else ()
     append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto BUILTIN_CFLAGS)
     append_list_if(COMPILER_RT_HAS_FCONVERGENT_FUNCTIONS_FLAG
                    -fconvergent-functions BUILTIN_CFLAGS)
+
+    # AMDGPU targets want to use a generic ABI.
+    if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+      append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
+                     "SHELL:-Xclang -mcode-object-version=none" BUILTIN_CFLAGS)
+    endif()
   endif()
 
   set(BUILTIN_DEFS "")
@@ -916,8 +919,6 @@ else ()
                               SOURCES ${${arch}_SOURCES}
                               DEFS ${BUILTIN_DEFS}
                               CFLAGS ${BUILTIN_CFLAGS_${arch}}
-                              C_STANDARD 11
-                              CXX_STANDARD 17
                               PARENT_TARGET builtins)
       cmake_pop_check_state()
     endif ()
