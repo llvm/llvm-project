@@ -14,7 +14,7 @@ define void @printf_call() {
   ret void
 }
 
-; CHECK: Function Attrs: nofree nounwind nonlazybind
+; CHECK: Function Attrs: nocallback nofree nounwind nonlazybind
 ; CHECK-NEXT: declare noundef i32 @puts(ptr noundef readonly captures(none))
 
 !llvm.module.flags = !{!0}

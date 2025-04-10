@@ -100,5 +100,5 @@ define void @test_simplify10() {
   ret void
 }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nofree nounwind }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind }
 ;.

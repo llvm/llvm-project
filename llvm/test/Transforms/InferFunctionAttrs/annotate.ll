@@ -762,11 +762,11 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE]]
-; CHECK-OPEN: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE:#[0-9]+]]
+; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOCALLBACK_NOFREE:#[0-9]+]]
+; CHECK-OPEN: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOCALLBACK_NOFREE:#[0-9]+]]
 declare i32 @open(ptr, i32, ...)
 
-; CHECK-LINUX: declare noundef i32 @open64(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE]]
+; CHECK-LINUX: declare noundef i32 @open64(ptr noundef readonly captures(none), i32 noundef, ...) [[NOCALLBACK_NOFREE]]
 declare i32 @open64(ptr, i32, ...)
 
 ; CHECK: declare noalias noundef ptr @opendir(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
@@ -781,7 +781,7 @@ declare void @perror(ptr)
 ; CHECK: declare noalias noundef ptr @popen(ptr noundef readonly captures(none), ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare ptr @popen(ptr, ptr)
 
-; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE]]
+; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE:#[0-9]+]]
 declare i32 @posix_memalign(ptr, i64, i64)
 
 ; CHECK: declare double @pow(double, double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
@@ -793,7 +793,7 @@ declare float @powf(float, float)
 ; CHECK: declare x86_fp80 @powl(x86_fp80, x86_fp80) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @powl(x86_fp80, x86_fp80)
 
-; CHECK: declare noundef i64 @pread(i32 noundef, ptr noundef captures(none), i64 noundef, i64 noundef) [[NOFREE]]
+; CHECK: declare noundef i64 @pread(i32 noundef, ptr noundef captures(none), i64 noundef, i64 noundef) [[NOCALLBACK_NOFREE]]
 declare i64 @pread(i32, ptr, i64, i64)
 
 ; CHECK: declare noundef i32 @printf(ptr noundef readonly captures(none), ...) [[NOFREE_NOUNWIND]]
@@ -812,13 +812,13 @@ declare i32 @putchar_unlocked(i32)
 ; CHECK: declare noundef i32 @puts(ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @puts(ptr)
 
-; CHECK: declare noundef i64 @pwrite(i32 noundef, ptr noundef readonly captures(none), i64 noundef, i64 noundef) [[NOFREE]]
+; CHECK: declare noundef i64 @pwrite(i32 noundef, ptr noundef readonly captures(none), i64 noundef, i64 noundef) [[NOCALLBACK_NOFREE]]
 declare i64 @pwrite(i32, ptr, i64, i64)
 
 ; CHECK: declare void @qsort(ptr noundef, i64 noundef, i64 noundef, ptr noundef captures(none)) [[NOFREE]]
 declare void @qsort(ptr, i64, i64, ptr)
 
-; CHECK: declare noundef i64 @read(i32 noundef, ptr noundef captures(none), i64 noundef) [[NOFREE]]
+; CHECK: declare noundef i64 @read(i32 noundef, ptr noundef captures(none), i64 noundef) [[NOCALLBACK_NOFREE]]
 declare i64 @read(i32, ptr, i64)
 
 ; CHECK: declare noundef i64 @readlink(ptr noundef readonly captures(none), ptr noundef captures(none), i64 noundef) [[NOFREE_NOUNWIND]]
@@ -1068,7 +1068,7 @@ declare i64 @strtoull(ptr, ptr, i32)
 ; CHECK: declare i64 @strxfrm(ptr captures(none), ptr readonly captures(none), i64) [[NOFREE_NOUNWIND_WILLRETURN]]
 declare i64 @strxfrm(ptr, ptr, i64)
 
-; CHECK: declare noundef i32 @system(ptr noundef readonly captures(none)) [[NOFREE]]
+; CHECK: declare noundef i32 @system(ptr noundef readonly captures(none)) [[NOCALLBACK_NOFREE]]
 declare i32 @system(ptr)
 
 ; CHECK: declare double @tan(double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
@@ -1152,7 +1152,7 @@ declare i32 @vsprintf(ptr, ptr, ptr)
 ; CHECK: declare noundef i32 @vsscanf(ptr noundef readonly captures(none), ptr noundef readonly captures(none), ptr noundef) [[NOFREE_NOUNWIND]]
 declare i32 @vsscanf(ptr, ptr, ptr)
 
-; CHECK: declare noundef i64 @write(i32 noundef, ptr noundef readonly captures(none), i64 noundef) [[NOFREE]]
+; CHECK: declare noundef i64 @write(i32 noundef, ptr noundef readonly captures(none), i64 noundef) [[NOCALLBACK_NOFREE]]
 declare i64 @write(i32, ptr, i64)
 
 ; CHECK: declare void @abort() [[NOFREE_COLD_NORETURN_NOUNWIND:#[0-9]+]]
@@ -1181,32 +1181,33 @@ declare void @memset_pattern8(ptr, ptr, i64)
 ; CHECK-DARWIN: declare void @memset_pattern16(ptr writeonly captures(none), ptr readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare void @memset_pattern16(ptr, ptr, i64)
 
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn }
-; CHECK-DAG: attributes [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CHECK-DAG: attributes [[ARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: write, errnomem: write) }
-; CHECK-DAG: attributes [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(errnomem: write) }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nofree nounwind willreturn memory(argmem: write) }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nofree nounwind }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized,aligned") allocsize(1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(read) }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite) }
-; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nofree nounwind memory(read) }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: read) }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn }
+; CHECK-DAG: attributes [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK-DAG: attributes [[ARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: write, errnomem: write) }
+; CHECK-DAG: attributes [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(errnomem: write) }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN_WRITEONLY]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: write) }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND]] = { nocallback nofree nounwind }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn allockind("alloc,uninitialized,aligned") allocsize(1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCZEROED_ALLOCSIZE01_FAMILY_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(read) }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK-DAG: attributes [[NOFREE_NOUNWIND_READONLY]] = { nocallback nofree nounwind memory(read) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_FREE_FAMILY_MALLOC]] = { mustprogress nocallback nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCKIND_ALLOCUNINIT_ALLOCSIZE0_FAMILY_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: read) }
 ; CHECK-DAG: attributes [[NOFREE]] = { nofree }
-; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nofree nounwind memory(argmem: readwrite) }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN_NOUNWIND]] = { cold nofree noreturn nounwind }
+; CHECK-DAG: attributes [[NOCALLBACK_NOFREE]] = { nocallback nofree }
+; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOUNWIND]] = { nocallback nofree nounwind memory(argmem: readwrite) }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nocallback nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nocallback nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN_NOUNWIND]] = { cold nocallback nofree noreturn nounwind }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
 ; CHECK-DAG: attributes [[COLD_NORETURN]] = { cold noreturn }
 
-; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nofree nosync nounwind memory(none) }
+; CHECK-NVPTX-DAG: attributes [[NOFREE_NOUNWIND_READNONE]] = { nocallback nofree nosync nounwind memory(none) }
 
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC]] = { mustprogress nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
-; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE0_FAMILY_VEC_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_FAMILY_VEC_MALLOC]] = { mustprogress nocallback nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOUNWIND_WILLRETURN_ALLOCSIZE_FAMILY_VEC_MALLOC]] = { mustprogress nocallback nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
+; CHECK-AIX-DAG: attributes [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN_ALLOCSIZE01_FAMILY_VEC_MALLOC]] = { mustprogress nocallback nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite) "alloc-family"="vec_malloc" }
