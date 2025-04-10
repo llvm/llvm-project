@@ -40,12 +40,14 @@ struct MlirTransformOptCLOptions {
 
   cl::opt<mlir::SourceMgrDiagnosticVerifierHandler::Level> verifyDiagnostics{
       "verify-diagnostics", llvm::cl::ValueOptional,
-      cl::desc("Check that emitted diagnostics match "
-               "expected-* lines on the corresponding line"),
+      cl::desc("Check that emitted diagnostics match expected-* lines on the "
+               "corresponding line"),
       cl::values(
           clEnumValN(
               mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "all",
               "Check all diagnostics (expected, unexpected, near-misses)"),
+          // Implicit value: when passed with no arguments, e.g.
+          // `--verify-diagnostics` or `--verify-diagnostics=`.
           clEnumValN(
               mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "",
               "Check all diagnostics (expected, unexpected, near-misses)"),

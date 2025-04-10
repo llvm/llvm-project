@@ -167,8 +167,8 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
                    /*ExternalStorage=*/true>
         verifyDiagnostics{
             "verify-diagnostics", llvm::cl::ValueOptional,
-            cl::desc("Check that emitted diagnostics match "
-                     "expected-* lines on the corresponding line"),
+            cl::desc("Check that emitted diagnostics match expected-* lines on "
+                     "the corresponding line"),
             cl::location(verifyDiagnosticsFlag),
             cl::values(
                 clEnumValN(SourceMgrDiagnosticVerifierHandler::Level::All,

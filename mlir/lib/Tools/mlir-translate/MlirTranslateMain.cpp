@@ -58,8 +58,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
   static llvm::cl::opt<bool> allowUnregisteredDialects(
       "allow-unregistered-dialect",
-      llvm::cl::desc("Allow operation with no registered dialects "
-                     "(discouraged: testing only!)"),
+      llvm::cl::desc("Allow operation with no registered dialects (discouraged: testing only!)"),
       llvm::cl::init(false));
 
   static llvm::cl::opt<std::string> inputSplitMarker{
@@ -76,12 +75,14 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
   static llvm::cl::opt<SourceMgrDiagnosticVerifierHandler::Level>
       verifyDiagnostics{
           "verify-diagnostics", llvm::cl::ValueOptional,
-          llvm::cl::desc("Check that emitted diagnostics match "
-                         "expected-* lines on the corresponding line"),
+          llvm::cl::desc("Check that emitted diagnostics match expected-* "
+                         "lines on the corresponding line"),
           llvm::cl::values(
               clEnumValN(
                   SourceMgrDiagnosticVerifierHandler::Level::All, "all",
                   "Check all diagnostics (expected, unexpected, near-misses)"),
+              // Implicit value: when passed with no arguments, e.g.
+              // `--verify-diagnostics` or `--verify-diagnostics=`.
               clEnumValN(
                   SourceMgrDiagnosticVerifierHandler::Level::All, "",
                   "Check all diagnostics (expected, unexpected, near-misses)"),
@@ -160,7 +161,7 @@ LogicalResult mlir::mlirTranslateMain(int argc, char **argv,
 
       MLIRContext context;
       context.allowUnregisteredDialects(allowUnregisteredDialects);
-      context.printOpOnDiagnostic(!bool(verifyDiagnostics.getNumOccurrences()));
+      context.printOpOnDiagnostic(verifyDiagnostics.getNumOccurrences() == 0);
       auto sourceMgr = std::make_shared<llvm::SourceMgr>();
       sourceMgr->AddNewSourceBuffer(std::move(ownedBuffer), SMLoc());
 
