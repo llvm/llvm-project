@@ -245,9 +245,7 @@ struct DemandedFields {
   }
 
   // Return true if any property of VL was used
-  bool usedVL() {
-    return VLAny || VLZeroness;
-  }
+  bool usedVL() const { return VLAny || VLZeroness; }
 
   // Mark all VTYPE subfields and properties as demanded
   void demandVTYPE() {
