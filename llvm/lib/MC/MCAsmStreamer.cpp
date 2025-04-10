@@ -74,10 +74,11 @@ class MCAsmStreamer final : public MCStreamer {
 
 public:
   MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                MCInstPrinter *printer, std::unique_ptr<MCCodeEmitter> emitter,
+                std::unique_ptr<MCInstPrinter> printer,
+                std::unique_ptr<MCCodeEmitter> emitter,
                 std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(printer),
+        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
@@ -2649,9 +2650,9 @@ void MCAsmStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
 
 MCStreamer *llvm::createAsmStreamer(MCContext &Context,
                                     std::unique_ptr<formatted_raw_ostream> OS,
-                                    MCInstPrinter *IP,
-                                    std::unique_ptr<MCCodeEmitter> &&CE,
-                                    std::unique_ptr<MCAsmBackend> &&MAB) {
-  return new MCAsmStreamer(Context, std::move(OS), IP, std::move(CE),
+                                    std::unique_ptr<MCInstPrinter> IP,
+                                    std::unique_ptr<MCCodeEmitter> CE,
+                                    std::unique_ptr<MCAsmBackend> MAB) {
+  return new MCAsmStreamer(Context, std::move(OS), std::move(IP), std::move(CE),
                            std::move(MAB));
 }

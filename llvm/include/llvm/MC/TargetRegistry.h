@@ -84,10 +84,11 @@ MCStreamer *createNullStreamer(MCContext &Ctx);
 ///
 /// \param ShowInst - Whether to show the MCInst representation inline with
 /// the assembly.
-MCStreamer *
-createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                  MCInstPrinter *InstPrint, std::unique_ptr<MCCodeEmitter> &&CE,
-                  std::unique_ptr<MCAsmBackend> &&TAB);
+MCStreamer *createAsmStreamer(MCContext &Ctx,
+                              std::unique_ptr<formatted_raw_ostream> OS,
+                              std::unique_ptr<MCInstPrinter> InstPrint,
+                              std::unique_ptr<MCCodeEmitter> CE,
+                              std::unique_ptr<MCAsmBackend> TAB);
 
 MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCAsmBackend> &&TAB,
@@ -208,10 +209,10 @@ public:
   using AsmTargetStreamerCtorTy =
       MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
-  using AsmStreamerCtorTy =
-      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                      MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> CE,
-                      std::unique_ptr<MCAsmBackend> TAB);
+  using AsmStreamerCtorTy = MCStreamer
+      *(*)(MCContext & Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+           std::unique_ptr<MCInstPrinter> IP, std::unique_ptr<MCCodeEmitter> CE,
+           std::unique_ptr<MCAsmBackend> TAB);
   using ObjectTargetStreamerCtorTy =
       MCTargetStreamer *(*)(MCStreamer &S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
@@ -559,15 +560,9 @@ public:
 
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
-                                MCInstPrinter *IP,
+                                std::unique_ptr<MCInstPrinter> IP,
                                 std::unique_ptr<MCCodeEmitter> CE,
                                 std::unique_ptr<MCAsmBackend> TAB) const;
-  LLVM_DEPRECATED("Use the overload without the 3 unused bool", "")
-  MCStreamer *
-  createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                    bool IsVerboseAsm, bool UseDwarfDirectory,
-                    MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> &&CE,
-                    std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst) const;
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
