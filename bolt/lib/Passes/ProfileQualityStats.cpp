@@ -24,12 +24,12 @@ using namespace bolt;
 
 namespace opts {
 extern cl::opt<unsigned> Verbosity;
-cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
+static cl::opt<unsigned> TopFunctionsForProfileQualityCheck(
     "top-functions-for-profile-quality-check",
     cl::desc("number of hottest functions to print aggregated "
              "profile quality stats of."),
     cl::init(1000), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltOptCategory));
-cl::opt<unsigned> PercentileForProfileQualityCheck(
+static cl::opt<unsigned> PercentileForProfileQualityCheck(
     "percentile-for-profile-quality-check",
     cl::desc("Percentile of profile quality distributions over hottest "
              "functions to report."),

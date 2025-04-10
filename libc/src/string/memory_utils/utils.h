@@ -293,11 +293,11 @@ LIBC_INLINE void store64_aligned(uint64_t value, Ptr dst, size_t offset) {
 // Advances the pointers p1 and p2 by offset bytes and decrease count by the
 // same amount.
 template <typename T1, typename T2>
-LIBC_INLINE void adjust(uintptr_t offset, T1 *__restrict &p1,
+LIBC_INLINE void adjust(ptrdiff_t offset, T1 *__restrict &p1,
                         T2 *__restrict &p2, size_t &count) {
   p1 += offset;
   p2 += offset;
-  count -= offset;
+  count -= static_cast<size_t>(offset);
 }
 
 // Advances p1 and p2 so p1 gets aligned to the next SIZE bytes boundary
@@ -306,7 +306,8 @@ LIBC_INLINE void adjust(uintptr_t offset, T1 *__restrict &p1,
 template <size_t SIZE, typename T1, typename T2>
 void align_p1_to_next_boundary(T1 *__restrict &p1, T2 *__restrict &p2,
                                size_t &count) {
-  adjust(distance_to_next_aligned<SIZE>(p1), p1, p2, count);
+  adjust(static_cast<ptrdiff_t>(distance_to_next_aligned<SIZE>(p1)), p1, p2,
+         count);
   p1 = assume_aligned<SIZE>(p1);
 }
 

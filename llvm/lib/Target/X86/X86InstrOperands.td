@@ -142,8 +142,14 @@ def i64mem_TC : X86MemOperand<"printqwordmem", X86Mem64AsmOperand, 64> {
 }
 
 // Special parser to detect 16-bit mode to select 16-bit displacement.
-def X86AbsMem16AsmOperand : AsmOperandClass {
-  let Name = "AbsMem16";
+def X86AbsMemMode16AsmOperand : AsmOperandClass {
+  let Name = "AbsMemMode16";
+  let RenderMethod = "addAbsMemOperands";
+  let SuperClasses = [X86AbsMemAsmOperand];
+}
+
+def X86AbsMem8AsmOperand : AsmOperandClass {
+  let Name = "AbsMem8";
   let RenderMethod = "addAbsMemOperands";
   let SuperClasses = [X86AbsMemAsmOperand];
 }
@@ -157,6 +163,9 @@ class BranchTargetOperand<ValueType ty> : Operand<ty> {
 
 def i32imm_brtarget : BranchTargetOperand<i32>;
 def i16imm_brtarget : BranchTargetOperand<i16>;
+def i8imm_brtarget : BranchTargetOperand<i8> {
+  let ParserMatchClass = X86AbsMem8AsmOperand;
+}
 
 // 64-bits but only 32 bits are significant, and those bits are treated as being
 // pc relative.
@@ -165,7 +174,7 @@ def i64i32imm_brtarget : BranchTargetOperand<i64>;
 def brtarget : BranchTargetOperand<OtherVT>;
 def brtarget8 : BranchTargetOperand<OtherVT>;
 def brtarget16 : BranchTargetOperand<OtherVT> {
-  let ParserMatchClass = X86AbsMem16AsmOperand;
+  let ParserMatchClass = X86AbsMemMode16AsmOperand;
 }
 def brtarget32 : BranchTargetOperand<OtherVT>;
 

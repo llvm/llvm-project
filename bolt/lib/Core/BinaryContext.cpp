@@ -46,9 +46,10 @@ using namespace llvm;
 
 namespace opts {
 
-cl::opt<bool> NoHugePages("no-huge-pages",
-                          cl::desc("use regular size pages for code alignment"),
-                          cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    NoHugePages("no-huge-pages",
+                cl::desc("use regular size pages for code alignment"),
+                cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
@@ -578,6 +579,21 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       TrimmedSize = EntriesAsAddress->size();
   };
 
+  auto printEntryDiagnostics = [&](raw_ostream &OS,
+                                   const BinaryFunction *TargetBF) {
+    OS << "FAIL: function doesn't contain this address\n";
+    if (!TargetBF)
+      return;
+    OS << "  ! function containing this address: " << *TargetBF << '\n';
+    if (!TargetBF->isFragment())
+      return;
+    OS << "  ! is a fragment with parents: ";
+    ListSeparator LS;
+    for (BinaryFunction *Parent : TargetBF->ParentFragments)
+      OS << LS << *Parent;
+    OS << '\n';
+  };
+
   ErrorOr<const BinarySection &> Section = getSectionForAddress(Address);
   if (!Section)
     return false;
@@ -646,19 +662,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
     if (!TargetBF || !areRelatedFragments(TargetBF, &BF)) {
-      LLVM_DEBUG({
-        dbgs() << "FAIL: function doesn't contain this address\n";
-        if (!TargetBF)
-          break;
-        dbgs() << "  ! function containing this address: " << *TargetBF << '\n';
-        if (!TargetBF->isFragment())
-          break;
-        dbgs() << "  ! is a fragment with parents: ";
-        ListSeparator LS;
-        for (BinaryFunction *Parent : TargetBF->ParentFragments)
-          dbgs() << LS << *Parent;
-        dbgs() << '\n';
-      });
+      LLVM_DEBUG(printEntryDiagnostics(dbgs(), TargetBF));
       break;
     }
 
@@ -697,8 +701,7 @@ void BinaryContext::populateJumpTables() {
        ++JTI) {
     JumpTable *JT = JTI->second;
 
-    auto isSimple = std::bind(&BinaryFunction::isSimple, std::placeholders::_1);
-    if (!llvm::all_of(JT->Parents, isSimple))
+    if (!llvm::all_of(JT->Parents, std::mem_fn(&BinaryFunction::isSimple)))
       continue;
 
     uint64_t NextJTAddress = 0;
@@ -841,9 +844,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     assert(llvm::all_of(JT->Parents, isSibling) &&
            "cannot re-use jump table of a different function");
     if (opts::Verbosity > 2) {
-      this->outs() << "BOLT-INFO: Multiple fragments access same jump table: "
-                   << JT->Parents[0]->getPrintName() << "; "
-                   << Function.getPrintName() << "\n";
+      this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
+                   << ": " << *JT->Parents[0] << "; " << Function << '\n';
       JT->print(this->outs());
     }
     if (JT->Parents.size() == 1)
@@ -2269,7 +2271,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
 }
 
 void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                  uint64_t Type, uint64_t Addend,
+                                  uint32_t Type, uint64_t Addend,
                                   uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
@@ -2278,7 +2280,7 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 }
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
-                                         uint64_t Type, uint64_t Addend,
+                                         uint32_t Type, uint64_t Addend,
                                          uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
@@ -2386,8 +2388,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   return BF;
 }
 
-BinaryFunction *BinaryContext::createInstructionPatch(
-    uint64_t Address, InstructionListType &Instructions, const Twine &Name) {
+BinaryFunction *
+BinaryContext::createInstructionPatch(uint64_t Address,
+                                      const InstructionListType &Instructions,
+                                      const Twine &Name) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot get section for patching");
   assert(Section->hasSectionRef() && Section->isText() &&
@@ -2408,6 +2412,11 @@ BinaryFunction *BinaryContext::createInstructionPatch(
   PBF->setFileOffset(FileOffset);
   PBF->setOriginSection(&Section.get());
   PBF->addBasicBlock()->addInstructions(Instructions);
+  PBF->setIsPatch(true);
+
+  // Don't create symbol table entry if the name wasn't specified.
+  if (Name.str().empty())
+    PBF->setAnonymous(true);
 
   return PBF;
 }

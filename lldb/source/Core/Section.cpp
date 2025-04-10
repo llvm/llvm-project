@@ -160,10 +160,9 @@ const char *Section::GetTypeAsCString() const {
 }
 
 Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, ConstString name,
-                 SectionType sect_type, addr_t file_addr, addr_t byte_size,
-                 lldb::offset_t file_offset, lldb::offset_t file_size,
-                 uint32_t log2align, uint32_t flags,
+                 user_id_t sect_id, ConstString name, SectionType sect_type,
+                 addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
+                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
                  uint32_t target_byte_size /*=1*/)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
       m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
@@ -171,15 +170,14 @@ Section::Section(const ModuleSP &module_sp, ObjectFile *obj_file,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
-}
+      m_executable(false), m_relocated(false),
+      m_target_byte_size(target_byte_size) {}
 
 Section::Section(const lldb::SectionSP &parent_section_sp,
                  const ModuleSP &module_sp, ObjectFile *obj_file,
-                 user_id_t sect_id, ConstString name,
-                 SectionType sect_type, addr_t file_addr, addr_t byte_size,
-                 lldb::offset_t file_offset, lldb::offset_t file_size,
-                 uint32_t log2align, uint32_t flags,
+                 user_id_t sect_id, ConstString name, SectionType sect_type,
+                 addr_t file_addr, addr_t byte_size, lldb::offset_t file_offset,
+                 lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
                  uint32_t target_byte_size /*=1*/)
     : ModuleChild(module_sp), UserID(sect_id), Flags(flags),
       m_obj_file(obj_file), m_type(sect_type), m_parent_wp(), m_name(name),
@@ -187,7 +185,8 @@ Section::Section(const lldb::SectionSP &parent_section_sp,
       m_file_offset(file_offset), m_file_size(file_size),
       m_log2align(log2align), m_children(), m_fake(false), m_encrypted(false),
       m_thread_specific(false), m_readable(false), m_writable(false),
-      m_executable(false), m_relocated(false), m_target_byte_size(target_byte_size) {
+      m_executable(false), m_relocated(false),
+      m_target_byte_size(target_byte_size) {
   if (parent_section_sp)
     m_parent_wp = parent_section_sp;
 }
@@ -469,7 +468,6 @@ bool Section::ContainsOnlyDebugInfo() const {
   return false;
 }
 
-
 #pragma mark SectionList
 
 SectionList &SectionList::operator=(const SectionList &rhs) {
@@ -554,8 +552,7 @@ SectionSP SectionList::GetSectionAtIndex(size_t idx) const {
   return sect_sp;
 }
 
-SectionSP
-SectionList::FindSectionByName(ConstString section_dstr) const {
+SectionSP SectionList::FindSectionByName(ConstString section_dstr) const {
   SectionSP sect_sp;
   // Check if we have a valid section string
   if (section_dstr && !m_sections.empty()) {
@@ -693,7 +690,14 @@ bool fromJSON(const llvm::json::Value &value,
          o.map("address", section.address) && o.map("size", section.size) &&
          o.map("read", section.read) && o.map("write", section.write) &&
          o.map("execute", section.execute) &&
-         o.mapOptional("subsections", section.subsections);
+         o.mapOptional("subsections", section.subsections) &&
+         o.map("user_id", section.user_id) &&
+         o.map("file_offset", section.file_offset) &&
+         o.map("file_size", section.file_size) &&
+         o.map("alignment", section.log2align) &&
+         o.map("flags", section.flags) && o.map("fake", section.fake) &&
+         o.map("encrypted", section.encrypted) &&
+         o.map("thread_specific", section.thread_specific);
 }
 
 bool fromJSON(const llvm::json::Value &value, lldb::SectionType &type,

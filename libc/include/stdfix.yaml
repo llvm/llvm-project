@@ -1,6 +1,12 @@
 header: stdfix.h
 header_template: stdfix.h.def
-macros: []
+macros:
+  - macro_name: absfx
+    macro_header: stdfix-macros.h
+  - macro_name: countlsfx
+    macro_header: stdfix-macros.h
+  - macro_name: roundfx
+    macro_header: stdfix-macros.h
 types:
   - type_name: stdfix-types
 enums: []

@@ -162,7 +162,7 @@ ADD_SPECIALIZATION(countl_zero, unsigned long long, __builtin_clzll)
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countl_one(T value) {
-  return cpp::countl_zero<T>(~value);
+  return cpp::countl_zero<T>(static_cast<T>(~value));
 }
 
 /// Count the number of ones from the least significant bit to the first
@@ -175,7 +175,7 @@ countl_one(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_unsigned_v<T>, int>
 countr_one(T value) {
-  return cpp::countr_zero<T>(~value);
+  return cpp::countr_zero<T>(static_cast<T>(~value));
 }
 
 /// Returns the number of bits needed to represent value if value is nonzero.

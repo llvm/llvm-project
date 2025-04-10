@@ -285,7 +285,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
       return 0;
     if (i >= int(N))
       return is_neg ? cpp::numeric_limits<word>::max() : 0;
-    return array[i];
+    return array[static_cast<unsigned>(i)];
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
@@ -296,7 +296,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
-    word &dst = out[at(index)];
+    word &dst = out[static_cast<unsigned>(at(index))];
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
@@ -866,7 +866,7 @@ public:
   LIBC_INLINE constexpr BigInt operator~() const {
     BigInt result;
     for (size_t i = 0; i < WORD_COUNT; ++i)
-      result[i] = ~val[i];
+      result[i] = static_cast<WordType>(~val[i]);
     return result;
   }
 
@@ -967,7 +967,7 @@ private:
 
   LIBC_INLINE constexpr void bitwise_not() {
     for (auto &part : val)
-      part = ~part;
+      part = static_cast<WordType>(~part);
   }
 
   LIBC_INLINE constexpr void negate() {
@@ -1383,8 +1383,7 @@ first_trailing_zero(T value) {
 template <typename T>
 [[nodiscard]] LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, int>
 first_trailing_one(T value) {
-  return value == cpp::numeric_limits<T>::max() ? 0
-                                                : cpp::countr_zero(value) + 1;
+  return value == 0 ? 0 : cpp::countr_zero(value) + 1;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -51,7 +51,7 @@ mlir::detail::getDefaultTypeSize(Type type, const DataLayout &dataLayout,
 llvm::TypeSize
 mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) {
-  if (isa<IntegerType, FloatType>(type))
+  if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
 
   if (auto ctype = dyn_cast<ComplexType>(type)) {
@@ -241,6 +241,16 @@ std::optional<uint64_t> mlir::detail::getDefaultIndexBitwidth(
 // the default endianness represented by an empty attribute is returned.
 Attribute mlir::detail::getDefaultEndianness(DataLayoutEntryInterface entry) {
   if (entry == DataLayoutEntryInterface())
+    return Attribute();
+
+  return entry.getValue();
+}
+
+// Returns the default memory space if specified in the given entry. If the
+// entry is empty the default memory space represented by an empty attribute is
+// returned.
+Attribute mlir::detail::getDefaultMemorySpace(DataLayoutEntryInterface entry) {
+  if (!entry)
     return Attribute();
 
   return entry.getValue();
@@ -605,6 +615,22 @@ mlir::Attribute mlir::DataLayout::getEndianness() const {
   return *endianness;
 }
 
+mlir::Attribute mlir::DataLayout::getDefaultMemorySpace() const {
+  checkValid();
+  if (defaultMemorySpace)
+    return *defaultMemorySpace;
+  DataLayoutEntryInterface entry;
+  if (originalLayout)
+    entry = originalLayout.getSpecForIdentifier(
+        originalLayout.getDefaultMemorySpaceIdentifier(
+            originalLayout.getContext()));
+  if (auto iface = dyn_cast_or_null<DataLayoutOpInterface>(scope))
+    defaultMemorySpace = iface.getDefaultMemorySpace(entry);
+  else
+    defaultMemorySpace = detail::getDefaultMemorySpace(entry);
+  return *defaultMemorySpace;
+}
+
 mlir::Attribute mlir::DataLayout::getAllocaMemorySpace() const {
   checkValid();
   if (allocaMemorySpace)
@@ -745,7 +771,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
       continue;
     }
 
-    if (isa<IntegerType, FloatType>(sampleType)) {
+    if (sampleType.isIntOrFloat()) {
       for (DataLayoutEntryInterface entry : kvp.second) {
         auto value = dyn_cast<DenseIntElementsAttr>(entry.getValue());
         if (!value || !value.getElementType().isSignlessInteger(64)) {
