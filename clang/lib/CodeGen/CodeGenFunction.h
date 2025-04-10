@@ -5306,6 +5306,8 @@ public:
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
 
+  llvm::MDNode *getRangeForLoadFromType(QualType Ty);
+
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.
@@ -5321,7 +5323,6 @@ private:
   getOrEmitConvergenceEntryToken(llvm::Function *F);
 
 private:
-  llvm::MDNode *getRangeForLoadFromType(QualType Ty);
   void EmitReturnOfRValue(RValue RV, QualType Ty);
 
   void deferPlaceholderReplacement(llvm::Instruction *Old, llvm::Value *New);

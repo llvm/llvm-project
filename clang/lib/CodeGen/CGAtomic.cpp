@@ -590,21 +590,17 @@ static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
     llvm::LoadInst *Load = CGF.Builder.CreateLoad(Ptr);
     Load->setAtomic(Order, Scope);
     Load->setVolatile(E->isVolatile());
-
     QualType Ty = E->getValueType();
-    if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && Ty->isBooleanType()) {
-      llvm::MDBuilder MDHelper(CGF.getLLVMContext());
-      llvm::APInt BooleanMin = llvm::APInt(CGF.getContext().getTypeSize(Ty), 0);
-      llvm::APInt BooleanEnd = llvm::APInt(CGF.getContext().getTypeSize(Ty), 2);
-      if (llvm::MDNode *RangeInfo =
-              MDHelper.createRange(BooleanMin, BooleanEnd)) {
+    if (CGF.EmitScalarRangeCheck(Load, Ty, E->getExprLoc())) {
+    } else if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0) {
+      CGF.getRangeForLoadFromType(Ty);
+      if (llvm::MDNode *RangeInfo = CGF.getRangeForLoadFromType(Ty)) {
         Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
         Load->setMetadata(llvm::LLVMContext::MD_noundef,
                           llvm::MDNode::get(CGF.getLLVMContext(), {}));
       }
     }
     CGF.Builder.CreateStore(Load, Dest);
-
     return;
   }
 
