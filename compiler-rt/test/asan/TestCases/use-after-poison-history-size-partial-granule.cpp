@@ -1,4 +1,4 @@
-// Check that __asan_poison_memory_region and ASAN_OPTIONS=poison_history_size work.
+// Check that __asan_poison_memory_region and ASAN_OPTIONS=poison_history_size work for partial granules.
 //
 // RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t 20 2>&1 | FileCheck %s
 //
