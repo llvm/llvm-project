@@ -3299,9 +3299,11 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-GISEL-NEXT:    ds_read_b64 v[2:3], v2 offset:8
 ; PACKED-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; PACKED-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; PACKED-GISEL-NEXT:    v_pk_mul_f32 v[2:3], 1.0, v[2:3] op_sel_hi:[0,1]
-; PACKED-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v2
-; PACKED-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v3
+; PACKED-GISEL-NEXT:    v_mov_b32_e32 v4, v3
+; PACKED-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; PACKED-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
 ; PACKED-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; PACKED-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
@@ -3333,10 +3335,11 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    ds_load_b64 v[2:3], v2 offset:8
 ; GFX1250-GISEL-NEXT:    s_wait_dscnt 0x0
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
+; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_pk_mul_f32 v[2:3], 1.0, v[2:3] op_sel_hi:[0,1]
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v5, 0x80000000, v2
-; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v4, 0x80000000, v3
+; GFX1250-GISEL-NEXT:    v_dual_mov_b32 v4, v3 :: v_dual_mov_b32 v5, v2
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], v[4:5]
