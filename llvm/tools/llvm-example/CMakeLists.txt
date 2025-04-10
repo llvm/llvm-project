@@ -1,0 +1,27 @@
+set(LLVM_LINK_COMPONENTS
+  AllTargetsAsmParsers
+  AllTargetsCodeGens
+  AllTargetsDescs
+  AllTargetsInfos
+  Analysis
+  BitReader
+  BitWriter
+  CodeGen
+  CodeGenTypes
+  Core
+  IPO
+  IRReader
+  MC
+  MIRParser
+  Passes
+  Support
+  Target
+  TargetParser
+  TransformUtils
+  )
+
+add_llvm_tool(llvm-example
+  llvm_example.cpp
+  DEPENDS
+  intrinsics_gen
+  )
