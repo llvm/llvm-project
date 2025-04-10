@@ -14,6 +14,7 @@
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/TargetSelect.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -23,6 +24,7 @@ using namespace clang::frontend;
 namespace {
 
 TEST(FrontendOutputTests, TestOutputStream) {
+  llvm::InitializeAllTargetMCs();
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("").release());
@@ -47,6 +49,7 @@ TEST(FrontendOutputTests, TestOutputStream) {
 }
 
 TEST(FrontendOutputTests, TestVerboseOutputStreamShared) {
+  llvm::InitializeAllTargetMCs();
   auto Invocation = std::make_shared<CompilerInvocation>();
   Invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc", MemoryBuffer::getMemBuffer("invalid").release());
@@ -77,6 +80,7 @@ TEST(FrontendOutputTests, TestVerboseOutputStreamOwned) {
   std::string VerboseBuffer;
   bool Success;
   {
+    llvm::InitializeAllTargetMCs();
     auto Invocation = std::make_shared<CompilerInvocation>();
     Invocation->getPreprocessorOpts().addRemappedFile(
         "test.cc", MemoryBuffer::getMemBuffer("invalid").release());
