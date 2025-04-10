@@ -1526,6 +1526,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
       Constant *C = Ty->isIntOrIntVectorTy() ?
         ConstantInt::get(Ty, NumFound) : ConstantFP::get(Ty, NumFound);
       Instruction *Mul = CreateMul(TheOp, C, "factor", I->getIterator(), I);
+      Mul->setDebugLoc(I->getDebugLoc());
 
       // Now that we have inserted a multiply, optimize it. This allows us to
       // handle cases that require multiple factoring steps, such as this:
