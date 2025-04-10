@@ -220,41 +220,40 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, Expr *E, bool CountInBytes,
 
 static void EmitIncompleteCountedByPointeeNotes(Sema &S,
                                                 const CountAttributedType *CATy,
-                                                NamedDecl *IncompleteTyDecl,
-                                                bool NoteAttrLocation = true) {
+                                                NamedDecl *IncompleteTyDecl) {
   assert(IncompleteTyDecl == nullptr || isa<TypeDecl>(IncompleteTyDecl));
 
-  if (NoteAttrLocation) {
-    // Note where the attribute is declared
-    // This is an approximation that's not quite right. This points to the
-    // the expression inside the attribute rather than the attribute itself.
+  if (IncompleteTyDecl) {
+    // Suggest completing the pointee type if its a named typed (i.e.
+    // IncompleteTyDecl isn't nullptr). Suggest this first as it is more likely
+    // to be the correct fix.
     //
-    // TODO: Implement logic to find the relevant TypeLoc for the attribute and
-    // get the SourceRange from that (#113582).
-    SourceRange AttrSrcRange = CATy->getCountExpr()->getSourceRange();
-    S.Diag(AttrSrcRange.getBegin(), diag::note_named_attribute)
-        << CATy->getAttributeName(/*WithMacroPrefix=*/true) << AttrSrcRange;
+    // Note the `IncompleteTyDecl` type is the underlying type which might not
+    // be the same as `CATy->getPointeeType()` which could be a typedef.
+    //
+    // The diagnostic printed will be at the location of the underlying type but
+    // the diagnostic text will print the type of `CATy->getPointeeType()` which
+    // could be a typedef name rather than the underlying type. This is ok
+    // though because the diagnostic will print the underlying type name too.
+    S.Diag(IncompleteTyDecl->getBeginLoc(),
+           diag::note_counted_by_consider_completing_pointee_ty)
+        << CATy->getPointeeType();
   }
 
-  if (!IncompleteTyDecl)
-    return;
-
-  // If there's an associated forward declaration display it to emphasize
-  // why the type is incomplete (all we have is a forward declaration).
-
-  // Note the `IncompleteTyDecl` type is the underlying type which might not
-  // be the same as `CATy->getPointeeType()` which could be a typedef.
+  // Suggest using __sized_by(_or_null) instead of __counted_by(_or_null) as
+  // __sized_by(_or_null) doesn't have the complete type restriction.
   //
-  // The diagnostic printed will be at the location of the underlying type but
-  // the diagnostic text will print the type of `CATy->getPointeeType()` which
-  // could be a typedef name rather than the underlying type. This is ok
-  // though because the diagnostic will print the underlying type name too.
-  // E.g:
+  // We use the source range of the expression on the CountAttributedType as an
+  // approximation for the source range of the attribute. This isn't quite right
+  // but isn't easy to fix right now.
   //
-  // `forward declaration of 'Incomplete_Struct_t'
-  //  (aka 'struct IncompleteStructTy')`
-  S.Diag(IncompleteTyDecl->getBeginLoc(), diag::note_forward_declaration)
-      << CATy->getPointeeType();
+  // TODO: Implement logic to find the relevant TypeLoc for the attribute and
+  // get the SourceRange from that (#113582).
+  //
+  // TODO: We should emit a fix-it here.
+  SourceRange AttrSrcRange = CATy->getCountExpr()->getSourceRange();
+  S.Diag(AttrSrcRange.getBegin(), diag::note_counted_by_consider_using_sized_by)
+      << CATy->isOrNull() << AttrSrcRange;
 }
 
 static std::tuple<const CountAttributedType *, QualType>
