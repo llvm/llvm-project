@@ -1206,6 +1206,41 @@ func.func @test_unranked_tensor(%arg0: tensor<*xf32>) {
 
 // -----
 
+// CHECK-LABEL: tensor_dim
+func.func @test_tensor_dim(%arg0: tensor<1x2147483648xf32>) {
+  %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<1> : tensor<2xindex>} : () -> !tosa.shape<2>
+
+  // expected-error@+1 {{'tosa.slice' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %2= tosa.slice %arg0, %0, %1 : (tensor<1x2147483648xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: tensor_size
+func.func @test_tensor_size(%arg0: tensor<1x1073741824xf32>) {
+  %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<1> : tensor<2xindex>} : () -> !tosa.shape<2>
+
+  // expected-error@+1 {{'tosa.slice' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
+  %2= tosa.slice %arg0, %0, %1 : (tensor<1x1073741824xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: tensor_size
+func.func @test_tensor_size_ok(%arg0: tensor<1x536870911xf32>) {
+  %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<1> : tensor<2xindex>} : () -> !tosa.shape<2>
+
+  %2= tosa.slice %arg0, %0, %1 : (tensor<1x536870911xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
+  return
+}
+
+// -----
+
 // CHECK-LABEL: test_concat_tensor_list_size
 func.func @test_concat_tensor_list_size() {
   %0 = "tosa.const"() {values = dense<0> : tensor<1xi32>} : () -> tensor<1xi32>

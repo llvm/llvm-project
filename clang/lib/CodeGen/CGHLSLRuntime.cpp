@@ -282,10 +282,18 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
+  auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+
+  // NativeHalfType corresponds to the -fnative-half-type clang option which is
+  // aliased by clang-dxc's -enable-16bit-types option. This option is used to
+  // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
+  if (LangOpts.NativeHalfType)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.nativelowprec",
+                    1);
 
   generateGlobalCtorDtorCalls();
 }

@@ -30,7 +30,7 @@ namespace {
 
 class ForwardDeclChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
   mutable RetainTypeChecker RTC;
   mutable llvm::DenseSet<const Type *> SystemTypes;
 
@@ -107,6 +107,7 @@ public:
   void visitTypedef(const TypedefDecl *TD) const {
     RTC.visitTypedef(TD);
     auto QT = TD->getUnderlyingType().getCanonicalType();
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(TD->getBeginLoc())) {
       if (auto *Type = QT.getTypePtrOrNull())
         SystemTypes.insert(Type);
@@ -146,6 +147,7 @@ public:
     if (Kind != TagTypeKind::Struct && Kind != TagTypeKind::Class)
       return;
 
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(RDLocation))
       return;
 
@@ -177,6 +179,7 @@ public:
   }
 
   void visitVarDecl(const VarDecl *V, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(V->getBeginLoc()))
       return;
 
@@ -194,6 +197,7 @@ public:
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -211,6 +215,7 @@ public:
 
   void visitConstructExpr(const CXXConstructExpr *CE,
                           const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -228,6 +233,7 @@ public:
 
   void visitObjCMessageExpr(const ObjCMessageExpr *E,
                             const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(E->getExprLoc()))
       return;
 
@@ -309,6 +315,7 @@ public:
     const std::string TypeName = Type.getAsString();
     Os << Description << " uses a forward declared type '" << TypeName << "'";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(SrcLoc, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
     Report->addRange(SrcRange);

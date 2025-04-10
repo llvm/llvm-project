@@ -28,7 +28,8 @@ using namespace cir;
 
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
+Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
+                                                 LValueBaseInfo *baseInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(expr->getType()->isPointerType() ||
          expr->getType()->isObjCObjectPointerType());
@@ -36,7 +37,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Casts:
   if (auto const *ce = dyn_cast<CastExpr>(expr)) {
-    if (auto const *ece = dyn_cast<ExplicitCastExpr>(ce)) {
+    if (isa<ExplicitCastExpr>(ce)) {
       cgm.errorNYI(expr->getSourceRange(),
                    "emitPointerWithAlignment: explicit cast");
       return Address::invalid();
@@ -164,7 +165,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Otherwise, use the alignment of the type.
   return makeNaturalAddressForPointer(
-      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits());
+      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits(),
+      /*forPointeeType=*/true, baseInfo);
 }
 
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
@@ -300,7 +302,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
-    return LValue::makeAddr(addr, ty);
+    return makeAddrLValue(addr, ty, AlignmentSource::Type);
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
@@ -338,9 +340,9 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType t = e->getSubExpr()->getType()->getPointeeType();
     assert(!t.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
 
-    assert(!cir::MissingFeatures::lvalueBaseInfo());
     assert(!cir::MissingFeatures::opTBAA());
-    Address addr = emitPointerWithAlignment(e->getSubExpr());
+    LValueBaseInfo baseInfo;
+    Address addr = emitPointerWithAlignment(e->getSubExpr(), &baseInfo);
 
     // Tag 'load' with deref attribute.
     // FIXME: This misses some derefence cases and has problematic interactions
@@ -350,7 +352,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
     }
 
-    LValue lv = LValue::makeAddr(addr, t);
+    LValue lv = makeAddrLValue(addr, t, baseInfo);
     assert(!cir::MissingFeatures::addressSpace());
     assert(!cir::MissingFeatures::setNonGC());
     return lv;
@@ -461,6 +463,107 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
     return RValue::get(nullptr);
   }
   llvm_unreachable("bad evaluation kind");
+}
+
+static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::weakRefReference());
+  return cgm.getAddrOfFunction(gd);
+}
+
+static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+
+  assert(!cir::MissingFeatures::hip());
+
+  return CIRGenCallee::forDirect(callee, gd);
+}
+
+RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
+                                const CIRGenCallee &callee,
+                                const clang::CallExpr *e) {
+  // Get the actual function type. The callee type will always be a pointer to
+  // function type or a block pointer type.
+  assert(calleeTy->isFunctionPointerType() &&
+         "Callee must have function pointer type!");
+
+  calleeTy = getContext().getCanonicalType(calleeTy);
+
+  if (getLangOpts().CPlusPlus)
+    assert(!cir::MissingFeatures::sanitizers());
+
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  const CIRGenFunctionInfo &funcInfo = cgm.getTypes().arrangeFreeFunctionCall();
+
+  assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
+  assert(!cir::MissingFeatures::opCallChainCall());
+  assert(!cir::MissingFeatures::hip());
+  assert(!cir::MissingFeatures::opCallMustTail());
+
+  cir::CIRCallOpInterface callOp;
+  RValue callResult =
+      emitCall(funcInfo, callee, &callOp, getLoc(e->getExprLoc()));
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return callResult;
+}
+
+CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
+  e = e->IgnoreParens();
+
+  // Look through function-to-pointer decay.
+  if (const auto *implicitCast = dyn_cast<ImplicitCastExpr>(e)) {
+    if (implicitCast->getCastKind() == CK_FunctionToPointerDecay ||
+        implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
+      return emitCallee(implicitCast->getSubExpr());
+    }
+  } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
+    // Resolve direct calls.
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
+      return emitDirectCallee(cgm, funcDecl);
+  }
+
+  cgm.errorNYI(e->getSourceRange(), "Unsupported callee kind");
+  return {};
+}
+
+RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
+  assert(!cir::MissingFeatures::objCBlocks());
+
+  if (isa<CXXMemberCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to member function");
+    return RValue::get(nullptr);
+  }
+
+  if (isa<CUDAKernelCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
+    return RValue::get(nullptr);
+  }
+
+  if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
+    if (isa_and_nonnull<CXXMethodDecl>(operatorCall->getCalleeDecl())) {
+      cgm.errorNYI(e->getSourceRange(), "call to member operator");
+      return RValue::get(nullptr);
+    }
+  }
+
+  CIRGenCallee callee = emitCallee(e->getCallee());
+
+  if (e->getBuiltinCallee()) {
+    cgm.errorNYI(e->getSourceRange(), "call to builtin functions");
+  }
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
+    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
+  }
+  assert(!cir::MissingFeatures::opCallPseudoDtor());
+
+  return emitCall(e->getCallee()->getType(), callee, e);
 }
 
 /// Emit code to compute the specified expression, ignoring the result.
