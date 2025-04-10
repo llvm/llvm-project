@@ -1571,6 +1571,13 @@ def combine_shuffle_concat : GICombineRule<
         [{ return Helper.matchCombineShuffleConcat(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineShuffleConcat(*${root}, ${matchinfo}); }])>;
 
+// Combines shuffles of vector into build_vector
+def combine_shuffle_vector_to_build_vector : GICombineRule<
+  (defs root:$root),
+  (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root,
+    [{ return Helper.matchCombineShuffleToBuildVector(*${root}); }]),
+  (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
+
 def insert_vector_element_idx_undef : GICombineRule<
    (defs root:$root),
    (match (G_IMPLICIT_DEF $idx),
