@@ -408,6 +408,7 @@ int main(int argc, char **argv) {
     PM.addPass(GlobalDCEPass());
   PM.addPass(StripDeadDebugInfoPass());
   PM.addPass(StripDeadPrototypesPass());
+  PM.addPass(StripDeadCGProfilePass());
 
   std::error_code EC;
   ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_None);

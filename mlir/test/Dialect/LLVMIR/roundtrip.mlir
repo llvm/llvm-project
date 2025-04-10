@@ -6,10 +6,10 @@
 llvm.func @baz()
 
 // CHECK-LABEL: func @ops
-// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: !llvm.vec<2 x ptr>)
+// CHECK-SAME: (%[[I32:.*]]: i32, %[[FLOAT:.*]]: f32, %[[PTR1:.*]]: !llvm.ptr, %[[PTR2:.*]]: !llvm.ptr, %[[BOOL:.*]]: i1, %[[VPTR1:.*]]: vector<2x!llvm.ptr>)
 func.func @ops(%arg0: i32, %arg1: f32,
           %arg2: !llvm.ptr, %arg3: !llvm.ptr,
-          %arg4: i1, %arg5 : !llvm.vec<2x!llvm.ptr>) {
+          %arg4: i1, %arg5 : vector<2x!llvm.ptr>) {
 // Integer arithmetic binary operations.
 //
 // CHECK: {{.*}} = llvm.add %[[I32]], %[[I32]] : i32
@@ -23,7 +23,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
 // CHECK: {{.*}} = llvm.add %[[SCALAR_PRED0]], %[[SCALAR_PRED0]] : i1
 // CHECK: %[[SCALAR_PRED1:.+]] = llvm.icmp "ne" %[[PTR1]], %[[PTR1]] : !llvm.ptr
 // CHECK: {{.*}} = llvm.add %[[SCALAR_PRED1]], %[[SCALAR_PRED1]] : i1
-// CHECK: %[[VEC_PRED:.+]] = llvm.icmp "ne" %[[VPTR1]], %[[VPTR1]] : !llvm.vec<2 x ptr>
+// CHECK: %[[VEC_PRED:.+]] = llvm.icmp "ne" %[[VPTR1]], %[[VPTR1]] : vector<2x!llvm.ptr>
 // CHECK: {{.*}} = llvm.add %[[VEC_PRED]], %[[VEC_PRED]] : vector<2xi1>
   %0 = llvm.add %arg0, %arg0 : i32
   %1 = llvm.sub %arg0, %arg0 : i32
@@ -36,7 +36,7 @@ func.func @ops(%arg0: i32, %arg1: f32,
   %typecheck_7 = llvm.add %7, %7 : i1
   %ptrcmp = llvm.icmp "ne" %arg2, %arg2 : !llvm.ptr
   %typecheck_ptrcmp = llvm.add %ptrcmp, %ptrcmp : i1
-  %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : !llvm.vec<2 x ptr>
+  %vptrcmp = llvm.icmp "ne" %arg5, %arg5 : vector<2x!llvm.ptr>
   %typecheck_vptrcmp = llvm.add %vptrcmp, %vptrcmp : vector<2 x i1>
 
 // Integer overflow flags
@@ -362,15 +362,15 @@ func.func @casts_overflow(%arg0: i32, %arg1: i64, %arg2: vector<4xi32>,
 }
 
 // CHECK-LABEL: @vect
-func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: !llvm.vec<2 x ptr>) {
+func.func @vect(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32, %arg3: vector<2x!llvm.ptr>) {
 // CHECK:  = llvm.extractelement {{.*}} : vector<4xf32>
   %0 = llvm.extractelement %arg0[%arg1 : i32] : vector<4xf32>
 // CHECK:  = llvm.insertelement {{.*}} : vector<4xf32>
   %1 = llvm.insertelement %arg2, %arg0[%arg1 : i32] : vector<4xf32>
 // CHECK:  = llvm.shufflevector {{.*}} [0, 0, 0, 0, 7] : vector<4xf32>
   %2 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 0, 7] : vector<4xf32>
-// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1, 0] : !llvm.vec<2 x ptr>
-  %3 = llvm.shufflevector %arg3, %arg3 [1, 0] : !llvm.vec<2 x ptr>
+// CHECK:  = llvm.shufflevector %{{.+}}, %{{.+}} [1, 0] : vector<2x!llvm.ptr>
+  %3 = llvm.shufflevector %arg3, %arg3 [1, 0] : vector<2x!llvm.ptr>
 // CHECK:  = llvm.mlir.constant(dense<1.000000e+00> : vector<4xf32>) : vector<4xf32>
   %4 = llvm.mlir.constant(dense<1.0> : vector<4xf32>) : vector<4xf32>
   return

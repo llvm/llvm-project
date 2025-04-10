@@ -34,10 +34,10 @@ _Pragma("acc shutdown")
   // CHECK-NEXT: CallExpr
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_int' 'int ()'
-#pragma acc shutdown device_type(T)
+#pragma acc shutdown device_type(multicore)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
-  // CHECK-NEXT: device_type(T)
-#pragma acc shutdown if (some_int() < some_long()) device_type(T) device_num(some_int())
+  // CHECK-NEXT: device_type(multicore)
+#pragma acc shutdown if (some_int() < some_long()) device_type(host) device_num(some_int())
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} 'bool' '<'
@@ -48,7 +48,7 @@ _Pragma("acc shutdown")
   // CHECK-NEXT: CallExpr
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'some_long' 'long ()'
-  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_type(host)
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: CallExpr
   // CHECK-NEXT: ImplicitCastExpr
@@ -76,17 +76,17 @@ void TemplFunc(T t) {
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
-#pragma acc shutdown device_type(T)
+#pragma acc shutdown device_type(radeon)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
-  // CHECK-NEXT: device_type(T)
-#pragma acc shutdown if (T::value > t) device_type(T) device_num(t)
+  // CHECK-NEXT: device_type(radeon)
+#pragma acc shutdown if (T::value > t) device_type(acc_device_nvidia) device_num(t)
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: if clause
   // CHECK-NEXT: BinaryOperator{{.*}} '<dependent type>' '>'
   // CHECK-NEXT: DependentScopeDeclRefExpr
   // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
-  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_type(acc_device_nvidia)
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'T'
 
@@ -119,7 +119,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
 
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
-  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_type(radeon)
 
   // CHECK-NEXT: OpenACCShutdownConstruct{{.*}}shutdown
   // CHECK-NEXT: if clause
@@ -131,7 +131,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: CXXMemberCallExpr{{.*}} 'unsigned int'
   // CHECK-NEXT: MemberExpr{{.*}} .operator unsigned int
   // CHECK-NEXT: DeclRefExpr{{.*}} 't' 'SomeStruct'
-  // CHECK-NEXT: device_type(T)
+  // CHECK-NEXT: device_type(acc_device_nvidia)
   // CHECK-NEXT: device_num clause
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'unsigned int'
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'
