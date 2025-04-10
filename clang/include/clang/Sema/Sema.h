@@ -4510,7 +4510,7 @@ public:
   getAttrLoc(const AttrInfo &AL) {
     return AL.getLocation();
   }
-  SourceLocation getAttrLoc(const ParsedAttr &AL);
+  SourceLocation getAttrLoc(const AttributeCommonInfo &CI);
 
   /// If Expr is a valid integer constant, get the value of the integer
   /// expression and return success or failure. May output an error.

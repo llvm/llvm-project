@@ -2734,9 +2734,9 @@ void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
                             Value v2, DenseI32ArrayAttr mask,
                             ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
-  auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
-                                   mask.size(),
-                                   LLVM::isScalableVectorType(containerType));
+  auto vType = LLVM::getVectorType(
+      cast<VectorType>(containerType).getElementType(), mask.size(),
+      LLVM::isScalableVectorType(containerType));
   build(builder, state, vType, v1, v2, mask);
   state.addAttributes(attrs);
 }
@@ -2752,8 +2752,9 @@ static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
   if (!LLVM::isCompatibleVectorType(v1Type))
     return parser.emitError(parser.getCurrentLocation(),
                             "expected an LLVM compatible vector type");
-  resType = LLVM::getVectorType(LLVM::getVectorElementType(v1Type), mask.size(),
-                                LLVM::isScalableVectorType(v1Type));
+  resType =
+      LLVM::getVectorType(cast<VectorType>(v1Type).getElementType(),
+                          mask.size(), LLVM::isScalableVectorType(v1Type));
   return success();
 }
 
@@ -3318,7 +3319,7 @@ LogicalResult AtomicRMWOp::verify() {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
-      Type elemType = getVectorElementType(valType);
+      Type elemType = llvm::cast<VectorType>(valType).getElementType();
       if (!isCompatibleFloatingPointType(elemType))
         return emitOpError(
             "expected LLVM IR floating point type for vector element");
@@ -3423,9 +3424,10 @@ static LogicalResult verifyExtOp(ExtOp op) {
       return op.emitError("input and output vectors are of incompatible shape");
     // Because this is a CastOp, the element of vectors is guaranteed to be an
     // integer.
-    inputType = cast<IntegerType>(getVectorElementType(op.getArg().getType()));
-    outputType =
-        cast<IntegerType>(getVectorElementType(op.getResult().getType()));
+    inputType = cast<IntegerType>(
+        cast<VectorType>(op.getArg().getType()).getElementType());
+    outputType = cast<IntegerType>(
+        cast<VectorType>(op.getResult().getType()).getElementType());
   } else {
     // Because this is a CastOp and arg is not a vector, arg is guaranteed to be
     // an integer.

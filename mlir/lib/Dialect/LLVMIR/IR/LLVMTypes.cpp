@@ -821,12 +821,6 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
   return false;
 }
 
-Type mlir::LLVM::getVectorElementType(Type type) {
-  auto vecTy = dyn_cast<VectorType>(type);
-  assert(vecTy && "incompatible with LLVM vector type");
-  return vecTy.getElementType();
-}
-
 llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
   auto vecTy = dyn_cast<VectorType>(type);
   assert(vecTy && "incompatible with LLVM vector type");
