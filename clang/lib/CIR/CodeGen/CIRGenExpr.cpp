@@ -471,12 +471,12 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   const CharUnits eltAlign =
       getArrayElementAlign(addr.getAlignment(), idx, eltSize);
 
-    assert(!cir::MissingFeatures::preservedAccessIndexRegion());
-    const mlir::Value eltPtr =
-        emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
-                              addr.getElementType(), idx, shouldDecay);
-    const mlir::Type elementType = cgf.convertTypeForMem(eltType);
-    return Address(eltPtr, elementType, eltAlign);
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+  const mlir::Value eltPtr =
+      emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
+                            addr.getElementType(), idx, shouldDecay);
+  const mlir::Type elementType = cgf.convertTypeForMem(eltType);
+  return Address(eltPtr, elementType, eltAlign);
 }
 
 LValue
@@ -484,24 +484,24 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   if (e->getBase()->getType()->isVectorType() &&
       !isa<ExtVectorElementExpr>(e->getBase())) {
     cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: VectorType");
-    return LValue::makeAddr(Address::invalid(), e->getType());
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
   }
 
   if (isa<ExtVectorElementExpr>(e->getBase())) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitArraySubscriptExpr: ExtVectorElementExpr");
-    return LValue::makeAddr(Address::invalid(), e->getType());
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
   }
 
   if (getContext().getAsVariableArrayType(e->getType())) {
     cgm.errorNYI(e->getSourceRange(),
                  "emitArraySubscriptExpr: VariableArrayType");
-    return LValue::makeAddr(Address::invalid(), e->getType());
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
   }
 
   if (e->getType()->getAs<ObjCObjectType>()) {
     cgm.errorNYI(e->getSourceRange(), "emitArraySubscriptExpr: ObjCObjectType");
-    return LValue::makeAddr(Address::invalid(), e->getType());
+    return LValue::makeAddr(Address::invalid(), e->getType(), LValueBaseInfo());
   }
 
   // The index must always be an integer, which is not an aggregate.  Emit it
@@ -522,7 +522,7 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
         arrayLV.getAddress(), e->getType(), idx, cgm.getLoc(e->getExprLoc()),
         /*shouldDecay=*/true);
 
-    return LValue::makeAddr(addr, e->getType());
+    return LValue::makeAddr(addr, e->getType(), LValueBaseInfo());
   }
 
   // The base must be a pointer; emit it with an estimate of its alignment.
