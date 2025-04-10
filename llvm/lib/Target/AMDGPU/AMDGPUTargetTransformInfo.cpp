@@ -324,7 +324,7 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) {
     if (ST->shouldCoerceIllegalTypes() &&
         DL.getTypeSizeInBits(VTy->getElementType()) == 8) {
       unsigned ElCount = VTy->getElementCount().getFixedValue();
-      return std::max(1ul, PowerOf2Ceil(ElCount / 4));
+      return PowerOf2Ceil(ElCount / 4);
     }
   }
 
