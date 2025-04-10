@@ -14,6 +14,7 @@
 
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -39,6 +40,7 @@ struct ConvertMemRefToEmitCPass
     });
 
     populateMemRefToEmitCTypeConversion(converter);
+    populateEmitCSizeTTypeConversions(converter);
 
     auto materializeAsUnrealizedCast = [](OpBuilder &builder, Type resultType,
                                           ValueRange inputs,

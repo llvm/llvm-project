@@ -36,9 +36,14 @@ public:
       return rewriter.notifyMatchFailure(
           callOp, "only functions with zero or one result can be converted");
 
-    rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, callOp.getResultTypes(),
-                                               adaptor.getOperands(),
-                                               callOp->getAttrs());
+    // Convert the original function results.
+    SmallVector<Type> types;
+    if (failed(typeConverter->convertTypes(callOp.getResultTypes(), types))) {
+      return rewriter.notifyMatchFailure(
+          callOp, "function return type conversion failed");
+    }
+    rewriter.replaceOpWithNewOp<emitc::CallOp>(
+        callOp, types, adaptor.getOperands(), callOp->getAttrs());
 
     return success();
   }
@@ -52,13 +57,34 @@ public:
   matchAndRewrite(func::FuncOp funcOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    if (funcOp.getFunctionType().getNumResults() > 1)
+    FunctionType type = funcOp.getFunctionType();
+    if (!type)
+      return failure();
+
+    if (type.getNumResults() > 1)
       return rewriter.notifyMatchFailure(
           funcOp, "only functions with zero or one result can be converted");
 
+    const TypeConverter *converter = getTypeConverter();
+
+    // Convert function signature
+    TypeConverter::SignatureConversion signatureConversion(type.getNumInputs());
+    SmallVector<Type, 1> convertedResults;
+    if (failed(converter->convertSignatureArgs(type.getInputs(),
+                                               signatureConversion)) ||
+        failed(converter->convertTypes(type.getResults(), convertedResults)) ||
+        failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
+                                           *converter, &signatureConversion)))
+      return rewriter.notifyMatchFailure(funcOp, "signature conversion failed");
+
+    // Convert the function type
+    auto convertedFunctionType = FunctionType::get(
+        rewriter.getContext(), signatureConversion.getConvertedTypes(),
+        convertedResults);
+
     // Create the converted `emitc.func` op.
     emitc::FuncOp newFuncOp = rewriter.create<emitc::FuncOp>(
-        funcOp.getLoc(), funcOp.getName(), funcOp.getFunctionType());
+        funcOp.getLoc(), funcOp.getName(), convertedFunctionType);
 
     // Copy over all attributes other than the function name and type.
     for (const auto &namedAttr : funcOp->getAttrs()) {
@@ -112,8 +138,10 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateFuncToEmitCPatterns(RewritePatternSet &patterns) {
+void mlir::populateFuncToEmitCPatterns(RewritePatternSet &patterns,
+                                       TypeConverter &typeConverter) {
   MLIRContext *ctx = patterns.getContext();
 
-  patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(ctx);
+  patterns.add<CallOpConversion, FuncOpConversion, ReturnOpConversion>(
+      typeConverter, ctx);
 }

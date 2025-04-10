@@ -9,10 +9,12 @@
 #ifndef MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H
 #define MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H
 
+#include "mlir/Transforms/DialectConversion.h"
 namespace mlir {
 class RewritePatternSet;
 
-void populateFuncToEmitCPatterns(RewritePatternSet &patterns);
+void populateFuncToEmitCPatterns(RewritePatternSet &patterns,
+                                 TypeConverter &typeConverter);
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_FUNCTOEMITC_FUNCTOEMITC_H
