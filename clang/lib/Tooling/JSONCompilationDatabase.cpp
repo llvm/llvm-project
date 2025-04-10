@@ -202,21 +202,26 @@ JSONCompilationDatabase::loadFromFile(StringRef FilePath,
     ErrorMessage = "Error while opening JSON database: " + Result.message();
     return nullptr;
   }
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(*DatabaseBuffer), Syntax));
+  SmallString<128> FolderPath = FilePath;
+  llvm::sys::path::remove_filename(FolderPath);
+  std::unique_ptr<JSONCompilationDatabase> Database(new JSONCompilationDatabase(
+      FolderPath, std::move(*DatabaseBuffer), Syntax));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
 }
 
 std::unique_ptr<JSONCompilationDatabase>
-JSONCompilationDatabase::loadFromBuffer(StringRef DatabaseString,
+JSONCompilationDatabase::loadFromBuffer(StringRef FilePath,
+                                        StringRef DatabaseString,
                                         std::string &ErrorMessage,
                                         JSONCommandLineSyntax Syntax) {
   std::unique_ptr<llvm::MemoryBuffer> DatabaseBuffer(
       llvm::MemoryBuffer::getMemBufferCopy(DatabaseString));
-  std::unique_ptr<JSONCompilationDatabase> Database(
-      new JSONCompilationDatabase(std::move(DatabaseBuffer), Syntax));
+  SmallString<128> FolderPath = FilePath;
+  llvm::sys::path::remove_filename(FolderPath);
+  std::unique_ptr<JSONCompilationDatabase> Database(new JSONCompilationDatabase(
+      FolderPath, std::move(DatabaseBuffer), Syntax));
   if (!Database->parse(ErrorMessage))
     return nullptr;
   return Database;
@@ -418,7 +423,14 @@ bool JSONCompilationDatabase::parse(std::string &ErrorMessage) {
     SmallString<128> NativeFilePath;
     if (llvm::sys::path::is_relative(FileName)) {
       SmallString<8> DirectoryStorage;
-      SmallString<128> AbsolutePath(Directory->getValue(DirectoryStorage));
+      StringRef DirectoryName = Directory->getValue(DirectoryStorage);
+      SmallString<128> AbsolutePath;
+      if (llvm::sys::path::is_relative(DirectoryName)) {
+        AbsolutePath = FolderPath;
+        llvm::sys::path::append(AbsolutePath, DirectoryName);
+      } else {
+        AbsolutePath = DirectoryName;
+      }
       llvm::sys::path::append(AbsolutePath, FileName);
       llvm::sys::path::native(AbsolutePath, NativeFilePath);
     } else {
