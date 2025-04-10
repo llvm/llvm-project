@@ -36,4 +36,9 @@ clang_target_link_libraries(clangDoc
   clangToolingCore
   )
 
+target_link_libraries(clangDoc
+  PRIVATE
+  clangDocSupport      
+  )
+
 add_subdirectory(tool)
