@@ -29,6 +29,24 @@
 
 using namespace clang;
 
+void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
+                                 bool isInstanceMethod, StringRef ClassName,
+                                 std::optional<StringRef> CategoryName,
+                                 StringRef MethodName, bool hasNilCheck) {
+  // \01+[ContainerName(CategoryName) SelectorName]
+  if (includePrefixByte)
+    OS << "\01";
+  OS << (isInstanceMethod ? '-' : '+');
+  OS << '[';
+  OS << ClassName;
+  if (CategoryName)
+    OS << "(" << *CategoryName << ")";
+  OS << " ";
+  OS << MethodName;
+  OS << ']';
+  if (!hasNilCheck)
+    OS << "_nonnull";
+}
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
 // much to be desired. Come up with a better mangling scheme.
 
@@ -328,7 +346,8 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) const {
+                                         bool includeCategoryNamespace,
+                                         bool hasNilCheck) const {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -362,24 +381,24 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
   }
 
   // \01+[ContainerName(CategoryName) SelectorName]
-  if (includePrefixByte) {
-    OS << '\01';
-  }
-  OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
+  auto CategoryName = std::optional<StringRef>();
+  StringRef ClassName;
   if (const auto *CID = MD->getCategory()) {
-    OS << CID->getClassInterface()->getName();
-    if (includeCategoryNamespace) {
-      OS << '(' << *CID << ')';
-    }
+    if (includeCategoryNamespace)
+      CategoryName = CID->getName();
+    ClassName = CID->getClassInterface()->getName();
+
   } else if (const auto *CD =
                  dyn_cast<ObjCContainerDecl>(MD->getDeclContext())) {
-    OS << CD->getName();
+    ClassName = CD->getName();
   } else {
     llvm_unreachable("Unexpected ObjC method decl context");
   }
-  OS << ' ';
-  MD->getSelector().print(OS);
-  OS << ']';
+  std::string MethodName;
+  llvm::raw_string_ostream MethodNameOS(MethodName);
+  MD->getSelector().print(MethodNameOS);
+  clang::mangleObjCMethodName(OS, includePrefixByte, MD->isInstanceMethod(),
+                              ClassName, CategoryName, MethodName, hasNilCheck);
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
