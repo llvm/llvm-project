@@ -19,6 +19,7 @@
     __cpp_lib_allocator_traits_is_always_equal       201411L [C++17]
     __cpp_lib_associative_heterogeneous_erasure      202110L [C++23]
     __cpp_lib_associative_heterogeneous_insertion    202306L [C++26]
+    __cpp_lib_constexpr_map                          202502L [C++26]
     __cpp_lib_containers_ranges                      202202L [C++23]
     __cpp_lib_erase_if                               202002L [C++20]
     __cpp_lib_generic_associative_lookup             201304L [C++14]
@@ -44,6 +45,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
 #   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -86,6 +91,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
 #   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -134,6 +143,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
 #   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -191,6 +204,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
 #   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -260,6 +277,10 @@
 
 # ifdef __cpp_lib_associative_heterogeneous_insertion
 #   error "__cpp_lib_associative_heterogeneous_insertion should not be defined before c++26"
+# endif
+
+# ifdef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_containers_ranges
@@ -350,6 +371,13 @@
 #   ifdef __cpp_lib_associative_heterogeneous_insertion
 #     error "__cpp_lib_associative_heterogeneous_insertion should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_constexpr_map
+#   error "__cpp_lib_constexpr_map should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_map != 202502L
+#   error "__cpp_lib_constexpr_map should have the value 202502L in c++26"
 # endif
 
 # ifndef __cpp_lib_containers_ranges
