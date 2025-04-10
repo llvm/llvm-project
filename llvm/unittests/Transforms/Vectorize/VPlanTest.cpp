@@ -812,7 +812,7 @@ Successor(s): ir-bb<scalar.header>
   {
     std::string I4Dump;
     raw_string_ostream OS(I4Dump);
-    OS << *cast<VPDef>(I4);
+    OS << *cast<VPValue>(I4);
     EXPECT_EQ("EMIT vp<%5> = mul vp<%3>, vp<%2>", I4Dump);
   }
 }

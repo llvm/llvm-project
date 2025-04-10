@@ -71,13 +71,9 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const VPValue &V) {
   V.print(OS, SlotTracker);
   return OS;
 }
-raw_ostream &llvm::operator<<(raw_ostream &OS, const VPDef &D) {
-  /// If this def has a single value, we can cast it to an instruction and use
-  /// its plan for the slot tracker.
-  if (const VPValue *Val = D.getVPSingleValue())
-    return OS << *Val;
-  VPSlotTracker SlotTracker(nullptr);
-  D.print(OS, "", SlotTracker);
+raw_ostream &llvm::operator<<(raw_ostream &OS, const VPRecipeBase &R) {
+  VPSlotTracker SlotTracker(R.getParent()->getPlan());
+  R.print(OS, "", SlotTracker);
   return OS;
 }
 #endif
