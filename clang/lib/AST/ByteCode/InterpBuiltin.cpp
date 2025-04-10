@@ -2723,6 +2723,45 @@ bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static void zeroAll(Pointer &Dest) {
+  const Descriptor *Desc = Dest.getFieldDesc();
+
+  if (Desc->isPrimitive()) {
+    TYPE_SWITCH(Desc->getPrimType(), {
+      Dest.deref<T>().~T();
+      new (&Dest.deref<T>()) T();
+    });
+    return;
+  }
+
+  if (Desc->isRecord()) {
+    const Record *R = Desc->ElemRecord;
+    for (const Record::Field &F : R->fields()) {
+      Pointer FieldPtr = Dest.atField(F.Offset);
+      zeroAll(FieldPtr);
+    }
+    return;
+  }
+
+  if (Desc->isPrimitiveArray()) {
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      TYPE_SWITCH(Desc->getPrimType(), {
+        Dest.deref<T>().~T();
+        new (&Dest.deref<T>()) T();
+      });
+    }
+    return;
+  }
+
+  if (Desc->isCompositeArray()) {
+    for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
+      Pointer ElemPtr = Dest.atIndex(I).narrow();
+      zeroAll(ElemPtr);
+    }
+    return;
+  }
+}
+
 static bool copyComposite(InterpState &S, CodePtr OpPC, const Pointer &Src,
                           Pointer &Dest, bool Activate);
 static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
@@ -2751,11 +2790,14 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, const Pointer &Src,
   const Record *R = DestDesc->ElemRecord;
   for (const Record::Field &F : R->fields()) {
     if (R->isUnion()) {
-      // For unions, only copy the active field.
+      // For unions, only copy the active field. Zero all others.
       const Pointer &SrcField = Src.atField(F.Offset);
       if (SrcField.isActive()) {
         if (!copyField(F, /*Activate=*/true))
           return false;
+      } else {
+        Pointer DestField = Dest.atField(F.Offset);
+        zeroAll(DestField);
       }
     } else {
       if (!copyField(F, Activate))
