@@ -1,0 +1,16 @@
+// RUN: %clang_cc1 -verify -fsyntax-only %s
+
+int __attribute__((not_tail_called)) foo1(int a) {
+    return a + 1;  
+}
+
+
+int foo2(int a) {
+    [[clang::musttail]] 
+    return foo1(a);  // expected-error{{cannot perform a tail call to function'musttail' because its signature is incompatible with the calling function}}
+}
+
+int main() {
+    int result = foo2(10);      
+    return 0;
+}

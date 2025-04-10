@@ -325,6 +325,9 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
+- The ``-err-musttail-mismatch`` error is emitted when a musttail call is made to a function marked with the not_tail_called attribute.(#133509).
+
+
 Improvements to Clang's time-trace
 ----------------------------------
 

@@ -3134,9 +3134,7 @@ def warn_function_attribute_ignored_in_stmt : Warning<
   "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
-def err_musttail_conflicts_with_not_tail_called : Error<
-  "%0 musttail conflicts with not tail called"
-  >;
+
 def err_musttail_needs_trivial_args : Error<
   "tail call requires that the return value, all parameters, and any "
   "temporaries created by the expression are trivially destructible">;
