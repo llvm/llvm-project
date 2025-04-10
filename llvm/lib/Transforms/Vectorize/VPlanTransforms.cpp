@@ -937,14 +937,6 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     }
   }
 
-  if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&R)) {
-    if (Steps->getParent()->getPlan()->hasSingleUF() && Steps->getNumOperands() == 2 && 
-        vputils::onlyFirstLaneUsed(Steps)) {
-      Steps->replaceAllUsesWith(Steps->getOperand(0));
-      return;
-    }
-  }
-
   VPValue *A;
   if (match(&R, m_Trunc(m_ZExtOrSExt(m_VPValue(A))))) {
     VPValue *Trunc = R.getVPSingleValue();
