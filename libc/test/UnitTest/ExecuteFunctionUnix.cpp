@@ -47,13 +47,12 @@ template <typename T> struct DeleteGuard {
   T *ptr;
   DeleteGuard(T *p) : ptr(p) {}
   ~DeleteGuard() {
-    if (ptr)
       delete ptr;
   }
 };
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
-  DeleteGuard<FunctionCaller> guard(func);
+  DeleteGuard guard(func);
 
   int pipe_fds[2];
   if (LIBC_NAMESPACE::pipe(pipe_fds) == -1)
