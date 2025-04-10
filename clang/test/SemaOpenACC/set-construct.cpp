@@ -17,11 +17,11 @@ struct ExplicitConvertOnly {
 void uses() {
 #pragma acc set default_async(getI())
 #pragma acc set device_num(getI())
-#pragma acc set device_type(getI)
-#pragma acc set device_type(getI) if (getI() < getS())
+#pragma acc set device_type(multicore)
+#pragma acc set device_type(host) if (getI() < getS())
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
-#pragma acc set if (NC) device_type(I)
+#pragma acc set if (NC) device_type(radeon)
 
   // expected-error@+2{{OpenACC 'set' construct must have at least one 'default_async', 'device_num', 'device_type' or 'if' clause}}
   // expected-error@+1{{OpenACC clause 'device_num' requires expression of integer type ('struct NotConvertible' invalid)}}
@@ -62,8 +62,8 @@ void uses() {
 
   // expected-error@+2{{'device_type' clause cannot appear more than once on a 'set' directive}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc set device_type(I) device_type(I)
+#pragma acc set device_type(nvidia) device_type(default)
   // expected-error@+2{{'if' clause cannot appear more than once on a 'set' directive}}
   // expected-note@+1{{previous clause is here}}
-#pragma acc set device_type(I) if(true) if (true)
+#pragma acc set device_type(acc_device_nvidia) if(true) if (true)
 }

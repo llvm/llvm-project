@@ -1306,15 +1306,12 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->isOneOf(tok::kw_struct, tok::kw_union, tok::kw_delete,
                            tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     } else if (Style.isJavaScript() &&
                FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
                                   tok::kw_operator)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
-      FormatTok->Tok.setIdentifierInfo(nullptr);
     }
   } else if (FormatTok->is(tok::greatergreater)) {
     FormatTok->Tok.setKind(tok::greater);

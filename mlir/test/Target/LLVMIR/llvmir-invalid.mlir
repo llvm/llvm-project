@@ -211,7 +211,7 @@ llvm.func @vec_reduce_fmax_intr_wrong_type(%arg0 : vector<4xi32>) -> i32 {
 // -----
 
 llvm.func @matrix_load_intr_wrong_type(%ptr : !llvm.ptr, %stride : i32) -> f32 {
-  // expected-error @below{{op result #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
+  // expected-error @+2{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.intr.matrix.column.major.load %ptr, <stride=%stride>
     { isVolatile = 0: i1, rows = 3: i32, columns = 16: i32} : f32 from !llvm.ptr stride i32
   llvm.return %0 : f32
@@ -229,7 +229,7 @@ llvm.func @matrix_store_intr_wrong_type(%matrix : vector<48xf32>, %ptr : i32, %s
 // -----
 
 llvm.func @matrix_multiply_intr_wrong_type(%arg0 : vector<64xf32>, %arg1 : f32) -> vector<12xf32> {
-  // expected-error @below{{op operand #1 must be LLVM dialect-compatible vector type, but got 'f32'}}
+  // expected-error @+2{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.intr.matrix.multiply %arg0, %arg1
     { lhs_rows = 4: i32, lhs_columns = 16: i32 , rhs_columns = 3: i32} : (vector<64xf32>, f32) -> vector<12xf32>
   llvm.return %0 : vector<12xf32>
@@ -238,7 +238,7 @@ llvm.func @matrix_multiply_intr_wrong_type(%arg0 : vector<64xf32>, %arg1 : f32) 
 // -----
 
 llvm.func @matrix_transpose_intr_wrong_type(%matrix : f32) -> vector<48xf32> {
-  // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
+  // expected-error @below{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.intr.matrix.transpose %matrix {rows = 3: i32, columns = 16: i32} : f32 into vector<48xf32>
   llvm.return %0 : vector<48xf32>
 }
@@ -286,7 +286,7 @@ llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : vector<7x!llvm.ptr>, %
 // -----
 
 llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : vector<7x!llvm.ptr>, %mask : vector<7xi1>) {
-  // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
+  // expected-error @below{{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
