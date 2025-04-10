@@ -89,7 +89,7 @@ offloading application using clang.
 High-level SYCL Offloading Compilation Flow
 *******************************************
 
-.. figure:: toplevel.png
+.. figure:: figures/toplevel.png
   :scale: 50%
   :align: center
   
