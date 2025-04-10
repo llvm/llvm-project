@@ -549,25 +549,12 @@ public:
                                      std::unique_ptr<MCObjectWriter> OW,
                                      std::unique_ptr<MCCodeEmitter> Emitter,
                                      const MCSubtargetInfo &STI) const;
-  LLVM_DEPRECATED("Use the overload without the 3 trailing bool", "")
-  MCStreamer *createMCObjectStreamer(const Triple &T, MCContext &Ctx,
-                                     std::unique_ptr<MCAsmBackend> &&TAB,
-                                     std::unique_ptr<MCObjectWriter> &&OW,
-                                     std::unique_ptr<MCCodeEmitter> &&Emitter,
-                                     const MCSubtargetInfo &STI, bool, bool,
-                                     bool) const;
 
   MCStreamer *createAsmStreamer(MCContext &Ctx,
                                 std::unique_ptr<formatted_raw_ostream> OS,
                                 MCInstPrinter *IP,
                                 std::unique_ptr<MCCodeEmitter> CE,
                                 std::unique_ptr<MCAsmBackend> TAB) const;
-  LLVM_DEPRECATED("Use the overload without the 3 unused bool", "")
-  MCStreamer *
-  createAsmStreamer(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
-                    bool IsVerboseAsm, bool UseDwarfDirectory,
-                    MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> &&CE,
-                    std::unique_ptr<MCAsmBackend> &&TAB, bool ShowInst) const;
 
   MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
                                             formatted_raw_ostream &OS,
