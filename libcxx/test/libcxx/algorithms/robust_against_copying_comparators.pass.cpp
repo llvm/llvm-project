@@ -12,7 +12,10 @@
 #include <cassert>
 #include <compare>
 #include <cstddef>
+#include <deque>
+#include <ranges>
 #include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -207,10 +210,25 @@ TEST_CONSTEXPR_CXX20 bool all_the_algorithms()
     return true;
 }
 
+bool test_segmented_iterator() {
+    int copies = 0;
+    std::deque<int> dq(10);
+    (void)std::for_each(dq.begin(), dq.end(), UnaryVoid<int>(&copies)); assert(copies == 1); copies = 0;
+
+#if TEST_STD_VER >= 20
+    std::vector<std::vector<int>> vecs(3, std::vector<int>(10));
+    auto v = std::views::join(vecs);
+    std::for_each(v.begin(), v.end(), UnaryVoid<int>(&copies)); assert(copies == 1); copies = 0;
+#endif
+
+    return true;
+}
+
 int main(int, char**)
 {
     all_the_algorithms<void*>();
     all_the_algorithms<int>();
+    test_segmented_iterator();
 #if TEST_STD_VER > 17
     static_assert(all_the_algorithms<void*>());
     static_assert(all_the_algorithms<int>());
