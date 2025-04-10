@@ -406,10 +406,6 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
 
-    // If --hip-device-lib is not set, add the default bitcode libraries.
-    // Add the HIP specific bitcode library.
-    BCLibs.emplace_back(RocmInstallation->getHIPPath());
-
     // Add common device libraries like ocml etc.
     for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))
       BCLibs.emplace_back(N);
