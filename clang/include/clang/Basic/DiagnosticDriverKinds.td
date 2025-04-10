@@ -67,7 +67,8 @@ def err_drv_no_cuda_libdevice : Error<
   "libdevice">;
 
 def err_drv_no_rocm_device_lib : Error<
-  "cannot find ROCm device library%select{| for %1| for ABI version %1}0; provide its path via "
+  "cannot find ROCm device library%select{| for %1| for ABI version %1"
+  "%select{|, which requires ROCm %3 or higher}2}0; provide its path via "
   "'--rocm-path' or '--rocm-device-lib-path', or pass '-nogpulib' to build "
   "without ROCm device library">;
 def err_drv_no_hip_runtime : Error<
@@ -849,4 +850,9 @@ def warn_missing_include_dirs : Warning<
 
 def err_drv_malformed_warning_suppression_mapping : Error<
   "failed to process suppression mapping file '%0': %1">;
+
+def warn_drv_openacc_without_cir
+    : Warning<"OpenACC directives will result in no runtime behavior; use "
+              "-fclangir to enable runtime effect">,
+      InGroup<SourceUsesOpenACC>;
 }

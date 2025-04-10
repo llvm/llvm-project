@@ -1372,36 +1372,45 @@ define <8 x i64> @shuffle_v8i164_span_splat(<8 x i64> %a) nounwind {
   ret <8 x i64> %res
 }
 
-; FIXME: Doing this as a span spat requires rewriting the undef elements in
-; the mask not just using a prefix of the mask.
+; Doing this as a span splat requires rewriting the undef elements in the mask
+; not just using a prefix of the mask.
 define <8 x i64> @shuffle_v8i64_span_splat_neg(<8 x i64> %a) nounwind {
 ; CHECK-LABEL: shuffle_v8i64_span_splat_neg:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 1
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    srli a0, a0, 3
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v10, v9, a0
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v13, v8, v10
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v10, v10, a0
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgatherei16.vv v12, v8, v9
-; CHECK-NEXT:    vmv.v.v v13, v12
-; CHECK-NEXT:    vmv.v.v v14, v12
-; CHECK-NEXT:    vmv.v.v v15, v12
+; CHECK-NEXT:    vrgatherei16.vv v14, v8, v10
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslidedown.vx v9, v10, a0
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v15, v8, v9
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i64> %a, <8 x i64> poison, <8 x i32> <i32 poison, i32 poison, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
   ret <8 x i64> %res
 }
 
-; FIXME: A locally repeating shuffle needs to use a mask prefix
+; Doing this as a locally repeating shuffle requires rewriting the undef
+; elements in the mask not just using a prefix of the mask.
 define <8 x i32> @shuffle_v8i32_locally_repeating_neg(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_v8i32_locally_repeating_neg:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI87_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI87_0)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v12, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v11, v9, v12
 ; CHECK-NEXT:    vrgatherei16.vv v10, v8, v12
-; CHECK-NEXT:    vmv2r.v v8, v10
+; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %res = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 1, i32 0, i32 poison, i32 poison, i32 5, i32 4, i32 6, i32 6>
   ret <8 x i32> %res

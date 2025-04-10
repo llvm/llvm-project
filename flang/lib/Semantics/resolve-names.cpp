@@ -4343,7 +4343,9 @@ bool SubprogramVisitor::Pre(const parser::PrefixSpec::Attributes &attrs) {
     }
     if (auto attrs{subp->cudaSubprogramAttrs()}) {
       if (*attrs == common::CUDASubprogramAttrs::Global ||
-          *attrs == common::CUDASubprogramAttrs::Device) {
+          *attrs == common::CUDASubprogramAttrs::Grid_Global ||
+          *attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice) {
         const Scope &scope{currScope()};
         const Scope *mod{FindModuleContaining(scope)};
         if (mod &&
