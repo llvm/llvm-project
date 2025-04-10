@@ -4877,14 +4877,10 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
 /// Get the VF scaling factor applied to the recipe's output, if the recipe has
 /// one.
 static unsigned getVFScaleFactor(VPRecipeBase *R) {
-  if (isa<VPPartialReductionRecipe, VPReductionPHIRecipe>(R)) {
-    auto *ReductionR = dyn_cast<VPReductionPHIRecipe>(R);
-    auto *PartialReductionR =
-        ReductionR ? nullptr : dyn_cast<VPPartialReductionRecipe>(R);
-    unsigned ScaleFactor = ReductionR ? ReductionR->getVFScaleFactor()
-                                      : PartialReductionR->getVFScaleFactor();
-    return ScaleFactor;
-  }
+  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
+    return RR->getVFScaleFactor();
+  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+    return RR->getVFScaleFactor();
   return 1;
 }
 
