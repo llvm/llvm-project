@@ -3914,6 +3914,14 @@ private:
                                 ArrayRef<Value *> VL) const;
 
   /// Checks if the specified list of the instructions/values can be vectorized
+  /// in general.
+  bool isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
+                                 const EdgeInfo &UserTreeIdx,
+                                 InstructionsState &S,
+                                 bool &TryToFindDuplicates,
+                                 bool &TrySplitVectorize) const;
+
+  /// Checks if the specified list of the instructions/values can be vectorized
   /// and fills required data before actual scheduling of the instructions.
   TreeEntry::EntryState
   getScalarsVectorizationState(const InstructionsState &S, ArrayRef<Value *> VL,
@@ -9329,35 +9337,25 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   return true;
 }
 
-void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
-                            const EdgeInfo &UserTreeIdx,
-                            unsigned InterleaveFactor) {
+bool BoUpSLP::isLegalToVectorizeScalars(ArrayRef<Value *> VL, unsigned Depth,
+                                        const EdgeInfo &UserTreeIdx,
+                                        InstructionsState &S,
+                                        bool &TryToFindDuplicates,
+                                        bool &TrySplitVectorize) const {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
-  SmallVector<int> ReuseShuffleIndices;
-  SmallVector<Value *> NonUniqueValueVL(VL.begin(), VL.end());
-  auto TryToFindDuplicates = [&](const InstructionsState &S,
-                                 bool DoNotFail = false) {
-    if (tryToFindDuplicates(NonUniqueValueVL, ReuseShuffleIndices, *TTI, *TLI,
-                            S, UserTreeIdx, DoNotFail)) {
-      VL = NonUniqueValueVL;
-      return true;
-    }
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-    return false;
-  };
-
-  InstructionsState S = getSameOpcode(VL, *TLI);
+  S = getSameOpcode(VL, *TLI);
+  TryToFindDuplicates = true;
+  TrySplitVectorize = false;
 
   // Don't go into catchswitch blocks, which can happen with PHIs.
   // Such blocks can only have PHIs and the catchswitch.  There is no
   // place to insert a shuffle if we need to, so just avoid that issue.
   if (S && isa<CatchSwitchInst>(S.getMainOp()->getParent()->getTerminator())) {
     LLVM_DEBUG(dbgs() << "SLP: bundle in catchswitch block.\n");
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-    return;
+    // Do not try to pack to avoid extra instructions here.
+    TryToFindDuplicates = false;
+    return false;
   }
 
   // Check if this is a duplicate of another entry.
@@ -9367,24 +9365,14 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       if (E->isSame(VL)) {
         LLVM_DEBUG(dbgs() << "SLP: Perfect diamond merge at " << *S.getMainOp()
                           << ".\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
+        return false;
       }
       SmallPtrSet<Value *, 8> Values(llvm::from_range, E->Scalars);
       if (all_of(VL, [&](Value *V) {
             return isa<PoisonValue>(V) || Values.contains(V);
           })) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to full overlap.\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
+        return false;
       }
     }
   }
@@ -9401,12 +9389,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                   cast<Instruction>(I)->getOpcode() == S.getOpcode();
          })))) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to max recursion depth.\n");
-    if (TryToFindDuplicates(S)) {
-      auto Invalid = ScheduleBundle::invalid();
-      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices);
-    }
-    return;
+    return false;
   }
 
   // Don't handle scalable vectors
@@ -9414,62 +9397,23 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       isa<ScalableVectorType>(
           cast<ExtractElementInst>(S.getMainOp())->getVectorOperandType())) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to scalable vector type.\n");
-    if (TryToFindDuplicates(S)) {
-      auto Invalid = ScheduleBundle::invalid();
-      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices);
-    }
-    return;
+    return false;
   }
 
   // Don't handle vectors.
   if (!SLPReVec && getValueType(VL.front())->isVectorTy()) {
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to vector type.\n");
-    auto Invalid = ScheduleBundle::invalid();
-    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-    return;
+    // Do not try to pack to avoid extra instructions here.
+    TryToFindDuplicates = false;
+    return false;
   }
-
-  // Tries to build split node.
-  auto TrySplitNode = [&](const InstructionsState &LocalState) {
-    SmallVector<Value *> Op1, Op2;
-    OrdersType ReorderIndices;
-    if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
-      return false;
-
-    SmallVector<Value *> NewVL(VL.size());
-    copy(Op1, NewVL.begin());
-    copy(Op2, std::next(NewVL.begin(), Op1.size()));
-    auto Invalid = ScheduleBundle::invalid();
-    auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
-                            UserTreeIdx, {}, ReorderIndices);
-    LLVM_DEBUG(dbgs() << "SLP: split alternate node.\n"; TE->dump());
-    auto AddNode = [&](ArrayRef<Value *> Op, unsigned Idx) {
-      InstructionsState S = getSameOpcode(Op, *TLI);
-      if (S && (isa<LoadInst>(S.getMainOp()) ||
-                getSameValuesTreeEntry(S.getMainOp(), Op, /*SameVF=*/true))) {
-        // Build gather node for loads, they will be gathered later.
-        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
-                                                    Idx == 0 ? 0 : Op1.size());
-        (void)newTreeEntry(Op, TreeEntry::NeedToGather, Invalid, S, {TE, Idx});
-      } else {
-        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
-                                                    Idx == 0 ? 0 : Op1.size());
-        buildTree_rec(Op, Depth, {TE, Idx});
-      }
-    };
-    AddNode(Op1, 0);
-    AddNode(Op2, 1);
-    return true;
-  };
 
   // If all of the operands are identical or constant we have a simple solution.
   // If we deal with insert/extract instructions, they all must have constant
   // indices, otherwise we should gather them, not try to vectorize.
   // If alternate op node with 2 elements with gathered operands - do not
   // vectorize.
-  auto &&NotProfitableForVectorization = [&S, this,
-                                          Depth](ArrayRef<Value *> VL) {
+  auto NotProfitableForVectorization = [&S, this, Depth](ArrayRef<Value *> VL) {
     if (!S || !S.isAltShuffle() || VL.size() > 2)
       return false;
     if (VectorizableTree.size() < MinTreeSize)
@@ -9549,18 +9493,13 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
        !all_of(VL, isVectorLikeInstWithConstOps)) ||
       NotProfitableForVectorization(VL)) {
     if (!S) {
-      auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
-      // Last chance to try to vectorize alternate node.
-      if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
-        return;
+      LLVM_DEBUG(dbgs() << "SLP: Try split and if failed, gathering due to "
+                           "C,S,B,O, small shuffle. \n");
+      TrySplitVectorize = true;
+      return false;
     }
     LLVM_DEBUG(dbgs() << "SLP: Gathering due to C,S,B,O, small shuffle. \n");
-    if (TryToFindDuplicates(S)) {
-      auto Invalid = ScheduleBundle::invalid();
-      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                   ReuseShuffleIndices);
-    }
-    return;
+    return false;
   }
 
   // Don't vectorize ephemeral values.
@@ -9569,9 +9508,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       if (EphValues.count(V)) {
         LLVM_DEBUG(dbgs() << "SLP: The instruction (" << *V
                           << ") is ephemeral.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return;
+        // Do not try to pack to avoid extra instructions here.
+        TryToFindDuplicates = false;
+        return false;
       }
     }
   }
@@ -9620,12 +9559,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     if (PreferScalarize) {
       LLVM_DEBUG(dbgs() << "SLP: The instructions are in tree and alternate "
                            "node is not profitable.\n");
-      if (TryToFindDuplicates(S)) {
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndices);
-      }
-      return;
+      return false;
     }
   }
 
@@ -9634,12 +9568,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     for (Value *V : VL) {
       if (UserIgnoreList->contains(V)) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
-        if (TryToFindDuplicates(S)) {
-          auto Invalid = ScheduleBundle::invalid();
-          newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                       ReuseShuffleIndices);
-        }
-        return;
+        return false;
       }
     }
   }
@@ -9669,8 +9598,79 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     // Do not vectorize EH and non-returning blocks, not profitable in most
     // cases.
     LLVM_DEBUG(dbgs() << "SLP: bundle in unreachable block.\n");
+    return false;
+  }
+  return true;
+}
+
+void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
+                            const EdgeInfo &UserTreeIdx,
+                            unsigned InterleaveFactor) {
+  assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
+
+  SmallVector<int> ReuseShuffleIndices;
+  SmallVector<Value *> NonUniqueValueVL(VL.begin(), VL.end());
+  auto TryToFindDuplicates = [&](const InstructionsState &S,
+                                 bool DoNotFail = false) {
+    if (tryToFindDuplicates(NonUniqueValueVL, ReuseShuffleIndices, *TTI, *TLI,
+                            S, UserTreeIdx, DoNotFail)) {
+      VL = NonUniqueValueVL;
+      return true;
+    }
     auto Invalid = ScheduleBundle::invalid();
     newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
+    return false;
+  };
+
+  InstructionsState S = InstructionsState::invalid();
+  // Tries to build split node.
+  auto TrySplitNode = [&](const InstructionsState &LocalState) {
+    SmallVector<Value *> Op1, Op2;
+    OrdersType ReorderIndices;
+    if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
+      return false;
+
+    SmallVector<Value *> NewVL(VL.size());
+    copy(Op1, NewVL.begin());
+    copy(Op2, std::next(NewVL.begin(), Op1.size()));
+    auto Invalid = ScheduleBundle::invalid();
+    auto *TE = newTreeEntry(VL, TreeEntry::SplitVectorize, Invalid, LocalState,
+                            UserTreeIdx, {}, ReorderIndices);
+    LLVM_DEBUG(dbgs() << "SLP: split alternate node.\n"; TE->dump());
+    auto AddNode = [&](ArrayRef<Value *> Op, unsigned Idx) {
+      InstructionsState S = getSameOpcode(Op, *TLI);
+      if (S && (isa<LoadInst>(S.getMainOp()) ||
+                getSameValuesTreeEntry(S.getMainOp(), Op, /*SameVF=*/true))) {
+        // Build gather node for loads, they will be gathered later.
+        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
+                                                    Idx == 0 ? 0 : Op1.size());
+        (void)newTreeEntry(Op, TreeEntry::NeedToGather, Invalid, S, {TE, Idx});
+      } else {
+        TE->CombinedEntriesWithIndices.emplace_back(VectorizableTree.size(),
+                                                    Idx == 0 ? 0 : Op1.size());
+        buildTree_rec(Op, Depth, {TE, Idx});
+      }
+    };
+    AddNode(Op1, 0);
+    AddNode(Op2, 1);
+    return true;
+  };
+
+  bool TryToPackDuplicates;
+  bool TrySplitVectorize;
+  if (!isLegalToVectorizeScalars(VL, Depth, UserTreeIdx, S, TryToPackDuplicates,
+                                 TrySplitVectorize)) {
+    if (TrySplitVectorize) {
+      auto [MainOp, AltOp] = getMainAltOpsNoStateVL(VL);
+      // Last chance to try to vectorize alternate node.
+      if (MainOp && AltOp && TrySplitNode(InstructionsState(MainOp, AltOp)))
+        return;
+    }
+    if (!TryToPackDuplicates || TryToFindDuplicates(S)) {
+      auto Invalid = ScheduleBundle::invalid();
+      newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
+                   ReuseShuffleIndices);
+    }
     return;
   }
 
@@ -9683,6 +9683,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
 
   // Perform specific checks for each particular instruction kind.
+  bool IsScatterVectorizeUserTE =
+      UserTreeIdx.UserTE &&
+      UserTreeIdx.UserTE->State == TreeEntry::ScatterVectorize;
   OrdersType CurrentOrder;
   SmallVector<Value *> PointerOps;
   TreeEntry::EntryState State = getScalarsVectorizationState(
@@ -9694,6 +9697,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     return;
   }
 
+  Instruction *VL0 = S.getMainOp();
+  BasicBlock *BB = VL0->getParent();
   auto &BSRef = BlocksSchedules[BB];
   if (!BSRef)
     BSRef = std::make_unique<BlockScheduling>(BB);
