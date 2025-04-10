@@ -4086,8 +4086,10 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
     return FormatStyle::LK_TableGen;
   if (FileName.ends_with_insensitive(".cs"))
     return FormatStyle::LK_CSharp;
-  if (FileName.ends_with_insensitive(".json"))
+  if (FileName.ends_with_insensitive(".json") ||
+      FileName.ends_with_insensitive(".ipynb")) {
     return FormatStyle::LK_Json;
+  }
   if (FileName.ends_with_insensitive(".sv") ||
       FileName.ends_with_insensitive(".svh") ||
       FileName.ends_with_insensitive(".v") ||
