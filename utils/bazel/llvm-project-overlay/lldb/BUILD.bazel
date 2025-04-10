@@ -834,6 +834,7 @@ cc_binary(
         ":Host",
         ":liblldb.wrapper",
         ":lldb_options_inc_gen",
+        ":UtilityHeaders",
         "//llvm:Option",
         "//llvm:Support",
     ],
