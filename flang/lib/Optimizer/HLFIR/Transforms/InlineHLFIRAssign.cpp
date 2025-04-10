@@ -13,6 +13,7 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -127,6 +128,121 @@ public:
   }
 };
 
+class InlineCopyInConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
+public:
+  using mlir::OpRewritePattern<hlfir::CopyInOp>::OpRewritePattern;
+
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::CopyInOp copyIn,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+
+llvm::LogicalResult
+InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
+                                        mlir::PatternRewriter &rewriter) const {
+  fir::FirOpBuilder builder(rewriter, copyIn.getOperation());
+  mlir::Location loc = copyIn.getLoc();
+  hlfir::Entity inputVariable{copyIn.getVar()};
+  if (!fir::isa_trivial(inputVariable.getFortranElementType()))
+    return rewriter.notifyMatchFailure(copyIn,
+                                       "CopyInOp's data type is not trivial");
+
+  if (fir::isPointerType(inputVariable.getType()))
+    return rewriter.notifyMatchFailure(
+        copyIn, "CopyInOp's input variable is a pointer");
+
+  // There should be exactly one user of WasCopied - the corresponding
+  // CopyOutOp.
+  if (copyIn.getWasCopied().getUses().empty())
+    return rewriter.notifyMatchFailure(copyIn,
+                                       "CopyInOp's WasCopied has no uses");
+  // The copy out should always be present, either to actually copy or just
+  // deallocate memory.
+  auto *copyOut =
+      copyIn.getWasCopied().getUsers().begin().getCurrent().getUser();
+
+  if (!mlir::isa<hlfir::CopyOutOp>(copyOut))
+    return rewriter.notifyMatchFailure(copyIn,
+                                       "CopyInOp has no direct CopyOut");
+
+  // Only inline the copy_in when copy_out does not need to be done, i.e. in
+  // case of intent(in).
+  if (::llvm::cast<hlfir::CopyOutOp>(copyOut).getVar())
+    return rewriter.notifyMatchFailure(copyIn, "CopyIn needs a copy-out");
+
+  inputVariable =
+      hlfir::derefPointersAndAllocatables(loc, builder, inputVariable);
+  mlir::Type resultAddrType = copyIn.getCopiedIn().getType();
+  mlir::Value isContiguous =
+      builder.create<fir::IsContiguousBoxOp>(loc, inputVariable);
+  auto results =
+      builder
+          .genIfOp(loc, {resultAddrType, builder.getI1Type()}, isContiguous,
+                   /*withElseRegion=*/true)
+          .genThen([&]() {
+            mlir::Value falseVal = builder.create<mlir::arith::ConstantOp>(
+                loc, builder.getI1Type(), builder.getBoolAttr(false));
+            builder.create<fir::ResultOp>(
+                loc, mlir::ValueRange{inputVariable, falseVal});
+          })
+          .genElse([&] {
+            auto [temp, cleanup] =
+                hlfir::createTempFromMold(loc, builder, inputVariable);
+            mlir::Value shape = hlfir::genShape(loc, builder, inputVariable);
+            llvm::SmallVector<mlir::Value> extents =
+                hlfir::getIndexExtents(loc, builder, shape);
+            hlfir::LoopNest loopNest = hlfir::genLoopNest(
+                loc, builder, extents, /*isUnordered=*/true,
+                flangomp::shouldUseWorkshareLowering(copyIn));
+            builder.setInsertionPointToStart(loopNest.body);
+            auto elem = hlfir::getElementAt(loc, builder, inputVariable,
+                                            loopNest.oneBasedIndices);
+            elem = hlfir::loadTrivialScalar(loc, builder, elem);
+            auto tempElem = hlfir::getElementAt(loc, builder, temp,
+                                                loopNest.oneBasedIndices);
+            builder.create<hlfir::AssignOp>(loc, elem, tempElem);
+            builder.setInsertionPointAfter(loopNest.outerOp);
+
+            mlir::Value result;
+            // Make sure the result is always a boxed array by boxing it
+            // ourselves if need be.
+            if (mlir::isa<fir::BaseBoxType>(temp.getType())) {
+              result = temp;
+            } else {
+              auto refTy =
+                  fir::ReferenceType::get(temp.getElementOrSequenceType());
+              auto refVal = builder.createConvert(loc, refTy, temp);
+              result =
+                  builder.create<fir::EmboxOp>(loc, resultAddrType, refVal);
+            }
+
+            builder.create<fir::ResultOp>(loc,
+                                          mlir::ValueRange{result, cleanup});
+          })
+          .getResults();
+
+  auto addr = results[0];
+  auto needsCleanup = results[1];
+
+  builder.setInsertionPoint(copyOut);
+  builder.genIfOp(loc, {}, needsCleanup, false).genThen([&] {
+    auto boxAddr = builder.create<fir::BoxAddrOp>(loc, addr);
+    auto heapType = fir::HeapType::get(fir::BoxValue(addr).getBaseTy());
+    auto heapVal = builder.createConvert(loc, heapType, boxAddr.getResult());
+    builder.create<fir::FreeMemOp>(loc, heapVal);
+  });
+  rewriter.eraseOp(copyOut);
+
+  auto tempBox = copyIn.getTempBox();
+
+  rewriter.replaceOp(copyIn, {addr, builder.genNot(loc, isContiguous)});
+
+  // The TempBox is only needed for flang-rt calls which we're no longer
+  // generating.
+  rewriter.eraseOp(tempBox.getDefiningOp());
+  return mlir::success();
+}
+
 class InlineHLFIRAssignPass
     : public hlfir::impl::InlineHLFIRAssignBase<InlineHLFIRAssignPass> {
 public:
@@ -140,6 +256,7 @@ public:
 
     mlir::RewritePatternSet patterns(context);
     patterns.insert<InlineHLFIRAssignConversion>(context);
+    patterns.insert<InlineCopyInConversion>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
