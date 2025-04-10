@@ -1373,7 +1373,12 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
     case eAddressMaskTypeCode:
       if (addr_range == eAddressMaskRangeAll) {
         process_sp->SetCodeAddressMask(mask);
-        process_sp->SetHighmemCodeAddressMask(mask);
+        // If the highmem mask is the default-invalid,
+        // don't change it, keep everything consistently
+        // using the lowmem all-address-space mask.
+        if (process_sp->GetConcreteHighmemCodeAddressMask() !=
+            LLDB_INVALID_ADDRESS_MASK)
+          process_sp->SetHighmemCodeAddressMask(mask);
       } else if (addr_range == eAddressMaskRangeHigh) {
         process_sp->SetHighmemCodeAddressMask(mask);
       } else {
@@ -1383,7 +1388,12 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
     case eAddressMaskTypeData:
       if (addr_range == eAddressMaskRangeAll) {
         process_sp->SetDataAddressMask(mask);
-        process_sp->SetHighmemDataAddressMask(mask);
+        // If the highmem mask is the default-invalid,
+        // don't change it, keep everything consistently
+        // using the lowmem all-address-space mask.
+        if (process_sp->GetConcreteHighmemDataAddressMask() !=
+            LLDB_INVALID_ADDRESS_MASK)
+          process_sp->SetHighmemDataAddressMask(mask);
       } else if (addr_range == eAddressMaskRangeHigh) {
         process_sp->SetHighmemDataAddressMask(mask);
       } else {
@@ -1394,8 +1404,16 @@ void SBProcess::SetAddressMask(AddressMaskType type, addr_t mask,
       if (addr_range == eAddressMaskRangeAll) {
         process_sp->SetCodeAddressMask(mask);
         process_sp->SetDataAddressMask(mask);
-        process_sp->SetHighmemCodeAddressMask(mask);
-        process_sp->SetHighmemDataAddressMask(mask);
+        // If the highmem masks are the default-invalid,
+        // don't change them, keep everything consistently
+        // using the lowmem all-address-space masks.
+        if (process_sp->GetConcreteHighmemDataAddressMask() !=
+                LLDB_INVALID_ADDRESS_MASK ||
+            process_sp->GetConcreteHighmemCodeAddressMask() !=
+                LLDB_INVALID_ADDRESS_MASK) {
+          process_sp->SetHighmemCodeAddressMask(mask);
+          process_sp->SetHighmemDataAddressMask(mask);
+        }
       } else if (addr_range == eAddressMaskRangeHigh) {
         process_sp->SetHighmemCodeAddressMask(mask);
         process_sp->SetHighmemDataAddressMask(mask);
