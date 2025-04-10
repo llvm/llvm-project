@@ -852,7 +852,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
       Streamer.emitSymbolValue(Entry, JT.OutputEntrySize);
     } else { // JTT_PIC
       const MCSymbolRefExpr *JTExpr =
-          MCSymbolRefExpr::create(LastLabel, Streamer.getContext());
+          MCSymbolRefExpr::create(JTLabel, Streamer.getContext());
       const MCSymbolRefExpr *E =
           MCSymbolRefExpr::create(Entry, Streamer.getContext());
       const MCBinaryExpr *Value =
