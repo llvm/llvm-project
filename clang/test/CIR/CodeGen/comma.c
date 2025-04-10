@@ -12,6 +12,8 @@ void comma(void) {
     int i;
 
     b = true, c = 65, f = 3.14f, i = 42;
+
+    i = 100, 200;
 }
 
 // CIR-LABEL: cir.func @comma() {
@@ -28,6 +30,8 @@ void comma(void) {
 // CIR:         cir.store %[[FLOAT_VAL]], %[[F]] : !cir.float, !cir.ptr<!cir.float>
 // CIR:         %[[INT_VAL:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:         cir.store %[[INT_VAL]], %[[I]] : !s32i, !cir.ptr<!s32i>
+// CIR:         %[[HUNDRED:.*]] = cir.const #cir.int<100> : !s32i
+// CIR:         cir.store %[[HUNDRED]], %[[I]] : !s32i, !cir.ptr<!s32i>
 // CIR:         cir.return
 
 // LLVM-LABEL: define {{.*}}void @comma() {
@@ -39,6 +43,7 @@ void comma(void) {
 // LLVM:         store i8 65, ptr %[[C_PTR]]
 // LLVM:         store float 0x40091EB860000000, ptr %[[F_PTR]]
 // LLVM:         store i32 42, ptr %[[I_PTR]]
+// LLVM:         store i32 100, ptr %[[I_PTR]]
 // LLVM:         ret void
 
 // OGCG-LABEL: define {{.*}}void @comma()
@@ -50,4 +55,5 @@ void comma(void) {
 // OGCG:         store i8 65, ptr %[[C_PTR]]
 // OGCG:         store float 0x40091EB860000000, ptr %[[F_PTR]]
 // OGCG:         store i32 42, ptr %[[I_PTR]]
+// OGCG:         store i32 100, ptr %[[I_PTR]]
 // OGCG:         ret void
