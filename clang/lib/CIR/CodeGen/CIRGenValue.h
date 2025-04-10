@@ -23,6 +23,8 @@
 
 #include "mlir/IR/Value.h"
 
+#include "clang/CIR/MissingFeatures.h"
+
 namespace clang::CIRGen {
 
 /// This trivial value class is used to represent the result of an
