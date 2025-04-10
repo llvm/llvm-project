@@ -588,10 +588,8 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = builder.createConvert(
-          loc, i32Ty,
-          fir::getBase(converter.genExprValue(
-              caller.getCallDescription().chevrons()[3], stmtCtx)));
+      stream = fir::getBase(converter.genExprValue(
+          caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(
         loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
