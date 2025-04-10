@@ -1733,14 +1733,13 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
 
     ```mlir
       llvm.indirectbr %dest : !llvm.ptr, [
-      ^head(%arg0 : i32),
-      ^tail(%arg1 : i32)
+        ^head(%arg0 : i32),
+        ^tail(%arg1, %arg0 : i32, i32)
       ]
     ^head(%r0 : i32):
       llvm.return %r0 : i32
-    ^tail(%r1 : i32):
-      llvm.return %r1 : i32
-
+    ^tail(%r1 : i32, %r2 : i32):
+      ...
     ```
   }];
   let arguments = (ins LLVM_AnyPointer:$addr,

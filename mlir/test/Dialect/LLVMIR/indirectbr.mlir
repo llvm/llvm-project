@@ -3,23 +3,25 @@
 llvm.func @ib0(%dest : !llvm.ptr, %arg0 : i32, %arg1 : i32) -> i32 {
   llvm.indirectbr %dest : !llvm.ptr, [
   ^head(%arg0 : i32),
-  ^tail(%arg1 : i32)
+  ^tail(%arg1, %arg0 : i32, i32)
   ]
 ^head(%r0 : i32):
   llvm.return %r0 : i32
-^tail(%r1 : i32):
-  llvm.return %r1 : i32
+^tail(%r1 : i32, %r2 : i32):
+  %r = llvm.add %r1, %r2 : i32
+  llvm.return %r : i32
 }
 
 // CHECK: llvm.func @ib0(%[[Addr:.*]]: !llvm.ptr, %[[A0:.*]]: i32, %[[A1:.*]]: i32) -> i32 {
 // CHECK:   llvm.indirectbr %[[Addr]] : !llvm.ptr, [
 // CHECK:   ^bb1(%[[A0:.*]] : i32)
-// CHECK:   ^bb2(%[[A1:.*]] : i32)
+// CHECK:   ^bb2(%[[A1:.*]], %[[A0]] : i32, i32)
 // CHECK:   ]
 // CHECK: ^bb1(%[[Op0:.*]]: i32):
 // CHECK:   llvm.return %[[Op0]] : i32
-// CHECK: ^bb2(%[[Op1:.*]]: i32):
-// CHECK:   llvm.return %[[Op1]] : i32
+// CHECK: ^bb2(%[[Op1:.*]]: i32, %[[Op2:.*]]: i32):
+// CHECK:   %[[Op3:.*]] = llvm.add %[[Op1]], %[[Op2]] : i32
+// CHECK:   llvm.return %[[Op3]] : i32
 // CHECK: }
 
 // -----
