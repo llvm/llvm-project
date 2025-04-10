@@ -14,6 +14,7 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
@@ -75,7 +76,7 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
          std::vector<std::string> pre_init_commands, Transport &transport)
     : log(log), transport(transport), broadcaster("lldb-dap"),
       exception_breakpoints(), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+      is_attach(false), stop_at_entry(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
@@ -628,9 +629,10 @@ void DAP::RunTerminateCommands() {
                   configuration.terminateCommands);
 }
 
-lldb::SBTarget
-DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
-                               lldb::SBError &error) {
+lldb::SBTarget DAP::CreateTargetFromArguments(llvm::StringRef program,
+                                              llvm::StringRef targetTriple,
+                                              llvm::StringRef platformName,
+                                              lldb::SBError &error) {
   // Grab the name of the program we need to debug and create a target using
   // the given program as an argument. Executable file can be a source of target
   // architecture and platform, if they differ from the host. Setting exe path
@@ -641,15 +643,10 @@ DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  const llvm::StringRef target_triple =
-      GetString(arguments, "targetTriple").value_or("");
-  const llvm::StringRef platform_name =
-      GetString(arguments, "platformName").value_or("");
-  const llvm::StringRef program = GetString(arguments, "program").value_or("");
-  auto target = this->debugger.CreateTarget(
-      program.data(), target_triple.data(), platform_name.data(),
-      true, // Add dependent modules.
-      error);
+  auto target = this->debugger.CreateTarget(program.data(), targetTriple.data(),
+                                            platformName.data(),
+                                            true, // Add dependent modules.
+                                            error);
 
   if (error.Fail()) {
     // Update message if there was an error.
@@ -805,7 +802,7 @@ llvm::Error DAP::Loop() {
   return llvm::Error::success();
 }
 
-lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
+lldb::SBError DAP::WaitForProcessToStop(std::chrono::seconds seconds) {
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   if (!process.IsValid()) {
@@ -840,8 +837,8 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
     }
     std::this_thread::sleep_for(std::chrono::microseconds(250));
   }
-  error.SetErrorStringWithFormat("process failed to stop within %u seconds",
-                                 seconds);
+  error.SetErrorStringWithFormat("process failed to stop within %lld seconds",
+                                 seconds.count());
   return error;
 }
 
@@ -1036,6 +1033,36 @@ bool SendEventRequestHandler::DoExecute(lldb::SBDebugger debugger,
   dap.SendJSON(llvm::json::Value(std::move(event)));
   result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
   return true;
+}
+
+void DAP::ConfigureSourceMaps() {
+  if (configuration.sourceMap.empty() && !configuration.sourcePath)
+    return;
+
+  std::string sourceMapCommand;
+  llvm::raw_string_ostream strm(sourceMapCommand);
+  strm << "settings set target.source-map ";
+
+  if (!configuration.sourceMap.empty()) {
+    for (const auto &kv : configuration.sourceMap) {
+      strm << "\"" << kv.first << "\" \"" << kv.second << "\" ";
+    }
+  } else if (configuration.sourcePath) {
+    strm << "\".\" \"" << *configuration.sourcePath << "\"";
+  }
+
+  RunLLDBCommands("Setting source map:", {sourceMapCommand});
+}
+
+void DAP::SetConfiguration(const protocol::Configuration &config,
+                           bool is_attach) {
+  configuration = config;
+  this->is_attach = is_attach;
+
+  if (configuration.customFrameFormat)
+    SetFrameFormat(*configuration.customFrameFormat);
+  if (configuration.customThreadFormat)
+    SetThreadFormat(*configuration.customThreadFormat);
 }
 
 void DAP::SetFrameFormat(llvm::StringRef format) {
