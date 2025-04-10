@@ -658,8 +658,8 @@ BuiltinTypeDeclBuilder::addHandleConstructorFromBinding() {
   QualType HandleType = getResourceHandleField()->getType();
 
   return BuiltinTypeMethodBuilder(*this, "", AST.VoidTy, false, true)
-      .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("registerNo", AST.UnsignedIntTy)
+      .addParam("spaceNo", AST.UnsignedIntTy)
       .addParam("range", AST.IntTy)
       .addParam("index", AST.UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_resource_createhandlefrombinding",

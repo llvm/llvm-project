@@ -293,8 +293,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_resource_createhandlefrombinding: {
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
-    Value *SpaceNoOp = EmitScalarExpr(E->getArg(1));
-    Value *RegisterNoOp = EmitScalarExpr(E->getArg(2));
+    Value *RegisterNoOp = EmitScalarExpr(E->getArg(1));
+    Value *SpaceNoOp = EmitScalarExpr(E->getArg(2));
     Value *RangeOp = EmitScalarExpr(E->getArg(3));
     Value *IndexOp = EmitScalarExpr(E->getArg(4));
     // FIXME: NonUniformResourceIndex bit is not yet implemented

@@ -3207,7 +3207,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
   }
 }
 
-static bool initVarDeclWithConstructor(Sema &S, VarDecl *VD,
+static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
                                        MutableArrayRef<Expr *> Args) {
   InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
   InitializationKind Kind = InitializationKind::CreateDirect(
@@ -3235,17 +3235,17 @@ static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
   uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
   uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
   Expr *Args[] = {
+      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
+                             AST.UnsignedIntTy, SourceLocation()),
       IntegerLiteral::Create(AST,
                              llvm::APInt(UIntTySize, RBA->getSpaceNumber()),
-                             AST.UnsignedIntTy, SourceLocation()),
-      IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, RBA->getSlotNumber()),
                              AST.UnsignedIntTy, SourceLocation()),
       IntegerLiteral::Create(AST, llvm::APInt(IntTySize, 1), AST.IntTy,
                              SourceLocation()),
       IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, 0), AST.UnsignedIntTy,
                              SourceLocation())};
 
-  return initVarDeclWithConstructor(S, VD, Args);
+  return initVarDeclWithCtor(S, VD, Args);
 }
 
 // Returns true in the initialization has been handled;

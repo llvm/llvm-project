@@ -29,26 +29,27 @@ export void foo() {
 // with explicit binding
 // CHECK: define internal void @__cxx_global_var_init()
 // CHECK-NEXT: entry:
-// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfEC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1, i32 noundef 2, i32 noundef 10, i32 noundef 1, i32 noundef 0)
+// CHECK-NEXT: call void @_ZN4hlsl16StructuredBufferIfEC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) @_ZL4Buf1,
+// CHECK-SAME: i32 noundef 10, i32 noundef 2, i32 noundef 1, i32 noundef 0)
 
 // Buf1 initialization part 2 - body of StructuredBuffer<float> C1 constructor with explicit binding 
 // that calls the C2 constructor
 // CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC1Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this, 
-// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %registerNo, i32 noundef %range, i32 noundef %index)
+// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
 // CHECK-NEXT: %registerNo.addr = alloca i32, align 4
+// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
 // CHECK-NEXT: %range.addr = alloca i32, align 4
 // CHECK-NEXT: %index.addr = alloca i32, align 4
 // CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: store i32 %registerNo, ptr %registerNo.addr, align 4
+// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
 // CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
 // CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK-NEXT: %0 = load i32, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: %1 = load i32, ptr %registerNo.addr, align 4
+// CHECK-NEXT: %0 = load i32, ptr %registerNo.addr, align 4
+// CHECK-NEXT: %1 = load i32, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: %2 = load i32, ptr %range.addr, align 4
 // CHECK-NEXT: %3 = load i32, ptr %index.addr, align 4
 // CHECK: call void @_ZN4hlsl16StructuredBufferIfEC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this1, 
@@ -81,25 +82,25 @@ export void foo() {
 // Buf1 initialization part 3 - body of AppendStructuredBuffer<float> C2 constructor with explicit binding 
 // that initializes handle with @llvm.dx.resource.handlefrombinding
 // CHECK: define linkonce_odr void @_ZN4hlsl16StructuredBufferIfEC2Ejjij(ptr noundef nonnull align 4 dereferenceable(4) %this,
-// CHECK-SAME: i32 noundef %spaceNo, i32 noundef %registerNo, i32 noundef %range, i32 noundef %index)
+// CHECK-SAME: i32 noundef %registerNo, i32 noundef %spaceNo, i32 noundef %range, i32 noundef %index)
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %this.addr = alloca ptr, align 4
-// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
 // CHECK-NEXT: %registerNo.addr = alloca i32, align 4
+// CHECK-NEXT: %spaceNo.addr = alloca i32, align 4
 // CHECK-NEXT: %range.addr = alloca i32, align 4
 // CHECK-NEXT: %index.addr = alloca i32, align 4
 // CHECK-NEXT: store ptr %this, ptr %this.addr, align 4
-// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: store i32 %registerNo, ptr %registerNo.addr, align 4
+// CHECK-NEXT: store i32 %spaceNo, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: store i32 %range, ptr %range.addr, align 4
 // CHECK-NEXT: store i32 %index, ptr %index.addr, align 4
 // CHECK-NEXT: %this1 = load ptr, ptr %this.addr, align 4
-// CHECK-NEXT: %0 = load i32, ptr %spaceNo.addr, align 4
-// CHECK-NEXT: %1 = load i32, ptr %registerNo.addr, align 4
+// CHECK-NEXT: %0 = load i32, ptr %registerNo.addr, align 4
+// CHECK-NEXT: %1 = load i32, ptr %spaceNo.addr, align 4
 // CHECK-NEXT: %2 = load i32, ptr %range.addr, align 4
 // CHECK-NEXT: %3 = load i32, ptr %index.addr, align 4
 // CHECK-DXIL-NEXT: %4 = call target("dx.RawBuffer", float, 0, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0t(
-// CHECK-DXIL-SAME: i32 %0, i32 %1, i32 %2, i32 %3, i1 false)
+// CHECK-DXIL-SAME: i32 %1, i32 %0, i32 %2, i32 %3, i1 false)
 // CHECK-NEXT: %__handle = getelementptr inbounds nuw %"class.hlsl::StructuredBuffer", ptr %this1, i32 0, i32 0
 // CHECK-DXIL-NEXT: store target("dx.RawBuffer", float, 0, 0) %4, ptr %__handle, align 4
 // CHECK-NEXT: ret void

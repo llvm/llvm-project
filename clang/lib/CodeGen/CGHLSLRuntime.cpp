@@ -544,9 +544,6 @@ static void initializeBufferFromBinding(CodeGenModule &CGM,
                    Args);
 }
 
-void CGHLSLRuntime::handleGlobalVarDefinition(const VarDecl *VD,
-                                              llvm::GlobalVariable *GV) {}
-
 llvm::Instruction *CGHLSLRuntime::getConvergenceToken(BasicBlock &BB) {
   if (!CGM.shouldEmitConvergenceTokens())
     return nullptr;
