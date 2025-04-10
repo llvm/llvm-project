@@ -365,10 +365,9 @@ define <8 x i32> @zipeven_v8i32_as_v4i64(<8 x i32> %v1, <8 x i32> %v2) {
 ;
 ; ZIP-LABEL: zipeven_v8i32_as_v4i64:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    li a0, 204
-; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; ZIP-NEXT:    vmv.s.x v0, a0
-; ZIP-NEXT:    vslideup.vi v8, v10, 2, v0.t
+; ZIP-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZIP-NEXT:    ri.vzipeven.vv v12, v8, v10
+; ZIP-NEXT:    vmv.v.v v8, v12
 ; ZIP-NEXT:    ret
   %out = shufflevector <8 x i32> %v1, <8 x i32> %v2, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 12, i32 13>
   ret <8 x i32> %out
@@ -386,11 +385,9 @@ define <8 x i32> @zipodd_v8i32_as_v4i64(<8 x i32> %v1, <8 x i32> %v2) {
 ;
 ; ZIP-LABEL: zipodd_v8i32_as_v4i64:
 ; ZIP:       # %bb.0:
-; ZIP-NEXT:    li a0, 51
-; ZIP-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
-; ZIP-NEXT:    vmv.s.x v0, a0
-; ZIP-NEXT:    vslidedown.vi v10, v8, 2, v0.t
-; ZIP-NEXT:    vmv.v.v v8, v10
+; ZIP-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZIP-NEXT:    ri.vzipodd.vv v12, v8, v10
+; ZIP-NEXT:    vmv.v.v v8, v12
 ; ZIP-NEXT:    ret
   %out = shufflevector <8 x i32> %v1, <8 x i32> %v2, <8 x i32> <i32 2, i32 3, i32 10, i32 11, i32 6, i32 7, i32 14, i32 15>
   ret <8 x i32> %out
