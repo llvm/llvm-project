@@ -108,11 +108,11 @@ struct MissingFeatures {
   static bool cgFPOptionsRAII() { return false; }
   static bool metaDataNode() { return false; }
   static bool fastMathFlags() { return false; }
-  static bool lvalueBaseInfo() { return false; }
   static bool alignCXXRecordDecl() { return false; }
   static bool setNonGC() { return false; }
   static bool incrementProfileCounter() { return false; }
   static bool insertBuiltinUnpredictable() { return false; }
+  static bool objCGC() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

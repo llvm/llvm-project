@@ -8205,21 +8205,6 @@ cc_library(
 )
 
 cc_library(
-    name = "X86VectorToLLVMIRTranslation",
-    srcs = glob(["lib/Target/LLVMIR/Dialect/X86Vector/*.cpp"]),
-    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/X86Vector/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":IR",
-        ":ToLLVMIRTranslation",
-        ":X86VectorConversionIncGen",
-        ":X86VectorDialect",
-        "//llvm:Core",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "ArmNeonToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/ArmNeon/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/ArmNeon/*.h"]),
@@ -8466,7 +8451,6 @@ cc_library(
         ":ROCDLToLLVMIRTranslation",
         ":SPIRVToLLVMIRTranslation",
         ":VCIXToLLVMIRTranslation",
-        ":X86VectorToLLVMIRTranslation",
     ],
 )
 
