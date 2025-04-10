@@ -720,7 +720,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX9-SDAG-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
 ; GFX9-SDAG-NEXT:    v_cvt_f16_f32_e32 v1, v2
 ; GFX9-SDAG-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX9-SDAG-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-SDAG-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX9-SDAG-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
@@ -814,14 +814,13 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX11-SDAG-FAKE16-NEXT:    buffer_load_b128 v[0:3], off, s[8:11], 0
 ; GFX11-SDAG-FAKE16-NEXT:    s_mov_b32 s5, s1
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f32_f64_e32 v2, v[2:3]
 ; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f32_f64_e32 v0, v[0:1]
-; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f32_f64_e32 v1, v[2:3]
 ; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v2
 ; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-SDAG-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX11-SDAG-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-SDAG-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
 ; GFX11-SDAG-FAKE16-NEXT:    s_endpgm
 ;
