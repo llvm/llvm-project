@@ -1883,17 +1883,25 @@ define i32 @sub_if_uge_C_multiuse_sub_i32(i32 signext %x, ptr %z) {
 }
 
 define i32 @sub_if_uge_C_swapped_i32(i32 %x) {
-; CHECK-LABEL: sub_if_uge_C_swapped_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 16
-; CHECK-NEXT:    lui a2, 1048560
-; CHECK-NEXT:    addi a1, a1, -15
-; CHECK-NEXT:    sltu a1, a0, a1
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    addi a2, a2, 15
-; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    ret
+; RV32I-LABEL: sub_if_uge_C_swapped_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    lui a1, 16
+; RV32I-NEXT:    lui a2, 1048560
+; RV32I-NEXT:    addi a1, a1, -15
+; RV32I-NEXT:    sltu a1, a0, a1
+; RV32I-NEXT:    addi a1, a1, -1
+; RV32I-NEXT:    addi a2, a2, 15
+; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    add a0, a0, a1
+; RV32I-NEXT:    ret
+;
+; RV32ZBB-LABEL: sub_if_uge_C_swapped_i32:
+; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a1, 1048560
+; RV32ZBB-NEXT:    addi a1, a1, 15
+; RV32ZBB-NEXT:    add a1, a0, a1
+; RV32ZBB-NEXT:    minu a0, a0, a1
+; RV32ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, 65521
   %sub = add i32 %x, -65521
   %cond = select i1 %cmp, i32 %x, i32 %sub
