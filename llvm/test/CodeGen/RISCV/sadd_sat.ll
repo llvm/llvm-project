@@ -116,14 +116,15 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV32I-NEXT:    lui a1, 8
 ; RV32I-NEXT:    addi a1, a1, -1
 ; RV32I-NEXT:    bge a0, a1, .LBB2_3
-; RV32I-NEXT:  .LBB2_1:
+; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    lui a1, 1048568
 ; RV32I-NEXT:    bge a1, a0, .LBB2_4
-; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:  .LBB2_2:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB2_3:
 ; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:    j .LBB2_1
+; RV32I-NEXT:    lui a1, 1048568
+; RV32I-NEXT:    blt a1, a0, .LBB2_2
 ; RV32I-NEXT:  .LBB2_4:
 ; RV32I-NEXT:    lui a0, 1048568
 ; RV32I-NEXT:    ret
@@ -134,14 +135,15 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64I-NEXT:    lui a1, 8
 ; RV64I-NEXT:    addiw a1, a1, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
-; RV64I-NEXT:  .LBB2_1:
+; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 1048568
 ; RV64I-NEXT:    bge a1, a0, .LBB2_4
-; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:  .LBB2_2:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB2_3:
 ; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:    j .LBB2_1
+; RV64I-NEXT:    lui a1, 1048568
+; RV64I-NEXT:    blt a1, a0, .LBB2_2
 ; RV64I-NEXT:  .LBB2_4:
 ; RV64I-NEXT:    lui a0, 1048568
 ; RV64I-NEXT:    ret
@@ -175,14 +177,15 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    li a1, 127
 ; RV32I-NEXT:    bge a0, a1, .LBB3_3
-; RV32I-NEXT:  .LBB3_1:
+; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a1, -128
 ; RV32I-NEXT:    bge a1, a0, .LBB3_4
-; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:  .LBB3_2:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB3_3:
 ; RV32I-NEXT:    li a0, 127
-; RV32I-NEXT:    j .LBB3_1
+; RV32I-NEXT:    li a1, -128
+; RV32I-NEXT:    blt a1, a0, .LBB3_2
 ; RV32I-NEXT:  .LBB3_4:
 ; RV32I-NEXT:    li a0, -128
 ; RV32I-NEXT:    ret
@@ -192,14 +195,15 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 127
 ; RV64I-NEXT:    bge a0, a1, .LBB3_3
-; RV64I-NEXT:  .LBB3_1:
+; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a1, -128
 ; RV64I-NEXT:    bge a1, a0, .LBB3_4
-; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:  .LBB3_2:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB3_3:
 ; RV64I-NEXT:    li a0, 127
-; RV64I-NEXT:    j .LBB3_1
+; RV64I-NEXT:    li a1, -128
+; RV64I-NEXT:    blt a1, a0, .LBB3_2
 ; RV64I-NEXT:  .LBB3_4:
 ; RV64I-NEXT:    li a0, -128
 ; RV64I-NEXT:    ret
@@ -231,14 +235,15 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; RV32I-NEXT:    add a0, a0, a1
 ; RV32I-NEXT:    li a1, 7
 ; RV32I-NEXT:    bge a0, a1, .LBB4_3
-; RV32I-NEXT:  .LBB4_1:
+; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    li a1, -8
 ; RV32I-NEXT:    bge a1, a0, .LBB4_4
-; RV32I-NEXT:  # %bb.2:
+; RV32I-NEXT:  .LBB4_2:
 ; RV32I-NEXT:    ret
 ; RV32I-NEXT:  .LBB4_3:
 ; RV32I-NEXT:    li a0, 7
-; RV32I-NEXT:    j .LBB4_1
+; RV32I-NEXT:    li a1, -8
+; RV32I-NEXT:    blt a1, a0, .LBB4_2
 ; RV32I-NEXT:  .LBB4_4:
 ; RV32I-NEXT:    li a0, -8
 ; RV32I-NEXT:    ret
@@ -248,14 +253,15 @@ define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    li a1, 7
 ; RV64I-NEXT:    bge a0, a1, .LBB4_3
-; RV64I-NEXT:  .LBB4_1:
+; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    li a1, -8
 ; RV64I-NEXT:    bge a1, a0, .LBB4_4
-; RV64I-NEXT:  # %bb.2:
+; RV64I-NEXT:  .LBB4_2:
 ; RV64I-NEXT:    ret
 ; RV64I-NEXT:  .LBB4_3:
 ; RV64I-NEXT:    li a0, 7
-; RV64I-NEXT:    j .LBB4_1
+; RV64I-NEXT:    li a1, -8
+; RV64I-NEXT:    blt a1, a0, .LBB4_2
 ; RV64I-NEXT:  .LBB4_4:
 ; RV64I-NEXT:    li a0, -8
 ; RV64I-NEXT:    ret

@@ -20,15 +20,16 @@ define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
 ; CHECKIZFH-NEXT:    fmv.h fa5, fa1
 ; CHECKIZFH-NEXT:    beqz a0, .LBB0_3
-; CHECKIZFH-NEXT:  .LBB0_1:
+; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
 ; CHECKIZFH-NEXT:    beqz a0, .LBB0_4
-; CHECKIZFH-NEXT:  # %bb.2:
+; CHECKIZFH-NEXT:  .LBB0_2:
 ; CHECKIZFH-NEXT:    fmin.h fa0, fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ; CHECKIZFH-NEXT:  .LBB0_3:
 ; CHECKIZFH-NEXT:    fmv.h fa5, fa0
-; CHECKIZFH-NEXT:    j .LBB0_1
+; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
+; CHECKIZFH-NEXT:    bnez a0, .LBB0_2
 ; CHECKIZFH-NEXT:  .LBB0_4:
 ; CHECKIZFH-NEXT:    fmin.h fa0, fa1, fa5
 ; CHECKIZFH-NEXT:    ret
@@ -38,15 +39,16 @@ define half @fminimum_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    feq.h a3, a0, a0
 ; CHECKIZHINX-NEXT:    mv a2, a1
 ; CHECKIZHINX-NEXT:    beqz a3, .LBB0_3
-; CHECKIZHINX-NEXT:  .LBB0_1:
+; CHECKIZHINX-NEXT:  # %bb.1:
 ; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
 ; CHECKIZHINX-NEXT:    beqz a3, .LBB0_4
-; CHECKIZHINX-NEXT:  # %bb.2:
+; CHECKIZHINX-NEXT:  .LBB0_2:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ; CHECKIZHINX-NEXT:  .LBB0_3:
 ; CHECKIZHINX-NEXT:    mv a2, a0
-; CHECKIZHINX-NEXT:    j .LBB0_1
+; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
+; CHECKIZHINX-NEXT:    bnez a3, .LBB0_2
 ; CHECKIZHINX-NEXT:  .LBB0_4:
 ; CHECKIZHINX-NEXT:    fmin.h a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret
@@ -62,15 +64,16 @@ define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZFH-NEXT:    feq.h a0, fa0, fa0
 ; CHECKIZFH-NEXT:    fmv.h fa5, fa1
 ; CHECKIZFH-NEXT:    beqz a0, .LBB1_3
-; CHECKIZFH-NEXT:  .LBB1_1:
+; CHECKIZFH-NEXT:  # %bb.1:
 ; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
 ; CHECKIZFH-NEXT:    beqz a0, .LBB1_4
-; CHECKIZFH-NEXT:  # %bb.2:
+; CHECKIZFH-NEXT:  .LBB1_2:
 ; CHECKIZFH-NEXT:    fmax.h fa0, fa0, fa5
 ; CHECKIZFH-NEXT:    ret
 ; CHECKIZFH-NEXT:  .LBB1_3:
 ; CHECKIZFH-NEXT:    fmv.h fa5, fa0
-; CHECKIZFH-NEXT:    j .LBB1_1
+; CHECKIZFH-NEXT:    feq.h a0, fa1, fa1
+; CHECKIZFH-NEXT:    bnez a0, .LBB1_2
 ; CHECKIZFH-NEXT:  .LBB1_4:
 ; CHECKIZFH-NEXT:    fmax.h fa0, fa1, fa5
 ; CHECKIZFH-NEXT:    ret
@@ -80,15 +83,16 @@ define half @fmaximum_f16(half %a, half %b) nounwind {
 ; CHECKIZHINX-NEXT:    feq.h a3, a0, a0
 ; CHECKIZHINX-NEXT:    mv a2, a1
 ; CHECKIZHINX-NEXT:    beqz a3, .LBB1_3
-; CHECKIZHINX-NEXT:  .LBB1_1:
+; CHECKIZHINX-NEXT:  # %bb.1:
 ; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
 ; CHECKIZHINX-NEXT:    beqz a3, .LBB1_4
-; CHECKIZHINX-NEXT:  # %bb.2:
+; CHECKIZHINX-NEXT:  .LBB1_2:
 ; CHECKIZHINX-NEXT:    fmax.h a0, a0, a2
 ; CHECKIZHINX-NEXT:    ret
 ; CHECKIZHINX-NEXT:  .LBB1_3:
 ; CHECKIZHINX-NEXT:    mv a2, a0
-; CHECKIZHINX-NEXT:    j .LBB1_1
+; CHECKIZHINX-NEXT:    feq.h a3, a1, a1
+; CHECKIZHINX-NEXT:    bnez a3, .LBB1_2
 ; CHECKIZHINX-NEXT:  .LBB1_4:
 ; CHECKIZHINX-NEXT:    fmax.h a0, a1, a2
 ; CHECKIZHINX-NEXT:    ret

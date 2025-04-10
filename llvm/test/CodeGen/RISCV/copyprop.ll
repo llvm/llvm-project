@@ -7,21 +7,23 @@ define void @copyprop_after_mbp(i32 %v, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; NOPROP:       # %bb.0:
 ; NOPROP-NEXT:    sext.w a0, a0
 ; NOPROP-NEXT:    li a5, 10
-; NOPROP-NEXT:    bne a0, a5, .LBB0_3
+; NOPROP-NEXT:    bne a0, a5, .LBB0_2
 ; NOPROP-NEXT:  # %bb.1: # %bb.0
 ; NOPROP-NEXT:    li a0, 15
 ; NOPROP-NEXT:    sw a0, 0(a2)
 ; NOPROP-NEXT:    li a0, 1
-; NOPROP-NEXT:  .LBB0_2: # %bb.0
 ; NOPROP-NEXT:    sw a0, 0(a1)
 ; NOPROP-NEXT:    li a0, 12
 ; NOPROP-NEXT:    sw a0, 0(a4)
 ; NOPROP-NEXT:    ret
-; NOPROP-NEXT:  .LBB0_3: # %bb.1
+; NOPROP-NEXT:  .LBB0_2: # %bb.1
 ; NOPROP-NEXT:    li a0, 0
 ; NOPROP-NEXT:    li a2, 25
 ; NOPROP-NEXT:    sw a2, 0(a3)
-; NOPROP-NEXT:    j .LBB0_2
+; NOPROP-NEXT:    sw a0, 0(a1)
+; NOPROP-NEXT:    li a0, 12
+; NOPROP-NEXT:    sw a0, 0(a4)
+; NOPROP-NEXT:    ret
 ;
 ; PROP-LABEL: copyprop_after_mbp:
 ; PROP:       # %bb.0:
@@ -33,12 +35,13 @@ define void @copyprop_after_mbp(i32 %v, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; PROP-NEXT:    sw a0, 0(a2)
 ; PROP-NEXT:    li a0, 1
 ; PROP-NEXT:    sw a0, 0(a1)
-; PROP-NEXT:    j .LBB0_3
+; PROP-NEXT:    li a0, 12
+; PROP-NEXT:    sw a0, 0(a4)
+; PROP-NEXT:    ret
 ; PROP-NEXT:  .LBB0_2: # %bb.1
 ; PROP-NEXT:    li a2, 25
 ; PROP-NEXT:    sw a2, 0(a3)
 ; PROP-NEXT:    sw zero, 0(a1)
-; PROP-NEXT:  .LBB0_3: # %bb.1
 ; PROP-NEXT:    li a0, 12
 ; PROP-NEXT:    sw a0, 0(a4)
 ; PROP-NEXT:    ret

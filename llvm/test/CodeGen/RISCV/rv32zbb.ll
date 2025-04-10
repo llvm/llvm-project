@@ -876,26 +876,26 @@ define <2 x i1> @ctpop_v2i64_eq_one(<2 x i64> %a) nounwind {
 ; RV32I-NEXT:    lw a0, 0(a0)
 ; RV32I-NEXT:    lw a3, 4(a1)
 ; RV32I-NEXT:    lw a2, 12(a1)
-; RV32I-NEXT:    beqz a3, .LBB22_4
+; RV32I-NEXT:    beqz a3, .LBB22_3
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    seqz a0, a0
 ; RV32I-NEXT:    sub a0, a3, a0
 ; RV32I-NEXT:    xor a3, a3, a0
 ; RV32I-NEXT:    sltu a0, a0, a3
-; RV32I-NEXT:  .LBB22_2:
 ; RV32I-NEXT:    lw a1, 8(a1)
-; RV32I-NEXT:    bnez a2, .LBB22_5
-; RV32I-NEXT:  # %bb.3:
+; RV32I-NEXT:    bnez a2, .LBB22_4
+; RV32I-NEXT:  .LBB22_2:
 ; RV32I-NEXT:    addi a2, a1, -1
 ; RV32I-NEXT:    xor a1, a1, a2
 ; RV32I-NEXT:    sltu a1, a2, a1
 ; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB22_4:
+; RV32I-NEXT:  .LBB22_3:
 ; RV32I-NEXT:    addi a3, a0, -1
 ; RV32I-NEXT:    xor a0, a0, a3
 ; RV32I-NEXT:    sltu a0, a3, a0
-; RV32I-NEXT:    j .LBB22_2
-; RV32I-NEXT:  .LBB22_5:
+; RV32I-NEXT:    lw a1, 8(a1)
+; RV32I-NEXT:    beqz a2, .LBB22_2
+; RV32I-NEXT:  .LBB22_4:
 ; RV32I-NEXT:    seqz a1, a1
 ; RV32I-NEXT:    sub a1, a2, a1
 ; RV32I-NEXT:    xor a2, a2, a1

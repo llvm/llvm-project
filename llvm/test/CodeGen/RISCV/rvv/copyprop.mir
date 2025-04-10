@@ -8,15 +8,16 @@
   ; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
   ; CHECK-NEXT:    sf.vc.v.x 3, 31, v9, a1
   ; CHECK-NEXT:    bgeu a0, zero, .LBB0_3
-  ; CHECK-NEXT:  .LBB0_1: # %entry
+  ; CHECK-NEXT:  # %bb.1: # %entry
   ; CHECK-NEXT:    li a2, 128
   ; CHECK-NEXT:    bltu a0, a2, .LBB0_4
-  ; CHECK-NEXT:  # %bb.2: # %entry
+  ; CHECK-NEXT:  .LBB0_2: # %entry
   ; CHECK-NEXT:    vse64.v v9, (a1)
   ; CHECK-NEXT:    ret
   ; CHECK-NEXT:  .LBB0_3:
   ; CHECK-NEXT:    vmv.v.i v9, 0
-  ; CHECK-NEXT:    j .LBB0_1
+  ; CHECK-NEXT:    li a2, 128
+  ; CHECK-NEXT:    bgeu a0, a2, .LBB0_2
   ; CHECK-NEXT:  .LBB0_4: # %entry
   ; CHECK-NEXT:    vmsne.vi v0, v8, 0
   ; CHECK-NEXT:    vsll.vi v8, v8, 5

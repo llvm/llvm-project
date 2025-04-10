@@ -36,22 +36,25 @@ define i32 @test(i32 %n) {
 ; CHECK-O3-LABEL: test:
 ; CHECK-O3:       # %bb.0: # %entry
 ; CHECK-O3-NEXT:    sext.w a1, a0
-; CHECK-O3-NEXT:    blez a1, .LBB0_3
+; CHECK-O3-NEXT:    blez a1, .LBB0_2
 ; CHECK-O3-NEXT:  # %bb.1: # %if.then
 ; CHECK-O3-NEXT:    lui a1, %hi(a)
 ; CHECK-O3-NEXT:    lw a1, %lo(a)(a1)
 ; CHECK-O3-NEXT:    mul a0, a1, a0
-; CHECK-O3-NEXT:  .LBB0_2: # %if.then
 ; CHECK-O3-NEXT:    lui a1, %hi(c)
 ; CHECK-O3-NEXT:    lw a1, %lo(c)(a1)
 ; CHECK-O3-NEXT:    addi a0, a0, -1
 ; CHECK-O3-NEXT:    mulw a0, a0, a1
 ; CHECK-O3-NEXT:    tail foo
-; CHECK-O3-NEXT:  .LBB0_3: # %if.else
+; CHECK-O3-NEXT:  .LBB0_2: # %if.else
 ; CHECK-O3-NEXT:    lui a1, %hi(b)
 ; CHECK-O3-NEXT:    lw a1, %lo(b)(a1)
 ; CHECK-O3-NEXT:    divw a0, a1, a0
-; CHECK-O3-NEXT:    j .LBB0_2
+; CHECK-O3-NEXT:    lui a1, %hi(c)
+; CHECK-O3-NEXT:    lw a1, %lo(c)(a1)
+; CHECK-O3-NEXT:    addi a0, a0, -1
+; CHECK-O3-NEXT:    mulw a0, a0, a1
+; CHECK-O3-NEXT:    tail foo
 entry:
   %cmp = icmp sgt i32 %n, 0
   br i1 %cmp, label %if.then, label %if.else

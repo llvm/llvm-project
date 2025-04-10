@@ -414,7 +414,7 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV32I-NEXT:    bnez t2, .LBB10_14
 ; RV32I-NEXT:  .LBB10_4:
 ; RV32I-NEXT:    beqz a6, .LBB10_6
-; RV32I-NEXT:  # %bb.5:
+; RV32I-NEXT:  .LBB10_5:
 ; RV32I-NEXT:    mv t0, a4
 ; RV32I-NEXT:  .LBB10_6:
 ; RV32I-NEXT:    slli t3, t0, 1
@@ -456,7 +456,8 @@ define i128 @fshr128_minsize(i128 %a, i128 %b) minsize nounwind {
 ; RV32I-NEXT:    beqz t2, .LBB10_4
 ; RV32I-NEXT:  .LBB10_14:
 ; RV32I-NEXT:    mv a4, t1
-; RV32I-NEXT:    j .LBB10_4
+; RV32I-NEXT:    bnez a6, .LBB10_5
+; RV32I-NEXT:    j .LBB10_6
 ;
 ; RV64I-LABEL: fshr128_minsize:
 ; RV64I:       # %bb.0:
