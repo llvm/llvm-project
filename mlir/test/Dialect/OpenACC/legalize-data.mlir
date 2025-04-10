@@ -232,7 +232,7 @@ func.func @test(%a: memref<10xf32>) {
 func.func @test(%a: memref<10xf32>) {
   %devptr = acc.use_device varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
   acc.host_data dataOperands(%devptr : memref<10xf32>) {
-    fir.call @foo(%a) fastmath<contract> : (memref<10xf32>) -> ()
+    func.call @foo(%a) fastmath<contract> : (memref<10xf32>) -> ()
     acc.terminator
   }
   return
