@@ -1857,3 +1857,21 @@ define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
   %shl = shl i32 %sub, %select2
   ret i32 %shl
 }
+
+define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 signext %x, i32 signext %y, ptr %z) {
+; CHECK-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a3, a0, a1
+; CHECK-NEXT:    xori a4, a3, 1
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a1, a3, a1
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a4, 0(a2)
+; CHECK-NEXT:    ret
+  %cmp = icmp uge i32 %x, %y
+  %conv = zext i1 %cmp to i32
+  store i32 %conv, ptr %z, align 4
+  %select = select i1 %cmp, i32 %y, i32 0
+  %sub = sub nuw i32 %x, %select
+  ret i32 %sub
+}
