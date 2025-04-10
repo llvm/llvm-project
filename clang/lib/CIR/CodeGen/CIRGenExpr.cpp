@@ -408,10 +408,10 @@ static const Expr *getSimpleArrayDecayOperand(const Expr *e) {
   return subExpr;
 }
 
-static mlir::IntegerAttr getConstantIndexOrNull(mlir::Value idx) {
+static cir::IntAttr getConstantIndexOrNull(mlir::Value idx) {
   // TODO(cir): should we consider using MLIRs IndexType instead of IntegerAttr?
   if (auto constantOp = dyn_cast<cir::ConstantOp>(idx.getDefiningOp()))
-    return mlir::dyn_cast<mlir::IntegerAttr>(constantOp.getValue());
+    return mlir::dyn_cast<cir::IntAttr>(constantOp.getValue());
   return {};
 }
 
@@ -419,7 +419,7 @@ static CharUnits getArrayElementAlign(CharUnits arrayAlign, mlir::Value idx,
                                       CharUnits eltSize) {
   // If we have a constant index, we can use the exact offset of the
   // element we're accessing.
-  const mlir::IntegerAttr constantIdx = getConstantIndexOrNull(idx);
+  const cir::IntAttr constantIdx = getConstantIndexOrNull(idx);
   if (constantIdx) {
     const CharUnits offset = constantIdx.getValue().getZExtValue() * eltSize;
     return arrayAlign.alignmentAtOffset(offset);
@@ -468,17 +468,12 @@ static Address emitArraySubscriptPtr(CIRGenFunction &cgf,
   const CharUnits eltAlign =
       getArrayElementAlign(addr.getAlignment(), idx, eltSize);
 
-  mlir::Value eltPtr;
-  const mlir::IntegerAttr index = getConstantIndexOrNull(idx);
-  if (!index) {
     assert(!cir::MissingFeatures::preservedAccessIndexRegion());
-    eltPtr = emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
-                                   addr.getElementType(), idx, shouldDecay);
-  } else {
-    cgf.cgm.errorNYI("emitArraySubscriptExpr: Non Constant Index");
-  }
-  const mlir::Type elementType = cgf.convertTypeForMem(eltType);
-  return Address(eltPtr, elementType, eltAlign);
+    const mlir::Value eltPtr =
+        emitArraySubscriptPtr(cgf, beginLoc, endLoc, addr.getPointer(),
+                              addr.getElementType(), idx, shouldDecay);
+    const mlir::Type elementType = cgf.convertTypeForMem(eltType);
+    return Address(eltPtr, elementType, eltAlign);
 }
 
 LValue

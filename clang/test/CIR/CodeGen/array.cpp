@@ -151,26 +151,55 @@ void func2() {
 
 void func3() {
   int arr[2] = {5, 6};
+
+  int idx = 1;
+  int e = arr[idx];
 }
 
-// CIR: %[[ARR3:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["arr", init]
-// CIR: %[[ARR_3_PTR:.*]] = cir.cast(array_to_ptrdecay, %[[ARR3]] : !cir.ptr<!cir.array<!s32i x 2>>), !cir.ptr<!s32i>
+// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!s32i x 2>, !cir.ptr<!cir.array<!s32i x 2>>, ["arr", init]
+// CIR: %[[IDX:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["idx", init]
+// CIR: %[[INIT:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["e", init]
+// CIR: %[[ARR_PTR:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!s32i x 2>>), !cir.ptr<!s32i>
 // CIR: %[[V0:.*]] = cir.const #cir.int<5> : !s32i
-// CIR: cir.store %[[V0]], %[[ARR_3_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store %[[V0]], %[[ARR_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[OFFSET_0:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ELE_1_PTR:.*]] = cir.ptr_stride(%[[ARR_3_PTR]] : !cir.ptr<!s32i>, %[[OFFSET_0]] : !s64i), !cir.ptr<!s32i>
+// CIR: %[[ELE_1_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[OFFSET_0]] : !s64i), !cir.ptr<!s32i>
 // CIR: %[[V1:.*]] = cir.const #cir.int<6> : !s32i
 // CIR: cir.store %[[V1]], %[[ELE_1_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[IDX_V:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store %[[IDX_V]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[TMP_IDX:.*]] = cir.load %[[IDX]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[ARR_PTR:.*]] = cir.cast(array_to_ptrdecay, %[[ARR]] : !cir.ptr<!cir.array<!s32i x 2>>), !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.ptr_stride(%[[ARR_PTR]] : !cir.ptr<!s32i>, %[[TMP_IDX]] : !s32i), !cir.ptr<!s32i>
+// CIR: %[[ELE_TMP:.*]] = cir.load %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.store %[[ELE_TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define void @func3()
 // LLVM:  %[[ARR_ALLOCA:.*]] = alloca [2 x i32], i64 1, align 4
+// LLVM:  %[[IDX:.*]] = alloca i32, i64 1, align 4
+// LLVM:  %[[INIT:.*]] = alloca i32, i64 1, align 4
 // LLVM:  %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
 // LLVM:  store i32 5, ptr %[[ARR_PTR]], align 4
 // LLVM:  %[[ELE_1_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
 // LLVM:  store i32 6, ptr %[[ELE_1_PTR]], align 4
+// LLVM:  store i32 1, ptr %[[IDX]], align 4
+// LLVM:  %[[TMP1:.*]] = load i32, ptr %[[IDX]], align 4
+// LLVM:  %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
+// LLVM:  %[[IDX_I64:.*]] = sext i32 %[[TMP1]] to i64
+// LLVM:  %[[ELE:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 %[[IDX_I64]]
+// LLVM:  %[[TMP2:.*]] = load i32, ptr %[[ELE]], align 4
+// LLVM:  store i32 %[[TMP2]], ptr %[[INIT]], align 4
 
-// OGCG: %arr = alloca [2 x i32], align 4
-// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %arr, ptr align 4 @[[FUN3_ARR]], i64 8, i1 false)
+// OGCG:  %arr = alloca [2 x i32], align 4
+// OGCG:  %idx = alloca i32, align 4
+// OGCG:  %e = alloca i32, align 4
+// OGCG:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %arr, ptr align 4 @[[FUN3_ARR]], i64 8, i1 false)
+// OGCG:  store i32 1, ptr %idx, align 4
+// OGCG:  %0 = load i32, ptr %idx, align 4
+// OGCG:  %idxprom = sext i32 %0 to i64
+// OGCG:  %arrayidx = getelementptr inbounds [2 x i32], ptr %arr, i64 0, i64 %idxprom
+// OGCG:  %1 = load i32, ptr %arrayidx, align 4
+// OGCG:  store i32 %1, ptr %e, align 4
 
 void func4() {
   int arr[2][1] = {{5}, {6}};
