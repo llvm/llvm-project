@@ -3208,7 +3208,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
 }
 
 static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
-                                       MutableArrayRef<Expr *> Args) {
+                                MutableArrayRef<Expr *> Args) {
   InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
   InitializationKind Kind = InitializationKind::CreateDirect(
       VD->getLocation(), SourceLocation(), SourceLocation());
