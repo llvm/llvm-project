@@ -910,6 +910,16 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       Known.setAllZero();
       return;
     }
+    auto *Trunc = dyn_cast<TruncInst>(Arg);
+    if (Trunc && Trunc->getOperand(0) == V &&
+        isValidAssumeForContext(I, Q.CxtI, Q.DT)) {
+      if (Trunc->hasNoUnsignedWrap()) {
+        Known = KnownBits::makeConstant(APInt(BitWidth, 1));
+        return;
+      }
+      Known.One.setBit(0);
+      return;
+    }
 
     // The remaining tests are all recursive, so bail out if we hit the limit.
     if (Depth == MaxAnalysisRecursionDepth)
