@@ -14,6 +14,7 @@
 #define LLVM_BINARYFORMAT_DXCONTAINER_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -158,18 +159,42 @@ enum class RootElementFlag : uint32_t {
 };
 
 #define ROOT_PARAMETER(Val, Enum) Enum = Val,
-enum class RootParameterType : uint32_t {
+enum RootParameterType : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
+#define ROOT_PARAMETER(Val, Enum)                                              \
+  case Val:                                                                    \
+    return dxbc::RootParameterType::Enum;
+inline llvm::Expected<dxbc::RootParameterType>
+safeParseParameterType(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "Invalid value for parameter type");
+}
+
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
-enum class ShaderVisibility : uint32_t {
+enum ShaderVisibility : uint32_t {
 #include "DXContainerConstants.def"
 };
 
 ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
+
+#define SHADER_VISIBILITY(Val, Enum)                                           \
+  case Val:                                                                    \
+    return dxbc::ShaderVisibility::Enum;
+inline llvm::Expected<dxbc::ShaderVisibility>
+safeParseShaderVisibility(uint32_t V) {
+  switch (V) {
+#include "DXContainerConstants.def"
+  }
+  return createStringError(std::errc::invalid_argument,
+                           "Invalid value for parameter type");
+}
 
 PartType parsePartType(StringRef S);
 
@@ -575,8 +600,8 @@ struct RootConstants {
 };
 
 struct RootParameterHeader {
-  RootParameterType ParameterType;
-  ShaderVisibility ShaderVisibility;
+  uint32_t ParameterType;
+  uint32_t ShaderVisibility;
   uint32_t ParameterOffset;
 
   void swapBytes() {

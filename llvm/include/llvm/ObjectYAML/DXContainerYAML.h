@@ -103,6 +103,10 @@ struct RootSignatureYamlDesc {
 
   uint32_t getEncodedFlags();
 
+  iterator_range<RootParameterYamlDesc *> params() {
+    return make_range(Parameters.begin(), Parameters.end());
+  }
+
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
 

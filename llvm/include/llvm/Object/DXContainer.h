@@ -117,16 +117,6 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-
-struct RootParameter {
-  dxbc::RootParameterHeader Header;
-  union {
-    dxbc::RootConstants Constants;
-  };
-
-  RootParameter() = default;
-};
-
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
@@ -183,7 +173,7 @@ public:
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  llvm::iterator_range<param_header_iterator> param_header() const {
+  llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
   uint32_t getFlags() const { return Flags; }

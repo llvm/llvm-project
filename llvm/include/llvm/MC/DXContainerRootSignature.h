@@ -23,11 +23,9 @@ struct RootParameter {
 };
 struct RootSignatureDesc {
 
-  dxbc::RootSignatureHeader Header;
+  uint32_t Version = 2U;
+  uint32_t Flags = 0U;
   SmallVector<mcdxbc::RootParameter> Parameters;
-  RootSignatureDesc()
-      : Header(dxbc::RootSignatureHeader{
-            2, 0, sizeof(dxbc::RootSignatureHeader), 0, 0, 0}) {}
 
   void write(raw_ostream &OS) const;
 

@@ -35,27 +35,48 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NumStaticSamplers(Data.getNumStaticSamplers()),
       StaticSamplersOffset(Data.getStaticSamplersOffset()) {
   uint32_t Flags = Data.getFlags();
-  for (const auto &PH : Data.param_header()) {
+  for (const auto &PH : Data.param_headers()) {
 
     RootParameterYamlDesc NewP;
     NewP.Offset = PH.ParameterOffset;
-    NewP.Type = PH.ParameterType;
-    NewP.Visibility = PH.ShaderVisibility;
 
-    llvm::Expected<object::DirectX::RootParameterView> ParamView =
+    llvm::Expected<dxbc::RootParameterType> TypeOrErr =
+        dxbc::safeParseParameterType(PH.ParameterType);
+    if (Error E = TypeOrErr.takeError()) {
+      llvm::errs() << "Error: " << E << "\n";
+      continue;
+    }
+
+    NewP.Type = TypeOrErr.get();
+
+    llvm::Expected<dxbc::ShaderVisibility> VisibilityOrErr =
+        dxbc::safeParseShaderVisibility(PH.ShaderVisibility);
+    if (Error E = VisibilityOrErr.takeError()) {
+      llvm::errs() << "Error: " << E << "\n";
+      continue;
+    }
+    NewP.Visibility = VisibilityOrErr.get();
+
+    llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
-    if (!ParamView)
-      llvm::errs() << "Error: " << ParamView.takeError() << "\n";
-    auto PV = *ParamView;
+    if (Error E = ParamViewOrErr.takeError()) {
+      llvm::errs() << "Error: " << E << "\n";
+      continue;
+    }
+    object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
-    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&PV)) {
-      auto Constants = RCV->read();
-      if (!Constants)
-        llvm::errs() << "Error: " << Constants.takeError() << "\n";
+    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
+      llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
+      if (Error E = ConstantsOrErr.takeError()) {
+        llvm::errs() << "Error: " << E << "\n";
+        continue;
+      }
 
-      NewP.Constants.Num32BitValues = Constants->Num32BitValues;
-      NewP.Constants.ShaderRegister = Constants->ShaderRegister;
-      NewP.Constants.RegisterSpace = Constants->RegisterSpace;
+      auto Constants = *ConstantsOrErr;
+
+      NewP.Constants.Num32BitValues = Constants.Num32BitValues;
+      NewP.Constants.ShaderRegister = Constants.ShaderRegister;
+      NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     }
     Parameters.push_back(NewP);
   }

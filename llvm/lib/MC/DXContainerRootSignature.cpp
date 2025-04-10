@@ -51,13 +51,13 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
   const uint32_t StaticSamplerOffset = 0u;
   const uint32_t NumStaticSamplers = 0u;
 
-  support::endian::write(BOS, Header.Version, llvm::endianness::little);
+  support::endian::write(BOS, Version, llvm::endianness::little);
   support::endian::write(BOS, NumParameters, llvm::endianness::little);
   support::endian::write(BOS, (uint32_t)sizeof(dxbc::RootSignatureHeader),
                          llvm::endianness::little);
   support::endian::write(BOS, StaticSamplerOffset, llvm::endianness::little);
   support::endian::write(BOS, NumStaticSamplers, llvm::endianness::little);
-  support::endian::write(BOS, Header.Flags, llvm::endianness::little);
+  support::endian::write(BOS, Flags, llvm::endianness::little);
 
   SmallVector<uint32_t> ParamsOffsets;
   for (const auto &P : Parameters) {

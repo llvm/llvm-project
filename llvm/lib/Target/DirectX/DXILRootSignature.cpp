@@ -47,7 +47,7 @@ static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
     return reportError(Ctx, "Invalid format for RootFlag Element");
 
   auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  RSD.Header.Flags = Flag->getZExtValue();
+  RSD.Flags = Flag->getZExtValue();
 
   return false;
 }
@@ -95,7 +95,7 @@ static bool parse(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
 static bool verifyRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
 static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
-  if (!verifyRootFlag(RSD.Header.Flags)) {
+  if (!verifyRootFlag(RSD.Flags)) {
     return reportError(Ctx, "Invalid Root Signature flag value");
   }
   return false;
@@ -191,6 +191,8 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
   SmallDenseMap<const Function *, mcdxbc::RootSignatureDesc> &RSDMap =
       AM.getResult<RootSignatureAnalysis>(M);
+
+  const size_t RSHSize = sizeof(dxbc::RootSignatureHeader);
   OS << "Root Signature Definitions"
      << "\n";
   uint8_t Space = 0;
@@ -203,14 +205,14 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
 
     // start root signature header
     Space++;
-    OS << indent(Space) << "Flags: " << format_hex(RS.Header.Flags, 8) << ":\n";
-    OS << indent(Space) << "Version: " << RS.Header.Version << ":\n";
+    OS << indent(Space) << "Flags: " << format_hex(RS.Flags, 8) << ":\n";
+    OS << indent(Space) << "Version: " << RS.Version << ":\n";
     OS << indent(Space) << "NumParameters: " << RS.Parameters.size() << ":\n";
-    OS << indent(Space) << "RootParametersOffset: " << sizeof(RS.Header)
-       << ":\n";
+    OS << indent(Space) << "RootParametersOffset: " << RSHSize << ":\n";
     OS << indent(Space) << "NumStaticSamplers: " << 0 << ":\n";
-    OS << indent(Space) << "StaticSamplersOffset: "
-       << sizeof(RS.Header) + RS.Parameters.size_in_bytes() << ":\n";
+    OS << indent(Space)
+       << "StaticSamplersOffset: " << RSHSize + RS.Parameters.size_in_bytes()
+       << ":\n";
     Space--;
     // end root signature header
   }
