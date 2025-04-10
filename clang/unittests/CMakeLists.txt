@@ -123,6 +123,6 @@ add_distinct_clang_unittest(AllClangUnitTests
 )
 
 # The Tooling library has some internal headers. Make those work. If we like
-# the merged clang unit test binary, we can udpate the include paths and make
+# the merged clang unit test binary, we can update the include paths and make
 # this the default.
 include_directories(Tooling)
