@@ -94,6 +94,10 @@ bool Qualifiers::isTargetAddressSpaceSupersetOf(LangAS A, LangAS B,
          (A == LangAS::Default &&
           (B == LangAS::cuda_constant || B == LangAS::cuda_device ||
            B == LangAS::cuda_shared)) ||
+         // `this` overloading depending on address space is not ready,
+         // so this is a hack to allow generating addrspacecasts.
+         // IR legalization will be required when this address space is used.
+         (A == LangAS::Default && B == LangAS::hlsl_private) ||
          // Conversions from target specific address spaces may be legal
          // depending on the target information.
          Ctx.getTargetInfo().isAddressSpaceSupersetOf(A, B);
