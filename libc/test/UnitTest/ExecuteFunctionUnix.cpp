@@ -104,14 +104,14 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   // If no FDs became “ready,” the child didn’t close the pipe before the
   // timeout.
   if (nfds == 0) {
-    LIBC_NAMESPACE::kill(pid, SIGKILL);
+    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0);
     return ProcessStatus::timed_out_ps();
   }
 
   // If we did get an event, check for EPOLLHUP (or EPOLLRDHUP).
   // If those are not set, the pipe wasn't closed in the manner we expected.
   if (!(result.events & (EPOLLHUP | EPOLLRDHUP))) {
-    LIBC_NAMESPACE::kill(pid, SIGKILL);
+    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0);
     return ProcessStatus::timed_out_ps();
   }
 
