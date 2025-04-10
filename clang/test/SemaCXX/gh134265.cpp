@@ -31,10 +31,10 @@ void foobar() {
 }
 
 struct BaseDelete1 {
-  void operator delete[](void *); //ms-note 2{{member found by ambiguous name lookup}}
+  void operator delete[](void *); //ms-note 3{{member found by ambiguous name lookup}}
 };
 struct BaseDelete2 {
-  void operator delete[](void *); //ms-note 2{{member found by ambiguous name lookup}}
+  void operator delete[](void *); //ms-note 3{{member found by ambiguous name lookup}}
 };
 struct BaseDestructor {
   BaseDestructor() {}
@@ -42,6 +42,10 @@ struct BaseDestructor {
 };
 struct Final : BaseDelete1, BaseDelete2, BaseDestructor {
   Final() {}
+};
+struct FinalExplicit : BaseDelete1, BaseDelete2, BaseDestructor {
+  FinalExplicit() {}
+  inline ~FinalExplicit() {}
 };
 
 #ifdef MS
@@ -52,4 +56,5 @@ struct Final1 : BaseDelete1, BaseDelete2, BaseDestructor {
 
 void foo() {
     Final* a = new Final[10](); // ms-error {{member 'operator delete[]' found in multiple base classes of different types}}
+    FinalExplicit* b = new FinalExplicit[10](); // ms-error {{member 'operator delete[]' found in multiple base classes of different types}}
 }
