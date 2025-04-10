@@ -449,6 +449,10 @@ Bug Fixes to C++ Support
   in a ``constexpr`` function. (#GH131432)
 - Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 
+- Emit an error when the same identifier appears with both internal and
+  external linkage in a translation unit Fixes:
+  (`#54215 <https://github.com/llvm/llvm-project/issues/54215>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
