@@ -9,6 +9,8 @@
 #ifndef TEST_COMPARE_H
 #define TEST_COMPARE_H
 
+#include "test_macros.h"
+
 template <class T>
 struct test_equal_to {
   int data_;
