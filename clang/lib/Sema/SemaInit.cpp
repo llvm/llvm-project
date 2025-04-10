@@ -9919,8 +9919,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   if (!Template) {
     if (auto *AliasTemplate = dyn_cast_or_null<TypeAliasTemplateDecl>(
             TemplateName.getAsTemplateDecl())) {
-      Diag(Kind.getLocation(),
-           diag::warn_cxx17_compat_ctad_for_alias_templates);
+      DiagCompat(Kind.getLocation(), diag_compat::ctad_for_alias_templates);
       LookupTemplateDecl = AliasTemplate;
       auto UnderlyingType = AliasTemplate->getTemplatedDecl()
                                 ->getUnderlyingType()

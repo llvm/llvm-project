@@ -152,8 +152,15 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
                    CharUnits::fromQuantity(asIntPointer().Value + this->Offset),
                    Path,
                    /*IsOnePastEnd=*/false, /*IsNullPtr=*/false);
-  if (isFunctionPointer())
-    return asFunctionPointer().toAPValue(ASTCtx);
+  if (isFunctionPointer()) {
+    const FunctionPointer &FP = asFunctionPointer();
+    if (const FunctionDecl *FD = FP.getFunction()->getDecl())
+      return APValue(FD, CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+                     /*OnePastTheEnd=*/false, /*IsNull=*/false);
+    return APValue(FP.getFunction()->getExpr(),
+                   CharUnits::fromQuantity(FP.getOffset() + Offset), {},
+                   /*OnePastTheEnd=*/false, /*IsNull=*/false);
+  }
 
   if (isTypeidPointer()) {
     TypeInfoLValue TypeInfo(PointeeStorage.Typeid.TypePtr);
@@ -339,12 +346,48 @@ void Pointer::print(llvm::raw_ostream &OS) const {
   }
 }
 
+/// Compute an integer that can be used to compare this pointer to
+/// another one.
+size_t Pointer::computeOffsetForComparison() const {
+  if (!isBlockPointer())
+    return Offset;
+
+  size_t Result = 0;
+  Pointer P = *this;
+  while (!P.isRoot()) {
+    if (P.isArrayRoot()) {
+      P = P.getBase();
+      continue;
+    }
+    if (P.isArrayElement()) {
+      P = P.expand();
+      Result += (P.getIndex() * P.elemSize());
+      P = P.getArray();
+      continue;
+    }
+
+    if (const Record *R = P.getBase().getRecord(); R && R->isUnion()) {
+      // Direct child of a union - all have offset 0.
+      P = P.getBase();
+      continue;
+    }
+
+    Result += P.getInlineDesc()->Offset;
+    P = P.getBase();
+  }
+
+  return Result;
+}
+
 std::string Pointer::toDiagnosticString(const ASTContext &Ctx) const {
   if (isZero())
     return "nullptr";
 
   if (isIntegralPointer())
     return (Twine("&(") + Twine(asIntPointer().Value + Offset) + ")").str();
+
+  if (isFunctionPointer())
+    return asFunctionPointer().toDiagnosticString(Ctx);
 
   return toAPValue(Ctx).getAsString(Ctx, getType());
 }

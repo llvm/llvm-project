@@ -13,6 +13,7 @@
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBFileSpecList.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
@@ -20,6 +21,7 @@
 #include <cassert>
 #include <cctype>
 #include <cstdlib>
+#include <mutex>
 #include <utility>
 
 namespace lldb_dap {
@@ -33,6 +35,9 @@ SourceBreakpoint::SourceBreakpoint(DAP &dap, const llvm::json::Object &obj)
                    .value_or(LLDB_INVALID_COLUMN_NUMBER)) {}
 
 void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
+  lldb::SBMutex lock = m_dap.GetAPIMutex();
+  std::lock_guard<lldb::SBMutex> guard(lock);
+
   lldb::SBFileSpecList module_list;
   m_bp = m_dap.target.BreakpointCreateByLocation(
       source_path.str().c_str(), m_line, m_column, 0, module_list);
@@ -319,9 +324,9 @@ bool SourceBreakpoint::BreakpointHitCallback(
           frame.GetValueForVariablePath(expr, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
-      output +=
-          VariableDescription(value, bp->m_dap.enable_auto_variable_summaries)
-              .display_value;
+      output += VariableDescription(
+                    value, bp->m_dap.configuration.enableAutoVariableSummaries)
+                    .display_value;
     } else {
       output += messagePart.text;
     }

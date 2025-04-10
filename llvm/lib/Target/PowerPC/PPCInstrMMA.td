@@ -1089,9 +1089,9 @@ let Predicates = [MMA, IsNotISAFuture] in {
 
 let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
-            (DMXXINSTFDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
+            (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
-            (DMXXINSTFDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
+            (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
   def : Pat<(v512i1 immAllZerosV), (XXSETACCZW)>;
 }

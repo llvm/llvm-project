@@ -20,6 +20,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTMatchers/LowLevelHelpers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
@@ -300,98 +301,6 @@ static void findStmtsInUnspecifiedLvalueContext(
     OnResult(BO->getLHS());
 }
 
-/// Note: Copied and modified from ASTMatchers.
-/// Matches all arguments and their respective types for a \c CallExpr.
-/// It is very similar to \c forEachArgumentWithParam but
-/// it works on calls through function pointers as well.
-///
-/// The difference is, that function pointers do not provide access to a
-/// \c ParmVarDecl, but only the \c QualType for each argument.
-///
-/// Given
-/// \code
-///   void f(int i);
-///   int y;
-///   f(y);
-///   void (*f_ptr)(int) = f;
-///   f_ptr(y);
-/// \endcode
-/// callExpr(
-///   forEachArgumentWithParamType(
-///     declRefExpr(to(varDecl(hasName("y")))),
-///     qualType(isInteger()).bind("type)
-/// ))
-///   matches f(y) and f_ptr(y)
-/// with declRefExpr(...)
-///   matching int y
-/// and qualType(...)
-///   matching int
-static void forEachArgumentWithParamType(
-    const CallExpr &Node,
-    const llvm::function_ref<void(QualType /*Param*/, const Expr * /*Arg*/)>
-        OnParamAndArg) {
-  // The first argument of an overloaded member operator is the implicit object
-  // argument of the method which should not be matched against a parameter, so
-  // we skip over it here.
-  unsigned ArgIndex = 0;
-  if (const auto *CE = dyn_cast<CXXOperatorCallExpr>(&Node)) {
-    const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
-    if (MD && !MD->isExplicitObjectMemberFunction()) {
-      // This is an overloaded operator call.
-      // We need to skip the first argument, which is the implicit object
-      // argument of the method which should not be matched against a
-      // parameter.
-      ++ArgIndex;
-    }
-  }
-
-  const FunctionProtoType *FProto = nullptr;
-
-  if (const auto *Call = dyn_cast<CallExpr>(&Node)) {
-    if (const auto *Value =
-            dyn_cast_or_null<ValueDecl>(Call->getCalleeDecl())) {
-      QualType QT = Value->getType().getCanonicalType();
-
-      // This does not necessarily lead to a `FunctionProtoType`,
-      // e.g. K&R functions do not have a function prototype.
-      if (QT->isFunctionPointerType())
-        FProto = QT->getPointeeType()->getAs<FunctionProtoType>();
-
-      if (QT->isMemberFunctionPointerType()) {
-        const auto *MP = QT->getAs<MemberPointerType>();
-        assert(MP && "Must be member-pointer if its a memberfunctionpointer");
-        FProto = MP->getPointeeType()->getAs<FunctionProtoType>();
-        assert(FProto &&
-               "The call must have happened through a member function "
-               "pointer");
-      }
-    }
-  }
-
-  unsigned ParamIndex = 0;
-  unsigned NumArgs = Node.getNumArgs();
-  if (FProto && FProto->isVariadic())
-    NumArgs = std::min(NumArgs, FProto->getNumParams());
-
-  const auto GetParamType =
-      [&FProto, &Node](unsigned int ParamIndex) -> std::optional<QualType> {
-    if (FProto && FProto->getNumParams() > ParamIndex) {
-      return FProto->getParamType(ParamIndex);
-    }
-    const auto *FD = Node.getDirectCallee();
-    if (FD && FD->getNumParams() > ParamIndex) {
-      return FD->getParamDecl(ParamIndex)->getType();
-    }
-    return std::nullopt;
-  };
-
-  for (; ArgIndex < NumArgs; ++ArgIndex, ++ParamIndex) {
-    auto ParamType = GetParamType(ParamIndex);
-    if (ParamType)
-      OnParamAndArg(*ParamType, Node.getArg(ArgIndex)->IgnoreParenCasts());
-  }
-}
-
 // Finds any expression `e` such that `InnerMatcher` matches `e` and
 // `e` is in an Unspecified Pointer Context (UPC).
 static void findStmtsInUnspecifiedPointerContext(
@@ -408,7 +317,7 @@ static void findStmtsInUnspecifiedPointerContext(
     if (const auto *FnDecl = CE->getDirectCallee();
         FnDecl && FnDecl->hasAttr<UnsafeBufferUsageAttr>())
       return;
-    forEachArgumentWithParamType(
+    ast_matchers::matchEachArgumentWithParamType(
         *CE, [&InnerMatcher](QualType Type, const Expr *Arg) {
           if (Type->isAnyPointerType())
             InnerMatcher(Arg);

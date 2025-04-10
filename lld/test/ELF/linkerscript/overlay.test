@@ -133,3 +133,11 @@ SECTIONS {
 # RUN: not ld.lld a.o -T unclosed.lds 2>&1 | FileCheck %s --check-prefix=UNCLOSED
 # UNCLOSED:     error: unclosed.lds:2: unexpected EOF
 # UNCLOSED-NOT: {{.}}
+
+#--- at-nocrossrefs-order.lds
+SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
+
+# RUN: not ld.lld a.o -T at-nocrossrefs-order.lds 2>&1 | FileCheck %s --check-prefix=AT-NOCROSSREFS-ORDER --strict-whitespace
+# AT-NOCROSSREFS-ORDER:{{.*}}error: at-nocrossrefs-order.lds:1: { expected, but got NOCROSSREFS
+# AT-NOCROSSREFS-ORDER-NEXT:>>> SECTIONS { OVERLAY 0x1000 : AT(0x1234) NOCROSSREFS {} }
+# AT-NOCROSSREFS-ORDER-NEXT:>>>                                        ^

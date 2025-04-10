@@ -470,7 +470,6 @@ struct InheritFromSealed : SealedType {};
 class SealedDestructor { // expected-note {{mark 'SealedDestructor' as 'sealed' to silence this warning}}
     // expected-warning@+1 {{'sealed' keyword is a Microsoft extension}}
     virtual ~SealedDestructor() sealed; // expected-warning {{class with destructor marked 'sealed' cannot be inherited from}}
-                                      // expected-warning@-1 {{virtual method '~SealedDestructor' is inside a 'final' class}}
 };
 
 // expected-warning@+1 {{'abstract' keyword is a Microsoft extension}}

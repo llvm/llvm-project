@@ -53,6 +53,7 @@ targets="${2}"
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
 echo "--- cmake"
+export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/mlir/python/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/lldb/test/requirements.txt
 pip install -q -r "${MONOREPO_ROOT}"/.ci/requirements.txt

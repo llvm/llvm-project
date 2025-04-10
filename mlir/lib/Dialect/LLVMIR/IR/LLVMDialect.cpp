@@ -685,10 +685,6 @@ GEPIndicesAdaptor<ValueRange> GEPOp::getIndices() {
 static Type extractVectorElementType(Type type) {
   if (auto vectorType = llvm::dyn_cast<VectorType>(type))
     return vectorType.getElementType();
-  if (auto scalableVectorType = llvm::dyn_cast<LLVMScalableVectorType>(type))
-    return scalableVectorType.getElementType();
-  if (auto fixedVectorType = llvm::dyn_cast<LLVMFixedVectorType>(type))
-    return fixedVectorType.getElementType();
   return type;
 }
 
@@ -725,20 +721,18 @@ static void destructureIndices(Type currType, ArrayRef<GEPArg> indices,
     if (rawConstantIndices.size() == 1 || !currType)
       continue;
 
-    currType =
-        TypeSwitch<Type, Type>(currType)
-            .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-                  LLVMArrayType>([](auto containerType) {
-              return containerType.getElementType();
-            })
-            .Case([&](LLVMStructType structType) -> Type {
-              int64_t memberIndex = rawConstantIndices.back();
-              if (memberIndex >= 0 && static_cast<size_t>(memberIndex) <
-                                          structType.getBody().size())
-                return structType.getBody()[memberIndex];
-              return nullptr;
-            })
-            .Default(Type(nullptr));
+    currType = TypeSwitch<Type, Type>(currType)
+                   .Case<VectorType, LLVMArrayType>([](auto containerType) {
+                     return containerType.getElementType();
+                   })
+                   .Case([&](LLVMStructType structType) -> Type {
+                     int64_t memberIndex = rawConstantIndices.back();
+                     if (memberIndex >= 0 && static_cast<size_t>(memberIndex) <
+                                                 structType.getBody().size())
+                       return structType.getBody()[memberIndex];
+                     return nullptr;
+                   })
+                   .Default(Type(nullptr));
   }
 }
 
@@ -839,11 +833,11 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
         return verifyStructIndices(elementTypes[gepIndex], indexPos + 1,
                                    indices, emitOpError);
       })
-      .Case<VectorType, LLVMScalableVectorType, LLVMFixedVectorType,
-            LLVMArrayType>([&](auto containerType) -> LogicalResult {
-        return verifyStructIndices(containerType.getElementType(), indexPos + 1,
-                                   indices, emitOpError);
-      })
+      .Case<VectorType, LLVMArrayType>(
+          [&](auto containerType) -> LogicalResult {
+            return verifyStructIndices(containerType.getElementType(),
+                                       indexPos + 1, indices, emitOpError);
+          })
       .Default([&](auto otherType) -> LogicalResult {
         return emitOpError()
                << "type " << otherType << " cannot be indexed (index #"
@@ -1037,7 +1031,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1065,7 +1060,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
-        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1079,7 +1075,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1093,7 +1090,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
-        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr);
+        /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -2301,6 +2299,28 @@ static LogicalResult verifyComdat(Operation *op,
   return success();
 }
 
+static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
+  llvm::DenseSet<BlockTagAttr> blockTags;
+  BlockTagOp badBlockTagOp;
+  if (funcOp
+          .walk([&](BlockTagOp blockTagOp) {
+            if (blockTags.contains(blockTagOp.getTag())) {
+              badBlockTagOp = blockTagOp;
+              return WalkResult::interrupt();
+            }
+            blockTags.insert(blockTagOp.getTag());
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    badBlockTagOp.emitError()
+        << "duplicate block tag '" << badBlockTagOp.getTag().getId()
+        << "' in the same function: ";
+    return failure();
+  }
+
+  return success();
+}
+
 /// Parse common attributes that might show up in the same order in both
 /// GlobalOp and AliasOp.
 template <typename OpType>
@@ -2714,9 +2734,9 @@ void ShuffleVectorOp::build(OpBuilder &builder, OperationState &state, Value v1,
                             Value v2, DenseI32ArrayAttr mask,
                             ArrayRef<NamedAttribute> attrs) {
   auto containerType = v1.getType();
-  auto vType = LLVM::getVectorType(LLVM::getVectorElementType(containerType),
-                                   mask.size(),
-                                   LLVM::isScalableVectorType(containerType));
+  auto vType = LLVM::getVectorType(
+      cast<VectorType>(containerType).getElementType(), mask.size(),
+      LLVM::isScalableVectorType(containerType));
   build(builder, state, vType, v1, v2, mask);
   state.addAttributes(attrs);
 }
@@ -2732,8 +2752,9 @@ static ParseResult parseShuffleType(AsmParser &parser, Type v1Type,
   if (!LLVM::isCompatibleVectorType(v1Type))
     return parser.emitError(parser.getCurrentLocation(),
                             "expected an LLVM compatible vector type");
-  resType = LLVM::getVectorType(LLVM::getVectorElementType(v1Type), mask.size(),
-                                LLVM::isScalableVectorType(v1Type));
+  resType =
+      LLVM::getVectorType(cast<VectorType>(v1Type).getElementType(),
+                          mask.size(), LLVM::isScalableVectorType(v1Type));
   return success();
 }
 
@@ -3056,6 +3077,9 @@ LogicalResult LLVMFuncOp::verify() {
     return emitError(diagnosticMessage);
   }
 
+  if (failed(verifyBlockTags(*this)))
+    return failure();
+
   return success();
 }
 
@@ -3128,26 +3152,23 @@ OpFoldResult LLVM::ZeroOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Compute the total number of elements in the given type, also taking into
-/// account nested types. Supported types are `VectorType`, `LLVMArrayType` and
-/// `LLVMFixedVectorType`. Everything else is treated as a scalar.
+/// account nested types. Supported types are `VectorType` and `LLVMArrayType`.
+/// Everything else is treated as a scalar.
 static int64_t getNumElements(Type t) {
-  if (auto vecType = dyn_cast<VectorType>(t))
+  if (auto vecType = dyn_cast<VectorType>(t)) {
+    assert(!vecType.isScalable() &&
+           "number of elements of a scalable vector type is unknown");
     return vecType.getNumElements() * getNumElements(vecType.getElementType());
+  }
   if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
     return arrayType.getNumElements() *
            getNumElements(arrayType.getElementType());
-  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
-    return vecType.getNumElements() * getNumElements(vecType.getElementType());
-  assert(!isa<LLVM::LLVMScalableVectorType>(t) &&
-         "number of elements of a scalable vector type is unknown");
   return 1;
 }
 
 /// Check if the given type is a scalable vector type or a vector/array type
 /// that contains a nested scalable vector type.
 static bool hasScalableVectorType(Type t) {
-  if (isa<LLVM::LLVMScalableVectorType>(t))
-    return true;
   if (auto vecType = dyn_cast<VectorType>(t)) {
     if (vecType.isScalable())
       return true;
@@ -3155,8 +3176,6 @@ static bool hasScalableVectorType(Type t) {
   }
   if (auto arrayType = dyn_cast<LLVM::LLVMArrayType>(t))
     return hasScalableVectorType(arrayType.getElementType());
-  if (auto vecType = dyn_cast<LLVMFixedVectorType>(t))
-    return hasScalableVectorType(vecType.getElementType());
   return false;
 }
 
@@ -3236,8 +3255,7 @@ LogicalResult LLVM::ConstantOp::verify() {
                << "scalable vector type requires a splat attribute";
       return success();
     }
-    if (!isa<VectorType, LLVM::LLVMArrayType, LLVM::LLVMFixedVectorType>(
-            getType()))
+    if (!isa<VectorType, LLVM::LLVMArrayType>(getType()))
       return emitOpError() << "expected vector or array type";
     // The number of elements of the attribute and the type must match.
     int64_t attrNumElements;
@@ -3301,7 +3319,7 @@ LogicalResult AtomicRMWOp::verify() {
     if (isCompatibleVectorType(valType)) {
       if (isScalableVectorType(valType))
         return emitOpError("expected LLVM IR fixed vector type");
-      Type elemType = getVectorElementType(valType);
+      Type elemType = llvm::cast<VectorType>(valType).getElementType();
       if (!isCompatibleFloatingPointType(elemType))
         return emitOpError(
             "expected LLVM IR floating point type for vector element");
@@ -3406,9 +3424,10 @@ static LogicalResult verifyExtOp(ExtOp op) {
       return op.emitError("input and output vectors are of incompatible shape");
     // Because this is a CastOp, the element of vectors is guaranteed to be an
     // integer.
-    inputType = cast<IntegerType>(getVectorElementType(op.getArg().getType()));
-    outputType =
-        cast<IntegerType>(getVectorElementType(op.getResult().getType()));
+    inputType = cast<IntegerType>(
+        cast<VectorType>(op.getArg().getType()).getElementType());
+    outputType = cast<IntegerType>(
+        cast<VectorType>(op.getResult().getType()).getElementType());
   } else {
     // Because this is a CastOp and arg is not a vector, arg is guaranteed to be
     // an integer.
@@ -3486,8 +3505,7 @@ LogicalResult LLVM::BitcastOp::verify() {
   if (!resultType)
     return success();
 
-  auto isVector =
-      llvm::IsaPred<VectorType, LLVMScalableVectorType, LLVMFixedVectorType>;
+  auto isVector = llvm::IsaPred<VectorType>;
 
   // Due to bitcast requiring both operands to be of the same size, it is not
   // possible for only one of the two to be a pointer of vectors.
@@ -3812,6 +3830,56 @@ void InlineAsmOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// BlockAddressOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BlockAddressOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  Operation *symbol = symbolTable.lookupSymbolIn(parentLLVMModule(*this),
+                                                 getBlockAddr().getFunction());
+  auto function = dyn_cast_or_null<LLVMFuncOp>(symbol);
+
+  if (!function)
+    return emitOpError("must reference a function defined by 'llvm.func'");
+
+  return success();
+}
+
+LLVMFuncOp BlockAddressOp::getFunction(SymbolTableCollection &symbolTable) {
+  return dyn_cast_or_null<LLVMFuncOp>(symbolTable.lookupSymbolIn(
+      parentLLVMModule(*this), getBlockAddr().getFunction()));
+}
+
+BlockTagOp BlockAddressOp::getBlockTagOp() {
+  auto funcOp = dyn_cast<LLVMFuncOp>(mlir::SymbolTable::lookupNearestSymbolFrom(
+      parentLLVMModule(*this), getBlockAddr().getFunction()));
+  if (!funcOp)
+    return nullptr;
+
+  BlockTagOp blockTagOp = nullptr;
+  funcOp.walk([&](LLVM::BlockTagOp labelOp) {
+    if (labelOp.getTag() == getBlockAddr().getTag()) {
+      blockTagOp = labelOp;
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return blockTagOp;
+}
+
+LogicalResult BlockAddressOp::verify() {
+  if (!getBlockTagOp())
+    return emitOpError(
+        "expects an existing block label target in the referenced function");
+
+  return success();
+}
+
+/// Fold a blockaddress operation to a dedicated blockaddress
+/// attribute.
+OpFoldResult BlockAddressOp::fold(FoldAdaptor) { return getBlockAddr(); }
+
+//===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
 //===----------------------------------------------------------------------===//
 
@@ -3903,7 +3971,6 @@ void LLVMDialect::initialize() {
 
   // clang-format off
   addTypes<LLVMVoidType,
-           LLVMPPCFP128Type,
            LLVMTokenType,
            LLVMLabelType,
            LLVMMetadataType>();

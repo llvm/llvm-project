@@ -222,9 +222,13 @@ void RISCVInstPrinter::printVTypeI(const MCInst *MI, unsigned OpNo,
 // Print a Zcmp RList. If we are printing architectural register names rather
 // than ABI register names, we need to print "{x1, x8-x9, x18-x27}" for all
 // registers. Otherwise, we print "{ra, s0-s11}".
-void RISCVInstPrinter::printRlist(const MCInst *MI, unsigned OpNo,
-                                  const MCSubtargetInfo &STI, raw_ostream &O) {
+void RISCVInstPrinter::printRegList(const MCInst *MI, unsigned OpNo,
+                                    const MCSubtargetInfo &STI, raw_ostream &O) {
   unsigned Imm = MI->getOperand(OpNo).getImm();
+
+  assert(Imm >= RISCVZC::RLISTENCODE::RA &&
+         Imm <= RISCVZC::RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
+
   O << "{";
   printRegName(O, RISCV::X1);
 
@@ -281,7 +285,6 @@ void RISCVInstPrinter::printStackAdj(const MCInst *MI, unsigned OpNo,
   bool IsRV64 = STI.hasFeature(RISCV::Feature64Bit);
   int64_t StackAdj = 0;
   auto RlistVal = MI->getOperand(0).getImm();
-  assert(RlistVal != 16 && "Incorrect rlist.");
   auto Base = RISCVZC::getStackAdjBase(RlistVal, IsRV64);
   StackAdj = Imm + Base;
   assert((StackAdj >= Base && StackAdj <= Base + 48) &&

@@ -183,6 +183,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
 
+    case BuiltinType::NullPtr:
+      // Add proper CIR type for it? this looks mostly useful for sema related
+      // things (like for overloads accepting void), for now, given that
+      // `sizeof(std::nullptr_t)` is equal to `sizeof(void *)`, model
+      // std::nullptr_t as !cir.ptr<!void>
+      resultType = builder.getVoidPtrTy();
+      break;
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.SInt32Ty;
@@ -253,4 +261,31 @@ mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
     assert(!qualType->isBitIntType() && "Bit field with type _BitInt NYI");
 
   return convertedType;
+}
+
+bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
+  if (t->getAs<PointerType>())
+    return astContext.getTargetNullPointerValue(t) == 0;
+
+  if (const auto *at = astContext.getAsArrayType(t)) {
+    if (isa<IncompleteArrayType>(at))
+      return true;
+
+    if (const auto *cat = dyn_cast<ConstantArrayType>(at))
+      if (astContext.getConstantArrayElementCount(cat) == 0)
+        return true;
+  }
+
+  if (t->getAs<RecordType>()) {
+    cgm.errorNYI(SourceLocation(), "isZeroInitializable for RecordType", t);
+    return false;
+  }
+
+  if (t->getAs<MemberPointerType>()) {
+    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
+                 t);
+    return false;
+  }
+
+  return true;
 }

@@ -45,6 +45,7 @@
 #include "deltas/ReduceRegisterMasks.h"
 #include "deltas/ReduceRegisterUses.h"
 #include "deltas/ReduceSpecialGlobals.h"
+#include "deltas/ReduceTargetFeaturesAttr.h"
 #include "deltas/ReduceUsingSimplifyCFG.h"
 #include "deltas/ReduceVirtualRegisters.h"
 #include "deltas/RunIRPasses.h"

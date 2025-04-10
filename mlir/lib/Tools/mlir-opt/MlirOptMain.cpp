@@ -126,11 +126,6 @@ struct MlirOptMainConfigCLOptions : public MlirOptMainConfig {
         "mlir-disable-diagnostic-notes", cl::desc("Disable diagnostic notes."),
         cl::location(disableDiagnosticNotesFlag), cl::init(false));
 
-    static cl::opt<bool, /*ExternalStorage=*/true> enableDebuggerHook(
-        "mlir-enable-debugger-hook",
-        cl::desc("Enable Debugger hook for debugging MLIR Actions"),
-        cl::location(enableDebuggerActionHookFlag), cl::init(false));
-
     static cl::opt<bool, /*ExternalStorage=*/true> explicitModule(
         "no-implicit-module",
         cl::desc("Disable implicit addition of a top-level module op during "

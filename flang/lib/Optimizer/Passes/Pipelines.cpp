@@ -287,12 +287,20 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
 /// \param pm - MLIR pass manager that will hold the pipeline definition.
 /// \param isTargetDevice - Whether code is being generated for a target device
 /// rather than the host device.
-void createOpenMPFIRPassPipeline(mlir::PassManager &pm, bool isTargetDevice) {
+void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
+                                 OpenMPFIRPassPipelineOpts opts) {
+  using DoConcurrentMappingKind =
+      Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind;
+
+  if (opts.doConcurrentMappingKind != DoConcurrentMappingKind::DCMK_None)
+    pm.addPass(flangomp::createDoConcurrentConversionPass(
+        opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
+
   pm.addPass(flangomp::createMapInfoFinalizationPass());
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createMarkDeclareTargetPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
-  if (isTargetDevice)
+  if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
 }
 

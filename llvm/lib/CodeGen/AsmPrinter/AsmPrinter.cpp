@@ -3496,10 +3496,12 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV,
           LHSGV, RHSGV, Addend, PCRelativeOffset, TM);
 
       // (ELF-specific) If the generic symbol difference does not apply, and
-      // LHS is a dso_local_equivalent of a dso_preemptable function,
-      // reference the PLT entry instead.
-      if (DSOEquiv && TM.getTargetTriple().isOSBinFormatELF() &&
-          !(LHSGV->isDSOLocal() || LHSGV->isImplicitDSOLocal()))
+      // LHS is a dso_local_equivalent of a function, reference the PLT entry
+      // instead. Note: A default visibility symbol is by default preemptible
+      // during linking, and should not be referenced with PC-relative
+      // relocations. Therefore, use a PLT relocation even if the function is
+      // dso_local.
+      if (DSOEquiv && TM.getTargetTriple().isOSBinFormatELF())
         Res = getObjFileLowering().lowerDSOLocalEquivalent(
             LHSSym, RHSSym, Addend, PCRelativeOffset, TM);
 
@@ -3883,12 +3885,11 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   MCValue MV;
   if (!(*ME)->evaluateAsRelocatable(MV, nullptr) || MV.isAbsolute())
     return;
-  const MCSymbolRefExpr *SymA = MV.getSymA();
-  if (!SymA)
+  const MCSymbol *GOTEquivSym = MV.getAddSym();
+  if (!GOTEquivSym)
     return;
 
   // Check that GOT equivalent symbol is cached.
-  const MCSymbol *GOTEquivSym = &SymA->getSymbol();
   if (!AP.GlobalGOTEquivs.count(GOTEquivSym))
     return;
 
@@ -4602,7 +4603,13 @@ void AsmPrinter::emitPatchableFunctionEntries() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     auto Flags = ELF::SHF_WRITE | ELF::SHF_ALLOC;
     const MCSymbolELF *LinkedToSym = nullptr;
-    StringRef GroupName;
+    StringRef GroupName, SectionName;
+
+    if (F.hasFnAttribute("patchable-function-entry-section"))
+      SectionName = F.getFnAttribute("patchable-function-entry-section")
+                        .getValueAsString();
+    if (SectionName.empty())
+      SectionName = "__patchable_function_entries";
 
     // GNU as < 2.35 did not support section flag 'o'. GNU ld < 2.36 did not
     // support mixed SHF_LINK_ORDER and non-SHF_LINK_ORDER sections.
@@ -4615,8 +4622,8 @@ void AsmPrinter::emitPatchableFunctionEntries() {
       LinkedToSym = cast<MCSymbolELF>(CurrentFnSym);
     }
     OutStreamer->switchSection(OutContext.getELFSection(
-        "__patchable_function_entries", ELF::SHT_PROGBITS, Flags, 0, GroupName,
-        F.hasComdat(), MCSection::NonUniqueID, LinkedToSym));
+        SectionName, ELF::SHT_PROGBITS, Flags, 0, GroupName, F.hasComdat(),
+        MCSection::NonUniqueID, LinkedToSym));
     emitAlignment(Align(PointerSize));
     OutStreamer->emitSymbolValue(CurrentPatchableFunctionEntrySym, PointerSize);
   }
