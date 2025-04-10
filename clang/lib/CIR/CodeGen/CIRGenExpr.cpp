@@ -28,7 +28,8 @@ using namespace cir;
 
 /// Given an expression of pointer type, try to
 /// derive a more accurate bound on the alignment of the pointer.
-Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
+Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
+                                                 LValueBaseInfo *baseInfo) {
   // We allow this with ObjC object pointers because of fragile ABIs.
   assert(expr->getType()->isPointerType() ||
          expr->getType()->isObjCObjectPointerType());
@@ -164,7 +165,8 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr) {
 
   // Otherwise, use the alignment of the type.
   return makeNaturalAddressForPointer(
-      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits());
+      emitScalarExpr(expr), expr->getType()->getPointeeType(), CharUnits(),
+      /*forPointeeType=*/true, baseInfo);
 }
 
 void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
@@ -300,7 +302,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
       cgm.errorNYI(vd->getSourceRange(), "emitDeclRefLValue: static local");
     }
 
-    return LValue::makeAddr(addr, ty);
+    return makeAddrLValue(addr, ty, AlignmentSource::Type);
   }
 
   cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: unhandled decl type");
@@ -338,9 +340,9 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
     QualType t = e->getSubExpr()->getType()->getPointeeType();
     assert(!t.isNull() && "CodeGenFunction::EmitUnaryOpLValue: Illegal type");
 
-    assert(!cir::MissingFeatures::lvalueBaseInfo());
     assert(!cir::MissingFeatures::opTBAA());
-    Address addr = emitPointerWithAlignment(e->getSubExpr());
+    LValueBaseInfo baseInfo;
+    Address addr = emitPointerWithAlignment(e->getSubExpr(), &baseInfo);
 
     // Tag 'load' with deref attribute.
     // FIXME: This misses some derefence cases and has problematic interactions
@@ -350,7 +352,7 @@ LValue CIRGenFunction::emitUnaryOpLValue(const UnaryOperator *e) {
       loadOp.setIsDerefAttr(mlir::UnitAttr::get(&getMLIRContext()));
     }
 
-    LValue lv = LValue::makeAddr(addr, t);
+    LValue lv = makeAddrLValue(addr, t, baseInfo);
     assert(!cir::MissingFeatures::addressSpace());
     assert(!cir::MissingFeatures::setNonGC());
     return lv;
