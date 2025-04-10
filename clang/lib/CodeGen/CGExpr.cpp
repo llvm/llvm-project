@@ -3621,18 +3621,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
         .addAttribute(llvm::Attribute::NoUnwind);
   }
   B.addUWTableAttr(llvm::UWTableKind::Default);
-  // Add more precise attributes to recoverable ubsan handlers for better
-  // optimizations.
-  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && MayReturn) {
-    // __ubsan_handle_dynamic_type_cache_miss reads the vtable, which is also
-    // accessible by the current module.
-    if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss)
-      B.addMemoryAttr(llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
-                      llvm::MemoryEffects::inaccessibleMemOnly());
-    // If the handler does not return, it must interact with the environment in
-    // an observable way.
-    B.addAttribute(llvm::Attribute::MustProgress);
-  }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
