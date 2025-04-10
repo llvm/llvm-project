@@ -16,6 +16,7 @@
 #define LLVM_ADT_EQUIVALENCECLASSES_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
@@ -218,6 +219,57 @@ public:
     I.first->second = ECV;
     Members.push_back(ECV);
     return *ECV;
+  }
+
+  /// erase - Erase a value from the union/find set, return "true" if erase
+  /// succeeded, or "false" when the value was not found.
+  bool erase(const ElemTy &V) {
+    if (!TheMapping.contains(V))
+      return false;
+    const ECValue *Cur = TheMapping[V];
+    const ECValue *Next = Cur->getNext();
+    // If the current element is the leader and has a successor element,
+    // update the successor element's 'Leader' field to be the last element,
+    // set the successor element's stolen bit, and set the 'Leader' field of
+    // all other elements in same class to be the successor element.
+    if (Cur->isLeader() && Next) {
+      Next->Leader = Cur->Leader;
+      Next->Next = reinterpret_cast<const ECValue *>(
+          reinterpret_cast<intptr_t>(Next->Next) | static_cast<intptr_t>(1));
+
+      const ECValue *NewLeader = Next;
+      while ((Next = Next->getNext())) {
+        Next->Leader = NewLeader;
+      }
+    } else if (!Cur->isLeader()) {
+      const ECValue *Leader = findLeader(V).Node;
+      const ECValue *Pre = Leader;
+      while (Pre->getNext() != Cur) {
+        Pre = Pre->getNext();
+      }
+      if (!Next) {
+        // If the current element is the last element(not leader), set the
+        // successor of the current element's predecessor to null, and set
+        // the 'Leader' field of the class leader to the predecessor element.
+        Pre->Next = nullptr;
+        Leader->Leader = Pre;
+      } else {
+        // If the current element is in the middle of class, then simply
+        // connect the predecessor element and the successor element.
+        Pre->Next = reinterpret_cast<const ECValue *>(
+            reinterpret_cast<intptr_t>(Next) |
+            static_cast<intptr_t>(Pre->isLeader()));
+        Next->Leader = Pre;
+      }
+    }
+
+    // Update 'TheMapping' and 'Members'.
+    assert(TheMapping.contains(V) && "Can't find input in TheMapping!");
+    TheMapping.erase(V);
+    auto I = find(Members, Cur);
+    assert(I != Members.end() && "Can't find input in members!");
+    Members.erase(I);
+    return true;
   }
 
   /// findLeader - Given a value in the set, return a member iterator for the
