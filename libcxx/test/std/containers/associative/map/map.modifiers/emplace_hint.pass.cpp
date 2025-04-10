@@ -24,31 +24,36 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX26 bool test() {
+
+  if(!TEST_IS_CONSTANT_EVALUATED)
   {
-    typedef std::map<int, DefaultOnly> M;
-    typedef M::iterator R;
-    M m;
+    {
+      typedef std::map<int, DefaultOnly> M;
+      typedef M::iterator R;
+      M m;
+      assert(DefaultOnly::count == 0);
+      R r = m.emplace_hint(m.end());
+      assert(r == m.begin());
+      assert(m.size() == 1);
+      assert(m.begin()->first == 0);
+      assert(m.begin()->second == DefaultOnly());
+      assert(DefaultOnly::count == 1);
+      r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
+      assert(r == std::next(m.begin()));
+      assert(m.size() == 2);
+      assert(std::next(m.begin())->first == 1);
+      assert(std::next(m.begin())->second == DefaultOnly());
+      assert(DefaultOnly::count == 2);
+      r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
+      assert(r == std::next(m.begin()));
+      assert(m.size() == 2);
+      assert(std::next(m.begin())->first == 1);
+      assert(std::next(m.begin())->second == DefaultOnly());
+      assert(DefaultOnly::count == 2);
+    }
     assert(DefaultOnly::count == 0);
-    R r = m.emplace_hint(m.end());
-    assert(r == m.begin());
-    assert(m.size() == 1);
-    assert(m.begin()->first == 0);
-    assert(m.begin()->second == DefaultOnly());
-    assert(DefaultOnly::count == 1);
-    r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
-    assert(r == std::next(m.begin()));
-    assert(m.size() == 2);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == DefaultOnly());
-    assert(DefaultOnly::count == 2);
-    r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
-    assert(r == std::next(m.begin()));
-    assert(m.size() == 2);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == DefaultOnly());
-    assert(DefaultOnly::count == 2);
   }
-  assert(DefaultOnly::count == 0);
+
   {
     typedef std::map<int, Emplaceable> M;
     typedef M::iterator R;
@@ -79,31 +84,36 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.begin()->first == 2);
     assert(m.begin()->second == 3.5);
   }
+
+  if(!TEST_IS_CONSTANT_EVALUATED)
   {
-    typedef std::map<int, DefaultOnly, std::less<int>, min_allocator<std::pair<const int, DefaultOnly>>> M;
-    typedef M::iterator R;
-    M m;
+    {
+      typedef std::map<int, DefaultOnly, std::less<int>, min_allocator<std::pair<const int, DefaultOnly>>> M;
+      typedef M::iterator R;
+      M m;
+      assert(DefaultOnly::count == 0);
+      R r = m.emplace_hint(m.end());
+      assert(r == m.begin());
+      assert(m.size() == 1);
+      assert(m.begin()->first == 0);
+      assert(m.begin()->second == DefaultOnly());
+      assert(DefaultOnly::count == 1);
+      r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
+      assert(r == std::next(m.begin()));
+      assert(m.size() == 2);
+      assert(std::next(m.begin())->first == 1);
+      assert(std::next(m.begin())->second == DefaultOnly());
+      assert(DefaultOnly::count == 2);
+      r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
+      assert(r == std::next(m.begin()));
+      assert(m.size() == 2);
+      assert(std::next(m.begin())->first == 1);
+      assert(std::next(m.begin())->second == DefaultOnly());
+      assert(DefaultOnly::count == 2);
+    }
     assert(DefaultOnly::count == 0);
-    R r = m.emplace_hint(m.end());
-    assert(r == m.begin());
-    assert(m.size() == 1);
-    assert(m.begin()->first == 0);
-    assert(m.begin()->second == DefaultOnly());
-    assert(DefaultOnly::count == 1);
-    r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
-    assert(r == std::next(m.begin()));
-    assert(m.size() == 2);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == DefaultOnly());
-    assert(DefaultOnly::count == 2);
-    r = m.emplace_hint(m.end(), std::piecewise_construct, std::forward_as_tuple(1), std::forward_as_tuple());
-    assert(r == std::next(m.begin()));
-    assert(m.size() == 2);
-    assert(std::next(m.begin())->first == 1);
-    assert(std::next(m.begin())->second == DefaultOnly());
-    assert(DefaultOnly::count == 2);
   }
-  assert(DefaultOnly::count == 0);
+
   {
     typedef std::map<int, Emplaceable, std::less<int>, min_allocator<std::pair<const int, Emplaceable>>> M;
     typedef M::iterator R;
