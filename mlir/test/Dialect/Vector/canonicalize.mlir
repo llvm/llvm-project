@@ -1028,25 +1028,26 @@ func.func @canonicalize_broadcast_shapecast_to_broadcast_scalar(%arg0: f32) -> v
 
 // -----
 
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapecast
+// In this test, broadcast (2)->(1,2,1) is not legal, but shape_cast (2)->(1,2,1) is.
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapcast
 //   CHECK-NOT:   vector.broadcast
-//       CHECK:   vector.shape_cast {{.+}} : vector<3x4xf32> to vector<1x12xf32>
-func.func @canonicalize_broadcast_shapecast_to_shapecast(%arg0: vector<3x4xf32>) -> vector<1x12xf32> {
-    %0 = vector.broadcast %arg0 : vector<3x4xf32> to vector<1x1x3x4xf32>
-    %1 = vector.shape_cast %0 : vector<1x1x3x4xf32> to vector<1x12xf32>
-    return %1 : vector<1x12xf32>
+//       CHECK:   vector.shape_cast {{.+}} : vector<2xf32> to vector<1x2x1xf32>
+func.func @canonicalize_broadcast_shapecast_to_shapcast(%arg0 : vector<2xf32>) -> vector<1x2x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<1x2xf32>
+  %1 = vector.shape_cast %0 : vector<1x2xf32> to vector<1x2x1xf32>
+  return %1 : vector<1x2x1xf32>
 }
 
 // -----
 
-// In this test, it could be folded to broadcast or shape_cast, shape_cast is chosen.
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapcast_priority
+// In this test, broadcast (1)->(1,1) and shape_cast (1)->(1,1) are both legal. shape_cast is chosen.
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_both_possible
 //   CHECK-NOT:   vector.broadcast
 //       CHECK:   vector.shape_cast {{.+}} : vector<1xf32> to vector<1x1xf32>
-func.func @canonicalize_broadcast_shapecast_to_shapcast_priority(%arg0 : vector<1xf32>) -> vector<1x1xf32> {
-  %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x1x1xf32>
-  %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1x1xf32>
-  return %1 : vector<1x1xf32>
+func.func @canonicalize_broadcast_shapecast_both_possible(%arg0: vector<1xf32>) -> vector<1x1xf32> {
+    %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x1x1xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1x1xf32>
+    return %1 : vector<1x1xf32>
 }
 
 // -----
