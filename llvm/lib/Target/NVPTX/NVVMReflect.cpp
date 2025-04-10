@@ -78,8 +78,7 @@ class NVVMReflectLegacyPass : public ModulePass {
 
 public:
   static char ID;
-  NVVMReflectLegacyPass(unsigned SmVersion)
-      : ModulePass(ID), Impl(SmVersion) {}
+  NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
   bool runOnModule(Module &M) override;
 };
 } // namespace
