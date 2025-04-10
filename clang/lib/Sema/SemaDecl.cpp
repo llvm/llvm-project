@@ -7977,6 +7977,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
+
   if (getLangOpts().OpenACC)
     OpenACC().ActOnVariableDeclarator(NewVD);
 
@@ -13130,6 +13131,9 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
 
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(VDecl);
+
+  if (getLangOpts().HLSL)
+    HLSL().deduceAddressSpace(VDecl);
 
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.
