@@ -1047,20 +1047,23 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
 
 void ModFileWriter::PutUserReduction(
     llvm::raw_ostream &os, const Symbol &symbol) {
-  auto &details{symbol.get<UserReductionDetails>()};
+  const auto &details{symbol.get<UserReductionDetails>()};
   // The module content for a OpenMP Declare Reduction is the OpenMP
   // declaration. There may be multiple declarations.
   // Decls are pointers, so do not use a referene.
   for (const auto decl : details.GetDeclList()) {
-    if (auto d = std::get_if<const parser::OpenMPDeclareReductionConstruct *>(
-            &decl)) {
-      Unparse(os, **d, context_.langOptions());
-    } else if (auto s = std::get_if<const parser::OmpMetadirectiveDirective *>(
-                   &decl)) {
-      Unparse(os, **s, context_.langOptions());
-    } else {
-      DIE("Unknown OpenMP DECLARE REDUCTION content");
-    }
+    common::visit( //
+        common::visitors{//
+            [&](const parser::OpenMPDeclareReductionConstruct *d) {
+              Unparse(os, *d, context_.langOptions());
+            },
+            [&](const parser::OmpMetadirectiveDirective *m) {
+              Unparse(os, *m, context_.langOptions());
+            },
+            [&](const auto &) {
+              DIE("Unknown OpenMP DECLARE REDUCTION content");
+            }},
+        decl);
   }
 }
 

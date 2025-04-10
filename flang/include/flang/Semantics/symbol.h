@@ -742,11 +742,11 @@ public:
 
   UserReductionDetails() = default;
 
-  void AddType(const DeclTypeSpec *type) { typeList_.push_back(type); }
+  void AddType(const DeclTypeSpec &type) { typeList_.push_back(&type); }
   const TypeVector &GetTypeList() const { return typeList_; }
 
-  bool SupportsType(const DeclTypeSpec *type) const {
-    return llvm::is_contained(typeList_, type);
+  bool SupportsType(const DeclTypeSpec &type) const {
+    return llvm::is_contained(typeList_, &type);
   }
 
   void AddDecl(const DeclInfo &decl) { declList_.push_back(decl); }
