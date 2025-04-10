@@ -78,7 +78,6 @@ function(compile_to_bc)
       COMMAND ${llvm-as_exe} -o ${ARG_OUTPUT} ${ARG_OUTPUT}${TMP_SUFFIX}
       DEPENDS ${llvm-as_target} ${ARG_OUTPUT}${TMP_SUFFIX}
     )
-    add_custom_target( ${ARG_TARGET}-as DEPENDS ${ARG_OUTPUT} )
   endif()
 endfunction()
 
@@ -295,7 +294,6 @@ function(add_libclc_builtin_set)
     get_filename_component( file_ext ${file} EXT )
     if( ${file_ext} STREQUAL ".ll" )
       list( APPEND bytecode_ir_files ${output_file} )
-      list( APPEND compile_tgts ${tgt}-as )
     else()
       list( APPEND bytecode_files ${output_file} )
     endif()
@@ -310,7 +308,7 @@ function(add_libclc_builtin_set)
 
   set( builtins_comp_lib_tgt builtins.comp.${ARG_ARCH_SUFFIX} )
   add_custom_target( ${builtins_comp_lib_tgt}
-    DEPENDS ${compile_tgts}
+    DEPENDS ${bytecode_files} ${compile_tgts}
   )
   set_target_properties( ${builtins_comp_lib_tgt} PROPERTIES FOLDER "libclc/Device IR/Comp" )
 
