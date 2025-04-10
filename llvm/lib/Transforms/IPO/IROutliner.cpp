@@ -24,6 +24,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
 
@@ -1930,29 +1931,25 @@ replaceArgumentUses(OutlinableRegion &Region,
 /// \param Region [in] - The region of extracted code to be changed.
 void replaceConstants(OutlinableRegion &Region) {
   OutlinableGroup &Group = *Region.Parent;
+  Function *OutlinedFunction = Group.OutlinedFunction;
+  ValueToValueMapTy VMap;
+
   // Iterate over the constants that need to be elevated into arguments
   for (std::pair<unsigned, Constant *> &Const : Region.AggArgToConstant) {
     unsigned AggArgIdx = Const.first;
-    Function *OutlinedFunction = Group.OutlinedFunction;
     assert(OutlinedFunction && "Overall Function is not defined?");
     Constant *CST = Const.second;
     Argument *Arg = Group.OutlinedFunction->getArg(AggArgIdx);
     // Identify the argument it will be elevated to, and replace instances of
     // that constant in the function.
-
-    // TODO: If in the future constants do not have one global value number,
-    // i.e. a constant 1 could be mapped to several values, this check will
-    // have to be more strict.  It cannot be using only replaceUsesWithIf.
-
+    VMap[CST] = Arg;
     LLVM_DEBUG(dbgs() << "Replacing uses of constant " << *CST
                       << " in function " << *OutlinedFunction << " with "
-                      << *Arg << "\n");
-    CST->replaceUsesWithIf(Arg, [OutlinedFunction](Use &U) {
-      if (Instruction *I = dyn_cast<Instruction>(U.getUser()))
-        return I->getFunction() == OutlinedFunction;
-      return false;
-    });
+                      << *Arg << '\n');
   }
+
+  RemapFunction(*OutlinedFunction, VMap,
+                RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 }
 
 /// It is possible that there is a basic block that already performs the same
