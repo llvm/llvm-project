@@ -21,6 +21,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 /// Include the generated interface declarations.
 #include "mlir/Dialect/X86Vector/X86VectorInterfaces.h.inc"

@@ -115,6 +115,7 @@ void mlir::populateX86VectorLegalizeForLLVMExportPatterns(
 void mlir::configureX86VectorLegalizeForExportTarget(
     LLVMConversionTarget &target) {
   target.addIllegalOp<MaskCompressOp, MaskRndScaleOp, MaskScaleFOp,
-                      Vp2IntersectOp, DotBF16Op, CvtPackedF32ToBF16Op, RsqrtOp,
+                      Vp2IntersectOp, DotBF16Op, CvtPackedF32ToBF16Op, CvtPackedEvenIndexedBF16ToF32Op,
+		      CvtPackedOddIndexedBF16ToF32Op, BcstBF16ToPackedF32Op, RsqrtOp,
                       DotOp>();
 }
