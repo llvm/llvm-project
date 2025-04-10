@@ -484,6 +484,11 @@ const FormatEntity::Entry *Debugger::GetStatuslineFormat() const {
   return GetPropertyAtIndexAs<const FormatEntity::Entry *>(idx);
 }
 
+bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
+  constexpr uint32_t idx = ePropertyStatuslineFormat;
+  return SetPropertyAtIndex(idx, format);
+}
+
 bool Debugger::GetUseAutosuggestion() const {
   const uint32_t idx = ePropertyShowAutosuggestion;
   return GetPropertyAtIndexAs<bool>(
