@@ -39,8 +39,16 @@ Module files are Fortran free form source code.
 and obtain a matching `foo.mod` file.)
 They include the declarations of all visible locally defined entities along
 with the private entities on which thef depend.
-Entity declarations that span multiple statements are collapsed into
-a single *type-declaration-statement*.
+
+Declarations of objects, interfaces, types, and other entities are
+regenerated from the compiler's symbol table.
+So entity declarations that spanned multiple statements in the source
+program are effectivel collapsed into a single *type-declaration-statement*.
+Constant expressions that appear in initializers, bounds, and other sites
+appear in the module file in as their folded values.
+Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
+of names are also included in the module file.
+
 Executable statements are omitted.
 
 ### Header
@@ -90,8 +98,12 @@ for module files and where to write them. By default it will be the current
 directory for both.
 
 `-I` specifies directories to search for include files and module
-files. `-J` specifies a directory into which module files are written
+files.
+`-J`, and its alias `-module-dir`, specify a directory into which module files are written
 as well as to search for them.
+
+`-fintrinsic-modules-path` is available to specify an alternative location
+for Fortran's intrinsic modules.
 
 ### Writing module files
 
