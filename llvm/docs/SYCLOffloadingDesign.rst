@@ -250,7 +250,7 @@ device objects and runs the device linking action on the extracted objects.
 Fully formed device images are then wrapped into host objects and then linked
 with host image in the original fat object using the host linker tool.
 
-.. figure:: linker_wrapper.png
+.. figure:: figures/linker_wrapper.png
   :scale: 50%
   :align: center
   
@@ -279,7 +279,7 @@ Linking of device objects
     $ clang++ --target <device triple> --sycl-link test.bc test.o -Xlinker <SYCLLINKOPTS> -###
     clang-sycl-linker -triple <device triple> <SYCLLINKOPTS> test.bc test.o
 
-  .. figure:: sycl_linker.png  
+  .. figure:: figures/sycl_linker.png
     :scale: 50%
     :align: center
   
@@ -337,7 +337,7 @@ Device code splitting
   kernel itself or any funtion in its call graph uses FP64 operations. Figure 4
   showcases this device code split.
 
-  .. figure:: code_split.png
+  .. figure:: figures/code_split.png
     :scale: 50%
     :align: center
    
