@@ -1362,3 +1362,203 @@ TEST(Local, ReplaceDbgVariableRecord) {
   // Teardown.
   RetInst->DebugMarker->eraseFromParent();
 }
+
+bool EliminateNewDuplicatePHINodesN2(BasicBlock *BB,
+                                     BasicBlock::phi_iterator FirstExistingPN);
+bool EliminateNewDuplicatePHINodesSet(BasicBlock *BB,
+                                      BasicBlock::phi_iterator FirstExistingPN);
+
+TEST(Local, RaceEliminateNewDuplicatePHINodes) {
+  GTEST_SKIP(); // Comment out to run this test manually.
+  using namespace std::chrono;
+
+  LLVMContext C;
+  IRBuilder<> B(C);
+  std::unique_ptr<Function> F(
+      Function::Create(FunctionType::get(B.getVoidTy(), false),
+                       GlobalValue::ExternalLinkage, "F"));
+  BasicBlock *Entry(BasicBlock::Create(C, "", F.get()));
+  BasicBlock *BB(BasicBlock::Create(C, "", F.get()));
+  BranchInst::Create(BB, Entry);
+  B.SetInsertPoint(BB);
+  auto *Ret = B.CreateRetVoid();
+  B.SetInsertPoint(Ret);
+
+  const unsigned NumPreds = 5;
+  for (unsigned Pass = 1; Pass < 64; ++Pass) {
+    auto *PHI = B.CreatePHI(Type::getInt32Ty(C), NumPreds);
+    for (unsigned I = 0; I < NumPreds; ++I)
+      PHI->addIncoming(B.getInt32(Pass), Entry);
+
+    if (Pass < 2)
+      continue;
+
+    auto FirstExistingPN = std::next(BB->phis().begin(), Pass / 2);
+    const unsigned NumRuns = 1000000;
+
+    outs() << "Num phis: " << Pass;
+    auto Start = high_resolution_clock::now();
+    for (unsigned Run = NumRuns; Run > 0; --Run)
+      EliminateNewDuplicatePHINodesSet(BB, FirstExistingPN);
+    auto End = high_resolution_clock::now();
+    auto TH = duration_cast<milliseconds>(End - Start).count();
+    outs() << "  H: " << TH;
+
+    Start = high_resolution_clock::now();
+    for (unsigned Run = NumRuns; Run > 0; --Run)
+      EliminateNewDuplicatePHINodesN2(BB, FirstExistingPN);
+    End = high_resolution_clock::now();
+    auto TN2 = duration_cast<milliseconds>(End - Start).count();
+
+    outs() << "  N2: " << TN2 << "  Diff: " << (TH - TN2)
+           << "  Ratio: " << format("%.3f", ((double)TH / TN2)) << "\n";
+  }
+}
+
+// Helper to run both versions on the same input.
+static void RunEliminateNewDuplicatePHINode(
+    const char *AsmText,
+    std::function<void(BasicBlock &,
+                       bool(BasicBlock *BB, BasicBlock::phi_iterator))>
+        Check) {
+  LLVMContext C;
+  for (int Pass = 0; Pass < 2; ++Pass) {
+    std::unique_ptr<Module> M = parseIR(C, AsmText);
+    Function *F = M->getFunction("main");
+    auto BBIt = std::find_if(F->begin(), F->end(), [](const BasicBlock &Block) {
+      return Block.getName() == "testbb";
+    });
+    ASSERT_NE(BBIt, F->end());
+    Check(*BBIt, Pass == 0 ? EliminateNewDuplicatePHINodesSet
+                           : EliminateNewDuplicatePHINodesN2);
+  }
+}
+
+static BasicBlock::phi_iterator getPhiIt(BasicBlock &BB, unsigned Idx) {
+  return std::next(BB.phis().begin(), Idx);
+}
+
+static PHINode *getPhi(BasicBlock &BB, unsigned Idx) {
+  return &*getPhiIt(BB, Idx);
+}
+
+static int getNumPHIs(BasicBlock &BB) {
+  return std::distance(BB.phis().begin(), BB.phis().end());
+}
+
+TEST(Local, EliminateNewDuplicatePHINodes_OrderExisting) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ]
+          %np1 = phi i32 [ 1, %entry ]
+          %ep0 = phi i32 [ 1, %entry ]
+          %ep1 = phi i32 [ 1, %entry ]
+          %u = add i32 %np0, %np1
+          ret void
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ]
+    //   %ep1 = phi i32 [ 1, %entry ]
+    //   %u = add i32 %ep0, %ep0
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP0);
+    (void)EP1; // Avoid "unused" warning.
+  });
+}
+
+TEST(Local, EliminateNewDuplicatePHINodes_OrderNew) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ]
+          %np1 = phi i32 [ 1, %entry ]
+          %ep0 = phi i32 [ 2, %entry ]
+          %ep1 = phi i32 [ 2, %entry ]
+          %u = add i32 %np0, %np1
+          ret void
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> NP0 = getPhi(BB, 0);
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %np0 = phi i32 [ 1, %entry ]
+    //   %ep0 = phi i32 [ 2, %entry ]
+    //   %ep1 = phi i32 [ 2, %entry ]
+    //   %u = add i32 %np0, %np0
+    EXPECT_EQ(getNumPHIs(BB), 3);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), NP0);
+    EXPECT_EQ(Add.getOperand(1), NP0);
+    (void)EP0;
+    (void)EP1; // Avoid "unused" warning.
+  });
+}
+
+TEST(Local, EliminateNewDuplicatePHINodes_NewRefExisting) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+          %np1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+          %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+          %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+          %u = add i32 %np0, %np1
+          br label %testbb
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+    //   %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+    //   %u = add i32 %ep0, %ep1
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP1);
+  });
+}
+
+TEST(Local, EliminateNewDuplicatePHINodes_ExistingRefNew) {
+  RunEliminateNewDuplicatePHINode(R"(
+      define void @main() {
+      entry:
+          br label %testbb
+      testbb:
+          %np0 = phi i32 [ 1, %entry ], [ %np0, %testbb ]
+          %np1 = phi i32 [ 1, %entry ], [ %np1, %testbb ]
+          %ep0 = phi i32 [ 1, %entry ], [ %np0, %testbb ]
+          %ep1 = phi i32 [ 1, %entry ], [ %np1, %testbb ]
+          %u = add i32 %np0, %np1
+          br label %testbb
+      }
+  )", [](BasicBlock &BB, auto *ENDPN) {
+    AssertingVH<PHINode> EP0 = getPhi(BB, 2);
+    AssertingVH<PHINode> EP1 = getPhi(BB, 3);
+    EXPECT_TRUE(ENDPN(&BB, getPhiIt(BB, 2)));
+    // Expected:
+    //   %ep0 = phi i32 [ 1, %entry ], [ %ep0, %testbb ]
+    //   %ep1 = phi i32 [ 1, %entry ], [ %ep1, %testbb ]
+    //   %u = add i32 %ep0, %ep1
+    EXPECT_EQ(getNumPHIs(BB), 2);
+    Instruction &Add = *BB.getFirstNonPHIIt();
+    EXPECT_EQ(Add.getOperand(0), EP0);
+    EXPECT_EQ(Add.getOperand(1), EP1);
+  });
+}
