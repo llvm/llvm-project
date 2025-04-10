@@ -29,7 +29,10 @@ public:
   }
 };
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wglobal-constructors"
 thread_local A thread_local_a(123);
+#pragma GCC diagnostic pop
 
 void *func(void *) {
   // Touch the thread local variable so that it gets initialized and a callback
