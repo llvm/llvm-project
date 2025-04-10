@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef LIBC_HERMETIC_TEST_FRAMEWORK
 #include "src/__support/CPP/new.h"
-
-#include "ExecuteFunction.h"
 // TODO: for now, we use epoll directly. Use poll for unix compatibility when it
 // is available.
 #include "hdr/sys_epoll_macros.h"
@@ -26,6 +25,32 @@
 #include "src/unistd/close.h"
 #include "src/unistd/fork.h"
 #include "src/unistd/pipe.h"
+#else
+#include "ExecuteFunction.h"
+#include <assert.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/epoll.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+namespace LIBC_NAMESPACE_DECL {
+using ::close;
+using ::exit;
+using ::fflush;
+using ::fork;
+using ::kill;
+using ::pipe;
+using ::waitpid;
+using ::epoll_create1;
+using ::epoll_ctl;
+using ::epoll_wait;
+using ::strsignal;
+#define LIBC_ASSERT(...) assert(__VA_ARGS__)
+} // namespace LIBC_NAMESPACE_DECL
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testutils {
@@ -46,10 +71,10 @@ int ProcessStatus::get_fatal_signal() {
 template <typename T> struct DeleteGuard {
   T *ptr;
   DeleteGuard(T *p) : ptr(p) {}
-  ~DeleteGuard() {
-      delete ptr;
-  }
+  ~DeleteGuard() { delete ptr; }
 };
+// deduction guide
+template <typename T> DeleteGuard(T *) -> DeleteGuard<T>;
 
 ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   DeleteGuard guard(func);
@@ -104,14 +129,16 @@ ProcessStatus invoke_in_subprocess(FunctionCaller *func, unsigned timeout_ms) {
   // If no FDs became “ready,” the child didn’t close the pipe before the
   // timeout.
   if (nfds == 0) {
-    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0);
+    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0)
+      ;
     return ProcessStatus::timed_out_ps();
   }
 
   // If we did get an event, check for EPOLLHUP (or EPOLLRDHUP).
   // If those are not set, the pipe wasn't closed in the manner we expected.
   if (!(result.events & (EPOLLHUP | EPOLLRDHUP))) {
-    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0);
+    while (LIBC_NAMESPACE::kill(pid, SIGKILL) == 0)
+      ;
     return ProcessStatus::timed_out_ps();
   }
 

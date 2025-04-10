@@ -25,6 +25,9 @@ function(add_unittest_framework_library name)
     endif()
   endforeach()
 
+  target_compile_definitions(${name}.unit PRIVATE LIBC_UNIT_TEST_FRAMEWORK)
+  target_compile_definitions(${name}.hermetic PRIVATE LIBC_HERMETIC_TEST_FRAMEWORK)
+
   if(LLVM_LIBC_FULL_BUILD)
     # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
