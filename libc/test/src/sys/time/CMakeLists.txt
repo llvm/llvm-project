@@ -27,11 +27,14 @@ add_libc_unittest(
   SRCS
     setitimer_test.cpp
   DEPENDS
+    libc.include.signal
     libc.src.sys.time.setitimer
+    libc.src.signal.sigaction
+    libc.src.signal.sigemptyset
     libc.src.__support.common
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
-    libc.include.signal
 )
 
 add_libc_unittest(
@@ -44,5 +47,6 @@ add_libc_unittest(
     libc.src.sys.time.getitimer
     libc.src.__support.common
     libc.src.errno.errno
+    libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

@@ -6,6 +6,7 @@ types:
   - type_name: struct_timeval
   - type_name: struct_itimerval
 enums: []
+objects: []
 functions:
   - name: utimes
     return_type: int
@@ -29,4 +30,3 @@ functions:
     arguments:
       - type: int
       - type: struct itimerval *
-objects: []

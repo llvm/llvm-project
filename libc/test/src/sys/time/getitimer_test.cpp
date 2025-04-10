@@ -9,13 +9,14 @@
 
 #include "hdr/types/struct_itimerval.h"
 #include "src/sys/time/getitimer.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-#include <sys/time.h>
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcSysTimeGetitimerTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSysTimeGetitimerTest, SmokeTest) {
+TEST_F(LlvmLibcSysTimeGetitimerTest, SmokeTest) {
   struct itimerval timer;
   timer.it_value.tv_sec = -1;
   timer.it_value.tv_usec = -1;
@@ -29,4 +30,12 @@ TEST(LlvmLibcSysTimeGetitimerTest, SmokeTest) {
   ASSERT_TRUE(timer.it_value.tv_usec == 0);
   ASSERT_TRUE(timer.it_interval.tv_sec == 0);
   ASSERT_TRUE(timer.it_interval.tv_usec == 0);
+}
+
+TEST_F(LlvmLibcSysTimeGetitimerTest, InvalidRetTest) {
+  struct itimerval timer;
+
+  // out of range timer type (which)
+  ASSERT_THAT(LIBC_NAMESPACE::getitimer(99, &timer),
+              returns(NE(0)).with_errno(NE(0)));
 }

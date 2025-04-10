@@ -12,6 +12,7 @@ add_entrypoint_object(
     libc.include.sys_syscall
     libc.include.fcntl
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
