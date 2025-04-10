@@ -1290,7 +1290,7 @@ def GetGlobalOp : CIR_Op<"get_global",
     The `cir.get_global` operation retrieves the address pointing to a
     named global variable. If the global variable is marked constant, writing
     to the resulting address (such as through a `cir.store` operation) is
-    undefined. Resulting type must always be a `!cir.ptr<...>` type with the
+    undefined. The resulting type must always be a `!cir.ptr<...>` type with the
     same address space as the global variable.
 
     Example:

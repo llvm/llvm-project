@@ -203,10 +203,7 @@ void CIRGenModule::emitGlobalFunctionDefinition(clang::GlobalDecl gd,
 }
 
 mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
-  mlir::Operation *global = mlir::SymbolTable::lookupSymbolIn(theModule, name);
-  if (!global)
-    return nullptr;
-  return global;
+  return mlir::SymbolTable::lookupSymbolIn(theModule, name);
 }
 
 /// If the specified mangled name is not in the module,
