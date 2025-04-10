@@ -38,4 +38,3 @@ entry:
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32) #0
 
 attributes #0 = { nounwind }
-
