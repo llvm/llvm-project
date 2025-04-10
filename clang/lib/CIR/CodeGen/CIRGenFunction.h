@@ -434,6 +434,8 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
