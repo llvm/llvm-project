@@ -62,6 +62,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
 // CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
@@ -77,6 +78,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
 // CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
@@ -92,6 +94,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: ReturnStmt
 // CHECK-NEXT: UnaryOperator {{.*}} 'element_type' prefix '*' cannot overflow
 // CHECK-NEXT: CallExpr {{.*}} 'element_type *'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <BuiltinFnToFnPtr>
 // CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}}  '__builtin_hlsl_resource_getpointer' 'void (...) noexcept'
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
@@ -106,6 +109,6 @@ RESOURCE<float> Buffer;
 // CHECK: TemplateArgument type 'float'
 // CHECK-NEXT: BuiltinType {{.*}}  'float'
 // CHECK-NEXT: FinalAttr {{.*}} Implicit final
-// CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
+// CHECK-NEXT: FieldDecl {{.*}} implicit referenced __handle '__hlsl_resource_t
 // CHECK-UAV-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
