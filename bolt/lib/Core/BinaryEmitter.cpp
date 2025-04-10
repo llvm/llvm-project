@@ -823,7 +823,7 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
              << (Offset ? ") as part of larger jump table\n" : ")\n");
     });
     if (!LabelCounts.empty()) {
-      uint64_t JTCount = LabelCounts[JTLabel];
+      const uint64_t JTCount = LabelCounts[JTLabel];
       LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: " << JTCount << '\n');
       Streamer.switchSection(JTCount ? HotSection : ColdSection);
       Streamer.emitValueToAlignment(Align(JT.EntrySize));
