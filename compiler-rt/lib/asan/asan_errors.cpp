@@ -623,7 +623,7 @@ static void CheckPoisonRecords(uptr addr) {
     return;
   }
 
-  struct PoisonRecord record;
+  PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
     StackTrace poison_stack = StackDepotGet(record.stack_id);
     if (poison_stack.size == 0) {

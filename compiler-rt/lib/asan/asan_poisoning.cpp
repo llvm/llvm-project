@@ -25,62 +25,50 @@
 
 namespace __asan {
 
-using PoisonRecordRingBuffer = RingBuffer<struct PoisonRecord>;
+using PoisonRecordRingBuffer = RingBuffer<PoisonRecord>;
 
 static atomic_uint8_t can_poison_memory;
 
 static Mutex poison_records_mutex;
-static PoisonRecordRingBuffer *poison_records = nullptr;
+static PoisonRecordRingBuffer *poison_records
+    SANITIZER_GUARDED_BY(poison_records_mutex) = nullptr;
 
 void AddPoisonRecord(const PoisonRecord &new_record) {
   if (flags()->poison_history_size <= 0)
     return;
 
-  poison_records_mutex.Lock();
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
 
   if (poison_records == nullptr)
     poison_records = PoisonRecordRingBuffer::New(flags()->poison_history_size);
 
   poison_records->push(new_record);
-
-  poison_records_mutex.Unlock();
 }
 
-bool FindPoisonRecord(uptr addr, const PoisonRecord &match) {
+bool FindPoisonRecord(uptr addr, PoisonRecord &match) {
   if (flags()->poison_history_size <= 0)
     return false;
 
-  poison_records_mutex.Lock();
+  GenericScopedLock<Mutex> l(&poison_records_mutex);
 
   if (poison_records) {
     for (unsigned int i = 0; i < poison_records->size(); i++) {
-      struct PoisonRecord record = (*poison_records)[i];
+      PoisonRecord record = (*poison_records)[i];
       if (record.begin <= addr && addr < record.end) {
-        internal_memcpy((void *)&match, (void *)&record,
-                        sizeof(struct PoisonRecord));
-        poison_records_mutex.Unlock();
+        internal_memcpy(&match, &record, sizeof(record));
         return true;
       }
     }
   }
 
-  poison_records_mutex.Unlock();
   return false;
 }
 
-__attribute__((no_thread_safety_analysis)) void SANITIZER_ACQUIRE(
-    poison_records_mutex) AcquirePoisonRecords() {
-  if (flags()->poison_history_size <= 0)
-    return;
-
+void SANITIZER_ACQUIRE(poison_records_mutex) AcquirePoisonRecords() {
   poison_records_mutex.Lock();
 }
 
-__attribute__((no_thread_safety_analysis)) void SANITIZER_RELEASE(
-    poison_records_mutex) ReleasePoisonRecords() {
-  if (flags()->poison_history_size <= 0)
-    return;
-
+void SANITIZER_RELEASE(poison_records_mutex) ReleasePoisonRecords() {
   poison_records_mutex.Unlock();
 }
 
@@ -171,8 +159,6 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
     GET_STACK_TRACE(/*max_size=*/16, /*fast=*/false);
     u32 current_tid = GetCurrentTidOrInvalid();
 
-    // TODO: garbage collect stacks once they fall off the ring buffer?
-    // StackDepot doesn't currently have a way to delete stacks.
     u32 stack_id = StackDepotPut(stack);
 
     PoisonRecord record{.stack_id = stack_id,

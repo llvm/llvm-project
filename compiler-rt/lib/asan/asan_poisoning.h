@@ -30,7 +30,7 @@ struct PoisonRecord {
 };
 
 void AddPoisonRecord(const PoisonRecord& new_record);
-bool FindPoisonRecord(uptr addr, const PoisonRecord& match);
+bool FindPoisonRecord(uptr addr, PoisonRecord& match);
 
 void AcquirePoisonRecords();
 void ReleasePoisonRecords();
