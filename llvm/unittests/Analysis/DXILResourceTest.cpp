@@ -67,7 +67,8 @@ testing::AssertionResult MDTupleEq(const char *LHSExpr, const char *RHSExpr,
 
 #define EXPECT_MDEQ(X, Y) EXPECT_PRED_FORMAT2(MDTupleEq, X, Y)
 
-#define EXPECT_PREQ(X, Y, Z) EXPECT_EQ(X, (std::pair<uint32_t, uint32_t>{Y, Z}))
+#define EXPECT_PROPS_EQ(X, Y, Z)                                               \
+  EXPECT_EQ(X, (std::pair<uint32_t, uint32_t>{Y, Z}))
 
 } // namespace
 
@@ -103,7 +104,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "Buffer");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000000bU, 0U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000000bU, 0U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "Buffer", 0, 0, 1, 11, 0, nullptr));
   }
@@ -123,7 +124,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "BufferOut");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000100bU, 0U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000100bU, 0U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(1, GV, "BufferOut", 2, 3, 1, 11, false, false, false,
                            nullptr));
@@ -147,7 +148,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "Buffer0");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000030cU, 0x00000010U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000030cU, 0x00000010U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI), TestMD.get(0, GV, "Buffer0", 0, 0, 1,
                                                      12, 0, TestMD.get(1, 16)));
   }
@@ -167,7 +168,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "Buffer1");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000000cU, 0x0000000cU);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000000cU, 0x0000000cU);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI), TestMD.get(1, GV, "Buffer1", 0, 1, 1,
                                                      12, 0, TestMD.get(1, 12)));
   }
@@ -189,7 +190,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "ColorMapTexture");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00000002U, 0x00000409U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00000002U, 0x00000409U);
     EXPECT_MDEQ(
         RI.getAsMetadata(M, RTI),
         TestMD.get(2, GV, "ColorMapTexture", 0, 2, 1, 2, 0, TestMD.get(0, 9)));
@@ -214,7 +215,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "DepthBuffer");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00000003U, 0x00080109U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00000003U, 0x00080109U);
     EXPECT_MDEQ(
         RI.getAsMetadata(M, RTI),
         TestMD.get(0, GV, "DepthBuffer", 0, 0, 1, 3, 8, TestMD.get(0, 9)));
@@ -236,7 +237,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "feedbackMinMip");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00001011U, 0U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00001011U, 0U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "feedbackMinMip", 0, 0, 1, 17, false, false,
                            false, TestMD.get(2, 0)));
@@ -258,7 +259,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "feedbackMipRegion");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00001012U, 0x00000001U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00001012U, 0x00000001U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "feedbackMipRegion", 0, 0, 1, 18, false,
                            false, false, TestMD.get(2, 1)));
@@ -284,7 +285,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "OutputTexture");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00005002U, 0x00000204U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00005002U, 0x00000204U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "OutputTexture", 2, 0, 1, 2, true, false,
                            false, TestMD.get(0, 4)));
@@ -308,7 +309,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
         RTI.getHandleTy());
     GlobalVariable *GV = RI.createSymbol(M, RTI.createElementStruct(), "ROB");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000300aU, 0x00000409U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000300aU, 0x00000409U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "ROB", 0, 0, 1, 10, false, false, true,
                            TestMD.get(0, 9)));
@@ -336,7 +337,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "g_OutputBuffer");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000920cU, 0x00000014U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000920cU, 0x00000014U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "g_OutputBuffer", 0, 2, 1, 12, false, true,
                            false, TestMD.get(1, 20)));
@@ -364,7 +365,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "g_rw_t2dmsa");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x00001008U, 0x00080105U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00001008U, 0x00080105U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "g_rw_t2dmsa", 0, 0, 1, 8, false, false,
                            false, TestMD.get(0, 5)));
@@ -384,7 +385,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/0, /*Size=*/1,
         RTI.getHandleTy());
     GlobalVariable *GV = RI.createSymbol(M, RTI.createElementStruct(), "");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000000dU, 0x00000020U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000000dU, 0x00000020U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "", 0, 0, 1, 32, nullptr));
   }
@@ -403,7 +404,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "ColorMapSampler");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000000eU, 0U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000000eU, 0U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "ColorMapSampler", 0, 0, 1, 0, nullptr));
   }
@@ -421,7 +422,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
         RTI.getHandleTy());
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "CmpSampler");
-    EXPECT_PREQ(RI.getAnnotateProps(M, RTI), 0x0000800eU, 0U);
+    EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000800eU, 0U);
     EXPECT_MDEQ(RI.getAsMetadata(M, RTI),
                 TestMD.get(0, GV, "CmpSampler", 0, 0, 1, 1, nullptr));
   }
