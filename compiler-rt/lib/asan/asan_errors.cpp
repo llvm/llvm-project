@@ -626,9 +626,7 @@ static void CheckPoisonRecords(uptr addr) {
   PoisonRecord record;
   if (FindPoisonRecord(addr, record)) {
     StackTrace poison_stack = StackDepotGet(record.stack_id);
-    if (poison_stack.size == 0) {
-      Printf("ERROR: stack depot did not have a matching stack.\n");
-    } else {
+    if (poison_stack.size > 0) {
       Printf("Memory was manually poisoned by thread T%u:\n", record.thread_id);
       poison_stack.Print();
     }
