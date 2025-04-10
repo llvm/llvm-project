@@ -163,11 +163,20 @@ static llvm::Error HandleFrontendOptions(const CompilerInstance &CI) {
     unsigned NumArgs = FrontendOpts.LLVMArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
     Args[0] = "clang-repl (LLVM option parsing)";
-    for (unsigned i = 0; i != NumArgs; ++i)
+    for (unsigned i = 0; i != NumArgs; ++i) {
       Args[i + 1] = FrontendOpts.LLVMArgs[i].c_str();
+      // remove the leading '-' from the option name
+      if (Args[i + 1][0] == '-') {
+        auto *option = static_cast<llvm::cl::opt<bool> *>(
+            llvm::cl::getRegisteredOptions()[Args[i + 1] + 1]);
+        if (option) {
+          option->setInitialValue(true);
+        } else {
+          llvm::errs() << "Unknown LLVM option: " << Args[i + 1] << "\n";
+        }
+      }
+    }
     Args[NumArgs + 1] = nullptr;
-    llvm::errs()
-        << "Parsing LLVM backend options via cl::ParseCommandLineOptions...\n";
     llvm::cl::ParseCommandLineOptions(NumArgs + 1, Args.get());
   }
 
