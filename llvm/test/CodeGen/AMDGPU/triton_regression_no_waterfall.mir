@@ -78,50 +78,7 @@ callSites:       []
 debugValueSubstitutions: []
 constants:       []
 machineFunctionInfo:
-  explicitKernArgSize: 24
-  maxKernArgAlign: 8
-  ldsSize:         0
-  gdsSize:         0
-  dynLDSAlign:     1
   isEntryFunction: true
-  isChainFunction: false
-  noSignedZerosFPMath: false
-  memoryBound:     false
-  waveLimiter:     false
-  hasSpilledSGPRs: false
-  hasSpilledVGPRs: false
-  scratchRSrcReg:  '$private_rsrc_reg'
-  frameOffsetReg:  '$fp_reg'
-  stackPtrOffsetReg: '$sp_reg'
-  bytesInStackArgArea: 0
-  returnsVoid:     true
-  argumentInfo:
-    dispatchPtr:     { reg: '$sgpr0_sgpr1' }
-    queuePtr:        { reg: '$sgpr2_sgpr3' }
-    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
-    dispatchID:      { reg: '$sgpr6_sgpr7' }
-    workGroupIDX:    { reg: '$sgpr8' }
-    workGroupIDY:    { reg: '$sgpr9' }
-    workGroupIDZ:    { reg: '$sgpr10' }
-    workItemIDX:     { reg: '$vgpr0', mask: 1023 }
-    workItemIDY:     { reg: '$vgpr0', mask: 1047552 }
-    workItemIDZ:     { reg: '$vgpr0', mask: 1072693248 }
-  psInputAddr:     0
-  psInputEnable:   0
-  maxMemoryClusterDWords: 8
-  mode:
-    ieee:            true
-    dx10-clamp:      true
-    fp32-input-denormals: true
-    fp32-output-denormals: true
-    fp64-fp16-input-denormals: true
-    fp64-fp16-output-denormals: true
-  highBitsOf32BitAddress: 0
-  occupancy:       8
-  vgprForAGPRCopy: ''
-  sgprForEXECCopy: ''
-  longBranchReservedReg: ''
-  hasInitWholeWave: false
 body:             |
   bb.0.entry:
     liveins: $sgpr4_sgpr5
