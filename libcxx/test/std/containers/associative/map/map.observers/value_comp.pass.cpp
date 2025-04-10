@@ -27,11 +27,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   assert(cm.value_comp()(*p1.first, *p2.first));
   assert(!cm.value_comp()(*p2.first, *p1.first));
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -114,11 +114,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(mo.size() == 0);
     assert(std::distance(mo.begin(), mo.end()) == 0);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

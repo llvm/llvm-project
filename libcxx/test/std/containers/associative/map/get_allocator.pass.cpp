@@ -31,11 +31,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     const std::map<int, std::string, std::less<int>, other_allocator<ValueType> > m(alloc);
     assert(m.get_allocator() == alloc);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

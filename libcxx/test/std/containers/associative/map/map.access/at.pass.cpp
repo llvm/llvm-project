@@ -45,13 +45,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
 
 // throwing is not allowed in constexpr
-#if TEST_STD_VER < 26
+#  if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
-#endif
+#  endif
 
 #endif
     assert(m.at(7) == 7.5);
@@ -90,7 +90,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.size() == 7);
   }
 #if TEST_STD_VER >= 11
-// #ifdef VINAY_DISABLE_FOR_NOW
+  // #ifdef VINAY_DISABLE_FOR_NOW
   {
     typedef std::pair<const int, double> V;
     V ar[] = {
@@ -107,9 +107,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     // std::__tree_node_base<min_pointer<void>> b  = d;
     using Base = std::__tree_node_base<min_pointer<void>>;
 
-    using Derived = std::__tree_node<std::__value_type<int,double>, min_pointer<void>> ;
+    using Derived = std::__tree_node<std::__value_type<int, double>, min_pointer<void>>;
     static_assert(std::is_base_of_v<Base, Derived>);
-
 
     // using BaseP = min_pointer<Base>;
     // using DerivedP = min_pointer<Derived>;
@@ -117,10 +116,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
     // DerivedP dp(nullptr);
     // (void)dp;
 
-    // BaseP bp =static_cast<BaseP>(dp); 
+    // BaseP bp =static_cast<BaseP>(dp);
     // (void)bp;
-
-
 
     std::map<int, double, std::less<int>, min_allocator<V>> m(ar, ar + sizeof(ar) / sizeof(ar[0]));
     assert(m.size() == 7);
@@ -134,13 +131,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 
 // throwing is not allowed in constexpr
-#   if TEST_STD_VER < 26
+#    if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
-#   endif
+#    endif
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);
@@ -166,13 +163,13 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.at(5) == 5.5);
 #  ifndef TEST_HAS_NO_EXCEPTIONS
 // throwing is not allowed in constexpr
-#   if TEST_STD_VER < 26
+#    if TEST_STD_VER < 26
     try {
       TEST_IGNORE_NODISCARD m.at(6);
       assert(false);
     } catch (std::out_of_range&) {
     }
-#   endif
+#    endif
 #  endif
     assert(m.at(7) == 7.5);
     assert(m.at(8) == 8.5);

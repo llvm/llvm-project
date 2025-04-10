@@ -20,7 +20,9 @@
 struct Comp {
   using is_transparent = void;
 
-  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const { return lhs < rhs; }
+  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const {
+    return lhs < rhs;
+  }
 
   TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, int rhs) const { return lhs.first < rhs; }
 
@@ -41,15 +43,14 @@ TEST_CONSTEXPR_CXX26 bool test() {
   test<std::map<std::pair<int, int>, int, Comp> >();
 
   // FIXME: remove when multimap is made constexpr
-  if(!TEST_IS_CONSTANT_EVALUATED)
-  {
-  test<std::multimap<std::pair<int, int>, int, Comp> >();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test<std::multimap<std::pair<int, int>, int, Comp> >();
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

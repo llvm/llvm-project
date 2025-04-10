@@ -25,7 +25,7 @@
 TEST_CONSTEXPR_CXX26 bool test() {
   std::map<std::tuple<int, int>, std::size_t> m;
   m[std::make_tuple(2, 3)] = 7;
-return true;
+  return true;
 }
 
 int main(int, char**) {

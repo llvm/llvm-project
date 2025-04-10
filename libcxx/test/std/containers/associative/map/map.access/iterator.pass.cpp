@@ -156,7 +156,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(!(cii != ii1));
   }
 #endif
-return true;
+  return true;
 }
 
 int main(int, char**) {

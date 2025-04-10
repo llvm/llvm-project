@@ -29,11 +29,11 @@ inline bool operator==(A const& L, A const& R) { return &L == &R; }
 inline bool operator<(A const& L, A const& R) { return L.data < R.data; }
 TEST_CONSTEXPR_CXX26 bool test() {
   A a;
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

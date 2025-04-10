@@ -117,7 +117,7 @@ int main(int, char**) {
       assert(map_equal(second, {{2, 0}, {3, 0}}));
       assert(map_equal(third, {{1, 0}, {3, 0}}));
 
-          assert(Counter_base::gConstructed == 8);
+      assert(Counter_base::gConstructed == 8);
     }
     assert(Counter_base::gConstructed == 0);
   }

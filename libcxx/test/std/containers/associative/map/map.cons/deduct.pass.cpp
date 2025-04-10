@@ -33,7 +33,7 @@
 // template<ranges::input_range R, class Allocator>
 //   map(from_range_t, R&&, Allocator)
 //     -> map<range-key-type<R>, range-mapped-type<R>, less<range-key-type<R>>, Allocator>; // C++23
- // constexpr since C++26
+// constexpr since C++26
 #include <algorithm> // std::equal
 #include <array>
 #include <cassert>
@@ -192,11 +192,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
 #endif
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::map, std::map<int, long>>();
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

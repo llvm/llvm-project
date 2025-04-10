@@ -44,11 +44,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test_map_exception_safety_throwing_copy<std::map>();
     test_map_exception_safety_throwing_allocator<std::map, int, int>();
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

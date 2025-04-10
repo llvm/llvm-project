@@ -112,7 +112,8 @@ private:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __basic_node_handle(__node_pointer_type __ptr, allocator_type const& __alloc)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  __basic_node_handle(__node_pointer_type __ptr, allocator_type const& __alloc)
       : __ptr_(__ptr), __alloc_(__alloc) {}
 
 public:

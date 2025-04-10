@@ -28,7 +28,7 @@ TEST_CONSTEXPR_CXX26 void test(Container& c, KeyTypeIter first, KeyTypeIter last
     typename Container::node_type t = c.extract(*copy);
     assert(!t.empty());
     --sz;
-    if(!TEST_IS_CONSTANT_EVALUATED) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(t.key() == *copy);
       t.key() = *first; // We should be able to mutate key.
       assert(t.key() == *first);
@@ -52,8 +52,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test(m, std::begin(keys), std::end(keys));
   }
 
-  if(!TEST_IS_CONSTANT_EVALUATED)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     {
       Counter<int> keys[] = {1, 2, 3, 4, 5, 6};
@@ -69,11 +68,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     int keys[]          = {1, 2, 3, 4, 5, 6};
     test(m, std::begin(keys), std::end(keys));
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -21,8 +21,7 @@
 
 using Init = std::initializer_list<int>;
 template <typename M>
-TEST_CONSTEXPR_CXX26
-M make(Init vals) {
+TEST_CONSTEXPR_CXX26 M make(Init vals) {
   M ret;
   for (int v : vals)
     ret[static_cast<typename M::key_type>(v)] = static_cast<typename M::mapped_type>(v + 10);
@@ -30,8 +29,7 @@ M make(Init vals) {
 }
 
 template <typename M, typename Pred>
-TEST_CONSTEXPR_CXX26
-void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
+TEST_CONSTEXPR_CXX26 void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
@@ -39,8 +37,7 @@ void test0(Init vals, Pred p, Init expected, std::size_t expected_erased_count) 
 }
 
 template <typename S>
-TEST_CONSTEXPR_CXX26
-bool test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   auto is1   = [](auto v) { return v.first == 1; };
   auto is2   = [](auto v) { return v.first == 2; };
   auto is3   = [](auto v) { return v.first == 3; };
@@ -68,7 +65,6 @@ bool test() {
   return true;
 }
 
-
 TEST_CONSTEXPR_CXX26
 bool test_upper() {
   test<std::map<int, int>>();
@@ -82,8 +78,7 @@ bool test_upper() {
 }
 
 int main(int, char**) {
-
-assert(test_upper());
+  assert(test_upper());
 #if TEST_STD_VER >= 26
   static_assert(test_upper());
 #endif

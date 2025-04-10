@@ -24,7 +24,9 @@
 struct Comp {
   using is_transparent = void;
 
-  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const { return lhs < rhs; }
+  TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, const std::pair<int, int>& rhs) const {
+    return lhs < rhs;
+  }
 
   TEST_CONSTEXPR_CXX26 bool operator()(const std::pair<int, int>& lhs, int rhs) const { return lhs.first < rhs; }
 
@@ -41,7 +43,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

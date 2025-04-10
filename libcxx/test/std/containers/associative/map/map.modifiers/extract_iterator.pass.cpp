@@ -29,7 +29,7 @@ TEST_CONSTEXPR_CXX26 bool test(Container& c) {
     auto key_value                  = first->first;
     typename Container::node_type t = c.extract(first++);
     --sz;
-    if(!TEST_IS_CONSTANT_EVALUATED) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
       assert(t.key() == key_value);
       t.key() = some_key;
       assert(t.key() == some_key);
@@ -49,8 +49,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     test(m);
   }
 
-  if(!TEST_IS_CONSTANT_EVALUATED)
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::map<Counter<int>, Counter<int>> m = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     assert(Counter_base::gConstructed == 12);
     test(m);
@@ -62,11 +61,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     min_alloc_map m     = {{1, 1}, {2, 2}, {3, 3}, {4, 4}, {5, 5}, {6, 6}};
     test(m);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

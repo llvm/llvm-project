@@ -40,11 +40,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     P result = example.equal_range(C2Int{5});
     assert(result.first == result.second);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

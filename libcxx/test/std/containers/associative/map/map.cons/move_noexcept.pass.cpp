@@ -31,7 +31,6 @@ struct some_comp {
 };
 
 TEST_CONSTEXPR_CXX26 bool test() {
-
 #if defined(_LIBCPP_VERSION)
   typedef std::pair<const MoveOnly, MoveOnly> V;
   {

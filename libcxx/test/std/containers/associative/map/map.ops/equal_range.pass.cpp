@@ -436,11 +436,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(r.second == std::next(m.begin(), 8));
   }
 #endif
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

@@ -68,7 +68,7 @@ TEST_CONSTEXPR_CXX26 bool duplicate_keys_test() {
 TEST_CONSTEXPR_CXX26 bool test() {
   test_basic();
   duplicate_keys_test();
-return true;
+  return true;
 }
 
 int main(int, char**) {

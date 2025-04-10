@@ -55,7 +55,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m.size() == 0);
   }
 #endif
-return true;
+  return true;
 }
 
 int main(int, char**) {

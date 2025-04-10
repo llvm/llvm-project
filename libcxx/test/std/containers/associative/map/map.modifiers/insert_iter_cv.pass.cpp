@@ -64,11 +64,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     do_insert_iter_cv_test<M>();
   }
 #endif
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

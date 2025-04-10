@@ -36,11 +36,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     M example;
     assert(example.lower_bound(C2Int{5}) == example.end());
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

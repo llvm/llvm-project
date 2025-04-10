@@ -51,7 +51,9 @@ public:
   }
 
   TEST_CONSTEXPR_CXX26 bool operator==(const Moveable& x) const { return int_ == x.int_ && double_ == x.double_; }
-  TEST_CONSTEXPR_CXX26 bool operator<(const Moveable& x) const { return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_); }
+  TEST_CONSTEXPR_CXX26 bool operator<(const Moveable& x) const {
+    return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_);
+  }
 
   TEST_CONSTEXPR_CXX26 int get() const { return int_; }
   TEST_CONSTEXPR_CXX26 bool moved() const { return int_ == -1; }
@@ -282,7 +284,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(r->first.get() == 11);  // key
     assert(r->second.get() == 13); // value
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {

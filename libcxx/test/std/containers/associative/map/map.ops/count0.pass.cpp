@@ -33,11 +33,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     typedef std::map<int, double, transparent_less_not_referenceable> M;
     assert(M().count(C2Int{5}) == 0);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

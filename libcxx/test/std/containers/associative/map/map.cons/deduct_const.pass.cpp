@@ -24,7 +24,7 @@
 // template<class Key, class Allocator>
 // map(initializer_list<Key>, Allocator)
 //   -> map<Key, less<Key>, Allocator>;
- // constexpr since C++26
+// constexpr since C++26
 #include <algorithm> // std::equal
 #include <cassert>
 #include <climits> // INT_MAX
@@ -102,11 +102,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(std::equal(m.begin(), m.end(), std::begin(expected_m), std::end(expected_m)));
     assert(m.get_allocator().get_id() == 45);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

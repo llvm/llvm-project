@@ -50,11 +50,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(!result2.second);
     assert(map[Key(0)] == 42);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

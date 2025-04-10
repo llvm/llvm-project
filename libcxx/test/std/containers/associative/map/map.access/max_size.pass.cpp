@@ -44,7 +44,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {

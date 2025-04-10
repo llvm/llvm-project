@@ -96,11 +96,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(m3.key_comp() == C(5));
     assert(m1.empty());
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

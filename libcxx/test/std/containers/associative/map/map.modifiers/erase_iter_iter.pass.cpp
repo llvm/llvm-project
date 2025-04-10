@@ -151,11 +151,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(i == m.end());
   }
 #endif
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

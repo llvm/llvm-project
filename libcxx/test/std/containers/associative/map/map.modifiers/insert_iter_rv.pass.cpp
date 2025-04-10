@@ -93,11 +93,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(r->first == 3);
     assert(r->second == 3);
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

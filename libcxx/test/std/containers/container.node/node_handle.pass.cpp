@@ -137,7 +137,9 @@ TEST_CONSTEXPR_CXX26 bool test_node_handle_operations_multi() {
 }
 
 template <class>
-TEST_CONSTEXPR_CXX26 bool test_typedef() { return true; }
+TEST_CONSTEXPR_CXX26 bool test_typedef() {
+  return true;
+}
 
 template <class Container>
 TEST_CONSTEXPR_CXX26 bool test_insert_return_type() {
@@ -146,35 +148,32 @@ TEST_CONSTEXPR_CXX26 bool test_insert_return_type() {
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
-
   test_node_handle_operations<std::map<int, int>>();
 
   // FIXME: update when other containers are made constexpr
-  if (!TEST_IS_CONSTANT_EVALUATED)
-  {
-  test_node_handle_operations_multi<std::multimap<int, int>>();
-  test_node_handle_operations<std::set<int>>();
-  test_node_handle_operations_multi<std::multiset<int>>();
-  test_node_handle_operations<std::unordered_map<int, int>>();
-  test_node_handle_operations_multi<std::unordered_multimap<int, int>>();
-  test_node_handle_operations<std::unordered_set<int>>();
-  test_node_handle_operations_multi<std::unordered_multiset<int>>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_node_handle_operations_multi<std::multimap<int, int>>();
+    test_node_handle_operations<std::set<int>>();
+    test_node_handle_operations_multi<std::multiset<int>>();
+    test_node_handle_operations<std::unordered_map<int, int>>();
+    test_node_handle_operations_multi<std::unordered_multimap<int, int>>();
+    test_node_handle_operations<std::unordered_set<int>>();
+    test_node_handle_operations_multi<std::unordered_multiset<int>>();
   }
 
   test_insert_return_type<std::map<int, int>>();
 
   // FIXME: update when other containers are made constexpr
-  if (!TEST_IS_CONSTANT_EVALUATED)
-  {
-  test_insert_return_type<std::set<int>>();
-  test_insert_return_type<std::unordered_map<int, int>>();
-  test_insert_return_type<std::unordered_set<int>>();
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_insert_return_type<std::set<int>>();
+    test_insert_return_type<std::unordered_map<int, int>>();
+    test_insert_return_type<std::unordered_set<int>>();
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif

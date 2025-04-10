@@ -40,11 +40,11 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*std::next(m.begin()) == V(2, 1));
     assert(*std::next(m.begin(), 2) == V(3, 1));
   }
-return true;
+  return true;
 }
 
 int main(int, char**) {
-assert(test());
+  assert(test());
 #if TEST_STD_VER >= 26
   static_assert(test());
 #endif
