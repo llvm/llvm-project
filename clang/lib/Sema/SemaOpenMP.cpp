@@ -4287,9 +4287,6 @@ getDispatchRegionParams(Sema &SemaRef) {
   ASTContext &Context = SemaRef.getASTContext();
   SmallVector<SemaOpenMP::CapturedParamNameType> Params;
 
-  //  QualType VoidPtrTy = Context.VoidPtrTy.withConst().withRestrict();
-  //  Params.push_back(std::make_pair(StringRef(), VoidPtrTy));
-
   Params.push_back(std::make_pair(StringRef(), QualType()));
   return Params;
 }
