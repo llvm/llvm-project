@@ -93,7 +93,9 @@ High-level SYCL Offloading Compilation Flow
   :scale: 50%
   :align: center
   
-  Top-level SYCL offloading compilation flow.
+  .. class:: center
+  
+  Figure 1: Top-level SYCL offloading compilation flow.
 
 Figure 1 showcases the SYCL offloading compilation flow. The SYCL compiler
 performs the following high-level actions to generate SYCL offloading code:
