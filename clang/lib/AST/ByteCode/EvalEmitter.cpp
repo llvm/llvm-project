@@ -169,6 +169,11 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
+
   if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))

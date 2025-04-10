@@ -90,9 +90,6 @@ static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset, PrimType PT) {
       assert(S.Stk.size() == StackSizeBefore);
       S.Stk.push<Integral<32, true>>(
           Integral<32, true>::from(CheckBCPResult(S, Ptr)));
-    } else if (PT == PT_FnPtr) {
-      S.Stk.discard<FunctionPointer>();
-      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
     } else {
       // Pop the result from the stack and return success.
       TYPE_SWITCH(PT, S.Stk.pop<T>(););
@@ -318,6 +315,8 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
     return false;
   if (Ptr.isZero())
     return true;
+  if (Ptr.isFunctionPointer())
+    return false;
   if (Ptr.isIntegralPointer())
     return true;
   if (Ptr.isTypeidPointer())
@@ -1621,20 +1620,24 @@ bool CallBI(InterpState &S, CodePtr OpPC, const Function *Func,
 
 bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE) {
-  const FunctionPointer &FuncPtr = S.Stk.pop<FunctionPointer>();
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  const Function *F = FuncPtr.getFunction();
-  if (!F) {
+  if (Ptr.isZero()) {
     const auto *E = cast<CallExpr>(S.Current->getExpr(OpPC));
     S.FFDiag(E, diag::note_constexpr_null_callee)
         << const_cast<Expr *>(E->getCallee()) << E->getSourceRange();
     return false;
   }
 
-  if (!FuncPtr.isValid() || !F->getDecl())
+  if (!Ptr.isFunctionPointer())
     return Invalid(S, OpPC);
 
+  const FunctionPointer &FuncPtr = Ptr.asFunctionPointer();
+  const Function *F = FuncPtr.getFunction();
   assert(F);
+  // Don't allow calling block pointers.
+  if (!F->getDecl())
+    return Invalid(S, OpPC);
 
   // This happens when the call expression has been cast to
   // something else, but we don't support that.
@@ -1774,6 +1777,8 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, unsigned BitWidth) {
   if (Ptr.isDummy())
     return false;
+  if (Ptr.isFunctionPointer())
+    return true;
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.CCEDiag(E, diag::note_constexpr_invalid_cast)
