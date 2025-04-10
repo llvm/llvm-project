@@ -467,6 +467,7 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
     MachineRegisterInfo *MRI = getMRI();
 
     // Check that all instructions that use Reg can be converted
+    SmallVector<MachineInstr *, 4> Uses;
     for (MachineInstr &UseMI : MRI->use_nodbg_instructions(Reg)) {
       MachineInstr *SrcMI =
           UseMI.isRegSequence()
@@ -475,21 +476,15 @@ MachineInstr *SDWASrcOperand::potentialToConvert(const SIInstrInfo *TII,
       if (!SrcMI || !isConvertibleToSDWA(*SrcMI, ST, TII) ||
           !canCombineSelections(*SrcMI, TII))
         return nullptr;
+
+      Uses.push_back(SrcMI);
     }
     // Now that it's guaranteed all uses are legal, iterate over the uses again
     // to add them for later conversion.
-    for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg)) {
-      // Should not get a subregister here
-      assert(isSameReg(UseMO, *Op));
+    auto &PM = *PotentialMatches;
+    for (auto *Use : Uses)
+      PM[Use].push_back(this);
 
-      SDWAOperandsMap &potentialMatchesMap = *PotentialMatches;
-      MachineInstr *Parent = UseMO.getParent();
-      MachineInstr *UseSrcMI =
-          Parent->isRegSequence()
-              ? regSequenceFindSingleSubregUser(*Parent, Reg, MRI)
-              : Parent;
-      potentialMatchesMap[UseSrcMI].push_back(this);
-    }
     return nullptr;
   }
 
