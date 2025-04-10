@@ -1138,6 +1138,18 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
+/// Determine the appropriate source input kind based on language
+/// options.
+static Language getLanguageFromOptions(const LangOptions &LangOpts) {
+  if (LangOpts.OpenCL)
+    return Language::OpenCL;
+  if (LangOpts.CUDA)
+    return Language::CUDA;
+  if (LangOpts.ObjC)
+    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
+  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
+}
+
 /// Creates a \c CompilerInstance for compiling a module.
 ///
 /// This expects a properly initialized \c FrontendInputFile.
@@ -1248,16 +1260,66 @@ createCompilerInstanceForModuleCompileImpl(CompilerInstance &ImportingInstance,
   return InstancePtr;
 }
 
-/// Determine the appropriate source input kind based on language
-/// options.
-static Language getLanguageFromOptions(const LangOptions &LangOpts) {
-  if (LangOpts.OpenCL)
-    return Language::OpenCL;
-  if (LangOpts.CUDA)
-    return Language::CUDA;
-  if (LangOpts.ObjC)
-    return LangOpts.CPlusPlus ? Language::ObjCXX : Language::ObjC;
-  return LangOpts.CPlusPlus ? Language::CXX : Language::C;
+/// Compile a module file for the given module, using the options
+/// provided by the importing compiler instance. Returns true if the module
+/// was built without errors.
+static bool compileModule(CompilerInstance &ImportingInstance,
+                          SourceLocation ImportLoc, StringRef ModuleName,
+                          StringRef ModuleFileName,
+                          CompilerInstance &Instance) {
+  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+
+  // Never compile a module that's already finalized - this would cause the
+  // existing module to be freed, causing crashes if it is later referenced
+  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
+          ModuleFileName)) {
+    ImportingInstance.getDiagnostics().Report(
+        ImportLoc, diag::err_module_rebuild_finalized)
+        << ModuleName;
+    return false;
+  }
+
+  ImportingInstance.getDiagnostics().Report(ImportLoc,
+                                            diag::remark_module_build)
+    << ModuleName << ModuleFileName;
+
+  // Execute the action to actually build the module in-place. Use a separate
+  // thread so that we get a stack large enough.
+  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
+      [&]() {
+        GenerateModuleFromModuleMapAction Action;
+        Instance.ExecuteAction(Action);
+      },
+      DesiredStackSize);
+
+  ImportingInstance.getDiagnostics().Report(ImportLoc,
+                                            diag::remark_module_build_done)
+    << ModuleName;
+
+  // Propagate the statistics to the parent FileManager.
+  if (ImportingInstance.getFrontendOpts().ModulesShareFileManager)
+    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
+
+  if (Crashed) {
+    // Clear the ASTConsumer if it hasn't been already, in case it owns streams
+    // that must be closed before clearing output files.
+    Instance.setSema(nullptr);
+    Instance.setASTConsumer(nullptr);
+
+    // Delete any remaining temporary files related to Instance.
+    Instance.clearOutputFiles(/*EraseFiles=*/true);
+  }
+
+  // We've rebuilt a module. If we're allowed to generate or update the global
+  // module index, record that fact in the importing compiler instance.
+  if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
+    ImportingInstance.setBuildGlobalModuleIndex(true);
+  }
+
+  // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
+  // occurred.
+  return !Instance.getDiagnostics().hasErrorOccurred() ||
+         Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
 static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
@@ -1354,68 +1416,6 @@ createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
                                                     std::move(ModuleMapBuffer));
 
   return Instance;
-}
-
-/// Compile a module file for the given module, using the options
-/// provided by the importing compiler instance. Returns true if the module
-/// was built without errors.
-static bool compileModule(CompilerInstance &ImportingInstance,
-                          SourceLocation ImportLoc, StringRef ModuleName,
-                          StringRef ModuleFileName,
-                          CompilerInstance &Instance) {
-  llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
-
-  // Never compile a module that's already finalized - this would cause the
-  // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
-        << ModuleName;
-    return false;
-  }
-
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build)
-    << ModuleName << ModuleFileName;
-
-  // Execute the action to actually build the module in-place. Use a separate
-  // thread so that we get a stack large enough.
-  bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnThread(
-      [&]() {
-        GenerateModuleFromModuleMapAction Action;
-        Instance.ExecuteAction(Action);
-      },
-      DesiredStackSize);
-
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build_done)
-    << ModuleName;
-
-  // Propagate the statistics to the parent FileManager.
-  if (ImportingInstance.getFileManagerPtr() != Instance.getFileManagerPtr())
-    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
-
-  if (Crashed) {
-    // Clear the ASTConsumer if it hasn't been already, in case it owns streams
-    // that must be closed before clearing output files.
-    Instance.setSema(nullptr);
-    Instance.setASTConsumer(nullptr);
-
-    // Delete any remaining temporary files related to Instance.
-    Instance.clearOutputFiles(/*EraseFiles=*/true);
-  }
-
-  // We've rebuilt a module. If we're allowed to generate or update the global
-  // module index, record that fact in the importing compiler instance.
-  if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
-    ImportingInstance.setBuildGlobalModuleIndex(true);
-  }
-
-  // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
-  // occurred.
-  return !Instance.getDiagnostics().hasErrorOccurred() ||
-         Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
 /// Read the AST right after compiling the module.
