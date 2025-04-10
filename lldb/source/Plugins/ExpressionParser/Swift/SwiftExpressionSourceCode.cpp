@@ -12,6 +12,7 @@
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Target.h"
@@ -114,6 +115,56 @@ struct CallsAndArgs {
   std::string lldb_call;
 };
 
+static llvm::SmallVector<const SwiftASTManipulator::VariableInfo *>
+CollectMetadataVariables(
+    llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables) {
+  llvm::SmallVector<const SwiftASTManipulator::VariableInfo *>
+      metadata_variables;
+  for (auto &var : local_variables)
+    if (var.IsOutermostMetadataPointer())
+      metadata_variables.push_back(&var);
+  return metadata_variables;
+}
+
+struct MetadataInfo {
+  bool is_pack = false;
+  unsigned depth;
+  unsigned index;
+  llvm::StringRef archetype_name;
+
+  MetadataInfo(bool is_pack, unsigned depth, unsigned index, llvm::StringRef archetype_name)
+      : is_pack(is_pack), depth(depth), index(index), archetype_name(archetype_name) {}
+};
+
+static llvm::Expected<llvm::SmallVector<MetadataInfo>> CollectMetadataInfos(
+    llvm::ArrayRef<const SwiftASTManipulator::VariableInfo *>
+        metadata_variables,
+    const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig) {
+  llvm::SmallVector<MetadataInfo> metadata_info;
+
+  for (size_t i = 0; i < metadata_variables.size(); ++i) {
+    auto variable_sp =
+        llvm::cast<SwiftASTManipulatorBase::VariableMetadataVariable>(
+            metadata_variables[i]->GetMetadata())
+            ->m_variable_sp;
+    auto archetype_name = variable_sp->GetType()->GetName();
+    if (generic_sig)
+      metadata_info.emplace_back(generic_sig->generic_params[i].is_pack,
+                                 generic_sig->generic_params[i].depth,
+                                 generic_sig->generic_params[i].index,
+                                 archetype_name);
+    else {
+      auto maybe_depth_and_index =
+          ParseSwiftGenericParameter(metadata_variables[i]->GetName().str());
+      if (!maybe_depth_and_index)
+        return llvm::createStringError(llvm::errc::not_supported,
+                                       "unexpected metadata variable");
+      metadata_info.emplace_back(false, maybe_depth_and_index->first,
+                                 maybe_depth_and_index->second, archetype_name);
+    }
+  }
+  return metadata_info;
+}
 /// Constructs the signatures for the expression evaluation functions based on
 /// the metadata variables in scope and any variadic functiontion parameters.
 /// For every outermost metadata pointer in scope ($τ_0_0, $τ_0_1, etc), we want
@@ -149,12 +200,7 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     llvm::ArrayRef<SwiftASTManipulator::VariableInfo> local_variables,
     const std::optional<SwiftLanguageRuntime::GenericSignature> &generic_sig,
     bool needs_object_ptr) {
-  llvm::SmallVector<const SwiftASTManipulator::VariableInfo *>
-      metadata_variables;
-  for (auto &var : local_variables)
-    if (var.IsOutermostMetadataPointer())
-      metadata_variables.push_back(&var);
-
+  auto metadata_variables = CollectMetadataVariables(local_variables);
   // The number of metadata variables could be > if the function is in
   // a generic context.
   if (generic_sig &&
@@ -162,37 +208,27 @@ static llvm::Expected<CallsAndArgs> MakeGenericSignaturesAndCalls(
     return llvm::createStringError(llvm::errc::not_supported,
                                    "Inconsistent generic signature");
 
+  auto maybe_metadata_infos = CollectMetadataInfos(metadata_variables, generic_sig);
+  if (!maybe_metadata_infos)
+    return maybe_metadata_infos.takeError();
+  auto metadata_infos = *maybe_metadata_infos;
+
   llvm::SmallDenseMap<std::pair<unsigned, unsigned>, llvm::SmallString<4>> subs;
   std::string generic_params;
   std::string generic_params_no_packs;
   llvm::raw_string_ostream s_generic_params(generic_params);
   llvm::raw_string_ostream s_generic_params_no_packs(generic_params_no_packs);
-  for (size_t i = 0; i < metadata_variables.size(); ++i) {
-    llvm::SmallString<4> archetype_name;
-    llvm::raw_svector_ostream s_archetype_name(archetype_name);
-    bool is_pack = false;
-    unsigned depth, index;
-    if (generic_sig) {
-      auto &gp = generic_sig->generic_params[i];
-      is_pack = gp.is_pack;
-      depth = gp.depth;
-      index = gp.index;
-    } else {
-      auto di =
-          ParseSwiftGenericParameter(metadata_variables[i]->GetName().str());
-      if (!di)
-        return llvm::createStringError(llvm::errc::not_supported,
-                                       "unexpected metadata variable");
-      depth = di->first;
-      index = di->second;
-    }
+
+  for (auto &[is_pack, depth, index, archetype_name] : metadata_infos) {
+    llvm::SmallString<4> sig_archetype_name;
+    llvm::raw_svector_ostream s_sig_archetype_name(sig_archetype_name);
     if (is_pack)
-      s_archetype_name << "each ";
-    s_archetype_name << "T" << i;
+      s_sig_archetype_name << "each ";
+    s_sig_archetype_name << archetype_name;
     if (!is_pack)
-      s_generic_params_no_packs << archetype_name << ",";
-    subs.insert({{depth, index}, archetype_name});
-    s_generic_params << archetype_name << ",";
+      s_generic_params_no_packs << sig_archetype_name << ",";
+    s_generic_params << sig_archetype_name << ",";
+    subs.insert({{depth, index}, sig_archetype_name});
   }
 
   if (!generic_params.empty())
