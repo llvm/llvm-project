@@ -89,6 +89,11 @@ public:
 } // namespace mlir
 
 namespace cir {
+
+/// Register the `CIRLinkerInterface` implementation of `LinkerInterface` within
+/// the CIR dialect.
+void registerLinkerInterface(mlir::DialectRegistry &registry);
+
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 } // namespace cir
 
