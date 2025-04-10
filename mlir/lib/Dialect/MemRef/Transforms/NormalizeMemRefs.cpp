@@ -29,6 +29,7 @@ namespace memref {
 #define DEBUG_TYPE "normalize-memrefs"
 
 using namespace mlir;
+using namespace memref;
 using namespace mlir::affine;
 
 namespace {
@@ -346,13 +347,16 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
 }
 
 /// Normalizes the memrefs within a function which includes those arising as a
-/// result of AllocOps, AllocaOps, CallOps and function's argument. The ModuleOp
-/// argument is used to help update function's signature after normalization.
+/// result of AllocOps, AllocaOps, CallOps, ReinterpretCastOps and function's
+/// argument. The ModuleOp argument is used to help update function's signature
+/// after normalization.
 void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
                                               ModuleOp moduleOp) {
   // Turn memrefs' non-identity layouts maps into ones with identity. Collect
+<<<<<<< Updated upstream
   // alloc/alloca ops first and then process since normalizeMemRef
   // replaces/erases ops during memref rewriting.
+<<<<<<< Updated upstream
   SmallVector<memref::AllocOp, 4> allocOps;
   funcOp.walk([&](memref::AllocOp op) { allocOps.push_back(op); });
   for (memref::AllocOp allocOp : allocOps)
@@ -361,7 +365,29 @@ void NormalizeMemRefs::normalizeFuncOpMemRefs(func::FuncOp funcOp,
   SmallVector<memref::AllocaOp> allocaOps;
   funcOp.walk([&](memref::AllocaOp op) { allocaOps.push_back(op); });
   for (memref::AllocaOp allocaOp : allocaOps)
+=======
+=======
+  // alloc, alloca ops and reinterpret_cast ops first and then process since
+  // normalizeMemRef replaces/erases ops during memref rewriting.
+>>>>>>> Stashed changes
+  SmallVector<AllocOp, 4> allocOps;
+  SmallVector<AllocaOp> allocaOps;
+  SmallVector<ReinterpretCastOp> reinterpretCastOps;
+  funcOp.walk([&](Operation *op) {
+    if (auto allocOp = dyn_cast<AllocOp>(op))
+      allocOps.push_back(allocOp);
+    if (auto allocaOp = dyn_cast<AllocaOp>(op))
+      allocaOps.push_back(allocaOp);
+    if (auto reinterpretCastOp = dyn_cast<ReinterpretCastOp>(op))
+      reinterpretCastOps.push_back(reinterpretCastOp);
+  });
+  for (AllocOp allocOp : allocOps)
+    (void)normalizeMemRef(allocOp);
+  for (AllocaOp allocaOp : allocaOps)
+>>>>>>> Stashed changes
     (void)normalizeMemRef(allocaOp);
+  for (ReinterpretCastOp reinterpretCastOp : reinterpretCastOps)
+    (void)normalizeMemRef(reinterpretCastOp);
 
   // We use this OpBuilder to create new memref layout later.
   OpBuilder b(funcOp);
