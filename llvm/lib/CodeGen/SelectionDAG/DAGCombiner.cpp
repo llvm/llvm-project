@@ -849,7 +849,7 @@ namespace {
       auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
       return (LK.first == TargetLoweringBase::TypeLegal ||
               LK.first == TargetLoweringBase::TypePromoteInteger) &&
-        TLI.isOperationLegal(ISD::UMIN, LK.second);
+             TLI.isOperationLegal(ISD::UMIN, LK.second);
     }
 
   public:
