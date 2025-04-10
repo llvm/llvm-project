@@ -147,7 +147,15 @@ enum NodeType : unsigned {
 
   // Floating point approximate reciprocal operation
   FRECIPE,
-  FRSQRTE
+  FRSQRTE,
+
+  // Vector logicial left / right shift by immediate
+  VSLLI,
+  VSRLI,
+
+  // Vector byte logicial left / right shift
+  VBSLL,
+  VBSRL
 
   // Intrinsic operations end =============================================
 };

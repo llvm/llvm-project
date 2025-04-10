@@ -4,61 +4,7 @@
 define <32 x i8> @shuffle_32i8_byte_left_shift_1(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 30
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.h $a0, $sp, 28
-; CHECK-NEXT:    st.h $a0, $sp, 61
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 57
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 49
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30>
   ret <32 x i8> %shuffle
@@ -67,57 +13,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_1(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_2(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 28
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 58
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 50
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29>
   ret <32 x i8> %shuffle
@@ -126,57 +22,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_2(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_3(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 50
-; CHECK-NEXT:    st.h $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 34
-; CHECK-NEXT:    st.h $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 28
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 59
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 51
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 3
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28>
   ret <32 x i8> %shuffle
@@ -185,51 +31,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_3(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_4(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 60
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 52
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27>
   ret <32 x i8> %shuffle
@@ -238,53 +40,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_4(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_5(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 36
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 26
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.h $a0, $sp, 24
-; CHECK-NEXT:    st.h $a0, $sp, 61
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 53
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26>
   ret <32 x i8> %shuffle
@@ -293,49 +49,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_5(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_6(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 36
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 24
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 54
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25>
   ret <32 x i8> %shuffle
@@ -344,49 +58,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_6(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_7(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 54
-; CHECK-NEXT:    st.h $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 38
-; CHECK-NEXT:    st.h $zero, $sp, 36
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 24
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 55
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24>
   ret <32 x i8> %shuffle
@@ -395,41 +67,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_7(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_8(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 56
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
   ret <32 x i8> %shuffle
@@ -438,45 +76,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_8(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_9(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 22
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.h $a0, $sp, 20
-; CHECK-NEXT:    st.h $a0, $sp, 61
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 57
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 9
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22>
   ret <32 x i8> %shuffle
@@ -485,41 +85,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_9(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_10(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 20
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 58
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 10
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21>
   ret <32 x i8> %shuffle
@@ -528,41 +94,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_10(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_11(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 58
-; CHECK-NEXT:    st.h $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 42
-; CHECK-NEXT:    st.h $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 20
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 59
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 11
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 4, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19, i32 20>
   ret <32 x i8> %shuffle
@@ -571,35 +103,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_11(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_12(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 60
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 3, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18, i32 19>
   ret <32 x i8> %shuffle
@@ -608,37 +112,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_12(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_13(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 44
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 18
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    ld.h $a0, $sp, 16
-; CHECK-NEXT:    st.h $a0, $sp, 61
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 13
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 2, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17, i32 18>
   ret <32 x i8> %shuffle
@@ -647,33 +121,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_13(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_14(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 44
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 16
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 1, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16, i32 17>
   ret <32 x i8> %shuffle
@@ -682,33 +130,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_14(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_left_shift_15(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_left_shift_15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 62
-; CHECK-NEXT:    st.h $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.b $zero, $sp, 46
-; CHECK-NEXT:    st.h $zero, $sp, 44
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.b $a0, $sp, 16
-; CHECK-NEXT:    st.b $a0, $sp, 63
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 0
-; CHECK-NEXT:    st.b $a0, $sp, 47
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 0, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 16>
   ret <32 x i8> %shuffle
@@ -717,43 +139,7 @@ define <32 x i8> @shuffle_32i8_byte_left_shift_15(<32 x i8> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_2(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 28
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 58
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 50
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 16, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
   ret <16 x i16> %shuffle
@@ -762,39 +148,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_2(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_4(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.w $a0, $sp, 24
-; CHECK-NEXT:    st.w $a0, $sp, 60
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 52
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 16, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13>
   ret <16 x i16> %shuffle
@@ -803,39 +157,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_4(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_6(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 36
-; CHECK-NEXT:    st.w $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 24
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 54
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 16, i32 0, i32 1, i32 2, i32 3, i32 4, i32 16, i32 16, i32 16, i32 8, i32 9, i32 10, i32 11, i32 12>
   ret <16 x i16> %shuffle
@@ -844,33 +166,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_6(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_8(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.d $a0, $sp, 16
-; CHECK-NEXT:    st.d $a0, $sp, 56
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 16, i32 16, i32 0, i32 1, i32 2, i32 3, i32 16, i32 16, i32 16, i32 16, i32 8, i32 9, i32 10, i32 11>
   ret <16 x i16> %shuffle
@@ -879,35 +175,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_8(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_10(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 20
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 58
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 10
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 16, i32 16, i32 16, i32 0, i32 1, i32 2, i32 16, i32 16, i32 16, i32 16, i32 16, i32 8, i32 9, i32 10>
   ret <16 x i16> %shuffle
@@ -916,31 +184,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_10(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_12(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.w $a0, $sp, 16
-; CHECK-NEXT:    st.w $a0, $sp, 60
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 0, i32 1, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 8, i32 9>
   ret <16 x i16> %shuffle
@@ -949,31 +193,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_12(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_left_shift_14(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_left_shift_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 48
-; CHECK-NEXT:    st.h $zero, $sp, 44
-; CHECK-NEXT:    st.w $zero, $sp, 40
-; CHECK-NEXT:    st.d $zero, $sp, 32
-; CHECK-NEXT:    ld.h $a0, $sp, 16
-; CHECK-NEXT:    st.h $a0, $sp, 62
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; CHECK-NEXT:    st.h $a0, $sp, 46
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 0, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 8>
   ret <16 x i16> %shuffle
@@ -982,34 +202,7 @@ define <16 x i16> @shuffle_16i16_byte_left_shift_14(<16 x i16> %a) {
 define <8 x i32> @shuffle_8i32_byte_left_shift_4(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_left_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.w $zero, $sp, 16
-; CHECK-NEXT:    st.w $zero, $sp, 0
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; CHECK-NEXT:    st.w $a0, $sp, 28
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
-; CHECK-NEXT:    st.w $a0, $sp, 24
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; CHECK-NEXT:    st.w $a0, $sp, 20
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; CHECK-NEXT:    st.w $a0, $sp, 12
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
-; CHECK-NEXT:    st.w $a0, $sp, 8
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; CHECK-NEXT:    st.w $a0, $sp, 4
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 8, i32 0, i32 1, i32 2, i32 8, i32 4, i32 5, i32 6>
   ret <8 x i32> %shuffle
@@ -1018,30 +211,7 @@ define <8 x i32> @shuffle_8i32_byte_left_shift_4(<8 x i32> %a) {
 define <8 x i32> @shuffle_8i32_byte_left_shift_8(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_left_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.d $zero, $sp, 16
-; CHECK-NEXT:    st.d $zero, $sp, 0
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
-; CHECK-NEXT:    st.w $a0, $sp, 28
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; CHECK-NEXT:    st.w $a0, $sp, 24
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
-; CHECK-NEXT:    st.w $a0, $sp, 12
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; CHECK-NEXT:    st.w $a0, $sp, 8
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 0, i32 1, i32 8, i32 8, i32 4, i32 5>
   ret <8 x i32> %shuffle
@@ -1050,28 +220,7 @@ define <8 x i32> @shuffle_8i32_byte_left_shift_8(<8 x i32> %a) {
 define <8 x i32> @shuffle_8i32_byte_left_shift_12(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_left_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.w $zero, $sp, 24
-; CHECK-NEXT:    st.d $zero, $sp, 16
-; CHECK-NEXT:    st.w $zero, $sp, 8
-; CHECK-NEXT:    st.d $zero, $sp, 0
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 4
-; CHECK-NEXT:    st.w $a0, $sp, 28
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 0
-; CHECK-NEXT:    st.w $a0, $sp, 12
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 0, i32 8, i32 8, i32 8, i32 4>
   ret <8 x i32> %shuffle
@@ -1080,26 +229,7 @@ define <8 x i32> @shuffle_8i32_byte_left_shift_12(<8 x i32> %a) {
 define <4 x i64> @shuffle_4i64_byte_left_shift_8(<4 x i64> %a) {
 ; CHECK-LABEL: shuffle_4i64_byte_left_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.d $zero, $sp, 16
-; CHECK-NEXT:    st.d $zero, $sp, 0
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 2
-; CHECK-NEXT:    st.d $a0, $sp, 24
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 0
-; CHECK-NEXT:    st.d $a0, $sp, 8
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsll.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 0, i32 4, i32 2>
   ret <4 x i64> %shuffle
@@ -1108,61 +238,7 @@ define <4 x i64> @shuffle_4i64_byte_left_shift_8(<4 x i64> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_1(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 62
-; CHECK-NEXT:    ld.h $a0, $sp, 29
-; CHECK-NEXT:    st.h $a0, $sp, 60
-; CHECK-NEXT:    ld.w $a0, $sp, 25
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 17
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 46
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 1
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 1
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32>
   ret <32 x i8> %shuffle
@@ -1171,57 +247,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_1(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_2(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 60
-; CHECK-NEXT:    ld.w $a0, $sp, 26
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 18
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 45
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 2
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1230,57 +256,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_2(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_3(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.h $zero, $sp, 61
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.h $zero, $sp, 45
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 60
-; CHECK-NEXT:    ld.w $a0, $sp, 27
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 19
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 3
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 3
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1289,51 +265,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_3(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_4(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 44
-; CHECK-NEXT:    ld.w $a0, $sp, 28
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 20
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 43
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 4
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1342,53 +274,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_4(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_5(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.w $zero, $sp, 59
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.w $zero, $sp, 43
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 58
-; CHECK-NEXT:    ld.h $a0, $sp, 29
-; CHECK-NEXT:    st.h $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 21
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 5
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 5
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1397,49 +283,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_5(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_6(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.w $zero, $sp, 58
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.w $zero, $sp, 42
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 22
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 41
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 6
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1448,49 +292,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_6(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_7(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.h $zero, $sp, 61
-; CHECK-NEXT:    st.w $zero, $sp, 57
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.h $zero, $sp, 45
-; CHECK-NEXT:    st.w $zero, $sp, 41
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 23
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 7
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 7
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1499,41 +301,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_7(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_8(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.d $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 40
-; CHECK-NEXT:    ld.d $a0, $sp, 24
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 39
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 8
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1542,45 +310,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_8(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_9(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.d $zero, $sp, 55
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.d $zero, $sp, 39
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 54
-; CHECK-NEXT:    ld.h $a0, $sp, 29
-; CHECK-NEXT:    st.h $a0, $sp, 52
-; CHECK-NEXT:    ld.w $a0, $sp, 25
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 9
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 9
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1589,41 +319,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_9(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_10(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.d $zero, $sp, 54
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.d $zero, $sp, 38
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 52
-; CHECK-NEXT:    ld.w $a0, $sp, 26
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 37
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 10
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 10
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1632,41 +328,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_10(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_11(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.h $zero, $sp, 61
-; CHECK-NEXT:    st.d $zero, $sp, 53
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.h $zero, $sp, 45
-; CHECK-NEXT:    st.d $zero, $sp, 37
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 52
-; CHECK-NEXT:    ld.w $a0, $sp, 27
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 11
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 11
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1675,35 +337,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_11(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_12(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 60
-; CHECK-NEXT:    st.d $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 44
-; CHECK-NEXT:    st.d $zero, $sp, 36
-; CHECK-NEXT:    ld.w $a0, $sp, 28
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 35
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 12
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 12, i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 28, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1712,37 +346,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_12(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_13(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.w $zero, $sp, 59
-; CHECK-NEXT:    st.d $zero, $sp, 51
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.w $zero, $sp, 43
-; CHECK-NEXT:    st.d $zero, $sp, 35
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 50
-; CHECK-NEXT:    ld.h $a0, $sp, 29
-; CHECK-NEXT:    st.h $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 13
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 13
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 13, i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 29, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1751,33 +355,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_13(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_14(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.w $zero, $sp, 58
-; CHECK-NEXT:    st.d $zero, $sp, 50
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.w $zero, $sp, 42
-; CHECK-NEXT:    st.d $zero, $sp, 34
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 33
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 14
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 14, i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 30, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1786,33 +364,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_14(<32 x i8> %a) {
 define <32 x i8> @shuffle_32i8_byte_right_shift_15(<32 x i8> %a) {
 ; CHECK-LABEL: shuffle_32i8_byte_right_shift_15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.b $zero, $sp, 63
-; CHECK-NEXT:    st.h $zero, $sp, 61
-; CHECK-NEXT:    st.w $zero, $sp, 57
-; CHECK-NEXT:    st.d $zero, $sp, 49
-; CHECK-NEXT:    st.b $zero, $sp, 47
-; CHECK-NEXT:    st.h $zero, $sp, 45
-; CHECK-NEXT:    st.w $zero, $sp, 41
-; CHECK-NEXT:    st.d $zero, $sp, 33
-; CHECK-NEXT:    ld.b $a0, $sp, 31
-; CHECK-NEXT:    st.b $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.b $a0, $vr0, 15
-; CHECK-NEXT:    st.b $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 15
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <32 x i8> %a, <32 x i8> zeroinitializer, <32 x i32> <i32 15, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 31, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32, i32 32>
   ret <32 x i8> %shuffle
@@ -1821,43 +373,7 @@ define <32 x i8> @shuffle_32i8_byte_right_shift_15(<32 x i8> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_2(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 60
-; CHECK-NEXT:    ld.w $a0, $sp, 26
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 18
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 44
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 1
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 2
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>
   ret <16 x i16> %shuffle
@@ -1866,39 +382,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_2(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_4(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 60
-; CHECK-NEXT:    st.w $zero, $sp, 44
-; CHECK-NEXT:    ld.w $a0, $sp, 28
-; CHECK-NEXT:    st.w $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 20
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 42
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 2
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 16, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -1907,39 +391,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_4(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_6(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.w $zero, $sp, 58
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.w $zero, $sp, 42
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 56
-; CHECK-NEXT:    ld.d $a0, $sp, 22
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 40
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 3
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 6
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 16, i32 16, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -1948,33 +400,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_6(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_8(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.d $zero, $sp, 56
-; CHECK-NEXT:    st.d $zero, $sp, 40
-; CHECK-NEXT:    ld.d $a0, $sp, 24
-; CHECK-NEXT:    st.d $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 38
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 4
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 16, i32 16, i32 16, i32 16, i32 12, i32 13, i32 14, i32 15, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -1983,35 +409,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_8(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_10(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.d $zero, $sp, 54
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.d $zero, $sp, 38
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 52
-; CHECK-NEXT:    ld.w $a0, $sp, 26
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 36
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 5
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 10
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 5, i32 6, i32 7, i32 16, i32 16, i32 16, i32 16, i32 16, i32 13, i32 14, i32 15, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -2020,31 +418,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_10(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_12(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.w $zero, $sp, 60
-; CHECK-NEXT:    st.d $zero, $sp, 52
-; CHECK-NEXT:    st.w $zero, $sp, 44
-; CHECK-NEXT:    st.d $zero, $sp, 36
-; CHECK-NEXT:    ld.w $a0, $sp, 28
-; CHECK-NEXT:    st.w $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 34
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 6
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 6, i32 7, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 14, i32 15, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -2053,31 +427,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_12(<16 x i16> %a) {
 define <16 x i16> @shuffle_16i16_byte_right_shift_14(<16 x i16> %a) {
 ; CHECK-LABEL: shuffle_16i16_byte_right_shift_14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -96
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 80 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 96
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    xvst $xr0, $sp, 0
-; CHECK-NEXT:    st.h $zero, $sp, 62
-; CHECK-NEXT:    st.w $zero, $sp, 58
-; CHECK-NEXT:    st.d $zero, $sp, 50
-; CHECK-NEXT:    st.h $zero, $sp, 46
-; CHECK-NEXT:    st.w $zero, $sp, 42
-; CHECK-NEXT:    st.d $zero, $sp, 34
-; CHECK-NEXT:    ld.h $a0, $sp, 30
-; CHECK-NEXT:    st.h $a0, $sp, 48
-; CHECK-NEXT:    vpickve2gr.h $a0, $vr0, 7
-; CHECK-NEXT:    st.h $a0, $sp, 32
-; CHECK-NEXT:    xvld $xr0, $sp, 32
-; CHECK-NEXT:    addi.d $sp, $fp, -96
-; CHECK-NEXT:    ld.d $fp, $sp, 80 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 96
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 14
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <16 x i16> %a, <16 x i16> zeroinitializer, <16 x i32> <i32 7, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 15, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   ret <16 x i16> %shuffle
@@ -2086,34 +436,7 @@ define <16 x i16> @shuffle_16i16_byte_right_shift_14(<16 x i16> %a) {
 define <8 x i32> @shuffle_8i32_byte_right_shift_4(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_right_shift_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.w $zero, $sp, 28
-; CHECK-NEXT:    st.w $zero, $sp, 12
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    st.w $a0, $sp, 24
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; CHECK-NEXT:    st.w $a0, $sp, 20
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 5
-; CHECK-NEXT:    st.w $a0, $sp, 16
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    st.w $a0, $sp, 8
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; CHECK-NEXT:    st.w $a0, $sp, 4
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 1
-; CHECK-NEXT:    st.w $a0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 4
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 1, i32 2, i32 3, i32 8, i32 5, i32 6, i32 7, i32 8>
   ret <8 x i32> %shuffle
@@ -2122,30 +445,7 @@ define <8 x i32> @shuffle_8i32_byte_right_shift_4(<8 x i32> %a) {
 define <8 x i32> @shuffle_8i32_byte_right_shift_8(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_right_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.d $zero, $sp, 24
-; CHECK-NEXT:    st.d $zero, $sp, 8
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    st.w $a0, $sp, 20
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 6
-; CHECK-NEXT:    st.w $a0, $sp, 16
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    st.w $a0, $sp, 4
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 2
-; CHECK-NEXT:    st.w $a0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 2, i32 3, i32 8, i32 8, i32 6, i32 7, i32 8, i32 8>
   ret <8 x i32> %shuffle
@@ -2154,28 +454,7 @@ define <8 x i32> @shuffle_8i32_byte_right_shift_8(<8 x i32> %a) {
 define <8 x i32> @shuffle_8i32_byte_right_shift_12(<8 x i32> %a) {
 ; CHECK-LABEL: shuffle_8i32_byte_right_shift_12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.w $zero, $sp, 28
-; CHECK-NEXT:    st.d $zero, $sp, 20
-; CHECK-NEXT:    st.w $zero, $sp, 12
-; CHECK-NEXT:    st.d $zero, $sp, 4
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 7
-; CHECK-NEXT:    st.w $a0, $sp, 16
-; CHECK-NEXT:    xvpickve2gr.w $a0, $xr0, 3
-; CHECK-NEXT:    st.w $a0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 12
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <8 x i32> %a, <8 x i32> zeroinitializer, <8 x i32> <i32 3, i32 8, i32 8, i32 8, i32 7, i32 8, i32 8, i32 8>
   ret <8 x i32> %shuffle
@@ -2184,28 +463,8 @@ define <8 x i32> @shuffle_8i32_byte_right_shift_12(<8 x i32> %a) {
 define <4 x i64> @shuffle_4i64_byte_right_shift_8(<4 x i64> %a) {
 ; CHECK-LABEL: shuffle_4i64_byte_right_shift_8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi.d $sp, $sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    st.d $ra, $sp, 56 # 8-byte Folded Spill
-; CHECK-NEXT:    st.d $fp, $sp, 48 # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset 1, -8
-; CHECK-NEXT:    .cfi_offset 22, -16
-; CHECK-NEXT:    addi.d $fp, $sp, 64
-; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    bstrins.d $sp, $zero, 4, 0
-; CHECK-NEXT:    st.d $zero, $sp, 24
-; CHECK-NEXT:    st.d $zero, $sp, 8
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 3
-; CHECK-NEXT:    st.d $a0, $sp, 16
-; CHECK-NEXT:    xvpickve2gr.d $a0, $xr0, 1
-; CHECK-NEXT:    st.d $a0, $sp, 0
-; CHECK-NEXT:    xvld $xr0, $sp, 0
-; CHECK-NEXT:    addi.d $sp, $fp, -64
-; CHECK-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload
-; CHECK-NEXT:    ld.d $ra, $sp, 56 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 64
+; CHECK-NEXT:    xvbsrl.v $xr0, $xr0, 8
 ; CHECK-NEXT:    ret
   %shuffle = shufflevector <4 x i64> %a, <4 x i64> zeroinitializer, <4 x i32> <i32 1, i32 4, i32 3, i32 4>
   ret <4 x i64> %shuffle
 }
-
