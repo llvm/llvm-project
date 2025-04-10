@@ -155,8 +155,8 @@ struct FormatResourceDimension
     case dxil::ResourceKind::StructuredBuffer:
       if (!Item.isUAV())
         OS << "r/o";
-      else if (Item.getUAV().HasCounter)
-        OS << "r/w+cnt";
+      //      else if (Item.getUAV().HasCounter)
+      //        OS << "r/w+cnt";
       else
         OS << "r/w";
       break;
