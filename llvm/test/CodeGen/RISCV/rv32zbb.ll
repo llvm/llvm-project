@@ -1718,3 +1718,141 @@ define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 %x, i32 %y, ptr %z) {
   %sub = sub nuw i32 %x, %select
   ret i32 %sub
 }
+
+define i8 @sub_if_uge_C_i8(i8 zeroext %x) {
+; CHECK-LABEL: sub_if_uge_C_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltiu a1, a0, 13
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    andi a1, a1, -13
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i8 %x, 12
+  %sub = add i8 %x, -13
+  %conv4 = select i1 %cmp, i8 %sub, i8 %x
+  ret i8 %conv4
+}
+
+define i16 @sub_if_uge_C_i16(i16 zeroext %x) {
+; CHECK-LABEL: sub_if_uge_C_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltiu a1, a0, 251
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    andi a1, a1, -251
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i16 %x, 250
+  %sub = add i16 %x, -251
+  %conv4 = select i1 %cmp, i16 %sub, i16 %x
+  ret i16 %conv4
+}
+
+define i32 @sub_if_uge_C_i32(i32 signext %x) {
+; CHECK-LABEL: sub_if_uge_C_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:    addi a1, a1, -16
+; CHECK-NEXT:    sltu a1, a1, a0
+; CHECK-NEXT:    neg a1, a1
+; CHECK-NEXT:    addi a2, a2, 15
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %x, 65520
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i64 @sub_if_uge_C_i64(i64 %x) {
+; CHECK-LABEL: sub_if_uge_C_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 1
+; CHECK-NEXT:    beq a1, a2, .LBB60_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    sltiu a2, a1, 2
+; CHECK-NEXT:    xori a2, a2, 1
+; CHECK-NEXT:    j .LBB60_3
+; CHECK-NEXT:  .LBB60_2:
+; CHECK-NEXT:    lui a2, 172127
+; CHECK-NEXT:    addi a2, a2, 511
+; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:  .LBB60_3:
+; CHECK-NEXT:    neg a2, a2
+; CHECK-NEXT:    andi a3, a2, -2
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    lui a3, 876449
+; CHECK-NEXT:    addi a3, a3, -512
+; CHECK-NEXT:    and a2, a2, a3
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    add a1, a1, a0
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i64 %x, 4999999999
+  %sub = add i64 %x, -5000000000
+  %cond = select i1 %cmp, i64 %sub, i64 %x
+  ret i64 %cond
+}
+
+define i32 @sub_if_uge_C_multiuse_cmp_i32(i32 signext %x, ptr %z) {
+; CHECK-LABEL: sub_if_uge_C_multiuse_cmp_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    lui a3, 1048560
+; CHECK-NEXT:    addi a2, a2, -16
+; CHECK-NEXT:    sltu a2, a2, a0
+; CHECK-NEXT:    neg a4, a2
+; CHECK-NEXT:    addi a3, a3, 15
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    add a0, a0, a3
+; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    ret
+  %cmp = icmp ugt i32 %x, 65520
+  %conv = zext i1 %cmp to i32
+  store i32 %conv, ptr %z, align 4
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i32 @sub_if_uge_C_multiuse_sub_i32(i32 signext %x, ptr %z) {
+; CHECK-LABEL: sub_if_uge_C_multiuse_sub_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:    lui a3, 16
+; CHECK-NEXT:    addi a2, a2, 15
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    addi a3, a3, -16
+; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    bltu a3, a0, .LBB62_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:  .LBB62_2:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %sub = add i32 %x, -65521
+  store i32 %sub, ptr %z, align 4
+  %cmp = icmp ugt i32 %x, 65520
+  %cond = select i1 %cmp, i32 %sub, i32 %x
+  ret i32 %cond
+}
+
+define i32 @sub_if_uge_C_swapped_i32(i32 %x) {
+; CHECK-LABEL: sub_if_uge_C_swapped_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 16
+; CHECK-NEXT:    lui a2, 1048560
+; CHECK-NEXT:    addi a1, a1, -15
+; CHECK-NEXT:    sltu a1, a0, a1
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    addi a2, a2, 15
+; CHECK-NEXT:    and a1, a1, a2
+; CHECK-NEXT:    add a0, a0, a1
+; CHECK-NEXT:    ret
+  %cmp = icmp ult i32 %x, 65521
+  %sub = add i32 %x, -65521
+  %cond = select i1 %cmp, i32 %x, i32 %sub
+  ret i32 %cond
+}
