@@ -463,6 +463,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
       if (!this->visit(SubExpr))
         return false;
+      if (CE->getType()->isFunctionPointerType())
+        return true;
       if (FromT == PT_Ptr)
         return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
       return true;
@@ -4921,10 +4923,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset =
-        this->allocateLocalPrimitive(Callee, PT_FnPtr, /*IsConst=*/true);
+        this->allocateLocalPrimitive(Callee, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(Callee))
       return false;
-    if (!this->emitSetLocal(PT_FnPtr, *CalleeOffset, E))
+    if (!this->emitSetLocal(PT_Ptr, *CalleeOffset, E))
       return false;
   }
 
@@ -5011,7 +5013,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       if (!this->emitGetMemberPtrDecl(E))
         return false;
     } else {
-      if (!this->emitGetLocal(PT_FnPtr, *CalleeOffset, E))
+      if (!this->emitGetLocal(PT_Ptr, *CalleeOffset, E))
         return false;
     }
     if (!this->emitCallPtr(ArgSize, E, E))
@@ -6823,7 +6825,7 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
         return true;
     }
 
-    if (size_t N = Desc->getNumElems()) {
+    if (unsigned N = Desc->getNumElems()) {
       for (ssize_t I = N - 1; I >= 0; --I) {
         if (!this->emitConstUint64(I, Loc))
           return false;

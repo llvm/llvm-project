@@ -222,19 +222,6 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   return variant_names;
 }
 
-std::pair<FunctionNameType, llvm::StringRef>
-ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
-  FunctionNameType func_name_type = eFunctionNameTypeNone;
-
-  if (ObjCLanguage::IsPossibleObjCMethodName(name.GetCString()))
-    func_name_type = eFunctionNameTypeFull;
-
-  if (ObjCLanguage::IsPossibleObjCSelector(name.GetCString()))
-    func_name_type |= eFunctionNameTypeSelector;
-
-  return {func_name_type, llvm::StringRef()};
-}
-
 bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   ConstString demangled_name = mangled.GetDemangledName();
   if (!demangled_name)
