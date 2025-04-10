@@ -1301,7 +1301,7 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
   for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
 
-    if (II != IE && II->isDebugInstr()) {
+    if (II != IE && II->isMetaInstruction()) {
       II = ++Next;
       continue;
     }
