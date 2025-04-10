@@ -132,6 +132,24 @@ protected:
 };
 
 //===----------------------------------------------------------------------===//
+// SymbolAttrLinkerInterface
+//===----------------------------------------------------------------------===//
+
+class SymbolAttrLinkerInterface : public SymbolLinkerInterface {
+public:
+  using SymbolLinkerInterface::SymbolLinkerInterface;
+
+  /// Returns the symbol for the given operation.
+  StringRef getSymbol(Operation *op) const override;
+
+  /// Checks if an operation conflicts with existing linked operations.
+  Conflict findConflict(Operation *src) const override;
+
+protected:
+  llvm::StringMap<Operation *> summary;
+};
+
+//===----------------------------------------------------------------------===//
 // SymbolLinkerInterfaceCollection
 //===----------------------------------------------------------------------===//
 

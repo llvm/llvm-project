@@ -212,24 +212,12 @@ unsigned getBitWidth(LLVM::GlobalOp op) {
 // LLVMSymbolLinkerInterface
 //===----------------------------------------------------------------------===//
 
-class LLVMSymbolLinkerInterface : public SymbolLinkerInterface {
+class LLVMSymbolLinkerInterface : public SymbolAttrLinkerInterface {
 public:
-  using SymbolLinkerInterface::SymbolLinkerInterface;
+  using SymbolAttrLinkerInterface::SymbolAttrLinkerInterface;
 
   bool canBeLinked(Operation *op) const override {
     return isa<LLVM::GlobalOp>(op) || isa<LLVM::LLVMFuncOp>(op);
-  }
-
-  StringRef getSymbol(Operation *op) const override { return symbol(op); }
-
-  Conflict findConflict(Operation *src) const override {
-    assert(canBeLinked(src) && "expected linkable operation");
-
-    if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
-      return {it->second, src};
-    }
-
-    return Conflict::noConflict(src);
   }
 
   bool isLinkNeeded(Conflict pair, bool forDependency) const override {
@@ -466,7 +454,6 @@ private:
   }
 
   SetVector<Operation *> uniqued;
-  llvm::StringMap<Operation *> summary;
 };
 
 //===----------------------------------------------------------------------===//

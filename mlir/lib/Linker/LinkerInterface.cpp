@@ -13,6 +13,10 @@
 using namespace mlir;
 using namespace mlir::link;
 
+//===----------------------------------------------------------------------===//
+// LinkState
+//===----------------------------------------------------------------------===//
+
 template <typename CloneFunc>
 Operation *cloneImpl(Operation *src, IRMapping &mapping, CloneFunc cloneFunc) {
   assert(!mapping.contains(src));
@@ -39,4 +43,22 @@ Operation *LinkState::getDestinationOp() const {
 
 Operation *LinkState::remapped(Operation *src) const {
   return mapping.lookupOrNull(src);
+}
+
+//===----------------------------------------------------------------------===//
+// SymbolAttrLinkerInterface
+//===----------------------------------------------------------------------===//
+
+StringRef SymbolAttrLinkerInterface::getSymbol(Operation *op) const {
+  return op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
+      .getValue();
+}
+
+Conflict SymbolAttrLinkerInterface::findConflict(Operation *src) const {
+  assert(canBeLinked(src) && "expected linkable operation");
+  StringRef symbol = getSymbol(src);
+  auto it = summary.find(symbol);
+  if (it == summary.end())
+    return Conflict::noConflict(src);
+  return {it->second, src};
 }
