@@ -1343,6 +1343,48 @@ def FuncOp : CIR_Op<"func", [
 }
 
 //===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
+    : Op<CIR_Dialect, mnemonic,
+         !listconcat(extra_traits,
+                     [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+                      DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+  let hasVerifier = 0;
+
+  // TODO(cir): for now cir.call is just a tiny shell of what it will become.
+  // More attributes, arguments, and properties will be added in the future as
+  // the upstreaming process moves on. The verifiers is also missing for now,
+  // will add in the future.
+
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+}
+
+def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
+  let summary = "call a function";
+  let description = [{
+    The `cir.call` operation represents a direct call to a function that is
+    within the same symbol scope as the call. The callee is encoded as a symbol
+    reference attribute named `callee`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.call @foo()
+    ```
+  }];
+
+  let arguments = commonArgs;
+
+  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee), [{
+      $_state.addAttribute("callee", callee);
+    }]>];
+}
+
+//===----------------------------------------------------------------------===//
 // UnreachableOp
 //===----------------------------------------------------------------------===//
 

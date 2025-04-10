@@ -361,7 +361,7 @@ public:
 
   bool tryIndexedLoad(SDNode *N);
 
-  void SelectPtrauthAuthX16X17(SDNode *N);
+  void SelectPtrauthAuth(SDNode *N);
   void SelectPtrauthResign(SDNode *N);
 
   bool trySelectStackSlotTagP(SDNode *N);
@@ -1520,7 +1520,7 @@ extractPtrauthBlendDiscriminators(SDValue Disc, SelectionDAG *DAG) {
       AddrDisc);
 }
 
-void AArch64DAGToDAGISel::SelectPtrauthAuthX16X17(SDNode *N) {
+void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
   SDLoc DL(N);
   // IntrinsicID is operand #0
   SDValue Val = N->getOperand(1);
@@ -1538,7 +1538,7 @@ void AArch64DAGToDAGISel::SelectPtrauthAuthX16X17(SDNode *N) {
                                          AArch64::X16, Val, SDValue());
   SDValue Ops[] = {AUTKey, AUTConstDisc, AUTAddrDisc, X16Copy.getValue(1)};
 
-  SDNode *AUT = CurDAG->getMachineNode(AArch64::AUTx16x17, DL, MVT::i64, Ops);
+  SDNode *AUT = CurDAG->getMachineNode(AArch64::AUT, DL, MVT::i64, Ops);
   ReplaceNode(N, AUT);
 }
 
@@ -5612,9 +5612,7 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
 
     case Intrinsic::ptrauth_auth:
-      if (!Subtarget->isX16X17Safer(CurDAG->getMachineFunction()))
-        break;
-      SelectPtrauthAuthX16X17(Node);
+      SelectPtrauthAuth(Node);
       return;
 
     case Intrinsic::ptrauth_resign:
