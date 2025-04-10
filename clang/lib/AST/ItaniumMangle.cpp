@@ -1404,9 +1404,19 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
     //   - a template type parameter
     //   - a template template parameter with arguments
     // In all of these cases, we should have no prefix.
-    if (qualifier->getPrefix()) {
-      mangleUnresolvedPrefix(qualifier->getPrefix(),
-                             /*recursive*/ true);
+    if (NestedNameSpecifier *Prefix = qualifier->getPrefix()) {
+      if (const auto *DTST =
+              dyn_cast<DependentTemplateSpecializationType>(type)) {
+        Out << "srN";
+        TemplateName Template = getASTContext().getDependentTemplateName(
+            {Prefix, DTST->getDependentTemplateName().getName(),
+             /*HasTemplateKeyword=*/true});
+        mangleTemplatePrefix(Template);
+        mangleTemplateArgs(Template, DTST->template_arguments());
+        break;
+      }
+      mangleUnresolvedPrefix(Prefix,
+                             /*recursive=*/true);
     } else {
       // Otherwise, all the cases want this.
       Out << "sr";
