@@ -34,6 +34,7 @@ private:
   mutable BugReporter *BR = nullptr;
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable llvm::DenseSet<const ValueDecl *> CreateOrCopyOutArguments;
+  mutable llvm::DenseSet<const Expr *> CreateOrCopyFnCall;
   mutable RetainTypeChecker RTC;
 
 public:
@@ -120,7 +121,7 @@ public:
       return;
 
     if (!isAdoptFn(F) || !CE->getNumArgs()) {
-      rememberOutArguments(CE, F);
+      checkCreateOrCopyFunction(CE, F, DeclWithIssue);
       return;
     }
 
@@ -129,24 +130,29 @@ public:
     auto Name = safeGetName(F);
     if (Result == IsOwnedResult::Unknown)
       Result = IsOwnedResult::NotOwned;
-    if (Result == IsOwnedResult::NotOwned && !isAllocInit(Arg) &&
-        !isCreateOrCopy(Arg)) {
-      if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
-        if (CreateOrCopyOutArguments.contains(DRE->getDecl()))
-          return;
-      }
-      if (RTC.isARCEnabled() && isAdoptNS(F))
-        reportUseAfterFree(Name, CE, DeclWithIssue, "when ARC is disabled");
-      else
-        reportUseAfterFree(Name, CE, DeclWithIssue);
+    if (isAllocInit(Arg) || isCreateOrCopy(Arg)) {
+      CreateOrCopyFnCall.insert(Arg); // Avoid double reporting.
+      return;
     }
+    if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip)
+      return;
+
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+      if (CreateOrCopyOutArguments.contains(DRE->getDecl()))
+        return;
+    }
+    if (RTC.isARCEnabled() && isAdoptNS(F))
+      reportUseAfterFree(Name, CE, DeclWithIssue, "when ARC is disabled");
+    else
+      reportUseAfterFree(Name, CE, DeclWithIssue);
   }
 
-  void rememberOutArguments(const CallExpr *CE,
-                            const FunctionDecl *Callee) const {
+  void checkCreateOrCopyFunction(const CallExpr *CE, const FunctionDecl *Callee,
+                                 const Decl *DeclWithIssue) const {
     if (!isCreateOrCopyFunction(Callee))
       return;
 
+    bool hasOutArgument = false;
     unsigned ArgCount = CE->getNumArgs();
     for (unsigned ArgIndex = 0; ArgIndex < ArgCount; ++ArgIndex) {
       auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
@@ -165,7 +171,12 @@ public:
       if (!Decl)
         continue;
       CreateOrCopyOutArguments.insert(Decl);
+      hasOutArgument = true;
     }
+    if (!RTC.isUnretained(Callee->getReturnType()))
+      return;
+    if (!hasOutArgument && !CreateOrCopyFnCall.contains(CE))
+      reportLeak(CE, DeclWithIssue);
   }
 
   void visitConstructExpr(const CXXConstructExpr *CE,
@@ -192,6 +203,13 @@ public:
     std::string Name = "RetainPtr constructor";
     auto *Arg = CE->getArg(0)->IgnoreParenCasts();
     auto Result = isOwned(Arg);
+
+    if (isCreateOrCopy(Arg))
+      CreateOrCopyFnCall.insert(Arg); // Avoid double reporting.
+
+    if (Result == IsOwnedResult::Skip)
+      return;
+
     if (Result == IsOwnedResult::Unknown)
       Result = IsOwnedResult::NotOwned;
     if (Result == IsOwnedResult::Owned)
@@ -317,11 +335,22 @@ public:
         if (auto *Callee = CE->getDirectCallee()) {
           if (isAdoptFn(Callee))
             return IsOwnedResult::NotOwned;
-          if (safeGetName(Callee) == "__builtin___CFStringMakeConstantString")
+          auto Name = safeGetName(Callee);
+          if (Name == "__builtin___CFStringMakeConstantString")
             return IsOwnedResult::NotOwned;
+          if ((Name == "checked_cf_cast" || Name == "dynamic_cf_cast" ||
+               Name == "checked_objc_cast" || Name == "dynamic_objc_cast") &&
+              CE->getNumArgs() == 1) {
+            E = CE->getArg(0)->IgnoreParenCasts();
+            continue;
+          }
           auto RetType = Callee->getReturnType();
           if (isRetainPtrType(RetType))
             return IsOwnedResult::NotOwned;
+          if (isCreateOrCopyFunction(Callee)) {
+            CreateOrCopyFnCall.insert(CE);
+            return IsOwnedResult::Owned;
+          }
         } else if (auto *CalleeExpr = CE->getCallee()) {
           if (isa<CXXDependentScopeMemberExpr>(CalleeExpr))
             return IsOwnedResult::Skip; // Wait for instantiation.
@@ -380,6 +409,20 @@ public:
     Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
+    PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
+                                 BR->getSourceManager());
+    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
+    Report->addRange(CE->getSourceRange());
+    Report->setDeclWithIssue(DeclWithIssue);
+    BR->emitReport(std::move(Report));
+  }
+
+  void reportLeak(const CallExpr *CE, const Decl *DeclWithIssue) const {
+    SmallString<100> Buf;
+    llvm::raw_svector_ostream Os(Buf);
+
+    Os << "The return value is +1 and results in a memory leak.";
+
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
