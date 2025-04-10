@@ -97,7 +97,7 @@ INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
                 false)
 
 // Allow users to specify additional key/value pairs to reflect. These key/value
-// pairs are the last to be added to the VarMap, and therefore will take
+// pairs are the last to be added to the ReflectMap, and therefore will take
 // precedence over initial values (i.e. __CUDA_FTZ from module medadata and
 // __CUDA_ARCH from SmVersion).
 static cl::list<std::string> ReflectList(
@@ -105,7 +105,7 @@ static cl::list<std::string> ReflectList(
     cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
     cl::ValueRequired);
 
-// Set the VarMap with, first, the value of __CUDA_FTZ from module metadata, and
+// Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata, and
 // then the key/value pairs from the command line.
 void NVVMReflect::populateReflectMap(Module &M) {
   if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
