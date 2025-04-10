@@ -95,6 +95,7 @@ inline void registerAllPasses() {
   arm_sve::registerArmSVEPasses();
   emitc::registerEmitCPasses();
   xegpu::registerXeGPUPasses();
+  registerConvertArithToSMTPass();
 
   // Dialect pipelines
   bufferization::registerBufferizationPipelines();
