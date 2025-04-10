@@ -105,8 +105,8 @@ static cl::list<std::string> ReflectList(
     cl::desc("A key=value pair. Replace __nvvm_reflect(name) with value."),
     cl::ValueRequired);
 
-// Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata, and
-// then the key/value pairs from the command line.
+// Set the ReflectMap with, first, the value of __CUDA_FTZ from module metadata,
+// and then the key/value pairs from the command line.
 void NVVMReflect::populateReflectMap(Module &M) {
   if (auto *Flag = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag(CUDA_FTZ_MODULE_NAME)))
