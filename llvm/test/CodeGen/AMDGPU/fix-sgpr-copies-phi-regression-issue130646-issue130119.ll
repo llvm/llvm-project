@@ -10,29 +10,31 @@ define double @issue130646(i64 %arg) {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
+; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    s_branch .LBB0_2
-; CHECK-NEXT:  .LBB0_1: ; %for.body.5
+; CHECK-NEXT:  .LBB0_1: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 1
-; CHECK-NEXT:    v_or_b32_e32 v3, s7, v3
-; CHECK-NEXT:    v_or_b32_e32 v2, s6, v2
-; CHECK-NEXT:    s_lshr_b64 s[6:7], s[4:5], 5
-; CHECK-NEXT:    s_or_b32 s6, s6, 1
-; CHECK-NEXT:    v_or3_b32 v3, v3, v1, s7
-; CHECK-NEXT:    v_or3_b32 v2, v2, v0, s6
-; CHECK-NEXT:    s_lshr_b64 s[4:5], s[4:5], 8
-; CHECK-NEXT:    s_cbranch_execz .LBB0_4
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: ; %for.body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
-; CHECK-NEXT:    v_readfirstlane_b32 s8, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s9, v1
-; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
-; CHECK-NEXT:  ; %bb.3:
-; CHECK-NEXT:    ; implicit-def: $vgpr2_vgpr3
-; CHECK-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; CHECK-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[2:3]
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
+; CHECK-NEXT:    s_cbranch_vccnz .LBB0_1
+; CHECK-NEXT:  ; %bb.3: ; %for.body.5
+; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
+; CHECK-NEXT:    v_lshrrev_b64 v[6:7], 1, v[2:3]
+; CHECK-NEXT:    v_lshrrev_b64 v[8:9], 5, v[2:3]
+; CHECK-NEXT:    v_or_b32_e32 v5, v5, v7
+; CHECK-NEXT:    v_or_b32_e32 v4, v4, v6
+; CHECK-NEXT:    v_or_b32_e32 v6, 1, v8
+; CHECK-NEXT:    v_or3_b32 v5, v5, v1, v9
+; CHECK-NEXT:    v_or3_b32 v4, v4, v0, v6
+; CHECK-NEXT:    v_lshrrev_b64 v[2:3], 8, v[2:3]
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_branch .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: ; %for.cond.cleanup
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
