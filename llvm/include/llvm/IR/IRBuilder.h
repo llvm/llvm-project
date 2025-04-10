@@ -2299,6 +2299,13 @@ public:
   // isSigned parameter.
   Value *CreateIntCast(Value *, Type *, const char *) = delete;
 
+  /// Cast between aggregate types that must have identical structure but may
+  /// differ in their leaf types. The leaf values are recursively extracted,
+  /// casted, and then reinserted into a value of type DestTy. The leaf types
+  /// must be castable using a bitcast or ptrcast, because signedness is
+  /// not specified.
+  Value *CreateAggregateCast(Value *V, Type *DestTy);
+
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions
   //===--------------------------------------------------------------------===//

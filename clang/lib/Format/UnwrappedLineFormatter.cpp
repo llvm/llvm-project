@@ -316,8 +316,13 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if (!(*J)->InPPDirective && !(*J)->isComment() &&
-                (*J)->Level < TheLine->Level) {
+            if ((*J)->InPPDirective || (*J)->isComment() ||
+                (*J)->Level > TheLine->Level) {
+              continue;
+            }
+            if ((*J)->Level < TheLine->Level ||
+                (Style.BreakBeforeBraces == FormatStyle::BS_Whitesmiths &&
+                 (*J)->First->is(tok::l_brace))) {
               Line = *J;
               break;
             }
@@ -463,13 +468,10 @@ private:
       switch (PreviousLine->First->Tok.getKind()) {
       case tok::at:
         // Don't merge block with left brace wrapped after ObjC special blocks.
-        if (PreviousLine->First->Next) {
-          tok::ObjCKeywordKind kwId =
-              PreviousLine->First->Next->Tok.getObjCKeywordID();
-          if (kwId == tok::objc_autoreleasepool ||
-              kwId == tok::objc_synchronized) {
-            return 0;
-          }
+        if (PreviousLine->First->Next &&
+            PreviousLine->First->Next->isOneOf(tok::objc_autoreleasepool,
+                                               tok::objc_synchronized)) {
+          return 0;
         }
         break;
 

@@ -38,6 +38,7 @@ public:
   OpenACCClauseKind getClauseKind() const { return Kind; }
   SourceLocation getBeginLoc() const { return Location.getBegin(); }
   SourceLocation getEndLoc() const { return Location.getEnd(); }
+  SourceRange getSourceRange() const { return Location; }
 
   static bool classof(const OpenACCClause *) { return true; }
 
@@ -1087,11 +1088,13 @@ class OpenACCCopyClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyClause, Expr *> {
   friend TrailingObjects;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                    SourceLocation LParenLoc, ArrayRef<Expr *> VarList,
-                    SourceLocation EndLoc)
-      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc) {
+                    SourceLocation LParenLoc, OpenACCModifierKind Mods,
+                    ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+      : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::Copy ||
             Spelling == OpenACCClauseKind::PCopy ||
             Spelling == OpenACCClauseKind::PresentOrCopy) &&
@@ -1110,20 +1113,23 @@ public:
   static OpenACCCopyClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
          SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
+
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
 };
 
 class OpenACCCopyInClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyInClause, Expr *> {
   friend TrailingObjects;
-  bool IsReadOnly;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyInClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                      SourceLocation LParenLoc, bool IsReadOnly,
+                      SourceLocation LParenLoc, OpenACCModifierKind Mods,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsReadOnly(IsReadOnly) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::CopyIn ||
             Spelling == OpenACCClauseKind::PCopyIn ||
             Spelling == OpenACCClauseKind::PresentOrCopyIn) &&
@@ -1139,24 +1145,25 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCopyIn ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCopyIn;
   }
-  bool isReadOnly() const { return IsReadOnly; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCopyInClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsReadOnly,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
 };
 
 class OpenACCCopyOutClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCopyOutClause, Expr *> {
   friend TrailingObjects;
-  bool IsZero;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCopyOutClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                       SourceLocation LParenLoc, bool IsZero,
+                       SourceLocation LParenLoc, OpenACCModifierKind Mods,
                        ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsZero(IsZero) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::CopyOut ||
             Spelling == OpenACCClauseKind::PCopyOut ||
             Spelling == OpenACCClauseKind::PresentOrCopyOut) &&
@@ -1172,24 +1179,25 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCopyOut ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCopyOut;
   }
-  bool isZero() const { return IsZero; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCopyOutClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
 };
 
 class OpenACCCreateClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCCreateClause, Expr *> {
   friend TrailingObjects;
-  bool IsZero;
+  OpenACCModifierKind Modifiers;
 
   OpenACCCreateClause(OpenACCClauseKind Spelling, SourceLocation BeginLoc,
-                      SourceLocation LParenLoc, bool IsZero,
+                      SourceLocation LParenLoc, OpenACCModifierKind Mods,
                       ArrayRef<Expr *> VarList, SourceLocation EndLoc)
       : OpenACCClauseWithVarList(Spelling, BeginLoc, LParenLoc, EndLoc),
-        IsZero(IsZero) {
+        Modifiers(Mods) {
     assert((Spelling == OpenACCClauseKind::Create ||
             Spelling == OpenACCClauseKind::PCreate ||
             Spelling == OpenACCClauseKind::PresentOrCreate) &&
@@ -1205,11 +1213,12 @@ public:
            C->getClauseKind() == OpenACCClauseKind::PCreate ||
            C->getClauseKind() == OpenACCClauseKind::PresentOrCreate;
   }
-  bool isZero() const { return IsZero; }
+  OpenACCModifierKind getModifierList() const { return Modifiers; }
   static OpenACCCreateClause *
   Create(const ASTContext &C, OpenACCClauseKind Spelling,
-         SourceLocation BeginLoc, SourceLocation LParenLoc, bool IsZero,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         SourceLocation BeginLoc, SourceLocation LParenLoc,
+         OpenACCModifierKind Mods, ArrayRef<Expr *> VarList,
+         SourceLocation EndLoc);
 };
 
 class OpenACCReductionClause final
@@ -1307,11 +1316,13 @@ public:
     switch (C->getClauseKind()) {
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   case OpenACCClauseKind::CLAUSE_NAME:                                         \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #define CLAUSE_ALIAS(ALIAS_NAME, CLAUSE_NAME, DEPRECATED)                      \
   case OpenACCClauseKind::ALIAS_NAME:                                          \
-    Visit##CLAUSE_NAME##Clause(*cast<OpenACC##CLAUSE_NAME##Clause>(C));        \
+    getDerived().Visit##CLAUSE_NAME##Clause(                                   \
+        *cast<OpenACC##CLAUSE_NAME##Clause>(C));                               \
     return;
 #include "clang/Basic/OpenACCClauses.def"
 
@@ -1324,7 +1335,7 @@ public:
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
   void Visit##CLAUSE_NAME##Clause(                                             \
       const OpenACC##CLAUSE_NAME##Clause &Clause) {                            \
-    return getDerived().Visit##CLAUSE_NAME##Clause(Clause);                    \
+    return getDerived().VisitClause(Clause);                                   \
   }
 
 #include "clang/Basic/OpenACCClauses.def"

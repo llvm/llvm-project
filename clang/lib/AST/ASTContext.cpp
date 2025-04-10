@@ -732,11 +732,8 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(*P)) {
       ID.AddInteger(0);
       ID.AddBoolean(TTP->isParameterPack());
-      if (TTP->isExpandedParameterPack()) {
-        ID.AddBoolean(true);
-        ID.AddInteger(TTP->getNumExpansionParameters());
-      } else
-        ID.AddBoolean(false);
+      ID.AddInteger(
+          TTP->getNumExpansionParameters().toInternalRepresentation());
       continue;
     }
 
@@ -789,9 +786,7 @@ ASTContext::getCanonicalTemplateTemplateParmDecl(
           *this, getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
           TTP->getDepth(), TTP->getIndex(), nullptr, false,
           TTP->isParameterPack(), /*HasTypeConstraint=*/false,
-          TTP->isExpandedParameterPack()
-              ? std::optional<unsigned>(TTP->getNumExpansionParameters())
-              : std::nullopt);
+          TTP->getNumExpansionParameters());
       CanonParams.push_back(NewTTP);
     } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       QualType T = getUnconstrainedType(getCanonicalType(NTTP->getType()));
@@ -5445,9 +5440,11 @@ QualType ASTContext::getHLSLAttributedResourceType(
   return QualType(Ty, 0);
 }
 /// Retrieve a substitution-result type.
-QualType ASTContext::getSubstTemplateTypeParmType(
-    QualType Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex, bool Final) const {
+QualType ASTContext::getSubstTemplateTypeParmType(QualType Replacement,
+                                                  Decl *AssociatedDecl,
+                                                  unsigned Index,
+                                                  UnsignedOrNone PackIndex,
+                                                  bool Final) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTypeParmType::Profile(ID, Replacement, AssociatedDecl, Index,
                                      PackIndex, Final);
@@ -5855,15 +5852,14 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
                     T, VK, NTTP->getLocation());
 
     if (NTTP->isParameterPack())
-      E = new (*this)
-          PackExpansionExpr(DependentTy, E, NTTP->getLocation(), std::nullopt);
+      E = new (*this) PackExpansionExpr(E, NTTP->getLocation(), std::nullopt);
     Arg = TemplateArgument(E);
   } else {
     auto *TTP = cast<TemplateTemplateParmDecl>(Param);
     TemplateName Name = getQualifiedTemplateName(
         nullptr, /*TemplateKeyword=*/false, TemplateName(TTP));
     if (TTP->isParameterPack())
-      Arg = TemplateArgument(Name, std::optional<unsigned>());
+      Arg = TemplateArgument(Name, /*NumExpansions=*/std::nullopt);
     else
       Arg = TemplateArgument(Name);
   }
@@ -5876,7 +5872,7 @@ TemplateArgument ASTContext::getInjectedTemplateArg(NamedDecl *Param) const {
 }
 
 QualType ASTContext::getPackExpansionType(QualType Pattern,
-                                          std::optional<unsigned> NumExpansions,
+                                          UnsignedOrNone NumExpansions,
                                           bool ExpectPackInType) const {
   assert((!ExpectPackInType || Pattern->containsUnexpandedParameterPack()) &&
          "Pack expansions must expand one or more parameter packs");
@@ -6371,10 +6367,10 @@ QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
 QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
                                          bool FullySubstituted,
                                          ArrayRef<QualType> Expansions,
-                                         int Index) const {
+                                         UnsignedOrNone Index) const {
   QualType Canonical;
-  if (FullySubstituted && Index != -1) {
-    Canonical = getCanonicalType(Expansions[Index]);
+  if (FullySubstituted && Index) {
+    Canonical = getCanonicalType(Expansions[*Index]);
   } else {
     llvm::FoldingSetNodeID ID;
     PackIndexingType::Profile(ID, *this, Pattern.getCanonicalType(), IndexExpr,
@@ -7014,7 +7010,7 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
         getCanonicalTemplateArgument(subst->getArgumentPack());
     return getSubstTemplateTemplateParmPack(
         canonArgPack, subst->getAssociatedDecl()->getCanonicalDecl(),
-        subst->getFinal(), subst->getIndex());
+        subst->getIndex(), subst->getFinal());
   }
   case TemplateName::DeducedTemplate: {
     assert(IgnoreDeduced == false);
@@ -7068,6 +7064,15 @@ bool ASTContext::hasSameTemplateName(const TemplateName &X,
                                      bool IgnoreDeduced) const {
   return getCanonicalTemplateName(X, IgnoreDeduced) ==
          getCanonicalTemplateName(Y, IgnoreDeduced);
+}
+
+bool ASTContext::isSameAssociatedConstraint(
+    const AssociatedConstraint &ACX, const AssociatedConstraint &ACY) const {
+  if (ACX.ArgPackSubstIndex != ACY.ArgPackSubstIndex)
+    return false;
+  if (!isSameConstraintExpr(ACX.ConstraintExpr, ACY.ConstraintExpr))
+    return false;
+  return true;
 }
 
 bool ASTContext::isSameConstraintExpr(const Expr *XCE, const Expr *YCE) const {
@@ -7386,8 +7391,8 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
       return false;
     }
 
-    if (!isSameConstraintExpr(FuncX->getTrailingRequiresClause(),
-                              FuncY->getTrailingRequiresClause()))
+    if (!isSameAssociatedConstraint(FuncX->getTrailingRequiresClause(),
+                                    FuncY->getTrailingRequiresClause()))
       return false;
 
     auto GetTypeAsWritten = [](const FunctionDecl *FD) {
@@ -10088,9 +10093,11 @@ ASTContext::getDependentTemplateName(const DependentTemplateStorage &S) const {
   return TemplateName(QTN);
 }
 
-TemplateName ASTContext::getSubstTemplateTemplateParm(
-    TemplateName Replacement, Decl *AssociatedDecl, unsigned Index,
-    std::optional<unsigned> PackIndex, bool Final) const {
+TemplateName ASTContext::getSubstTemplateTemplateParm(TemplateName Replacement,
+                                                      Decl *AssociatedDecl,
+                                                      unsigned Index,
+                                                      UnsignedOrNone PackIndex,
+                                                      bool Final) const {
   llvm::FoldingSetNodeID ID;
   SubstTemplateTemplateParmStorage::Profile(ID, Replacement, AssociatedDecl,
                                             Index, PackIndex, Final);
@@ -12965,7 +12972,7 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
   case TargetCXXABI::XL:
     return ItaniumMangleContext::create(
         *this, getDiagnostics(),
-        [](ASTContext &, const NamedDecl *ND) -> std::optional<unsigned> {
+        [](ASTContext &, const NamedDecl *ND) -> UnsignedOrNone {
           if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
             return RD->getDeviceLambdaManglingNumber();
           return std::nullopt;
