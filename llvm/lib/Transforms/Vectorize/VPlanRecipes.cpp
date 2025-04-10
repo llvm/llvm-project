@@ -3379,7 +3379,7 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   assert(getInductionDescriptor().getKind() ==
              InductionDescriptor::IK_PtrInduction &&
          "Not a pointer induction according to InductionDescriptor!");
-  assert(cast<PHINode>(getUnderlyingInstr())->getType()->isPointerTy() &&
+  assert(State.TypeAnalysis.inferScalarType(this)->isPointerTy() &&
          "Unexpected type.");
   assert(!onlyScalarsGenerated(State.VF.isScalable()) &&
          "Recipe should have been replaced");
