@@ -432,6 +432,7 @@ class TRAPSPrr<bits<6> op3Val, dag outs, dag ins,
 
    let Inst{10-5} = 0;
    let Inst{4-0}  = rs2;
+   let isTrap = 1;
 }
 
 class TRAPSPri<bits<6> op3Val, dag outs, dag ins,
