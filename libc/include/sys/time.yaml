@@ -20,8 +20,8 @@ functions:
     return_type: int
     arguments:
       - type: int
-      - type: const struct itimerval *
-      - type: struct itimerval *
+      - type: const struct itimerval *__restrict
+      - type: struct itimerval *__restrict
   
   - name: getitimer
     standards:
