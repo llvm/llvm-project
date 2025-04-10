@@ -2594,6 +2594,14 @@ GetX86_64ByValArgumentPair(llvm::Type *Lo, llvm::Type *Hi,
 
 ABIArgInfo X86_64ABIInfo::
 classifyReturnType(QualType RetTy) const {
+  // return int128 as i128
+  if (const BuiltinType *BT = RetTy->getAs<BuiltinType>()) {
+    BuiltinType::Kind k = BT->getKind();
+    if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
+      return ABIArgInfo::getDirect();
+    }
+  }
+
   // AMD64-ABI 3.2.3p4: Rule 1. Classify the return type with the
   // classification algorithm.
   X86_64ABIInfo::Class Lo, Hi;
@@ -2725,6 +2733,16 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
                                     unsigned &neededInt, unsigned &neededSSE,
                                     bool isNamedArg, bool IsRegCall) const {
   Ty = useFirstFieldIfTransparentUnion(Ty);
+
+  // represent int128 as i128
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+    BuiltinType::Kind k = BT->getKind();
+    if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
+      neededInt = 2;
+      neededSSE = 0;
+      return ABIArgInfo::getDirect();
+    }
+  }
 
   X86_64ABIInfo::Class Lo, Hi;
   classify(Ty, 0, Lo, Hi, isNamedArg, IsRegCall);
