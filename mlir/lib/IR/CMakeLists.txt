@@ -25,6 +25,7 @@ add_mlir_library(MLIRIR
   ExtensibleDialect.cpp
   IntegerSet.cpp
   Location.cpp
+  Matchers.cpp
   MLIRContext.cpp
   ODSSupport.cpp
   Operation.cpp

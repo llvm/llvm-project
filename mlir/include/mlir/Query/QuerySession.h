@@ -9,6 +9,7 @@
 #ifndef MLIR_TOOLS_MLIRQUERY_QUERYSESSION_H
 #define MLIR_TOOLS_MLIRQUERY_QUERYSESSION_H
 
+#include "Matcher/VariantValue.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Query/Matcher/Registry.h"
 #include "llvm/ADT/StringMap.h"
@@ -16,7 +17,6 @@
 
 namespace mlir::query {
 
-class Registry;
 // Represents the state for a particular mlir-query session.
 class QuerySession {
 public:
@@ -32,6 +32,11 @@ public:
 
   llvm::StringMap<matcher::VariantValue> namedValues;
   bool terminate = false;
+
+public:
+  bool omitBlockArguments = false;
+  bool omitUsesFromAbove = true;
+  bool inclusive = true;
 
 private:
   Operation *rootOp;
