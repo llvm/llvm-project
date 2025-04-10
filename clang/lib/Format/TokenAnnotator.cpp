@@ -948,6 +948,8 @@ private:
       HashTok->setType(TT_Unknown);
       if (!parseTableGenValue(ParseNameMode))
         return false;
+      if (!CurrentToken)
+        return true;
     }
     // In name mode, '{' is regarded as the end of the value.
     // See TGParser::ParseValue in TGParser.cpp
