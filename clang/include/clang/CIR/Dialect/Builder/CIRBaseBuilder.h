@@ -202,6 +202,19 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
+    auto op = create<cir::CallOp>(loc, callee);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
+  }
+
+  //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 

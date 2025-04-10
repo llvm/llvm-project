@@ -465,6 +465,107 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
   llvm_unreachable("bad evaluation kind");
 }
 
+static cir::FuncOp emitFunctionDeclPointer(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::weakRefReference());
+  return cgm.getAddrOfFunction(gd);
+}
+
+static CIRGenCallee emitDirectCallee(CIRGenModule &cgm, GlobalDecl gd) {
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
+
+  assert(!cir::MissingFeatures::hip());
+
+  return CIRGenCallee::forDirect(callee, gd);
+}
+
+RValue CIRGenFunction::emitCall(clang::QualType calleeTy,
+                                const CIRGenCallee &callee,
+                                const clang::CallExpr *e) {
+  // Get the actual function type. The callee type will always be a pointer to
+  // function type or a block pointer type.
+  assert(calleeTy->isFunctionPointerType() &&
+         "Callee must have function pointer type!");
+
+  calleeTy = getContext().getCanonicalType(calleeTy);
+
+  if (getLangOpts().CPlusPlus)
+    assert(!cir::MissingFeatures::sanitizers());
+
+  assert(!cir::MissingFeatures::sanitizers());
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  const CIRGenFunctionInfo &funcInfo = cgm.getTypes().arrangeFreeFunctionCall();
+
+  assert(!cir::MissingFeatures::opCallNoPrototypeFunc());
+  assert(!cir::MissingFeatures::opCallChainCall());
+  assert(!cir::MissingFeatures::hip());
+  assert(!cir::MissingFeatures::opCallMustTail());
+
+  cir::CIRCallOpInterface callOp;
+  RValue callResult =
+      emitCall(funcInfo, callee, &callOp, getLoc(e->getExprLoc()));
+
+  assert(!cir::MissingFeatures::generateDebugInfo());
+
+  return callResult;
+}
+
+CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
+  e = e->IgnoreParens();
+
+  // Look through function-to-pointer decay.
+  if (const auto *implicitCast = dyn_cast<ImplicitCastExpr>(e)) {
+    if (implicitCast->getCastKind() == CK_FunctionToPointerDecay ||
+        implicitCast->getCastKind() == CK_BuiltinFnToFnPtr) {
+      return emitCallee(implicitCast->getSubExpr());
+    }
+  } else if (const auto *declRef = dyn_cast<DeclRefExpr>(e)) {
+    // Resolve direct calls.
+    if (const auto *funcDecl = dyn_cast<FunctionDecl>(declRef->getDecl()))
+      return emitDirectCallee(cgm, funcDecl);
+  }
+
+  cgm.errorNYI(e->getSourceRange(), "Unsupported callee kind");
+  return {};
+}
+
+RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e) {
+  assert(!cir::MissingFeatures::objCBlocks());
+
+  if (isa<CXXMemberCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to member function");
+    return RValue::get(nullptr);
+  }
+
+  if (isa<CUDAKernelCallExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
+    return RValue::get(nullptr);
+  }
+
+  if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
+    if (isa_and_nonnull<CXXMethodDecl>(operatorCall->getCalleeDecl())) {
+      cgm.errorNYI(e->getSourceRange(), "call to member operator");
+      return RValue::get(nullptr);
+    }
+  }
+
+  CIRGenCallee callee = emitCallee(e->getCallee());
+
+  if (e->getBuiltinCallee()) {
+    cgm.errorNYI(e->getSourceRange(), "call to builtin functions");
+  }
+  assert(!cir::MissingFeatures::opCallBuiltinFunc());
+
+  if (isa<CXXPseudoDestructorExpr>(e->getCallee())) {
+    cgm.errorNYI(e->getSourceRange(), "call to pseudo destructor");
+  }
+  assert(!cir::MissingFeatures::opCallPseudoDtor());
+
+  return emitCall(e->getCallee()->getType(), callee, e);
+}
+
 /// Emit code to compute the specified expression, ignoring the result.
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {

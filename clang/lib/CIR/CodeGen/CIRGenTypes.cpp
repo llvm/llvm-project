@@ -289,3 +289,33 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
 
   return true;
 }
+
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo() {
+  // Lookup or create unique function info.
+  llvm::FoldingSetNodeID id;
+  CIRGenFunctionInfo::Profile(id);
+
+  void *insertPos = nullptr;
+  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  if (fi)
+    return *fi;
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+
+  // Construction the function info. We co-allocate the ArgInfos.
+  fi = CIRGenFunctionInfo::create();
+  functionInfos.InsertNode(fi, insertPos);
+
+  bool inserted = functionsBeingProcessed.insert(fi).second;
+  (void)inserted;
+  assert(inserted && "Are functions being processed recursively?");
+
+  assert(!cir::MissingFeatures::opCallCallConv());
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  bool erased = functionsBeingProcessed.erase(fi);
+  (void)erased;
+  assert(erased && "Not in set?");
+
+  return *fi;
+}

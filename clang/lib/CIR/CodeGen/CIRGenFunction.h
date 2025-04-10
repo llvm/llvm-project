@@ -161,6 +161,16 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// An abstract representation of regular/ObjC call/message targets.
+  class AbstractCallee {
+    /// The function declaration of the callee.
+    const clang::Decl *calleeDecl;
+
+  public:
+    AbstractCallee() : calleeDecl(nullptr) {}
+    AbstractCallee(const clang::FunctionDecl *fd) : calleeDecl(fd) {}
+  };
+
   void finishFunction(SourceLocation endLoc);
 
   /// Determine whether the given initializer is trivial in the sense
@@ -437,6 +447,15 @@ public:
   LValue emitBinaryOperatorLValue(const BinaryOperator *e);
 
   mlir::LogicalResult emitBreakStmt(const clang::BreakStmt &s);
+
+  RValue emitCall(const CIRGenFunctionInfo &funcInfo,
+                  const CIRGenCallee &callee, cir::CIRCallOpInterface *callOp,
+                  mlir::Location loc);
+  RValue emitCall(clang::QualType calleeTy, const CIRGenCallee &callee,
+                  const clang::CallExpr *e);
+  RValue emitCallExpr(const clang::CallExpr *e);
+  CIRGenCallee emitCallee(const clang::Expr *e);
+
   mlir::LogicalResult emitContinueStmt(const clang::ContinueStmt &s);
   mlir::LogicalResult emitDoStmt(const clang::DoStmt &s);
 
