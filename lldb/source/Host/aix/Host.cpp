@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <fcntl.h>
-#include <sstream>
-#include <sys/procfs.h>
 #include "lldb/Host/Host.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -16,6 +13,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include <sys/procfs.h>
 
 using namespace llvm;
 using namespace lldb;
@@ -101,12 +99,12 @@ static bool GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
   auto BufferOrError = getProcFile(pid, "psinfo");
   if (!BufferOrError)
     return false;
-  
+
   std::unique_ptr<llvm::MemoryBuffer> PsinfoBuffer = std::move(*BufferOrError);
   // Ensure there's enough data for psinfoData
-  if(PsinfoBuffer->getBufferSize() < sizeof(psinfoData))  
+  if (PsinfoBuffer->getBufferSize() < sizeof(psinfoData))
     return false;
-  
+
   std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
   llvm::StringRef PathRef(&(psinfoData.pr_psargs[0]));
   if (!PathRef.empty()) {
@@ -128,7 +126,7 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   process_info.Clear();
   process_info.SetProcessID(pid);
 
-  if(!GetExePathAndArch(pid, process_info))
+  if (!GetExePathAndArch(pid, process_info))
     return false;
   // Get User and Group IDs and get tracer pid.
   if (!GetStatusInfo(pid, process_info, State, tracerpid, tgid))
