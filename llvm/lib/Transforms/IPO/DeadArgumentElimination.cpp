@@ -521,16 +521,8 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     if (BB.getTerminatingMustTailCall()) {
       LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - " << F.getName()
                         << " has musttail calls\n");
-      // If the calling convention is not swifttailcc or tailcc, the caller and
-      // callee of musttail must have exactly the same signature. Otherwise we
-      // only needs to guarantee they have the same return type.
-      if (F.getCallingConv() != CallingConv::SwiftTail ||
-          F.getCallingConv() != CallingConv::Tail) {
-        markFrozen(F);
+      if (markFnOrRetTyFrozenOnMusttail(F))
         return;
-      } else {
-        markRetTyFrozen(F);
-      }
     }
   }
 
@@ -560,16 +552,8 @@ void DeadArgumentEliminationPass::surveyFunction(const Function &F) {
     if (CB->isMustTailCall()) {
       LLVM_DEBUG(dbgs() << "DeadArgumentEliminationPass - " << F.getName()
                         << " has musttail callers\n");
-      // If the calling convention is not swifttailcc or tailcc, the caller and
-      // callee of musttail must have exactly the same signature. Otherwise we
-      // only needs to guarantee they have the same return type.
-      if (F.getCallingConv() != CallingConv::SwiftTail ||
-          F.getCallingConv() != CallingConv::Tail) {
-        markFrozen(F);
+      if (markFnOrRetTyFrozenOnMusttail(F))
         return;
-      } else {
-        markRetTyFrozen(F);
-      }
     }
 
     // If we end up here, we are looking at a direct call to our function.
@@ -664,6 +648,22 @@ void DeadArgumentEliminationPass::markValue(const RetOrArg &RA, Liveness L,
       Uses.emplace(MaybeLiveUse, RA);
     }
     break;
+  }
+}
+
+/// Return true if we freeze the whole function.
+/// If the calling convention is not swifttailcc or tailcc, the caller and
+/// callee of musttail must have exactly the same signature. Otherwise we
+/// only needs to guarantee they have the same return type.
+bool DeadArgumentEliminationPass::markFnOrRetTyFrozenOnMusttail(
+    const Function &F) {
+  if (F.getCallingConv() != CallingConv::SwiftTail ||
+      F.getCallingConv() != CallingConv::Tail) {
+    markFrozen(F);
+    return true;
+  } else {
+    markRetTyFrozen(F);
+    return false;
   }
 }
 

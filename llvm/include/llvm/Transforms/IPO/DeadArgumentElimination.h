@@ -136,6 +136,7 @@ private:
   void markLive(const RetOrArg &RA);
   void markFrozen(const Function &F);
   void markRetTyFrozen(const Function &F);
+  bool markFnOrRetTyFrozenOnMusttail(const Function &F);
   void propagateLiveness(const RetOrArg &RA);
   bool removeDeadStuffFromFunction(Function *F);
   bool deleteDeadVarargs(Function &F);
