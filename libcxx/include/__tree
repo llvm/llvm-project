@@ -682,7 +682,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI _Tp& __get_value() { return __value_; }
   // _LIBCPP_HIDE_FROM_ABI static _Tp& __get_value_static(__tree_node * foo) { return (foo->__value_); }
 
-  template <typename... Args>
+  template <class... Args>
   constexpr __tree_node(Args&&... args) : __value_{std::forward<Args>(args)...} {}
   // TODO: libcxx26
   // _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_node(__node_value_type &&  args): __value_{args} { }

@@ -22,13 +22,13 @@ class Emplaceable {
   double double_;
 
 public:
-  Emplaceable() : int_(0), double_(0) {}
-  Emplaceable(int i, double d) : int_(i), double_(d) {}
-  Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
+  TEST_CONSTEXPR_CXX26 Emplaceable() : int_(0), double_(0) {}
+  TEST_CONSTEXPR_CXX26 Emplaceable(int i, double d) : int_(i), double_(d) {}
+  TEST_CONSTEXPR_CXX26 Emplaceable(Emplaceable&& x) : int_(x.int_), double_(x.double_) {
     x.int_    = 0;
     x.double_ = 0;
   }
-  Emplaceable& operator=(Emplaceable&& x) {
+  TEST_CONSTEXPR_CXX26 Emplaceable& operator=(Emplaceable&& x) {
     int_      = x.int_;
     x.int_    = 0;
     double_   = x.double_;
@@ -36,10 +36,10 @@ public:
     return *this;
   }
 
-  bool operator==(const Emplaceable& x) const { return int_ == x.int_ && double_ == x.double_; }
-  bool operator<(const Emplaceable& x) const { return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_); }
+  TEST_CONSTEXPR_CXX26 bool operator==(const Emplaceable& x) const { return int_ == x.int_ && double_ == x.double_; }
+  TEST_CONSTEXPR_CXX26 bool operator<(const Emplaceable& x) const { return int_ < x.int_ || (int_ == x.int_ && double_ < x.double_); }
 
-  int get() const { return int_; }
+  TEST_CONSTEXPR_CXX26 int get() const { return int_; }
 };
 
 template <>

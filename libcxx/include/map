@@ -857,7 +857,7 @@ public:
   template <typename... Args>
   _LIBCPP_CONSTEXPR_SINCE_CXX26 __value_type(Args&&... args) : __cc_{std::forward<Args>(args)...} {}
   // constexpr __value_type(value_type && args): __cc_{args} { }
-  __value_type()                    = delete;
+  __value_type()                    = default;
   ~__value_type()                   = default;
   __value_type(const __value_type&) = delete;
   __value_type(__value_type&&)      = delete;
