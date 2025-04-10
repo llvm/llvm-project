@@ -789,11 +789,8 @@ int main(int argc, char const *argv[]) {
           g_driver->GetDebugger().SaveInputTerminalState();
 
         struct sigaction old_action;
-        struct sigaction new_action;
-
-        memset(&new_action, 0, sizeof(new_action));
+        struct sigaction new_action = {};
         new_action.sa_handler = SIG_DFL;
-        new_action.sa_flags = SA_SIGINFO;
         sigemptyset(&new_action.sa_mask);
         sigaddset(&new_action.sa_mask, SIGTSTP);
 
