@@ -374,6 +374,20 @@ public:
   const llvm::omp::GV &getGridValue() const override {
     return llvm::omp::SPIRVGridValues;
   }
+
+  std::optional<LangAS> getConstantAddressSpace() const override {
+    return ConstantAS;
+  }
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override {
+    BaseSPIRVTargetInfo::adjust(Diags, Opts);
+    // opencl_constant will map to UniformConstant in SPIR-V
+    if (Opts.OpenCL)
+      ConstantAS = LangAS::opencl_constant;
+  }
+
+private:
+  // opencl_global will map to CrossWorkgroup in SPIR-V
+  LangAS ConstantAS = LangAS::opencl_global;
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64AMDGCNTargetInfo final

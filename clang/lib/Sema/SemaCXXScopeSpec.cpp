@@ -31,8 +31,7 @@ static CXXRecordDecl *getCurrentInstantiationOf(QualType T,
   const Type *Ty = T->getCanonicalTypeInternal().getTypePtr();
   if (const RecordType *RecordTy = dyn_cast<RecordType>(Ty)) {
     CXXRecordDecl *Record = cast<CXXRecordDecl>(RecordTy->getDecl());
-    if (!Record->isDependentContext() ||
-        Record->isCurrentInstantiation(CurContext))
+    if (Record->isCurrentInstantiation(CurContext))
       return Record;
 
     return nullptr;

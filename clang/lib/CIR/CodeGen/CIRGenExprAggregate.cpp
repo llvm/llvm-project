@@ -130,7 +130,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     }
 
     const Address address = Address(element, cirElementType, elementAlign);
-    const LValue elementLV = LValue::makeAddr(address, elementType);
+    const LValue elementLV = cgf.makeAddrLValue(address, elementType);
     emitInitializationToLValue(args[i], elementLV);
   }
 
@@ -157,7 +157,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
     const Address tmpAddr = cgf.createTempAlloca(
         cirElementPtrType, cgf.getPointerAlign(), loc, "arrayinit.temp",
         /*insertIntoFnEntryBlock=*/false);
-    LValue tmpLV = LValue::makeAddr(tmpAddr, elementPtrType);
+    LValue tmpLV = cgf.makeAddrLValue(tmpAddr, elementPtrType);
     cgf.emitStoreThroughLValue(RValue::get(element), tmpLV);
 
     // TODO(CIR): Replace this part later with cir::DoWhileOp
@@ -166,7 +166,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
           builder.createLoad(loc, tmpAddr.getPointer());
 
       // Emit the actual filler expression.
-      const LValue elementLV = LValue::makeAddr(
+      const LValue elementLV = cgf.makeAddrLValue(
           Address(currentElement, cirElementType, elementAlign), elementType);
 
       if (arrayFiller)

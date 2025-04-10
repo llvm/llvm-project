@@ -692,10 +692,8 @@ public:
   /// \<target\>ISD namespace).
   bool isTargetOpcode() const { return NodeType >= ISD::BUILTIN_OP_END; }
 
-  /// Returns true if the node type is UNDEF or POISON.
-  bool isUndef() const {
-    return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
-  }
+  /// Return true if the type of the node type undefined.
+  bool isUndef() const { return NodeType == ISD::UNDEF; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
