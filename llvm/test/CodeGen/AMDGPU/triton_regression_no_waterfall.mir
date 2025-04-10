@@ -104,7 +104,7 @@ body:             |
     ; GCN-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
     ; GCN-NEXT: BUFFER_STORE_DWORD_OFFSET_exact [[COPY4]], killed [[REG_SEQUENCE]], killed [[S_MOV_B32_2]], 0, 2, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 8)
     ; GCN-NEXT: S_ENDPGM 0
-    %3:sgpr_64(p4) = COPY $sgpr4_sgpr5
+    %3:sgpr_64 = COPY $sgpr4_sgpr5
     early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec %3(p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.fval.kernarg.offset, align 4, addrspace 4)
     %9:sreg_32 = COPY %8.sub2
     %10:sreg_32 = COPY %8.sub1
