@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
+// RUN: %check_clang_tidy --match-partial-fixes %s modernize-make-shared %t -- -- -I %S/Inputs/smart-ptr
 
 #include "shared_ptr.h"
 // CHECK-FIXES: #include <memory>

@@ -333,10 +333,10 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
   // CHECK: atomicrmw fadd ptr {{.*}} seq_cst, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.dec.32.p0
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 

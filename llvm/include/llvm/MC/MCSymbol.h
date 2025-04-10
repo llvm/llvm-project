@@ -252,7 +252,8 @@ public:
   /// isInSection - Check if this symbol is defined in some section (i.e., it
   /// is defined but not absolute).
   bool isInSection() const {
-    return isDefined() && !isAbsolute();
+    auto *F = getFragment(0);
+    return F && F != AbsolutePseudoFragment;
   }
 
   /// isUndefined - Check if this symbol undefined (i.e., implicitly defined).

@@ -31,7 +31,7 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
 
 namespace lldb_dap::protocol {
 
-enum MessageType {
+enum MessageType : unsigned {
   eMessageTypeRequest,
   eMessageTypeResponse,
   eMessageTypeEvent
@@ -107,12 +107,12 @@ json::Value toJSON(const Response &R) {
 
   if (R.message) {
     assert(!R.success && "message can only be used if success is false");
-    if (const auto *messageEnum = std::get_if<Response::Message>(&*R.message)) {
+    if (const auto *messageEnum = std::get_if<ResponseMessage>(&*R.message)) {
       switch (*messageEnum) {
-      case Response::Message::cancelled:
+      case eResponseMessageCancelled:
         Result.insert({"message", "cancelled"});
         break;
-      case Response::Message::notStopped:
+      case eResponseMessageNotStopped:
         Result.insert({"message", "notStopped"});
         break;
       }
@@ -129,16 +129,16 @@ json::Value toJSON(const Response &R) {
 }
 
 bool fromJSON(json::Value const &Params,
-              std::variant<Response::Message, std::string> &M, json::Path P) {
+              std::variant<ResponseMessage, std::string> &M, json::Path P) {
   auto rawMessage = Params.getAsString();
   if (!rawMessage) {
     P.report("expected a string");
     return false;
   }
-  std::optional<Response::Message> message =
-      StringSwitch<std::optional<Response::Message>>(*rawMessage)
-          .Case("cancelled", Response::Message::cancelled)
-          .Case("notStopped", Response::Message::notStopped)
+  std::optional<ResponseMessage> message =
+      StringSwitch<std::optional<ResponseMessage>>(*rawMessage)
+          .Case("cancelled", eResponseMessageCancelled)
+          .Case("notStopped", eResponseMessageNotStopped)
           .Default(std::nullopt);
   if (message)
     M = *message;

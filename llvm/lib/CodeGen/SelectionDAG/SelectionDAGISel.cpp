@@ -1564,7 +1564,7 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
 
   // Look through casts and constant offset GEPs. These mostly come from
   // inalloca.
-  APInt Offset(DL.getTypeSizeInBits(Address->getType()), 0);
+  APInt Offset(DL.getIndexTypeSizeInBits(Address->getType()), 0);
   Address = Address->stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
 
   // Check if the variable is a static alloca or a byval or inalloca

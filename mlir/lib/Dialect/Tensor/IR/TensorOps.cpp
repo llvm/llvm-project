@@ -2617,10 +2617,10 @@ struct SliceCanonicalizer {
 
 void ExtractSliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add<OpWithOffsetSizesAndStridesConstantArgumentFolder<
-                  ExtractSliceOp, SliceReturnTypeCanonicalizer,
-                  SliceCanonicalizer, /*CheckInBounds=*/true>,
-              ExtractSliceOpCastFolder>(context);
+  results.add<
+      OpWithOffsetSizesAndStridesConstantArgumentFolder<
+          ExtractSliceOp, SliceReturnTypeCanonicalizer, SliceCanonicalizer>,
+      ExtractSliceOpCastFolder>(context);
 }
 
 //

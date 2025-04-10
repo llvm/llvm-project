@@ -441,20 +441,32 @@ void ExternalFileUnit::Rewind(IoErrorHandler &handler) {
         "REWIND(UNIT=%d) on non-sequential file", unitNumber());
   } else {
     DoImpliedEndfile(handler);
-    SetPosition(0, handler);
+    SetPosition(0);
     currentRecordNumber = 1;
     leftTabLimit.reset();
     anyWriteSinceLastPositioning_ = false;
   }
 }
 
-void ExternalFileUnit::SetPosition(std::int64_t pos, IoErrorHandler &handler) {
+void ExternalFileUnit::SetPosition(std::int64_t pos) {
   frameOffsetInFile_ = pos;
   recordOffsetInFrame_ = 0;
   if (access == Access::Direct) {
     directAccessRecWasSet_ = true;
   }
   BeginRecord();
+}
+
+void ExternalFileUnit::Sought(std::int64_t zeroBasedPos) {
+  SetPosition(zeroBasedPos);
+  if (zeroBasedPos == 0) {
+    currentRecordNumber = 1;
+  } else {
+    // We no longer know which record we're in.  Set currentRecordNumber to
+    // a large value from whence we can both advance and backspace.
+    currentRecordNumber = std::numeric_limits<std::int64_t>::max() / 2;
+    endfileRecordNumber.reset();
+  }
 }
 
 bool ExternalFileUnit::SetStreamPos(
@@ -474,12 +486,29 @@ bool ExternalFileUnit::SetStreamPos(
       frameOffsetInFile_ + recordOffsetInFrame_) {
     DoImpliedEndfile(handler);
   }
-  SetPosition(oneBasedPos - 1, handler);
-  // We no longer know which record we're in.  Set currentRecordNumber to
-  // a large value from whence we can both advance and backspace.
-  currentRecordNumber = std::numeric_limits<std::int64_t>::max() / 2;
-  endfileRecordNumber.reset();
+  Sought(oneBasedPos - 1);
   return true;
+}
+
+// GNU FSEEK extension
+RT_API_ATTRS bool ExternalFileUnit::Fseek(std::int64_t zeroBasedPos,
+    enum FseekWhence whence, IoErrorHandler &handler) {
+  if (whence == FseekEnd) {
+    Flush(handler); // updates knownSize_
+    if (auto size{knownSize()}) {
+      zeroBasedPos += *size;
+    } else {
+      return false;
+    }
+  } else if (whence == FseekCurrent) {
+    zeroBasedPos += InquirePos() - 1;
+  }
+  if (zeroBasedPos >= 0) {
+    Sought(zeroBasedPos);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 bool ExternalFileUnit::SetDirectRec(
@@ -498,7 +527,7 @@ bool ExternalFileUnit::SetDirectRec(
     return false;
   }
   currentRecordNumber = oneBasedRec;
-  SetPosition((oneBasedRec - 1) * *openRecl, handler);
+  SetPosition((oneBasedRec - 1) * *openRecl);
   return true;
 }
 

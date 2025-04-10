@@ -49,6 +49,8 @@ defm constexpr_ctor_missing_init : CXX20Compat<
 defm adl_only_template_id : CXX20Compat<
   "use of function template name with no prior declaration in function call "
   "with explicit template arguments is">;
+defm ctad_for_alias_templates
+    : CXX20Compat<"class template argument deduction for alias templates is">;
 
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
@@ -61,7 +63,7 @@ defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a conditi
 
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
-  defm constexpr_body_invalid_stmt : CXXCompat<
+  defm cxx#std#_constexpr_body_invalid_stmt : CXXCompat<
     "use of this statement in a constexpr %select{function|constructor}0 is", std>;
 }
 
@@ -545,7 +547,7 @@ def warn_qual_return_type : Warning<
   InGroup<IgnoredQualifiers>, DefaultIgnore;
 def warn_qual_base_type : Warning<
   "'%0' qualifier%s1 on base class type %2 %plural{1:has|:have}1 no effect">,
-  InGroup<IgnoredQualifiers>, DefaultIgnore;
+  InGroup<IgnoredBaseClassQualifiers>, DefaultIgnore;
 
 def warn_deprecated_redundant_constexpr_static_def : Warning<
   "out-of-line definition of constexpr static data member is redundant "
@@ -1028,6 +1030,9 @@ def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
+    InGroup<MainReturnType>;
+def ext_main_no_return : Extension<
+    "implicit '0' return value from 'main' is a C99 extension">,
     InGroup<MainReturnType>;
 def note_main_change_return_type : Note<"change return type to 'int'">;
 def err_main_surplus_args : Error<"too many parameters (%0) for 'main': "
@@ -3193,6 +3198,10 @@ def err_attribute_wrong_number_arguments : Error<
 def err_attribute_wrong_number_arguments_for : Error <
   "%0 attribute references function %1, which %plural{0:takes no arguments|1:takes one argument|"
   ":takes exactly %2 arguments}2">;
+def err_callback_attribute_wrong_arg_count : Error<
+  "'callback' attribute references function of type %0 which expects %1 "
+  "%plural{1:argument|:arguments}1 but attribute specifies %2 parameter index "
+  "%plural{1:argument|:arguments}2">;
 def err_attribute_bounds_for_function : Error<
   "%0 attribute references parameter %1, but the function %2 has only %3 parameters">;
 def err_attribute_no_member_function : Error<
@@ -3549,6 +3558,10 @@ def err_conflicting_codeseg_attribute : Error<
   "conflicting code segment specifiers">;
 def warn_duplicate_codeseg_attribute : Warning<
   "duplicate code segment specifiers">, InGroup<Section>;
+
+def err_attribute_patchable_function_entry_invalid_section
+    : Error<"section argument to 'patchable_function_entry' attribute is not "
+            "valid for this target: %0">;
 
 def err_anonymous_property: Error<
   "anonymous property is not supported">;
@@ -7031,10 +7044,10 @@ def err_offsetof_incomplete_type : Error<
 def err_offsetof_record_type : Error<
   "offsetof requires struct, union, or class type, %0 invalid">;
 def err_offsetof_array_type : Error<"offsetof requires array type, %0 invalid">;
-def ext_offsetof_non_pod_type : ExtWarn<"offset of on non-POD type %0">,
+def ext_offsetof_non_pod_type : ExtWarn<"'offsetof' on non-POD type %0">,
   InGroup<InvalidOffsetof>;
 def ext_offsetof_non_standardlayout_type : ExtWarn<
-  "offset of on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
+  "'offsetof' on non-standard-layout type %0">, InGroup<InvalidOffsetof>;
 def err_offsetof_bitfield : Error<"cannot compute offset of bit-field %0">;
 def err_offsetof_field_of_virtual_base : Error<
   "invalid application of 'offsetof' to a field of a virtual base">;
@@ -7340,8 +7353,9 @@ def err_typecheck_pointer_arith_void_type : Error<
   "arithmetic on%select{ a|}0 pointer%select{|s}0 to void">;
 def err_typecheck_decl_incomplete_type : Error<
   "variable has incomplete type %0">;
-def ext_typecheck_decl_incomplete_type : ExtWarn<
-  "tentative definition of variable with internal linkage has incomplete non-array type %0">,
+def ext_typecheck_decl_incomplete_type : Extension<
+  "tentative definition of variable with internal linkage has incomplete "
+  "%select{non-array|array}0 type %1">,
   InGroup<DiagGroup<"tentative-definition-incomplete-type">>;
 def err_tentative_def_incomplete_type : Error<
   "tentative definition has type %0 that is never completed">;
@@ -8444,11 +8458,6 @@ let CategoryName = "Lambda Issue" in {
   def warn_cxx17_compat_lambda_def_ctor_assign : Warning<
     "%select{default construction|assignment}0 of lambda is incompatible with "
     "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
-
-  // C++20 class template argument deduction for alias templates.
-  def warn_cxx17_compat_ctad_for_alias_templates : Warning<
-  "class template argument deduction for alias templates is incompatible with "
-  "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 }
 
 def err_return_in_captured_stmt : Error<
@@ -9070,7 +9079,7 @@ def err_atomic_op_needs_atomic_int : Error<
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
-def err_atomic_op_has_invalid_synch_scope : Error<
+def err_atomic_op_has_invalid_sync_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
 def warn_atomic_implicit_seq_cst : Warning<
   "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
@@ -13050,8 +13059,12 @@ def warn_acc_confusing_routine_name
       InGroup<DiagGroup<"openacc-confusing-routine-name">>;
 def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
+def err_acc_invalid_modifier
+    : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
+def err_acc_invalid_default_type
+    : Error<"invalid value %0 in '%1' clause; valid values are %2">;
 
 // AMDGCN builtins diagnostics
-def err_amdgcn_global_load_lds_size_invalid_value : Error<"invalid size value">;
-def note_amdgcn_global_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
+def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 } // end of sema component.

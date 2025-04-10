@@ -1127,9 +1127,9 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (hasNoUse())
-    Code += "if (!SDValue(N, 0).use_empty()) return false;\n";
+    Code += "if (N->hasAnyUseOfValue(0)) return false;\n";
   if (hasOneUse())
-    Code += "if (!SDValue(N, 0).hasOneUse()) return false;\n";
+    Code += "if (!N->hasNUsesOfValue(1, 0)) return false;\n";
 
   std::string PredicateCode =
       std::string(PatFragRec->getRecord()->getValueAsString("PredicateCode"));

@@ -1591,3 +1591,12 @@ namespace WMemChr {
   constexpr bool c = !wcschr(L"hello", L'h'); // both-error {{constant expression}} \
                                               // both-note {{non-constexpr function 'wcschr' cannot be used in a constant expression}}
 }
+
+namespace Invalid {
+  constexpr int test() { // both-error {{never produces a constant expression}}
+    __builtin_abort(); // both-note 2{{subexpression not valid in a constant expression}}
+    return 0;
+  }
+  static_assert(test() == 0); // both-error {{not an integral constant expression}} \
+                              // both-note {{in call to}}
+}

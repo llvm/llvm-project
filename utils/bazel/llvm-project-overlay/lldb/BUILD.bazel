@@ -331,16 +331,10 @@ cc_library(
 gentbl_cc_library(
     name = "InterpreterProperties",
     strip_include_prefix = "source/Interpreter",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Interpreter/InterpreterProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Interpreter/InterpreterPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Interpreter/InterpreterProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Interpreter/InterpreterPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Interpreter/InterpreterProperties.td",
     deps = [":CoreTdFiles"],
@@ -406,12 +400,7 @@ td_library(
 gentbl_cc_library(
     name = "CommandOptions",
     strip_include_prefix = "source/Commands",
-    tbl_outs = [
-        (
-            ["-gen-lldb-option-defs"],
-            "source/Commands/CommandOptions.inc",
-        ),
-    ],
+    tbl_outs = {"source/Commands/CommandOptions.inc": ["-gen-lldb-option-defs"]},
     tblgen = ":lldb-tblgen",
     td_file = "source/Commands/Options.td",
     deps = [":CommandsTdFiles"],
@@ -595,16 +584,10 @@ td_library(
 gentbl_cc_library(
     name = "CoreProperties",
     strip_include_prefix = "source/Core",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Core/CoreProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Core/CorePropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Core/CoreProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Core/CorePropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Core/CoreProperties.td",
     deps = [":CoreTdFiles"],
@@ -676,16 +659,10 @@ cc_library(
 gentbl_cc_library(
     name = "TargetProperties",
     strip_include_prefix = "source/Target",
-    tbl_outs = [
-        (
-            ["-gen-lldb-property-defs"],
-            "source/Target/TargetProperties.inc",
-        ),
-        (
-            ["-gen-lldb-property-enum-defs"],
-            "source/Target/TargetPropertiesEnum.inc",
-        ),
-    ],
+    tbl_outs = {
+        "source/Target/TargetProperties.inc": ["-gen-lldb-property-defs"],
+        "source/Target/TargetPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
     tblgen = ":lldb-tblgen",
     td_file = "source/Target/TargetProperties.td",
     deps = [":CoreTdFiles"],
@@ -832,10 +809,7 @@ cc_import(
 gentbl_cc_library(
     name = "lldb_options_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "Options.inc",
-    )],
+    tbl_outs = {"Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/driver/Options.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -981,10 +955,7 @@ cc_binary(
 gentbl_cc_library(
     name = "lldb_server_opts_gen",
     strip_include_prefix = ".",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "LLGSOptions.inc",
-    )],
+    tbl_outs = {"LLGSOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/lldb-server/LLGSOptions.td",
     deps = ["//llvm:OptParserTdFiles"],
@@ -1051,10 +1022,7 @@ expand_template(
 gentbl_cc_library(
     name = "lldb_dap_opts_gen",
     strip_include_prefix = "tools/lldb-dap",
-    tbl_outs = [(
-        ["-gen-opt-parser-defs"],
-        "tools/lldb-dap/Options.inc",
-    )],
+    tbl_outs = {"tools/lldb-dap/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "tools/lldb-dap/Options.td",
     deps = ["//llvm:OptParserTdFiles"],

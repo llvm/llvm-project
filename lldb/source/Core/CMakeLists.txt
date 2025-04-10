@@ -70,6 +70,7 @@ add_lldb_library(lldbCore
     lldbTarget
     lldbUtility
     lldbValueObject
+    lldbVersion
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     ${LLDB_CURSES_LIBS}

@@ -62,8 +62,10 @@ ast_matchers::StatementMatcher isPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorStar();
 ast_matchers::StatementMatcher isPointerLikeOperatorArrow();
 ast_matchers::StatementMatcher isSmartPointerLikeOperatorArrow();
-ast_matchers::StatementMatcher isSmartPointerLikeValueMethodCall();
-ast_matchers::StatementMatcher isSmartPointerLikeGetMethodCall();
+ast_matchers::StatementMatcher
+isSmartPointerLikeValueMethodCall(clang::StringRef MethodName = "value");
+ast_matchers::StatementMatcher
+isSmartPointerLikeGetMethodCall(clang::StringRef MethodName = "get");
 
 // Common transfer functions.
 
