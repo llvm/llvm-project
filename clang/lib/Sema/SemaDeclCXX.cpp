@@ -11056,7 +11056,8 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
         // if new[] will be used with the type outside of the library. Otherwise
         // when the dtor is not exported then new[]/delete[] in the TU will make
         // sure the operator is referenced and its uses diagnosed.
-        bool Diagnose = Destructor->hasAttr<DLLExportAttr>() && Destructor->isDefined();
+        bool Diagnose =
+            Destructor->hasAttr<DLLExportAttr>() && Destructor->isDefined();
         FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
             Loc, RD, VDeleteName, Diagnose);
         Destructor->setOperatorArrayDelete(ArrOperatorDelete);
