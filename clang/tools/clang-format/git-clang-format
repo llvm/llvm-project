@@ -106,6 +106,7 @@ def main():
             "c++m",  # C++ Modules
             "cu",
             "cuh",  # CUDA
+            "cl",  # OpenCL
             # Other languages that clang-format supports
             "proto",
             "protodevel",  # Protocol Buffers
