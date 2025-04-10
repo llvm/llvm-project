@@ -118,7 +118,6 @@ public:
                                    const CharSourceRange &Range,
                                    const LangOptions &LangOpts) {
       // For token ranges, compute end location for end character of the range.
-      // The end location of returned range is exclusive.
       CharSourceRange R = Lexer::getAsCharRange(Range, SM, LangOpts);
       SourceLocation End = R.getEnd();
       // Relex the token past the end location of the last token in the source
@@ -127,6 +126,7 @@ public:
       Lexer::getRawToken(End, PossiblySemi, SM, LangOpts, true);
       if (PossiblySemi.is(tok::semi))
         End = End.getLocWithOffset(1);
+      // Column number of the returned end position is exclusive.
       return {SM.getSpellingLineNumber(End), SM.getSpellingColumnNumber(End)};
     }
   };
