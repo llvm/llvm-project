@@ -121,7 +121,7 @@ struct GPULaunchKernelConversion
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
            llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
+           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchClusterKernel = mlir::SymbolRefAttr::get(
           mod.getContext(), RTNAME_STRING(CUFLaunchClusterKernel));
@@ -133,6 +133,10 @@ struct GPULaunchKernelConversion
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }
+      mlir::Value stream = adaptor.getAsyncObject();
+      if (!stream)
+        stream = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
       rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op, funcTy, cufLaunchClusterKernel,
           mlir::ValueRange{kernelPtr, adaptor.getClusterSizeX(),
@@ -140,7 +144,7 @@ struct GPULaunchKernelConversion
                            adaptor.getGridSizeX(), adaptor.getGridSizeY(),
                            adaptor.getGridSizeZ(), adaptor.getBlockSizeX(),
                            adaptor.getBlockSizeY(), adaptor.getBlockSizeZ(),
-                           dynamicMemorySize, kernelArgs, nullPtr});
+                           stream, dynamicMemorySize, kernelArgs, nullPtr});
     } else {
       auto procAttr =
           op->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName());
@@ -153,7 +157,8 @@ struct GPULaunchKernelConversion
       auto funcTy = mlir::LLVM::LLVMFunctionType::get(
           voidTy,
           {ptrTy, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
-           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, i32Ty, ptrTy, ptrTy},
+           llvmIntPtrType, llvmIntPtrType, llvmIntPtrType, llvmIntPtrType,
+           i32Ty, ptrTy, ptrTy},
           /*isVarArg=*/false);
       auto cufLaunchKernel =
           mlir::SymbolRefAttr::get(mod.getContext(), fctName);
@@ -165,12 +170,18 @@ struct GPULaunchKernelConversion
         launchKernelFuncOp.setVisibility(
             mlir::SymbolTable::Visibility::Private);
       }
+
+      mlir::Value stream = adaptor.getAsyncObject();
+      if (!stream)
+        stream = rewriter.create<mlir::LLVM::ConstantOp>(
+            loc, llvmIntPtrType, rewriter.getIntegerAttr(llvmIntPtrType, -1));
+
       rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
           op, funcTy, cufLaunchKernel,
           mlir::ValueRange{kernelPtr, adaptor.getGridSizeX(),
                            adaptor.getGridSizeY(), adaptor.getGridSizeZ(),
                            adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
-                           adaptor.getBlockSizeZ(), dynamicMemorySize,
+                           adaptor.getBlockSizeZ(), stream, dynamicMemorySize,
                            kernelArgs, nullPtr});
     }
 

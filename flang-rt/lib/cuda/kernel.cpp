@@ -16,7 +16,7 @@ extern "C" {
 
 void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    int32_t smem, void **params, void **extra) {
+    intptr_t stream, int32_t smem, void **params, void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
   gridDim.y = gridY;
@@ -74,15 +74,15 @@ void RTDEF(CUFLaunchKernel)(const void *kernel, intptr_t gridX, intptr_t gridY,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t stream = 0; // TODO stream managment
+  cudaStream_t cuStream = 0; // TODO stream managment
   CUDA_REPORT_IF_ERROR(
-      cudaLaunchKernel(kernel, gridDim, blockDim, params, smem, stream));
+      cudaLaunchKernel(kernel, gridDim, blockDim, params, smem, cuStream));
 }
 
 void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
     intptr_t clusterY, intptr_t clusterZ, intptr_t gridX, intptr_t gridY,
     intptr_t gridZ, intptr_t blockX, intptr_t blockY, intptr_t blockZ,
-    int32_t smem, void **params, void **extra) {
+    intptr_t stream, int32_t smem, void **params, void **extra) {
   cudaLaunchConfig_t config;
   config.gridDim.x = gridX;
   config.gridDim.y = gridY;
@@ -153,7 +153,8 @@ void RTDEF(CUFLaunchClusterKernel)(const void *kernel, intptr_t clusterX,
 
 void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     intptr_t gridY, intptr_t gridZ, intptr_t blockX, intptr_t blockY,
-    intptr_t blockZ, int32_t smem, void **params, void **extra) {
+    intptr_t blockZ, intptr_t stream, int32_t smem, void **params,
+    void **extra) {
   dim3 gridDim;
   gridDim.x = gridX;
   gridDim.y = gridY;
@@ -211,9 +212,9 @@ void RTDEF(CUFLaunchCooperativeKernel)(const void *kernel, intptr_t gridX,
     Fortran::runtime::Terminator terminator{__FILE__, __LINE__};
     terminator.Crash("Too many invalid grid dimensions");
   }
-  cudaStream_t stream = 0; // TODO stream managment
+  cudaStream_t cuStream = 0; // TODO stream managment
   CUDA_REPORT_IF_ERROR(cudaLaunchCooperativeKernel(
-      kernel, gridDim, blockDim, params, smem, stream));
+      kernel, gridDim, blockDim, params, smem, cuStream));
 }
 
 } // extern "C"
