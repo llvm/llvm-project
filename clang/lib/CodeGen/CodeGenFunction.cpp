@@ -1595,6 +1595,26 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // Implicit copy-assignment gets the same special treatment as implicit
     // copy-constructors.
     emitImplicitAssignmentOperatorBody(Args);
+  } else if (FD->hasAttr<OpenCLKernelAttr>() &&
+             GD.getKernelReferenceKind() == KernelReferenceKind::Kernel) {
+    CallArgList CallArgs;
+    for (unsigned i = 0; i < Args.size(); ++i) {
+      Address ArgAddr = GetAddrOfLocalVar(Args[i]);
+      QualType ArgQualType = Args[i]->getType();
+      RValue ArgRValue = convertTempToRValue(ArgAddr, ArgQualType, Loc);
+      CallArgs.add(ArgRValue, ArgQualType);
+    }
+    GlobalDecl GDStub = GlobalDecl(FD, KernelReferenceKind::Stub);
+    const FunctionType *FT = cast<FunctionType>(FD->getType());
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
+    const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
+        CallArgs, FT, /*ChainCall=*/false);
+    llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FnInfo);
+    llvm::Constant *GDStubFunctionPointer =
+        CGM.getRawFunctionPointer(GDStub, FTy);
+    CGCallee GDStubCallee = CGCallee::forDirect(GDStubFunctionPointer, GDStub);
+    EmitCall(FnInfo, GDStubCallee, ReturnValueSlot(), CallArgs, nullptr, false,
+             Loc);
   } else if (Body) {
     EmitFunctionBody(Body);
   } else

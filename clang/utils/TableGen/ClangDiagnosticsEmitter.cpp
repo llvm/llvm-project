@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Format.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -1560,6 +1561,60 @@ void clang::EmitClangDiagsCompatIDs(const llvm::RecordKeeper &Records,
 
   if (!PrevComponent.empty())
     OS << "DIAG_COMPAT_IDS_END()\n";
+}
+
+/// ClangDiagsIntefaceEmitter - Emit the diagnostics interface header for
+/// a Clang component.
+void clang::EmitClangDiagsInterface(llvm::raw_ostream &OS,
+                                    const std::string &Component) {
+  if (Component.empty())
+    PrintFatalError("'-gen-clang-diags-iface' requires a component name");
+
+  std::string ComponentUpper = StringRef(Component).upper();
+  const char *Comp = Component.c_str();
+  const char *Upper = ComponentUpper.c_str();
+
+  OS << llvm::format(R"c++(
+namespace clang {
+namespace diag {
+enum {
+#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
+             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
+  ENUM,
+#define %sSTART
+#include "clang/Basic/Diagnostic%sKinds.inc"
+#undef DIAG
+  NUM_BUILTIN_%s_DIAGNOSTICS
+};
+
+#define DIAG_ENUM(ENUM_NAME)                                                   \
+  namespace ENUM_NAME {                                                        \
+  enum {
+#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
+#define DIAG_ENUM_END()                                                        \
+  }                                                                            \
+  ;                                                                            \
+  }
+#include "clang/Basic/Diagnostic%sEnums.inc"
+#undef DIAG_ENUM_END
+#undef DIAG_ENUM_ITEM
+#undef DIAG_ENUM
+} // end namespace diag
+
+namespace diag_compat {
+#define DIAG_COMPAT_IDS_BEGIN() enum {
+#define DIAG_COMPAT_IDS_END()                                                  \
+  }                                                                            \
+  ;
+#define DIAG_COMPAT_ID(IDX, NAME, ...) NAME = IDX,
+#include "clang/Basic/Diagnostic%sCompatIDs.inc"
+#undef DIAG_COMPAT_ID
+#undef DIAG_COMPAT_IDS_BEGIN
+#undef DIAG_COMPAT_IDS_END
+} // end namespace diag_compat
+} // end namespace clang
+)c++",
+                     Upper, Comp, Upper, Comp, Comp);
 }
 
 /// ClangDiagsEnumsEmitter - The top-level class emits .def files containing

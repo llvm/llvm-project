@@ -261,6 +261,10 @@ public:
   void applyCombineShuffleConcat(MachineInstr &MI,
                                  SmallVector<Register> &Ops) const;
 
+  /// Replace \p MI with a build_vector.
+  bool matchCombineShuffleToBuildVector(MachineInstr &MI) const;
+  void applyCombineShuffleToBuildVector(MachineInstr &MI) const;
+
   /// Try to combine G_SHUFFLE_VECTOR into G_CONCAT_VECTORS.
   /// Returns true if MI changed.
   ///

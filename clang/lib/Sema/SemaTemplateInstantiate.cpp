@@ -2383,10 +2383,10 @@ TemplateInstantiator::TransformSubstNonTypeTemplateParmExpr(
   // The call to CheckTemplateArgument here produces the ImpCast.
   TemplateArgument SugaredConverted, CanonicalConverted;
   if (SemaRef
-          .CheckTemplateArgument(
-              E->getParameter(), SubstType, SubstReplacement.get(),
-              SugaredConverted, CanonicalConverted,
-              /*PartialOrderingTTP=*/false, Sema::CTAK_Specified)
+          .CheckTemplateArgument(E->getParameter(), SubstType,
+                                 SubstReplacement.get(), SugaredConverted,
+                                 CanonicalConverted,
+                                 /*StrictCheck=*/false, Sema::CTAK_Specified)
           .isInvalid())
     return true;
   return transformNonTypeTemplateParmRef(

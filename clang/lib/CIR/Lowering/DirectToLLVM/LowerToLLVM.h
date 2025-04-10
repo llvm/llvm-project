@@ -186,6 +186,19 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMCmpOpLowering : public mlir::OpConversionPattern<cir::CmpOp> {
+public:
+  CIRToLLVMCmpOpLowering(const mlir::TypeConverter &typeConverter,
+                         mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
+    setHasBoundedRewriteRecursion();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
 public:
   using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;

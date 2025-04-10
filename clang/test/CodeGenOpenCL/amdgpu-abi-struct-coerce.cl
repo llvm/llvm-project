@@ -423,7 +423,7 @@ struct_char_arr32 func_ret_struct_char_arr32()
   return s;
 }
 
-// CHECK: define{{.*}} i32 @func_transparent_union_ret() local_unnamed_addr #1 {
+// CHECK: define{{.*}} i32 @func_transparent_union_ret() local_unnamed_addr #[[ATTR1:[0-9]+]] {
 // CHECK: ret i32 0
 transparent_u func_transparent_union_ret()
 {

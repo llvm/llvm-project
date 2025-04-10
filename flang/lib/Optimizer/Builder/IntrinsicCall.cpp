@@ -5968,8 +5968,10 @@ IntrinsicLibrary::genIeeeSupportFlag(mlir::Type resultType,
   bool mayBeSupported = false;
   if (mlir::Value arg1 = getBase(args[1])) {
     mlir::Type arg1Ty = arg1.getType();
-    if (fir::ReferenceType refTy = mlir::dyn_cast<fir::ReferenceType>(arg1Ty))
-      arg1Ty = refTy.getEleTy();
+    if (auto eleTy = fir::dyn_cast_ptrOrBoxEleTy(arg1.getType()))
+      arg1Ty = eleTy;
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(arg1Ty))
+      arg1Ty = seqTy.getEleTy();
     switch (mlir::dyn_cast<mlir::FloatType>(arg1Ty).getWidth()) {
     case 16:
       mayBeSupported = arg1Ty.isBF16(); // kind=3
