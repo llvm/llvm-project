@@ -80,7 +80,7 @@ constants:       []
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
-  bb.0.entry:
+  bb.0:
     liveins: $sgpr4_sgpr5
 
     ; GCN-LABEL: name: test_should_convert_to_v_readfirstlane_b32
