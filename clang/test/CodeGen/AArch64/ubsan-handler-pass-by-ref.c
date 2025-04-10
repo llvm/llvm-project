@@ -8,7 +8,8 @@
 // RECOVER-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // RECOVER-NEXT:  [[ENTRY:.*:]]
 // RECOVER-NEXT:    [[TMP:%.*]] = alloca i64, align 8
-// RECOVER-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TMP]] to i32, !nosanitize [[META3:![0-9]+]]
+// RECOVER-NEXT:    store i64 -9223372036854775808, ptr [[TMP]], align 8, !nosanitize [[META3:![0-9]+]]
+// RECOVER-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[TMP]] to i32, !nosanitize [[META3]]
 // RECOVER-NEXT:    call void @__ubsan_handle_negate_overflow(ptr nonnull @[[GLOB1:[0-9]+]], i32 [[TMP0]]) #[[ATTR2:[0-9]+]], !nosanitize [[META3]]
 // RECOVER-NEXT:    ret i32 0
 //
