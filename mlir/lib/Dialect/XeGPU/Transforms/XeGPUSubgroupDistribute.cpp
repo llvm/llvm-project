@@ -36,6 +36,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
@@ -781,30 +782,27 @@ namespace {
 /// | 2x32x16               | [1, 16]     | 2x32x1                   |
 FailureOr<VectorType> getDistVecTypeBasedOnLaneLayout(xegpu::LayoutAttr layout,
                                                       VectorType originalType) {
-  llvm::SmallVector<int64_t, 2> distributedShape;
   if (!layout)
     return failure();
 
-  auto laneLayout = layout.getLaneLayout();
-  assert((originalType.getRank() == 2 || originalType.getRank() == 3) &&
-         "expecting 2D or 3D shape for the original vector type");
-  assert(laneLayout.size() == 2 && "expecting 2D shape for the wi layout");
-  // Original type can be 2D or 3D (array_length > 1), the last two dims are the
-  // block shape.
-  auto blockShape = originalType.getShape().take_back(2);
-  // Check if the block vector shape can be distributed evenly.
-  if (blockShape[0] % laneLayout[0] != 0 || blockShape[1] % laneLayout[1] != 0)
-    return failure();
-
-  if (originalType.getRank() == 3) {
-    distributedShape.push_back(originalType.getShape()[0]);
+  auto laneLayout = layout.getLaneLayout().asArrayRef();
+  assert(originalType.getShape().size() >= laneLayout.size() &&
+         "Rank of the original vector type should be greater or equal to the "
+         "size of the lane layout to distribute the vector type.");
+  SmallVector<int64_t> distributedShape(originalType.getShape());
+  /// Only distribute the last `laneLayout.size()` dimensions. The remaining
+  /// dimensions are not distributed.
+  unsigned distributionStart = originalType.getRank() - laneLayout.size();
+  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
+    if (i < distributionStart) {
+      continue;
+    }
+    /// Check if the dimension can be distributed evenly.
+    if (dim % laneLayout[i - distributionStart] != 0)
+      return failure();
+    distributedShape[i] = dim / laneLayout[i - distributionStart];
   }
-  for (unsigned i = 0; i < 2; ++i) {
-    distributedShape.push_back(blockShape[i] / laneLayout[i]);
-  }
-  auto newVectorType =
-      VectorType::get(distributedShape, originalType.getElementType());
-  return newVectorType;
+  return VectorType::get(distributedShape, originalType.getElementType());
 }
 
 static VectorType getDistributedVectorType(xegpu::LayoutAttr layout,
@@ -1028,15 +1026,14 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           storeOp, "the source tensor descriptor lacks sg_map attribute");
 
-    if (storeOp.getTensorDescType().getShape().size() != 2)
-      return rewriter.notifyMatchFailure(storeOp, "unsupported shape");
-
-    auto distriburtedTypeByWarpOp =
+    auto distributedTypeByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
-    if (failed(distriburtedTypeByWarpOp))
+    if (failed(distributedTypeByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
-    VectorType distributedTypeByWarpOp = distriburtedTypeByWarpOp.value();
+    VectorType distributedTypeByWarpOp =
+        distributedTypeByWarpOpOrFailure.value();
+    llvm::errs() << "distributed type: " << distributedTypeByWarpOp << "\n";
 
     SmallVector<size_t> newRetIndices;
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1066,7 +1063,8 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
     newStoreOperands.push_back(newWarpOp.getResult(newRetIndices[1]));
 
     rewriter.create<xegpu::StoreNdOp>(newWarpOp.getLoc(), TypeRange{},
-                                      newStoreOperands, storeOp->getAttrs());
+                                      newStoreOperands);
+    storeOp->setDialectAttrs(storeOp->getDialectAttrs());
     rewriter.eraseOp(storeOp);
     return success();
   }

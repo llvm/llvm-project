@@ -378,6 +378,10 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   // tensorSize must be adjusted for array_length.
   tensorSize *= getArrayLength();
 
+  if (layout.getRank() == 1) {
+    return VectorType::get({tensorSize / sgSize}, getElementType());
+  }
+
   return VectorType::get({tensorSize / (sgSize * laneDataSize), laneDataSize},
                          getElementType());
 }
