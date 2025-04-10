@@ -105,9 +105,6 @@ class GCNRewritePartialRegUsesImpl {
 
   /// Helper methods.
 
-  /// Return reg class expected by a MO's parent instruction for a given MO.
-  const TargetRegisterClass *getOperandRegClass(MachineOperand &MO) const;
-
   /// Find right-shifted by RShift amount version of the SubReg if it exists,
   /// return 0 otherwise.
   unsigned shiftSubReg(unsigned SubReg, unsigned RShift) const;
@@ -404,13 +401,6 @@ void GCNRewritePartialRegUsesImpl::updateLiveIntervals(
   LIS->removeInterval(OldReg);
 }
 
-const TargetRegisterClass *
-GCNRewritePartialRegUsesImpl::getOperandRegClass(MachineOperand &MO) const {
-  MachineInstr *MI = MO.getParent();
-  return TII->getRegClass(TII->get(MI->getOpcode()), MI->getOperandNo(&MO), TRI,
-                          *MI->getParent()->getParent());
-}
-
 bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
   auto Range = MRI->reg_nodbg_operands(Reg);
   if (Range.empty() || any_of(Range, [](MachineOperand &MO) {
@@ -435,14 +425,6 @@ bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
 
     if (Inserted)
       SubRegRC = TRI->getSubRegisterClass(RC, SubReg);
-
-    if (SubRegRC) {
-      if (const TargetRegisterClass *OpDescRC = getOperandRegClass(MO)) {
-        LLVM_DEBUG(dbgs() << TRI->getRegClassName(SubRegRC) << " & "
-                          << TRI->getRegClassName(OpDescRC) << " = ");
-        SubRegRC = TRI->getCommonSubClass(SubRegRC, OpDescRC);
-      }
-    }
 
     if (!SubRegRC) {
       LLVM_DEBUG(dbgs() << "couldn't find target regclass\n");
