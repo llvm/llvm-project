@@ -5735,11 +5735,10 @@ def t2CSINC : CS<"csinc", 0b1001>;
 def t2CSINV : CS<"csinv", 0b1010>;
 def t2CSNEG : CS<"csneg", 0b1011>;
 
+let HasOneUse = 1 in
 def ARMcsinc_su
     : PatFrag<(ops node:$lhs, node:$rhs, node:$cc, node:$flags),
-              (ARMcsinc node:$lhs, node:$rhs, node:$cc, node:$flags), [{
-  return N->hasOneUse();
-}]>;
+              (ARMcsinc node:$lhs, node:$rhs, node:$cc, node:$flags)>;
 
 let Predicates = [HasV8_1MMainline] in {
   multiclass CSPats<SDNode Node, Instruction Insn> {

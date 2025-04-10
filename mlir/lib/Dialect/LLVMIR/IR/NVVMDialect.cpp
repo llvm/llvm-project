@@ -49,34 +49,6 @@ using namespace NVVM;
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.cpp.inc"
 
 //===----------------------------------------------------------------------===//
-// Printing/parsing for NVVM ops
-//===----------------------------------------------------------------------===//
-
-static void printNVVMIntrinsicOp(OpAsmPrinter &p, Operation *op) {
-  p << " " << op->getOperands();
-  if (op->getNumResults() > 0)
-    p << " : " << op->getResultTypes();
-}
-
-// <operation> ::= `llvm.nvvm.vote.ballot.sync %mask, %pred` : result_type
-ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
-  MLIRContext *context = parser.getContext();
-  auto int32Ty = IntegerType::get(context, 32);
-  auto int1Ty = IntegerType::get(context, 1);
-
-  SmallVector<OpAsmParser::UnresolvedOperand, 8> ops;
-  Type type;
-  return failure(parser.parseOperandList(ops) ||
-                 parser.parseOptionalAttrDict(result.attributes) ||
-                 parser.parseColonType(type) ||
-                 parser.addTypeToList(type, result.types) ||
-                 parser.resolveOperands(ops, {int32Ty, int1Ty},
-                                        parser.getNameLoc(), result.operands));
-}
-
-void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
-
-//===----------------------------------------------------------------------===//
 // Verifier methods
 //===----------------------------------------------------------------------===//
 
@@ -172,7 +144,7 @@ LogicalResult BulkStoreOp::verify() {
 std::optional<mlir::NVVM::MMATypes>
 MmaOp::inferOperandMMAType(Type operandElType, bool isAccumulator) {
   auto half2Type =
-      LLVM::getFixedVectorType(Float16Type::get(operandElType.getContext()), 2);
+      VectorType::get(2, Float16Type::get(operandElType.getContext()));
   if (operandElType.isF64())
     return NVVM::MMATypes::f64;
   if (operandElType.isF16() || operandElType == half2Type)
@@ -271,7 +243,8 @@ void MmaOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
 
   // Print the types of the operands and result.
-  p << " : " << "(";
+  p << " : "
+    << "(";
   llvm::interleaveComma(SmallVector<Type, 3>{frags[0].regs[0].getType(),
                                              frags[1].regs[0].getType(),
                                              frags[2].regs[0].getType()},
@@ -432,7 +405,7 @@ LogicalResult MmaOp::verify() {
   MLIRContext *context = getContext();
   auto f16Ty = Float16Type::get(context);
   auto i32Ty = IntegerType::get(context, 32);
-  auto f16x2Ty = LLVM::getFixedVectorType(f16Ty, 2);
+  auto f16x2Ty = VectorType::get(2, f16Ty);
   auto f32Ty = Float32Type::get(context);
   auto f16x2x4StructTy = LLVM::LLVMStructType::getLiteral(
       context, {f16x2Ty, f16x2Ty, f16x2Ty, f16x2Ty});
@@ -534,7 +507,7 @@ LogicalResult MmaOp::verify() {
       expectedA.emplace_back(1, f64Ty);
       expectedB.emplace_back(1, f64Ty);
       expectedC.emplace_back(2, f64Ty);
-      // expectedC.emplace_back(1, LLVM::getFixedVectorType(f64Ty, 2));
+      // expectedC.emplace_back(1, VectorType::get(2, f64Ty));
       expectedResult.emplace_back(LLVM::LLVMStructType::getLiteral(
           context, SmallVector<Type>(2, f64Ty)));
       allowedShapes.push_back({8, 8, 4});
@@ -1020,7 +993,9 @@ std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
   ss << "},";
   // Need to map read/write registers correctly.
   regCnt = (regCnt * 2);
-  ss << " $" << (regCnt) << "," << " $" << (regCnt + 1) << "," << " p";
+  ss << " $" << (regCnt) << ","
+     << " $" << (regCnt + 1) << ","
+     << " p";
   if (getTypeD() != WGMMATypes::s32) {
     ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
   }
@@ -1155,6 +1130,19 @@ LogicalResult NVVM::MatchSyncOp::verify() {
   } else {
     if (!getType().isInteger(32)) {
       return emitOpError("match.sync 'any' returns an i32");
+    }
+  }
+  return success();
+}
+
+LogicalResult NVVM::VoteSyncOp::verify() {
+  if (getKind() == NVVM::VoteSyncKind::ballot) {
+    if (!getType().isInteger(32)) {
+      return emitOpError("vote.sync 'ballot' returns an i32");
+    }
+  } else {
+    if (!getType().isInteger(1)) {
+      return emitOpError("vote.sync 'any', 'all' and 'uni' returns an i1");
     }
   }
   return success();

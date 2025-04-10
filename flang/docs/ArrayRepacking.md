@@ -39,13 +39,13 @@ Having these results it seems reasonable to provide support for arrays repacking
 
 #### Facts and guesses about the implementation
 
-The dynamic checks for continuity and the array copy code is located completely in the [runtime](https://github.com/gcc-mirror/gcc/blob/3e08a4ecea27c54fda90e8f58641b1986ad957e1/libgfortran/generated/in_pack_r8.c#L35), so the compiler inserts unconditional calls in the subprogram prologue/epilogue.
+The dynamic checks for contiguity and the array copy code is located completely in the [runtime](https://github.com/gcc-mirror/gcc/blob/3e08a4ecea27c54fda90e8f58641b1986ad957e1/libgfortran/generated/in_pack_r8.c#L35), so the compiler inserts unconditional calls in the subprogram prologue/epilogue.
 
 It looks like `gfortran` ignores `intent(out)/intent(in)` which could have helped to avoid some of the `pack/unpack` overhead.
 
 It looks like the `pack`/`unpack` actions are inserted early in the compilation pipeline, and these extra calls affect behavior of the later optimization passes. For example, `Polyhedron/fatigue2` slows down by about 2x with `-frepack-arrays`: this slowdown is not caused by the `pack`/`unpack` overhead, but is a consequence of worse function inlining decisions made after the calls insertion. The benchmarks becomes even faster than the original version with `-frepack-arrays` and proper `-finline-limit=` settings, but it does not look like the benchmark contains code that would benefit from the array repacking.
 
-It does not look like `gfortran` is able to eliminate the `pack`/`unpack` code after the function inlining, if the actual argument is statically known to be contiguous. So the overhead from the dynamic continuity checks is inevitable when `-frepack-arrays` is specified.
+It does not look like `gfortran` is able to eliminate the `pack`/`unpack` code after the function inlining, if the actual argument is statically known to be contiguous. So the overhead from the dynamic contiguity checks is inevitable when `-frepack-arrays` is specified.
 
 It does not look like `gfortran` tries to optimize the insertion of `pack`/`unpack` code. For example, if a dummy array is only used under a condition within the subprogram, the repacking code might be inserted under the same condition to minimize the overhead on the unconditional path through the subprogram.
 
@@ -59,7 +59,7 @@ It does not look like `gfortran` tries to optimize the insertion of `pack`/`unpa
 
 #### Facts and guesses about the implementation
 
-The `pack` code is only generated if the actual argument may be non-contiguous in the innermost dimension, as determined statically, i.e. the compiler does not generate any dynamic continuity checks. For example:
+The `pack` code is only generated if the actual argument may be non-contiguous in the innermost dimension, as determined statically, i.e. the compiler does not generate any dynamic contiguity checks. For example:
 
 ```Fortran
 interface
@@ -132,8 +132,8 @@ So it does not seem practical/reasonable to enable the array repacking by defaul
 ### Performance
 
 1. Minimize the overhead of array repacking, e.g. avoid copy-in/out whenever possible, execute copy-in/out only on the execution paths where the array is accessed.
-2. Provide different modes of repacking depending on the "continuity" meaning, i.e. one - array is contiguous in the innermost dimension, two - array is contiguous in all dimensions.
-3. Avoid generating repacking code, when the "continuity" can be statically proven (including after optimization passes like constant propagation, function inlining, etc.).
+2. Provide different modes of repacking depending on the "contiguity" meaning, i.e. one - array is contiguous in the innermost dimension, two - array is contiguous in all dimensions.
+3. Avoid generating repacking code, when the "contiguity" can be statically proven (including after optimization passes like constant propagation, function inlining, etc.).
 4. Use a set of heuristics to avoid generating repacking code based on the array usage pattern, e.g. if an array is proven not to be used in an array expression or a loop, etc.
 5. Use a set of heuristics to avoid repacking actions dynamically, e.g. based on the array size, element size, byte stride(s) of the [innermost] dimension(s), etc.
 6. Minimize the impact of the IR changes, introduced by repacking, on the later optimization passes.
@@ -156,7 +156,7 @@ Controlled by cli options, Lowering will generate a `fir.pack_array` operation i
 The new operations will hold all the information that customizes further handling of the `pack`/`unpack` actions, such as:
 
 * Optional array of attributes supporting an interface to generate a predicate that says if the repacking is safe in the current context.
-* The continuity mode: `innermost` vs `whole`.
+* The contiguity mode: `innermost` vs `whole`.
 * Attributes selecting the heuristics (both compiler and runtime ones) that may be applied to avoid `pack`/`unpack` actions.
 * Other attributes, like `stack` vs `heap` to manage the temporary allocation according to `-fstack-arrays`, etc.
 
@@ -195,7 +195,7 @@ The operation creates a new `!fir.box/class<!fir.array<>>` value to represent ei
 Arguments:
 
 * `stack` - indicates if `-fstack-arrays` is in effect for compiling this function.
-* `innermost` - tells that the repacking has to be done iff the array is not contiguous in the innermost dimension. This also describes what type of continuity can be expected from `%new_var`, i.e. `innermost` means that the resulting array is definitely contiguous in the innermost dimension, but may be non-contiguous in other dimensions (unless additional analysis proves otherwise). For 1-D arrays, `innermost` attribute is not valid.
+* `innermost` - tells that the repacking has to be done iff the array is not contiguous in the innermost dimension. This also describes what type of contiguity can be expected from `%new_var`, i.e. `innermost` means that the resulting array is definitely contiguous in the innermost dimension, but may be non-contiguous in other dimensions (unless additional analysis proves otherwise). For 1-D arrays, `innermost` attribute is not valid.
 * `no_copy` - indicates that, in case a temporary array is created, `%var` to `%new_var` copy is not required (`intent(out)` dummy argument case).
 * `heuristics`
   * `loop-only` - `fir.pack_array` can be optimized away, if the array is not used in a loop.
@@ -351,7 +351,7 @@ The `fir.pack_array`'s copy-in action cannot be skipped for `INTENT(OUT)` dummy 
 
 #### Optional behavior
 
-In case of the `whole` continuity mode or with 1-D array, Flang can propagate this information to `hlfir.declare` - this may improve optimizations down the road. This can be done iff the repacking has no dynamic constraints and/or heuristics. For example:
+In case of the `whole` contiguity mode or with 1-D array, Flang can propagate this information to `hlfir.declare` - this may improve optimizations down the road. This can be done iff the repacking has no dynamic constraints and/or heuristics. For example:
 
 ```
     %c0 = arith.constant 0 : index
@@ -441,10 +441,11 @@ In cases where `fir.pack_array` is statically known to produce a copy that is co
 The following user options are proposed:
 
 * `-frepack-arrays` - the option forces Flang to repack a non-contiguous assumed-shape dummy array into a temporary contiguous memory, which may result in faster accesses of the array. The compiler will insert special code in subprogram prologue to allocate a temporary array and copy the original array into the temporary; in subprogram epilogue, it will insert a copy from the temporary array into the original array and deallocate the temporary. The overhead of the allocation/deallocation and the copies may be significant depending on the array size. The compiler will try to optimize the unnecessary/unprofitable repacking.
+* `-fstack-repack-arrays` - attempt allocating the temporary arrays in stack memory. By default, they are allocated in heap memory (note that `-fstack-arrays` does not affect the allocation of the temporaries created for the arrays repacking).
 * `-frepack-arrays-opts=[none|loop-only]` - the option enables optimizations that may eliminate the array repacking code depending on the array usage pattern:
   * `none` - no optimizations.
   * `loop-only` - the array repacking code will be removed in any subprogram where the array is not used inside a loop or an array expression.
-* `-frepack-arrays-continuity=[whole|innermost]`:
+* `-frepack-arrays-contiguity=[whole|innermost]`:
   * `whole` - the option will repack arrays that are non-contiguous in any dimension (default).
   * `innermost` - the option will repack arrays that are non-contiguous in the innermost dimension.
 * `-frepack-arrays-max-size=<int>` - arrays bigger than the specified size will not be repacked.

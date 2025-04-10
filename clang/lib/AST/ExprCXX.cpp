@@ -1402,7 +1402,7 @@ ArrayRef<NamedDecl *> LambdaExpr::getExplicitTemplateParameters() const {
   return Record->getLambdaExplicitTemplateParameters();
 }
 
-Expr *LambdaExpr::getTrailingRequiresClause() const {
+const AssociatedConstraint &LambdaExpr::getTrailingRequiresClause() const {
   return getCallOperator()->getTrailingRequiresClause();
 }
 
@@ -1694,7 +1694,7 @@ SizeOfPackExpr *SizeOfPackExpr::Create(ASTContext &Context,
                                        SourceLocation OperatorLoc,
                                        NamedDecl *Pack, SourceLocation PackLoc,
                                        SourceLocation RParenLoc,
-                                       std::optional<unsigned> Length,
+                                       UnsignedOrNone Length,
                                        ArrayRef<TemplateArgument> PartialArgs) {
   void *Storage =
       Context.Allocate(totalSizeToAlloc<TemplateArgument>(PartialArgs.size()));
@@ -1760,10 +1760,12 @@ QualType SubstNonTypeTemplateParmExpr::getParameterType(
 
 SubstNonTypeTemplateParmPackExpr::SubstNonTypeTemplateParmPackExpr(
     QualType T, ExprValueKind ValueKind, SourceLocation NameLoc,
-    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index)
+    const TemplateArgument &ArgPack, Decl *AssociatedDecl, unsigned Index,
+    bool Final)
     : Expr(SubstNonTypeTemplateParmPackExprClass, T, ValueKind, OK_Ordinary),
       AssociatedDecl(AssociatedDecl), Arguments(ArgPack.pack_begin()),
-      NumArguments(ArgPack.pack_size()), Index(Index), NameLoc(NameLoc) {
+      NumArguments(ArgPack.pack_size()), Final(Final), Index(Index),
+      NameLoc(NameLoc) {
   assert(AssociatedDecl != nullptr);
   setDependence(ExprDependence::TypeValueInstantiation |
                 ExprDependence::UnexpandedPack);
@@ -1979,14 +1981,13 @@ CXXParenListInitExpr *CXXParenListInitExpr::CreateEmpty(ASTContext &C,
 }
 
 CXXFoldExpr::CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
-                                SourceLocation LParenLoc, Expr *LHS,
-                                BinaryOperatorKind Opcode,
-                                SourceLocation EllipsisLoc, Expr *RHS,
-                                SourceLocation RParenLoc,
-                                std::optional<unsigned> NumExpansions)
+                         SourceLocation LParenLoc, Expr *LHS,
+                         BinaryOperatorKind Opcode, SourceLocation EllipsisLoc,
+                         Expr *RHS, SourceLocation RParenLoc,
+                         UnsignedOrNone NumExpansions)
     : Expr(CXXFoldExprClass, T, VK_PRValue, OK_Ordinary), LParenLoc(LParenLoc),
       EllipsisLoc(EllipsisLoc), RParenLoc(RParenLoc),
-      NumExpansions(NumExpansions ? *NumExpansions + 1 : 0), Opcode(Opcode) {
+      NumExpansions(NumExpansions), Opcode(Opcode) {
   // We rely on asserted invariant to distinguish left and right folds.
   assert(((LHS && LHS->containsUnexpandedParameterPack()) !=
           (RHS && RHS->containsUnexpandedParameterPack())) &&

@@ -230,7 +230,11 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
-#if __has_attribute(retain)
+// Only enabled for clang:
+// See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99587
+// GCC may produce "warning: ‘retain’ attribute ignored" (despite
+// __has_attribute(retain) being 1).
+#if defined(__clang__) && __has_attribute(retain)
 #define LLVM_ATTRIBUTE_RETAIN __attribute__((__retain__))
 #else
 #define LLVM_ATTRIBUTE_RETAIN

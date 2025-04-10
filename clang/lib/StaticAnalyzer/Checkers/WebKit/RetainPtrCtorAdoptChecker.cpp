@@ -31,7 +31,7 @@ class RetainPtrCtorAdoptChecker
     : public Checker<check::ASTDecl<TranslationUnitDecl>> {
 private:
   BugType Bug;
-  mutable BugReporter *BR;
+  mutable BugReporter *BR = nullptr;
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable llvm::DenseSet<const ValueDecl *> CreateOrCopyOutArguments;
   mutable RetainTypeChecker RTC;
@@ -111,6 +111,7 @@ public:
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -169,6 +170,7 @@ public:
 
   void visitConstructExpr(const CXXConstructExpr *CE,
                           const Decl *DeclWithIssue) const {
+    assert(BR && "expected nonnull BugReporter");
     if (BR->getSourceManager().isInSystemHeader(CE->getExprLoc()))
       return;
 
@@ -202,6 +204,12 @@ public:
 
   bool isAllocInit(const Expr *E) const {
     auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E);
+    if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+      if (unsigned ExprCount = POE->getNumSemanticExprs()) {
+        auto *Expr = POE->getSemanticExpr(ExprCount - 1)->IgnoreParenCasts();
+        ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Expr);
+      }
+    }
     if (!ObjCMsgExpr)
       return false;
     auto Selector = ObjCMsgExpr->getSelector();
@@ -247,6 +255,12 @@ public:
   enum class IsOwnedResult { Unknown, Skip, Owned, NotOwned };
   IsOwnedResult isOwned(const Expr *E) const {
     while (1) {
+      if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
+        if (unsigned SemanticExprCount = POE->getNumSemanticExprs()) {
+          E = POE->getSemanticExpr(SemanticExprCount - 1);
+          continue;
+        }
+      }
       if (isa<CXXNullPtrLiteralExpr>(E))
         return IsOwnedResult::NotOwned;
       if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
@@ -344,6 +358,7 @@ public:
       Os << " " << condition;
     Os << ".";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
@@ -364,6 +379,7 @@ public:
       Os << " " << condition;
     Os << ".";
 
+    assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
                                  BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);

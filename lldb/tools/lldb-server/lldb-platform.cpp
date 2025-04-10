@@ -67,8 +67,6 @@ static struct option g_long_options[] = {
     {"log-channels", required_argument, nullptr, 'c'},
     {"listen", required_argument, nullptr, 'L'},
     {"gdbserver-port", required_argument, nullptr, 'P'},
-    {"min-gdbserver-port", required_argument, nullptr, 'm'},
-    {"max-gdbserver-port", required_argument, nullptr, 'M'},
     {"socket-file", required_argument, nullptr, 'f'},
     {"server", no_argument, &g_server, 1},
     {"child-platform-fd", required_argument, nullptr, 2},

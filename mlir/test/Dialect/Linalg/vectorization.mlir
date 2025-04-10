@@ -665,6 +665,48 @@ module attributes {transform.with_named_sequence} {
 }
 
 // -----
+// This case is supported because low padding `%l0` is applied on
+// a unit dimension which is supported, non unit result dimension low
+// padding is currently unsupported.
+//  CHECK-LABEL: func @test_masked_vectorize_non_zero_low_pad_unit_res_dim
+func.func @test_masked_vectorize_non_zero_low_pad_unit_res_dim(
+  %0 : tensor<?x?xf32>, %h0 : index, %h1 : index, %l0 : index)
+    -> tensor<1x4xf32>
+{
+  //  CHECK-DAG: %[[C42:.*]] = arith.constant 4.243000e+01 : f32
+  //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+  //      CHECK: %[[C0_1:.*]] = arith.constant 0 : index
+  //  CHECK-DAG: %[[D0:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //  CHECK-DAG: %[[D1:.*]] = tensor.dim {{.*}} : tensor<?x?xf32>
+  //      CHECK: %[[MASK:.*]] = vector.create_mask %[[D0]], %[[D1]] : vector<1x4xi1>
+  //      CHECK: %[[MASKED_READ:.*]] = vector.mask %[[MASK]] {
+  // CHECK-SAME:   vector.transfer_read %{{.*}}[%[[C0_1]], %[[C0_1]]], %[[C42]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : tensor<?x?xf32>, vector<1x4xf32>
+  // CHECK-SAME: } : vector<1x4xi1> -> vector<1x4xf32>
+  //  CHECK-DAG: %[[EMPTY:.*]] = tensor.empty() : tensor<1x4xf32>
+  //  CHECK-DAG: %[[C0_2:.*]] = arith.constant 0 : index
+  //      CHECK: %[[MASKED_WRITE:.*]] = vector.transfer_write %[[MASKED_READ]], %[[EMPTY]][%[[C0_2]], %[[C0_2]]]
+  // CHECK-SAME:   {in_bounds = [true, true]} : vector<1x4xf32>, tensor<1x4xf32>
+  //      CHECK: return %[[MASKED_WRITE]] : tensor<1x4xf32>
+  %cst = arith.constant 42.43 : f32
+  %c0 = arith.constant 0 : index
+  %1 = tensor.pad %0 low[%l0, %c0] high[%h0, %h1]  {
+    ^bb0(%hh1: index, %hh2: index):
+      tensor.yield %cst : f32
+    } : tensor<?x?xf32> to tensor<1x4xf32>
+  return %1: tensor<1x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [1, 4] : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
 
 // Input identical as the test in vectorization-with-patterns.mlir. Output is
 // different - vector sizes are inferred (rather than user-specified) and hence

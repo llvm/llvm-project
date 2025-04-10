@@ -2079,9 +2079,6 @@ private:
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
                     uint32_t CFIType, MDNode *MMRAs);
-
-  /// Returns true if all successors are IRBlockAddressTaken.
-  bool jumpToIRBlockAddressTaken() const;
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

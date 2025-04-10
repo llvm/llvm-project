@@ -18,8 +18,6 @@
 #error "sqrtss / sqrtsd need SSE2"
 #endif
 
-#include "src/__support/FPUtil/generic/sqrt.h"
-
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 

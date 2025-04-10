@@ -28,6 +28,17 @@ struct JustAWeirdBird {
   }
 };
 
+int i = 0;
+struct HasOperatorDelete : public Bird{
+~HasOperatorDelete() { }
+void operator delete(void *p) { i-=2; }
+void operator delete[](void *p) { i--; }
+};
+
+struct AllocatedAsArray : public Bird {
+
+};
+
 // Vector deleting dtor for Bird is an alias because no new Bird[] expressions
 // in the TU.
 // X64: @"??_EBird@@UEAAPEAXI@Z" = weak dso_local unnamed_addr alias ptr (ptr, i32), ptr @"??_GBird@@UEAAPEAXI@Z"
@@ -48,11 +59,24 @@ Bird* alloc() {
   return P;
 }
 
+
+template<class C>
+struct S {
+  void foo() { void *p = new C(); delete (C *)p; }
+};
+
+S<AllocatedAsArray[1][3]> sp;
+
 void bar() {
   dealloc(alloc());
 
   JustAWeirdBird B;
   B.doSmth(38);
+
+  Bird *p = new HasOperatorDelete[2];
+  dealloc(p);
+
+  sp.foo();
 }
 
 // CHECK-LABEL: define dso_local void @{{.*}}dealloc{{.*}}(
@@ -85,6 +109,36 @@ void bar() {
 // CHECK-NEXT:   %[[FPLOAD:.*]]  = load ptr, ptr %[[FPGEP]]
 // X64-NEXT:   %[[CALL:.*]] = call noundef ptr %[[FPLOAD]](ptr noundef nonnull align 8 dereferenceable(8) %[[LPTR]], i32 noundef 3)
 // X86-NEXT:   %[[CALL:.*]] = call x86_thiscallcc noundef ptr %[[FPLOAD]](ptr noundef nonnull align 4 dereferenceable(4) %[[LPTR]], i32 noundef 3)
+// CHECK-NEXT:   br label %delete.end
+// CHECK: delete.end:
+// CHECK-NEXT:   ret void
+
+// Definition of S::foo, check that it has vector deleting destructor call
+// X64-LABEL: define linkonce_odr dso_local void @"?foo@?$S@$$BY102UAllocatedAsArray@@@@QEAAXXZ"
+// X86-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?foo@?$S@$$BY102UAllocatedAsArray@@@@QAEXXZ"
+// CHECK: delete.notnull:                                   ; preds = %arrayctor.cont
+// CHECK-NEXT:   %[[DEL_PTR:.*]] = getelementptr inbounds [1 x [3 x %struct.AllocatedAsArray]], ptr %[[THE_ARRAY:.*]], i32 0, i32 0
+// X64-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[DEL_PTR]], i64 -8
+// X86-NEXT:   %[[COOKIEGEP:.*]] = getelementptr inbounds i8, ptr %[[DEL_PTR]], i32 -4
+// X64-NEXT:   %[[HOWMANY:.*]] = load i64, ptr %[[COOKIEGEP]]
+// X86-NEXT:   %[[HOWMANY:.*]] = load i32, ptr %[[COOKIEGEP]]
+// X64-NEXT:   %[[ISNOELEM:.*]] = icmp eq i64 %[[HOWMANY]], 0
+// X86-NEXT:   %[[ISNOELEM:.*]] = icmp eq i32 %[[HOWMANY]], 0
+// CHECK-NEXT:   br i1 %[[ISNOELEM]], label %vdtor.nocall, label %vdtor.call
+// CHECK: vdtor.nocall:                                     ; preds = %delete.notnull
+// X64-NEXT:   %[[HOWMANYBYTES:.*]] = mul i64 8, %[[HOWMANY]]
+// X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
+// X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
+// X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
+// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
+// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
+// CHECK-NEXT:   br label %delete.end
+// CHECK: vdtor.call:                                       ; preds = %delete.notnull
+// CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[DEL_PTR]]
+// CHECK-NEXT:   %[[FPGEP:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 0
+// CHECK-NEXT:   %[[FPLOAD:.*]]  = load ptr, ptr %[[FPGEP]]
+// X64-NEXT:   %[[CALL:.*]] = call noundef ptr %[[FPLOAD]](ptr noundef nonnull align 8 dereferenceable(8) %[[DEL_PTR]], i32 noundef 3)
+// X86-NEXT:   %[[CALL:.*]] = call x86_thiscallcc noundef ptr %[[FPLOAD]](ptr noundef nonnull align 4 dereferenceable(4) %[[DEL_PTR]], i32 noundef 3)
 // CHECK-NEXT:   br label %delete.end
 // CHECK: delete.end:
 // CHECK-NEXT:   ret void
@@ -129,8 +183,8 @@ void bar() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete_after_array_destroy
 // CHECK: dtor.call_delete_after_array_destroy:
-// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
-// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
+// X64-NEXT:     call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef 8)
+// X86-NEXT:     call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef 4)
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %[[LTHIS]])
@@ -150,3 +204,15 @@ void bar() {
 // X64-SAME: ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EJustAWeirdBird@@UAEPAXI@Z"(
 // X86-SAME: ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete) unnamed_addr
+
+// X64-LABEL: define weak dso_local noundef ptr @"??_EHasOperatorDelete@@UEAAPEAXI@Z"
+// X86-LABEL: define weak dso_local x86_thiscallcc noundef ptr @"??_EHasOperatorDelete@@UAEPAXI@Z"
+// CHECK: dtor.call_delete_after_array_destroy:
+// X64-NEXT: call void @"??_VHasOperatorDelete@@SAXPEAX@Z"
+// X86-NEXT: call void @"??_VHasOperatorDelete@@SAXPAX@Z"
+// CHECK: dtor.call_delete:
+// X64-NEXT: call void @"??3HasOperatorDelete@@SAXPEAX@Z"
+// X86-NEXT: call void @"??3HasOperatorDelete@@SAXPAX@Z"
+
+// X64: define weak dso_local noundef ptr @"??_EAllocatedAsArray@@UEAAPEAXI@Z"
+// X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EAllocatedAsArray@@UAEPAXI@Z"

@@ -526,9 +526,8 @@ void RuntimePointerChecking::groupChecks(
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto MI = DepCands.findLeader(Access), ME = DepCands.member_end();
-         MI != ME; ++MI) {
-      auto PointerI = PositionMap.find(MI->getPointer());
+    for (auto M : DepCands.members(Access)) {
+      auto PointerI = PositionMap.find(M.getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {

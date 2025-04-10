@@ -1251,10 +1251,9 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
                                                const MCSymbolELF *Sym,
                                                uint64_t C,
                                                unsigned Type) const {
-  const MCSymbolRefExpr *RefA = Val.getSymA();
   // A PCRel relocation to an absolute value has no symbol (or section). We
   // represent that with a relocation to a null section.
-  if (!RefA)
+  if (!Val.getAddSym())
     return false;
 
   // An undefined symbol is not in any section, so the relocation has to point
@@ -1379,8 +1378,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (auto *RefB = Target.getSubSym()) {
     // When there is no relocation specifier, a linker relaxation target may
     // emit ADD/SUB relocations for A-B+C.
-    if (Target.getSymA() && Backend.handleAddSubRelocations(
-                                Asm, *Fragment, Fixup, Target, FixedValue))
+    if (Target.getAddSym() && Backend.handleAddSubRelocations(
+                                  Asm, *Fragment, Fixup, Target, FixedValue))
       return;
 
     const auto &SymB = cast<MCSymbolELF>(*RefB);
@@ -1405,8 +1404,8 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 
   // We either rejected the fixup or folded B into C at this point.
-  const MCSymbolRefExpr *RefA = Target.getSymA();
-  const auto *SymA = RefA ? cast<MCSymbolELF>(&RefA->getSymbol()) : nullptr;
+  const auto *RefA = Target.getAddSym();
+  const auto *SymA = RefA ? cast<MCSymbolELF>(RefA) : nullptr;
 
   bool ViaWeakRef = false;
   if (SymA && SymA->isVariable()) {

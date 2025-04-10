@@ -108,8 +108,9 @@ GENERIC OPTIONS
 EXIT STATUS
 ------------
 
-:program:`llvm-reduce` returns 0 under normal operation. It returns a non-zero
-exit code if there were any errors.
+:program:`llvm-reduce` returns 0 under normal operation. It returns a
+non-zero exit code if there were any errors. Returns 2 if the
+interestingness test reported the initial input was not interesting.
 
 EXAMPLE
 -------
