@@ -10617,7 +10617,11 @@ protected:
                                /*IsStrict=*/true) ||
                 (Shuffle && Mask.size() == Shuffle->getShuffleMask().size() &&
                  Shuffle->isZeroEltSplat() &&
-                 ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())));
+                 ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()) &&
+                 all_of(enumerate(Mask), [&](const auto &P) {
+                   return P.value() == PoisonMaskElem ||
+                          Shuffle->getShuffleMask()[P.index()] == 0;
+                 })));
       }
       V = Op;
       return false;
