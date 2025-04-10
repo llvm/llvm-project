@@ -1682,15 +1682,23 @@ entry:
 }
 
 define i8 @sub_if_uge_i8(i8 %x, i8 %y) {
-; CHECK-LABEL: sub_if_uge_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    zext.b a2, a1
-; CHECK-NEXT:    zext.b a3, a0
-; CHECK-NEXT:    sltu a2, a3, a2
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sub_if_uge_i8:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a2, a1
+; RV64I-NEXT:    zext.b a3, a0
+; RV64I-NEXT:    sltu a2, a3, a2
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    and a1, a2, a1
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_i8:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.b a2, a0
+; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    zext.b a0, a0
+; RV64ZBB-NEXT:    minu a0, a2, a0
+; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i8 %x, %y
   %select = select i1 %cmp, i8 0, i8 %y
   %sub = sub nuw i8 %x, %select
@@ -1712,12 +1720,10 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 ;
 ; RV64ZBB-LABEL: sub_if_uge_i16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a2, a1
-; RV64ZBB-NEXT:    zext.h a3, a0
-; RV64ZBB-NEXT:    sltu a2, a3, a2
-; RV64ZBB-NEXT:    addi a2, a2, -1
-; RV64ZBB-NEXT:    and a1, a2, a1
-; RV64ZBB-NEXT:    sub a0, a0, a1
+; RV64ZBB-NEXT:    zext.h a2, a0
+; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    zext.h a0, a0
+; RV64ZBB-NEXT:    minu a0, a2, a0
 ; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i16 %x, %y
   %select = select i1 %cmp, i16 0, i16 %y
@@ -1726,15 +1732,22 @@ define i16 @sub_if_uge_i16(i16 %x, i16 %y) {
 }
 
 define i32 @sub_if_uge_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: sub_if_uge_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a2, a1
-; CHECK-NEXT:    sext.w a3, a0
-; CHECK-NEXT:    sltu a2, a3, a2
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    subw a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sub_if_uge_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a2, a1
+; RV64I-NEXT:    sext.w a3, a0
+; RV64I-NEXT:    sltu a2, a3, a2
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    and a1, a2, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sext.w a2, a0
+; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    minu a0, a2, a0
+; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
   %select = select i1 %cmp, i32 0, i32 %y
   %sub = sub nuw i32 %x, %select
@@ -1742,13 +1755,19 @@ define i32 @sub_if_uge_i32(i32 %x, i32 %y) {
 }
 
 define i64 @sub_if_uge_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: sub_if_uge_i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sltu a2, a0, a1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    sub a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sub_if_uge_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a2, a0, a1
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    and a1, a2, a1
+; RV64I-NEXT:    sub a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sub a1, a0, a1
+; RV64ZBB-NEXT:    minu a0, a0, a1
+; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i64 %x, %y
   %select = select i1 %cmp, i64 0, i64 %y
   %sub = sub nuw i64 %x, %select
@@ -1798,27 +1817,70 @@ define i32 @sub_if_uge_multiuse_select_i32(i32 %x, i32 %y) {
 }
 
 define i32 @sub_if_uge_multiuse_cmp_i32(i32 %x, i32 %y) {
-; CHECK-LABEL: sub_if_uge_multiuse_cmp_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    sext.w a2, a1
-; CHECK-NEXT:    sext.w a3, a0
-; CHECK-NEXT:    sltu a4, a3, a2
-; CHECK-NEXT:    addi a4, a4, -1
-; CHECK-NEXT:    and a1, a4, a1
-; CHECK-NEXT:    subw a0, a0, a1
-; CHECK-NEXT:    bltu a3, a2, .LBB68_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a1, 4
-; CHECK-NEXT:    sllw a0, a0, a1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB68_2:
-; CHECK-NEXT:    li a1, 2
-; CHECK-NEXT:    sllw a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: sub_if_uge_multiuse_cmp_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sext.w a2, a1
+; RV64I-NEXT:    sext.w a3, a0
+; RV64I-NEXT:    sltu a4, a3, a2
+; RV64I-NEXT:    addi a4, a4, -1
+; RV64I-NEXT:    and a1, a4, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    bltu a3, a2, .LBB68_2
+; RV64I-NEXT:  # %bb.1:
+; RV64I-NEXT:    li a1, 4
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    ret
+; RV64I-NEXT:  .LBB68_2:
+; RV64I-NEXT:    li a1, 2
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_multiuse_cmp_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sext.w a2, a1
+; RV64ZBB-NEXT:    sext.w a3, a0
+; RV64ZBB-NEXT:    subw a0, a0, a1
+; RV64ZBB-NEXT:    minu a0, a3, a0
+; RV64ZBB-NEXT:    bltu a3, a2, .LBB68_2
+; RV64ZBB-NEXT:  # %bb.1:
+; RV64ZBB-NEXT:    li a1, 4
+; RV64ZBB-NEXT:    sllw a0, a0, a1
+; RV64ZBB-NEXT:    ret
+; RV64ZBB-NEXT:  .LBB68_2:
+; RV64ZBB-NEXT:    li a1, 2
+; RV64ZBB-NEXT:    sllw a0, a0, a1
+; RV64ZBB-NEXT:    ret
   %cmp = icmp ult i32 %x, %y
   %select = select i1 %cmp, i32 0, i32 %y
   %sub = sub nuw i32 %x, %select
   %select2 = select i1 %cmp, i32 2, i32 4
   %shl = shl i32 %sub, %select2
   ret i32 %shl
+}
+
+define i32 @sub_if_uge_multiuse_cmp_store_i32(i32 signext %x, i32 signext %y, ptr %z) {
+; RV64I-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    sltu a3, a0, a1
+; RV64I-NEXT:    xori a4, a3, 1
+; RV64I-NEXT:    addi a3, a3, -1
+; RV64I-NEXT:    and a1, a3, a1
+; RV64I-NEXT:    subw a0, a0, a1
+; RV64I-NEXT:    sw a4, 0(a2)
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: sub_if_uge_multiuse_cmp_store_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    sltu a3, a0, a1
+; RV64ZBB-NEXT:    subw a1, a0, a1
+; RV64ZBB-NEXT:    xori a3, a3, 1
+; RV64ZBB-NEXT:    minu a0, a0, a1
+; RV64ZBB-NEXT:    sw a3, 0(a2)
+; RV64ZBB-NEXT:    ret
+  %cmp = icmp uge i32 %x, %y
+  %conv = zext i1 %cmp to i32
+  store i32 %conv, ptr %z, align 4
+  %select = select i1 %cmp, i32 %y, i32 0
+  %sub = sub nuw i32 %x, %select
+  ret i32 %sub
 }
