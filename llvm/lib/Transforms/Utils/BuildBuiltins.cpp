@@ -204,6 +204,9 @@ protected:
       return emitInst(IsWeak, SuccessMemorder, *FailureMemorderConst);
     }
 
+    Type *BoolTy = Builder.getInt1Ty();
+    IntegerType *Int32Ty = Builder.getInt32Ty();
+
     // Create all the relevant BB's
     BasicBlock *ContBB =
         splitBB(Builder, /*CreateBranch=*/false,
@@ -215,43 +218,33 @@ protected:
     // MonotonicBB is arbitrarily chosen as the default case; in practice,
     // this doesn't matter unless someone is crazy enough to use something
     // that doesn't fold to a constant for the ordering.
-    SwitchInst *SI = Builder.CreateSwitch(FailureMemorderCABI, MonotonicBB);
-    // Implemented as acquire, since it's the closest in LLVM.
-    SI->addCase(
-        Builder.getInt32(static_cast<int32_t>(AtomicOrderingCABI::consume)),
-        AcquireBB);
-    SI->addCase(
-        Builder.getInt32(static_cast<int32_t>(AtomicOrderingCABI::acquire)),
-        AcquireBB);
-    SI->addCase(
-        Builder.getInt32(static_cast<int32_t>(AtomicOrderingCABI::seq_cst)),
-        SeqCstBB);
+    Value *Order = Builder.CreateIntCast(FailureMemorderCABI, Int32Ty, false);
+    SwitchInst *SI = Builder.CreateSwitch(Order, MonotonicBB);
 
     // TODO: Do not insert PHINode if operation cannot fail
     Builder.SetInsertPoint(ContBB, ContBB->begin());
     PHINode *Result =
-        Builder.CreatePHI(Builder.getInt1Ty(), 3,
+        Builder.CreatePHI(BoolTy, /*NumReservedValues=*/3,
                           Name + "." + getBuiltinSig() + ".failorder.success");
     IRBuilderBase::InsertPoint ContIP = Builder.saveIP();
 
-    // Emit all the different atomics
-    Builder.SetInsertPoint(MonotonicBB);
-    Value *MonotonicResult =
-        emitInst(IsWeak, SuccessMemorder, AtomicOrdering::Monotonic);
-    Builder.CreateBr(ContBB);
-    Result->addIncoming(MonotonicResult, Builder.GetInsertBlock());
+    auto EmitCaseImpl = [&](BasicBlock *CaseBB, AtomicOrdering AO,
+                            bool IsDefault = false) {
+      if (!IsDefault) {
+        for (auto CABI : seq<int>(0, 6)) {
+          if (fromCABI(CABI) == AO)
+            SI->addCase(Builder.getInt32(CABI), CaseBB);
+        }
+      }
+      Builder.SetInsertPoint(CaseBB);
+      Value *AtomicResult = emitInst(IsWeak, SuccessMemorder, AO);
+      Builder.CreateBr(ContBB);
+      Result->addIncoming(AtomicResult, Builder.GetInsertBlock());
+    };
 
-    Builder.SetInsertPoint(AcquireBB);
-    Value *AcquireResult =
-        emitInst(IsWeak, SuccessMemorder, AtomicOrdering::Acquire);
-    Builder.CreateBr(ContBB);
-    Result->addIncoming(AcquireResult, Builder.GetInsertBlock());
-
-    Builder.SetInsertPoint(SeqCstBB);
-    Value *SeqCstResult = emitInst(IsWeak, SuccessMemorder,
-                                   AtomicOrdering::SequentiallyConsistent);
-    Builder.CreateBr(ContBB);
-    Result->addIncoming(SeqCstResult, Builder.GetInsertBlock());
+    EmitCaseImpl(MonotonicBB, AtomicOrdering::Monotonic, /*IsDefault=*/true);
+    EmitCaseImpl(AcquireBB, AtomicOrdering::Acquire);
+    EmitCaseImpl(SeqCstBB, AtomicOrdering::SequentiallyConsistent);
 
     Builder.restoreIP(ContIP);
     return Result;
@@ -262,6 +255,7 @@ protected:
       return emitFailureMemorderSwitch(IsWeak, *SuccessMemorderConst);
 
     Type *BoolTy = Builder.getInt1Ty();
+    IntegerType *Int32Ty = Builder.getInt32Ty();
 
     // Create all the relevant BB's
     BasicBlock *ContBB =
@@ -282,67 +276,39 @@ protected:
     // MonotonicBB is arbitrarily chosen as the default case; in practice,
     // this doesn't matter unless someone is crazy enough to use something
     // that doesn't fold to a constant for the ordering.
-    IntegerType *IntTy = getIntTy(Builder, EmitOptions.TLI);
-    Value *Order = Builder.CreateIntCast(SuccessMemorderCABI, IntTy, false);
+    Value *Order = Builder.CreateIntCast(SuccessMemorderCABI, Int32Ty, false);
     SwitchInst *SI = Builder.CreateSwitch(Order, MonotonicBB);
 
     // TODO: No PHI if operation cannot fail
     Builder.SetInsertPoint(ContBB, ContBB->begin());
-    PHINode *Result = Builder.CreatePHI(
-        BoolTy, 5, Name + "." + getBuiltinSig() + ".memorder.success");
+    PHINode *Result =
+        Builder.CreatePHI(BoolTy, /*NumReservedValues=*/5,
+                          Name + "." + getBuiltinSig() + ".memorder.success");
     IRBuilderBase::InsertPoint ContIP = Builder.saveIP();
 
-    // Emit all the different atomics
-    Builder.SetInsertPoint(MonotonicBB);
-    Value *MonotonicResult =
-        emitFailureMemorderSwitch(IsWeak, AtomicOrdering::Monotonic);
-    Builder.CreateBr(ContBB);
-    Result->addIncoming(MonotonicResult, Builder.GetInsertBlock());
+    auto EmitCaseImpl = [&](BasicBlock *CaseBB, AtomicOrdering AO,
+                            bool IsDefault = false) {
+      if (!CaseBB)
+        return;
 
-    if (AcquireBB) {
-      SI->addCase(
-          Builder.getInt32(static_cast<uint32_t>(AtomicOrderingCABI::consume)),
-          AcquireBB);
-      SI->addCase(
-          Builder.getInt32(static_cast<uint32_t>(AtomicOrderingCABI::acquire)),
-          AcquireBB);
-      Builder.SetInsertPoint(AcquireBB);
-      Value *AcquireResult =
-          emitFailureMemorderSwitch(IsWeak, AtomicOrdering::Acquire);
+      if (!IsDefault) {
+        for (auto CABI : seq<int>(0, 6)) {
+          if (fromCABI(CABI) == AO)
+            SI->addCase(Builder.getInt32(CABI), CaseBB);
+        }
+      }
+      Builder.SetInsertPoint(CaseBB);
+      Value *AtomicResult = emitFailureMemorderSwitch(IsWeak, AO);
       Builder.CreateBr(ContBB);
-      Result->addIncoming(AcquireResult, Builder.GetInsertBlock());
-    }
+      Result->addIncoming(AtomicResult, Builder.GetInsertBlock());
+    };
 
-    if (ReleaseBB) {
-      SI->addCase(
-          Builder.getInt32(static_cast<uint32_t>(AtomicOrderingCABI::release)),
-          ReleaseBB);
-      Builder.SetInsertPoint(ReleaseBB);
-      Value *ReleaseResult =
-          emitFailureMemorderSwitch(IsWeak, AtomicOrdering::Release);
-      Builder.CreateBr(ContBB);
-      Result->addIncoming(ReleaseResult, Builder.GetInsertBlock());
-    }
-
-    if (AcqRelBB) {
-      SI->addCase(
-          Builder.getInt32(static_cast<uint32_t>(AtomicOrderingCABI::acq_rel)),
-          AcqRelBB);
-      Builder.SetInsertPoint(AcqRelBB);
-      Value *AcqRelResult =
-          emitFailureMemorderSwitch(IsWeak, AtomicOrdering::AcquireRelease);
-      Builder.CreateBr(ContBB);
-      Result->addIncoming(AcqRelResult, Builder.GetInsertBlock());
-    }
-
-    SI->addCase(
-        Builder.getInt32(static_cast<uint32_t>(AtomicOrderingCABI::seq_cst)),
-        SeqCstBB);
-    Builder.SetInsertPoint(SeqCstBB);
-    Value *SeqCstResult = emitFailureMemorderSwitch(
-        IsWeak, AtomicOrdering::SequentiallyConsistent);
-    Builder.CreateBr(ContBB);
-    Result->addIncoming(SeqCstResult, Builder.GetInsertBlock());
+    // Emit all the different atomics.
+    EmitCaseImpl(MonotonicBB, AtomicOrdering::Monotonic, /*IsDefault=*/true);
+    EmitCaseImpl(AcquireBB, AtomicOrdering::Acquire);
+    EmitCaseImpl(ReleaseBB, AtomicOrdering::Release);
+    EmitCaseImpl(AcqRelBB, AtomicOrdering::AcquireRelease);
+    EmitCaseImpl(SeqCstBB, AtomicOrdering::SequentiallyConsistent);
 
     Builder.restoreIP(ContIP);
     return Result;
