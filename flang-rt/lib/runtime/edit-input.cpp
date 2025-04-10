@@ -169,17 +169,18 @@ static inline RT_API_ATTRS char32_t GetRadixPointChar(const DataEdit &edit) {
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
     const DataEdit &edit, Fortran::common::optional<char32_t> &next,
-    Fortran::common::optional<int> &remaining) {
-  remaining = io.CueUpInput(edit);
-  next = io.NextInField(remaining, edit);
+    Fortran::common::optional<int> &remaining,
+    IoStatementState::FastAsciiField *fastField = nullptr) {
+  remaining = io.CueUpInput(edit, fastField);
+  next = io.NextInField(remaining, edit, fastField);
   char sign{'\0'};
   if (next) {
     if (*next == '-' || *next == '+') {
       sign = *next;
       if (!edit.IsListDirected()) {
-        io.SkipSpaces(remaining);
+        io.SkipSpaces(remaining, fastField);
       }
-      next = io.NextInField(remaining, edit);
+      next = io.NextInField(remaining, edit, fastField);
     }
   }
   return sign;
@@ -213,17 +214,18 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   }
   Fortran::common::optional<int> remaining;
   Fortran::common::optional<char32_t> next;
-  char sign{ScanNumericPrefix(io, edit, next, remaining)};
+  auto fastField{io.GetUpcomingFastAsciiField()};
+  char sign{ScanNumericPrefix(io, edit, next, remaining, &fastField)};
   if (sign == '-' && !isSigned) {
     io.GetIoErrorHandler().SignalError("Negative sign in UNSIGNED input field");
     return false;
   }
-  common::UnsignedInt128 value{0};
+  common::uint128_t value{0};
   bool any{!!sign};
   bool overflow{false};
   const char32_t comma{GetSeparatorChar(edit)};
-  static constexpr auto maxu128{~common::UnsignedInt128{0}};
-  for (; next; next = io.NextInField(remaining, edit)) {
+  static constexpr auto maxu128{~common::uint128_t{0}};
+  for (; next; next = io.NextInField(remaining, edit, &fastField)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
       if (edit.modes.editingFlags & blankZero) {
@@ -243,7 +245,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
         // input, like a few other Fortran compilers do.
         // TODO: also process exponents?  Some compilers do, but they obviously
         // can't just be ignored.
-        while ((next = io.NextInField(remaining, edit))) {
+        while ((next = io.NextInField(remaining, edit, &fastField))) {
           if (*next < '0' || *next > '9') {
             break;
           }
@@ -271,7 +273,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     return false;
   }
   if (isSigned) {
-    auto maxForKind{common::UnsignedInt128{1} << ((8 * kind) - 1)};
+    auto maxForKind{common::uint128_t{1} << ((8 * kind) - 1)};
     overflow |= value >= maxForKind && (value > maxForKind || sign != '-');
   } else {
     auto maxForKind{maxu128 >> (((16 - kind) * 8) + (isSigned ? 1 : 0))};
@@ -287,7 +289,16 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   }
   if (any || !io.GetIoErrorHandler().InError()) {
     // The value is stored in the lower order bits on big endian platform.
-    // When memcpy, shift the value to the higher order bit.
+    // For memcpy, shift the value to the highest order bits.
+#if USING_NATIVE_INT128_T
+    auto shft{static_cast<int>(sizeof value - kind)};
+    if (!isHostLittleEndian && shft >= 0) {
+      auto l{value << shft};
+      std::memcpy(n, &l, kind);
+    } else {
+      std::memcpy(n, &value, kind); // a blank field means zero
+    }
+#else
     auto shft{static_cast<int>(sizeof(value.low())) - kind};
     // For kind==8 (i.e. shft==0), the value is stored in low_ in big endian.
     if (!isHostLittleEndian && shft >= 0) {
@@ -296,6 +307,8 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     } else {
       std::memcpy(n, &value, kind); // a blank field means zero
     }
+#endif
+    io.GotChar(fastField.got());
     return true;
   } else {
     return false;
@@ -1070,7 +1083,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
       readyBytes = io.GetNextInputBytes(input);
       if (readyBytes == 0 ||
           (readyBytes < remainingChars && edit.modes.nonAdvancing)) {
-        if (io.CheckForEndOfRecord(readyBytes)) {
+        if (io.CheckForEndOfRecord(readyBytes, connection)) {
           if (readyBytes == 0) {
             // PAD='YES' and no more data
             Fortran::runtime::fill_n(x, lengthChars, ' ');
