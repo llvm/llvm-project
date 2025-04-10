@@ -173,6 +173,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_RELAX;
   case RISCV::fixup_riscv_align:
     return ELF::R_RISCV_ALIGN;
+  case RISCV::fixup_riscv_qc_e_32:
+    return ELF::R_RISCV_QC_E_32;
+  case RISCV::fixup_riscv_qc_abs20_u:
+    return ELF::R_RISCV_QC_ABS20_U;
   }
 }
 
