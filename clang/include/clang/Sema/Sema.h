@@ -4711,6 +4711,7 @@ public:
   NamedDecl *findLocallyScopedExternCDecl(DeclarationName Name);
 
   void deduceOpenCLAddressSpace(ValueDecl *decl);
+  void deduceHLSLAddressSpace(VarDecl *decl);
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
   void deduceBoundsSafetyPointerTypes(ValueDecl *decl);
