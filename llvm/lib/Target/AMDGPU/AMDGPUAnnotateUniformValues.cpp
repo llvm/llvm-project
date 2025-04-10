@@ -51,18 +51,12 @@ public:
       : UA(&UA), MSSA(&MSSA), AA(&AA),
         isEntryFunc(AMDGPU::isEntryFunctionCC(F.getCallingConv())) {}
 
-  void visitBranchInst(BranchInst &I);
   void visitLoadInst(LoadInst &I);
 
   bool changed() const { return Changed; }
 };
 
 } // End anonymous namespace
-
-void AMDGPUAnnotateUniformValues::visitBranchInst(BranchInst &I) {
-  if (UA->isUniform(&I))
-    setUniformMetadata(&I);
-}
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
