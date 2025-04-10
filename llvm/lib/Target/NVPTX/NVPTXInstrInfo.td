@@ -2998,27 +2998,46 @@ let hasSideEffects = false in {
                              "{{ .reg .b32 tmp; mov.b64 {$low, tmp}, $s; }}",
                              []>;
 
+  // PTX 7.1 lets you avoid a temp register and just use _ as a "sink" for the
+  // unused high/low part.
+  def I32toI16H_Sink  : NVPTXInst<(outs Int16Regs:$high),
+                             (ins Int32Regs:$s),
+                             "mov.b32 \t{{_, $high}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I32toI16L_Sink  : NVPTXInst<(outs Int16Regs:$low),
+                             (ins Int32Regs:$s),
+                             "mov.b32 \t{{$low, _}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I64toI32H_Sink  : NVPTXInst<(outs Int32Regs:$high),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{_, $high}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
+  def I64toI32L_Sink  : NVPTXInst<(outs Int32Regs:$low),
+                             (ins Int64Regs:$s),
+                             "mov.b64 \t{{$low, _}}, $s;",
+                             []>, Requires<[hasPTX<71>]>;
 }
 
-// Using partial vectorized move produces better SASS code for extraction of
-// upper/lower parts of an integer.
-def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))),
-          (I32toI16H $s)>;
-def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))),
-          (I32toI16H $s)>;
-def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))),
-          (I64toI32H $s)>;
-def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))),
-          (I64toI32H $s)>;
+def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))), (I32toI16H_Sink i32:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
+def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H_Sink i64:$s)>, Requires<[hasPTX<71>]>;
+
+// Fall back to the old way if we don't have PTX 7.1.
+def : Pat<(i16 (trunc (srl i32:$s, (i32 16)))), (I32toI16H $s)>;
+def : Pat<(i16 (trunc (sra i32:$s, (i32 16)))), (I32toI16H $s)>;
+def : Pat<(i32 (trunc (srl i64:$s, (i32 32)))), (I64toI32H $s)>;
+def : Pat<(i32 (trunc (sra i64:$s, (i32 32)))), (I64toI32H $s)>;
 
 def: Pat<(i32 (sext (extractelt v2i16:$src, 0))),
          (CVT_INREG_s32_s16 $src)>;
 
 foreach vt = [v2f16, v2bf16, v2i16] in {
-def : Pat<(extractelt vt:$src, 0),
-          (I32toI16L $src)>;
-def : Pat<(extractelt vt:$src, 1),
-          (I32toI16H $src)>;
+  def : Pat<(extractelt vt:$src, 0), (I32toI16L_Sink $src)>, Requires<[hasPTX<71>]>;
+  def : Pat<(extractelt vt:$src, 1), (I32toI16H_Sink $src)>, Requires<[hasPTX<71>]>;
+
+  def : Pat<(extractelt vt:$src, 0), (I32toI16L $src)>;
+  def : Pat<(extractelt vt:$src, 1), (I32toI16H $src)>;
 }
 def : Pat<(v2f16 (build_vector f16:$a, f16:$b)),
           (V2I16toI32 $a, $b)>;
@@ -3405,6 +3424,14 @@ def : Pat <
   (v2i16 (bswap v2i16:$a)),
   (INT_NVVM_PRMT $a, (i32 0), (i32 0x2301))>;
 
+def : Pat <
+  (i64 (bswap i64:$a)),
+  (V2I32toI64
+    (INT_NVVM_PRMT (I64toI32H_Sink $a), (i32 0), (i32 0x0123)),
+    (INT_NVVM_PRMT (I64toI32L_Sink $a), (i32 0), (i32 0x0123)))>,
+  Requires<[hasPTX<71>]>;
+
+// Fall back to the old way if we don't have PTX 7.1.
 def : Pat <
   (i64 (bswap i64:$a)),
   (V2I32toI64
