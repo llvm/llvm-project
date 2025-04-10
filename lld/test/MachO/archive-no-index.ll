@@ -2,9 +2,9 @@
 ; RUN: rm -rf %t; split-file %s %t
 
 ; RUN: llvm-as %t/lib.ll -o %t/lib.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
+; RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/main.o %t/main.s
 ; RUN: llvm-ar rcST %t/lib.a %t/lib.o
-# RUN: %lld %t/main.o %t/lib.a -o %t/out
+; RUN: %lld %t/main.o %t/lib.a -o %t/out
 
 ;--- main.s
 .global _main
