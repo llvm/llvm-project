@@ -35,8 +35,8 @@ bb1:                                              ; preds = %bb3, %bb
   %i2 = extractelement <3 x float> %i, i64 2
   %i3 = fmul float %i2, 1.000000e+00
   %i4 = fmul nsz <3 x float> %arg, <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00>
-  %i5 = insertelement <3 x float> undef, float %i3, i32 0
-  %i6 = shufflevector <3 x float> %i5, <3 x float> undef, <3 x i32> zeroinitializer
+  %i5 = insertelement <3 x float> poison, float %i3, i32 0
+  %i6 = shufflevector <3 x float> %i5, <3 x float> poison, <3 x i32> zeroinitializer
   %i7 = fmul <3 x float> %i4, %i6
   %i8 = fcmp oeq float %i3, 0.000000e+00
   br i1 %i8, label %bb3, label %bb2

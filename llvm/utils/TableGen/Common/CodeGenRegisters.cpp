@@ -598,8 +598,7 @@ void CodeGenRegister::addSubRegsPreOrder(
       SR->addSubRegsPreOrder(OSet, RegBank);
   }
   // Add any secondary sub-registers that weren't part of the explicit tree.
-  for (auto SubReg : SubRegs)
-    OSet.insert(SubReg.second);
+  OSet.insert_range(llvm::make_second_range(SubRegs));
 }
 
 // Get the sum of this register's unit weights.
@@ -861,23 +860,27 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
   }
 }
 
-// Compute inherited propertied for a synthesized register class.
+// Compute inherited properties for a synthesized register class.
 void CodeGenRegisterClass::inheritProperties(CodeGenRegBank &RegBank) {
   assert(!getDef() && "Only synthesized classes can inherit properties");
   assert(!SuperClasses.empty() && "Synthesized class without super class");
 
-  // The last super-class is the smallest one.
-  CodeGenRegisterClass &Super = *SuperClasses.back();
+  // The last super-class is the smallest one in topological order. Check for
+  // allocatable super-classes and inherit from the nearest allocatable one if
+  // any.
+  auto NearestAllocSCRIt =
+      find_if(reverse(SuperClasses),
+              [&](const CodeGenRegisterClass *S) { return S->Allocatable; });
+  CodeGenRegisterClass &Super = NearestAllocSCRIt == SuperClasses.rend()
+                                    ? *SuperClasses.back()
+                                    : **NearestAllocSCRIt;
 
   // Most properties are copied directly.
   // Exceptions are members, size, and alignment
   Namespace = Super.Namespace;
   VTs = Super.VTs;
   CopyCost = Super.CopyCost;
-  // Check for allocatable superclasses.
-  Allocatable = any_of(SuperClasses, [&](const CodeGenRegisterClass *S) {
-    return S->Allocatable;
-  });
+  Allocatable = Super.Allocatable;
   AltOrderSelect = Super.AltOrderSelect;
   AllocationPriority = Super.AllocationPriority;
   GlobalPriority = Super.GlobalPriority;
@@ -2004,7 +2007,7 @@ void CodeGenRegBank::pruneUnitSets() {
 // Create a RegUnitSet for each RegClass that contains all units in the class
 // including adopted units that are necessary to model register pressure. Then
 // iteratively compute RegUnitSets such that the union of any two overlapping
-// RegUnitSets is repreresented.
+// RegUnitSets is represented.
 //
 // RegisterInfoEmitter will map each RegClass to its RegUnitClass and any
 // RegUnitSet that is a superset of that RegUnitClass.
@@ -2103,9 +2106,7 @@ void CodeGenRegBank::computeRegUnitSets() {
 
   // For each register class, list the UnitSets that are supersets.
   RegClassUnitSets.resize(RegClasses.size());
-  int RCIdx = -1;
   for (auto &RC : RegClasses) {
-    ++RCIdx;
     if (!RC.Allocatable)
       continue;
 
@@ -2127,12 +2128,13 @@ void CodeGenRegBank::computeRegUnitSets() {
          ++USIdx) {
       if (isRegUnitSubSet(RCRegUnits, RegUnitSets[USIdx].Units)) {
         LLVM_DEBUG(dbgs() << " " << USIdx);
-        RegClassUnitSets[RCIdx].push_back(USIdx);
+        RegClassUnitSets[RC.EnumValue].push_back(USIdx);
       }
     }
     LLVM_DEBUG(dbgs() << "\n");
-    assert((!RegClassUnitSets[RCIdx].empty() || !RC.GeneratePressureSet) &&
-           "missing unit set for regclass");
+    assert(
+        (!RegClassUnitSets[RC.EnumValue].empty() || !RC.GeneratePressureSet) &&
+        "missing unit set for regclass");
   }
 
   // For each register unit, ensure that we have the list of UnitSets that
@@ -2337,7 +2339,7 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
 void CodeGenRegBank::inferMatchingSuperRegClass(
     CodeGenRegisterClass *RC,
     std::list<CodeGenRegisterClass>::iterator FirstSubRegRC) {
-  DenseMap<const CodeGenRegister *, std::vector<const CodeGenRegister *>>
+  std::vector<std::pair<const CodeGenRegister *, const CodeGenRegister *>>
       SubToSuperRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
@@ -2349,15 +2351,17 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     if (RC->getSubClassWithSubReg(&SubIdx) != RC)
       continue;
 
-    // Build list of (Super, Sub) pairs for this SubIdx.
+    // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
+    // that the list may contain entries with the same Sub but different Supers.
     SubToSuperRegs.clear();
     TopoSigs.reset();
     for (const auto Super : RC->getMembers()) {
       const CodeGenRegister *Sub = Super->getSubRegs().find(&SubIdx)->second;
       assert(Sub && "Missing sub-register");
-      SubToSuperRegs[Sub].push_back(Super);
+      SubToSuperRegs.emplace_back(Sub, Super);
       TopoSigs.set(Sub->getTopoSig());
     }
+    sort(SubToSuperRegs, on_first<deref<std::less<>>>());
 
     // Iterate over sub-register class candidates.  Ignore classes created by
     // this loop. They will never be useful.
@@ -2372,14 +2376,17 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // Topological shortcut: SubRC members have the wrong shape.
       if (!TopoSigs.anyCommon(SubRC.getTopoSigs()))
         continue;
-      // Compute the subset of RC that maps into SubRC.
+      // Compute the subset of RC that maps into SubRC with a single linear scan
+      // through SubToSuperRegs and the members of SubRC.
       CodeGenRegister::Vec SubSetVec;
-      for (const CodeGenRegister *R : SubRC.getMembers()) {
-        auto It = SubToSuperRegs.find(R);
-        if (It != SubToSuperRegs.end()) {
-          const std::vector<const CodeGenRegister *> &SuperRegs = It->second;
-          SubSetVec.insert(SubSetVec.end(), SuperRegs.begin(), SuperRegs.end());
-        }
+      auto SubI = SubRC.getMembers().begin(), SubE = SubRC.getMembers().end();
+      for (auto &[Sub, Super] : SubToSuperRegs) {
+        while (SubI != SubE && **SubI < *Sub)
+          ++SubI;
+        if (SubI == SubE)
+          break;
+        if (**SubI == *Sub)
+          SubSetVec.push_back(Super);
       }
 
       if (SubSetVec.empty())

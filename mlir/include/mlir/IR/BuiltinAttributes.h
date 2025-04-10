@@ -717,6 +717,7 @@ using DenseResourceElementsHandle = DialectResourceBlobHandle<BuiltinDialect>;
 namespace mlir {
 //===----------------------------------------------------------------------===//
 // DenseArrayAttr
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Base class for DenseArrayAttr that is instantiated and specialized for each
@@ -772,6 +773,7 @@ using DenseF64ArrayAttr = detail::DenseArrayAttrImpl<double>;
 
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttr
+//===----------------------------------------------------------------------===//
 
 namespace detail {
 /// Base class for DenseResourceElementsAttr that is instantiated and

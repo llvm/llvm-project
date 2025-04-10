@@ -217,6 +217,9 @@ let Definition = "target" in {
          "launched. If you change this setting, the new value will only apply to "
          "subsequent launches. Commands that take an explicit working directory "
          "will override this setting.">;
+  def ParallelModuleLoad: Property<"parallel-module-load", "Boolean">,
+    DefaultTrue,
+    Desc<"Enable loading of modules in parallel for the dynamic loader.">;
 }
 
 let Definition = "process_experimental" in {

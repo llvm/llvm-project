@@ -8,6 +8,10 @@ static_library("MCA") {
     "//llvm/lib/Support",
     "//llvm/lib/Target/RISCV/MCTargetDesc",
     "//llvm/lib/Target/RISCV/TargetInfo",
+
+    # RISCVCustomBehaviour.cpp after 32dffdce0511 includes
+    # RISCVGenRegisterBank.inc via RISCVSubtarget.h :/
+    "../:RISCVGenRegisterBank",
   ]
   include_dirs = [ ".." ]
   sources = [ "RISCVCustomBehaviour.cpp" ]

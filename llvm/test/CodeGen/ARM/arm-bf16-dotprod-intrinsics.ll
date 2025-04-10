@@ -64,7 +64,6 @@ entry:
 define <4 x float> @test_vbfdotq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfdotq_lane_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vdot.bf16 q0, q1, d4[0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -108,7 +107,6 @@ entry:
 define <4 x float> @test_vbfmlalbq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfmlalbq_lane_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vfmab.bf16 q0, q1, d4[0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -131,7 +129,6 @@ entry:
 define <4 x float> @test_vbfmlaltq_lane_f32(<4 x float> %r, <8 x bfloat> %a, <4 x bfloat> %b) {
 ; CHECK-LABEL: test_vbfmlaltq_lane_f32:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    @ kill: def $d4 killed $d4 def $q2
 ; CHECK-NEXT:    vfmat.bf16 q0, q1, d4[0]
 ; CHECK-NEXT:    bx lr
 entry:

@@ -210,6 +210,7 @@ defvar writeMlirBytecodeWithConvertToAttribute = [{
 
 //===----------------------------------------------------------------------===//
 // Primitive property kinds
+//===----------------------------------------------------------------------===//
 
 // Any kind of integer stored as properties.
 class IntProp<string storageTypeParam, string desc = ""> :
@@ -360,6 +361,7 @@ def UnitProperty : _cls_UnitProp, Deprecated<"moved to shorter name UnitProp">;
 
 //===----------------------------------------------------------------------===//
 // Property field overwrites
+//===----------------------------------------------------------------------===//
 
 /// Class for giving a property a default value.
 /// This doesn't change anything about the property other than giving it a default
@@ -419,6 +421,7 @@ class ConfinedProperty<Property p, Pred pred, string newSummary = "">
 
 //===----------------------------------------------------------------------===//
 // Primitive property combinators
+//===----------------------------------------------------------------------===//
 
 /// Create a variable named `name` of `prop`'s storage type that is initialized
 /// to the correct default value, if there is one.

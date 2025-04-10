@@ -33,6 +33,7 @@
 #include "clang/Basic/PragmaKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "clang/Basic/Visibility.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -77,6 +78,23 @@ class TypeAliasTemplateDecl;
 class UnresolvedSetImpl;
 class VarTemplateDecl;
 enum class ImplicitParamKind;
+
+// Holds a constraint expression along with a pack expansion index, if
+// expanded.
+struct AssociatedConstraint {
+  const Expr *ConstraintExpr = nullptr;
+  UnsignedOrNone ArgPackSubstIndex = std::nullopt;
+
+  constexpr AssociatedConstraint() = default;
+
+  explicit AssociatedConstraint(const Expr *ConstraintExpr,
+                                UnsignedOrNone ArgPackSubstIndex = std::nullopt)
+      : ConstraintExpr(ConstraintExpr), ArgPackSubstIndex(ArgPackSubstIndex) {}
+
+  explicit operator bool() const { return ConstraintExpr != nullptr; }
+
+  bool isNull() const { return !operator bool(); }
+};
 
 /// The top declaration context.
 class TranslationUnitDecl : public Decl,
@@ -742,7 +760,7 @@ class DeclaratorDecl : public ValueDecl {
   // and constrained function decls.
   struct ExtInfo : public QualifierInfo {
     TypeSourceInfo *TInfo = nullptr;
-    Expr *TrailingRequiresClause = nullptr;
+    AssociatedConstraint TrailingRequiresClause;
   };
 
   llvm::PointerUnion<TypeSourceInfo *, ExtInfo *> DeclInfo;
@@ -811,17 +829,12 @@ public:
   /// \brief Get the constraint-expression introduced by the trailing
   /// requires-clause in the function/member declaration, or null if no
   /// requires-clause was provided.
-  Expr *getTrailingRequiresClause() {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
+  const AssociatedConstraint &getTrailingRequiresClause() const {
+    static constexpr AssociatedConstraint Null;
+    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause : Null;
   }
 
-  const Expr *getTrailingRequiresClause() const {
-    return hasExtInfo() ? getExtInfo()->TrailingRequiresClause
-                        : nullptr;
-  }
-
-  void setTrailingRequiresClause(Expr *TrailingRequiresClause);
+  void setTrailingRequiresClause(const AssociatedConstraint &AC);
 
   unsigned getNumTemplateParameterLists() const {
     return hasExtInfo() ? getExtInfo()->NumTemplParamLists : 0;
@@ -2090,7 +2103,7 @@ protected:
                const DeclarationNameInfo &NameInfo, QualType T,
                TypeSourceInfo *TInfo, StorageClass S, bool UsesFPIntrin,
                bool isInlineSpecified, ConstexprSpecKind ConstexprKind,
-               Expr *TrailingRequiresClause = nullptr);
+               const AssociatedConstraint &TrailingRequiresClause);
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
@@ -2126,7 +2139,7 @@ public:
          TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin = false,
          bool isInlineSpecified = false, bool hasWrittenPrototype = true,
          ConstexprSpecKind ConstexprKind = ConstexprSpecKind::Unspecified,
-         Expr *TrailingRequiresClause = nullptr) {
+         const AssociatedConstraint &TrailingRequiresClause = {}) {
     DeclarationNameInfo NameInfo(N, NLoc);
     return FunctionDecl::Create(C, DC, StartLoc, NameInfo, T, TInfo, SC,
                                 UsesFPIntrin, isInlineSpecified,
@@ -2139,7 +2152,7 @@ public:
          const DeclarationNameInfo &NameInfo, QualType T, TypeSourceInfo *TInfo,
          StorageClass SC, bool UsesFPIntrin, bool isInlineSpecified,
          bool hasWrittenPrototype, ConstexprSpecKind ConstexprKind,
-         Expr *TrailingRequiresClause);
+         const AssociatedConstraint &TrailingRequiresClause);
 
   static FunctionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
@@ -2296,6 +2309,13 @@ public:
   /// State that this templated function will be late parsed.
   void setLateTemplateParsed(bool ILT = true) {
     FunctionDeclBits.IsLateTemplateParsed = ILT;
+  }
+
+  bool isInstantiatedFromMemberTemplate() const {
+    return FunctionDeclBits.IsInstantiatedFromMemberTemplate;
+  }
+  void setInstantiatedFromMemberTemplate(bool Val = true) {
+    FunctionDeclBits.IsInstantiatedFromMemberTemplate = Val;
   }
 
   /// Whether this function is "trivial" in some specialized C++ senses.
@@ -2520,7 +2540,7 @@ public:
   /// If this function is an allocation/deallocation function that takes
   /// the `std::nothrow_t` tag, return true through IsNothrow,
   bool isReplaceableGlobalAllocationFunction(
-      std::optional<unsigned> *AlignmentParam = nullptr,
+      UnsignedOrNone *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
 
   /// Determine if this function provides an inline implementation of a builtin.
@@ -2624,9 +2644,10 @@ public:
   ///
   /// Use this instead of getTrailingRequiresClause for concepts APIs that
   /// accept an ArrayRef of constraint expressions.
-  void getAssociatedConstraints(SmallVectorImpl<const Expr *> &AC) const {
-    if (auto *TRC = getTrailingRequiresClause())
-      AC.push_back(TRC);
+  void
+  getAssociatedConstraints(SmallVectorImpl<AssociatedConstraint> &ACs) const {
+    if (const AssociatedConstraint &AC = getTrailingRequiresClause())
+      ACs.emplace_back(AC);
   }
 
   /// Get the message that indicates why this function was deleted.
@@ -3027,6 +3048,8 @@ public:
   static FunctionDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<FunctionDecl *>(const_cast<DeclContext*>(DC));
   }
+
+  bool isReferenceableKernel() const;
 };
 
 /// Represents a member of a struct/union/class.
@@ -5032,16 +5055,32 @@ class HLSLBufferDecl final : public NamedDecl, public DeclContext {
   SourceLocation KwLoc;
   /// IsCBuffer - Whether the buffer is a cbuffer (and not a tbuffer).
   bool IsCBuffer;
+  /// HasValidPackoffset - Whether the buffer has valid packoffset annotations
+  //                       on all declarations
+  bool HasValidPackoffset;
+  // LayoutStruct - Layout struct for the buffer
+  CXXRecordDecl *LayoutStruct;
+
+  // For default (implicit) constant buffer, an array of references of global
+  // decls that belong to the buffer. The decls are already parented by the
+  // translation unit context. The array is allocated by the ASTContext
+  // allocator in HLSLBufferDecl::CreateDefaultCBuffer.
+  ArrayRef<Decl *> DefaultBufferDecls;
 
   HLSLBufferDecl(DeclContext *DC, bool CBuffer, SourceLocation KwLoc,
                  IdentifierInfo *ID, SourceLocation IDLoc,
                  SourceLocation LBrace);
+
+  void setDefaultBufferDecls(ArrayRef<Decl *> Decls);
 
 public:
   static HLSLBufferDecl *Create(ASTContext &C, DeclContext *LexicalParent,
                                 bool CBuffer, SourceLocation KwLoc,
                                 IdentifierInfo *ID, SourceLocation IDLoc,
                                 SourceLocation LBrace);
+  static HLSLBufferDecl *
+  CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
+                       ArrayRef<Decl *> DefaultCBufferDecls);
   static HLSLBufferDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
 
   SourceRange getSourceRange() const override LLVM_READONLY {
@@ -5052,6 +5091,10 @@ public:
   SourceLocation getRBraceLoc() const { return RBraceLoc; }
   void setRBraceLoc(SourceLocation L) { RBraceLoc = L; }
   bool isCBuffer() const { return IsCBuffer; }
+  void setHasValidPackoffset(bool PO) { HasValidPackoffset = PO; }
+  bool hasValidPackoffset() const { return HasValidPackoffset; }
+  const CXXRecordDecl *getLayoutStruct() const { return LayoutStruct; }
+  void addLayoutStruct(CXXRecordDecl *LS);
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -5062,6 +5105,28 @@ public:
   static HLSLBufferDecl *castFromDeclContext(const DeclContext *DC) {
     return static_cast<HLSLBufferDecl *>(const_cast<DeclContext *>(DC));
   }
+
+  // Iterator for the buffer decls. For constant buffers explicitly declared
+  // with `cbuffer` keyword this will the list of decls parented by this
+  // HLSLBufferDecl (equal to `decls()`).
+  // For implicit $Globals buffer this will be the list of default buffer
+  // declarations stored in DefaultBufferDecls plus the implicit layout
+  // struct (the only child of HLSLBufferDecl in this case).
+  //
+  // The iterator uses llvm::concat_iterator to concatenate the lists
+  // `decls()` and `DefaultBufferDecls`. For non-default buffers
+  // `DefaultBufferDecls` is always empty.
+  using buffer_decl_iterator =
+      llvm::concat_iterator<Decl *const, SmallVector<Decl *>::const_iterator,
+                            decl_iterator>;
+  using buffer_decl_range = llvm::iterator_range<buffer_decl_iterator>;
+
+  buffer_decl_range buffer_decls() const {
+    return buffer_decl_range(buffer_decls_begin(), buffer_decls_end());
+  }
+  buffer_decl_iterator buffer_decls_begin() const;
+  buffer_decl_iterator buffer_decls_end() const;
+  bool buffer_decls_empty();
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;

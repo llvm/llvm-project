@@ -587,12 +587,12 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
               << II.getName()
               << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
         }
-
-        SourceLocation TemplateNameLoc = ConsumeToken();
+        ConsumeToken();
 
         TemplateNameKind TNK = Actions.ActOnTemplateName(
-            getCurScope(), SS, TemplateNameLoc, TemplateName, ObjectType,
-            EnteringContext, Template, /*AllowInjectedClassName*/ true);
+            getCurScope(), SS, /*TemplateKWLoc=*/SourceLocation(), TemplateName,
+            ObjectType, EnteringContext, Template,
+            /*AllowInjectedClassName=*/true);
         if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                     TemplateName, false))
           return true;
@@ -2203,8 +2203,16 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
       return ParseCXXCondition(nullptr, Loc, CK, MissingOK);
     }
 
-    // Parse the expression.
-    ExprResult Expr = ParseExpression(); // expression
+    ExprResult Expr = [&] {
+      EnterExpressionEvaluationContext Eval(
+          Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+          /*LambdaContextDecl=*/nullptr,
+          /*ExprContext=*/Sema::ExpressionEvaluationContextRecord::EK_Other,
+          /*ShouldEnter=*/CK == Sema::ConditionKind::ConstexprIf);
+      // Parse the expression.
+      return ParseExpression(); // expression
+    }();
+
     if (Expr.isInvalid())
       return Sema::ConditionError();
 

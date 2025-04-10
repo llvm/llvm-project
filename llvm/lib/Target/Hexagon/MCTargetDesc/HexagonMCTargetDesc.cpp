@@ -97,7 +97,7 @@ cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
                    cl::init(false));
 } // namespace
 
-cl::opt<Hexagon::ArchEnum> EnableHVX(
+static cl::opt<Hexagon::ArchEnum> EnableHVX(
     "mhvx", cl::desc("Enable Hexagon Vector eXtensions"),
     cl::values(clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
                clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
@@ -125,7 +125,7 @@ static cl::opt<bool>
 static cl::opt<bool> EnableHexagonCabac
   ("mcabac", cl::desc("tbd"), cl::init(false));
 
-static StringRef DefaultArch = "hexagonv60";
+static constexpr StringRef DefaultArch = "hexagonv68";
 
 static StringRef HexagonGetArchVariant() {
   if (MV5)
@@ -614,7 +614,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   // Add qfloat subtarget feature by default to v68 and above
-  // unless explicitely disabled
+  // unless explicitly disabled
   if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
       !ArchFS.contains("-hvx-qfloat")) {
     llvm::FeatureBitset Features = X->getFeatureBits();
@@ -749,7 +749,7 @@ public:
 
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 const Triple &TargetTriple) const override {
+                 const MCSubtargetInfo &STI) const override {
     // Do a lightweight parsing of PLT entries.
     std::vector<std::pair<uint64_t, uint64_t>> Result;
     for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {

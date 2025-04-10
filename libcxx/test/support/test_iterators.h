@@ -1177,6 +1177,23 @@ rvalue_iterator(T*) -> rvalue_iterator<T>;
 
 static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 
+// The ProxyDiffTBase allows us to conditionally specify Proxy<T>::difference_type
+// which we need in certain situations. For example when we want
+// std::weakly_incrementable<Proxy<T>> to be true.
+template <class T>
+struct ProxyDiffTBase {
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
+};
+
+template <class T>
+  requires requires { std::iter_difference_t<T>{}; }
+struct ProxyDiffTBase<T> {
+  using difference_type = std::iter_difference_t<T>;
+  // Add default `operator<=>` so that the derived type, Proxy, can also use the default `operator<=>`
+  friend constexpr auto operator<=>(const ProxyDiffTBase&, const ProxyDiffTBase&) = default;
+};
+
 // Proxy
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple
@@ -1187,6 +1204,7 @@ static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 // This class is useful for testing that if algorithms support proxy iterator
 // properly, i.e. calling ranges::iter_swap and ranges::iter_move instead of
 // plain swap and std::move.
+
 template <class T>
 struct Proxy;
 
@@ -1197,7 +1215,7 @@ template <class T>
 inline constexpr bool IsProxy<Proxy<T>> = true;
 
 template <class T>
-struct Proxy {
+struct Proxy : ProxyDiffTBase<T> {
   T data;
 
   constexpr T& getData() & { return data; }
@@ -1207,6 +1225,10 @@ struct Proxy {
   constexpr T&& getData() && { return static_cast<T&&>(data); }
 
   constexpr const T&& getData() const&& { return static_cast<const T&&>(data); }
+
+  // Explicitly declare the copy constructor as defaulted to avoid deprecation of the implicitly declared one
+  // because of the user-provided copy assignment operator.
+  Proxy(const Proxy&) = default;
 
   template <class U>
     requires std::constructible_from<T, U&&>
@@ -1244,7 +1266,7 @@ struct Proxy {
 
   // Compare operators are defined for the convenience of the tests
   friend constexpr bool operator==(const Proxy&, const Proxy&)
-    requires (std::equality_comparable<T> && !std::is_reference_v<T>)
+    requires(std::equality_comparable<T> && !std::is_reference_v<T>)
   = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
@@ -1256,7 +1278,7 @@ struct Proxy {
   }
 
   friend constexpr auto operator<=>(const Proxy&, const Proxy&)
-    requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
+    requires(std::three_way_comparable<T> && !std::is_reference_v<T>)
   = default;
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
@@ -1265,6 +1287,22 @@ struct Proxy {
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy<U>& rhs)
     requires std::three_way_comparable_with<std::decay_t<T>, std::decay_t<U>> {
     return lhs.data <=> rhs.data;
+  }
+
+  // Needed to allow certain types to be weakly_incrementable
+  constexpr Proxy& operator++()
+    requires(std::weakly_incrementable<std::remove_reference_t<T>>)
+  {
+    ++data;
+    return *this;
+  }
+
+  constexpr Proxy operator++(int)
+    requires(std::incrementable<std::remove_reference_t<T>>)
+  {
+    Proxy tmp = *this;
+    operator++();
+    return tmp;
   }
 };
 

@@ -3,11 +3,12 @@
 target triple = "dxil-pc-shadermodel6.7-library"
 
 ; CHECK: ; Combined Shader Flags for Module
-; CHECK-NEXT: ; Shader Flags Value: 0x00000044
+; CHECK-NEXT: ; Shader Flags Value: 0x00100044
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Note: shader requires additional functionality:
 ; CHECK-NEXT: ;       Double-precision floating point
 ; CHECK-NEXT: ;       Double-precision extensions for 11.1
+; CHECK-NEXT: ;       64-Bit integer
 ; CHECK-NEXT: ; Note: extra DXIL module flags:
 ; CHECK-NEXT: ;
 ; CHECK-NEXT: ; Shader Flags for Module Functions
@@ -55,13 +56,13 @@ define double @call_get_uitofp_flag(i32 noundef %0) local_unnamed_addr #0 {
   ret double %2
 }
 
-; CHECK: ; Function call_get_fptoui_flag : 0x00000044
+; CHECK: ; Function call_get_fptoui_flag : 0x00100044
 define double @call_get_fptoui_flag(double noundef %0) local_unnamed_addr #0 {
   %2 = tail call double @get_fptoui_flag(double noundef %0)
   ret double %2
 }
 
-; CHECK: ; Function get_fptoui_flag : 0x00000044
+; CHECK: ; Function get_fptoui_flag : 0x00100044
 define double @get_fptoui_flag(double noundef %0) local_unnamed_addr #0 {
   %2 = fcmp ugt double %0, 5.000000e+00
   br i1 %2, label %6, label %3
@@ -81,7 +82,7 @@ define double @get_fptoui_flag(double noundef %0) local_unnamed_addr #0 {
   ret double %10
 }
 
-; CHECK: ; Function get_sitofp_uitofp_flag : 0x00000044
+; CHECK: ; Function get_sitofp_uitofp_flag : 0x00100044
 define double @get_sitofp_uitofp_flag(i64 noundef %0) local_unnamed_addr #0 {
   %2 = icmp ult i64 %0, 6
   br i1 %2, label %3, label %7
@@ -154,7 +155,7 @@ define double @get_all_doubles_flags(i32 noundef %0) local_unnamed_addr #0 {
   ret double %4
 }
 
-; CHECK: ; Function main : 0x00000044
+; CHECK: ; Function main : 0x00100044
 define i32 @main() local_unnamed_addr #0 {
   %1 = tail call double @get_fptoui_flag(double noundef 1.000000e+00)
   %2 = tail call double @get_sitofp_fdiv_flag(i32 noundef 4)

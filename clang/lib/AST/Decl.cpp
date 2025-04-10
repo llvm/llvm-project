@@ -57,6 +57,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -809,8 +810,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // functions as the host-callable kernel functions are emitted at codegen.
     if (Context.getLangOpts().OpenMP &&
         Context.getLangOpts().OpenMPIsTargetDevice &&
-        ((Context.getTargetInfo().getTriple().isAMDGPU() ||
-          Context.getTargetInfo().getTriple().isNVPTX()) ||
+        (Context.getTargetInfo().getTriple().isGPU() ||
          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(Function)))
       LV.mergeVisibility(HiddenVisibility, /*newExplicit=*/false);
 
@@ -1747,6 +1747,10 @@ void NamedDecl::printNestedNameSpecifier(raw_ostream &OS,
       }
     }
 
+    // Suppress transparent contexts like export or HLSLBufferDecl context
+    if (Ctx->isTransparentContext())
+      continue;
+
     // Skip non-named contexts such as linkage specifications and ExportDecls.
     const NamedDecl *ND = dyn_cast<NamedDecl>(Ctx);
     if (!ND)
@@ -2005,8 +2009,8 @@ void DeclaratorDecl::setQualifierInfo(NestedNameSpecifierLoc QualifierLoc) {
   }
 }
 
-void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
-  assert(TrailingRequiresClause);
+void DeclaratorDecl::setTrailingRequiresClause(const AssociatedConstraint &AC) {
+  assert(AC);
   // Make sure the extended decl info is allocated.
   if (!hasExtInfo()) {
     // Save (non-extended) type source info pointer.
@@ -2017,7 +2021,7 @@ void DeclaratorDecl::setTrailingRequiresClause(Expr *TrailingRequiresClause) {
     getExtInfo()->TInfo = savedTInfo;
   }
   // Set requires clause info.
-  getExtInfo()->TrailingRequiresClause = TrailingRequiresClause;
+  getExtInfo()->TrailingRequiresClause = AC;
 }
 
 void DeclaratorDecl::setTemplateParameterListsInfo(
@@ -3043,7 +3047,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                            TypeSourceInfo *TInfo, StorageClass S,
                            bool UsesFPIntrin, bool isInlineSpecified,
                            ConstexprSpecKind ConstexprKind,
-                           Expr *TrailingRequiresClause)
+                           const AssociatedConstraint &TrailingRequiresClause)
     : DeclaratorDecl(DK, DC, NameInfo.getLoc(), NameInfo.getName(), T, TInfo,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), Body(), ODRHash(0),
@@ -3065,6 +3069,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsIneligibleOrNotSelected = false;
   FunctionDeclBits.HasImplicitReturnZero = false;
   FunctionDeclBits.IsLateTemplateParsed = false;
+  FunctionDeclBits.IsInstantiatedFromMemberTemplate = false;
   FunctionDeclBits.ConstexprKind = static_cast<uint64_t>(ConstexprKind);
   FunctionDeclBits.BodyContainsImmediateEscalatingExpression = false;
   FunctionDeclBits.InstantiationIsPending = false;
@@ -3381,7 +3386,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
 }
 
 bool FunctionDecl::isReplaceableGlobalAllocationFunction(
-    std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
+    UnsignedOrNone *AlignmentParam, bool *IsNothrow) const {
   if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
     return false;
   if (getDeclName().getCXXOverloadedOperator() != OO_New &&
@@ -3566,7 +3571,7 @@ bool FunctionDecl::isMemberLikeConstrainedFriend() const {
     // If these friends don't have constraints, they aren't constrained, and
     // thus don't fall under temp.friend p9. Else the simple presence of a
     // constraint makes them unique.
-    return getTrailingRequiresClause();
+    return !getTrailingRequiresClause().isNull();
   }
 
   return FriendConstraintRefersToEnclosingTemplate();
@@ -5448,7 +5453,7 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                      TypeSourceInfo *TInfo, StorageClass SC, bool UsesFPIntrin,
                      bool isInlineSpecified, bool hasWrittenPrototype,
                      ConstexprSpecKind ConstexprKind,
-                     Expr *TrailingRequiresClause) {
+                     const AssociatedConstraint &TrailingRequiresClause) {
   FunctionDecl *New = new (C, DC) FunctionDecl(
       Function, C, DC, StartLoc, NameInfo, T, TInfo, SC, UsesFPIntrin,
       isInlineSpecified, ConstexprKind, TrailingRequiresClause);
@@ -5459,7 +5464,12 @@ FunctionDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
 FunctionDecl *FunctionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) FunctionDecl(
       Function, C, nullptr, SourceLocation(), DeclarationNameInfo(), QualType(),
-      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified, nullptr);
+      nullptr, SC_None, false, false, ConstexprSpecKind::Unspecified,
+      /*TrailingRequiresClause=*/{});
+}
+
+bool FunctionDecl::isReferenceableKernel() const {
+  return hasAttr<CUDAGlobalAttr>() || hasAttr<OpenCLKernelAttr>();
 }
 
 BlockDecl *BlockDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
@@ -5716,7 +5726,7 @@ HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
                                SourceLocation IDLoc, SourceLocation LBrace)
     : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
       DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
-      IsCBuffer(CBuffer) {}
+      IsCBuffer(CBuffer), HasValidPackoffset(false), LayoutStruct(nullptr) {}
 
 HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
                                        DeclContext *LexicalParent, bool CBuffer,
@@ -5740,10 +5750,58 @@ HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
   return Result;
 }
 
+HLSLBufferDecl *
+HLSLBufferDecl::CreateDefaultCBuffer(ASTContext &C, DeclContext *LexicalParent,
+                                     ArrayRef<Decl *> DefaultCBufferDecls) {
+  DeclContext *DC = LexicalParent;
+  IdentifierInfo *II = &C.Idents.get("$Globals", tok::TokenKind::identifier);
+  HLSLBufferDecl *Result = new (C, DC) HLSLBufferDecl(
+      DC, true, SourceLocation(), II, SourceLocation(), SourceLocation());
+  Result->setImplicit(true);
+  Result->setDefaultBufferDecls(DefaultCBufferDecls);
+  return Result;
+}
+
 HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C,
                                                    GlobalDeclID ID) {
   return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
                                     SourceLocation(), SourceLocation());
+}
+
+void HLSLBufferDecl::addLayoutStruct(CXXRecordDecl *LS) {
+  assert(LayoutStruct == nullptr && "layout struct has already been set");
+  LayoutStruct = LS;
+  addDecl(LS);
+}
+
+void HLSLBufferDecl::setDefaultBufferDecls(ArrayRef<Decl *> Decls) {
+  assert(!Decls.empty());
+  assert(DefaultBufferDecls.empty() && "default decls are already set");
+  assert(isImplicit() &&
+         "default decls can only be added to the implicit/default constant "
+         "buffer $Globals");
+
+  // allocate array for default decls with ASTContext allocator
+  Decl **DeclsArray = new (getASTContext()) Decl *[Decls.size()];
+  std::copy(Decls.begin(), Decls.end(), DeclsArray);
+  DefaultBufferDecls = ArrayRef<Decl *>(DeclsArray, Decls.size());
+}
+
+HLSLBufferDecl::buffer_decl_iterator
+HLSLBufferDecl::buffer_decls_begin() const {
+  return buffer_decl_iterator(llvm::iterator_range(DefaultBufferDecls.begin(),
+                                                   DefaultBufferDecls.end()),
+                              decl_range(decls_begin(), decls_end()));
+}
+
+HLSLBufferDecl::buffer_decl_iterator HLSLBufferDecl::buffer_decls_end() const {
+  return buffer_decl_iterator(
+      llvm::iterator_range(DefaultBufferDecls.end(), DefaultBufferDecls.end()),
+      decl_range(decls_end(), decls_end()));
+}
+
+bool HLSLBufferDecl::buffer_decls_empty() {
+  return DefaultBufferDecls.empty() && decls_empty();
 }
 
 //===----------------------------------------------------------------------===//

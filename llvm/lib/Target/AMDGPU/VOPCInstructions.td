@@ -389,10 +389,10 @@ multiclass VOPC_Pseudos <string opName,
     let SchedRW = P.Schedule;
     let isCompare = 1;
     let isCommutable = 1;
-    let AsmMatchConverter =
-        !if (P.HasOpSel, "cvtVOP3OpSel",
-             !if (!or(P.HasModifiers, P.HasOMod, P.HasIntClamp), "cvtVOP3",
-                  ""));
+    let AsmMatchConverter = !cond(
+        P.HasOpSel : "cvtVOP3OpSel",
+        !or(P.HasModifiers, P.HasOMod, P.HasIntClamp) : "cvtVOP3",
+        1 : "");
   }
 
   if P.HasExtSDWA then
@@ -454,6 +454,10 @@ multiclass VOPCX_Pseudos <string opName,
     let isCommutable = 1;
     let SubtargetPredicate = HasNoSdstCMPX;
     let IsVCMPX = 1;
+    let AsmMatchConverter = !cond(
+        P_NoSDst.HasOpSel : "cvtVOP3OpSel",
+        !or(P_NoSDst.HasModifiers, P_NoSDst.HasOMod, P_NoSDst.HasIntClamp) : "cvtVOP3",
+        1 : "");
   }
 
   if P_NoSDst.HasExtSDWA then
@@ -1079,6 +1083,10 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
              VCMPXNoSDstTable<1, opName#"_e64"> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = p.Schedule;
+    let AsmMatchConverter = !cond(
+        p.HasOpSel : "cvtVOP3OpSel",
+        !or(p.HasModifiers, p.HasOMod, p.HasIntClamp) : "cvtVOP3",
+        1 : "");
   }
 
   if p.HasExtSDWA then
@@ -1127,6 +1135,10 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
     let SubtargetPredicate = HasNoSdstCMPX;
+    let AsmMatchConverter = !cond(
+       P_NoSDst.HasOpSel : "cvtVOP3OpSel",
+       !or(P_NoSDst.HasModifiers, P_NoSDst.HasOMod, P_NoSDst.HasIntClamp) : "cvtVOP3",
+       1 : "");
   }
 
   if P_NoSDst.HasExtSDWA then

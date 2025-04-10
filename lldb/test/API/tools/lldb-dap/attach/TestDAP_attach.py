@@ -44,7 +44,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by process ID.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         self.process = subprocess.Popen(
             [program],
@@ -60,7 +60,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests attaching to a process by process name.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         orig_program = self.getBuildArtifact("a.out")
         # Since we are going to attach by process name, we need a unique
         # process name that has minimal chance to match a process that is
@@ -101,7 +101,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         next instance of a process to be launched, ingoring all current
         ones.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         self.spawn_thread = threading.Thread(
             target=spawn_and_wait,
@@ -137,7 +137,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         "terminateCommands" are a list of LLDB commands that get executed when
         the debugger session terminates.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target
@@ -211,7 +211,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         Tests that the "terminateCommands", that can be passed during
         attach, are run when the debugger is disconnected.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
         # Here we just create a target and launch the process as a way to test
         # if we are able to use attach commands to create any kind of a target
