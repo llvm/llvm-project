@@ -55,7 +55,7 @@ RISC-V
 | mikhail\@igalia.com (email), `mikhailramalho <https://github.com/mikhailramalho>`_ (github)
 
 Public Headers / hdrgen
-------
+-----------------------
 | Roland McGrath
 | mcgrathr\@google.com (email), `frobtech <https://github.com/frobtech>`_ (github)
 
