@@ -9558,7 +9558,8 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       continue;
     }
     if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
-         I->getOpcode() == LocalState.getOpcode()) ||
+         isMainInstruction(I, LocalState.getMainOp(), LocalState.getAltOp(),
+                           *TLI)) ||
         (LocalState.getAltOpcode() == LocalState.getOpcode() &&
          !isAlternateInstruction(I, LocalState.getMainOp(),
                                  LocalState.getAltOp(), *TLI))) {
@@ -9768,109 +9769,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
       }
       return true;
     }
-<<<<<<< HEAD
-    SmallVector<Value *> Op1, Op2;
-    OrdersType ReorderIndices(VL.size(), VL.size());
-    SmallBitVector Op1Indices(VL.size());
-    for (auto [Idx, V] : enumerate(VL)) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I) {
-        Op1.push_back(V);
-        Op1Indices.set(Idx);
-        continue;
-      }
-      if ((LocalState.getAltOpcode() != LocalState.getOpcode() &&
-           isMainInstruction(I, LocalState.getMainOp(), LocalState.getAltOp(),
-                             *TLI)) ||
-          (LocalState.getAltOpcode() == LocalState.getOpcode() &&
-           !isAlternateInstruction(I, LocalState.getMainOp(),
-                                   LocalState.getAltOp(), *TLI))) {
-        Op1.push_back(V);
-        Op1Indices.set(Idx);
-        continue;
-      }
-      Op2.push_back(V);
-    }
-    Type *ScalarTy = getValueType(VL.front());
-    VectorType *VecTy = getWidenedType(ScalarTy, VL.size());
-    unsigned Opcode0 = LocalState.getOpcode();
-    unsigned Opcode1 = LocalState.getAltOpcode();
-    SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
-    // Enable split node, only if all nodes do not form legal alternate
-    // instruction (like X86 addsub).
-    SmallPtrSet<Value *, 4> UOp1(llvm::from_range, Op1);
-    SmallPtrSet<Value *, 4> UOp2(llvm::from_range, Op2);
-    if (UOp1.size() <= 1 || UOp2.size() <= 1 ||
-        TTI.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask) ||
-        !hasFullVectorsOrPowerOf2(TTI, Op1.front()->getType(), Op1.size()) ||
-        !hasFullVectorsOrPowerOf2(TTI, Op2.front()->getType(), Op2.size()))
-      return false;
-    // Enable split node, only if all nodes are power-of-2/full registers.
-    unsigned Op1Cnt = 0, Op2Cnt = Op1.size();
-    for (unsigned Idx : seq<unsigned>(VL.size())) {
-      if (Op1Indices.test(Idx)) {
-        ReorderIndices[Op1Cnt] = Idx;
-        ++Op1Cnt;
-      } else {
-        ReorderIndices[Op2Cnt] = Idx;
-        ++Op2Cnt;
-      }
-    }
-    if (isIdentityOrder(ReorderIndices))
-      ReorderIndices.clear();
-    SmallVector<int> Mask;
-    if (!ReorderIndices.empty())
-      inversePermutation(ReorderIndices, Mask);
-    unsigned NumParts = TTI.getNumberOfParts(VecTy);
-    VectorType *Op1VecTy = getWidenedType(ScalarTy, Op1.size());
-    VectorType *Op2VecTy = getWidenedType(ScalarTy, Op2.size());
-    // Check non-profitable single register ops, which better to be represented
-    // as alternate ops.
-    if (NumParts >= VL.size())
-      return false;
-    if ((LocalState.getMainOp()->isBinaryOp() &&
-         LocalState.getAltOp()->isBinaryOp() &&
-         (LocalState.isShiftOp() || LocalState.isBitwiseLogicOp() ||
-          LocalState.isAddSubLikeOp() || LocalState.isMulDivLikeOp())) ||
-        (LocalState.getMainOp()->isCast() && LocalState.getAltOp()->isCast()) ||
-        (LocalState.getMainOp()->isUnaryOp() &&
-         LocalState.getAltOp()->isUnaryOp())) {
-      constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
-      InstructionCost InsertCost = ::getShuffleCost(
-          TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
-      FixedVectorType *SubVecTy =
-          getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size()));
-      InstructionCost NewShuffleCost =
-          ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, Kind);
-      if (NumParts <= 1 && (Mask.empty() || InsertCost >= NewShuffleCost))
-        return false;
-      InstructionCost OriginalVecOpsCost =
-          TTI.getArithmeticInstrCost(Opcode0, VecTy, Kind) +
-          TTI.getArithmeticInstrCost(Opcode1, VecTy, Kind);
-      SmallVector<int> OriginalMask(VL.size(), PoisonMaskElem);
-      for (unsigned Idx : seq<unsigned>(VL.size())) {
-        if (isa<PoisonValue>(VL[Idx]))
-          continue;
-        OriginalMask[Idx] = Idx + (Op1Indices.test(Idx) ? 0 : VL.size());
-      }
-      InstructionCost OriginalCost =
-          OriginalVecOpsCost + ::getShuffleCost(TTI, TTI::SK_PermuteTwoSrc,
-                                                VecTy, OriginalMask, Kind);
-      InstructionCost NewVecOpsCost =
-          TTI.getArithmeticInstrCost(Opcode0, Op1VecTy, Kind) +
-          TTI.getArithmeticInstrCost(Opcode1, Op2VecTy, Kind);
-      InstructionCost NewCost =
-          NewVecOpsCost + InsertCost +
-          (!VectorizableTree.empty() && VectorizableTree.front()->hasState() &&
-                   VectorizableTree.front()->getOpcode() == Instruction::Store
-               ? NewShuffleCost
-               : 0);
-      // If not profitable to split - exit.
-      if (NewCost >= OriginalCost)
-        return false;
-    }
-=======
->>>>>>> upstream/main
 
     SmallVector<Value *> NewVL(VL.size());
     copy(Op1, NewVL.begin());
