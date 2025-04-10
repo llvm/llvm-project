@@ -4,7 +4,7 @@
 define amdgpu_kernel void @test_should_convert_to_v_readfirstlane_b32(float %fval, i32 %arg1, i32 %arg2) {
 ; GCN-LABEL: test_should_convert_to_v_readfirstlane_b32:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_cvt_u32_f32_e32 v0, s0
 ; GCN-NEXT:    s_nop 0

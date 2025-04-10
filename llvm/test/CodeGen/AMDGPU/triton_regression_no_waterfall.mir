@@ -86,8 +86,8 @@ body:             |
     ; GCN-LABEL: name: test_should_convert_to_v_readfirstlane_b32
     ; GCN: liveins: $sgpr4_sgpr5
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    ; GCN-NEXT: early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.fval.kernarg.offset, align 4, addrspace 4)
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
+    ; GCN-NEXT: early-clobber %8:sgpr_128 = S_LOAD_DWORDX4_IMM_ec [[COPY]], 36, 0 :: (dereferenceable invariant load (s128), align 4, addrspace 4)
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY %8.sub2
     ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY %8.sub1
     ; GCN-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY %8.sub0
