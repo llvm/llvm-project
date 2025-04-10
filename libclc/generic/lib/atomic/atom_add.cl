@@ -8,15 +8,17 @@
 
 #include <clc/atomic/atom_add.h>
 
-// cl_khr_global_int32_base_atomics
+#ifdef cl_khr_global_int32_base_atomics
 #define __CLC_ATOMIC_OP add
 #define __CLC_ATOMIC_ADDRESS_SPACE global
 #include "atom_int32_binary.inc"
+#endif // cl_khr_global_int32_base_atomics
 
-// cl_khr_local_int32_base_atomics
+#ifdef cl_khr_local_int32_base_atomics
 #define __CLC_ATOMIC_OP add
 #define __CLC_ATOMIC_ADDRESS_SPACE local
 #include "atom_int32_binary.inc"
+#endif // cl_khr_local_int32_base_atomics
 
 #ifdef cl_khr_int64_base_atomics
 

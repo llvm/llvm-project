@@ -9,13 +9,15 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
-// cl_khr_global_int32_base_atomics
+#ifdef cl_khr_global_int32_base_atomics
 _CLC_OVERLOAD _CLC_DECL int atom_inc(volatile global int *p);
 _CLC_OVERLOAD _CLC_DECL unsigned int atom_inc(volatile global unsigned int *p);
+#endif // cl_khr_global_int32_base_atomics
 
-// cl_khr_local_int32_base_atomics
+#ifdef cl_khr_local_int32_base_atomics
 _CLC_OVERLOAD _CLC_DECL int atom_inc(volatile local int *p);
 _CLC_OVERLOAD _CLC_DECL unsigned int atom_inc(volatile local unsigned int *p);
+#endif // cl_khr_local_int32_base_atomics
 
 #ifdef cl_khr_int64_base_atomics
 _CLC_OVERLOAD _CLC_DECL long atom_inc(volatile global long *p);

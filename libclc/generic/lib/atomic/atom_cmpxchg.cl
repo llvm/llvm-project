@@ -15,12 +15,15 @@
     return atomic_cmpxchg(p, cmp, val);                                        \
   }
 
-// cl_khr_global_int32_base_atomics
+#ifdef cl_khr_global_int32_base_atomics
 IMPL(global, int)
 IMPL(global, unsigned int)
-// cl_khr_local_int32_base_atomics
+#endif // cl_khr_global_int32_base_atomics
+#ifdef cl_khr_local_int32_base_atomics
 IMPL(local, int)
 IMPL(local, unsigned int)
+#endif // cl_khr_local_int32_base_atomics
+
 #undef IMPL
 
 #ifdef cl_khr_int64_base_atomics

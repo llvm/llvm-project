@@ -9,19 +9,21 @@
 #include <clc/clcfunc.h>
 #include <clc/clctypes.h>
 
-// cl_khr_global_int32_base_atomics
+#ifdef cl_khr_global_int32_base_atomics
 _CLC_OVERLOAD _CLC_DECL int atom_cmpxchg(volatile global int *p, int cmp,
                                          int val);
 _CLC_OVERLOAD _CLC_DECL unsigned int
 atom_cmpxchg(volatile global unsigned int *p, unsigned int cmp,
              unsigned int val);
+#endif // cl_khr_global_int32_base_atomics
 
-// cl_khr_local_int32_base_atomics
+#ifdef cl_khr_local_int32_base_atomics
 _CLC_OVERLOAD _CLC_DECL int atom_cmpxchg(volatile local int *p, int cmp,
                                          int val);
 _CLC_OVERLOAD _CLC_DECL unsigned int
 atom_cmpxchg(volatile local unsigned int *p, unsigned int cmp,
              unsigned int val);
+#endif // cl_khr_local_int32_base_atomics
 
 #ifdef cl_khr_int64_base_atomics
 _CLC_OVERLOAD _CLC_DECL long atom_cmpxchg(volatile global long *p, long cmp,
