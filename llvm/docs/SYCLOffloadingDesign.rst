@@ -93,8 +93,6 @@ High-level SYCL Offloading Compilation Flow
   :scale: 50%
   :align: center
   
-  .. class:: center
-  
   Figure 1: Top-level SYCL offloading compilation flow.
 
 Figure 1 showcases the SYCL offloading compilation flow. The SYCL compiler
