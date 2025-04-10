@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OCL
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OCL
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NOOCL
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}

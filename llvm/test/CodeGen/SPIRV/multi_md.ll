@@ -1,7 +1,7 @@
 ;; Check duplicate operands in opencl.ocl.version metadata is accepted without
 ;; assertion.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
 
 %struct.my_struct_t = type { i8, i32 }
 

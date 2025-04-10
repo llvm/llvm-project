@@ -1,7 +1,7 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-HLSL
-; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OCL
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OCL
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 ; Make sure spirv operation function calls for all are generated.
 
 ; CHECK-HLSL-DAG: OpMemoryModel Logical GLSL450

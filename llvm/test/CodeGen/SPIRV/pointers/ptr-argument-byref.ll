@@ -1,7 +1,7 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
-target triple = "spirv64-unknown-unknown"
+target triple = "spirv64-unknown-unknown-opencl"
 
 ; CHECK-DAG: %[[#VOID:]] = OpTypeVoid
 ; CHECK-DAG: %[[#INT32:]] = OpTypeInt 32 0

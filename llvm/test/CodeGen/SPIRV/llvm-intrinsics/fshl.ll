@@ -1,4 +1,4 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 
 ; CHECK-SPIRV-DAG:     OpName %[[#NAME_FSHL_FUNC_32:]] "spirv.llvm_fshl_i32"
 ; CHECK-SPIRV-DAG:     OpName %[[#NAME_FSHL_FUNC_16:]] "spirv.llvm_fshl_i16"

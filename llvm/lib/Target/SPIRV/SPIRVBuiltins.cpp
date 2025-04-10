@@ -1019,7 +1019,7 @@ static bool buildExtendedBitOpsInst(const SPIRV::IncomingCall *Call,
   if ((Opcode == SPIRV::OpBitFieldInsert ||
        Opcode == SPIRV::OpBitFieldSExtract ||
        Opcode == SPIRV::OpBitFieldUExtract || Opcode == SPIRV::OpBitReverse) &&
-      !ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions)) {
+      (!ST->canUseExtension(SPIRV::Extension::SPV_KHR_bit_instructions) && (ST->isOpenCLEnv()))) {
     std::string DiagMsg = std::string(Builtin->Name) +
                           ": the builtin requires the following SPIR-V "
                           "extension: SPV_KHR_bit_instructions";

@@ -1,5 +1,5 @@
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bindless_images %s -o - | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_bindless_images %s -o - | FileCheck %s
 
 ; CHECK-ERROR: LLVM ERROR: OpConvertHandleTo[Image/Sampler/SampledImage]INTEL instruction
 ; CHECK-ERROR-SAME: require the following SPIR-V extension: SPV_INTEL_bindless_images

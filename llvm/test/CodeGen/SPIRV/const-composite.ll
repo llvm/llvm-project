@@ -3,8 +3,8 @@
 ; it's `1` that is passed implicitly as a part of the `foo` function argument
 ; and also takes part in a composite constant creation.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[#type_int32:]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: %[[#const1:]] = OpConstant %[[#type_int32]] 1{{$}}

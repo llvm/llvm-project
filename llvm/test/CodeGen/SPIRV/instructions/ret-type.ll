@@ -1,6 +1,6 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl --translator-compatibility-mode %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[Test1:.*]] "test1"
 ; CHECK-DAG: OpName %[[Foo:.*]] "foo"

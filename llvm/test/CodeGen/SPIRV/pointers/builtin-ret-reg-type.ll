@@ -1,8 +1,8 @@
 ; The goal of the test case is to ensure that correct types are applied to virtual registers which were
 ; used as return values in call lowering. Pass criterion is that spirv-val considers output valid.
 
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 %t_half = type { half }
 %t_i17 = type { [17 x i32] }

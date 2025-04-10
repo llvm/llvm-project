@@ -1,7 +1,7 @@
 ; Check that bitcast for pointers implies that the address spaces must match.
 
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_usm_storage_classes -o - | FileCheck %s
-; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s --spirv-ext=+SPV_INTEL_usm_storage_classes -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s --spirv-ext=+SPV_INTEL_usm_storage_classes -o - | FileCheck %s
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s --spirv-ext=+SPV_INTEL_usm_storage_classes -o - -filetype=obj | spirv-val %}
 
 ; CHECK: Capability USMStorageClassesINTEL
 ; CHECK: OpExtension "SPV_INTEL_usm_storage_classes"

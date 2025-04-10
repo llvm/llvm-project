@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_INTEL_optnone %s -o - | FileCheck %s --check-prefixes=CHECK-EXTENSION
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-NO-EXTENSION
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_optnone %s -o - | FileCheck %s --check-prefixes=CHECK-EXTENSION
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s --check-prefixes=CHECK-NO-EXTENSION
 
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_optnone %s -o - -filetype=obj | spirv-val %}
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl --spirv-ext=+SPV_INTEL_optnone %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-EXTENSION: OpCapability OptNoneEXT
 ; CHECK-EXTENSION: OpExtension "SPV_INTEL_optnone"

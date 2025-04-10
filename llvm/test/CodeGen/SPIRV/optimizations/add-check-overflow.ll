@@ -4,17 +4,17 @@
 ; strength reduction pre-empting with a more preferable match for this pattern
 ; in llc arguments).
 
-; RUN: llc -O3 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O3 -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O3 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O3 -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O3 -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O3 -disable-lsr -mtriple=spirv32-unknown-unknown %s -o - | FileCheck --check-prefix=NOLSR %s
-; RUN: %if spirv-tools %{ llc -O3 -disable-lsr -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O3 -disable-lsr -mtriple=spirv32-unknown-unknown-opencl %s -o - | FileCheck --check-prefix=NOLSR %s
+; RUN: %if spirv-tools %{ llc -O3 -disable-lsr -mtriple=spirv32-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
-; RUN: llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown %s -o - | FileCheck --check-prefix=NOLSR %s
-; RUN: %if spirv-tools %{ llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown-opencl %s -o - | FileCheck --check-prefix=NOLSR %s
+; RUN: %if spirv-tools %{ llc -O3 -disable-lsr -mtriple=spirv64-unknown-unknown-opencl %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[PhiRes:.*]] "lsr.iv"
 ; CHECK-DAG: OpName %[[IsOver:.*]] "fl"

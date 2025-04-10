@@ -1,4 +1,4 @@
-; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown %s -o - 2>&1 | FileCheck %s
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown-opencl %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: A token is encountered but SPIR-V without extensions does not support token type
 
