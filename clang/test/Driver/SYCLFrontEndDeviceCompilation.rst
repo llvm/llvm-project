@@ -1,5 +1,3 @@
-.. _sycl-frontend-device-compilation:
-
 =================================
 SYCL Front-end device compilation
 =================================

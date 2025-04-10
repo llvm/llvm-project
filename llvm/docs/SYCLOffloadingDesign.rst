@@ -134,7 +134,7 @@ An example of front-end device compilation command is shown below:
 Front-end device compilation for SYCL offloading can be split into the following
 components - Device code outlining, SYCL kernel function object lowering,
 Generation of device code diagnostics, and Integration header generation. These
-components are explained in :ref:`sycl-frontend-device-compilation`.
+components are explained in :doc:`SYCLFrontEndDeviceCompilation.rst`.
 
 ****************************
 Device code packaging
@@ -224,7 +224,7 @@ Linking of device objects
   steps. This include device code splitting, specialization constant lowering,
   symbol table generation, and property sets generation.
 
-  4. Each of the split device images in the LLVM IR format will be translated to
+  1. Each of the split device images in the LLVM IR format will be translated to
   SPIR-V IR.using an external tool 'llvm-spirv'.
 
   Remainder of this section discusses the various post-link steps and the
