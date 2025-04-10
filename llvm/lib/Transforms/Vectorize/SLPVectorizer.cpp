@@ -1278,6 +1278,17 @@ static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
   return OpcodeMask;
 }
 
+/// Replicates the given \p Val \p VF times.
+static SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val,
+                                             unsigned VF) {
+  assert(none_of(Val, [](Constant *C) { return C->getType()->isVectorTy(); }) &&
+         "Expected scalar constants.");
+  SmallVector<Constant *> NewVal(Val.size() * VF);
+  for (auto [I, V] : enumerate(Val))
+    std::fill_n(NewVal.begin() + I * VF, VF, V);
+  return NewVal;
+}
+
 namespace llvm {
 
 static void inversePermutation(ArrayRef<unsigned> Indices,
@@ -12202,32 +12213,24 @@ public:
       unsigned VF = VL.size();
       if (MaskVF != 0)
         VF = std::min(VF, MaskVF);
+      Type *VLScalarTy = VL.front()->getType();
       for (Value *V : VL.take_front(VF)) {
-        if (isa<UndefValue>(V)) {
-          Vals.push_back(cast<Constant>(V));
+        Type *ScalarTy = VLScalarTy->getScalarType();
+        if (isa<PoisonValue>(V)) {
+          Vals.push_back(PoisonValue::get(ScalarTy));
           continue;
         }
-        Vals.push_back(Constant::getNullValue(V->getType()));
+        if (isa<UndefValue>(V)) {
+          Vals.push_back(UndefValue::get(ScalarTy));
+          continue;
+        }
+        Vals.push_back(Constant::getNullValue(ScalarTy));
       }
-      if (auto *VecTy = dyn_cast<FixedVectorType>(Vals.front()->getType())) {
+      if (auto *VecTy = dyn_cast<FixedVectorType>(VLScalarTy)) {
         assert(SLPReVec && "FixedVectorType is not expected.");
         // When REVEC is enabled, we need to expand vector types into scalar
         // types.
-        unsigned VecTyNumElements = VecTy->getNumElements();
-        SmallVector<Constant *> NewVals(VF * VecTyNumElements, nullptr);
-        for (auto [I, V] : enumerate(Vals)) {
-          Type *ScalarTy = V->getType()->getScalarType();
-          Constant *NewVal;
-          if (isa<PoisonValue>(V))
-            NewVal = PoisonValue::get(ScalarTy);
-          else if (isa<UndefValue>(V))
-            NewVal = UndefValue::get(ScalarTy);
-          else
-            NewVal = Constant::getNullValue(ScalarTy);
-          std::fill_n(NewVals.begin() + I * VecTyNumElements, VecTyNumElements,
-                      NewVal);
-        }
-        Vals.swap(NewVals);
+        Vals = replicateMask(Vals, VecTy->getNumElements());
       }
       return ConstantVector::get(Vals);
     }
@@ -17610,6 +17613,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
+          if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+            assert(SLPReVec && "Only supported by REVEC.");
+            MaskValues = replicateMask(MaskValues, VecTy->getNumElements());
+          }
           Constant *MaskValue = ConstantVector::get(MaskValues);
           NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
                                            MaskValue);
@@ -17618,6 +17625,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         NewLI = ::propagateMetadata(NewLI, E->Scalars);
         // TODO: include this cost into CommonCost.
+        if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
+                                                 CompressMask);
+        }
         NewLI =
             cast<Instruction>(Builder.CreateShuffleVector(NewLI, CompressMask));
       } else if (E->State == TreeEntry::StridedVectorize) {
