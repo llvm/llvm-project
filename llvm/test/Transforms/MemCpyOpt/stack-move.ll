@@ -259,7 +259,7 @@ define void @remove_scoped_noalias() {
 ; CHECK-LABEL: define void @remove_scoped_noalias() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]]), !alias.scope !0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
@@ -283,7 +283,7 @@ define void @remove_alloca_metadata() {
 ; CHECK-LABEL: define void @remove_alloca_metadata() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]]), !alias.scope !0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
@@ -308,7 +308,7 @@ define void @noalias_on_lifetime() {
 ; CHECK-LABEL: define void @noalias_on_lifetime() {
 ; CHECK-NEXT:    [[SRC:%.*]] = alloca [[STRUCT_FOO:%.*]], align 4
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]]), !alias.scope !0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    ret void
 ;
@@ -399,10 +399,10 @@ define void @terminator_lastuse() personality i32 0 {
 ; CHECK-NEXT:    store [[STRUCT_FOO]] { i32 10, i32 20, i32 30 }, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @use_nocapture(ptr nocapture [[SRC]])
 ; CHECK-NEXT:    [[RV:%.*]] = invoke i32 @use_nocapture(ptr [[SRC]])
-; CHECK-NEXT:    to label [[SUC:%.*]] unwind label [[UNW:%.*]]
+; CHECK-NEXT:            to label [[SUC:%.*]] unwind label [[UNW:%.*]]
 ; CHECK:       unw:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad i32
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    resume i32 0
 ; CHECK:       suc:
 ; CHECK-NEXT:    ret void
