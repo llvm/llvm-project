@@ -5410,6 +5410,24 @@ static InstructionCost getVectorInstrCost(
                                 ScalarUserAndIdx);
 }
 
+/// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+static InstructionCost getExtractWithExtendCost(
+    const TargetTransformInfo &TTI, unsigned Opcode, Type *Dst,
+    VectorType *VecTy, unsigned Index,
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+  if (auto *ScalarTy = dyn_cast<FixedVectorType>(Dst)) {
+    assert(SLPReVec && "Only supported by REVEC.");
+    auto *SubTp =
+        getWidenedType(VecTy->getElementType(), ScalarTy->getNumElements());
+    return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
+                          Index * ScalarTy->getNumElements(), SubTp) +
+           TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
+                                CostKind);
+  }
+  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+}
+
 /// Correctly creates insert_subvector, checking that the index is multiple of
 /// the subvectors length. Otherwise, generates shuffle using \p Generator or
 /// using default shuffle.
@@ -14155,13 +14173,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
-      auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      Type *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy))
+        MinTy = getWidenedType(MinTy, VecTy->getNumElements());
       unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
                             ? Instruction::ZExt
                             : Instruction::SExt;
       VecTy = getWidenedType(MinTy, BundleWidth);
-      ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
-                                                VecTy, EU.Lane);
+      ExtraCost =
+          getExtractWithExtendCost(*TTI, Extend, ScalarTy, VecTy, EU.Lane);
     } else {
       ExtraCost =
           getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
