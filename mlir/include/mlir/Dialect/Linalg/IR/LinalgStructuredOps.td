@@ -563,13 +563,16 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
     The number of dims of the iterator-types are inferred from the rank of
     the result type.
 
+    Numeric casting is performed on the input operand, promoting it to the same
+    data type as the result.
+
     Example:
 
     Defining a unary linalg.elemwise with default indexing-map:
     ```mlir
     %exp = linalg.elemwise
         kind=#linalg.elemwise_kind<exp>
-        ins(%x : tensor<4x16x8xf32>)
+        ins(%x : tensor<4x16x8xf16>)
         outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
     ```
 
@@ -587,7 +590,8 @@ def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
       ElementwiseKindAttr:$kind,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
 
   let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
