@@ -17,12 +17,14 @@
 #include <string>
 #include <utility>
 
+#include "test_macros.h"
+
 template <typename Map>
 struct CallCompMember : Map::value_compare {
-  CallCompMember(const typename Map::value_compare& vc) : Map::value_compare(vc) {}
+  TEST_CONSTEXPR_CXX26 CallCompMember(const typename Map::value_compare& vc) : Map::value_compare(vc) {}
 
   typedef typename Map::value_type value_type;
-  bool operator()(const value_type& value1, const value_type& value2) const {
+  TEST_CONSTEXPR_CXX26 bool operator()(const value_type& value1, const value_type& value2) const {
     return this->comp(value1.first, value2.first);
   }
 };
