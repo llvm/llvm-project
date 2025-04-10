@@ -103,6 +103,23 @@ static LogicalResult transferPreconditions(
   return success();
 }
 
+static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
+                                           vector::TransferReadOp readOp,
+                                           bool requiresBroadcasting,
+                                           VectorType unbroadcastedVectorType) {
+  Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
+                                               readOp.getPadding());
+  Value load = builder.create<vector::LoadOp>(
+      loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
+  Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
+                                              readOp.getMask(), load, fill);
+  // Insert a broadcasting op if required.
+  if (requiresBroadcasting) {
+    res = builder.create<vector::BroadcastOp>(loc, readOp.getVectorType(), res);
+  }
+  return res;
+}
+
 namespace {
 
 struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
@@ -150,14 +167,6 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
       stride = rewriter.create<arith::MulIOp>(loc, stride, nextStride);
     }
 
-    // Add vector size offset to linear index
-    VectorType vectorType = readOp.getVectorType();
-    int64_t vectorSize = vectorType.getNumElements();
-    Value vectorSizeOffset =
-        rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
-    Value upperBoundIndex =
-        rewriter.create<arith::AddIOp>(loc, linearIndex, vectorSizeOffset);
-
     Value totalSize = one;
     for (size_t i = 0; i < shape.size(); ++i) {
       Value dimensionSize;
@@ -169,35 +178,48 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
       totalSize = rewriter.create<arith::MulIOp>(loc, totalSize, dimensionSize);
     }
 
-    Value isInBounds = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ule, upperBoundIndex, totalSize);
+    // delta = bufferSize - linearizedOffset
+    // 1) check if delta < vectorSize
+    VectorType vectorType = readOp.getVectorType();
+    int64_t vectorSize = vectorType.getNumElements();
+    Value vectorSizeOffset =
+        rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
+    Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
+    Value isOutofBounds = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ule, delta, vectorSizeOffset);
+
+    // 2) check if (detla(bytes) % (32 / elementBitwidth) != 0)
+    int64_t elementBitWidth = vectorType.getElementTypeBitWidth();
+    Value deltaBytes = rewriter.create<arith::MulIOp>(
+        loc, delta,
+        rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
+    Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
+        loc, elementBitWidth < 32 ? 32 / elementBitWidth : 1);
+    Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ne,
+        rewriter.create<arith::RemUIOp>(loc, deltaBytes, elementsPerWord),
+        rewriter.create<arith::ConstantIndexOp>(loc, 0));
+
+    // We take the fallback of transfer_read default lowering only it is both
+    // out-of-bounds and not word aligned.
+    Value ifCondition =
+        rewriter.create<arith::AndIOp>(loc, isOutofBounds, isNotWordAligned);
 
     auto thenBuilder = [&](OpBuilder &builder, Location loc) {
-      Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
-                                                   readOp.getPadding());
-      Value load = builder.create<vector::LoadOp>(loc, unbroadcastedVectorType,
-                                                  readOp.getSource(),
-                                                  readOp.getIndices());
-      Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
-                                                  readOp.getMask(), load, fill);
-
-      // Insert a broadcasting op if required.
-      if (requiresBroadcasting) {
-        res = builder.create<vector::BroadcastOp>(loc, readOp.getVectorType(),
-                                                  res);
-      }
-      rewriter.create<scf::YieldOp>(loc, res);
-    };
-
-    auto elseBuilder = [&](OpBuilder &builder, Location loc) {
       Operation *read = builder.clone(*readOp.getOperation());
       read->setAttr("amdgpu.transformed", builder.getUnitAttr());
       Value readResult = read->getResult(0);
       builder.create<scf::YieldOp>(loc, readResult);
     };
 
+    auto elseBuilder = [&](OpBuilder &builder, Location loc) {
+      Value res = createVectorLoadForMaskedLoad(
+          builder, loc, readOp, requiresBroadcasting, unbroadcastedVectorType);
+      rewriter.create<scf::YieldOp>(loc, res);
+    };
+
     auto ifOp =
-        rewriter.create<scf::IfOp>(loc, isInBounds, thenBuilder, elseBuilder);
+        rewriter.create<scf::IfOp>(loc, ifCondition, thenBuilder, elseBuilder);
 
     rewriter.replaceOp(readOp, ifOp);
 
