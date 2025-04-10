@@ -605,10 +605,13 @@ static void PrintShadowMemoryForAddress(uptr addr) {
 static void CheckPoisonRecords(uptr addr) {
   if (!AddrIsInMem(addr))
     return;
-  uptr shadow_addr = MemToShadow(addr);
-  unsigned char poison_magic = *(reinterpret_cast<u8 *>(shadow_addr));
 
-  if (poison_magic != kAsanUserPoisonedMemoryMagic)
+  u8 *shadow_addr = (u8 *)MemToShadow(addr);
+  // If we are in the partial right redzone, look at the next shadow byte.
+  if (*shadow_addr > 0 && *shadow_addr < 128) shadow_addr++;
+  u8 shadow_val = *shadow_addr;
+
+  if (shadow_val != kAsanUserPoisonedMemoryMagic)
     return;
 
   Printf("\n");
