@@ -3022,7 +3022,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_EnableDevice2DeviceMemAccess(
             "OMPX_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
-        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
+        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {
+    // Get config for envars.
+    const DeviceEnvarConfigTy &EnvarConfig = getEnvarConfig();
+    // Check each envar if it was set by user.
+    if (!OMPX_UseMultipleSdmaEngines.isPresent()) {
+      OMPX_UseMultipleSdmaEngines = EnvarConfig.OMPX_UseMultipleSdmaEngines;
+    }
+  }
 
   ~AMDGPUDeviceTy() {}
 
@@ -4712,6 +4719,38 @@ private:
 
   /// True if in multi-device mode.
   bool IsMultiDeviceEnabled = false;
+
+  /// Representing all the runtime envar configs for a device.
+  struct DeviceEnvarConfigTy {
+    bool
+        OMPX_UseMultipleSdmaEngines; // LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES
+  };
+
+  static inline const std::unordered_map<std::string, DeviceEnvarConfigTy>
+      EnvarConfigs = {{"MI210", {.OMPX_UseMultipleSdmaEngines = true}},
+                      {"MI300A", {.OMPX_UseMultipleSdmaEngines = false}},
+                      {"MI300X", {.OMPX_UseMultipleSdmaEngines = true}},
+                      // Default config for unknown devices.
+                      {"DEFAULT", {.OMPX_UseMultipleSdmaEngines = true}}};
+
+  const DeviceEnvarConfigTy &getEnvarConfig() const {
+    std::string DeviceMarketingName = getNormMarketingName();
+    auto It = EnvarConfigs.find(DeviceMarketingName);
+
+    if (DeviceMarketingName == "UNKNOWN" || It == EnvarConfigs.end()) {
+      // Return default config
+      DP("Default envar config is used.\n");
+      auto DefaultIt = EnvarConfigs.find("DEFAULT");
+
+      assert(DefaultIt != EnvarConfigs.end() &&
+             "Default envar config not found!\n");
+      return DefaultIt->second;
+    }
+
+    DP("Envar config for %s is used.\n", DeviceMarketingName.c_str());
+
+    return It->second;
+  }
 
 public:
   /// Return if it is an MI300 series device.
