@@ -5024,6 +5024,7 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
                 VPBranchOnMaskRecipe>(R))
           continue;
+
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
                 VPScalarIVStepsRecipe>(R) ||
