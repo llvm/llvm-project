@@ -90,3 +90,57 @@ int f3(void) {
 // OGCG-NEXT:   store i32 3, ptr %[[I_PTR]], align 4
 // OGCG-NEXT:   %[[I:.*]] = load i32, ptr %[[I_PTR]], align 4
 // OGCG-NEXT:   ret i32 %[[I]]
+
+// Verify null statement handling.
+void f4(void) {
+  ;
+}
+
+//      CIR: cir.func @f4()
+// CIR-NEXT:   cir.return
+
+//      LLVM: define void @f4()
+// LLVM-NEXT:   ret void
+
+//      OGCG: define{{.*}} void @f4()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   ret void
+
+// Verify null statement as for-loop body.
+void f5(void) {
+  for (;;)
+    ;
+}
+
+//      CIR: cir.func @f5()
+// CIR-NEXT:   cir.scope {
+// CIR-NEXT:      cir.for : cond {
+// CIR-NEXT:        %0 = cir.const #true
+// CIR-NEXT:        cir.condition(%0)
+// CIR-NEXT:      } body {
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      } step {
+// CIR-NEXT:        cir.yield
+// CIR-NEXT:      }
+// CIR-NEXT:   }
+// CIR-NEXT:   cir.return
+// CIR-NEXT: }
+
+// LLVM: define void @f5()
+// LLVM:   br label %[[SCOPE:.*]]
+// LLVM: [[SCOPE]]:
+// LLVM:   br label %[[LOOP:.*]]
+// LLVM: [[LOOP]]:
+// LLVM:   br i1 true, label %[[LOOP_STEP:.*]], label %[[LOOP_EXIT:.*]]
+// LLVM: [[LOOP_STEP]]:
+// LLVM:   br label %[[LOOP_BODY:.*]]
+// LLVM: [[LOOP_BODY]]:
+// LLVM:   br label %[[LOOP]]
+// LLVM: [[LOOP_EXIT]]:
+// LLVM:   ret void
+
+// OGCG: define{{.*}} void @f5()
+// OGCG: entry:
+// OGCG:   br label %[[LOOP:.*]]
+// OGCG: [[LOOP]]:
+// OGCG:   br label %[[LOOP]]

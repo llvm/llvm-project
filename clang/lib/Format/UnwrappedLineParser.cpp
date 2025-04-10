@@ -167,9 +167,7 @@ UnwrappedLineParser::UnwrappedLineParser(
                        ? IG_Rejected
                        : IG_Inited),
       IncludeGuardToken(nullptr), FirstStartColumn(FirstStartColumn),
-      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {
-  assert(IsCpp == (LangOpts.CXXOperatorNames || LangOpts.C17));
-}
+      Macros(Style.Macros, SourceMgr, Style, Allocator, IdentTable) {}
 
 void UnwrappedLineParser::reset() {
   PPBranchLevel = -1;
@@ -1721,12 +1719,13 @@ void UnwrappedLineParser::parseStructuralElement(
         nextToken();
         parseBracedList();
         break;
-      } else if (Style.Language == FormatStyle::LK_Java &&
-                 FormatTok->is(Keywords.kw_interface)) {
+      }
+      if (Style.Language == FormatStyle::LK_Java &&
+          FormatTok->is(Keywords.kw_interface)) {
         nextToken();
         break;
       }
-      switch (FormatTok->Tok.getObjCKeywordID()) {
+      switch (bool IsAutoRelease = false; FormatTok->Tok.getObjCKeywordID()) {
       case tok::objc_public:
       case tok::objc_protected:
       case tok::objc_package:
@@ -1747,19 +1746,11 @@ void UnwrappedLineParser::parseStructuralElement(
         addUnwrappedLine();
         return;
       case tok::objc_autoreleasepool:
-        nextToken();
-        if (FormatTok->is(tok::l_brace)) {
-          if (Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_Always) {
-            addUnwrappedLine();
-          }
-          parseBlock();
-        }
-        addUnwrappedLine();
-        return;
+        IsAutoRelease = true;
+        [[fallthrough]];
       case tok::objc_synchronized:
         nextToken();
-        if (FormatTok->is(tok::l_paren)) {
+        if (!IsAutoRelease && FormatTok->is(tok::l_paren)) {
           // Skip synchronization object
           parseParens();
         }
@@ -1887,8 +1878,11 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->isBinaryOperator())
         nextToken();
       break;
-    case tok::caret:
+    case tok::caret: {
+      const auto *Prev = FormatTok->getPreviousNonComment();
       nextToken();
+      if (Prev && Prev->is(tok::identifier))
+        break;
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
@@ -1903,6 +1897,7 @@ void UnwrappedLineParser::parseStructuralElement(
       if (FormatTok->is(tok::l_brace))
         parseChildBlock();
       break;
+    }
     case tok::l_brace:
       if (InRequiresExpression)
         FormatTok->setFinalizedType(TT_BracedListLBrace);
@@ -3084,11 +3079,10 @@ void UnwrappedLineParser::parseTryCatch() {
     if (FormatTok->is(tok::at))
       nextToken();
     if (!(FormatTok->isOneOf(tok::kw_catch, Keywords.kw___except,
-                             tok::kw___finally) ||
+                             tok::kw___finally, tok::objc_catch,
+                             tok::objc_finally) ||
           ((Style.Language == FormatStyle::LK_Java || Style.isJavaScript()) &&
-           FormatTok->is(Keywords.kw_finally)) ||
-          (FormatTok->isObjCAtKeyword(tok::objc_catch) ||
-           FormatTok->isObjCAtKeyword(tok::objc_finally)))) {
+           FormatTok->is(Keywords.kw_finally)))) {
       break;
     }
     nextToken();
@@ -4160,17 +4154,15 @@ void UnwrappedLineParser::parseObjCProtocolList() {
   do {
     nextToken();
     // Early exit in case someone forgot a close angle.
-    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
-        FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::objc_end))
       return;
-    }
   } while (!eof() && FormatTok->isNot(tok::greater));
   nextToken(); // Skip '>'.
 }
 
 void UnwrappedLineParser::parseObjCUntilAtEnd() {
   do {
-    if (FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->is(tok::objc_end)) {
       nextToken();
       addUnwrappedLine();
       break;
@@ -4193,8 +4185,7 @@ void UnwrappedLineParser::parseObjCUntilAtEnd() {
 }
 
 void UnwrappedLineParser::parseObjCInterfaceOrImplementation() {
-  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_interface ||
-         FormatTok->Tok.getObjCKeywordID() == tok::objc_implementation);
+  assert(FormatTok->isOneOf(tok::objc_interface, tok::objc_implementation));
   nextToken();
   nextToken(); // interface name
 
@@ -4242,10 +4233,8 @@ void UnwrappedLineParser::parseObjCLightweightGenerics() {
   do {
     nextToken();
     // Early exit in case someone forgot a close angle.
-    if (FormatTok->isOneOf(tok::semi, tok::l_brace) ||
-        FormatTok->isObjCAtKeyword(tok::objc_end)) {
+    if (FormatTok->isOneOf(tok::semi, tok::l_brace, tok::objc_end))
       break;
-    }
     if (FormatTok->is(tok::less)) {
       ++NumOpenAngles;
     } else if (FormatTok->is(tok::greater)) {
@@ -4259,7 +4248,7 @@ void UnwrappedLineParser::parseObjCLightweightGenerics() {
 // Returns true for the declaration/definition form of @protocol,
 // false for the expression form.
 bool UnwrappedLineParser::parseObjCProtocol() {
-  assert(FormatTok->Tok.getObjCKeywordID() == tok::objc_protocol);
+  assert(FormatTok->is(tok::objc_protocol));
   nextToken();
 
   if (FormatTok->is(tok::l_paren)) {

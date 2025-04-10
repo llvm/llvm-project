@@ -47,19 +47,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reflect"
 
-namespace llvm {
-void initializeNVVMReflectPass(PassRegistry &);
-}
-
 namespace {
 class NVVMReflect : public FunctionPass {
 public:
   static char ID;
   unsigned int SmVersion;
   NVVMReflect() : NVVMReflect(0) {}
-  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {
-    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
-  }
+  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {}
 
   bool runOnFunction(Function &) override;
 };

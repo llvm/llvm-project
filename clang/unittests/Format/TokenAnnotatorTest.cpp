@@ -3622,6 +3622,11 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[7], BK_BracedInit);
   EXPECT_BRACE_KIND(Tokens[9], BK_BracedInit);
+
+  Tokens = annotate("return lhs ^ Byte{rhs};");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+  EXPECT_BRACE_KIND(Tokens[6], BK_BracedInit);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
@@ -3928,6 +3933,12 @@ TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
+}
+
+TEST_F(TokenAnnotatorTest, UTF8StringLiteral) {
+  auto Tokens = annotate("return u8\"foo\";", getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 4u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::utf8_string_literal, TT_Unknown);
 }
 
 } // namespace

@@ -145,10 +145,9 @@ class AttributeNamer:
         return attribute_name
 
     # Get the saved substitution name for the given attribute name. If no name
-    # has been generated for the given attribute yet, the source attribute name
-    # itself is returned.
+    # has been generated for the given attribute yet, None is returned.
     def get_name(self, source_attribute_name):
-        return self.map[source_attribute_name] if source_attribute_name in self.map else '?'
+        return self.map.get(source_attribute_name)
 
 # Return the number of SSA results in a line of type
 #   %0, %1, ... = ...
@@ -227,9 +226,9 @@ def process_attribute_references(line, attribute_namer):
     components = ATTR_RE.split(line)
     for component in components:
         m = ATTR_RE.match(component)
-        if m:
-            output_line += '#[[' + attribute_namer.get_name(m.group(1)) + ']]'
-            output_line += component[len(m.group()):]
+        attribute_name = attribute_namer.get_name(m.group(1)) if m else None
+        if attribute_name:
+            output_line += f"#[[{attribute_name}]]{component[len(m.group()):]}"
         else:
             output_line += component
     return output_line

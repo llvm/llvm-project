@@ -159,12 +159,27 @@ C23 Feature Support
   which clarified that a compound literal used within a function prototype is
   treated as if the compound literal were within the body rather than at file
   scope.
+- Fixed a bug where you could not cast a null pointer constant to type
+  ``nullptr_t``. Fixes #GH133644.
+
+C11 Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Implemented `WG14 N1285 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1285.htm>`_
+  which introduces the notion of objects with a temporary lifetime. When an
+  expression resulting in an rvalue with structure or union type and that type
+  contains a member of array type, the expression result is an automatic storage
+  duration object with temporary lifetime which begins when the expression is
+  evaluated and ends at the evaluation of the containing full expression. This
+  functionality is also implemented for earlier C language modes because the
+  C99 semantics will never be implemented (it would require dynamic allocations
+  of memory which leaks, which users would not appreciate).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
+- For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
 
 New Compiler Flags
 ------------------
@@ -275,6 +290,13 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 - Clang now better preserves the sugared types of pointers to member.
+- Clang now better preserves the presence of the template keyword with dependent
+  prefixes.
+- Clang now respects the current language mode when printing expressions in
+  diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
+  a bunch of HLSL types being printed as their C++ equivalents.
+- When printing types for diagnostics, clang now doesn't suppress the scopes of
+  template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
 - Fixed diagnostics adding a trailing ``::`` when printing some source code
   constructs, like base classes.
@@ -297,6 +319,24 @@ Improvements to Clang's diagnostics
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
 - Improve the ``-Wundefined-func-template`` warning when a function template is not instantiated due to being unreachable in modules.
+
+- Fixed an assertion when referencing an out-of-bounds parameter via a function
+  attribute whose argument list refers to parameters by index and the function
+  is variadic. e.g.,
+  .. code-block:: c
+
+    __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
+
+  Fixes #GH61635
+
+- Split diagnosing base class qualifiers from the ``-Wignored-Qualifiers`` diagnostic group into a new ``-Wignored-base-class-qualifiers`` diagnostic group (which is grouped under ``-Wignored-qualifiers``). Fixes #GH131935.
+
+- ``-Wc++98-compat`` no longer diagnoses use of ``__auto_type`` or
+  ``decltype(auto)`` as though it was the extension for ``auto``. (#GH47900)
+- Clang now issues a warning for missing return in ``main`` in C89 mode. (#GH21650)
+
+- Now correctly diagnose a tentative definition of an array with static
+  storage duration in pedantic mode in C. (#GH50661)
 
 Improvements to Clang's time-trace
 ----------------------------------
@@ -324,11 +364,26 @@ Bug Fixes in This Version
 - Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
   ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 - Fixed a modules crash where an explicit Constructor was deserialized. (#GH132794)
+- Defining an integer literal suffix (e.g., ``LL``) before including
+  ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
+  when using the ``INTn_C`` macros. (#GH85995)
+- Clang no longer accepts invalid integer constants which are too large to fit
+  into any (standard or extended) integer type when the constant is unevaluated.
+  Merely forming the token is sufficient to render the program invalid. Code
+  like this was previously accepted and is now rejected (#GH134658):
+  .. code-block:: c
+
+    #if 1 ? 1 : 999999999999999999999
+    #endif
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - The behvaiour of ``__add_pointer`` and ``__remove_pointer`` for Objective-C++'s ``id`` and interfaces has been fixed.
+
+- The signature for ``__builtin___clear_cache`` was changed from
+  ``void(char *, char *)`` to ``void(void *, void *)`` to match GCC's signature
+  for the same builtin. (#GH47833)
 
 Bug Fixes to Attribute Support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -339,9 +394,18 @@ Bug Fixes to Attribute Support
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
+- Corrected the diagnostic for the ``callback`` attribute when passing too many
+  or too few attribute argument indicies for the specified callback function.
+  (#GH47451)
+
+- No longer crashing on ``__attribute__((align_value(N)))`` during template
+  instantiation when the function parameter type is not a pointer or reference.
+  (#GH26612)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports implicitly defined comparison operators for friend declarations. (#GH132249)
 - Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
@@ -357,6 +421,12 @@ Bug Fixes to C++ Support
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 - Clang will emit an error instead of crash when use co_await or co_yield in
   C++26 braced-init-list template parameter initialization. (#GH78426)
+- Improved fix for an issue with pack expansions of type constraints, where this
+  now also works if the constraint has non-type or template template parameters.
+  (#GH131798)
+- Fixes to partial ordering of non-type template parameter packs. (#GH132562)
+- Fix crash when evaluating the trailing requires clause of generic lambdas which are part of
+  a pack expansion.
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
@@ -371,9 +441,11 @@ Bug Fixes to C++ Support
 - Fixed a Clang regression in C++20 mode where unresolved dependent call expressions were created inside non-dependent contexts (#GH122892)
 - Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
   and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
+- Fixed a crash caused by invalid declarations of ``std::initializer_list``. (#GH132256)
 - Clang no longer crashes when establishing subsumption between some constraint expressions. (#GH122581)
 - Clang now issues an error when placement new is used to modify a const-qualified variable
   in a ``constexpr`` function. (#GH131432)
+- Clang now emits a warning when class template argument deduction for alias templates is used in C++17. (#GH133806)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

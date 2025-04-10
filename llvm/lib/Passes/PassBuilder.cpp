@@ -137,6 +137,7 @@
 #include "llvm/CodeGen/PHIElimination.h"
 #include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/PostRASchedulerList.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
@@ -165,6 +166,7 @@
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/CodeGen/WasmEHPrepare.h"
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "llvm/CodeGen/XRayInstrumentation.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -790,6 +792,31 @@ Expected<bool> parseLoopExtractorPassOptions(StringRef Params) {
 Expected<bool> parseLowerMatrixIntrinsicsPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "minimal",
                                             "LowerMatrixIntrinsics");
+}
+
+Expected<IRNormalizerOptions> parseIRNormalizerPassOptions(StringRef Params) {
+  IRNormalizerOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    bool Enable = !ParamName.consume_front("no-");
+    if (ParamName == "preserve-order")
+      Result.PreserveOrder = Enable;
+    else if (ParamName == "rename-all")
+      Result.RenameAll = Enable;
+    else if (ParamName == "fold-all") // FIXME: Name mismatch
+      Result.FoldPreOutputs = Enable;
+    else if (ParamName == "reorder-operands")
+      Result.ReorderOperands = Enable;
+    else {
+      return make_error<StringError>(
+          formatv("invalid normalize pass parameter '{0}' ", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+
+  return Result;
 }
 
 Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {

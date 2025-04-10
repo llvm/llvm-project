@@ -481,3 +481,44 @@ for.end.loopexit:
   %or0 = or <4 x i16> %phi1, zeroinitializer
   ret void
 }
+
+define i32 @test15() {
+; CHECK-LABEL: @test15(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr null, i64 480
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr null, i64 160
+; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[TMP1]], align 16
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr null, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> poison, <4 x float> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP4]], <4 x float> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP5]], <4 x float> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP6]], <4 x float> zeroinitializer, i64 12)
+; CHECK-NEXT:    [[TMP8:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> poison, <4 x float> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x float> @llvm.vector.insert.v16f32.v4f32(<16 x float> [[TMP8]], <4 x float> zeroinitializer, i64 12)
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x float> [[TMP10]], <16 x float> [[TMP9]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <16 x float> [[TMP7]], [[TMP11]]
+; CHECK-NEXT:    store <16 x float> [[TMP12]], ptr [[TMP0]], align 16
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %0 = getelementptr i8, ptr null, i64 512
+  %1 = getelementptr i8, ptr null, i64 528
+  %2 = getelementptr i8, ptr null, i64 480
+  %3 = getelementptr i8, ptr null, i64 496
+  %4 = getelementptr i8, ptr null, i64 160
+  %5 = load <4 x float>, ptr %4, align 16
+  %6 = getelementptr i8, ptr null, i64 176
+  %7 = load <4 x float>, ptr %6, align 16
+  store <4 x float> %5, ptr null, align 16
+  %8 = fadd <4 x float> zeroinitializer, %5
+  %9 = fadd <4 x float> zeroinitializer, %7
+  store <4 x float> %8, ptr %2, align 16
+  store <4 x float> %9, ptr %3, align 16
+  %10 = fadd <4 x float> zeroinitializer, zeroinitializer
+  %11 = fadd <4 x float> zeroinitializer, zeroinitializer
+  store <4 x float> %10, ptr %0, align 16
+  store <4 x float> %11, ptr %1, align 16
+  ret i32 0
+}

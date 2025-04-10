@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file defines the operation set for the TOSA dialect as defined in
-// the TOSA specfication (https://developer.mlplatform.org/w/tosa/).
+// the TOSA specfication (https://www.mlplatform.org/tosa/tosa_spec.html).
 //
 //===----------------------------------------------------------------------===//
 
@@ -107,6 +107,7 @@ def Tosa_AvgPool2dOp : Tosa_InferShapedTypeOp<"avg_pool2d"> {
     LogicalResult verifyOutputZeroPoint(int64_t zp);
   }];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -153,6 +154,8 @@ def Tosa_Conv2DOp : Tosa_ConvOp<"conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -244,6 +247,8 @@ def Tosa_DepthwiseConv2DOp : Tosa_ConvOp<"depthwise_conv2d"> {
   }];
 
   let builders = [Tosa_ConvOpQuantInfoBuilder];
+
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
@@ -540,9 +545,7 @@ def Tosa_SigmoidOp : Tosa_ElementwiseUnaryOp<"sigmoid"> {
     For quantized integer data types, the TABLE operator should be used instead.
     Each implementation may choose an appropriate TABLE given the scale and zero
     point of the input data. Eight or sixteen bit precision tables may be used
-    based on the input tensor to the sigmoid function. The sigmoid table has 513
-    entries each of 16-bit precision and covering the input range -16.0 to +16.0
-    in steps of 1/16.
+    based on the input tensor to the sigmoid function.
   }];
 
   let arguments = (ins
@@ -752,10 +755,10 @@ def Tosa_IntDivOp : Tosa_ElementwiseOp<"int_div", [SameOperandsAndResultElementT
   let summary = "Integer divide operator.";
 
   let description = [{
-    Elementwise integer divide of input1 by input2. Axis of size 1 will be 
-    broadcast as necessary. Rank of input tensors must match. The result of the 
-    divide is truncated towards zero. Expected use is for operations on 
-    non-scaled integers. Floating point divide should use RECIPROCAL and MUL. 
+    Elementwise integer divide of input1 by input2. Axis of size 1 will be
+    broadcast as necessary. Rank of input tensors must match. The result of the
+    divide is truncated towards zero. Expected use is for operations on
+    non-scaled integers. Floating point divide should use RECIPROCAL and MUL.
     Quantized integer divide should use TABLE (for 1/x) and MUL.
   }];
 
@@ -972,11 +975,6 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
     Extension<[Tosa_EXT_BF16]>,
   ];
-}
-
-def MulOperandsAndResultElementType :
-  NativeOpTrait<"MulOperandsAndResultElementType"> {
-  let cppNamespace = "mlir::OpTrait::tosa";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1906,7 +1904,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
     ```mlir
     %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    %padding = tosa.const_shape {values = dense<[1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
     tosa.pad %arg0, %padding, %pad_const: (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<4x9xf32>)
     ```
 
@@ -1914,7 +1912,7 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad"> {
 
     ```mlir
     %pad_const = "tosa.const"() {values = dense<3.14> : tensor<1xf32>} : () -> tensor<1xf32>
-    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex> } : () -> !tosa.shape<4>
+    %padding = tosa.const_shape {values = dense<[-1, 2, 3, 4]> : tensor<4xindex>} : () -> !tosa.shape<4>
     tosa.pad %arg0, %padding, %pad_const : (tensor<1x2xf32>, !tosa.shape<4>, tensor<1xf32>)  -> (tensor<?x9xf32>)
     ```
   }];
@@ -2251,7 +2249,7 @@ def Tosa_CastOp: Tosa_Op<"cast", [Pure,
   let description = [{
     Casts a tensor from one data type to another.
     * This table is showing the supported conversions from the TOSA Specification.
-    * The MLIR dialect here can be used to represent other conversions. 
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                     | Input   | Output  |
     |--------------------------|---------|---------|
@@ -2328,7 +2326,21 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
   let summary = "Tosa rescale operator.";
 
   let description = [{
-    Rescale quantized values into a new domain. Supported rescalings are:
+    RESCALE is defined using an integer multiply, add, and shift.
+
+    Rescale supports two precisions of multiplier: 16-bit and 32-bit. The 32-bit multiplier
+    version supports two rounding modes to enable simpler lowering of existing frameworks
+    that use two stage rounding. All arithmetic is designed so that it does not overflow a
+    64-bit accumulator and that the result fits in 32 bits. In particular, a 48-bit value
+    cannot be scaled with the 32-bit multiplier because the accumulator would need to have
+    80 bits.
+
+    The shift and value range are limited to allow a variety of implementations. The limit
+    of 62 on shift allows the shift to be decomposed as two right shifts of 31.
+
+    Supported rescalings:
+    * This table is showing the supported conversions from the TOSA Specification.
+    * The MLIR dialect here can be used to represent other conversions.
 
     | Mode                   | Input | Output | Unsigned input | Unsigned output |
     |------------------------|-------|--------|----------------|-----------------|

@@ -84,9 +84,7 @@ namespace {
 struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   static char ID;
 
-  AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {
-    initializeAArch64MIPeepholeOptPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {}
 
   const AArch64InstrInfo *TII;
   const AArch64RegisterInfo *TRI;
