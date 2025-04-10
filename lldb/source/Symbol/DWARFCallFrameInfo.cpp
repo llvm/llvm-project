@@ -735,7 +735,7 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
                      __FUNCTION__, dwarf_offset, startaddr.GetFileAddress());
             break;
           }
-          lldb::addr_t offset = row.GetOffset();
+          int64_t offset = row.GetOffset();
           row = std::move(stack.back());
           stack.pop_back();
           row.SetOffset(offset);
