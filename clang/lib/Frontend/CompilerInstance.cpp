@@ -1359,11 +1359,21 @@ createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
 /// Compile a module file for the given module, using the options
 /// provided by the importing compiler instance. Returns true if the module
 /// was built without errors.
-static bool compileModuleImpl(CompilerInstance &ImportingInstance,
-                              SourceLocation ImportLoc, StringRef ModuleName,
-                              StringRef ModuleFileName,
-                              CompilerInstance &Instance) {
+static bool compileModule(CompilerInstance &ImportingInstance,
+                          SourceLocation ImportLoc, StringRef ModuleName,
+                          StringRef ModuleFileName,
+                          CompilerInstance &Instance) {
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
+
+  // Never compile a module that's already finalized - this would cause the
+  // existing module to be freed, causing crashes if it is later referenced
+  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
+          ModuleFileName)) {
+    ImportingInstance.getDiagnostics().Report(
+        ImportLoc, diag::err_module_rebuild_finalized)
+        << ModuleName;
+    return false;
+  }
 
   ImportingInstance.getDiagnostics().Report(ImportLoc,
                                             diag::remark_module_build)
@@ -1396,43 +1406,16 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     Instance.clearOutputFiles(/*EraseFiles=*/true);
   }
 
-  // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
-  // occurred.
-  return !Instance.getDiagnostics().hasErrorOccurred() ||
-         Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
-}
-
-/// Compile a module file for the given module in a separate compiler instance,
-/// using the options provided by the importing compiler instance. Returns true
-/// if the module was built without errors.
-static bool compileModule(CompilerInstance &ImportingInstance,
-                          SourceLocation ImportLoc, Module *Module,
-                          StringRef ModuleFileName) {
-  StringRef ModuleName = Module->getTopLevelModuleName();
-
-  // Never compile a module that's already finalized - this would cause the
-  // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
-        << ModuleName;
-    return false;
-  }
-
-  auto Instance = createCompilerInstanceForModuleCompile(
-      ImportingInstance, ImportLoc, Module, ModuleFileName);
-
-  bool Success = compileModuleImpl(ImportingInstance, ImportLoc, ModuleName,
-                                   ModuleFileName, *Instance);
-
   // We've rebuilt a module. If we're allowed to generate or update the global
   // module index, record that fact in the importing compiler instance.
   if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
     ImportingInstance.setBuildGlobalModuleIndex(true);
   }
 
-  return Success;
+  // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
+  // occurred.
+  return !Instance.getDiagnostics().hasErrorOccurred() ||
+         Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
 /// Read the AST right after compiling the module.
@@ -1482,8 +1465,12 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
                                         SourceLocation ModuleNameLoc,
                                         Module *Module,
                                         StringRef ModuleFileName) {
-  if (!compileModule(ImportingInstance, ModuleNameLoc, Module,
-                     ModuleFileName)) {
+  auto Instance = createCompilerInstanceForModuleCompile(
+      ImportingInstance, ImportLoc, Module, ModuleFileName);
+
+  if (!compileModule(ImportingInstance, ModuleNameLoc,
+                     Module->getTopLevelModuleName(), ModuleFileName,
+                     *Instance)) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_built)
         << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
@@ -2274,7 +2261,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   // Build the module, inheriting any modules that we've built locally.
   bool Success =
-      compileModuleImpl(*this, ImportLoc, ModuleName, ModuleFileName, *Other);
+      compileModule(*this, ImportLoc, ModuleName, ModuleFileName, *Other);
 
   BuiltModules = std::move(Other->BuiltModules);
 
