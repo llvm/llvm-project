@@ -503,6 +503,10 @@ public:
                     DebugLoc DL = {})
       : VPRecipeBase(SC, Operands, DL), VPValue(this, UV) {}
 
+  VPSingleDefRecipe(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                    Type *ResultTy, DebugLoc DL = {})
+      : VPRecipeBase(SC, Operands, DL), VPValue(ResultTy, this) {}
+
   static inline bool classof(const VPRecipeBase *R) {
     switch (R->getVPDefID()) {
     case VPRecipeBase::VPDerivedIVSC:
@@ -531,7 +535,6 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
-    case VPRecipeBase::VPScalarCastSC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -695,6 +698,13 @@ public:
                       DisjointFlagsTy DisjointFlags, DebugLoc DL = {})
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
         DisjointFlags(DisjointFlags) {}
+
+  VPRecipeWithIRFlags(const unsigned char SC, ArrayRef<VPValue *> Operands,
+                      Type *ResultTy, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, ResultTy, DL) {
+    OpType = OperationType::Other;
+    AllFlags = 0;
+  }
 
 protected:
   template <typename IterT>
@@ -924,6 +934,11 @@ public:
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, DL),
         Opcode(Opcode), Name(Name.str()) {}
 
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, Type *ResultTy,
+                DebugLoc DL, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, ResultTy, DL),
+        Opcode(Opcode), Name(Name.str()) {}
+
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
@@ -1023,6 +1038,52 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+
+  /// Return true if \p U is a cast.
+  static bool isCast(const VPUser *U) {
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && Instruction::isCast(VPI->getOpcode());
+  }
+};
+
+/// A specialization of VPInstruction augmenting it with a dedicated result
+/// type, to be used when the opcode and operands of the VPInstruction don't
+/// directly determine the result type.
+class VPInstructionWithType : public VPInstruction {
+public:
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, ResultTy, DL, Name) {}
+
+  static inline bool classof(const VPRecipeBase *R) { return isCast(R); }
+
+  static inline bool classof(const VPUser *R) {
+    return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
+  }
+
+  VPInstruction *clone() override {
+    SmallVector<VPValue *, 2> Operands(operands());
+    auto *New = new VPInstructionWithType(
+        getOpcode(), Operands, getScalarType(), getDebugLoc(), getName());
+    return New;
+  }
+
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override {
+    // TODO: Compute accurate cost after retiring the legacy cost model.
+    return 0;
+  }
+
+  Type *getResultType() const { return getScalarType(); }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1209,54 +1270,6 @@ public:
 
   /// Returns the result type of the cast.
   Type *getResultType() const { return ResultTy; }
-};
-
-/// VPScalarCastRecipe is a recipe to create scalar cast instructions.
-class VPScalarCastRecipe : public VPSingleDefRecipe {
-  Instruction::CastOps Opcode;
-
-  Type *ResultTy;
-
-  Value *generate(VPTransformState &State);
-
-public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                     DebugLoc DL)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
-        ResultTy(ResultTy) {}
-
-  ~VPScalarCastRecipe() override = default;
-
-  VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
-                                  getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPScalarCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    // At the moment, only uniform codegen is implemented.
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
 };
 
 /// A recipe for widening vector intrinsics.
