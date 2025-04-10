@@ -122,6 +122,7 @@ struct ModuleStats {
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
   double debug_index_time = 0.0;
+  double symbol_download_time = 0.0;
   uint64_t debug_info_size = 0;
   bool symtab_loaded_from_cache = false;
   bool symtab_saved_to_cache = false;

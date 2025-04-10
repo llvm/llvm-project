@@ -1217,28 +1217,36 @@ PluginManager::GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx) {
 }
 
 ModuleSpec
-PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
+PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                                          std::string *locator_name) {
   auto instances = GetSymbolLocatorInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (instance.locate_executable_object_file) {
       std::optional<ModuleSpec> result =
           instance.locate_executable_object_file(module_spec);
-      if (result)
+      if (result) {
+        if (locator_name)
+          *locator_name = instance.name;
         return *result;
+      }
     }
   }
   return {};
 }
 
 FileSpec PluginManager::LocateExecutableSymbolFile(
-    const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths,
+    std::string *locator_name) {
   auto instances = GetSymbolLocatorInstances().GetSnapshot();
   for (auto &instance : instances) {
     if (instance.locate_executable_symbol_file) {
       std::optional<FileSpec> result = instance.locate_executable_symbol_file(
           module_spec, default_search_paths);
-      if (result)
+      if (result) {
+        if (locator_name)
+          *locator_name = instance.name;
         return *result;
+      }
     }
   }
   return {};

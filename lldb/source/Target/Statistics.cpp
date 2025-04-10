@@ -71,6 +71,7 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoHadIncompleteTypes",
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
+  module.try_emplace("symbolDownloadTime", symbol_download_time);
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
 
@@ -288,6 +289,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
 
   json::Array json_targets;
   json::Array json_modules;
+  double symbol_download_time = 0.0;
   double symtab_parse_time = 0.0;
   double symtab_index_time = 0.0;
   double debug_parse_time = 0.0;
@@ -345,6 +347,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         ++debug_index_saved;
       module_stat.debug_index_time = sym_file->GetDebugInfoIndexTime().count();
       module_stat.debug_parse_time = sym_file->GetDebugInfoParseTime().count();
+      module_stat.symbol_download_time +=
+          sym_file->GetSymbolDownloadTime().count();
+      if (sym_file->GetObjectFile() != module->GetObjectFile())
+        module_stat.symbol_download_time +=
+            module->GetObjectFile()->GetDownloadTime().get().count();
       module_stat.debug_info_size =
           sym_file->GetDebugInfoSize(load_all_debug_info);
       module_stat.symtab_stripped = module->GetObjectFile()->IsStripped();
@@ -361,6 +368,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (module_stat.debug_info_had_variable_errors)
         ++num_modules_with_variable_errors;
     }
+    symbol_download_time += module_stat.symbol_download_time;
     symtab_parse_time += module_stat.symtab_parse_time;
     symtab_index_time += module_stat.symtab_index_time;
     debug_parse_time += module_stat.debug_parse_time;
@@ -391,6 +399,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   }
 
   json::Object global_stats{
+      {"totalSymbolDownloadTime", symbol_download_time},
       {"totalSymbolTableParseTime", symtab_parse_time},
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded},

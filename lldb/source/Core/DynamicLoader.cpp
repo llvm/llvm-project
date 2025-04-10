@@ -16,6 +16,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
@@ -24,6 +25,8 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-private-interfaces.h"
+
+#include "Plugins/SymbolLocator/Debuginfod/SymbolLocatorDebuginfod.h"
 
 #include "llvm/ADT/StringRef.h"
 
@@ -243,14 +246,39 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // find an executable and symbol file.
     if (!module_sp) {
       FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-      module_spec.GetSymbolFileSpec() =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
-      ModuleSpec objfile_module_spec =
-          PluginManager::LocateExecutableObjectFile(module_spec);
+      StatsDuration symbol_duration;
+      std::string symbol_locator_name;
+      StatsDuration object_duration;
+      std::string object_locator_name;
+      ModuleSpec objfile_module_spec;
+      {
+        ElapsedTime elapsed(symbol_duration);
+        module_spec.GetSymbolFileSpec() =
+            PluginManager::LocateExecutableSymbolFile(module_spec, search_paths,
+                                                      &symbol_locator_name);
+      }
+      {
+        ElapsedTime elapsed(object_duration);
+        objfile_module_spec = PluginManager::LocateExecutableObjectFile(
+            module_spec, &object_locator_name);
+      }
       module_spec.GetFileSpec() = objfile_module_spec.GetFileSpec();
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec()) &&
           FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
+      }
+      if (module_sp) {
+        if (object_locator_name ==
+                SymbolLocatorDebuginfod::GetPluginNameStatic() &&
+            module_sp->GetObjectFile())
+          module_sp->GetObjectFile()->GetDownloadTime() += object_duration;
+        if (symbol_locator_name ==
+            SymbolLocatorDebuginfod::GetPluginNameStatic()) {
+          const auto symfile = module_sp->GetSymbolFile();
+          if (symfile) {
+            symfile->GetObjectFile()->GetDownloadTime() += symbol_duration;
+          }
+        }
       }
     }
 

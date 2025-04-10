@@ -422,6 +422,11 @@ public:
   /// hasn't been indexed yet, or a valid duration if it has.
   virtual StatsDuration::Duration GetDebugInfoIndexTime() { return {}; }
 
+  /// Return the time it took to download any extra symbol files.
+  ///
+  /// \returns 0.0 if no extra symbol files need to be downloaded
+  virtual StatsDuration::Duration GetSymbolDownloadTime() { return {}; }
+
   /// Reset the statistics for the symbol file.
   virtual void ResetStatistics() {}
 
