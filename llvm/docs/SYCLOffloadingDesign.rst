@@ -134,7 +134,7 @@ An example of front-end device compilation command is shown below:
 Front-end device compilation for SYCL offloading can be split into the following
 components - Device code outlining, SYCL kernel function object lowering,
 Generation of device code diagnostics, and Integration header generation. These
-components are explained in :doc:`SYCLFrontEndDeviceCompilation.rst`.
+components are explained :ref:`in this document<sycl_frontend_device_compilation>`.
 
 ****************************
 Device code packaging

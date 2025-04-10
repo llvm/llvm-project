@@ -4,7 +4,8 @@ SYCL Front-end device compilation
 
 .. contents::
    :local:
-   
+
+.. _sycl_frontend_device_compilation:
 SYCL front-end device compiler parses input source, outlines device part of the
 code, applies additional restrictions on the device code (e.g. no exceptions or
 virtual calls), generates LLVM IR bitcode for the device code only and
