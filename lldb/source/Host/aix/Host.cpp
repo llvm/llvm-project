@@ -9,7 +9,6 @@
 #include <fcntl.h>
 #include <sstream>
 #include <sys/procfs.h>
-
 #include "lldb/Host/Host.h"
 #include "lldb/Host/linux/Support.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -41,7 +40,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
                           ProcessState &State, ::pid_t &TracerPid,
                           ::pid_t &Tgid) {
   Log *log = GetLog(LLDBLog::Host);
-
   auto BufferOrError = getProcFile(Pid, "status");
   if (!BufferOrError)
     return false;
@@ -50,7 +48,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   while (!Rest.empty()) {
     llvm::StringRef Line;
     std::tie(Line, Rest) = Rest.split('\n');
-
     if (Line.consume_front("Gid:")) {
       // Real, effective, saved set, and file system GIDs. Read the first two.
       Line = Line.ltrim();
@@ -58,7 +55,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
       Line.consumeInteger(10, RGid);
       Line = Line.ltrim();
       Line.consumeInteger(10, EGid);
-
       ProcessInfo.SetGroupID(RGid);
       ProcessInfo.SetEffectiveGroupID(EGid);
     } else if (Line.consume_front("Uid:")) {
@@ -68,7 +64,6 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
       Line.consumeInteger(10, RUid);
       Line = Line.ltrim();
       Line.consumeInteger(10, EUid);
-
       ProcessInfo.SetUserID(RUid);
       ProcessInfo.SetEffectiveUserID(EUid);
     } else if (Line.consume_front("PPid:")) {
@@ -101,48 +96,28 @@ static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
   return true;
 }
 
-static void GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
-  Log *log = GetLog(LLDBLog::Process);
-  std::string ExePath(PATH_MAX, '\0');
+static bool GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
   struct psinfo psinfoData;
-
-  // We can't use getProcFile here because proc/[pid]/exe is a symbolic link.
-  llvm::SmallString<64> ProcExe;
-  (llvm::Twine("/proc/") + llvm::Twine(pid) + "/cwd").toVector(ProcExe);
-
-  ssize_t len = readlink(ProcExe.c_str(), &ExePath[0], PATH_MAX);
-  if (len > 0) {
-    ExePath.resize(len);
-
-    struct stat statData;
-
-    std::ostringstream oss;
-
-    oss << "/proc/" << std::dec << pid << "/psinfo";
-    assert(stat(oss.str().c_str(), &statData) == 0);
-
-    const int fd = open(oss.str().c_str(), O_RDONLY);
-    assert(fd >= 0);
-
-    ssize_t readNum = read(fd, &psinfoData, sizeof(psinfoData));
-    assert(readNum >= 0);
-
-    close(fd);
-  } else {
-    LLDB_LOG(log, "failed to read link exe link for {0}: {1}", pid,
-             Status(errno, eErrorTypePOSIX));
-    ExePath.resize(0);
-  }
-
+  auto BufferOrError = getProcFile(pid, "psinfo");
+  if (!BufferOrError)
+    return false;
+  
+  std::unique_ptr<llvm::MemoryBuffer> PsinfoBuffer = std::move(*BufferOrError);
+  // Ensure there's enough data for psinfoData
+  if(PsinfoBuffer->getBufferSize() < sizeof(psinfoData))  
+    return false;
+  
+  std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
   llvm::StringRef PathRef(&(psinfoData.pr_psargs[0]));
-
   if (!PathRef.empty()) {
     process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
     ArchSpec arch_spec = ArchSpec();
     arch_spec.SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
                               LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
     process_info.SetArchitecture(arch_spec);
+    return true;
   }
+  return false;
 }
 
 static bool GetProcessAndStatInfo(::pid_t pid,
@@ -151,11 +126,10 @@ static bool GetProcessAndStatInfo(::pid_t pid,
   ::pid_t tgid;
   tracerpid = 0;
   process_info.Clear();
-
   process_info.SetProcessID(pid);
 
-  GetExePathAndArch(pid, process_info);
-
+  if(!GetExePathAndArch(pid, process_info))
+    return false;
   // Get User and Group IDs and get tracer pid.
   if (!GetStatusInfo(pid, process_info, State, tracerpid, tgid))
     return false;
