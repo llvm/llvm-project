@@ -647,8 +647,6 @@ private:
   void process(LocationAttr loc, StringRef msg, DiagnosticSeverity kind);
 
   std::unique_ptr<detail::SourceMgrDiagnosticVerifierHandlerImpl> impl;
-
-  Level level = Level::All;
 };
 
 //===----------------------------------------------------------------------===//
