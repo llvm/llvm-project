@@ -32,20 +32,20 @@ __for_each_segment(_SegmentedIterator __first, _SegmentedIterator __last, _Funct
 
   // We are in a single segment, so we might not be at the beginning or end
   if (__sfirst == __slast) {
-    __func.template operator()<_SegmentedIterator>(_Traits::__local(__first), _Traits::__local(__last));
+    __func(_Traits::__local(__first), _Traits::__local(__last));
     return;
   }
 
   // We have more than one segment. Iterate over the first segment, since we might not start at the beginning
-  __func.template operator()<_SegmentedIterator>(_Traits::__local(__first), _Traits::__end(__sfirst));
+  __func(_Traits::__local(__first), _Traits::__end(__sfirst));
   ++__sfirst;
   // iterate over the segments which are guaranteed to be completely in the range
   while (__sfirst != __slast) {
-    __func.template operator()<_SegmentedIterator>(_Traits::__begin(__sfirst), _Traits::__end(__sfirst));
+    __func(_Traits::__begin(__sfirst), _Traits::__end(__sfirst));
     ++__sfirst;
   }
   // iterate over the last segment
-  __func.template operator()<_SegmentedIterator>(_Traits::__begin(__sfirst), _Traits::__local(__last));
+  __func(_Traits::__begin(__sfirst), _Traits::__local(__last));
 }
 
 _LIBCPP_END_NAMESPACE_STD

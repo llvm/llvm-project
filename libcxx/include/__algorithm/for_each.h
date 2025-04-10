@@ -21,9 +21,6 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Sent, class _Func>
@@ -32,29 +29,19 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __for_each(_InputIterat
     __f(*__first);
 }
 
-// __segment_processor handles the per-segment processing by applying the function object __func_ to each
-// element within the segment.
-template <class _Func>
-struct __segment_processor {
-  _Func& __func_;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __segment_processor(_Func& __f) : __func_(__f) {}
-
-  template <class _SegmentedIterator>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
-  operator()(typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator __lfirst,
-             typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator __llast) {
-    std::__for_each(__lfirst, __llast, __func_);
-  }
-};
-
+#ifndef _LIBCPP_CXX03_LANG
 template <class _SegmentedIterator,
           class _Function,
           __enable_if_t<__is_segmented_iterator<_SegmentedIterator>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __for_each(_SegmentedIterator __first, _SegmentedIterator __last, _Function& __func) {
-  std::__for_each_segment(__first, __last, std::__segment_processor<_Function>(__func));
+  using _Traits = __segmented_iterator_traits<_SegmentedIterator>;
+  std::__for_each_segment(
+      __first, __last, [&](typename _Traits::__local_iterator __lfirst, typename _Traits::__local_iterator __llast) {
+        std::__for_each(__lfirst, __llast, __func);
+      });
 }
+#endif
 
 template <class _InputIterator, class _Function>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Function
@@ -64,7 +51,5 @@ for_each(_InputIterator __first, _InputIterator __last, _Function __f) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FOR_EACH_H
