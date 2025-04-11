@@ -642,6 +642,7 @@ Python Binding Changes
   the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
+- Add equality comparison operators for ``File`` type.
 
 OpenMP Support
 --------------
