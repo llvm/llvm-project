@@ -20864,7 +20864,8 @@ public:
   }
 
   void reset(unsigned NewBaseInstr) {
-    assert(NewBaseInstr < AllStores.size());
+    assert(NewBaseInstr < AllStores.size() &&
+           "Instruction index out of bounds");
     BaseInstrIdx = NewBaseInstr;
     Instrs.clear();
     insertOrLookup(NewBaseInstr, 0);
@@ -20894,9 +20895,8 @@ public:
     // again. Their distance will be "rebased" to use NewBaseInstIdx as
     // reference.
     for (auto [Dist, InstIdx] : PrevSet) {
-      if (InstIdx >= MinSafeIdx) {
+      if (InstIdx >= MinSafeIdx)
         insertOrLookup(InstIdx, Dist - DistFromCurBase);
-      }
     }
   }
 
@@ -21270,6 +21270,7 @@ bool SLPVectorizerPass::vectorizeStores(
 
     // If there is already a store in the group with the same PtrDiff, try to
     // vectorize the existing instructions before adding the current store.
+    // Otherwise, insert this store and keep collecting.
     if (std::optional<unsigned> PrevInst =
             RelatedStores->insertOrLookup(Idx, *Diff)) {
       TryToVectorize(RelatedStores->getStores());
