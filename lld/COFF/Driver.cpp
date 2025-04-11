@@ -659,12 +659,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
 
   if (machine != ARM64X) {
     ctx.symtab.machine = machine;
-    if (machine == ARM64EC)
-      ctx.symtabEC = &ctx.symtab;
   } else {
     ctx.symtab.machine = ARM64EC;
     ctx.hybridSymtab.emplace(ctx, ARM64);
-    ctx.symtabEC = &ctx.symtab;
   }
 
   addWinSysRootLibSearchPaths();
@@ -1320,7 +1317,7 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
     expName = saver().save("EXP+" + *mangledName);
   else
     expName = saver().save("EXP+" + name);
-  sym = ctx.symtabEC->addGCRoot(expName);
+  sym = ctx.symtab.addGCRoot(expName);
   if (auto undef = dyn_cast<Undefined>(sym)) {
     if (!undef->getWeakAlias()) {
       auto thunk = make<ECExportThunkChunk>(def);
@@ -1332,13 +1329,13 @@ void LinkerDriver::maybeCreateECExportThunk(StringRef name, Symbol *&sym) {
 void LinkerDriver::createECExportThunks() {
   // Check if EXP+ symbols have corresponding $hp_target symbols and use them
   // to create export thunks when available.
-  for (Symbol *s : ctx.symtabEC->expSymbols) {
+  for (Symbol *s : ctx.symtab.expSymbols) {
     if (!s->isUsedInRegularObj)
       continue;
     assert(s->getName().starts_with("EXP+"));
     std::string targetName =
         (s->getName().substr(strlen("EXP+")) + "$hp_target").str();
-    Symbol *sym = ctx.symtabEC->find(targetName);
+    Symbol *sym = ctx.symtab.find(targetName);
     if (!sym)
       continue;
     Defined *targetSym;
@@ -1360,10 +1357,9 @@ void LinkerDriver::createECExportThunks() {
     }
   }
 
-  if (ctx.symtabEC->entry)
-    maybeCreateECExportThunk(ctx.symtabEC->entry->getName(),
-                             ctx.symtabEC->entry);
-  for (Export &e : ctx.symtabEC->exports) {
+  if (ctx.symtab.entry)
+    maybeCreateECExportThunk(ctx.symtab.entry->getName(), ctx.symtab.entry);
+  for (Export &e : ctx.symtab.exports) {
     if (!e.data)
       maybeCreateECExportThunk(e.extName.empty() ? e.name : e.extName, e.sym);
   }
@@ -1372,7 +1368,7 @@ void LinkerDriver::createECExportThunks() {
 void LinkerDriver::pullArm64ECIcallHelper() {
   if (!ctx.config.arm64ECIcallHelper)
     ctx.config.arm64ECIcallHelper =
-        ctx.symtabEC->addGCRoot("__icall_helper_arm64ec");
+        ctx.symtab.addGCRoot("__icall_helper_arm64ec");
 }
 
 // In MinGW, if no symbols are chosen to be exported, then all symbols are
@@ -2753,8 +2749,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (auto *arg = args.getLastArg(OPT_print_symbol_order))
     config->printSymbolOrder = arg->getValue();
 
-  if (ctx.symtabEC)
-    ctx.symtabEC->initializeECThunks();
+  if (ctx.symtab.isEC())
+    ctx.symtab.initializeECThunks();
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.initializeLoadConfig(); });
 
   // Identify unreferenced COMDAT sections.
