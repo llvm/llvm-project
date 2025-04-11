@@ -1887,6 +1887,33 @@ bool NamedDecl::declarationReplaces(const NamedDecl *OldD,
                         cast<UnresolvedUsingValueDecl>(OldD)->getQualifier());
   }
 
+  {
+    // When default arguments across redeclarations in different lexical scopes
+    // are involved, we can't let one UsingShadowDecl to replace another based
+    // on the fact that they refer to the same canonical function.
+    const auto *OldShadowD = dyn_cast<UsingShadowDecl>(OldD);
+    const auto *NewShadowD = dyn_cast<UsingShadowDecl>(this);
+    if (OldShadowD && NewShadowD &&
+        isa<FunctionDecl>(OldShadowD->getTargetDecl()) &&
+        isa<FunctionDecl>(NewShadowD->getTargetDecl())) {
+      const auto *OldFDecl = cast<FunctionDecl>(OldShadowD->getTargetDecl());
+      const auto *NewFDecl = cast<FunctionDecl>(NewShadowD->getTargetDecl());
+      const DeclContext *OldDeclCtx = OldFDecl->getLexicalDeclContext()
+                                          ->getNonTransparentContext()
+                                          ->getPrimaryContext();
+      const DeclContext *NewDeclCtx = NewFDecl->getLexicalDeclContext()
+                                          ->getNonTransparentContext()
+                                          ->getPrimaryContext();
+      auto hasDefaultArg = [](const ParmVarDecl *PDecl) {
+        return PDecl->hasDefaultArg();
+      };
+      if (OldDeclCtx != NewDeclCtx &&
+          llvm::any_of(OldFDecl->parameters(), hasDefaultArg) &&
+          llvm::any_of(NewFDecl->parameters(), hasDefaultArg))
+        return false;
+    }
+  }
+
   if (isRedeclarable(getKind())) {
     if (getCanonicalDecl() != OldD->getCanonicalDecl())
       return false;
