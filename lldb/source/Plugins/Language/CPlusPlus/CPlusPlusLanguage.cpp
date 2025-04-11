@@ -1697,65 +1697,89 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.contains("/usr/include/c++/");
 }
 
+static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
+  assert(sc.function);
+
+  if (sc.block)
+    if (Block *inline_block = sc.block->GetContainingInlinedBlock())
+      return inline_block->GetBlockVariableList(true);
+
+  return sc.function->GetBlock(true).GetBlockVariableList(true);
+}
+
+static char const *GetInlinedFunctionName(const SymbolContext &sc) {
+  if (!sc.block)
+    return nullptr;
+
+  const Block *inline_block = sc.block->GetContainingInlinedBlock();
+  if (!inline_block)
+    return nullptr;
+
+  const InlineFunctionInfo *inline_info =
+      inline_block->GetInlinedFunctionInfo();
+  if (!inline_info)
+    return nullptr;
+
+  return inline_info->GetName().AsCString(nullptr);
+}
+
+static bool PrintFunctionNameWithArgs(Stream &s,
+                                      const ExecutionContext *exe_ctx,
+                                      const SymbolContext &sc) {
+  assert(sc.function);
+
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+  const char *cstr = sc.function->GetName().AsCString(nullptr);
+  if (!cstr)
+    return false;
+
+  if (const char *inlined_name = GetInlinedFunctionName(sc)) {
+    s.PutCString(cstr);
+    s.PutCString(" [inlined] ");
+    cstr = inlined_name;
+  }
+
+  VariableList args;
+  if (auto variable_list_sp = GetFunctionVariableList(sc))
+    variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                               args);
+
+  if (args.GetSize() > 0)
+    return PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+
+  // FIXME: can we just unconditionally call PrettyPrintFunctionNameWithArgs?
+  // It should be able to handle the "no arguments" case.
+  s.PutCString(cstr);
+
+  return true;
+}
+
 bool CPlusPlusLanguage::GetFunctionDisplayName(
     const SymbolContext *sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
   switch (representation) {
   case FunctionNameRepresentation::eNameWithArgs: {
+    assert(sc);
+
     // Print the function name with arguments in it
-    if (sc->function) {
-      ExecutionContextScope *exe_scope =
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-      const char *cstr = sc->function->GetName().AsCString(nullptr);
-      if (cstr) {
-        const InlineFunctionInfo *inline_info = nullptr;
-        VariableListSP variable_list_sp;
-        bool get_function_vars = true;
-        if (sc->block) {
-          Block *inline_block = sc->block->GetContainingInlinedBlock();
+    if (sc->function)
+      return PrintFunctionNameWithArgs(s, exe_ctx, *sc);
 
-          if (inline_block) {
-            get_function_vars = false;
-            inline_info = inline_block->GetInlinedFunctionInfo();
-            if (inline_info)
-              variable_list_sp = inline_block->GetBlockVariableList(true);
-          }
-        }
+    if (!sc->symbol)
+      return false;
 
-        if (get_function_vars) {
-          variable_list_sp =
-              sc->function->GetBlock(true).GetBlockVariableList(true);
-        }
+    const char *cstr = sc->symbol->GetName().AsCString(nullptr);
+    if (!cstr)
+      return false;
 
-        if (inline_info) {
-          s.PutCString(cstr);
-          s.PutCString(" [inlined] ");
-          cstr = inline_info->GetName().GetCString();
-        }
+    s.PutCString(cstr);
 
-        VariableList args;
-        if (variable_list_sp)
-          variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
-                                                     args);
-        if (args.GetSize() > 0) {
-          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args))
-            return false;
-        } else {
-          s.PutCString(cstr);
-        }
-        return true;
-      }
-    } else if (sc->symbol) {
-      const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-      if (cstr) {
-        s.PutCString(cstr);
-        return true;
-      }
-    }
-  } break;
-  default:
+    return true;
+  }
+  case FunctionNameRepresentation::eNameWithNoArgs:
+  case FunctionNameRepresentation::eName:
     return false;
   }
-
-  return false;
 }
