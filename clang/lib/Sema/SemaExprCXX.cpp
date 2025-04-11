@@ -5223,7 +5223,8 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     if (CheckExceptionSpecCompatibility(From, ToType))
       return ExprError();
 
-    From = ImpCastExprToType(From, ToType, CK_NoOp, VK_PRValue,
+    From = ImpCastExprToType(From, ToType.getNonReferenceType(), CK_NoOp,
+                             From->getValueKind(),
                              /*BasePath=*/nullptr, CCK)
                .get();
     break;
