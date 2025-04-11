@@ -151,8 +151,7 @@ public:
 
   QualType getInoutParameterType(QualType Ty);
 
-  bool TransformInitList(const InitializedEntity &Entity,
-                         const InitializationKind &Kind, InitListExpr *Init);
+  bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
 
   void deduceAddressSpace(VarDecl *Decl);
 
