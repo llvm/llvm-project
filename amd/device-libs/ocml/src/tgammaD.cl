@@ -10,149 +10,86 @@
 CONSTATTR double
 MATH_MANGLE(tgamma)(double x)
 {
-    const double pi = 3.14159265358979323846;
-
-
     double ax = BUILTIN_ABS_F64(x);
     double ret;
 
-    if (ax > 0x1.0p-11) {
-        // For x < 4, push to [1-3] range  using gamma(x) = gamma(x+1) / x
-        // For 4.5 < x < 6.5, push above 6.5
-        // [4,4.5) left alone
-        double nterm = 1.0;
-        double dterm = 1.0;
-        double z = ax;
-        if (ax < 4.5) {
-            if (ax < 1.0) {
-                dterm = z;
-                z += 1.0;
-            } else if (ax < 3.0) {
-                ; // do nothing
-            } else if (ax < 4.0) {
-                z -= 1.0;
-                nterm = z;
+    if (ax < 16.0) {
+        double n, d;
+        double y = x;
+        if (x > 0.0) {
+            n = 1.0;
+            while (y > 2.5) {
+                n = MATH_MAD(n, y, -n);
+                y = y - 1.0;
+                n = MATH_MAD(n, y, -n);
+                y = y - 1.0;
             }
-        } else if (ax < 5.5) {
-            dterm = MATH_MAD(z,z,z);
-            z += 2.0;
-        } else if (ax < 6.5) {
-            dterm = z;
-            z += 1.0;
-        }
-
-        double negadj = 1.0;
-        if (x < 0.0) {
-            negadj = -x * MATH_MANGLE(sinpi)(x);
-        }
-
-        double etonegz = MATH_MANGLE(exp)(-z);
-
-        if (z < 4.5) {
-            const double rn0 =     297.312130630940277;
-            const double rn1 =   16926.1409177878806;
-            const double rn2 =  131675.407800922036;
-            const double rn3 =  344586.743316038732;
-            const double rn4 =  440619.954224349898;
-            const double rn5 =  275507.567385621460;
-            const double rn6 =   84657.9644812230335;
-
-            const double rd0 =       1.00000000000000000;
-            const double rd1 =     -13.3400904528209096;
-            const double rd2 =    3270.94389286527964;
-            const double rd3 =   41972.5365974090031;
-            const double rd4 =  123293.896672792281;
-            const double rd5 =  166739.899991898533;
-            const double rd6 =  107097.146935059144;
-            const double rd7 =   33773.6414083704053;
-
-            double num = MATH_MAD(z,
-                             MATH_MAD(z,
-                                 MATH_MAD(z,
-                                     MATH_MAD(z,
-                                         MATH_MAD(z,
-                                             MATH_MAD(z, rn6, rn5),
-                                             rn4),
-                                         rn3),
-                                     rn2),
-                                 rn1),
-                             rn0) * nterm;
-
-            double den = MATH_MAD(z,
-                            MATH_MAD(z,
-                                MATH_MAD(z,
-                                    MATH_MAD(z,
-                                        MATH_MAD(z,
-                                            MATH_MAD(z,
-                                                MATH_MAD(z, rd7, rd6),
-                                                rd5),
-                                            rd4),
-                                        rd3),
-                                    rd2),
-                                rd1),
-                            rd0) * dterm;
-
-            double zpow = MATH_MANGLE(powr)(z, z+0.5);
-
-            if (x >= 0.0) {
-                ret = etonegz * zpow * MATH_DIV(num,den);
-            } else {
-                ret = MATH_DIV(den*pi, negadj*etonegz*zpow*num);
-                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
+            if (y > 1.5) {
+                n = MATH_MAD(n, y, -n);
+                y = y - 1.0;
             }
+            if (x >= 0.5)
+                y = y - 1.0;
+            d = x < 0.5 ? x : 1.0;
         } else {
-            const double c0  =  2.5066282746310007;
-            const double c1  =  0.20888568955258338;
-            const double c2  =  0.008703570398024307;
-            const double c3  = -0.0067210904740298821;
-            const double c4  = -0.00057520123811017124;
-            const double c5  =  0.0019652948815832029;
-            const double c6  =  0.00017478252120455912;
-            const double c7  = -0.0014843411351582762;
-            const double c8  = -0.00012963757321125544;
-            const double c9  =  0.0021043112297532062;
-            const double c10 =  0.00018059994565555043;
-            const double c11 = -0.0047987856705463457;
-            const double c12 = -0.0004073678593815252;
-            const double c13 =  0.01605085033194459500;
-            const double c14 =  0.0013539922801590941;
-            const double c15 = -0.074015421268427375;
-            const double c16 = -0.0062208086788087787;
-            const double c17 =  0.45004033385625097;
-
-            double rz = MATH_RCP(z);
-
-            double poly = MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz,
-                          MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz,
-                          MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz, MATH_MAD(rz,
-                          MATH_MAD(rz, MATH_MAD(rz,
-                          c17, c16), c15), c14), c13), c12), c11), c10), c9), c8),
-                               c7), c6), c5), c4), c3), c2), c1), c0);
-
-            double zpow = MATH_MANGLE(powr)(z, MATH_MAD(0.5, z, -0.25));
-            if (x >= 0.0) {
-                ret = MATH_DIV(etonegz*zpow*zpow*poly, dterm);
-                ret = x > 0x1.573fae561f647p+7 ? PINF_F64 : ret;
-            } else if (x < 0.0) {
-                if (x >= -170.5) {
-                    ret = MATH_DIV(pi*dterm, etonegz*zpow*zpow*poly*negadj);
-                } else if (x >= -184.0) {
-                    ret = MATH_DIV(MATH_DIV(pi*dterm, etonegz*zpow*poly), zpow*negadj);
-                } else {
-                    ret = BUILTIN_COPYSIGN_F64(0.0, negadj);
-                }
-                ret = BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
-            } else {
-                ret = x;
+            d = x;
+            while (y < -1.5) {
+                d = MATH_MAD(d, y, d);
+                y = y + 1.0;
+                d = MATH_MAD(d, y, d);
+                y = y + 1.0;
             }
+            if (y < -0.5) {
+                d = MATH_MAD(d, y, d);
+                y = y + 1.0;
+            }
+            n = 1.0;
         }
-    } else {
-        const double c0 = -0x1.2788cfc6fb619p-1;
-        const double c1 =  0x1.fa658c23b1578p-1;
-        const double c2 = -0x1.d0a118f324b63p-1;
-        const double c3 =  0x1.f6a51055096b5p-1;
+        double qt = MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y,
+                    MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y,
+                    MATH_MAD(y, MATH_MAD(y, MATH_MAD(y, MATH_MAD(y,
+                    MATH_MAD(y,
+                       -0x1.aed75feec7b9ap-23, 0x1.31854a0be3cd3p-20),
+                       -0x1.5037d6a97a8b7p-20), -0x1.51d67f2cdbcfbp-16),
+                       0x1.0c8ab2ac5112dp-13), -0x1.c364ce9b5e149p-13),
+                       -0x1.317113a39f929p-10), 0x1.d919c501178a3p-8),
+                       -0x1.3b4af282da690p-7), -0x1.59af103bf2cd0p-5),
+                       0x1.5512320b432ccp-3), -0x1.5815e8fa28886p-5),
+                       -0x1.4fcf4026afa24p-1), 0x1.2788cfc6fb61cp-1);
 
-        ret = MATH_MAD(x, MATH_MAD(x, MATH_MAD(x, c3, c2), c1), c0) + MATH_RCP(x);
+        ret = MATH_DIV(n, MATH_MAD(d, y*qt, d));
+        ret = x == 0.0 ? BUILTIN_COPYSIGN_F64(PINF_F64, x) : ret;
+        ret = x < 0.0 && BUILTIN_FRACTION_F64(x) == 0.0 ? QNAN_F64 : ret;
+    } else {
+        const double sqrt2pi = 0x1.40d931ff62706p+1;
+        const double sqrtpiby2 = 0x1.40d931ff62706p+0;
+
+        double t1 = MATH_MANGLE(powr)(ax, MATH_MAD(ax, 0.5, -0.25));
+        double t2 = MATH_MANGLE(exp)(-ax);
+        double xr = MATH_FAST_RCP(ax);
+        double pt = MATH_MAD(xr, MATH_MAD(xr, MATH_MAD(xr, MATH_MAD(xr,
+                    MATH_MAD(xr, MATH_MAD(xr,
+                       -0x1.2b04c5ea74bbfp-11, 0x1.14869344f1d9bp-14),
+                       0x1.9b3457156ffefp-11), -0x1.e1427e86ee097p-13),
+                       -0x1.5f7266f67c4e0p-9), 0x1.c71c71c0f96adp-9),
+                       0x1.5555555555a28p-4);
+
+        if (x > 0.0) {
+            double gt = sqrt2pi*t2*t1*t1;
+            double g = MATH_MAD(gt, xr*pt, gt);
+            ret = x > 0x1.573fae561f646p+7 ? PINF_F64 : g;
+        } else {
+            double s = -x * MATH_MANGLE(sinpi)(x);
+            if (x > -170.5) {
+                double d = s*t2*t1*t1;
+                ret = MATH_DIV(sqrtpiby2, MATH_MAD(d, xr*pt, d));
+            } else if (x > -184.0) {
+                double d = t2*t1;
+                ret = MATH_DIV(MATH_DIV(sqrtpiby2, MATH_MAD(d, xr*pt, d)), s*t1);
+            } else
+                ret = BUILTIN_COPYSIGN_F64(0.0, s);
+            ret = BUILTIN_FRACTION_F64(x) == 0.0 || BUILTIN_ISNAN_F64(x) ? QNAN_F64 : ret;
+        }
     }
 
     return ret;
