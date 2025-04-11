@@ -31,7 +31,7 @@ class XeGPUTypeDef<string name, string typeMnemonic, list<Trait> traits = [],
 }
 
 def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
-        [ShapedTypeInterface], "::mlir::TensorType"> {
+        [TensorTypeInterface]> {
   let summary = "TensorDesc describing regions of interested data.";
   let description = [{
     TensorDesc is a type designed to describe regions of interest in data, as well as some features
@@ -117,7 +117,6 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
   ];
 
   let extraClassDeclaration = [{
-    using TensorType::clone;
     using mlir::ShapedType::Trait<TensorDescType>::getElementTypeBitWidth;
     using mlir::ShapedType::Trait<TensorDescType>::getRank;
     using mlir::ShapedType::Trait<TensorDescType>::getNumElements;
@@ -127,8 +126,11 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
     using mlir::ShapedType::Trait<TensorDescType>::getDimSize;
     using mlir::ShapedType::Trait<TensorDescType>::getDynamicDimIndex;
 
+    TensorDescType cloneWith(std::optional<ArrayRef<int64_t>> shape, Type elementType) const;
+    bool hasRank() const { return true; }
+
     TensorDescType clone(::mlir::Type elementType) {
-      return llvm::cast<TensorDescType>(cloneWith(getShape(), elementType));
+      return cloneWith(getShape(), elementType);
     }
 
     BlockTensorDescAttr getEncodingAsBlockTensorDescAttr() const {
@@ -156,7 +158,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return MemorySpace::Global;
     }
 
-    int getArrayLength() {
+    int getArrayLength() const {
       auto attr = getEncoding();
       auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
       assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
@@ -166,7 +168,7 @@ def XeGPU_TensorDesc: XeGPUTypeDef<"TensorDesc", "tensor_desc",
       return 1;
     }
 
-    bool getBoundaryCheck() {
+    bool getBoundaryCheck() const {
       auto attr = getEncoding();
       auto block_attr = mlir::dyn_cast_if_present<BlockTensorDescAttr>(attr);
       assert((!attr || block_attr) && "invalid on non BlockTensorDescAttr.");
