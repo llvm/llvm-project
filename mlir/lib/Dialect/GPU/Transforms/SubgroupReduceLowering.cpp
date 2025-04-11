@@ -419,7 +419,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   }
 
   if (ci.clusterSize == 64) {
-    auto permArg = b.getIntegerAttr(b.getIntegerType(32), 31);
+    auto permArg = b.getI32IntegerAttr(31);
     Value dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
         b.getUnitAttr(), allRows, allBanks, false);
