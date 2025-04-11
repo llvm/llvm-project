@@ -11,7 +11,7 @@ if (current_cpu == "x86" || current_cpu == "x64") {
 builtins_defines = []
 
 # This is based on who sets HasFloat16 to true in clang/lib/Basic/Targets.
-if (current_cpu == "aarch64" || current_cpu == "arm" ||
+if (current_cpu == "arm" || current_cpu == "arm64" ||
     current_cpu == "hexagon" || current_cpu == "riscv" ||
     current_cpu == "riscv64" || current_cpu == "x64") {
   builtins_defines += [ "COMPILER_RT_HAS_FLOAT16" ]

@@ -65,6 +65,7 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(
       dbgs() << "********** AArch64 Branch Targets  **********\n"
              << "********** Function: " << MF.getName() << '\n');
+  const Function &F = MF.getFunction();
 
   // LLVM does not consider basic blocks which are the targets of jump tables
   // to be address-taken (the address can't escape anywhere else), but they are
@@ -78,16 +79,22 @@ bool AArch64BranchTargets::runOnMachineFunction(MachineFunction &MF) {
   bool HasWinCFI = MF.hasWinCFI();
   for (MachineBasicBlock &MBB : MF) {
     bool CouldCall = false, CouldJump = false;
-    // Even in cases where a function has internal linkage and is only called
-    // directly in its translation unit, it can still be called indirectly if
-    // the linker decides to add a thunk to it for whatever reason (say, for
-    // example, if it is finally placed far from its call site and a BL is not
-    // long-range enough). PLT entries and tail-calls use BR, but when they are
+    // If the function is address-taken or externally-visible, it could be
+    // indirectly called. PLT entries and tail-calls use BR, but when they are
     // are in guarded pages should all use x16 or x17 to hold the called
     // address, so we don't need to set CouldJump here. BR instructions in
     // non-guarded pages (which might be non-BTI-aware code) are allowed to
     // branch to a "BTI c" using any register.
-    if (&MBB == &*MF.begin())
+    //
+    // For ELF targets, this is enough, because AAELF64 says that if the static
+    // linker later wants to use an indirect branch instruction in a
+    // long-branch thunk, it's also responsible for adding a 'landing pad' with
+    // a BTI, and pointing the indirect branch at that. For non-ELF targets we
+    // can't rely on that, so we assume that `CouldCall` is _always_ true due
+    // to the risk of long-branch thunks at link time.
+    if (&MBB == &*MF.begin() &&
+        (!MF.getSubtarget<AArch64Subtarget>().isTargetELF() ||
+         (F.hasAddressTaken() || !F.hasLocalLinkage())))
       CouldCall = true;
 
     // If the block itself is address-taken, it could be indirectly branched

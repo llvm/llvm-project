@@ -2493,11 +2493,11 @@ llvm.mlir.global linkonce @partially_zeroinit_aggregate() : !llvm.struct<(i32, i
 llvm.func @zeroinit_complex_local_aggregate() {
   // CHECK: %[[#VAR:]] = alloca [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }], i64 1, align 32
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
+  %1 = llvm.alloca %0 x !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>> : (i64) -> !llvm.ptr
 
   // CHECK: store [1000 x { i32, [3 x { double, <4 x ptr>, [2 x ptr] }], [6 x ptr] }] zeroinitializer, ptr %[[#VAR]], align 32
-  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
-  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, !llvm.vec<4 x ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
+  %2 = llvm.mlir.zero : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>
+  llvm.store %2, %1 : !llvm.array<1000 x !llvm.struct<(i32, !llvm.array<3 x !llvm.struct<(f64, vector<4 x !llvm.ptr>, !llvm.array<2 x ptr>)>>, !llvm.array<6 x ptr>)>>, !llvm.ptr
 
   llvm.return
 }
