@@ -151,3 +151,21 @@ class C {
                         // expected-error {{unexpected ';' before ')'}}
 };
 }
+
+#if __cplusplus >= 201103L
+namespace GH23317 {
+struct A {
+  enum E : int;
+  constexpr int foo() const;
+};
+
+enum A::E : int  { ae1 = 100, ae2 }; // expected-note {{'A::ae1' declared here}}
+
+constexpr int A::foo() const { return ae1; } // This is fine
+static_assert(A{}.foo() == 100, "oh no");
+
+int foo() {
+  return ae1; // expected-error {{use of undeclared identifier 'ae1'; did you mean 'A::ae1'?}}
+}
+} // namespace GH23317
+#endif // __cplusplus >= 201103L
