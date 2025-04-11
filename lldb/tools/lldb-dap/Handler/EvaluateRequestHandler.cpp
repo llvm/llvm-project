@@ -164,7 +164,8 @@ void EvaluateRequestHandler::operator()(
       dap.focus_tid = frame.GetThread().GetThreadID();
     }
     auto result = RunLLDBCommandsVerbatim(dap.debugger, llvm::StringRef(),
-                                          {std::string(expression)});
+                                          {std::string(expression)},
+                                          /*echo_commands*/ false);
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
