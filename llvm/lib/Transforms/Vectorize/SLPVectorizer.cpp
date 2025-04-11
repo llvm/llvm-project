@@ -9539,10 +9539,9 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                                 const TargetLibraryInfo &TLI,
                                 const InstructionsState &S,
                                 const BoUpSLP::EdgeInfo &UserTreeIdx,
-                                bool DoNotFail) {
+                                bool TryPad) {
   // Check that every instruction appears once in this bundle.
   SmallVector<Value *> UniqueValues;
-  SmallVector<Value *> NonUniqueValueVL;
   SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
   for (Value *V : VL) {
     if (isConstant(V)) {
@@ -9578,7 +9577,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
       (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
          return isa<UndefValue>(V) || !isConstant(V);
        }))) {
-    if (DoNotFail && UniquePositions.size() > 1 && NumUniqueScalarValues > 1 &&
+    if (TryPad && UniquePositions.size() > 1 && NumUniqueScalarValues > 1 &&
         S.getMainOp()->isSafeToRemove() &&
         all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
       // Find the number of elements, which forms full vectors.
@@ -9586,19 +9585,24 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
           TTI, UniqueValues.front()->getType(), UniqueValues.size());
       PWSz = std::min<unsigned>(PWSz, VL.size());
       if (PWSz == VL.size()) {
+        // We ended up with the same size after removing duplicates and
+        // upgrading the resulting vector size to a "nice size". Just keep
+        // the initial VL then.
         ReuseShuffleIndices.clear();
       } else {
-        NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
-        NonUniqueValueVL.append(
+        // Pad unique values with poison to grow the vector to a "nice" size
+        SmallVector<Value *> PaddedUniqueValues(UniqueValues.begin(),
+                                                UniqueValues.end());
+        PaddedUniqueValues.append(
             PWSz - UniqueValues.size(),
             PoisonValue::get(UniqueValues.front()->getType()));
         // Check that extended with poisons operations are still valid for
         // vectorization (div/rem are not allowed).
-        if (!getSameOpcode(NonUniqueValueVL, TLI).valid()) {
+        if (!getSameOpcode(PaddedUniqueValues, TLI).valid()) {
           LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
           return false;
         }
-        VL = NonUniqueValueVL;
+        VL = std::move(PaddedUniqueValues);
       }
       return true;
     }
@@ -10014,9 +10018,9 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VL, unsigned Depth,
   SmallVector<int> ReuseShuffleIndices;
   SmallVector<Value *> NonUniqueValueVL(VL.begin(), VL.end());
   auto TryToFindDuplicates = [&](const InstructionsState &S,
-                                 bool DoNotFail = false) {
+                                 bool TryPad = false) {
     if (tryToFindDuplicates(NonUniqueValueVL, ReuseShuffleIndices, *TTI, *TLI,
-                            S, UserTreeIdx, DoNotFail)) {
+                            S, UserTreeIdx, TryPad)) {
       VL = NonUniqueValueVL;
       return true;
     }
@@ -10082,7 +10086,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VL, unsigned Depth,
     return;
 
   // Check that every instruction appears once in this bundle.
-  if (!TryToFindDuplicates(S, /*DoNotFail=*/true))
+  if (!TryToFindDuplicates(S, /*TryPad=*/true))
     return;
 
   // Perform specific checks for each particular instruction kind.
