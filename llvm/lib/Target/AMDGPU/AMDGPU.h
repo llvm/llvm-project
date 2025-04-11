@@ -491,10 +491,6 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
-void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
-extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
-FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();
-
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
   const AMDGPUTargetMachine &TM;

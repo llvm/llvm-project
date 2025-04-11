@@ -125,33 +125,6 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
   return IsChanged;
 }
 
-class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
-public:
-  static char ID;
-  AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
-    initializeAMDGPUUniformIntrinsicCombineLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
-  bool runOnFunction(Function &F) override;
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<UniformityInfoWrapperPass>();
-    AU.addPreserved<UniformityInfoWrapperPass>();
-  }
-};
-
-char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
-char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
-    AMDGPUUniformIntrinsicCombineLegacy::ID;
-
-bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {
-  if (skipFunction(F)) {
-    return false;
-  }
-  const UniformityInfo &UI =
-      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
-  return runUniformIntrinsicCombine(F, UI);
-}
-
 PreservedAnalyses
 AMDGPUUniformIntrinsicCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
@@ -164,15 +137,4 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserve<UniformityInfoAnalysis>();
   return PA;
-}
-
-INITIALIZE_PASS_BEGIN(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
-                      "AMDGPU uniformIntrinsic Combine", false, false)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
-INITIALIZE_PASS_END(AMDGPUUniformIntrinsicCombineLegacy, DEBUG_TYPE,
-                    "AMDGPU uniformIntrinsic Combine", false, false)
-
-FunctionPass *llvm::createAMDGPUUniformIntrinsicCombineLegacyPass() {
-  return new AMDGPUUniformIntrinsicCombineLegacy();
 }
