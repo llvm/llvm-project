@@ -22,9 +22,9 @@ def simm11_lsb0 : Operand<OtherVT> {
   let DecoderMethod = "decodeSImmOperandAndLsl1<11>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isShiftedInt<10, 1>(Imm);
-    return MCOp.isBareSymbolRef();
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    return isShiftedInt<10, 1>(Imm);
   }];
   let OperandType = "OPERAND_PCREL";
 }
