@@ -66,9 +66,9 @@ void VEInstPrinter::printOperand(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASXOperand(const MCInst *MI, int OpNum,
                                        const MCSubtargetInfo &STI,
-                                       raw_ostream &O, const char *Modifier) {
+                                       raw_ostream &O, StringRef Modifier) {
   // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
+  if (Modifier == "arith") {
     printOperand(MI, OpNum, STI, O);
     O << ", ";
     printOperand(MI, OpNum + 1, STI, O);
@@ -110,9 +110,9 @@ void VEInstPrinter::printMemASXOperand(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandASX(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
+  if (Modifier == "arith") {
     printOperand(MI, OpNum, STI, O);
     O << ", ";
     printOperand(MI, OpNum + 1, STI, O);
@@ -141,9 +141,9 @@ void VEInstPrinter::printMemASOperandASX(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandRRM(const MCInst *MI, int OpNum,
                                          const MCSubtargetInfo &STI,
-                                         raw_ostream &O, const char *Modifier) {
+                                         raw_ostream &O, StringRef Modifier) {
   // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
+  if (Modifier == "arith") {
     printOperand(MI, OpNum, STI, O);
     O << ", ";
     printOperand(MI, OpNum + 1, STI, O);
@@ -172,9 +172,9 @@ void VEInstPrinter::printMemASOperandRRM(const MCInst *MI, int OpNum,
 
 void VEInstPrinter::printMemASOperandHM(const MCInst *MI, int OpNum,
                                         const MCSubtargetInfo &STI,
-                                        raw_ostream &O, const char *Modifier) {
+                                        raw_ostream &O, StringRef Modifier) {
   // If this is an ADD operand, emit it like normal operands.
-  if (Modifier && !strcmp(Modifier, "arith")) {
+  if (Modifier == "arith") {
     printOperand(MI, OpNum, STI, O);
     O << ", ";
     printOperand(MI, OpNum + 1, STI, O);
