@@ -1074,6 +1074,14 @@ static void generateFlangClausesParser(const DirectiveLanguage &DirLang,
 
 // Generate the implementation section for the enumeration in the directive
 // language
+static void emitDirectivesClangImpl(const DirectiveLanguage &DirLang,
+                                    raw_ostream &OS) {
+  // Currently we only have work to do for OpenACC, so skip.
+  if (DirLang.getName() != "OpenACC")
+    return;
+}
+// Generate the implementation section for the enumeration in the directive
+// language
 static void emitDirectivesFlangImpl(const DirectiveLanguage &DirLang,
                                     raw_ostream &OS) {
   generateDirectiveClauseSets(DirLang, OS);
@@ -1210,6 +1218,8 @@ static void emitDirectivesImpl(const RecordKeeper &Records, raw_ostream &OS) {
     return;
 
   emitDirectivesFlangImpl(DirLang, OS);
+
+  emitDirectivesClangImpl(DirLang, OS);
 
   generateClauseClassMacro(DirLang, OS);
 

@@ -328,7 +328,8 @@ enum class OpenACCClauseKind : uint8_t {
   /// constructs.
   Wait,
 
-  /// Represents an invalid clause, for the purposes of parsing.
+  /// Represents an invalid clause, for the purposes of parsing. Should be
+  /// 'last'.
   Invalid,
 };
 
