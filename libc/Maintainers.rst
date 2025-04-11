@@ -22,6 +22,11 @@ Baremetal
 | Petr Hosek
 | phosek\@google.com (email), `petrhosek <https://github.com/petrhosek>`_ (github)
 
+Baremetal (Allocator)
+---------------------
+| Daniel Thornburgh
+| dthorn\@google.com (email), `mysterymath <https://github.com/mysterymath>`_ (github)
+
 Fixed Point
 -----------
 | Leonard Chan
