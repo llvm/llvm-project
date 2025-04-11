@@ -1297,7 +1297,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
     << ModuleName;
 
   // Propagate the statistics to the parent FileManager.
-  if (ImportingInstance.getFrontendOpts().ModulesShareFileManager)
+  if (!ImportingInstance.getFrontendOpts().ModulesShareFileManager)
     ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
