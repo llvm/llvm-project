@@ -410,7 +410,8 @@ Instruction *removeUnwindEdge(BasicBlock *BB, DomTreeUpdater *DTU = nullptr);
 ///
 /// Returns true if any basic block was removed.
 bool removeUnreachableBlocks(Function &F, DomTreeUpdater *DTU = nullptr,
-                             MemorySSAUpdater *MSSAU = nullptr);
+                             MemorySSAUpdater *MSSAU = nullptr,
+                             bool KeepOneInputPHIs = false);
 
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some

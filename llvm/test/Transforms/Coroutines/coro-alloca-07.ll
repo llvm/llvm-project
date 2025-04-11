@@ -70,11 +70,7 @@ declare void @free(ptr)
 ; CHECK-NEXT:    store ptr @f.destroy, ptr [[DESTROY_ADDR]], align 8
 ; CHECK-NEXT:    [[X_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 2
 ; CHECK-NEXT:    [[Y_RELOAD_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 3
-; CHECK-NEXT:    br i1 [[N:%.*]], label [[MERGE:%.*]], label [[MERGE_FROM_FLAG_FALSE:%.*]]
-; CHECK:       merge.from.flag_false:
-; CHECK-NEXT:    br label [[MERGE:%.*]]
-; CHECK:       merge:
-; CHECK-NEXT:    [[ALIAS_PHI:%.*]] = phi ptr [ [[Y_RELOAD_ADDR]], [[MERGE_FROM_FLAG_FALSE]] ], [ [[X_RELOAD_ADDR]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ALIAS_PHI:%.*]] = select i1 [[N:%.*]], ptr [[X_RELOAD_ADDR]], ptr [[Y_RELOAD_ADDR]]
 ; CHECK-NEXT:    [[ALIAS_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds [[F_FRAME]], ptr [[HDL]], i32 0, i32 4
 ; CHECK-NEXT:    store ptr [[ALIAS_PHI]], ptr [[ALIAS_PHI_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    store i8 1, ptr [[ALIAS_PHI]], align 1
