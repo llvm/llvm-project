@@ -211,7 +211,7 @@ struct DAP {
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
 
-  /// The initial thread list upon attaching
+  /// The initial thread list upon attaching.
   std::optional<llvm::json::Array> initial_thread_list;
 
   /// Creates a new DAP sessions.
