@@ -502,14 +502,14 @@ ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty, bool IsVariadicFn,
       }
       return all_of(RD->fields(), [&](FieldDecl *FD) {
         QualType FDTy = FD->getType();
-        return FDTy->isPointerOrReferenceType() ||
-               (FDTy->isArrayType() &&
-                FDTy->getBaseElementTypeUnsafe()->isPointerOrReferenceType()) ||
+        if (FDTy->isArrayType())
+          FDTy = QualType(FDTy->getBaseElementTypeUnsafe(), 0);
+        return (FDTy->isPointerOrReferenceType() &&
+                getContext().getTypeSize(FDTy) == 64) ||
                ContainsOnlyPointers(FDTy);
       });
     };
-    if (getTarget().getTriple().getArch() != llvm::Triple::aarch64_32 &&
-        ContainsOnlyPointers(Ty)) {
+    if (ContainsOnlyPointers(Ty)) {
       assert((Size == 64 || Size == 128) &&
              "Expected a 64 or 128bit struct containing pointers");
       llvm::Type *PtrTy = llvm::PointerType::getUnqual(getVMContext());
