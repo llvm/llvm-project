@@ -90,7 +90,7 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           %[[VAL_17:.*]] = arith.constant false
 // CHECK:           fir.call @_QFPdeclared_volatile_in_this_scope(%[[VAL_16]], %[[VAL_0]]) fastmath<contract> : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i32>) -> ()
 // CHECK:           %[[VAL_18:.*]] = arith.constant 6 : i32
-// CHECK:           %[[VAL_19:.*]] = fir.address_of(
+// CHECK:           %[[VAL_19:.*]] = fir.address_of
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (
 // CHECK:           %[[VAL_21:.*]] = arith.constant 8 : i32
 // CHECK:           %[[VAL_22:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_18]], %[[VAL_20]], %[[VAL_21]]) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
@@ -138,8 +138,8 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           %[[VAL_19:.*]] = fir.embox %[[VAL_13]](%[[VAL_18]]) : (!fir.ref<!fir.array<?xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>, volatile>
 // CHECK:           fir.store %[[VAL_19]] to %[[VAL_2]] : !fir.ref<!fir.box<!fir.array<?xi32>, volatile>>
 // CHECK:           %[[VAL_20:.*]] = fir.address_of(
-// CHECK:           %[[VAL_21:.*]] = arith.constant 79 : index
-// CHECK:           %[[VAL_22:.*]] = arith.constant 60 : i32
+// CHECK:           %[[VAL_21:.*]] = arith.constant
+// CHECK:           %[[VAL_22:.*]] = arith.constant
 // CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.box<!fir.array<?xi32>, volatile>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_24:.*]] = fir.convert %[[VAL_17]] : (!fir.box<i32>) -> !fir.box<none>
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_20]] : (

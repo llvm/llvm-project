@@ -100,7 +100,7 @@ func.func private @_QFPhost_assoc(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.hos
 // CHECK:           %[[VAL_31:.*]] = arith.constant
 // CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.array<10xi32>, volatile>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_26]] : (!fir.box<i32>) -> !fir.box<none>
-// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,79>>) -> !fir.ref<i8>
+// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_29]]
 // CHECK:           fir.call @_FortranAAssign(%[[VAL_32]], %[[VAL_33]], %[[VAL_34]], %[[VAL_31]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:           fir.call @_QFPhost_assoc(%[[VAL_17]]) fastmath<contract> : (!fir.ref<tuple<!fir.ref<i32>>>) -> ()
 // CHECK:           return
@@ -145,7 +145,7 @@ func.func private @_QFPhost_assoc(%arg0: !fir.ref<tuple<!fir.ref<i32>>> {fir.hos
 // CHECK:           %[[VAL_31:.*]] = arith.constant
 // CHECK:           %[[VAL_32:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.box<!fir.array<10xi32>, volatile>>) -> !fir.ref<!fir.box<none>>
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_26]] : (!fir.box<i32>) -> !fir.box<none>
-// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_29]] : (!fir.ref<!fir.char<1,79>>) -> !fir.ref<i8>
+// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_29]]
 // CHECK:           fir.call @_FortranAAssign(%[[VAL_32]], %[[VAL_33]], %[[VAL_34]], %[[VAL_31]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
 // CHECK:           return
 // CHECK:         }

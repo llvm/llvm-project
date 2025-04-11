@@ -93,7 +93,7 @@ func.func private @_QFPg(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>, 
 // CHECK:           %[[VAL_23:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_5]](%[[VAL_23]]) : (!fir.ref<!fir.array<10xi32>, volatile>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>, volatile>
 // CHECK:           fir.store %[[VAL_24]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.array<10xi32>, volatile>>
-// CHECK:           %[[VAL_25:.*]] = fir.address_of{{.+}}
+// CHECK:           %[[VAL_25:.*]] = fir.address_of
 // CHECK:           %[[VAL_26:.*]] = arith.constant
 // CHECK:           %[[VAL_27:.*]] = arith.constant
 // CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.array<10xi32>, volatile>>) -> !fir.ref<!fir.box<none>>
