@@ -122,7 +122,14 @@ constexpr Definition g_function_child_entries[] = {
     Definition("pc-offset", EntryType::FunctionPCOffset),
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
-    Definition("is-optimized", EntryType::FunctionIsOptimized)};
+    Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("scope", EntryType::FunctionScope),
+    Definition("basename", EntryType::FunctionBasename),
+    Definition("template-arguments", EntryType::FunctionTemplateArguments),
+    Definition("arguments", EntryType::FunctionArguments),
+    Definition("return-left", EntryType::FunctionReturnLeft),
+    Definition("return-right", EntryType::FunctionReturnRight),
+    Definition("qualifiers", EntryType::FunctionQualifiers)};
 
 constexpr Definition g_line_child_entries[] = {
     Entry::DefinitionWithChildren("file", EntryType::LineEntryFile,
@@ -352,6 +359,13 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionNameWithArgs);
     ENUM_TO_CSTR(FunctionNameNoArgs);
     ENUM_TO_CSTR(FunctionMangledName);
+    ENUM_TO_CSTR(FunctionScope);
+    ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionTemplateArguments);
+    ENUM_TO_CSTR(FunctionArguments);
+    ENUM_TO_CSTR(FunctionReturnLeft);
+    ENUM_TO_CSTR(FunctionReturnRight);
+    ENUM_TO_CSTR(FunctionQualifiers);
     ENUM_TO_CSTR(FunctionAddrOffset);
     ENUM_TO_CSTR(FunctionAddrOffsetConcrete);
     ENUM_TO_CSTR(FunctionLineOffset);
@@ -1218,6 +1232,65 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   return true;
 }
 
+static bool FormatFunctionNameWithArgs(Stream &s, const SymbolContext *sc,
+                                       const ExecutionContext *exe_ctx) {
+  if (!sc)
+    return false;
+
+  Language *language_plugin = nullptr;
+  bool language_plugin_handled = false;
+  StreamString ss;
+  if (sc->function)
+    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+  else if (sc->symbol)
+    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+  if (language_plugin)
+    language_plugin_handled = language_plugin->GetFunctionDisplayName(
+        sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+
+  if (language_plugin_handled) {
+    s << ss.GetString();
+    return true;
+  }
+
+  if (sc->function)
+    return PrintFunctionNameWithArgs(s, exe_ctx, *sc);
+
+  if (!sc->symbol)
+    return false;
+
+  const char *cstr = sc->symbol->GetName().AsCString(nullptr);
+  if (!cstr)
+    return false;
+
+  s.PutCString(cstr);
+  return true;
+}
+
+static bool FormatFunctionNameForLanguage(Stream &s, const SymbolContext *sc,
+                                          const ExecutionContext *exe_ctx) {
+  if (!sc)
+    return false;
+
+  Language *language_plugin = nullptr;
+  if (sc->function)
+    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+  else if (sc->symbol)
+    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+  if (!language_plugin)
+    return false;
+
+  const auto *format = language_plugin->GetFrameFormat();
+  if (!format)
+    return false;
+
+  return FormatEntity::Format(*format, s, sc, exe_ctx, /*addr=*/nullptr,
+                              /*valobj=*/nullptr, /*function_changed=*/false,
+                              /*initial_function=*/false);
+}
+
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    const SymbolContext *sc,
                                    const ExecutionContext *exe_ctx,
@@ -1775,41 +1848,34 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
     return false;
 
-  case Entry::Type::FunctionNameWithArgs: {
+  case Entry::Type::FunctionScope:
+  case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionTemplateArguments:
+  case Entry::Type::FunctionArguments:
+  case Entry::Type::FunctionReturnRight:
+  case Entry::Type::FunctionReturnLeft:
+  case Entry::Type::FunctionQualifiers: {
     if (!sc)
       return false;
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
-
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
-    }
-
-    if (sc->function)
-      return PrintFunctionNameWithArgs(s, exe_ctx, *sc);
-
-    if (!sc->symbol)
+    if (!sc->function)
       return false;
 
-    const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-    if (!cstr)
+    Language *language_plugin =
+        Language::FindPlugin(sc->function->GetLanguage());
+    if (!language_plugin)
       return false;
 
-    s.PutCString(cstr);
-    return true;
+    return language_plugin->HandleFrameFormatVariable(*sc, exe_ctx, entry.type,
+                                                      s);
   }
 
+  case Entry::Type::FunctionNameWithArgs: {
+    if (FormatFunctionNameForLanguage(s, sc, exe_ctx))
+      return true;
+
+    return FormatFunctionNameWithArgs(s, sc, exe_ctx);
+  }
   case Entry::Type::FunctionMangledName: {
     if (!sc)
       return false;

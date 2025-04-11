@@ -1,0 +1,58 @@
+# Test the ${function.scope} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %build %t/main.cpp -o %t.out
+# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# Check that we have an appropriate fallback for languages that
+# don't implement this frame format variable (in this case Objective-C).
+#
+# RUN: %build %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=CHECK-OBJC
+
+#--- main.cpp
+namespace ns::ns2 {
+inline namespace ins {
+template <typename T>
+struct Foo {
+    void func() {}
+};
+
+int foo() {
+    Foo<int>{}.func();
+    return 5;
+}
+}  // namespace ins
+}  // namespace ns::ns2
+
+using namespace ns::ns2;
+
+int bar() {
+  return ns::ns2::foo();
+}
+
+int main() { return bar(); }
+
+#--- main.m
+
+int func() {}
+int bar() { func(); }
+
+int main() { return bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.scope}'\n"
+break set -n func
+
+run
+bt
+
+# CHECK: frame 'ns::ns2::ins::Foo<int>::'
+# CHECK: frame 'ns::ns2::ins::'
+# CHECK: frame ''
+
+# CHECK-OBJC: bt
+# CHECK-OBJC-NOT: custom-frame

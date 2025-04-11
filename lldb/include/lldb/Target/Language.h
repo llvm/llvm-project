@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -273,6 +274,13 @@ public:
                                       FunctionNameRepresentation representation,
                                       Stream &s);
 
+  virtual bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                         const ExecutionContext *exe_ctx,
+                                         FormatEntity::Entry::Type type,
+                                         Stream &s) {
+    return false;
+  }
+
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
     if (ConstString demangled = mangled.GetDemangledName())
@@ -388,6 +396,8 @@ public:
   /// Returns the keyword used for catch statements in this language, e.g.
   /// Python uses \b except. Defaults to \b catch.
   virtual llvm::StringRef GetCatchKeyword() const { return "catch"; }
+
+  virtual const FormatEntity::Entry *GetFrameFormat() const { return nullptr; }
 
 protected:
   // Classes that inherit from Language can see and modify these

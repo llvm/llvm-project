@@ -143,6 +143,11 @@ public:
                               FunctionNameRepresentation representation,
                               Stream &s) override;
 
+  bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                 const ExecutionContext *exe_ctx,
+                                 FormatEntity::Entry::Type type,
+                                 Stream &s) override;
+
   static bool IsCPPMangledName(llvm::StringRef name);
 
   // Extract C++ context and identifier from a string using heuristic matching
@@ -169,8 +174,13 @@ public:
 
   llvm::StringRef GetInstanceVariableName() override { return "this"; }
 
+  const FormatEntity::Entry *GetFrameFormat() const override;
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
+
+private:
+  static void DebuggerInitialize(Debugger &);
 };
 
 } // namespace lldb_private

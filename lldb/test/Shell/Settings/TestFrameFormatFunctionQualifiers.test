@@ -1,0 +1,42 @@
+# Test the ${function.qualifiers} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %build %t/main.cpp -o %t.out
+# RUN: %lldb -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# Check that we have an appropriate fallback for languages that
+# don't implement this frame format variable (in this case Objective-C).
+#
+# RUN: %build %t/main.m -o %t.objc.out
+# RUN: %lldb -x -b -s %t/commands.input %t.objc.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=CHECK-OBJC
+
+#--- main.cpp
+struct Foo {
+    void foo() const volatile && {}
+    void bar() { Foo{}.foo(); }
+};
+
+int main() { Foo{}.bar(); }
+
+#--- main.m
+
+int foo() {}
+int bar() { foo(); }
+
+int main() { return bar(); }
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.qualifiers}'\n"
+break set -n foo
+
+run
+bt
+
+# CHECK: custom-frame ' const volatile &&'
+# CHECK: custom-frame ''
+
+# CHECK-OBJC: bt
+# CHECK-OBJC-NOT: custom-frame
