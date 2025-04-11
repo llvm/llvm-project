@@ -8045,6 +8045,10 @@ def print_dependency_directives_minimized_source : Flag<["-"],
   "print-dependency-directives-minimized-source">,
   HelpText<"Print the output of the dependency directives source minimizer">;
 }
+def dump_minimization_hints : Joined<["-"],
+  "dump-minimization-hints=">,
+  HelpText<"Dump ranges of deserialized declarations to use as bug minimization hints">,
+  MarshallingInfoString<FrontendOpts<"DumpMinimizationHintsPath">>;
 
 defm emit_llvm_uselists : BoolOption<"", "emit-llvm-uselists",
   CodeGenOpts<"EmitLLVMUseLists">, DefaultFalse,
