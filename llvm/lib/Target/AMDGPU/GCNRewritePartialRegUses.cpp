@@ -386,22 +386,21 @@ void GCNRewritePartialRegUsesImpl::updateLiveIntervals(
 }
 
 bool GCNRewritePartialRegUsesImpl::rewriteReg(Register Reg) const {
-  auto Range = MRI->reg_nodbg_operands(Reg);
-  if (Range.empty() || any_of(Range, [](MachineOperand &MO) {
-        return MO.getSubReg() == AMDGPU::NoSubRegister; // Whole reg used. [1]
-      }))
+
+  // Collect used subregs.
+  SubRegMap SubRegs;
+  for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    if (MO.getSubReg() == AMDGPU::NoSubRegister)
+      return false; // Whole reg used.
+    SubRegs.try_emplace(MO.getSubReg());
+  }
+
+  if (SubRegs.empty())
     return false;
 
   auto *RC = MRI->getRegClass(Reg);
   LLVM_DEBUG(dbgs() << "Try to rewrite partial reg " << printReg(Reg, TRI)
                     << ':' << TRI->getRegClassName(RC) << '\n');
-
-  // Collect used subregs.
-  SubRegMap SubRegs;
-  for (MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
-    assert(MO.getSubReg() != AMDGPU::NoSubRegister); // Due to [1].
-    SubRegs.try_emplace(MO.getSubReg());
-  }
 
   auto *NewRC = getMinSizeReg(RC, SubRegs);
   if (!NewRC) {
