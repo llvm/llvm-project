@@ -178,4 +178,26 @@ def fir_PackArrayHeuristicsAttr
   let assemblyFormat = "`<` $value `>`";
 }
 
+def fir_OpenACCSafeTempArrayCopyAttr : fir_Attr<"OpenACCSafeTempArrayCopy"> {
+  let mnemonic = "acc_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenACC.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
+def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
+  let mnemonic = "omp_safe_temp_array_copy";
+  let description = [{
+    An attribute implementing SafeTempArrayCopyAttrInterface.
+    It specifies whether it is possible to dynamically check
+    if creating a temporary copy of a Fortran array is safe
+    in the context of OpenMP.
+    It also provides the methods to generate those dynamic checks.
+  }];
+}
+
 #endif // FIR_DIALECT_FIR_ATTRS

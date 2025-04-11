@@ -39,6 +39,7 @@ add_flang_library(flangFrontend
   HLFIRTransforms
   flangPasses
   FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
 
   LINK_COMPONENTS

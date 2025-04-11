@@ -1,4 +1,4 @@
-//===- RegisterOpenACCExtensions.h - OpenACC Extension Registration --===--===//
+//===- RegisterOpenMPExtensions.h - OpenMP Extension Registration -*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_
-#define FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_
+#ifndef FLANG_OPTIMIZER_OPENMP_SUPPORT_REGISTEROPENMPEXTENSIONS_H_
+#define FLANG_OPTIMIZER_OPENMP_SUPPORT_REGISTEROPENMPEXTENSIONS_H_
 
 namespace mlir {
 class DialectRegistry;
 } // namespace mlir
 
-namespace fir::acc {
+namespace fir::omp {
 
-void registerOpenACCExtensions(mlir::DialectRegistry &registry);
+void registerOpenMPExtensions(mlir::DialectRegistry &registry);
 
-/// Register external models for FIR attributes related to OpenACC.
+/// Register external models for FIR attributes related to OpenMP.
 void registerAttrsExtensions(mlir::DialectRegistry &registry);
 
 /// Register all dialects whose operations may be created
@@ -25,6 +25,6 @@ void registerAttrsExtensions(mlir::DialectRegistry &registry);
 void registerTransformationalAttrsDependentDialects(
     mlir::DialectRegistry &registry);
 
-} // namespace fir::acc
+} // namespace fir::omp
 
-#endif // FLANG_OPTIMIZER_OPENACC_REGISTEROPENACCEXTENSIONS_H_
+#endif // FLANG_OPTIMIZER_OPENMP_SUPPORT_REGISTEROPENMPEXTENSIONS_H_

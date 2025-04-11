@@ -35,3 +35,5 @@ add_flang_library(FlangOpenMPTransforms
   MLIRTransformUtils
   ${dialect_libs}
 )
+
+add_subdirectory(Support)
