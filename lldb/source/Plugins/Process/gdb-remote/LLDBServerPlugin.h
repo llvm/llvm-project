@@ -11,7 +11,9 @@
 
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/lldb-types.h"
+#include "llvm/Support/JSON.h"
 
 #include <functional>
 #include <optional>
@@ -42,6 +44,9 @@ public:
 
   /// Check if we are already connected.
   bool IsConnected() const { return m_is_connected; }
+
+  virtual llvm::StringRef GetPluginName() = 0;
+
   /// Get an connection URL to connect to this plug-in.
   ///
   /// This function will get called each time native process stops if this
@@ -53,6 +58,29 @@ public:
   virtual std::optional<std::string> GetConnectionURL() {
     return std::nullopt;
   };
+
+  /// Get the GPU plug-in information.
+  ///
+  /// Each GPU plugin can return a structure that describes the GPU plug-in and 
+  /// the breakpoints it requires in the native process. GPU plug-ins might want
+  /// to set breakpoints in the native process to know when the GPU has been 
+  /// initialized, or when the GPU has shared libraries that get loaded.
+  /// They can do this by populating the LLDBServerPlugin::m_info structure 
+  /// when this function gets called. The contents of this structure will be
+  /// converted to JSON and sent to the LLDB client. The structure allows 
+  /// plug-ins to set breakpoints by name and can also request symbol values
+  /// that should be sent when the breakpoint gets hit.
+  /// When the breakpoint is hit, the LLDBServerPlugin::BreakpointWasHit(...)
+  /// method will get called with a structure that identifies the plugin,
+  /// breakpoint and it will supply any requested symbol values.
+  virtual void InitializePluginInfo() = 0;
+
+  /// Get the plugin info.
+  ///
+  /// This function will call InitializePluginInfo() one time to intialize the
+  /// information. Plug-ins must override InitializePluginInfo() and fill in
+  /// the structure in the LLDBServerPlugin::m_info instance variable.
+  const GPUPluginInfo &GetPluginInfo();
 
   /// Get a file descriptor to listen for in the ptrace epoll loop.
   ///
@@ -79,7 +107,10 @@ public:
   /// calling m_process.SetBreakpoint(...) to help implement funcionality,
   /// such as dynamic library loading in GPUs or to synchronize in any other
   /// way with the native process.
-  virtual void BreakpointWasHit(lldb::addr_t address) {}
+  virtual void BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {}
+
+  protected:
+    GPUPluginInfo m_info;
 };
 
 } // namespace lldb_server

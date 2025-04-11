@@ -45,6 +45,7 @@ add_lldb_library(lldbUtility NO_INTERNAL_DEPENDENCIES
   FileSpec.cpp
   FileSpecList.cpp
   GDBRemote.cpp
+  GPUGDBRemotePackets.cpp
   IOObject.cpp
   LLDBAssert.cpp
   LLDBLog.cpp

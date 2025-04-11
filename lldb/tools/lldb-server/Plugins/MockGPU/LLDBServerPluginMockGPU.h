@@ -22,9 +22,12 @@ class LLDBServerPluginMockGPU : public lldb_private::lldb_server::LLDBServerPlug
 public:
   LLDBServerPluginMockGPU(lldb_private::lldb_server::LLDBServerPlugin::GDBServer &native_process);
   ~LLDBServerPluginMockGPU() override;
+  llvm::StringRef GetPluginName() override;
   int GetEventFileDescriptorAtIndex(size_t idx) override;
   bool HandleEventFileDescriptorEvent(int fd) override;
   std::optional<std::string> GetConnectionURL() override;
+  void InitializePluginInfo() override;
+  void BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;
 
 private:
   void CloseFDs();

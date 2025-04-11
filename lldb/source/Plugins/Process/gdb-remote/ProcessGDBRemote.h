@@ -279,6 +279,7 @@ protected:
                                               // registers and memory for all
                                               // threads if "jThreadsInfo"
                                               // packet is supported
+  StructuredData::ObjectSP m_plugin_metadata_sp;
   tid_collection m_continue_c_tids;           // 'c' for continue
   tid_sig_collection m_continue_C_tids;       // 'C' for continue with signal
   tid_collection m_continue_s_tids;           // 's' for step
@@ -436,6 +437,14 @@ private:
   /// Remove the breakpoints associated with thread creation from the Target.
   void RemoveNewThreadBreakpoints();
 
+  static bool GPUBreakpointHitCallback(void *baton,
+                                       StoppointCallbackContext *context,
+                                       lldb::user_id_t break_id, 
+                                       lldb::user_id_t break_loc_id);
+                    
+  bool GPUBreakpointHit(void *baton, StoppointCallbackContext *context, 
+                        lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
+                    
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;

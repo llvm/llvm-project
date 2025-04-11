@@ -34,7 +34,9 @@
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -602,7 +604,8 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetThreadsInfo() {
   return object_sp;
 }
 
-StructuredData::ObjectSP GDBRemoteCommunicationClient::GetGPUPluginInfo() {
+std::optional<std::vector<GPUPluginInfo>> 
+GDBRemoteCommunicationClient::GetGPUPluginInfos() {
   // Get JSON information containing any breakpoints and other information
   // required by any GPU plug-ins using the "jGPUPluginInitialize" packet.
   //
@@ -610,7 +613,6 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetGPUPluginInfo() {
   // that controls the GPUs. This packet allows the GPU plug-ins to set one or
   // more breakpoints in the native program and get a callback when those 
   // breakpoints get hit.
-  StructuredData::ObjectSP object_sp;
 
   if (m_supports_gpu_plugins == eLazyBoolYes) {
     StringExtractorGDBRemote response;
@@ -620,11 +622,31 @@ StructuredData::ObjectSP GDBRemoteCommunicationClient::GetGPUPluginInfo() {
       if (response.IsUnsupportedResponse()) {
         m_supports_gpu_plugins = eLazyBoolNo;
       } else if (!response.Empty()) {
-        object_sp = StructuredData::ParseJSON(response.GetStringRef());
+        if (llvm::Expected<std::vector<GPUPluginInfo>> info = 
+                llvm::json::parse<std::vector<GPUPluginInfo>>(response.Peek(), 
+                                                              "GPUPluginInfo"))
+          return std::move(*info);
+        else
+          llvm::consumeError(info.takeError());
       }
     }
   }
-  return object_sp;
+  return std::nullopt;
+}
+
+bool GDBRemoteCommunicationClient::GPUBreakpointHit(
+  const GPUPluginBreakpointHitArgs &args) {
+  StreamGDBRemote packet;
+  packet.PutCString("jGPUPluginBreakpointHit:");
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << toJSON(args);
+  packet.PutEscapedBytes(json_string.c_str(), json_string.size());
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
+      PacketResult::Success)
+    return response.IsOKResponse();
+  return false;
 }
 
 bool GDBRemoteCommunicationClient::GetThreadExtendedInfoSupported() {

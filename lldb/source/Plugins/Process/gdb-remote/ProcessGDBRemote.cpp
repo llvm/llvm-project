@@ -23,6 +23,7 @@
 #include <ctime>
 #include <sys/types.h>
 
+#include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Breakpoint/WatchpointAlgorithms.h"
 #include "lldb/Breakpoint/WatchpointResource.h"
@@ -84,7 +85,9 @@
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
@@ -620,7 +623,6 @@ Status ProcessGDBRemote::WillLaunchOrAttach() {
   m_stdio_communication.Clear();
   return error;
 }
-
 // Process Control
 Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                   ProcessLaunchInfo &launch_info) {
@@ -813,6 +815,60 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
   return error;
 }
 
+class GPUBreakpointCallbackBaton : public TypedBaton<GPUPluginBreakpointHitArgs> {
+  public:
+  explicit GPUBreakpointCallbackBaton(std::unique_ptr<GPUPluginBreakpointHitArgs> Data)
+  : TypedBaton(std::move(Data)) {}
+};
+
+typedef std::shared_ptr<GPUBreakpointCallbackBaton> GPUBreakpointCallbackBatonSP;
+
+bool ProcessGDBRemote::GPUBreakpointHitCallback(
+    void *baton, 
+    StoppointCallbackContext *context,
+    lldb::user_id_t break_id, 
+    lldb::user_id_t break_loc_id) {
+  ProcessSP process_sp = context->exe_ctx_ref.GetProcessSP();
+  ProcessGDBRemote *process = static_cast<ProcessGDBRemote *>(process_sp.get());
+  return process->GPUBreakpointHit(baton, context, break_id, break_loc_id);
+}
+
+bool ProcessGDBRemote::GPUBreakpointHit(void *baton, 
+                                        StoppointCallbackContext *context,
+                                        lldb::user_id_t break_id, 
+                                        lldb::user_id_t break_loc_id) {
+  GPUPluginBreakpointHitArgs *callback_data = 
+      static_cast<GPUPluginBreakpointHitArgs *>(baton);
+  // Make a copy of the args so we can fill in any needed symbol values prior
+  // to notifying lldb-server.
+  GPUPluginBreakpointHitArgs args = *callback_data;
+  Target &target = GetTarget();
+  const size_t num_symbols = args.breakpoint.symbol_names.size();
+  if (num_symbols > 0) {
+    args.symbol_values.resize(num_symbols);
+    for (size_t i=0; i<num_symbols; ++i) {
+      const auto &symbol_name = args.breakpoint.symbol_names[i];
+      SymbolContextList sc_list;
+      target.GetImages().FindSymbolsWithNameAndType(ConstString(symbol_name),
+                                                    lldb::eSymbolTypeAny,
+                                                    sc_list);
+      SymbolContext sc;
+      args.symbol_values[i].name = symbol_name;
+      args.symbol_values[i].value = LLDB_INVALID_ADDRESS;
+      size_t num_symbols = sc_list.GetSize();
+      for (size_t sc_idx=0; sc_idx<num_symbols; ++sc_idx) {
+        if (sc_list.GetContextAtIndex(sc_idx, sc)) {
+          args.symbol_values[i].value = sc.symbol->GetAddress().GetLoadAddress(&target);
+          if (args.symbol_values[i].value != LLDB_INVALID_ADDRESS)
+            break;
+        }
+      }
+    }
+  }
+  m_gdb_comm.GPUBreakpointHit(args);
+  return false; // Don't stop, auto continue.
+}
+
 Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   Status error;
   // Only connect if we have a valid connect URL
@@ -866,7 +922,39 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVContSupported('c');
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
-
+  Target &target = GetTarget();
+  if (auto infos = m_gdb_comm.GetGPUPluginInfos()) {
+    for (const auto &info: *infos) {
+      for (const auto &bp_info: info.breakpoints) {
+        auto args_up = std::make_unique<GPUPluginBreakpointHitArgs>();
+        args_up->plugin_name = info.name;
+        args_up->breakpoint = bp_info;
+        FileSpecList bp_modules;
+        if (!bp_info.shlib.empty())
+          bp_modules.Append(FileSpec(bp_info.shlib, 
+                                     llvm::sys::path::Style::native));
+        BreakpointSP bp_sp = target.CreateBreakpoint(
+            &bp_modules, // Containing modules.
+            nullptr, // Containing source files.
+            bp_info.function_name.c_str(), // Function name.
+            eFunctionNameTypeFull, // Function name type.
+            eLanguageTypeUnknown, // Language type
+            0, // Byte offset.
+            eLazyBoolNo, // Skip prologue.
+            true, // Internal breakpoint.
+            false); // Request hardware.
+        if (bp_sp) {
+          // Create some JSON we can send back to the lldb-server
+          // that identifies the plug-in and the breakpoint for when
+          // the breakpoint gets hit.
+          auto baton_sp = 
+              std::make_shared<GPUBreakpointCallbackBaton>(std::move(args_up));
+          bp_sp->SetCallback(GPUBreakpointHitCallback, baton_sp,
+                             /*is_synchronous=*/true);
+        }
+      }
+    }
+  }
   // First dispatch any commands from the platform:
   auto handle_cmds = [&] (const Args &args) ->  void {
     for (const Args::ArgEntry &entry : args) {

@@ -183,7 +183,8 @@ public:
     eServerPacketType_vStdio,
 
     // GPU plug-in packets.
-    eServerPacketType_jGPUPluginInitialize
+    eServerPacketType_jGPUPluginInitialize,
+    eServerPacketType_jGPUPluginBreakpointHit
   };
 
   ServerPacketType GetServerPacketType() const;
