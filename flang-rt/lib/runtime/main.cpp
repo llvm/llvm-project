@@ -28,9 +28,9 @@ static void ConfigureFloatingPoint() {
 }
 
 std::thread::id _main_thread_id = std::this_thread::get_id();
-extern "C" {
 std::thread::id RTNAME(GetMainThreadId)() { return _main_thread_id; }
 
+extern "C" {
 void RTNAME(ProgramStart)(int argc, const char *argv[], const char *envp[],
     const EnvironmentDefaultList *envDefaults) {
   std::atexit(Fortran::runtime::NotifyOtherImagesOfNormalEnd);
