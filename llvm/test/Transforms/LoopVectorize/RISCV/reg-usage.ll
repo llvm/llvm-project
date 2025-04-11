@@ -82,19 +82,19 @@ define void @goo(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-SCALAR-NEXT: LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-LMUL1:       LV(REG): VF = 2
 ; CHECK-LMUL1-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
-; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 1 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
+; CHECK-LMUL1-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; CHECK-LMUL2:       LV(REG): VF = 4
 ; CHECK-LMUL2-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-LMUL2-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 2 registers
 ; CHECK-LMUL4:       LV(REG): VF = 8
 ; CHECK-LMUL4-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-LMUL4-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 4 registers
 ; CHECK-LMUL8:       LV(REG): VF = 16
 ; CHECK-LMUL8-NEXT:  LV(REG): Found max usage: 2 item
-; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 2 registers
+; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::GPRRC, 3 registers
 ; CHECK-LMUL8-NEXT:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
 entry:
   %cmp3 = icmp sgt i32 %n, 0
