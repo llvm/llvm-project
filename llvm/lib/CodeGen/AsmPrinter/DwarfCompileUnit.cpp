@@ -1123,6 +1123,8 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
                                                    MCSymbol *LineTableSym) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub, LineTableSym);
 
+  DwarfUnit::addLLVMChangedArgs(ScopeDIE, Sub);
+
   if (Scope) {
     assert(!Scope->getInlinedAt());
     assert(!Scope->isAbstractScope());

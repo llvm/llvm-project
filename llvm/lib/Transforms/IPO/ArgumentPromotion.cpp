@@ -51,6 +51,7 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -132,6 +133,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
   // First, determine the new argument list
   unsigned ArgNo = 0, NewArgNo = 0;
+  bool CurrFuncArgChanged = false;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgNo) {
     auto It = ArgsToPromote.find(&*I);
@@ -143,6 +145,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     } else if (I->use_empty()) {
       // Dead argument (which are always marked as promotable)
       ++NumArgumentsDead;
+      CurrFuncArgChanged = true;
       ORE.emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "ArgumentRemoved", F)
                << "eliminating argument " << ore::NV("ArgName", I->getName())
@@ -157,6 +160,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
         ArgAttrVec.push_back(AttributeSet());
       }
       ++NumArgumentsPromoted;
+      CurrFuncArgChanged = true;
       ORE.emit([&]() {
         return OptimizationRemark(DEBUG_TYPE, "ArgumentPromoted", F)
                << "promoting argument " << ore::NV("ArgName", I->getName())
@@ -433,6 +437,10 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     auto &AC = FAM.getResult<AssumptionAnalysis>(*NF);
     PromoteMemToReg(Allocas, DT, &AC);
   }
+
+  DISubprogram *SP = NF->getSubprogram();
+  if (SP && CurrFuncArgChanged)
+    SP->setArgChanged();
 
   return NF;
 }
