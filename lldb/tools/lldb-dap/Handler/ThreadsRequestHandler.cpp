@@ -63,8 +63,9 @@ void ThreadsRequestHandler::operator()(
   if (dap.initial_thread_list) {
     threads = dap.initial_thread_list.value();
     dap.initial_thread_list.reset();
-  } else
+  } else {
     threads = GetThreads(dap.target.GetProcess(), dap.thread_format);
+  }
 
   if (threads.size() == 0) {
     response["success"] = llvm::json::Value(false);
