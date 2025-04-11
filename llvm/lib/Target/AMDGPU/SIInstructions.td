@@ -3124,6 +3124,17 @@ def IMMBitSelConst : SDNodeXForm<imm, [{
 
 // Handle the VALU case.
 def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i32:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1), i32:$a), (i32 1))
+>;
+
+def : GCNPat <
+  (i1 (xor (i1 (DivergentUnaryFrag<HasOneUseUnaryOp<trunc>> i64:$a)), -1)),
+  (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 1),
+  (i32 (EXTRACT_SUBREG $a, sub0))), (i32 1))
+>;
+
+def : GCNPat <
   (i1 (DivergentUnaryFrag<trunc> (i32 (srl i32:$a, (i32 imm:$b))))),
   (V_CMP_NE_U32_e64 (V_AND_B32_e64 (i32 (IMMBitSelConst $b)), $a),
     (i32 0))
