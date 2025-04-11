@@ -276,6 +276,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
@@ -1452,6 +1453,8 @@ public:
   /// \returns true if the target supports using software to avoid hazards
   /// between VMEM and VALU instructions in some instances.
   bool hasSoftwareHazardMode() const { return getGeneration() >= GFX12; }
+
+  bool hasPointSampleAccel() const { return HasPointSampleAccel; }
 
   /// \returns The maximum number of instructions that can be enclosed in an
   /// S_CLAUSE on the given subtarget, or 0 for targets that do not support that
