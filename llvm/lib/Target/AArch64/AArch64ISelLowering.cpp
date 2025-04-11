@@ -24025,6 +24025,13 @@ static SDValue performSTORECombine(SDNode *N,
     EVT VectorVT = Vector.getValueType();
     EVT ElemVT = VectorVT.getVectorElementType();
 
+    // Propagate zero constants (applying this fold may miss optimizations).
+    if (ISD::isConstantSplatVectorAllZeros(Vector.getNode())) {
+      SDValue ZeroElt = DAG.getConstant(0, DL, ValueVT);
+      DAG.ReplaceAllUsesWith(Value, ZeroElt);
+      return SDValue();
+    }
+
     if (!ValueVT.isInteger())
       return SDValue();
     if (ValueVT != MemVT && !ST->isTruncatingStore())
