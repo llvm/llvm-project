@@ -73,33 +73,4 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Pred& __make_projected(_Pred& __pred, _
 
 _LIBCPP_END_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-namespace ranges {
-
-template <class _Comp, class _Proj1, class _Proj2>
-_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __make_projected_comp(_Comp& __comp, _Proj1& __proj1, _Proj2& __proj2) {
-  if constexpr (__is_identity<decay_t<_Proj1>>::value && __is_identity<decay_t<_Proj2>>::value &&
-                !is_member_pointer_v<decay_t<_Comp>>) {
-    // Avoid creating the lambda and just use the pristine comparator -- for certain algorithms, this would enable
-    // optimizations that rely on the type of the comparator.
-    return __comp;
-
-  } else {
-    return [&](auto&& __lhs, auto&& __rhs) -> bool {
-      return std::invoke(__comp,
-                         std::invoke(__proj1, std::forward<decltype(__lhs)>(__lhs)),
-                         std::invoke(__proj2, std::forward<decltype(__rhs)>(__rhs)));
-    };
-  }
-}
-
-} // namespace ranges
-
-_LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER >= 20
-
 #endif // _LIBCPP___CXX03___ALGORITHM_MAKE_PROJECTED_H

@@ -79,12 +79,7 @@ public:
   static _LIBCPP_CONSTEXPR const result_type default_seed = 19780503u;
 
   // constructors and seeding functions
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI subtract_with_carry_engine() : subtract_with_carry_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
-#else
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = default_seed) { seed(__sd); }
-#endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, subtract_with_carry_engine>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(_Sseq& __q) {
     seed(__q);
