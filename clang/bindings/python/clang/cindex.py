@@ -2602,7 +2602,9 @@ class Type(Structure):
         policy - This PrintingPolicy can further refine the type formatting
         with_global_ns_prefix - If true, function will prepend a '::' to qualified names
         """
-        return _CXString.from_result(conf.lib.clang_getFullyQualifiedName(self, policy, with_global_ns_prefix))
+        return _CXString.from_result(
+            conf.lib.clang_getFullyQualifiedName(self, policy, with_global_ns_prefix)
+        )
 
     def is_const_qualified(self):
         """Determine whether a Type has the "const" qualifier set.
