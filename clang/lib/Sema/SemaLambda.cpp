@@ -28,6 +28,9 @@
 #include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
+#include "clang/Lex/Lexer.h"
+#include "clang/AST/Type.h"  
+
 #include <optional>
 using namespace clang;
 using namespace sema;
@@ -1187,15 +1190,26 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       CheckCXXThisCapture(C->Loc, /*Explicit=*/true, /*BuildAndDiagnose*/ true,
                           /*FunctionScopeIndexToStopAtPtr*/ nullptr,
                           C->Kind == LCK_StarThis);
-      if (!LSI->Captures.empty())
-        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
-      continue;
+      if (!LSI->Captures.empty()) { // 
+        SourceManager &SourceMgr = Context.getSourceManager();
+        const LangOptions &LangOpts = Context.getLangOpts();
+        SourceRange TrimmedRange = Lexer::makeFileCharRange(
+            CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts)
+            .getAsRange();
+        LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+      }
+      continue; // // skip further processing for `this` and `*this` captures.
     }
 
-    assert(C->Id && "missing identifier for capture");
+    if (!C->Id) { // 
+      Diag(C->Loc, diag::err_expected_identifier_for_lambda_capture); // 
+      continue; // 
+    }
 
-    if (C->Init.isInvalid())
-      continue;
+    if (C->Init.isInvalid()) {
+      Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);  // 
+      continue; // 
+    }
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
@@ -1208,12 +1222,66 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       // for e.g., [n{0}] { }; <-- if no <initializer_list> is included.
       // FIXME: we should create the init capture variable and mark it invalid
       // in this case.
-      if (C->InitCaptureType.get().isNull())
-        continue;
+// Ensure the initialization is valid before proceeding
 
-      if (C->Init.get()->containsUnexpandedParameterPack() &&
-          !C->InitCaptureType.get()->getAs<PackExpansionType>())
-        DiagnoseUnexpandedParameterPack(C->Init.get(), UPPC_Initializer);
+
+if (!C->InitCaptureType || C->InitCaptureType.get().isNull()) {
+  if (!C->Init.isUsable()) {
+      Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+      continue;
+  }
+
+  if (!C->Init.get()) {
+      continue;
+  }
+
+  ASTContext &Ctx = this->Context;
+  QualType DeducedType = C->Init.get()->getType();
+
+  if (DeducedType.isNull()) {
+      continue;
+  }
+
+  if (DeducedType->isVoidType()) {
+      if (!DeducedType->isDependentType()) {
+          C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
+      } else {
+          Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+      }
+      continue;
+  }
+
+  if (isa<InitListExpr>(C->Init.get())) {
+      IdentifierInfo *DummyID = &Ctx.Idents.get("lambda_tmp_var");
+      QualType DummyType = Ctx.UnknownAnyTy;
+
+      auto *TempVarDecl = VarDecl::Create(
+          Ctx, nullptr, C->Loc, C->Loc,
+          DummyID, DummyType, nullptr, SC_None
+      );
+
+      if (!TempVarDecl) {
+          continue;
+      }
+
+      DeducedType = deduceVarTypeFromInitializer(
+          TempVarDecl, TempVarDecl->getDeclName(),
+          TempVarDecl->getType(), nullptr,
+          TempVarDecl->getSourceRange(),
+          false, C->Init.get()
+      );
+
+      if (DeducedType.isNull()) {
+          Diag(C->Loc, diag::err_invalid_lambda_capture_initializer_type);
+          C->InitCaptureType = ParsedType::make(Ctx.DependentTy);
+          continue;
+      }
+  }
+
+  if (!DeducedType.isNull()) {
+      C->InitCaptureType = ParsedType::make(DeducedType);
+  }
+}
 
       unsigned InitStyle;
       switch (C->InitKind) {
@@ -1353,7 +1421,13 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       tryCaptureVariable(Var, C->Loc, Kind, EllipsisLoc);
     }
     if (!LSI->Captures.empty())
-      LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = C->ExplicitRange;
+      {
+    SourceManager &SourceMgr = Context.getSourceManager();
+    const LangOptions &LangOpts = Context.getLangOpts();
+    SourceRange TrimmedRange = Lexer::makeFileCharRange(
+        CharSourceRange::getTokenRange(C->ExplicitRange), SourceMgr, LangOpts).getAsRange();
+    LSI->ExplicitCaptureRanges[LSI->Captures.size() - 1] = TrimmedRange;
+      }
   }
   finishLambdaExplicitCaptures(LSI);
   LSI->ContainsUnexpandedParameterPack |= ContainsUnexpandedParameterPack;
@@ -2159,32 +2233,35 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       SourceRange CaptureRange = LSI->ExplicitCaptureRanges[I];
 
       // Warn about unused explicit captures.
-      bool IsCaptureUsed = true;
-      if (!CurContext->isDependentContext() && !IsImplicit &&
-          !From.isODRUsed()) {
-        // Initialized captures that are non-ODR used may not be eliminated.
-        // FIXME: Where did the IsGenericLambda here come from?
-        bool NonODRUsedInitCapture =
-            IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
-        if (!NonODRUsedInitCapture) {
-          bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
-          SourceRange FixItRange;
-          if (CaptureRange.isValid()) {
-            if (!CurHasPreviousCapture && !IsLast) {
-              // If there are no captures preceding this capture, remove the
-              // following comma.
-              FixItRange = SourceRange(CaptureRange.getBegin(),
-                                       getLocForEndOfToken(CaptureRange.getEnd()));
-            } else {
-              // Otherwise, remove the comma since the last used capture.
-              FixItRange = SourceRange(getLocForEndOfToken(PrevCaptureLoc),
-                                       CaptureRange.getEnd());
-            }
-          }
 
-          IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
-        }
+      bool IsCaptureUsed = true;
+
+if (!CurContext->isDependentContext() && !IsImplicit && !From.isODRUsed()) {
+  // Handle non-ODR used init captures separately.
+  bool NonODRUsedInitCapture = IsGenericLambda && From.isNonODRUsed() && From.isInitCapture();
+
+  if (!NonODRUsedInitCapture) {
+    bool IsLast = (I + 1) == LSI->NumExplicitCaptures;
+    SourceRange FixItRange;
+
+    if (CaptureRange.isValid()) {
+      if (!CurHasPreviousCapture && !IsLast) {
+        // No previous capture and not the last capture: remove current and next comma.
+        FixItRange = SourceRange(
+            CaptureRange.getBegin(), getLocForEndOfToken(CaptureRange.getEnd()));
+      } else if (CurHasPreviousCapture && !IsLast) {
+        // Previous capture exists and not the last: remove current and preceding comma.
+        FixItRange = SourceRange(
+            getLocForEndOfToken(PrevCaptureLoc), CaptureRange.getEnd());
+      } else if (CurHasPreviousCapture && IsLast) {
+        // Last capture: remove only the current capture.
+        FixItRange = CaptureRange;
       }
+    }
+
+    IsCaptureUsed = !DiagnoseUnusedLambdaCapture(FixItRange, From);
+  }
+}
 
       if (CaptureRange.isValid()) {
         CurHasPreviousCapture |= IsCaptureUsed;
