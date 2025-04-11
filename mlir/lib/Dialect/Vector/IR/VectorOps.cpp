@@ -6075,28 +6075,6 @@ public:
   }
 };
 
-// Folds transpose(broadcast(<scalar>)) into broadcast(<scalar>).
-struct FoldTransposedScalarBroadcast final
-    : public OpRewritePattern<vector::TransposeOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
-                                PatternRewriter &rewriter) const override {
-    auto bcastOp = transposeOp.getVector().getDefiningOp<vector::BroadcastOp>();
-    if (!bcastOp)
-      return failure();
-
-    auto srcVectorType = llvm::dyn_cast<VectorType>(bcastOp.getSourceType());
-    if (!srcVectorType || srcVectorType.getNumElements() == 1) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          transposeOp, transposeOp.getResultVectorType(), bcastOp.getSource());
-      return success();
-    }
-
-    return failure();
-  }
-};
-
 // Folds transpose(splat x : src_type) : res_type into splat x : res_type.
 class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
 public:
@@ -6194,11 +6172,9 @@ public:
 
     auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
 
-    // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid, and
-    // transpose(broadcast(all ones)) -> broadcast(all ones) is always valid
+    // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid
     bool inputIsScalar = !inputType;
-    bool inputIsSizeOneVector = inputType.getNumElements() == 1;
-    if (inputIsScalar || inputIsSizeOneVector) {
+    if (inputIsScalar) {
       rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
           transpose, transpose.getResultVectorType(), transpose.getVector());
       return success();
@@ -6248,9 +6224,8 @@ public:
 
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
-  results.add<FoldTransposeCreateMask, FoldTransposedScalarBroadcast,
-              TransposeFolder, FoldTransposeSplat, FoldTransposeBroadcast>(
-      context);
+  results.add<FoldTransposeCreateMask, TransposeFolder, FoldTransposeSplat,
+              FoldTransposeBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
