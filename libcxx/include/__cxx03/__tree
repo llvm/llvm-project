@@ -533,7 +533,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   static const bool __is_map = true;
 
   _LIBCPP_HIDE_FROM_ABI static key_type const& __get_key(__node_value_type const& __t) {
-    return __t.__get_value().first;
+    return __node_value_type::__get_value(__t).first;
   }
 
   template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, int> = 0>
@@ -542,7 +542,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   }
 
   _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(__node_value_type const& __t) {
-    return __t.__get_value();
+    return __node_value_type::__get_value(__t);
   }
 
   template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, int> = 0>
@@ -551,7 +551,7 @@ struct __tree_key_value_types<__value_type<_Key, _Tp> > {
   }
 
   _LIBCPP_HIDE_FROM_ABI static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return std::addressof(__n.__get_value());
+    return std::addressof(__node_value_type::__get_value(__n));
   }
 
   _LIBCPP_HIDE_FROM_ABI static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }

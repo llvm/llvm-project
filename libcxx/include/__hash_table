@@ -193,7 +193,7 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
 
   template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __node_value_type>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI static __container_value_type const& __get_value(_Up& __t) {
-    return __t.__get_value();
+    return __node_value_type::__get_value(__t);
   }
 
   template <class _Up, __enable_if_t<__is_same_uncvref<_Up, __container_value_type>::value, int> = 0>
@@ -202,7 +202,7 @@ struct __hash_key_value_types<__hash_value_type<_Key, _Tp> > {
   }
 
   _LIBCPP_HIDE_FROM_ABI static __container_value_type* __get_ptr(__node_value_type& __n) {
-    return std::addressof(__n.__get_value());
+    return std::addressof(__node_value_type::__get_value(__n));
   }
   _LIBCPP_HIDE_FROM_ABI static pair<key_type&&, mapped_type&&> __move(__node_value_type& __v) { return __v.__move(); }
 };
