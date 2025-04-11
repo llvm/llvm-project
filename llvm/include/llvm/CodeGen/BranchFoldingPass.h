@@ -24,6 +24,9 @@ public:
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoPHIs);
   }
+
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 
 } // namespace llvm
