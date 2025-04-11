@@ -809,8 +809,8 @@ public:
   Register addLDSKernelId();
   SmallVectorImpl<MCRegister> *
   addPreloadedKernArg(const SIRegisterInfo &TRI, const TargetRegisterClass *RC,
-                      unsigned AllocSizeDWord, int KernArgIdx,
-                      int PaddingSGPRs);
+                      unsigned AllocSizeDWord, unsigned PartIdx,
+                      unsigned ArgIdx, unsigned PaddingSGPRs);
 
   /// Increment user SGPRs used for padding the argument list only.
   Register addReservedUserSGPR() {

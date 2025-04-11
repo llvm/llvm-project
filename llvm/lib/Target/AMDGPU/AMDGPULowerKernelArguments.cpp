@@ -24,6 +24,7 @@
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
 using namespace llvm;
+using namespace llvm::KernArgPreload;
 
 namespace {
 
@@ -32,59 +33,6 @@ private:
   Function &F;
   const GCNSubtarget &ST;
   unsigned NumFreeUserSGPRs;
-
-  enum HiddenArg : unsigned {
-    HIDDEN_BLOCK_COUNT_X,
-    HIDDEN_BLOCK_COUNT_Y,
-    HIDDEN_BLOCK_COUNT_Z,
-    HIDDEN_GROUP_SIZE_X,
-    HIDDEN_GROUP_SIZE_Y,
-    HIDDEN_GROUP_SIZE_Z,
-    HIDDEN_REMAINDER_X,
-    HIDDEN_REMAINDER_Y,
-    HIDDEN_REMAINDER_Z,
-    END_HIDDEN_ARGS
-  };
-
-  // Stores information about a specific hidden argument.
-  struct HiddenArgInfo {
-    // Offset in bytes from the location in the kernearg segment pointed to by
-    // the implicitarg pointer.
-    uint8_t Offset;
-    // The size of the hidden argument in bytes.
-    uint8_t Size;
-    // The name of the hidden argument in the kernel signature.
-    const char *Name;
-  };
-
-  static constexpr HiddenArgInfo HiddenArgs[END_HIDDEN_ARGS] = {
-      {0, 4, "_hidden_block_count_x"}, {4, 4, "_hidden_block_count_y"},
-      {8, 4, "_hidden_block_count_z"}, {12, 2, "_hidden_group_size_x"},
-      {14, 2, "_hidden_group_size_y"}, {16, 2, "_hidden_group_size_z"},
-      {18, 2, "_hidden_remainder_x"},  {20, 2, "_hidden_remainder_y"},
-      {22, 2, "_hidden_remainder_z"}};
-
-  static HiddenArg getHiddenArgFromOffset(unsigned Offset) {
-    for (unsigned I = 0; I < END_HIDDEN_ARGS; ++I)
-      if (HiddenArgs[I].Offset == Offset)
-        return static_cast<HiddenArg>(I);
-
-    return END_HIDDEN_ARGS;
-  }
-
-  static Type *getHiddenArgType(LLVMContext &Ctx, HiddenArg HA) {
-    if (HA < END_HIDDEN_ARGS)
-      return Type::getIntNTy(Ctx, HiddenArgs[HA].Size * 8);
-
-    llvm_unreachable("Unexpected hidden argument.");
-  }
-
-  static const char *getHiddenArgName(HiddenArg HA) {
-    if (HA < END_HIDDEN_ARGS) {
-      return HiddenArgs[HA].Name;
-    }
-    llvm_unreachable("Unexpected hidden argument.");
-  }
 
   // Clones the function after adding implicit arguments to the argument list
   // and returns the new updated function. Preloaded implicit arguments are
@@ -98,7 +46,7 @@ private:
     LLVMContext &Ctx = F.getParent()->getContext();
     SmallVector<Type *, 16> FTypes(FT->param_begin(), FT->param_end());
     for (unsigned I = 0; I <= LastPreloadIndex; ++I)
-      FTypes.push_back(getHiddenArgType(Ctx, HiddenArg(I)));
+      FTypes.push_back(HiddenArgUtils::getHiddenArgType(Ctx, HiddenArg(I)));
 
     FunctionType *NFT =
         FunctionType::get(FT->getReturnType(), FTypes, FT->isVarArg());
@@ -126,7 +74,7 @@ private:
     AttributeList AL = NF->getAttributes();
     for (unsigned I = 0; I <= LastPreloadIndex; ++I) {
       AL = AL.addParamAttributes(Ctx, NFArg->getArgNo(), AB);
-      NFArg++->setName(getHiddenArgName(HiddenArg(I)));
+      NFArg++->setName(HiddenArgUtils::getHiddenArgName(HiddenArg(I)));
     }
 
     NF->setAttributes(AL);
@@ -202,8 +150,9 @@ public:
         // FIXME: Expand to handle 64-bit implicit args and large merged loads.
         LLVMContext &Ctx = F.getParent()->getContext();
         Type *LoadTy = Load->getType();
-        HiddenArg HA = getHiddenArgFromOffset(Offset);
-        if (HA == END_HIDDEN_ARGS || LoadTy != getHiddenArgType(Ctx, HA))
+        HiddenArg HA = HiddenArgUtils::getHiddenArgFromOffset(Offset);
+        if (HA == END_HIDDEN_ARGS ||
+            LoadTy != HiddenArgUtils::getHiddenArgType(Ctx, HA))
           continue;
 
         ImplicitArgLoads.push_back(std::make_pair(Load, Offset));
@@ -238,13 +187,15 @@ public:
     if (PreloadEnd == ImplicitArgLoads.begin())
       return;
 
-    unsigned LastHiddenArgIndex = getHiddenArgFromOffset(PreloadEnd[-1].second);
+    unsigned LastHiddenArgIndex =
+        HiddenArgUtils::getHiddenArgFromOffset(PreloadEnd[-1].second);
     Function *NF = cloneFunctionWithPreloadImplicitArgs(LastHiddenArgIndex);
     assert(NF);
     for (const auto *I = ImplicitArgLoads.begin(); I != PreloadEnd; ++I) {
       LoadInst *LoadInst = I->first;
       unsigned LoadOffset = I->second;
-      unsigned HiddenArgIndex = getHiddenArgFromOffset(LoadOffset);
+      unsigned HiddenArgIndex =
+          HiddenArgUtils::getHiddenArgFromOffset(LoadOffset);
       unsigned Index = NF->arg_size() - LastHiddenArgIndex + HiddenArgIndex - 1;
       Argument *Arg = NF->getArg(Index);
       LoadInst->replaceAllUsesWith(Arg);
