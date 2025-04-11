@@ -33,6 +33,8 @@ class TargetTransformInfo;
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
+  /// Maximum scalable vector width.
+  static constexpr unsigned MaxScalableVectorWidth = 512;
 
   /// VF as overridden by the user.
   static unsigned VectorizationFactor;
@@ -180,9 +182,10 @@ public:
 
   MemoryDepChecker(PredicatedScalarEvolution &PSE, const Loop *L,
                    const DenseMap<Value *, const SCEV *> &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits)
+                   unsigned MaxTargetVectorWidthInBits, bool AllowNonPow2Deps)
       : PSE(PSE), InnermostLoop(L), SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits) {}
+        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
+        AllowNonPow2Deps(AllowNonPow2Deps) {}
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -222,7 +225,7 @@ public:
            std::numeric_limits<uint64_t>::max();
   }
 
-  /// Return safe power-of-2 number of elements, which do not prevent store-load
+  /// Return safe number of elements, which do not prevent store-load
   /// forwarding, multiplied by the size of the elements in bits.
   uint64_t getStoreLoadForwardSafeDistanceInBits() const {
     assert(!isSafeForAnyStoreLoadForwardDistances() &&
@@ -319,8 +322,8 @@ private:
   /// restrictive.
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
-  /// Maximum power-of-2 number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
+  /// Maximum number of elements, which do not prevent store-load forwarding,
+  /// multiplied by the size of the elements in bits.
   uint64_t MaxStoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
@@ -347,6 +350,9 @@ private:
   /// backwards dependence with non-constant stride should be classified as
   /// backwards-vectorizable or unknown (triggering a runtime check).
   unsigned MaxTargetVectorWidthInBits = 0;
+
+  /// True if current target supports non-power-of-2 dependence distances.
+  bool AllowNonPow2Deps = false;
 
   /// Mapping of SCEV expressions to their expanded pointer bounds (pair of
   /// start and end pointer expressions).
