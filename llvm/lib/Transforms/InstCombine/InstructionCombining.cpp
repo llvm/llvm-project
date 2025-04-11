@@ -3116,8 +3116,8 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return &GEP;
   }
 
-  // These rewrites are trying to preserve inbounds/nuw attributes. So we want to
-  // do this after having tried to derive "nuw" above.
+  // These rewrites are trying to preserve inbounds/nuw attributes. So we want
+  // to do this after having tried to derive "nuw" above.
   if (GEP.getNumIndices() == 1) {
     // Given (gep p, x+y) we want to determine the common nowrap flags for both
     // geps if transforming into (gep (gep p, x), y).
