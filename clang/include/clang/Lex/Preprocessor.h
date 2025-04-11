@@ -140,6 +140,12 @@ class Preprocessor {
   friend class VariadicMacroScopeGuard;
 
   llvm::unique_function<void(const clang::Token &)> OnToken;
+  /// Function for getting the dependency preprocessor directives of a file.
+  ///
+  /// These are directives derived from a special form of lexing where the
+  /// source input is scanned for the preprocessor directives that might have an
+  /// effect on the dependencies for a compilation unit.
+  GetDependencyDirectivesFn GetDependencyDirectives;
   const PreprocessorOptions &PPOpts;
   DiagnosticsEngine        *Diags;
   const LangOptions &LangOpts;
@@ -1324,6 +1330,10 @@ public:
   /// This also reports annotation tokens produced by the parser.
   void setTokenWatcher(llvm::unique_function<void(const clang::Token &)> F) {
     OnToken = std::move(F);
+  }
+
+  void setDependencyDirectivesGetter(GetDependencyDirectivesFn Fn) {
+    GetDependencyDirectives = Fn;
   }
 
   void setPreprocessToken(bool Preprocess) { PreprocessToken = Preprocess; }

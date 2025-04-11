@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
+class FileManager;
 
 namespace tok {
 enum TokenKind : unsigned short;
@@ -134,6 +135,11 @@ void printDependencyDirectivesAsSource(
     StringRef Source,
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
+
+// FIXME: Allow returning an error.
+using GetDependencyDirectivesFn = std::function<
+    std::optional<ArrayRef<dependency_directives_scan::Directive>>(
+        FileManager &, FileEntryRef)>;
 
 } // end namespace clang
 

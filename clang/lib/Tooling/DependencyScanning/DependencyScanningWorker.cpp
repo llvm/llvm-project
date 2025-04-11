@@ -357,6 +357,57 @@ static void canonicalizeDefines(PreprocessorOptions &PPOpts) {
   std::swap(PPOpts.Macros, NewMacros);
 }
 
+static GetDependencyDirectivesFn makeDepDirectivesGetter() {
+  /// This is a functor that conforms to \c GetDependencyDirectivesFn.
+  /// It ensures it's always invoked with the same \c FileManager and caches the
+  /// extraction of the scanning VFS for better performance.
+  struct DepDirectivesGetter {
+    DepDirectivesGetter() : DepFS(nullptr), FM(nullptr) {}
+
+    /// It's important copies do not carry over the cached members. The copies
+    /// are likely to be used from distinct \c CompilerInstance objects with
+    /// distinct \c FileManager \c llvm::vfs::FileSystem.
+    DepDirectivesGetter(const DepDirectivesGetter &)
+        : DepFS(nullptr), FM(nullptr) {}
+    DepDirectivesGetter &operator=(const DepDirectivesGetter &) {
+      DepFS = nullptr;
+      FM = nullptr;
+      return *this;
+    }
+
+    auto operator()(FileManager &FileMgr, FileEntryRef File) {
+      ensureConsistentFileManager(FileMgr);
+      ensurePopulatedFileSystem(FileMgr);
+      return DepFS->getDirectiveTokens(File.getName());
+    }
+
+  private:
+    DependencyScanningWorkerFilesystem *DepFS;
+    FileManager *FM;
+
+    void ensureConsistentFileManager(FileManager &FileMgr) {
+      if (!FM)
+        FM = &FileMgr;
+      assert(&FileMgr == FM);
+    }
+
+    void ensurePopulatedFileSystem(FileManager &FM) {
+      if (DepFS)
+        return;
+      FM.getVirtualFileSystem().visit([&](llvm::vfs::FileSystem &FS) {
+        auto *DFS = llvm::dyn_cast<DependencyScanningWorkerFilesystem>(&FS);
+        if (DFS) {
+          assert(!DepFS && "Found multiple scanning VFSs");
+          DepFS = DFS;
+        }
+      });
+      assert(DepFS && "Did not find scanning VFS");
+    }
+  };
+
+  return DepDirectivesGetter{};
+}
+
 /// A clang tool that runs the preprocessor in a mode that's optimized for
 /// dependency scanning for the given compiler invocation.
 class DependencyScanningAction : public tooling::ToolAction {
@@ -433,15 +484,7 @@ public:
       if (!ModulesCachePath.empty())
         DepFS->setBypassedPathPrefix(ModulesCachePath);
 
-      ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
-          [LocalDepFS = DepFS](FileEntryRef File)
-          -> std::optional<ArrayRef<dependency_directives_scan::Directive>> {
-        if (llvm::ErrorOr<EntryRef> Entry =
-                LocalDepFS->getOrCreateFileSystemEntry(File.getName()))
-          if (LocalDepFS->ensureDirectiveTokensArePopulated(*Entry))
-            return Entry->getDirectiveTokens();
-        return std::nullopt;
-      };
+      ScanInstance.setDependencyDirectivesGetter(makeDepDirectivesGetter());
     }
 
     // Create a new FileManager to match the invocation's FileSystemOptions.
