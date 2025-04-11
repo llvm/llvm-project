@@ -8,7 +8,7 @@
 // CHECK-LABEL: @indexable_indexable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[PTR_COERCE0:%.*]], [[PTR_TO_TERM_COERCE0:%.*]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -17,11 +17,11 @@
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM_COERCE0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER:%.*]] = icmp ule ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_COERCE1:%.*]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW]], [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT7:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT7:%.*]], label [[TRAP]], !prof [[PROF7:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont7:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR_TO_TERM_COERCE0]], align 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq i32 [[TMP0]], 0, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT8:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT8:%.*]], label [[TRAP]], !prof [[PROF9:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont8:
 // CHECK-NEXT:    ret ptr [[PTR_COERCE0]]
 //
@@ -37,7 +37,7 @@ int *__null_terminated indexable_indexable(int *__indexable ptr, int *__indexabl
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[PTR_TO_TERM:%.*]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND10:%.*]] = or i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], [[DOTNOT]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND10]], label [[TRAP:%.*]], label [[CONT6:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND10]], label [[TRAP:%.*]], label [[CONT6:%.*]], !prof [[PROF16:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -48,11 +48,11 @@ int *__null_terminated indexable_indexable(int *__indexable ptr, int *__indexabl
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER:%.*]] = icmp ule ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW]], i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER]], i1 false, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       cont8:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[PTR_TO_TERM]], align 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq i32 [[TMP0]], 0, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT9:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT9:%.*]], label [[TRAP]], !prof [[PROF9]], {{!annotation ![0-9]+}}
 // CHECK:       cont9:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //
@@ -63,7 +63,7 @@ int *__null_terminated bidi_indexable_single(int *__bidi_indexable ptr, int *__s
 // CHECK-LABEL: @nested_indexable_indexable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[PTR_COERCE0:%.*]], [[PTR_TO_TERM_COERCE0:%.*]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -72,11 +72,11 @@ int *__null_terminated bidi_indexable_single(int *__bidi_indexable ptr, int *__s
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM_COERCE0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER:%.*]] = icmp ule ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_COERCE1:%.*]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW]], [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT7:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT7:%.*]], label [[TRAP]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       cont7:
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_TO_TERM_COERCE0]], align 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq ptr [[TMP0]], inttoptr (i64 -1 to ptr), {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT8:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT8:%.*]], label [[TRAP]], !prof [[PROF9]], {{!annotation ![0-9]+}}
 // CHECK:       cont8:
 // CHECK-NEXT:    ret ptr [[PTR_COERCE0]]
 //
@@ -92,7 +92,7 @@ int *__single *__terminated_by(-1) nested_indexable_indexable(int *__single *__i
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[PTR_TO_TERM:%.*]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND10:%.*]] = or i1 [[TERMINATED_BY_CHECK_PTR_LE_TERM_PTR_NOT]], [[DOTNOT]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND10]], label [[TRAP:%.*]], label [[CONT6:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND10]], label [[TRAP:%.*]], label [[CONT6:%.*]], !prof [[PROF16]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -103,11 +103,11 @@ int *__single *__terminated_by(-1) nested_indexable_indexable(int *__single *__i
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[PTR_TO_TERM]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER:%.*]] = icmp ule ptr [[TERMINATED_BY_ONE_PAST_TERM_PTR]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_OVERFLOW]], i1 [[TERMINATED_BY_CHECK_ONE_PAST_TERM_PTR_LE_UPPER]], i1 false, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       cont8:
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_TO_TERM]], align 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq ptr [[TMP0]], inttoptr (i64 -1 to ptr), {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT9:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_TERMINATOR]], label [[CONT9:%.*]], label [[TRAP]], !prof [[PROF9]], {{!annotation ![0-9]+}}
 // CHECK:       cont9:
 // CHECK-NEXT:    ret ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]]
 //

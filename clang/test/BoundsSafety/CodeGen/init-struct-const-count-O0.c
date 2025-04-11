@@ -100,7 +100,7 @@ void consume_cb(struct cb);
 // SAME-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // SAME:       [[LAND_END30]]:
 // SAME-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -194,7 +194,7 @@ void init_list_cb(int count_param, int*__counted_by(count_param) ptr) {
 // SAME-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // SAME:       [[LAND_END30]]:
 // SAME-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -337,7 +337,7 @@ void init_list_cb_bidi(int count_param, int* __bidi_indexable ptr) {
 // NEW-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // NEW:       [[LAND_END30]]:
 // NEW-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -458,7 +458,7 @@ void compound_literal_init_cb(int count_param, int*__counted_by(count_param) ptr
 // NEW-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // NEW:       [[LAND_END30]]:
 // NEW-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -520,8 +520,8 @@ void consume_cbon(struct cbon);
 // SAME-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
 // SAME-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // SAME-NEXT:    [[TMP2:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
-// SAME-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META3:![0-9]+]]
-// SAME-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META3]]
+// SAME-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4:![0-9]+]]
+// SAME-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
 // SAME:       [[BOUNDSCHECK_NOTNULL]]:
 // SAME-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // SAME-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -605,7 +605,7 @@ void consume_cbon(struct cbon);
 // SAME-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // SAME:       [[LAND_END37]]:
 // SAME-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -713,7 +713,7 @@ void init_list_cbon(int count_param, int*__counted_by_or_null(count_param) ptr) 
 // SAME-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // SAME:       [[LAND_END37]]:
 // SAME-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -811,8 +811,8 @@ void init_list_cbon_bidi(int count_param, int*__bidi_indexable ptr) {
 // NEW-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
 // NEW-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // NEW-NEXT:    [[TMP2:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
-// NEW-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META3:![0-9]+]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META3]]
+// NEW-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4:![0-9]+]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
 // NEW:       [[BOUNDSCHECK_NOTNULL]]:
 // NEW-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // NEW-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -896,7 +896,7 @@ void init_list_cbon_bidi(int count_param, int*__bidi_indexable ptr) {
 // NEW-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // NEW:       [[LAND_END37]]:
 // NEW-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -1031,7 +1031,7 @@ void compound_literal_init_cbon(int count_param, int*__counted_by_or_null(count_
 // NEW-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // NEW:       [[LAND_END37]]:
 // NEW-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -1150,7 +1150,7 @@ void consume_sb(struct sb);
 // SAME-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // SAME:       [[LAND_END30]]:
 // SAME-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -1243,7 +1243,7 @@ void init_list_sb(int count_param, char*__sized_by(count_param) ptr) {
 // SAME-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // SAME:       [[LAND_END30]]:
 // SAME-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -1385,7 +1385,7 @@ void init_list_bidi(int count_param, char*__bidi_indexable ptr) {
 // NEW-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // NEW:       [[LAND_END30]]:
 // NEW-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -1505,7 +1505,7 @@ void compound_literal_init_sb(int count_param, char*__sized_by(count_param) ptr)
 // NEW-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // NEW:       [[LAND_END30]]:
 // NEW-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -1567,8 +1567,8 @@ void consume_sbon(struct sbon);
 // SAME-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
 // SAME-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // SAME-NEXT:    [[TMP2:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
-// SAME-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META3]]
-// SAME-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META3]]
+// SAME-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
+// SAME-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
 // SAME:       [[BOUNDSCHECK_NOTNULL]]:
 // SAME-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // SAME-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -1651,7 +1651,7 @@ void consume_sbon(struct sbon);
 // SAME-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // SAME:       [[LAND_END37]]:
 // SAME-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -1758,7 +1758,7 @@ void init_list_sbon(int count_param, char*__sized_by_or_null(count_param) ptr) {
 // SAME-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // SAME:       [[LAND_END37]]:
 // SAME-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// SAME-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// SAME-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // SAME:       [[TRAP]]:
 // SAME-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // SAME-NEXT:    unreachable, !annotation [[META2]]
@@ -1856,8 +1856,8 @@ void init_list_sbon_bidi(int count_param, char*__bidi_indexable ptr) {
 // NEW-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
 // NEW-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // NEW-NEXT:    [[TMP2:%.*]] = load i32, ptr [[COUNT_PARAM_ADDR]], align 4
-// NEW-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META3]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META3]]
+// NEW-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
 // NEW:       [[BOUNDSCHECK_NOTNULL]]:
 // NEW-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // NEW-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -1940,7 +1940,7 @@ void init_list_sbon_bidi(int count_param, char*__bidi_indexable ptr) {
 // NEW-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // NEW:       [[LAND_END37]]:
 // NEW-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -2074,7 +2074,7 @@ void compound_literal_init_sbon(int count_param, char*__sized_by_or_null(count_p
 // NEW-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // NEW:       [[LAND_END37]]:
 // NEW-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
@@ -2104,10 +2104,12 @@ void compound_literal_init_sbon_bidi(int count_param, char*__bidi_indexable ptr)
 #endif
 //.
 // SAME: [[META2]] = !{!"bounds-safety-generic"}
-// SAME: [[META3]] = !{!"bounds-safety-check-ptr-neq-null"}
+// SAME: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// SAME: [[META4]] = !{!"bounds-safety-check-ptr-neq-null"}
 //.
 // LEGACY: [[META2]] = !{!"bounds-safety-check-ptr-neq-null"}
 //.
 // NEW: [[META2]] = !{!"bounds-safety-generic"}
-// NEW: [[META3]] = !{!"bounds-safety-check-ptr-neq-null"}
+// NEW: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// NEW: [[META4]] = !{!"bounds-safety-check-ptr-neq-null"}
 //.

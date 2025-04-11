@@ -110,7 +110,7 @@
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP30:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[CMP33]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP30]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP30]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -254,7 +254,7 @@ void foo(int *__ended_by(end) start, int * end) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP30:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[CMP33]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP30]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP30]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -358,4 +358,5 @@ void bar(int *__ended_by(end) start, int * end) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 //.

@@ -11,7 +11,7 @@
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2:![0-9]+]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -36,7 +36,7 @@ int *__counted_by(len) cb_0(int len) {
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -61,7 +61,7 @@ int *__counted_by(len) cb_NULL(int len) {
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -86,7 +86,7 @@ int *__counted_by(len) cb_int_cast(int len) {
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -111,7 +111,7 @@ int *__counted_by(len) cb_int_cast_NULL(int len) {
 // CHECK-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -136,7 +136,7 @@ int *__sized_by(size) sb_0(int size) {
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -161,7 +161,7 @@ int *__sized_by(len) sb_int_cast(int len) {
 // CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[LEN_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -294,4 +294,5 @@ int *__sized_by_or_null(len) sbn_int_cast_NULL(int len) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 //.

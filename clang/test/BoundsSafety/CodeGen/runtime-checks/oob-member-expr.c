@@ -19,10 +19,10 @@ struct S {
 // O2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[S]], i64 16
 // O2-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i64 24
 // O2-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP1]], [[TMP0]], !annotation [[META2:![0-9]+]]
-// O2-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT9:.*]], !annotation [[META2]]
+// O2-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[CONT9:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // O2:       [[TRAP]]:
-// O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META3:![0-9]+]]
-// O2-NEXT:    unreachable, !annotation [[META3]]
+// O2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META4:![0-9]+]]
+// O2-NEXT:    unreachable, !annotation [[META4]]
 // O2:       [[CONT9]]:
 // O2-NEXT:    call void @llvm.lifetime.end.p0(i64 16, ptr nonnull [[S]]) #[[ATTR3]]
 // O2-NEXT:    ret void
@@ -75,16 +75,16 @@ struct S {
 // O0-NEXT:    [[WIDE_PTR_LB8:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR7]], align 8
 // O0-NEXT:    [[TMP10:%.*]] = getelementptr [[STRUCT_S]], ptr [[WIDE_PTR_PTR4]], i64 1
 // O0-NEXT:    [[TMP11:%.*]] = icmp ule ptr [[TMP10]], [[WIDE_PTR_UB6]], !annotation [[META2:![0-9]+]]
-// O0-NEXT:    br i1 [[TMP11]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// O0-NEXT:    br i1 [[TMP11]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // O0:       [[TRAP]]:
 // O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // O0-NEXT:    unreachable, !annotation [[META2]]
 // O0:       [[CONT]]:
-// O0-NEXT:    [[TMP12:%.*]] = icmp ule ptr [[WIDE_PTR_LB8]], [[WIDE_PTR_PTR4]], !annotation [[META3:![0-9]+]]
-// O0-NEXT:    br i1 [[TMP12]], label %[[CONT10:.*]], label %[[TRAP9:.*]], !annotation [[META3]]
+// O0-NEXT:    [[TMP12:%.*]] = icmp ule ptr [[WIDE_PTR_LB8]], [[WIDE_PTR_PTR4]], !annotation [[META4:![0-9]+]]
+// O0-NEXT:    br i1 [[TMP12]], label %[[CONT10:.*]], label %[[TRAP9:.*]], !prof [[PROF3]], !annotation [[META4]]
 // O0:       [[TRAP9]]:
-// O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// O0-NEXT:    unreachable, !annotation [[META3]]
+// O0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// O0-NEXT:    unreachable, !annotation [[META4]]
 // O0:       [[CONT10]]:
 // O0-NEXT:    [[I11:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[WIDE_PTR_PTR4]], i32 0, i32 1
 // O0-NEXT:    store i64 3, ptr [[I11]], align 8
@@ -97,9 +97,12 @@ bingo:;
     sp->i = 3; // run-time trap : oob
 }
 
+//.
 // O2: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// O2: [[META3]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+// O2: [[PROF3]] = !{!"branch_weights", i32 8191, i32 -8192}
+// O2: [[META4]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // O0: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// O0: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// O0: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// O0: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

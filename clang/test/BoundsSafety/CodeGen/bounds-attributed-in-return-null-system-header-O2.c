@@ -10,7 +10,7 @@ void consume(int* __bidi_indexable);
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[COUNT]], 0, !annotation [[META2:![0-9]+]]
-// CHECK-NEXT:    br i1 [[CMP_I]], label %[[INLINE_HEADER_FUNC_UNSPECIFIED_PTR_EXIT:.*]], label %[[TRAP_I:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_I]], label %[[INLINE_HEADER_FUNC_UNSPECIFIED_PTR_EXIT:.*]], label %[[TRAP_I:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP_I]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -47,7 +47,7 @@ void use_inline_header_func_unspecified_ptr(int count) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca %"__bounds_safety::wide_ptr.bidi_indexable", align 8
 // CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i32 [[COUNT]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP_I]], label %[[INLINE_HEADER_FUNC_UNSAFE_INDEXABLE_PTR_EXIT:.*]], label %[[TRAP_I:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_I]], label %[[INLINE_HEADER_FUNC_UNSAFE_INDEXABLE_PTR_EXIT:.*]], label %[[TRAP_I:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP_I]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -80,6 +80,7 @@ void use_inline_header_func_unsafe_indexable_ptr(int count) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
 // LEGACY: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // LEGACY: [[META3]] = !{!"p1 int", [[META4:![0-9]+]], i64 0}

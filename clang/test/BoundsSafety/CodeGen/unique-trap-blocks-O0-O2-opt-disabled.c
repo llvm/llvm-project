@@ -31,18 +31,18 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT0-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // OPT0-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // OPT0-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2:![0-9]+]]
-// OPT0-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// OPT0-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // OPT0:       [[TRAP]]:
 // OPT0-NEXT:    call void asm sideeffect "", "n"(i64 0), !annotation [[META2]]
 // OPT0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // OPT0-NEXT:    unreachable, !annotation [[META2]]
 // OPT0:       [[CONT]]:
-// OPT0-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3:![0-9]+]]
-// OPT0-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// OPT0-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4:![0-9]+]]
+// OPT0-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // OPT0:       [[TRAP1]]:
-// OPT0-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META3]]
-// OPT0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// OPT0-NEXT:    unreachable, !annotation [[META3]]
+// OPT0-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META4]]
+// OPT0-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// OPT0-NEXT:    unreachable, !annotation [[META4]]
 // OPT0:       [[CONT2]]:
 // OPT0-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // OPT0-NEXT:    ret i32 [[TMP3]]
@@ -67,25 +67,26 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT2-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // OPT2-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // OPT2-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META13:![0-9]+]]
-// OPT2-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META13]]
+// OPT2-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF14:![0-9]+]], !annotation [[META13]]
 // OPT2:       [[TRAP]]:
 // OPT2-NEXT:    call void asm sideeffect "", "n"(i64 0), !annotation [[META13]]
 // OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META13]]
 // OPT2-NEXT:    unreachable, !annotation [[META13]]
 // OPT2:       [[CONT]]:
-// OPT2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META14:![0-9]+]]
-// OPT2-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META14]]
+// OPT2-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META15:![0-9]+]]
+// OPT2-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF14]], !annotation [[META15]]
 // OPT2:       [[TRAP1]]:
-// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META14]]
-// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META14]]
-// OPT2-NEXT:    unreachable, !annotation [[META14]]
+// OPT2-NEXT:    call void asm sideeffect "", "n"(i64 1), !annotation [[META15]]
+// OPT2-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META15]]
+// OPT2-NEXT:    unreachable, !annotation [[META15]]
 // OPT2:       [[CONT2]]:
 // OPT2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA8]]
 // OPT2-NEXT:    ret i32 [[TMP3]]
 //
 //.
 // OPT0: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// OPT0: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// OPT0: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// OPT0: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.
 // OPT2: [[TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
 // OPT2: [[META3]] = !{!"p2 int", [[META4:![0-9]+]], i64 0}
@@ -99,5 +100,6 @@ int consume(int* __bidi_indexable ptr, int idx) {
 // OPT2: [[META11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
 // OPT2: [[META12]] = !{!"p1 int", [[META5]], i64 0}
 // OPT2: [[META13]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// OPT2: [[META14]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// OPT2: [[PROF14]] = !{!"branch_weights", i32 1048575, i32 1}
+// OPT2: [[META15]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

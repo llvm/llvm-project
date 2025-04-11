@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 
 // IR: [[LABEL_TRAP_RES]]:
 // IR: %[[TRAP_RES:[a-z0-9_]+]] = phi i1 [ false, %[[LABEL_CONT]] ], [ false, %entry ], [ %[[TRAP_RES2]], %[[LABEL_TRAP_RES2]] ], !dbg ![[TRAP_LOC_MISSING:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT:[0-9]+]]
-// IR: br i1 %[[TRAP_RES]], label %[[LABEL_CONT4:[a-z0-9.]+]], label %[[LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_11_44]], !annotation ![[ANNOT_CONV_TO_COUNT]]
+// IR: br i1 %[[TRAP_RES]], label %[[LABEL_CONT4:[a-z0-9.]+]], label %[[LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_11_44]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT]]
 
 // IR: [[LABEL_TRAP]]:
 // IR: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[TRAP_LOC_11_44:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT]]
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
 
 // IR: [[LABEL_CONT5]]:
 // IR: %[[LT_CHECK_RES:[a-z0-9_]+]] = icmp ult ptr %[[WIDE_PTR]], {{.*}}, !dbg ![[LOC_TMP]], !annotation ![[ANNOT3:[0-9]+]]
-// IR: br i1 %[[LT_CHECK_RES]], label %[[LABEL_CONT6:[a-z0-9.]+]], label %[[LABEL_TRAP2:[a-z0-9.]+]], !dbg ![[LOC_TMP]], !annotation ![[ANNOT3]]
+// IR: br i1 %[[LT_CHECK_RES]], label %[[LABEL_CONT6:[a-z0-9.]+]], label %[[LABEL_TRAP2:[a-z0-9.]+]], !dbg ![[LOC_TMP]], !prof ![[PROFILE_METADATA]], !annotation ![[ANNOT3]]
 
 // IR: [[LABEL_TRAP2]]:
 // IR: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[TRAP_LOC2:[0-9]+]], !annotation ![[ANNOT_TRAP:[0-9]+]]
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
 
 // IR: [[LABEL_CONT6]]:
 // IR: %[[GE_CHECK_RES:[a-z0-9_]+]] = icmp uge ptr %[[WIDE_PTR]], {{.*}}, !dbg ![[LOC_TMP]], !annotation ![[ANNOT4:[0-9]+]]
-// IR: br i1 %[[GE_CHECK_RES]], label %[[LABEL_CONT7:[a-z0-9.]+]], label %[[LABEL_TRAP3:[a-z0-9.]+]], !dbg ![[LOC_TMP]], !annotation ![[ANNOT4]]
+// IR: br i1 %[[GE_CHECK_RES]], label %[[LABEL_CONT7:[a-z0-9.]+]], label %[[LABEL_TRAP3:[a-z0-9.]+]], !dbg ![[LOC_TMP]], !prof ![[PROFILE_METADATA]], !annotation ![[ANNOT4]]
 
 // IR: [[LABEL_END]]:
 

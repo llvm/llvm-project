@@ -94,7 +94,7 @@
 // CHECK-NEXT:    br label %[[LAND_END28]], !annotation [[META2]]
 // CHECK:       [[LAND_END28]]:
 // CHECK-NEXT:    [[TMP14:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP13]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -109,4 +109,5 @@ void test_cb_const_inc(int* __counted_by(3) p) { // expected-note{{__counted_by 
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
 //.

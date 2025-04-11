@@ -12,16 +12,16 @@
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds float, ptr [[ARRAYDECAY]], i64 80
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr float, ptr [[ARRAYDECAY]], i64 19
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[ARRAYIDX]], [[UPPER]], !annotation [[META2:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP0]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARRAYDECAY]], !annotation [[META3:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP1]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[ARRAYIDX]], [[ARRAYDECAY]], !annotation [[META4:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP1]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // CHECK:       [[TRAP1]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META3]]
-// CHECK-NEXT:    unreachable, !annotation [[META3]]
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
+// CHECK-NEXT:    unreachable, !annotation [[META4]]
 // CHECK:       [[CONT2]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    ret float [[TMP2]]
@@ -60,16 +60,16 @@ float large_array_subscript(void) {
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // CHECK:       [[TRAP1]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META3]]
-// CHECK-NEXT:    unreachable, !annotation [[META3]]
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
+// CHECK-NEXT:    unreachable, !annotation [[META4]]
 // CHECK:       [[CONT2]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
@@ -82,5 +82,6 @@ float vla_subscript(int size) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

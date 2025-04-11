@@ -44,7 +44,7 @@ void loop_all_accesses_in_bounds(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[B_SROA_0_011]], [[A]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND3:%.*]] = and i1 [[TMP2]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND3]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND3]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF11:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -239,7 +239,7 @@ void loop_all_accesses_in_bounds_length_ull(int* __counted_by(len) buf, unsigned
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -271,7 +271,7 @@ void loop_accesses_out_of_bounds_eliminate_lower_check(int* __counted_by(n) dst,
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -306,7 +306,7 @@ void loop_accesses_out_of_bounds_eliminate_lower_check_len_signed(int* __counted
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[ARRAYIDX]], [[BUF]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND4:%.*]] = and i1 [[TMP3]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT3]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT3]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -341,7 +341,7 @@ void loop_accesses_out_of_bounds_eliminate_lower_check_len_ull(int* __counted_by
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND4:%.*]] = and i1 [[TMP4]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -376,7 +376,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check(int* __counted_by(n
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND4:%.*]] = and i1 [[TMP4]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT2]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND4]], label [[CONT2]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -412,7 +412,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_signed_len(int* __c
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND5:%.*]] = and i1 [[TMP4]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND5]], label [[CONT3]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND5]], label [[CONT3]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -456,7 +456,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP0]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT2:%.*]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -470,7 +470,7 @@ void loop_accesses_out_of_bounds_cannot_eliminate_wrap_check_ull_len(int* __coun
 // CHECK-NEXT:    [[OR_COND20:%.*]] = and i1 [[TMP5]], [[TMP6]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX10]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND21:%.*]] = and i1 [[TMP7]], [[OR_COND20]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND21]], label [[CONT17]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND21]], label [[CONT17]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont17:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX10]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[IDX_EXT]]
@@ -502,7 +502,7 @@ void loop_accesses_eliminate_second_lower_check(int* __counted_by(n) dst, unsign
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND19:%.*]] = and i1 [[TMP4]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND19]], label [[CONT2:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND19]], label [[CONT2:%.*]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -516,7 +516,7 @@ void loop_accesses_eliminate_second_lower_check(int* __counted_by(n) dst, unsign
 // CHECK-NEXT:    [[OR_COND20:%.*]] = and i1 [[TMP6]], [[TMP7]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP8:%.*]] = icmp uge ptr [[ARRAYIDX10]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND21:%.*]] = and i1 [[TMP8]], [[OR_COND20]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND21]], label [[CONT17]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND21]], label [[CONT17]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont17:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX10]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 2000
@@ -542,7 +542,7 @@ void loop_accesses_eliminate_later_checks(int* __counted_by(n) dst, unsigned n) 
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[TMP3]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND55]], label [[CONT2:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND55]], label [[CONT2:%.*]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -555,11 +555,11 @@ void loop_accesses_eliminate_later_checks(int* __counted_by(n) dst, unsigned n) 
 // CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[TMP6]], [[TMP5]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX8]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND57:%.*]] = and i1 [[TMP7]], [[OR_COND56]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND57]], label [[CONT15:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND57]], label [[CONT15:%.*]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont15:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX8]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARRAYIDX8]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CONT54:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CONT54:%.*]], !prof [[PROF26:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont54:
 // CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr i8, ptr [[DST]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX21]], align 4, {{!tbaa ![0-9]+}}
@@ -591,7 +591,7 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP1]], [[TMP2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[ARRAYIDX]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[TMP3]], [[OR_COND]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND55]], label [[CONT2:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND55]], label [[CONT2:%.*]], label [[TRAP:%.*]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -602,11 +602,11 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ule ptr [[TMP4]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP6:%.*]] = icmp ule ptr [[ARRAYIDX8]], [[TMP4]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND56:%.*]] = and i1 [[TMP6]], [[TMP5]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND56]], label [[CONT15:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND56]], label [[CONT15:%.*]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont15:
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX8]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[ARRAYIDX8]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CONT41:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP]], label [[CONT41:%.*]], !prof [[PROF26]], {{!annotation ![0-9]+}}
 // CHECK:       cont41:
 // CHECK-NEXT:    [[ARRAYIDX21:%.*]] = getelementptr i8, ptr [[DST]], i64 12
 // CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX21]], align 4, {{!tbaa ![0-9]+}}
@@ -618,7 +618,7 @@ void elim_consecutive_writes(int* __counted_by(n) dst, unsigned n) {
 // CHECK-NEXT:    [[OR_COND62:%.*]] = and i1 [[TMP9]], [[TMP8]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP10:%.*]] = icmp uge ptr [[TMP4]], [[DST]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND63:%.*]] = and i1 [[TMP10]], [[OR_COND62]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND63]], label [[CONT54:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND63]], label [[CONT54:%.*]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont54:
 // CHECK-NEXT:    store i32 0, ptr [[TMP4]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    br label [[IF_END]]
@@ -648,7 +648,7 @@ void elim_consecutive_writes2(int* __counted_by(n) dst, unsigned n, unsigned idx
 // CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[IDX_EXT]], 4611686018427387903
 // CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = and i64 [[TMP0]], 4611686018427387903
 // CHECK-NEXT:    [[CMP27_NOT:%.*]] = icmp samesign ult i64 [[SUB_PTR_DIV]], [[CONV]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP27_NOT]], label [[TRAP:%.*]], label [[CONT61:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP27_NOT]], label [[TRAP:%.*]], label [[CONT61:%.*]], !prof [[PROF30:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -661,7 +661,7 @@ void elim_consecutive_writes2(int* __counted_by(n) dst, unsigned n, unsigned idx
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[ADD_PTR64]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[BOUND_PTR_ARITH]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND93:%.*]] = and i1 [[TMP3]], [[TMP2]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND93]], label [[CONT74:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND93]], label [[CONT74:%.*]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont74:
 // CHECK-NEXT:    store i32 1, ptr [[BOUND_PTR_ARITH]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[SUB80:%.*]] = add i32 [[N]], -2, {{!annotation ![0-9]+}}
@@ -673,7 +673,7 @@ void elim_consecutive_writes2(int* __counted_by(n) dst, unsigned n, unsigned idx
 // CHECK-NEXT:    [[OR_COND95:%.*]] = and i1 [[TMP5]], [[TMP6]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP7:%.*]] = icmp uge ptr [[ARRAYIDX82]], [[BOUND_PTR_ARITH]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND96:%.*]] = and i1 [[TMP7]], [[OR_COND95]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND96]], label [[CONT89:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND96]], label [[CONT89:%.*]], label [[TRAP]], !prof [[PROF11]], {{!annotation ![0-9]+}}
 // CHECK:       cont89:
 // CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX82]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    br label [[RETURN]]
@@ -726,7 +726,7 @@ void ptrinc0(char *__counted_by(inLen) buf,
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[CURRENTBUF_SROA_0_05]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp uge ptr [[CURRENTBUF_SROA_0_05]], [[BUF]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP0]], [[TMP1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT1]], label [[TRAP:%.*]], !prof [[PROF36:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -778,7 +778,7 @@ void ptrinc1(char *__counted_by(inLen) buf,
 // CHECK-NEXT:    [[IDX_EXT_LE:%.*]] = zext i32 [[TABLE_SIZE]] to i64
 // CHECK-NEXT:    [[ADD_PTR_LE:%.*]] = getelementptr inbounds nuw i32, ptr [[TABLE]], i64 [[IDX_EXT_LE]]
 // CHECK-NEXT:    [[DOTNOT33:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH_LE]], [[TABLE]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT33]], label [[TRAP:%.*]], label [[RETURN]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT33]], label [[TRAP:%.*]], label [[RETURN]], !prof [[PROF30]], {{!annotation ![0-9]+}}
 // CHECK:       return:
 // CHECK-NEXT:    [[RETVAL_SROA_4_3:%.*]] = phi ptr [ null, [[ENTRY:%.*]] ], [ [[ADD_PTR_LE]], [[IF_THEN5]] ], [ null, [[FOR_COND]] ]
 // CHECK-NEXT:    [[RETVAL_SROA_0_3:%.*]] = phi ptr [ null, [[ENTRY]] ], [ [[BOUND_PTR_ARITH_LE]], [[IF_THEN5]] ], [ null, [[FOR_COND]] ]

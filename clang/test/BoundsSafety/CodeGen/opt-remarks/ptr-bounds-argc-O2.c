@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
 // IR-NEXT:   %[[LOWER_CHECK:[a-z0-9.]+]] = icmp uge ptr %[[PTR]], %[[ARR]], !dbg ![[LOC_10_16]], !annotation ![[ANNOT_GE_LB:[0-9]+]]
 // TODO: The condition and branch should also be ANNOT_LT_UB_OR_GT_LB (rdar://109089053)
 // IR-NEXT:   %[[COND:[a-z0-9.]+]] = and i1 %[[UPPER_CHECK]], %[[LOWER_CHECK]], !dbg ![[LOC_10_16]], !annotation ![[ANNOT_GE_LB]]
-// IR-NEXT:   br i1 %{{[a-z.0-9]+}}, label %[[FOO_LABEL_CONT:[a-z0-9]+]], label %[[FOO_LABEL_TRAP:[a-z0-9]+]], !dbg ![[LOC_10_16]], !annotation ![[ANNOT_LT_UB]]
+// IR-NEXT:   br i1 %{{[a-z.0-9]+}}, label %[[FOO_LABEL_CONT:[a-z0-9]+]], label %[[FOO_LABEL_TRAP:[a-z0-9]+]], !dbg ![[LOC_10_16]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation ![[ANNOT_LT_UB]]
 // ...
 // IR: [[FOO_LABEL_TRAP]]:
 // IR-NEXT:   call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[LT_TRAP_LOC_10_16:[0-9]+]], !annotation ![[ANNOT_LT_UB_OR_GE_LB:[0-9]+]]

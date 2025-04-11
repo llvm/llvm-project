@@ -142,7 +142,7 @@ void receive_transparent_union(union TransparentUnion);
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP3]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -189,9 +189,9 @@ void assign_via_ptr(struct sbon* ptr, int new_count,
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[NEW_PTR_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_SBON]], ptr [[NEW]], i32 0, i32 0
-// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META3:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META4:![0-9]+]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SBON]], ptr [[NEW]], i32 0, i32 1
-// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP]], ptr align 8 [[NEW_PTR]], i64 24, i1 false), !annotation [[META2]]
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0, !annotation [[META2]]
@@ -256,7 +256,7 @@ void assign_via_ptr(struct sbon* ptr, int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -366,7 +366,7 @@ void assign_operator(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -473,7 +473,7 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -582,7 +582,7 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -690,7 +690,7 @@ struct sbon return_sbon(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -827,7 +827,7 @@ void assign_via_ptr_nullptr(struct sbon* ptr, int new_count) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP3]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -945,7 +945,7 @@ void assign_via_ptr_nested(struct nested_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP3]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1070,7 +1070,7 @@ void assign_via_ptr_nested_v2(struct nested_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP3]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1140,7 +1140,7 @@ void assign_via_ptr_nested_v2(struct nested_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END94]], !annotation [[META2]]
 // CHECK:       [[LAND_END94]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE50]] ], [ false, %[[CONT]] ], [ [[TMP7]], %[[LOR_END93]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT96:.*]], label %[[TRAP95:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT96:.*]], label %[[TRAP95:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP95]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1267,7 +1267,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1317,20 +1317,20 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sbon* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_UB58:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR57]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR59:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP47]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB60:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR59]], align 8
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META4:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT64:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META5:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT64:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META5:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT62:.*]], label %[[TRAP61:.*]], !annotation [[META5]]
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META6:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT62:.*]], label %[[TRAP61:.*]], !prof [[PROF3]], !annotation [[META6]]
 // CHECK:       [[TRAP61]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META5]]
-// CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT62]]:
-// CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META6:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT64]], label %[[TRAP63:.*]], !annotation [[META6]]
-// CHECK:       [[TRAP63]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META6]]
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK:       [[CONT62]]:
+// CHECK-NEXT:    [[TMP15:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META7:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT64]], label %[[TRAP63:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK:       [[TRAP63]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT64]]:
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef [[WIDE_PTR_PTR56]])
 // CHECK-NEXT:    ret void
@@ -1428,7 +1428,7 @@ void array_of_struct_init(char* __bidi_indexable new_ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP3]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1582,7 +1582,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct sbon_with_other_data*
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1699,7 +1699,7 @@ void call_arg_transparent_union(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1766,8 +1766,8 @@ void call_arg_transparent_union_untransparently(int new_count,
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[COUNT1]], align 8
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SBON]], ptr [[TMP3]], i32 0, i32 1
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[BUF]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = icmp ne ptr [[TMP5]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP6]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP6:%.*]] = icmp ne ptr [[TMP5]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP6]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP4]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP5]], i64 [[IDX_EXT]]
@@ -1850,7 +1850,7 @@ void call_arg_transparent_union_untransparently(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END38]], !annotation [[META2]]
 // CHECK:       [[LAND_END38]]:
 // CHECK-NEXT:    [[TMP15:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP14]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP15]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1901,8 +1901,8 @@ void assign_via_ptr_from_ptr(struct sbon* ptr) {
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[IDX_EXT]]
@@ -1985,7 +1985,7 @@ void assign_via_ptr_from_ptr(struct sbon* ptr) {
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP12]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2033,14 +2033,14 @@ void assign_via_ptr_from_sbon(struct sbon* ptr, int new_count,
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_SBON]], ptr [[NEW]], i32 0, i32 0
-// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SBON]], ptr [[NEW]], i32 0, i32 1
-// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -2123,7 +2123,7 @@ void assign_via_ptr_from_sbon(struct sbon* ptr, int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2174,8 +2174,8 @@ void assign_operator_from_sbon(int new_count,
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -2258,7 +2258,7 @@ void assign_operator_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2306,8 +2306,8 @@ void local_var_init_from_sbon(int new_count,
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -2390,7 +2390,7 @@ void local_var_init_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2440,8 +2440,8 @@ void call_arg_from_sbon(int new_count,
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -2524,7 +2524,7 @@ void call_arg_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2573,8 +2573,8 @@ struct sbon return_sbon_from_sbon(int new_count,
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -2657,7 +2657,7 @@ struct sbon return_sbon_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2709,8 +2709,8 @@ void construct_not_used_from_sbon(int new_count,
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[IDX_EXT]]
@@ -2793,7 +2793,7 @@ void construct_not_used_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP12]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2851,8 +2851,8 @@ void assign_via_ptr_nested_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[IDX_EXT]]
@@ -2935,7 +2935,7 @@ void assign_via_ptr_nested_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP12]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2991,8 +2991,8 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp ne ptr [[TMP1]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP2]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[IDX_EXT]]
@@ -3075,7 +3075,7 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP12:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP11]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3125,20 +3125,20 @@ void assign_via_ptr_nested_v2_from_sbon(struct nested_sbon* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_UB58:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR57]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR59:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP47]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB60:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR59]], align 8
-// CHECK-NEXT:    [[TMP22:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP22]], label %[[BOUNDSCHECK_NOTNULL61:.*]], label %[[CONT65:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP22:%.*]] = icmp ne ptr [[WIDE_PTR_PTR56]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP22]], label %[[BOUNDSCHECK_NOTNULL61:.*]], label %[[CONT65:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL61]]:
-// CHECK-NEXT:    [[TMP23:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[TMP23]], label %[[CONT63:.*]], label %[[TRAP62:.*]], !annotation [[META5]]
+// CHECK-NEXT:    [[TMP23:%.*]] = icmp ult ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_UB58]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[TMP23]], label %[[CONT63:.*]], label %[[TRAP62:.*]], !prof [[PROF3]], !annotation [[META6]]
 // CHECK:       [[TRAP62]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META5]]
-// CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT63]]:
-// CHECK-NEXT:    [[TMP24:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[TMP24]], label %[[CONT65]], label %[[TRAP64:.*]], !annotation [[META6]]
-// CHECK:       [[TRAP64]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META6]]
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK:       [[CONT63]]:
+// CHECK-NEXT:    [[TMP24:%.*]] = icmp uge ptr [[WIDE_PTR_PTR56]], [[WIDE_PTR_LB60]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP24]], label %[[CONT65]], label %[[TRAP64:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK:       [[TRAP64]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT65]]:
 // CHECK-NEXT:    call void @consume_sbon_arr(ptr noundef [[WIDE_PTR_PTR56]])
 // CHECK-NEXT:    ret void
@@ -3175,8 +3175,8 @@ void array_of_struct_init_from_sbon(char* __sized_by_or_null(new_count) new_ptr,
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
-// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = icmp ne ptr [[TMP2]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP4]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[BOUNDSCHECK_NULL:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[TMP3]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 [[IDX_EXT]]
@@ -3259,7 +3259,7 @@ void array_of_struct_init_from_sbon(char* __sized_by_or_null(new_count) new_ptr,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[BOUNDSCHECK_CONT]] ], [ [[TMP12]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3413,7 +3413,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_sbon(struct sbon_with_o
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3531,7 +3531,7 @@ void call_arg_transparent_union_from_sbon(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END37]], !annotation [[META2]]
 // CHECK:       [[LAND_END37]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LOR_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3571,8 +3571,9 @@ void call_arg_transparent_union_untransparently_from_sbon(int new_count,
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
-// CHECK: [[META3]] = !{!"bounds-safety-zero-init"}
-// CHECK: [[META4]] = !{!"bounds-safety-check-ptr-neq-null"}
-// CHECK: [[META5]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[META4]] = !{!"bounds-safety-zero-init"}
+// CHECK: [[META5]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// CHECK: [[META7]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

@@ -8,7 +8,7 @@
 // CHECK-LABEL: @indexable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[PTR_COERCE0:%.*]], [[PTR_COERCE1:%.*]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP0]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP0]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], !prof [[PROF3:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -16,7 +16,7 @@
 // CHECK-NEXT:    [[TERMINATED_BY_CUR_0:%.*]] = phi ptr [ [[TERMINATED_BY_ONE_PAST_CUR:%.*]], [[CONT2:%.*]] ], [ [[PTR_COERCE0]], [[ENTRY:%.*]] ]
 // CHECK-NEXT:    [[TERMINATED_BY_ONE_PAST_CUR]] = getelementptr inbounds nuw i8, ptr [[TERMINATED_BY_CUR_0]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ACCESS_NOT:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_CUR]], [[PTR_COERCE1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT2]], !prof [[PROF6:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont2:
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TERMINATED_BY_CUR_0]], align 4
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq i32 [[TMP1]], 0
@@ -38,7 +38,7 @@ int *__null_terminated indexable(int *__indexable ptr) {
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp uge ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_3_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 [[TMP0]], i1 false, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], !prof [[PROF13:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -46,7 +46,7 @@ int *__null_terminated indexable(int *__indexable ptr) {
 // CHECK-NEXT:    [[TERMINATED_BY_CUR_0:%.*]] = phi ptr [ [[TERMINATED_BY_ONE_PAST_CUR:%.*]], [[CONT8:%.*]] ], [ [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[ENTRY:%.*]] ]
 // CHECK-NEXT:    [[TERMINATED_BY_ONE_PAST_CUR]] = getelementptr inbounds nuw i8, ptr [[TERMINATED_BY_CUR_0]], i64 4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ACCESS_NOT:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_CUR]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT8]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT8]], !prof [[PROF6]], {{!annotation ![0-9]+}}
 // CHECK:       cont8:
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TERMINATED_BY_CUR_0]], align 4
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq i32 [[TMP1]], 0
@@ -61,7 +61,7 @@ int *__null_terminated bidi_indexable(int *__bidi_indexable ptr) {
 // CHECK-LABEL: @nested_indexable(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[PTR_COERCE0:%.*]], [[PTR_COERCE1:%.*]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP0]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP0]], label [[TERMINATED_BY_LOOP_COND:%.*]], label [[TRAP:%.*]], !prof [[PROF3]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -69,7 +69,7 @@ int *__null_terminated bidi_indexable(int *__bidi_indexable ptr) {
 // CHECK-NEXT:    [[TERMINATED_BY_CUR_0:%.*]] = phi ptr [ [[TERMINATED_BY_ONE_PAST_CUR:%.*]], [[CONT2:%.*]] ], [ [[PTR_COERCE0]], [[ENTRY:%.*]] ]
 // CHECK-NEXT:    [[TERMINATED_BY_ONE_PAST_CUR]] = getelementptr inbounds nuw i8, ptr [[TERMINATED_BY_CUR_0]], i64 8, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_ACCESS_NOT:%.*]] = icmp ugt ptr [[TERMINATED_BY_ONE_PAST_CUR]], [[PTR_COERCE1]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT2]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TERMINATED_BY_CHECK_ACCESS_NOT]], label [[TRAP]], label [[CONT2]], !prof [[PROF6]], {{!annotation ![0-9]+}}
 // CHECK:       cont2:
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TERMINATED_BY_CUR_0]], align 8
 // CHECK-NEXT:    [[TERMINATED_BY_CHECK_TERMINATOR:%.*]] = icmp eq ptr [[TMP1]], inttoptr (i64 -1 to ptr)

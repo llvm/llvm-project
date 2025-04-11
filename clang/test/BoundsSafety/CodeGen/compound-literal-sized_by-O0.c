@@ -130,7 +130,7 @@ void receive_transparent_union(union TransparentUnion);
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -176,9 +176,9 @@ void assign_via_ptr(struct sb* ptr, int new_count,
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[NEW_PTR_INDIRECT_ADDR]], align 8
 // CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_SB]], ptr [[NEW]], i32 0, i32 0
-// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META3:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META4:![0-9]+]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SB]], ptr [[NEW]], i32 0, i32 1
-// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[AGG_TEMP]], ptr align 8 [[NEW_PTR]], i64 24, i1 false), !annotation [[META2]]
 // CHECK-NEXT:    [[WIDE_PTR_PTR_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 0, !annotation [[META2]]
@@ -230,7 +230,7 @@ void assign_via_ptr(struct sb* ptr, int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -326,7 +326,7 @@ void assign_operator(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -419,7 +419,7 @@ void local_var_init(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -514,7 +514,7 @@ void call_arg(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -608,7 +608,7 @@ struct sb return_sb(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -646,7 +646,7 @@ void construct_not_used(int new_count, char* __bidi_indexable new_ptr) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -737,7 +737,7 @@ void assign_via_ptr_nullptr(struct sb* ptr, int new_count) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -841,7 +841,7 @@ void assign_via_ptr_nested(struct nested_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -951,7 +951,7 @@ void assign_via_ptr_nested_v2(struct nested_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1008,7 +1008,7 @@ void assign_via_ptr_nested_v2(struct nested_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END77]], !annotation [[META2]]
 // CHECK:       [[LAND_END77]]:
 // CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE43]] ], [ false, %[[CONT]] ], [ [[TMP5]], %[[LAND_END76]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT79:.*]], label %[[TRAP78:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP6]], label %[[CONT79:.*]], label %[[TRAP78:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP78]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1121,7 +1121,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1140,7 +1140,7 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sb* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_LB37:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR36]], align 8
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR33]], ptr [[BUF]], align 8
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_SB]], ptr [[ARR]], i64 1
-// CHECK-NEXT:    br i1 true, label %[[CONT39:.*]], label %[[TRAP38:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 true, label %[[CONT39:.*]], label %[[TRAP38:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP38]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1176,20 +1176,20 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_sb* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_UB53:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR52]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR54:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP42]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB55:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR54]], align 8
-// CHECK-NEXT:    [[TMP12:%.*]] = icmp ne ptr [[WIDE_PTR_PTR51]], null, !annotation [[META4:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP12]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT59:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP12:%.*]] = icmp ne ptr [[WIDE_PTR_PTR51]], null, !annotation [[META5:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP12]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT59:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
-// CHECK-NEXT:    [[TMP13:%.*]] = icmp ult ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_UB53]], !annotation [[META5:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT57:.*]], label %[[TRAP56:.*]], !annotation [[META5]]
+// CHECK-NEXT:    [[TMP13:%.*]] = icmp ult ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_UB53]], !annotation [[META6:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT57:.*]], label %[[TRAP56:.*]], !prof [[PROF3]], !annotation [[META6]]
 // CHECK:       [[TRAP56]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META5]]
-// CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT57]]:
-// CHECK-NEXT:    [[TMP14:%.*]] = icmp uge ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_LB55]], !annotation [[META6:![0-9]+]]
-// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT59]], label %[[TRAP58:.*]], !annotation [[META6]]
-// CHECK:       [[TRAP58]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META6]]
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK:       [[CONT57]]:
+// CHECK-NEXT:    [[TMP14:%.*]] = icmp uge ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_LB55]], !annotation [[META7:![0-9]+]]
+// CHECK-NEXT:    br i1 [[TMP14]], label %[[CONT59]], label %[[TRAP58:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK:       [[TRAP58]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT59]]:
 // CHECK-NEXT:    call void @consume_sb_arr(ptr noundef [[WIDE_PTR_PTR51]])
 // CHECK-NEXT:    ret void
@@ -1273,7 +1273,7 @@ void array_of_struct_init(char* __bidi_indexable new_ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP2]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1323,7 +1323,7 @@ void assign_via_ptr_other_data_side_effect(struct sb_with_other_data* ptr,
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1419,7 +1419,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct sb_with_other_data* p
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1522,7 +1522,7 @@ void call_arg_transparent_union(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1647,7 +1647,7 @@ void call_arg_transparent_union_untransparently(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END31]], !annotation [[META2]]
 // CHECK:       [[LAND_END31]]:
 // CHECK-NEXT:    [[TMP10:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP9]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP10]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP10]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1755,7 +1755,7 @@ void assign_via_ptr_from_ptr(struct sb* ptr) {
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP7]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1802,9 +1802,9 @@ void assign_via_ptr_from_sb(struct sb* ptr, int new_count,
 // CHECK-NEXT:    store i32 [[NEW_COUNT]], ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    store ptr [[NEW_PTR]], ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[COUNT:%.*]] = getelementptr inbounds nuw [[STRUCT_SB]], ptr [[NEW]], i32 0, i32 0
-// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[BUF:%.*]] = getelementptr inbounds nuw [[STRUCT_SB]], ptr [[NEW]], i32 0, i32 1
-// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META3]]
+// CHECK-NEXT:    store ptr null, ptr [[BUF]], align 8, !annotation [[META4]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[NEW_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
@@ -1866,7 +1866,7 @@ void assign_via_ptr_from_sb(struct sb* ptr, int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -1974,7 +1974,7 @@ void assign_operator_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2079,7 +2079,7 @@ void local_var_init_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2186,7 +2186,7 @@ void call_arg_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2292,7 +2292,7 @@ struct sb return_sb_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2401,7 +2401,7 @@ void construct_not_used_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP7]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2516,7 +2516,7 @@ void assign_via_ptr_nested_from_sb(struct nested_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP7]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2629,7 +2629,7 @@ void assign_via_ptr_nested_v2_from_sb(struct nested_sb* ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP6]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP7]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2648,7 +2648,7 @@ void assign_via_ptr_nested_v2_from_sb(struct nested_sb* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_LB37:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR36]], align 8
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR33]], ptr [[BUF]], align 8
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [[STRUCT_SB]], ptr [[ARR]], i64 1
-// CHECK-NEXT:    br i1 true, label %[[CONT39:.*]], label %[[TRAP38:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 true, label %[[CONT39:.*]], label %[[TRAP38:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP38]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2684,20 +2684,20 @@ void assign_via_ptr_nested_v2_from_sb(struct nested_sb* ptr,
 // CHECK-NEXT:    [[WIDE_PTR_UB53:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR52]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR54:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP42]], i32 0, i32 2
 // CHECK-NEXT:    [[WIDE_PTR_LB55:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR54]], align 8
-// CHECK-NEXT:    [[TMP17:%.*]] = icmp ne ptr [[WIDE_PTR_PTR51]], null, !annotation [[META4]]
-// CHECK-NEXT:    br i1 [[TMP17]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT59:.*]], !annotation [[META4]]
+// CHECK-NEXT:    [[TMP17:%.*]] = icmp ne ptr [[WIDE_PTR_PTR51]], null, !annotation [[META5]]
+// CHECK-NEXT:    br i1 [[TMP17]], label %[[BOUNDSCHECK_NOTNULL:.*]], label %[[CONT59:.*]], !annotation [[META5]]
 // CHECK:       [[BOUNDSCHECK_NOTNULL]]:
-// CHECK-NEXT:    [[TMP18:%.*]] = icmp ult ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_UB53]], !annotation [[META5]]
-// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT57:.*]], label %[[TRAP56:.*]], !annotation [[META5]]
+// CHECK-NEXT:    [[TMP18:%.*]] = icmp ult ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_UB53]], !annotation [[META6]]
+// CHECK-NEXT:    br i1 [[TMP18]], label %[[CONT57:.*]], label %[[TRAP56:.*]], !prof [[PROF3]], !annotation [[META6]]
 // CHECK:       [[TRAP56]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META5]]
-// CHECK-NEXT:    unreachable, !annotation [[META5]]
-// CHECK:       [[CONT57]]:
-// CHECK-NEXT:    [[TMP19:%.*]] = icmp uge ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_LB55]], !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[TMP19]], label %[[CONT59]], label %[[TRAP58:.*]], !annotation [[META6]]
-// CHECK:       [[TRAP58]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META6]]
 // CHECK-NEXT:    unreachable, !annotation [[META6]]
+// CHECK:       [[CONT57]]:
+// CHECK-NEXT:    [[TMP19:%.*]] = icmp uge ptr [[WIDE_PTR_PTR51]], [[WIDE_PTR_LB55]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[TMP19]], label %[[CONT59]], label %[[TRAP58:.*]], !prof [[PROF3]], !annotation [[META7]]
+// CHECK:       [[TRAP58]]:
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META7]]
+// CHECK-NEXT:    unreachable, !annotation [[META7]]
 // CHECK:       [[CONT59]]:
 // CHECK-NEXT:    call void @consume_sb_arr(ptr noundef [[WIDE_PTR_PTR51]])
 // CHECK-NEXT:    ret void
@@ -2791,7 +2791,7 @@ void array_of_struct_init_from_sb(char* __sized_by(new_count) new_ptr,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP8:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP7]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2841,7 +2841,7 @@ void assign_via_ptr_other_data_side_effect_from_sb(struct sb_with_other_data* pt
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[NEW_COUNT_ADDR]], align 4
 // CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0, !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -2937,7 +2937,7 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_sb(struct sb_with_other
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3041,7 +3041,7 @@ void call_arg_transparent_union_from_sb(int new_count,
 // CHECK-NEXT:    br label %[[LAND_END30]], !annotation [[META2]]
 // CHECK:       [[LAND_END30]]:
 // CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[LAND_LHS_TRUE]] ], [ false, %[[ENTRY]] ], [ [[TMP1]], %[[LAND_END]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -3081,8 +3081,9 @@ void call_arg_transparent_union_untransparently_from_sb(int new_count,
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
-// CHECK: [[META3]] = !{!"bounds-safety-zero-init"}
-// CHECK: [[META4]] = !{!"bounds-safety-check-ptr-neq-null"}
-// CHECK: [[META5]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[META4]] = !{!"bounds-safety-zero-init"}
+// CHECK: [[META5]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[META6]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
+// CHECK: [[META7]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

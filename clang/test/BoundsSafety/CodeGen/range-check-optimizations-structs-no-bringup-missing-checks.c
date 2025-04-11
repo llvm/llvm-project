@@ -57,7 +57,7 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr [[STRUCT_STRUCT_1]], ptr [[SRC]], i64 [[INDVARS_IV_NEXT]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[BOUND_PTR_ARITH]], i64 8
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[TMP0]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT1]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT1]], !prof [[PROF10:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) {{#[0-9]+}}, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -67,7 +67,7 @@ struct struct_1 * access_struct_1_all_checks_removable(
 // CHECK-NEXT:    br i1 [[CMP3_NOT]], label [[BOUNDSCHECK_NOTNULL:%.*]], label [[FOR_COND]]
 // CHECK:       boundscheck.notnull:
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[ADD_PTR]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[TMP2]], label [[CLEANUP13]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[TMP2]], label [[CLEANUP13]], label [[TRAP]], !prof [[PROF12:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cleanup13:
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = phi ptr [ [[BOUND_PTR_ARITH]], [[BOUNDSCHECK_NOTNULL]] ], [ null, [[FOR_COND]] ]
 // CHECK-NEXT:    ret ptr [[SPEC_SELECT]]

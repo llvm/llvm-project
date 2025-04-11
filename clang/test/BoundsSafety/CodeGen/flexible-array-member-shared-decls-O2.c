@@ -41,21 +41,21 @@ int * __counted_by(len) baz(int len);
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[CALL1]], [[TMP1]], !annotation [[META7:![0-9]+]]
 // CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META8:![0-9]+]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[DOTNOT106]], !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !prof [[PROF9:![0-9]+]], !annotation [[META7]]
 // CHECK:       [[CONT60]]:
-// CHECK-NEXT:    [[UPPER_INTPTR:%.*]] = ptrtoint ptr [[ADD_PTR3]] to i64, !annotation [[META9:![0-9]+]]
-// CHECK-NEXT:    [[FAM_INTPTR:%.*]] = ptrtoint ptr [[TMP1]] to i64, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = ashr exact i64 [[FLEX_AVAIL_COUNT]], 2, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext nneg i32 [[LEN]] to i64, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_COUNT_CHECK_NOT:%.*]] = icmp uge i64 [[FLEX_AVAIL_COUNT_DIV]], [[FLEX_COUNT_INTPTR]], !annotation [[META9]]
+// CHECK-NEXT:    [[UPPER_INTPTR:%.*]] = ptrtoint ptr [[ADD_PTR3]] to i64, !annotation [[META10:![0-9]+]]
+// CHECK-NEXT:    [[FAM_INTPTR:%.*]] = ptrtoint ptr [[TMP1]] to i64, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = ashr exact i64 [[FLEX_AVAIL_COUNT]], 2, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext nneg i32 [[LEN]] to i64, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_COUNT_CHECK_NOT:%.*]] = icmp uge i64 [[FLEX_AVAIL_COUNT_DIV]], [[FLEX_COUNT_INTPTR]], !annotation [[META10]]
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[CALL1]], [[ADD_PTR3]], !annotation [[META8]]
 // CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[FLEX_COUNT_CHECK_NOT]], i1 [[TMP2]], i1 false, !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !annotation [[META9]]
+// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !prof [[PROF11:![0-9]+]], !annotation [[META10]]
 // CHECK:       [[CONT69]]:
 // CHECK-NEXT:    [[LEN70:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
-// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN70]], align 8, !tbaa [[TBAA10:![0-9]+]]
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA17:![0-9]+]]
+// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN70]], align 8, !tbaa [[TBAA12:![0-9]+]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA19:![0-9]+]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
 //
 struct Outer *foo(int len) {
@@ -90,21 +90,21 @@ struct Outer *foo(int len) {
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[CALL1]], [[TMP1]], !annotation [[META7]]
 // CHECK-NEXT:    [[DOTNOT106:%.*]] = icmp ugt ptr [[TMP1]], [[ADD_PTR3]], !annotation [[META8]]
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[DOTNOT106]], !annotation [[META8]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !annotation [[META7]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP]], label %[[CONT60:.*]], !prof [[PROF9]], !annotation [[META7]]
 // CHECK:       [[CONT60]]:
-// CHECK-NEXT:    [[UPPER_INTPTR:%.*]] = ptrtoint ptr [[ADD_PTR3]] to i64, !annotation [[META9]]
-// CHECK-NEXT:    [[FAM_INTPTR:%.*]] = ptrtoint ptr [[TMP1]] to i64, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = ashr exact i64 [[FLEX_AVAIL_COUNT]], 2, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext nneg i32 [[LEN]] to i64, !annotation [[META9]]
-// CHECK-NEXT:    [[FLEX_COUNT_CHECK_NOT:%.*]] = icmp uge i64 [[FLEX_AVAIL_COUNT_DIV]], [[FLEX_COUNT_INTPTR]], !annotation [[META9]]
+// CHECK-NEXT:    [[UPPER_INTPTR:%.*]] = ptrtoint ptr [[ADD_PTR3]] to i64, !annotation [[META10]]
+// CHECK-NEXT:    [[FAM_INTPTR:%.*]] = ptrtoint ptr [[TMP1]] to i64, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_AVAIL_COUNT:%.*]] = sub nuw i64 [[UPPER_INTPTR]], [[FAM_INTPTR]], !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = ashr exact i64 [[FLEX_AVAIL_COUNT]], 2, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_COUNT_INTPTR:%.*]] = zext nneg i32 [[LEN]] to i64, !annotation [[META10]]
+// CHECK-NEXT:    [[FLEX_COUNT_CHECK_NOT:%.*]] = icmp uge i64 [[FLEX_AVAIL_COUNT_DIV]], [[FLEX_COUNT_INTPTR]], !annotation [[META10]]
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ult ptr [[CALL1]], [[ADD_PTR3]], !annotation [[META8]]
 // CHECK-NEXT:    [[OR_COND108:%.*]] = select i1 [[FLEX_COUNT_CHECK_NOT]], i1 [[TMP2]], i1 false, !annotation [[META6]]
-// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !annotation [[META9]]
+// CHECK-NEXT:    br i1 [[OR_COND108]], label %[[CONT69]], label %[[TRAP]], !prof [[PROF11]], !annotation [[META10]]
 // CHECK:       [[CONT69]]:
-// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA17]]
+// CHECK-NEXT:    store ptr [[CALL]], ptr [[CALL1]], align 8, !tbaa [[TBAA19]]
 // CHECK-NEXT:    [[LEN78:%.*]] = getelementptr inbounds nuw i8, ptr [[CALL1]], i64 8
-// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN78]], align 8, !tbaa [[TBAA10]]
+// CHECK-NEXT:    store i32 [[LEN]], ptr [[LEN78]], align 8, !tbaa [[TBAA12]]
 // CHECK-NEXT:    ret ptr [[CALL1]]
 //
 struct Outer *foo2(int len) {
@@ -122,13 +122,15 @@ struct Outer *foo2(int len) {
 // CHECK: [[META6]] = !{!"bounds-safety-check-ptr-neq-null"}
 // CHECK: [[META7]] = !{!"bounds-safety-check-one-past-end-overflow"}
 // CHECK: [[META8]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// CHECK: [[META9]] = !{!"bounds-safety-check-flexible-count-gt-bounds"}
-// CHECK: [[TBAA10]] = !{[[META11:![0-9]+]], [[META16:![0-9]+]], i64 8}
-// CHECK: [[META11]] = !{!"Inner", [[META12:![0-9]+]], i64 0, [[META16]], i64 8}
-// CHECK: [[META12]] = !{!"p1 int", [[META13:![0-9]+]], i64 0}
-// CHECK: [[META13]] = !{!"any pointer", [[META14:![0-9]+]], i64 0}
-// CHECK: [[META14]] = !{!"omnipotent char", [[META15:![0-9]+]], i64 0}
-// CHECK: [[META15]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[META16]] = !{!"int", [[META14]], i64 0}
-// CHECK: [[TBAA17]] = !{[[META11]], [[META12]], i64 0}
+// CHECK: [[PROF9]] = !{!"branch_weights", i32 12286, i32 -12288}
+// CHECK: [[META10]] = !{!"bounds-safety-check-flexible-count-gt-bounds"}
+// CHECK: [[PROF11]] = !{!"branch_weights", i32 -8193, i32 8190}
+// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META18:![0-9]+]], i64 8}
+// CHECK: [[META13]] = !{!"Inner", [[META14:![0-9]+]], i64 0, [[META18]], i64 8}
+// CHECK: [[META14]] = !{!"p1 int", [[META15:![0-9]+]], i64 0}
+// CHECK: [[META15]] = !{!"any pointer", [[META16:![0-9]+]], i64 0}
+// CHECK: [[META16]] = !{!"omnipotent char", [[META17:![0-9]+]], i64 0}
+// CHECK: [[META17]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[META18]] = !{!"int", [[META16]], i64 0}
+// CHECK: [[TBAA19]] = !{[[META13]], [[META14]], i64 0}
 //.

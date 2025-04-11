@@ -109,7 +109,7 @@ void caller_6(int *__counted_by(len) p, int len) {
 // CHECK-NEXT:    [[CMP51:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META3]]
 // CHECK-NEXT:    [[CMP54:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META3]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP54]], [[CMP51]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT]], label [[TRAP]], !annotation [[META3]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT]], label [[TRAP]], !prof [[PROF11:![0-9]+]], !annotation [[META3]]
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META3]]
 // CHECK-NEXT:    unreachable, !annotation [[META3]]
@@ -127,7 +127,7 @@ void caller_7(int *__bidi_indexable p, int len) {
 // CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META3]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = icmp ult i32 [[LEN]], 2
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL_NOT]], [[SPEC_SELECT]], !annotation [[META3]]
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT:%.*]], label [[TRAP:%.*]], !annotation [[META3]]
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF12:![0-9]+]], !annotation [[META3]]
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META3]]
 // CHECK-NEXT:    unreachable, !annotation [[META3]]
@@ -157,9 +157,9 @@ void caller_9(int *__counted_by(*len) *out, int *len){
 // CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[P:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[COUNT]]) #[[ATTR5]]
-// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4, !annotation [[META11:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4, !annotation [[META13:![0-9]+]]
 // CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr nonnull [[P]]) #[[ATTR5]]
-// CHECK-NEXT:    store ptr null, ptr [[P]], align 8, !annotation [[META11]]
+// CHECK-NEXT:    store ptr null, ptr [[P]], align 8, !annotation [[META13]]
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[P]], ptr noundef nonnull [[COUNT]]) #[[ATTR5]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P]], align 8, !tbaa [[TBAA4]]
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ne ptr [[TMP0]], null, !annotation [[META2]]
@@ -168,15 +168,15 @@ void caller_9(int *__counted_by(*len) *out, int *len){
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = select i1 [[DOTNOT]], i1 [[CMP_NOT83]], i1 false, !annotation [[META3]]
 // CHECK-NEXT:    br i1 [[CMP_NOT]], label [[TRAP:%.*]], label [[LAND_RHS:%.*]], !annotation [[META3]]
 // CHECK:       trap:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META12:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META12]]
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR6]], !annotation [[META14:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META14]]
 // CHECK:       land.rhs:
 // CHECK-NEXT:    br i1 [[DOTNOT]], label [[LOR_RHS:%.*]], label [[CONT60:%.*]], !annotation [[META3]]
 // CHECK:       lor.rhs:
 // CHECK-NEXT:    [[CMP54:%.*]] = icmp sge i32 [[TMP1]], [[LEN]], !annotation [[META3]]
 // CHECK-NEXT:    [[CMP57:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META3]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP57]], [[CMP54]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT60]], label [[TRAP]], !annotation [[META3]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label [[CONT60]], label [[TRAP]], !prof [[PROF11]], !annotation [[META3]]
 // CHECK:       cont60:
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr nonnull [[P]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[COUNT]]) #[[ATTR5]]
@@ -201,6 +201,8 @@ int *__counted_by_or_null(len) caller_10(int len) {
 // CHECK: [[META8]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META9]] = !{!"bounds-safety-generic", [[META10:![0-9]+]]}
 // CHECK: [[META10]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
-// CHECK: [[META11]] = !{!"bounds-safety-zero-init"}
-// CHECK: [[META12]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
+// CHECK: [[PROF11]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[PROF12]] = !{!"branch_weights", i32 2097151, i32 1}
+// CHECK: [[META13]] = !{!"bounds-safety-zero-init"}
+// CHECK: [[META14]] = !{!"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound", !"bounds-safety-generic"}
 //.

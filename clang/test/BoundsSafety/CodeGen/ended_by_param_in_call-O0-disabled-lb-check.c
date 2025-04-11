@@ -63,7 +63,7 @@ void ended_by(const char *__ended_by(end) start, const char *end);
 // CHECK-NEXT:    [[WIDE_PTR_LB_ADDR10:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP5]], i32 0, i32 2, !annotation [[META2]]
 // CHECK-NEXT:    [[WIDE_PTR_LB11:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR10]], align 8, !annotation [[META2]]
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ule ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_PTR7]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -185,7 +185,7 @@ void pass_const_size_arr_in_bounds(void) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP25:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP30]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP25]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP25]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -293,7 +293,7 @@ void pass_const_size_arr_start_oob(void) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP16:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP28]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP16]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP16]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -349,13 +349,13 @@ void pass_const_size_arr_end_oob(void) {
 // CHECK-NEXT:    [[WIDE_PTR_PTR:%.*]] = load ptr, ptr [[WIDE_PTR_PTR_ADDR]], align 8
 // CHECK-NEXT:    [[WIDE_PTR_UB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 1
 // CHECK-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
-// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2, !annotation [[META3:![0-9]+]]
-// CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8, !annotation [[META3]]
-// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META3]]
+// CHECK-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2, !annotation [[META4:![0-9]+]]
+// CHECK-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8, !annotation [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = icmp uge ptr [[WIDE_PTR_PTR]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// CHECK-NEXT:    br i1 [[TMP3]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META4]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META3]]
-// CHECK-NEXT:    unreachable, !annotation [[META3]]
+// CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META4]]
+// CHECK-NEXT:    unreachable, !annotation [[META4]]
 // CHECK:       [[CONT]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.indexable", ptr [[ILOCAL]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[WIDE_PTR_PTR]], ptr [[TMP4]], align 8
@@ -433,7 +433,7 @@ void pass_const_size_arr_end_oob(void) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP22:%.*]] = phi i1 [ false, %[[CONT]] ], [ [[CMP41]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP22]], label %[[CONT43:.*]], label %[[TRAP42:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP22]], label %[[CONT43:.*]], label %[[TRAP42:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP42]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -535,7 +535,7 @@ void pass_explicit_indexable(void) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP26]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -635,7 +635,7 @@ void pass_explict_bidi_indexable(void) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP26]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP13]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -751,7 +751,7 @@ void pass_ended_by(char* __ended_by(end) start, const char* end) {
 // CHECK-NEXT:    br label %[[LAND_END]], !annotation [[META2]]
 // CHECK:       [[LAND_END]]:
 // CHECK-NEXT:    [[TMP21:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[CMP28]], %[[LAND_RHS]] ], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[TMP21]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[TMP21]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR4]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -778,5 +778,6 @@ void pass_counted_by(char* __counted_by(count) start, int count) {
 }
 //.
 // CHECK: [[META2]] = !{!"bounds-safety-generic"}
-// CHECK: [[META3]] = !{!"bounds-safety-check-bidi-to-indexable-ptr-ge-lower-bound"}
+// CHECK: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[META4]] = !{!"bounds-safety-check-bidi-to-indexable-ptr-ge-lower-bound"}
 //.

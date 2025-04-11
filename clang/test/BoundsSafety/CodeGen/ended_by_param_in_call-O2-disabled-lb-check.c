@@ -31,7 +31,7 @@ void pass_const_size_arr_in_bounds(void) {
 // CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds nuw i8, ptr [[LOCAL]], i64 10
 // CHECK-NEXT:    [[BOUND_PTR_ARITH:%.*]] = getelementptr i8, ptr [[LOCAL]], i64 -2
 // CHECK-NEXT:    [[CMP30_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP30_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP30_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
@@ -55,7 +55,7 @@ void pass_const_size_arr_start_oob(void) {
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[BOUND_PTR_ARITH]], [[UPPER]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp ugt ptr [[LOCAL]], [[BOUND_PTR_ARITH]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[CMP_NOT]], [[CMP28_NOT]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
@@ -105,7 +105,7 @@ void pass_explict_bidi_indexable(void) {
 // CHECK-SAME: ptr noundef [[START:%.*]], ptr noundef [[END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP26_NOT:%.*]] = icmp ugt ptr [[START]], [[END]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP26_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP26_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
@@ -121,7 +121,7 @@ void pass_ended_by(char* __ended_by(end) start, const char* end) {
 // CHECK-SAME: ptr noundef [[START:%.*]], i32 noundef [[COUNT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP28_NOT:%.*]] = icmp slt i32 [[COUNT]], 0, !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP28_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP28_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}

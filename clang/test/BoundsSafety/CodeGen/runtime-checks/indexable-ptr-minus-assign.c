@@ -20,7 +20,7 @@ int main() {
 // CHECK: define{{.*}} i32 @foo({{.*}})
 // ...
 // CHECK: %[[UGE_RES:[0-9]+]] = icmp uge i64 {{%.*}}, {{%.*}}, !annotation ![[ANNOT_NEW_IDX_GE_OLD:[0-9]+]]
-// CHECK: br i1 %[[UGE_RES]], label %{{[a-z0-9]+}}, label %[[LABEL_TRAP:[a-z0-9]+]], !annotation ![[ANNOT_NEW_IDX_GE_OLD]]
+// CHECK: br i1 %[[UGE_RES]], label %{{[a-z0-9]+}}, label %[[LABEL_TRAP:[a-z0-9]+]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation ![[ANNOT_NEW_IDX_GE_OLD]]
 // CHECK: [[LABEL_TRAP]]
 // CHECK-NEXT:   call void @llvm.ubsantrap{{.*}} !annotation ![[ANNOT_NEW_IDX_GE_OLD]]
 // ...

@@ -72,7 +72,7 @@ void receive_transparent_union(union TransparentUnion);
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3:![0-9]+]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -105,7 +105,7 @@ void assign_via_ptr(struct eb* ptr,
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -136,7 +136,7 @@ void assign_operator(char* __bidi_indexable new_start, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -165,7 +165,7 @@ void local_var_init(char* __bidi_indexable new_start, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -199,7 +199,7 @@ void call_arg(char* __bidi_indexable new_start, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -232,7 +232,7 @@ struct eb return_eb(char* __bidi_indexable new_start, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -250,7 +250,7 @@ void construct_not_used(char* __bidi_indexable new_start, char* new_end) {
 // CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[NEW_END]], inttoptr (i64 1 to ptr), !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -283,7 +283,7 @@ void assign_via_ptr_nullptr(struct eb* ptr, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -292,7 +292,7 @@ void assign_via_ptr_nullptr(struct eb* ptr, char* new_end) {
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9:![0-9]+]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -321,7 +321,7 @@ void assign_via_ptr_nested(struct nested_eb* ptr,
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -330,7 +330,7 @@ void assign_via_ptr_nested(struct nested_eb* ptr,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -359,7 +359,7 @@ void assign_via_ptr_nested_v2(struct nested_eb* ptr,
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT42:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT42:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -368,7 +368,7 @@ void assign_via_ptr_nested_v2(struct nested_eb* ptr,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_5_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 24
@@ -405,14 +405,14 @@ void assign_via_ptr_nested_v3(struct nested_and_outer_eb* ptr,
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META10:![0-9]+]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META11:![0-9]+]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    store ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], ptr [[ARR]], align 8, !tbaa [[TBAA11:![0-9]+]]
+// CHECK-NEXT:    store ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], ptr [[ARR]], align 8, !tbaa [[TBAA12:![0-9]+]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 8
-// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA13:![0-9]+]]
+// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA14:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_eb_arr(ptr noundef nonnull [[ARR]]) #[[ATTR6]]
@@ -443,7 +443,7 @@ void array_of_struct_init(char* __bidi_indexable new_start, char* new_end) {
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -453,7 +453,7 @@ void array_of_struct_init(char* __bidi_indexable new_start, char* new_end) {
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -473,7 +473,7 @@ void assign_via_ptr_other_data_side_effect(struct eb_with_other_data* ptr,
 // CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[NEW_END]], inttoptr (i64 1 to ptr), !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -483,7 +483,7 @@ void assign_via_ptr_other_data_side_effect(struct eb_with_other_data* ptr,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -514,16 +514,16 @@ void assign_via_ptr_other_data_side_effect_zero_ptr(struct eb_with_other_data* p
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    store ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA14:![0-9]+]]
+// CHECK-NEXT:    store ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA15:![0-9]+]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
-// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA16:![0-9]+]]
+// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA17:![0-9]+]]
 // CHECK-NEXT:    [[OTHER:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA17:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA18:![0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR6]]
@@ -556,7 +556,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 // CHECK:       [[LAND_RHS]]:
 // CHECK-NEXT:    [[AGG_TEMP5_SROA_1_0_COPYLOAD:%.*]] = load ptr, ptr [[AGG_TEMP_SROA_2_0_NEW_START_SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[CMP15_NOT:%.*]] = icmp ugt ptr [[AGG_TEMP5_SROA_1_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP15_NOT]], label %[[TRAP]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -568,7 +568,7 @@ void call_arg_transparent_union(char* __bidi_indexable new_start,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0_BYVAL_TEMP_SROA_IDX]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA18:![0-9]+]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA19:![0-9]+]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
@@ -718,7 +718,7 @@ void construct_not_used_from_eb(char* __ended_by(new_end) new_start, char* new_e
 // CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[NEW_END]], inttoptr (i64 1 to ptr), !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -749,7 +749,7 @@ void assign_via_ptr_nullptr_from_eb(struct eb* ptr, char* new_end) {
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -776,7 +776,7 @@ void assign_via_ptr_nested_from_eb(struct nested_eb* ptr,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -798,12 +798,12 @@ void assign_via_ptr_nested_v2_from_eb(struct nested_eb* ptr,
 // CHECK-NEXT:    [[CMP19_NOT:%.*]] = icmp ugt ptr [[NEW_START]], [[NEW_END]], !annotation [[META2]]
 // CHECK-NEXT:    br i1 [[CMP19_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META10]]
-// CHECK-NEXT:    unreachable, !annotation [[META10]]
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META11]]
+// CHECK-NEXT:    unreachable, !annotation [[META11]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    store ptr [[NEW_START]], ptr [[ARR]], align 8, !tbaa [[TBAA11]]
+// CHECK-NEXT:    store ptr [[NEW_START]], ptr [[ARR]], align 8, !tbaa [[TBAA12]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 8
-// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA13]]
+// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA14]]
 // CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds nuw i8, ptr [[ARR]], i64 16
 // CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[ARRAYINIT_ELEMENT]], i8 0, i64 16, i1 false)
 // CHECK-NEXT:    call void @consume_eb_arr(ptr noundef nonnull [[ARR]]) #[[ATTR6]]
@@ -833,7 +833,7 @@ void array_of_struct_init_from_eb(char* __ended_by(new_end) new_start, char* new
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -853,7 +853,7 @@ void assign_via_ptr_other_data_side_effect_from_eb(struct eb_with_other_data* pt
 // CHECK-SAME: ptr noundef writeonly captures(none) [[PTR:%.*]], ptr noundef [[NEW_END:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp ugt ptr [[NEW_END]], inttoptr (i64 1 to ptr), !annotation [[META2]]
-// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[CMP_NOT]], label %[[TRAP:.*]], label %[[CONT:.*]], !prof [[PROF8]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -863,7 +863,7 @@ void assign_via_ptr_other_data_side_effect_from_eb(struct eb_with_other_data* pt
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
 // CHECK-NEXT:    store ptr [[NEW_END]], ptr [[DOTCOMPOUNDLITERAL_SROA_2_0__SROA_IDX]], align 8, !tbaa [[TBAA3]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 16
-// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA8]]
+// CHECK-NEXT:    store i32 [[CALL]], ptr [[DOTCOMPOUNDLITERAL_SROA_3_0__SROA_IDX]], align 8, !tbaa [[TBAA9]]
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0__SROA_IDX]], align 4
 // CHECK-NEXT:    ret void
@@ -888,11 +888,11 @@ void assign_via_ptr_other_data_side_effect_zero_ptr_from_eb(struct eb_with_other
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR5]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
 // CHECK:       [[CONT]]:
-// CHECK-NEXT:    store ptr [[NEW_START]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA14]]
+// CHECK-NEXT:    store ptr [[NEW_START]], ptr [[AGG_TMP]], align 8, !tbaa [[TBAA15]]
 // CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 8
-// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA16]]
+// CHECK-NEXT:    store ptr [[NEW_END]], ptr [[END]], align 8, !tbaa [[TBAA17]]
 // CHECK-NEXT:    [[OTHER:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 16
-// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA17]]
+// CHECK-NEXT:    store i32 0, ptr [[OTHER]], align 8, !tbaa [[TBAA18]]
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[AGG_TMP]], i64 20
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[AGG_TMP]]) #[[ATTR6]]
@@ -926,7 +926,7 @@ void call_arg_transparent_union_from_eb(char* __ended_by(new_end) new_start,
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_3_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 16
 // CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_3_0_BYVAL_TEMP_SROA_IDX]], align 8
 // CHECK-NEXT:    [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX:%.*]] = getelementptr inbounds nuw i8, ptr [[BYVAL_TEMP]], i64 20
-// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA18]]
+// CHECK-NEXT:    store i32 0, ptr [[DOTCOMPOUNDLITERAL_SROA_4_0_BYVAL_TEMP_SROA_IDX]], align 4, !tbaa [[TBAA19]]
 // CHECK-NEXT:    call void @receive_transparent_union(ptr noundef nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 24, ptr nonnull [[BYVAL_TEMP]]) #[[ATTR6]]
 // CHECK-NEXT:    ret void
@@ -951,15 +951,16 @@ void call_arg_transparent_union_untransparently_from_eb(
 // CHECK: [[META5]] = !{!"any pointer", [[META6:![0-9]+]], i64 0}
 // CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
 // CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-// CHECK: [[META9]] = !{!"int", [[META6]], i64 0}
-// CHECK: [[META10]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
-// CHECK: [[TBAA11]] = !{[[META12:![0-9]+]], [[META4]], i64 0}
-// CHECK: [[META12]] = !{!"eb", [[META4]], i64 0, [[META4]], i64 8}
-// CHECK: [[TBAA13]] = !{[[META12]], [[META4]], i64 8}
-// CHECK: [[TBAA14]] = !{[[META15:![0-9]+]], [[META4]], i64 0}
-// CHECK: [[META15]] = !{!"eb_with_other_data", [[META4]], i64 0, [[META4]], i64 8, [[META9]], i64 16}
-// CHECK: [[TBAA16]] = !{[[META15]], [[META4]], i64 8}
-// CHECK: [[TBAA17]] = !{[[META15]], [[META9]], i64 16}
-// CHECK: [[TBAA18]] = !{[[META6]], [[META6]], i64 0}
+// CHECK: [[PROF8]] = !{!"branch_weights", i32 1, i32 1048575}
+// CHECK: [[TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"int", [[META6]], i64 0}
+// CHECK: [[META11]] = !{!"bounds-safety-generic", !"bounds-safety-check-ptr-lt-upper-bound", !"bounds-safety-check-ptr-ge-lower-bound"}
+// CHECK: [[TBAA12]] = !{[[META13:![0-9]+]], [[META4]], i64 0}
+// CHECK: [[META13]] = !{!"eb", [[META4]], i64 0, [[META4]], i64 8}
+// CHECK: [[TBAA14]] = !{[[META13]], [[META4]], i64 8}
+// CHECK: [[TBAA15]] = !{[[META16:![0-9]+]], [[META4]], i64 0}
+// CHECK: [[META16]] = !{!"eb_with_other_data", [[META4]], i64 0, [[META4]], i64 8, [[META10]], i64 16}
+// CHECK: [[TBAA17]] = !{[[META16]], [[META4]], i64 8}
+// CHECK: [[TBAA18]] = !{[[META16]], [[META10]], i64 16}
+// CHECK: [[TBAA19]] = !{[[META6]], [[META6]], i64 0}
 //.

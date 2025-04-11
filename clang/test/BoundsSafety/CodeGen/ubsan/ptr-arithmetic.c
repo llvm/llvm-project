@@ -17,7 +17,7 @@ int main() {
     int *ptr = &arr[v];
 // RECOVER: call void @__ubsan_handle_out_of_bounds
 
-// TRAP: br {{.*}} label %[[LABEL_TRAP:[a-z0-9]+]], !nosanitize
+// TRAP: br {{.*}} label %[[LABEL_TRAP:[a-z0-9]+]], !prof ![[PROFILE_METADATA:[0-9]+]], !nosanitize
 // TRAP: [[LABEL_TRAP]]:
 // TRAP-NEXT:  call void @llvm.ubsantrap(i8 {{.*}}) #{{.*}}, !nosanitize
 

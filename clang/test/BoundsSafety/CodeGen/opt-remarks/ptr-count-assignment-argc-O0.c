@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 // IR: store i32 %[[ARGC_LOAD1]], ptr %[[COUNT_RT_ALLOCA:[a-z0-9._]+]], align 4, !dbg ![[LOC_10_9:[0-9]+]]
 // IR: %[[COUNT_RT_LOAD:[a-z0-9._]+]] = load i32, ptr %[[COUNT_RT_ALLOCA]], align 4, !dbg ![[LOC_12_16:[0-9]+]]
 // IR: icmp eq i32 %[[COUNT_RT_LOAD]], 0, !dbg ![[LOC_11_44:[0-9]+]], !annotation ![[NEW_COUNT_POSITIVE:[a-z0-9]+]]
-// IR: br i1 {{.*}}, label %[[LABEL_CONT:cont]], label %[[LABEL_TRAP:trap]], !dbg ![[LOC_11_44]], !annotation ![[NEW_COUNT_POSITIVE]]
+// IR: br i1 {{.*}}, label %[[LABEL_CONT:cont]], label %[[LABEL_TRAP:trap]], !dbg ![[LOC_11_44]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation ![[NEW_COUNT_POSITIVE]]
 // ...
 // IR: [[LABEL_TRAP]]:
 // IR: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[TRAP_LOC_11_44:[0-9]+]], !annotation ![[NEW_COUNT_POSITIVE]]
@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
 // IR: [[MAIN_LABEL_TRAP_RES]]:
 // IR: %[[TRAP_RES:[a-z0-9_]+]] = phi i1 [ false, %[[MAIN_LABEL_CONT]] ], [ false, %[[LABEL_CONT]] ], [ %[[TRAP_RES2]], %[[MAIN_LABEL_TRAP_RES2]] ], !dbg ![[TRAP_LOC_MISSING:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT:[0-9]+]]
-// IR: br i1 %[[TRAP_RES]], label {{.*}}, label %[[MAIN_LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_12_5]], !annotation ![[ANNOT_CONV_TO_COUNT]]
+// IR: br i1 %[[TRAP_RES]], label {{.*}}, label %[[MAIN_LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_12_5]], !prof ![[PROFILE_METADATA]], !annotation ![[ANNOT_CONV_TO_COUNT]]
 
 // IR: [[MAIN_LABEL_TRAP]]:
 // IR: call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[TRAP_LOC_12_14:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT]]

@@ -27,14 +27,14 @@ void bar(struct s *p);
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[BUF]], [[TMP1]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT49:%.*]] = icmp ugt ptr [[TMP1]], [[ADD_PTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[DOTNOT]], i1 true, i1 [[DOTNOT49]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[TRAP:%.*]], label [[CONT27:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[TRAP:%.*]], label [[CONT27:%.*]], !prof [[PROF6:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont27:
 // CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[BUF]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_COUNT_MINUS:%.*]] = icmp sgt i32 [[TMP2]], -1, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[FLEX_COUNT_MINUS]], label [[CONT30:%.*]], label [[TRAP]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[FLEX_COUNT_MINUS]], label [[CONT30:%.*]], label [[TRAP]], !prof [[PROF13:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont30:
 // CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i64 [[IDX_EXT]], -4, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[FLEX_AVAIL_COUNT_DIV:%.*]] = ashr exact i64 [[GEPDIFF]], 2, {{!annotation ![0-9]+}}
@@ -42,7 +42,7 @@ void bar(struct s *p);
 // CHECK-NEXT:    [[FLEX_COUNT_CHECK_NOT:%.*]] = icmp ult i64 [[FLEX_AVAIL_COUNT_DIV]], [[FLEX_COUNT_INTPTR]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[DOTNOT50:%.*]] = icmp eq i32 [[SIZE]], 0, {{!annotation ![0-9]+}}
 // CHECK-NEXT:    [[OR_COND52:%.*]] = or i1 [[DOTNOT50]], [[FLEX_COUNT_CHECK_NOT]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND52]], label [[TRAP]], label [[CONT40]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND52]], label [[TRAP]], label [[CONT40]], !prof [[PROF17:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       cont40:
 // CHECK-NEXT:    tail call void @bar(ptr noundef [[BUF]]) #[[ATTR4:[0-9]+]]
 // CHECK-NEXT:    ret void

@@ -28,7 +28,7 @@ struct Outer {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[ADD_PTR]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[FAM]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[TMP2]], [[TMP1]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP:%.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT8:%.*]], label [[TRAP:%.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2:[0-9]+]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
@@ -55,7 +55,7 @@ char access(struct Outer *bar, int index) {
 // CHECK:       flex.base.nonnull:
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], i64 8
 // CHECK-NEXT:    [[DOTNOT:%.*]] = icmp ugt ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[TMP0]], !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[DOTNOT]], label [[TRAP:%.*]], label [[CONT:%.*]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR2]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    unreachable, !annotation {{![0-9]+}}
@@ -63,7 +63,7 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ule ptr [[TMP0]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[AGG_TEMP1_SROA_3_0_COPYLOAD]], [[AGG_TEMP1_SROA_0_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 false, !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT18:%.*]], label [[TRAP]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND]], label [[CONT18:%.*]], label [[TRAP]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       cont18:
 // CHECK-NEXT:    [[FLEX_COUNT_MINUS:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[UPPER_INTPTR:%.*]] = ptrtoint ptr [[AGG_TEMP1_SROA_2_0_COPYLOAD]] to i64, !annotation {{![0-9]+}}
@@ -74,7 +74,7 @@ char access(struct Outer *bar, int index) {
 // CHECK-NEXT:    [[OR_COND49:%.*]] = select i1 [[FLEX_COUNT_MINUS]], i1 [[FLEX_COUNT_CHECK]], i1 false, !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[AGG_TEMP1_SROA_0_0_COPYLOAD]], [[AGG_TEMP1_SROA_2_0_COPYLOAD]], !annotation {{![0-9]+}}
 // CHECK-NEXT:    [[OR_COND60:%.*]] = select i1 [[OR_COND49]], i1 [[TMP3]], i1 false, !annotation {{![0-9]+}}
-// CHECK-NEXT:    br i1 [[OR_COND60]], label [[BOUNDSCHECK_CONT:%.*]], label [[TRAP]], !annotation {{![0-9]+}}
+// CHECK-NEXT:    br i1 [[OR_COND60]], label [[BOUNDSCHECK_CONT:%.*]], label [[TRAP]], !prof {{![0-9]+}}, !annotation {{![0-9]+}}
 // CHECK:       boundscheck.cont.thread:
 // CHECK-NEXT:    store i32 [[LEN]], ptr inttoptr (i64 4 to ptr), align 4, !tbaa {{![0-9]+}}
 // CHECK-NEXT:    br label [[CONT46:%.*]]

@@ -8,11 +8,11 @@
 // CHECK-LABEL: @foo1(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4:[0-9]+]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
 // CHECK-NEXT:    store i32 40, ptr [[SIZE]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
@@ -24,11 +24,11 @@ void foo1(int *__sized_by(*size) buf, unsigned *size) {
 // CHECK-LABEL: @foo2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
 // CHECK-NEXT:    store i32 40, ptr [[SIZE]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
@@ -41,11 +41,11 @@ void foo2(int *__sized_by(*size) buf, unsigned *size) {
 // CHECK-LABEL: @bar1(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
 // CHECK-NEXT:    store i32 8, ptr [[SIZE]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    ret void
@@ -59,11 +59,11 @@ bb:
 // CHECK-LABEL: @bar2(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
-// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    [[CMP33:%.*]] = icmp ugt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 // CHECK:       cont:
 // CHECK-NEXT:    store i32 40, ptr [[SIZE]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    br label [[TRAP]]
@@ -78,8 +78,8 @@ inline void baz1(int *__sized_by(*size) buf, unsigned *size) { *size = 64; }
 
 // CHECK-LABEL: @baz2(
 // CHECK-NEXT:  trap.i:
-// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR4]], {{!annotation ![0-9]+}}
-// CHECK-NEXT:    unreachable
+// CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
 //
 void baz2(void) {
   int arr[10];

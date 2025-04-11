@@ -36,14 +36,14 @@ void convert(const char* __indexable str) {
 // Note: We use the `OPT_REMARK` to make sure we match against the correct branch.
 // Unfortunately `SRC_LOC` is not enough because it isn't unique.
 
-// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_0:[a-z0-9]+]], !dbg [[SRC_LOC_0]], !annotation [[OPT_REMARK_0]]
+// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_0:[a-z0-9]+]], !dbg [[SRC_LOC_0]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation [[OPT_REMARK_0]]
 // CHECK: [[TRAP_LABEL_0]]:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 25) {{.*}}!dbg [[TRAP_LOC_0]]
 
-// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_1:[a-z0-9]+]], !dbg [[SRC_LOC_1]], !annotation [[OPT_REMARK_1]]
+// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_1:[a-z0-9]+]], !dbg [[SRC_LOC_1]], !prof ![[PROFILE_METADATA]], !annotation [[OPT_REMARK_1]]
 // CHECK: [[TRAP_LABEL_1]]:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 25) {{.*}}!dbg [[TRAP_LOC_1]]
 
-// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_2:[a-z0-9]+]], !dbg [[SRC_LOC_2]], !annotation [[OPT_REMARK_2]]
+// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL_2:[a-z0-9]+]], !dbg [[SRC_LOC_2]], !prof ![[PROFILE_METADATA]], !annotation [[OPT_REMARK_2]]
 // CHECK: [[TRAP_LABEL_2]]:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 25) {{.*}}!dbg [[TRAP_LOC_2]]

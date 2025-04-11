@@ -19,14 +19,14 @@ int main() {
 // IR-LABEL: @foo
 // ...
 // IR: icmp ult {{.*}} !dbg ![[LOC_10_14:[0-9]+]], !annotation ![[ANNOT_LT_UB:[0-9]+]]
-// IR: br i1 %{{[0-9]+}}, label %[[FOO_LABEL_CONT:[a-z0-9]+]], label %[[FOO_LABEL_TRAP:[a-z0-9]+]], !dbg ![[LOC_10_14]], !annotation ![[ANNOT_LT_UB]]
+// IR: br i1 %{{[0-9]+}}, label %[[FOO_LABEL_CONT:[a-z0-9]+]], label %[[FOO_LABEL_TRAP:[a-z0-9]+]], !dbg ![[LOC_10_14]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation ![[ANNOT_LT_UB]]
 // ...
 // IR: [[FOO_LABEL_TRAP]]:
 // IR:   call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[LT_TRAP_LOC_10_14:[0-9]+]], !annotation ![[ANNOT_LT_UB]]
 // IR-NEXT: unreachable, !dbg ![[LT_TRAP_LOC_10_14]], !annotation ![[ANNOT_LT_UB]]
 // ...
 // IR: [[FOO_LABEL_CONT]]:
-// IR:   br i1 %{{[0-9]+}}, label %{{[a-z0-9]+}}, label %[[FOO_LABEL_TRAP2:[a-z0-9]+]], !dbg ![[LOC_10_14]], !annotation ![[ANNOT_GE_LB:[0-9]+]]
+// IR:   br i1 %{{[0-9]+}}, label %{{[a-z0-9]+}}, label %[[FOO_LABEL_TRAP2:[a-z0-9]+]], !dbg ![[LOC_10_14]], !prof ![[PROFILE_METADATA]], !annotation ![[ANNOT_GE_LB:[0-9]+]]
 // ...
 // IR: [[FOO_LABEL_TRAP2]]:
 // IR:   call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[GT_TRAP_LOC_10_14:[0-9]+]], !annotation ![[ANNOT_GE_LB]]
@@ -52,7 +52,7 @@ int main() {
 
 // IR: [[MAIN_LABEL_TRAP_RES]]:
 // IR: %[[TRAP_RES:[a-z0-9_]+]] = phi i1 [ false, %[[MAIN_LABEL_CONT]] ], [ false, %entry ], [ %[[WIDTH_CHECK_RES]], %[[MAIN_LABEL_CONT2]] ], !dbg ![[TRAP_LOC_MISSING:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT:[0-9]+]]
-// IR: br i1 %[[TRAP_RES]], label {{.*}}, label %[[MAIN_LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_16_5]], !annotation ![[ANNOT_CONV_TO_COUNT]]
+// IR: br i1 %[[TRAP_RES]], label {{.*}}, label %[[MAIN_LABEL_TRAP:[a-z0-9.]+]], !dbg ![[LOC_16_5]], !prof ![[PROFILE_METADATA]], !annotation ![[ANNOT_CONV_TO_COUNT]]
 
 // IR: [[MAIN_LABEL_TRAP]]:
 // IR:   call void @llvm.ubsantrap(i8 25) #{{[0-9]+}}, !dbg ![[TRAP_LOC_16_5:[0-9]+]], !annotation ![[ANNOT_CONV_TO_COUNT]]

@@ -35,6 +35,6 @@ int* TYPE operation(Data_t* TYPE d) {
 // CHECK-LABEL: @operation
 // Note: We use the `OPT_REMARK` to make sure we match against the correct branch.
 // Unfortunately `SRC_LOC` is not enough because it isn't unique.
-// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL:[a-z0-9]+]], !dbg [[SRC_LOC]], !annotation [[OPT_REMARK]]
+// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL:[a-z0-9]+]], !dbg [[SRC_LOC]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation [[OPT_REMARK]]
 // CHECK: [[TRAP_LABEL]]:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 25) {{.*}}!dbg [[TRAP_LOC]]

@@ -41,7 +41,7 @@ int * __counted_by_or_null(len) foo(int * __bidi_indexable p, int len) {
 // CHECK-NEXT:    [[CMP34:%.*]] = icmp sge i64 [[SUB_PTR_DIV]], [[CONV]], !annotation [[META2]]
 // CHECK-NEXT:    [[CMP37:%.*]] = icmp sgt i32 [[LEN]], -1, !annotation [[META2]]
 // CHECK-NEXT:    [[SPEC_SELECT:%.*]] = and i1 [[CMP37]], [[CMP34]]
-// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT]], label %[[TRAP]], !annotation [[META2]]
+// CHECK-NEXT:    br i1 [[SPEC_SELECT]], label %[[CONT]], label %[[TRAP]], !prof [[PROF10:![0-9]+]], !annotation [[META2]]
 // CHECK:       [[TRAP]]:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR7:[0-9]+]], !annotation [[META2]]
 // CHECK-NEXT:    unreachable, !annotation [[META2]]
@@ -56,7 +56,7 @@ void foo_assign(int * __bidi_indexable p, int len) {
 // CHECK-LABEL: define dso_local void @bar(
 // CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(%"__bounds_safety::wide_ptr.bidi_indexable") align 8 captures(none) initializes((0, 24)) [[AGG_RESULT:%.*]], ptr noundef [[P:%.*]], i32 noundef [[LEN:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META10:![0-9]+]]
+// CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq ptr [[P]], null, !annotation [[META11:![0-9]+]]
 // CHECK-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[LEN]] to i64
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[IDX_EXT]]
 // CHECK-NEXT:    [[ADD_PTR_SINK:%.*]] = select i1 [[DOTNOT]], ptr null, ptr [[ADD_PTR]]
@@ -132,5 +132,6 @@ int *__bidi_indexable null_count_too_big(void) {
 // CHECK: [[META7]] = !{!"Simple C/C++ TBAA"}
 // CHECK: [[META8]] = !{!"bounds-safety-generic", [[META9:![0-9]+]]}
 // CHECK: [[META9]] = !{!"bounds-safety-missed-optimization-nsw", !"Check can not be removed because the arithmetic operation might wrap in the signed sense. Optimize the check by adding conditions to check for overflow before doing the operation"}
-// CHECK: [[META10]] = !{!"bounds-safety-check-ptr-neq-null"}
+// CHECK: [[PROF10]] = !{!"branch_weights", i32 1048575, i32 1}
+// CHECK: [[META11]] = !{!"bounds-safety-check-ptr-neq-null"}
 //.

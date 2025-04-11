@@ -25,6 +25,6 @@ int* shift(int* __indexable i, int offset) {
 
 // In second copy of the file
 // CHECK-LABEL: @shift
-// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL:[a-z0-9]+]], !dbg [[SRC_LOC]], !annotation [[OPT_REMARK]]
+// CHECK: br i1 %{{.+}}, label %{{.+}}, label %[[TRAP_LABEL:[a-z0-9]+]], !dbg [[SRC_LOC]], !prof ![[PROFILE_METADATA:[0-9]+]], !annotation [[OPT_REMARK]]
 // CHECK: [[TRAP_LABEL]]:
 // CHECK-NEXT: call void @llvm.ubsantrap(i8 25) {{.*}}!dbg [[TRAP_LOC]]

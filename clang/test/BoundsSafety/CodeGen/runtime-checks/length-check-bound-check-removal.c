@@ -59,12 +59,12 @@ int access1(S *p) {
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH]], [[ADD_PTR]], !annotation [[META12:![0-9]+]]
 // CHECK-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[BOUND_PTR_ARITH]], [[TMP1]], !annotation [[META13:![0-9]+]]
 // CHECK-NEXT:    [[OR_COND35:%.*]] = and i1 [[TMP3]], [[TMP4]], !annotation [[META13]]
-// CHECK-NEXT:    br i1 [[OR_COND35]], label [[CONT22:%.*]], label [[TRAP:%.*]], !annotation [[META12]]
+// CHECK-NEXT:    br i1 [[OR_COND35]], label [[CONT22:%.*]], label [[TRAP:%.*]], !prof [[PROF14:![0-9]+]], !annotation [[META12]]
 // CHECK:       cont22:
-// CHECK-NEXT:    [[DOTNOT39:%.*]] = icmp eq ptr [[BOUND_PTR_ARITH14]], null, !annotation [[META14:![0-9]+]]
+// CHECK-NEXT:    [[DOTNOT39:%.*]] = icmp eq ptr [[BOUND_PTR_ARITH14]], null, !annotation [[META15:![0-9]+]]
 // CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[BOUND_PTR_ARITH14]], [[ADD_PTR]], !annotation [[META12]]
 // CHECK-NEXT:    [[OR_COND40:%.*]] = select i1 [[DOTNOT39]], i1 true, i1 [[TMP5]], !annotation [[META12]]
-// CHECK-NEXT:    br i1 [[OR_COND40]], label [[CONT32:%.*]], label [[TRAP]], !annotation [[META14]]
+// CHECK-NEXT:    br i1 [[OR_COND40]], label [[CONT32:%.*]], label [[TRAP]], !prof [[PROF16:![0-9]+]], !annotation [[META15]]
 // CHECK:       cont32:
 // CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[BOUND_PTR_ARITH]], align 4, !tbaa [[TBAA10]]
 // CHECK-NEXT:    tail call void @use(ptr noundef [[BOUND_PTR_ARITH14]], i32 noundef [[TMP6]]) #[[ATTR3]]

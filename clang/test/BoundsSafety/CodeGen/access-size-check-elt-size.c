@@ -25,16 +25,16 @@
 // NEW-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // NEW-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // NEW-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2:![0-9]+]]
-// NEW-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// NEW-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // NEW:       [[TRAP]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // NEW-NEXT:    unreachable, !annotation [[META2]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3:![0-9]+]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// NEW-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4:![0-9]+]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // NEW:       [[TRAP1]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// NEW-NEXT:    unreachable, !annotation [[META3]]
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// NEW-NEXT:    unreachable, !annotation [[META4]]
 // NEW:       [[CONT2]]:
 // NEW-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 // NEW-NEXT:    ret i8 [[TMP3]]
@@ -58,16 +58,16 @@
 // LEGACY-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable", ptr [[AGG_TEMP]], i32 0, i32 2
 // LEGACY-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // LEGACY-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2:![0-9]+]]
-// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3:![0-9]+]], !annotation [[META2]]
 // LEGACY:       [[TRAP]]:
 // LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], !annotation [[META2]]
 // LEGACY-NEXT:    unreachable, !annotation [[META2]]
 // LEGACY:       [[CONT]]:
-// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3:![0-9]+]]
-// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4:![0-9]+]]
+// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // LEGACY:       [[TRAP1]]:
-// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// LEGACY-NEXT:    unreachable, !annotation [[META3]]
+// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// LEGACY-NEXT:    unreachable, !annotation [[META4]]
 // LEGACY:       [[CONT2]]:
 // LEGACY-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 // LEGACY-NEXT:    ret i8 [[TMP3]]
@@ -94,24 +94,24 @@ uint8_t access_uint8(uint8_t* __bidi_indexable ptr, int idx) {
 // NEW-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // NEW-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2
 // NEW-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[ARRAYIDX]], i64 1, !annotation [[META4:![0-9]+]]
-// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[ARRAYIDX]], i64 1, !annotation [[META5:![0-9]+]]
+// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
-// NEW-NEXT:    unreachable, !annotation [[META4]]
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP1]]:
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
+// NEW:       [[CONT2]]:
+// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF3]], !annotation [[META4]]
+// NEW:       [[TRAP3]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
 // NEW-NEXT:    unreachable, !annotation [[META4]]
-// NEW:       [[CONT2]]:
-// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !annotation [[META3]]
-// NEW:       [[TRAP3]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// NEW-NEXT:    unreachable, !annotation [[META3]]
 // NEW:       [[CONT4]]:
 // NEW-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 // NEW-NEXT:    ret i16 [[TMP5]]
@@ -135,16 +135,16 @@ uint8_t access_uint8(uint8_t* __bidi_indexable ptr, int idx) {
 // LEGACY-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.0", ptr [[AGG_TEMP]], i32 0, i32 2
 // LEGACY-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // LEGACY-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2]]
-// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // LEGACY:       [[TRAP]]:
 // LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // LEGACY-NEXT:    unreachable, !annotation [[META2]]
 // LEGACY:       [[CONT]]:
-// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // LEGACY:       [[TRAP1]]:
-// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// LEGACY-NEXT:    unreachable, !annotation [[META3]]
+// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// LEGACY-NEXT:    unreachable, !annotation [[META4]]
 // LEGACY:       [[CONT2]]:
 // LEGACY-NEXT:    [[TMP3:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 // LEGACY-NEXT:    ret i16 [[TMP3]]
@@ -171,24 +171,24 @@ uint16_t access_uint16(uint16_t* __bidi_indexable ptr, int idx) {
 // NEW-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // NEW-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP]], i32 0, i32 2
 // NEW-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAYIDX]], i64 1, !annotation [[META4]]
-// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[ARRAYIDX]], i64 1, !annotation [[META5]]
+// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
-// NEW-NEXT:    unreachable, !annotation [[META4]]
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP1]]:
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
+// NEW:       [[CONT2]]:
+// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF3]], !annotation [[META4]]
+// NEW:       [[TRAP3]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
 // NEW-NEXT:    unreachable, !annotation [[META4]]
-// NEW:       [[CONT2]]:
-// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !annotation [[META3]]
-// NEW:       [[TRAP3]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// NEW-NEXT:    unreachable, !annotation [[META3]]
 // NEW:       [[CONT4]]:
 // NEW-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // NEW-NEXT:    ret i32 [[TMP5]]
@@ -212,16 +212,16 @@ uint16_t access_uint16(uint16_t* __bidi_indexable ptr, int idx) {
 // LEGACY-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.1", ptr [[AGG_TEMP]], i32 0, i32 2
 // LEGACY-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // LEGACY-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2]]
-// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // LEGACY:       [[TRAP]]:
 // LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // LEGACY-NEXT:    unreachable, !annotation [[META2]]
 // LEGACY:       [[CONT]]:
-// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // LEGACY:       [[TRAP1]]:
-// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// LEGACY-NEXT:    unreachable, !annotation [[META3]]
+// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// LEGACY-NEXT:    unreachable, !annotation [[META4]]
 // LEGACY:       [[CONT2]]:
 // LEGACY-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 // LEGACY-NEXT:    ret i32 [[TMP3]]
@@ -248,24 +248,24 @@ uint32_t access_uint32(uint32_t* __bidi_indexable ptr, int idx) {
 // NEW-NEXT:    [[WIDE_PTR_UB:%.*]] = load ptr, ptr [[WIDE_PTR_UB_ADDR]], align 8
 // NEW-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.2", ptr [[AGG_TEMP]], i32 0, i32 2
 // NEW-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
-// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[ARRAYIDX]], i64 1, !annotation [[META4]]
-// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[ARRAYIDX]], i64 1, !annotation [[META5]]
+// NEW-NEXT:    [[TMP2:%.*]] = icmp ule ptr [[TMP1]], [[WIDE_PTR_UB]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
-// NEW-NEXT:    unreachable, !annotation [[META4]]
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
 // NEW:       [[CONT]]:
-// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META4]]
-// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META4]]
+// NEW-NEXT:    [[TMP3:%.*]] = icmp ule ptr [[ARRAYIDX]], [[TMP1]], !annotation [[META5]]
+// NEW-NEXT:    br i1 [[TMP3]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META5]]
 // NEW:       [[TRAP1]]:
+// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META5]]
+// NEW-NEXT:    unreachable, !annotation [[META5]]
+// NEW:       [[CONT2]]:
+// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !prof [[PROF3]], !annotation [[META4]]
+// NEW:       [[TRAP3]]:
 // NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
 // NEW-NEXT:    unreachable, !annotation [[META4]]
-// NEW:       [[CONT2]]:
-// NEW-NEXT:    [[TMP4:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// NEW-NEXT:    br i1 [[TMP4]], label %[[CONT4:.*]], label %[[TRAP3:.*]], !annotation [[META3]]
-// NEW:       [[TRAP3]]:
-// NEW-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// NEW-NEXT:    unreachable, !annotation [[META3]]
 // NEW:       [[CONT4]]:
 // NEW-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 // NEW-NEXT:    ret i64 [[TMP5]]
@@ -289,16 +289,16 @@ uint32_t access_uint32(uint32_t* __bidi_indexable ptr, int idx) {
 // LEGACY-NEXT:    [[WIDE_PTR_LB_ADDR:%.*]] = getelementptr inbounds nuw %"__bounds_safety::wide_ptr.bidi_indexable.2", ptr [[AGG_TEMP]], i32 0, i32 2
 // LEGACY-NEXT:    [[WIDE_PTR_LB:%.*]] = load ptr, ptr [[WIDE_PTR_LB_ADDR]], align 8
 // LEGACY-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[ARRAYIDX]], [[WIDE_PTR_UB]], !annotation [[META2]]
-// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !annotation [[META2]]
+// LEGACY-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[TRAP:.*]], !prof [[PROF3]], !annotation [[META2]]
 // LEGACY:       [[TRAP]]:
 // LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META2]]
 // LEGACY-NEXT:    unreachable, !annotation [[META2]]
 // LEGACY:       [[CONT]]:
-// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META3]]
-// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !annotation [[META3]]
+// LEGACY-NEXT:    [[TMP2:%.*]] = icmp uge ptr [[ARRAYIDX]], [[WIDE_PTR_LB]], !annotation [[META4]]
+// LEGACY-NEXT:    br i1 [[TMP2]], label %[[CONT2:.*]], label %[[TRAP1:.*]], !prof [[PROF3]], !annotation [[META4]]
 // LEGACY:       [[TRAP1]]:
-// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META3]]
-// LEGACY-NEXT:    unreachable, !annotation [[META3]]
+// LEGACY-NEXT:    call void @llvm.ubsantrap(i8 25) #[[ATTR3]], !annotation [[META4]]
+// LEGACY-NEXT:    unreachable, !annotation [[META4]]
 // LEGACY:       [[CONT2]]:
 // LEGACY-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 // LEGACY-NEXT:    ret i64 [[TMP3]]
@@ -309,9 +309,11 @@ uint64_t access_uint64(uint64_t* __bidi_indexable ptr, int idx) {
 
 //.
 // NEW: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// NEW: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
-// NEW: [[META4]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
+// NEW: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// NEW: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// NEW: [[META5]] = !{!"bounds-safety-check-ptr-le-upper-bound"}
 //.
 // LEGACY: [[META2]] = !{!"bounds-safety-check-ptr-lt-upper-bound"}
-// LEGACY: [[META3]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
+// LEGACY: [[PROF3]] = !{!"branch_weights", i32 1048575, i32 1}
+// LEGACY: [[META4]] = !{!"bounds-safety-check-ptr-ge-lower-bound"}
 //.

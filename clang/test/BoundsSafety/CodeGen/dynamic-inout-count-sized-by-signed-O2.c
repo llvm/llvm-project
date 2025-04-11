@@ -9,7 +9,7 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP33:%.*]] = icmp sgt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7:![0-9]+]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3:[0-9]+]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -25,7 +25,7 @@ void foo1(int *__sized_by(*size) buf, int *size) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP33:%.*]] = icmp sgt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -42,7 +42,7 @@ void foo2(int *__sized_by(*size) buf, int *size) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP33:%.*]] = icmp sgt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
@@ -60,7 +60,7 @@ bb:
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SIZE:%.*]], align 4, {{!tbaa ![0-9]+}}
 // CHECK-NEXT:    [[CMP33:%.*]] = icmp sgt i32 [[TMP0]], 39, {{!annotation ![0-9]+}}
-// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], {{!annotation ![0-9]+}}
+// CHECK-NEXT:    br i1 [[CMP33]], label [[CONT:%.*]], label [[TRAP:%.*]], !prof [[PROF7]], {{!annotation ![0-9]+}}
 // CHECK:       trap:
 // CHECK-NEXT:    tail call void @llvm.ubsantrap(i8 25) #[[ATTR3]], {{!annotation ![0-9]+}}
 // CHECK-NEXT:    unreachable, {{!annotation ![0-9]+}}
