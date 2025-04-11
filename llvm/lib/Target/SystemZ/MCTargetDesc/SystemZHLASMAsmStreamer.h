@@ -46,11 +46,11 @@ class SystemZHLASMAsmStreamer final : public MCStreamer {
 public:
   SystemZHLASMAsmStreamer(MCContext &Context,
                           std::unique_ptr<formatted_raw_ostream> os,
-                          MCInstPrinter *printer,
+                          std::unique_ptr<MCInstPrinter> printer,
                           std::unique_ptr<MCCodeEmitter> emitter,
                           std::unique_ptr<MCAsmBackend> asmbackend)
       : MCStreamer(Context), FOSOwner(std::move(os)), FOS(*FOSOwner), OS(Str),
-        MAI(Context.getAsmInfo()), InstPrinter(printer),
+        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
         Assembler(std::make_unique<MCAssembler>(
             Context, std::move(asmbackend), std::move(emitter),
             (asmbackend) ? asmbackend->createObjectWriter(NullStream)
