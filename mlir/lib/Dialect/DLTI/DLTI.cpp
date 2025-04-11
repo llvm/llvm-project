@@ -14,8 +14,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -293,16 +293,16 @@ overwriteDuplicateEntries(SmallVectorImpl<DataLayoutEntryInterface> &oldEntries,
 /// Combines a data layout spec into the given lists of entries organized by
 /// type class and identifier, overwriting them if necessary. Fails to combine
 /// if the two entries with identical keys are not compatible.
-static LogicalResult
-combineOneSpec(DataLayoutSpecInterface spec,
-               DenseMap<TypeID, DataLayoutEntryList> &entriesForType,
-               DenseMap<StringAttr, DataLayoutEntryInterface> &entriesForID) {
+static LogicalResult combineOneSpec(
+    DataLayoutSpecInterface spec,
+    llvm::MapVector<TypeID, DataLayoutEntryList> &entriesForType,
+    llvm::MapVector<StringAttr, DataLayoutEntryInterface> &entriesForID) {
   // A missing spec should be fine.
   if (!spec)
     return success();
 
-  DenseMap<TypeID, DataLayoutEntryList> newEntriesForType;
-  DenseMap<StringAttr, DataLayoutEntryInterface> newEntriesForID;
+  llvm::MapVector<TypeID, DataLayoutEntryList> newEntriesForType;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> newEntriesForID;
   spec.bucketEntriesByType(newEntriesForType, newEntriesForID);
 
   // Combine non-Type DL entries first so they are visible to the
@@ -362,8 +362,8 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
     return {};
 
   // Combine all specs in order, with `this` being the last one.
-  DenseMap<TypeID, DataLayoutEntryList> entriesForType;
-  DenseMap<StringAttr, DataLayoutEntryInterface> entriesForID;
+  llvm::MapVector<TypeID, DataLayoutEntryList> entriesForType;
+  llvm::MapVector<StringAttr, DataLayoutEntryInterface> entriesForID;
   for (DataLayoutSpecInterface spec : specs)
     if (failed(combineOneSpec(spec, entriesForType, entriesForID)))
       return nullptr;
@@ -374,7 +374,7 @@ DataLayoutSpecAttr::combineWith(ArrayRef<DataLayoutSpecInterface> specs) const {
   SmallVector<DataLayoutEntryInterface> entries;
   llvm::append_range(entries, llvm::make_second_range(entriesForID));
   for (const auto &kvp : entriesForType)
-    llvm::append_range(entries, kvp.getSecond());
+    llvm::append_range(entries, kvp.second);
 
   return DataLayoutSpecAttr::get(getContext(), entries);
 }
