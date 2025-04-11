@@ -1692,8 +1692,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = GetPossiblyInlinedFunctionName(
-        *sc, Mangled::NamePreference::ePreferDemangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangled);
     if (!name)
       return false;
 
@@ -1724,8 +1724,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = GetPossiblyInlinedFunctionName(
-        *sc, Mangled::NamePreference::ePreferDemangledWithoutArguments);
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangledWithoutArguments);
     if (!name)
       return false;
 
@@ -1773,8 +1773,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (!sc)
       return false;
 
-    const char *name = GetPossiblyInlinedFunctionName(
-        *sc, Mangled::NamePreference::ePreferMangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferMangled);
     if (!name)
       return false;
 
