@@ -17003,7 +17003,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         });
       return IsSigned;
     };
-    if (cast<VectorType>(Op1->getType())->getElementType() != ScalarTy) {
+    if (cast<VectorType>(Op1->getType())->getElementType() !=
+        ScalarTy->getScalarType()) {
       assert(ScalarTy->isIntegerTy() && "Expected item in MinBWs.");
       Op1 = Builder.CreateIntCast(
           Op1,
@@ -17012,7 +17013,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               cast<FixedVectorType>(Op1->getType())->getNumElements()),
           GetOperandSignedness(&OpTE1));
     }
-    if (cast<VectorType>(Op2->getType())->getElementType() != ScalarTy) {
+    if (cast<VectorType>(Op2->getType())->getElementType() !=
+        ScalarTy->getScalarType()) {
       assert(ScalarTy->isIntegerTy() && "Expected item in MinBWs.");
       Op2 = Builder.CreateIntCast(
           Op2,
@@ -17027,9 +17029,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Mask.begin(),
           std::next(Mask.begin(), E->CombinedEntriesWithIndices.back().second),
           0);
+      unsigned ScalarTyNumElements = getNumElements(ScalarTy);
+      if (ScalarTyNumElements != 1) {
+        assert(SLPReVec && "Only supported by REVEC.");
+        transformScalarShuffleIndiciesToVector(ScalarTyNumElements, Mask);
+      }
       Value *Vec = Builder.CreateShuffleVector(Op1, Mask);
       Vec = createInsertVector(Builder, Vec, Op2,
-                               E->CombinedEntriesWithIndices.back().second);
+                               E->CombinedEntriesWithIndices.back().second *
+                                   ScalarTyNumElements);
       E->VectorizedValue = Vec;
       return Vec;
     }
