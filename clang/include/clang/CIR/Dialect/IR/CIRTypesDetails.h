@@ -54,8 +54,8 @@ struct RecordTypeStorage : public mlir::TypeStorage {
                     RecordType::RecordKind kind)
       : members(members), name(name), incomplete(incomplete), packed(packed),
         padded(padded), kind(kind) {
-          assert(name || !incomplete && "Incomplete records must have a name");
-        }
+    assert(name || !incomplete && "Incomplete records must have a name");
+  }
 
   KeyTy getAsKey() const {
     return KeyTy(members, name, incomplete, packed, padded, kind);
