@@ -10,10 +10,11 @@
 
 // void push_back(const value_type& x);
 
-#include <vector>
 #include <cassert>
+#include <vector>
 
 #include "asan_testing.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 
 // Flag that makes the copy constructor for CMyClass throw an exception
@@ -85,6 +86,18 @@ int main(int, char**) {
   } catch (...) {
     assert(vec == vec2);
     assert(is_contiguous_container_asan_correct(vec));
+  }
+
+  {
+    std::vector<int, limited_allocator<int, 10> > v(10, 42);
+    try {
+      v.push_back(0);
+      assert(false);
+    } catch (...) {
+      assert(v.size() == v.max_size());
+      for (std::size_t i = 0; i != v.size(); ++i)
+        assert(v[i] == 42); // Strong exception safety guarantee
+    }
   }
 #endif
 
