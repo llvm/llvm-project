@@ -506,6 +506,18 @@ TARGET_BUILTIN(__builtin_amdgcn_global_load_tr_b128_v4bf16, "V4yV4y*1", "nc", "g
 
 TARGET_BUILTIN(__builtin_amdgcn_ds_bpermute_fi_b32, "iii", "nc", "gfx12-insts")
 
+// For the following two builtins, the second and third return values of the
+// intrinsics are returned through the last two pointer-type function arguments.
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh8_intersect_ray, "V10UiWUifUcV3fV3fUiV4UiV3f*V3f*", "nc", "gfx12-insts")
+TARGET_BUILTIN(__builtin_amdgcn_image_bvh_dual_intersect_ray, "V10UiWUifUcV3fV3fV2UiV4UiV3f*V3f*", "nc", "gfx12-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push4_pop1_rtn, "V2UiUiUiV4UiIi", "n", "gfx11-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push8_pop1_rtn, "V2UiUiUiV8UiIi", "n", "gfx12-insts")
+
+// The intrinsic returns {i64, i32}, the builtin returns <2 x i64>.
+// The second return value of the intrinsic is zext'ed.
+TARGET_BUILTIN(__builtin_amdgcn_ds_bvh_stack_push8_pop2_rtn, "V2WUiUiUiV8UiIi", "n", "gfx12-insts")
+
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
 // Postfix w32 indicates the builtin requires wavefront size of 32.
