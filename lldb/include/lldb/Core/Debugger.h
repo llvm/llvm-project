@@ -752,6 +752,8 @@ protected:
   IOHandlerStack m_io_handler_stack;
   std::recursive_mutex m_io_handler_synchronous_mutex;
 
+  /// Mutex protecting the m_statusline member.
+  std::mutex m_statusline_mutex;
   std::optional<Statusline> m_statusline;
 
   llvm::StringMap<std::weak_ptr<LogHandler>> m_stream_handlers;
