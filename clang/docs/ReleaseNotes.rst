@@ -350,6 +350,9 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
+- Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
+  on pointers and references of polymorphic types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
