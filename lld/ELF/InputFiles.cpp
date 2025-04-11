@@ -704,6 +704,7 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
   };
 
   if (hasBA && hasGP) {
+    // Check for data mismatch
     if (!gpInfo.aarch64PauthAbiCoreInfo.empty()) {
       auto baPauth = serializeUnsigned(baInfo.pauth.tagPlatform,
                                        baInfo.pauth.tagSchema, isBE);
@@ -723,6 +724,9 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
   }
 
   if (hasBA && !hasGP) {
+    // Write missing data
+    // We can only know when Pauth is missing.
+    // Unlike AArch64 Build Attributes, GNU properties does not give a way to distinguish between no-value given to value of '0' given.
     if (baInfo.pauth.tagPlatform || baInfo.pauth.tagSchema) {
       tPointer->aarch64PauthAbiCoreInfoStorage = serializeUnsigned(
           baInfo.pauth.tagPlatform, baInfo.pauth.tagSchema, isBE);
@@ -763,7 +767,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     // Collect GNU properties data.
     // GNU properties might be processed in this loop, or only later on (e.g. in
     // initializeSections) Therefore there is no guarantee that the GNU
-    // properties data will be read after this loop end, so it is being
+    // properties data will be ready after this loop end, so it has to be
     // collected here.
     if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
       if (0 == this->andFeatures && this->aarch64PauthAbiCoreInfo.empty()) {
@@ -873,7 +877,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       // dynamic loader. In the future, when relocatable linking (`-r` flag) is
       // performed, a single merged AArch64 Build Attributes section will be
       // emitted.
-
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
         AArch64AttributeParser attributes;
