@@ -15,7 +15,7 @@
 
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_FREEBSD || SANITIZER_FUCHSIA || SANITIZER_LINUX || \
-    SANITIZER_NETBSD || SANITIZER_SOLARIS
+    SANITIZER_NETBSD || SANITIZER_SOLARIS || SANITIZER_HAIKU
 
 #  include "asan_allocator.h"
 #  include "asan_interceptors.h"
