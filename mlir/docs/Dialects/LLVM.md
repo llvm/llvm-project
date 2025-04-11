@@ -327,20 +327,7 @@ multiple of some fixed size in case of _scalable_ vectors, and the element type.
 Vectors cannot be nested and only 1D vectors are supported. Scalable vectors are
 still considered 1D.
 
-LLVM dialect uses built-in vector types for _fixed_-size vectors of built-in
-types, and provides additional types for fixed-sized vectors of LLVM dialect
-types (`LLVMFixedVectorType`) and scalable vectors of any types
-(`LLVMScalableVectorType`). These two additional types share the following
-syntax:
-
-```
-  llvm-vec-type ::= `!llvm.vec<` (`?` `x`)? integer-literal `x` type `>`
-```
-
-Note that the sets of element types supported by built-in and LLVM dialect
-vector types are mutually exclusive, e.g., the built-in vector type does not
-accept `!llvm.ptr` and the LLVM dialect fixed-width vector type does not
-accept `i32`.
+The LLVM dialect uses built-in vector type.
 
 The following functions are provided to operate on any kind of the vector types
 compatible with the LLVM dialect:
@@ -360,8 +347,8 @@ compatible with the LLVM dialect:
 
 ```mlir
 vector<42 x i32>                   // Vector of 42 32-bit integers.
-!llvm.vec<42 x ptr>                // Vector of 42 pointers.
-!llvm.vec<? x 4 x i32>             // Scalable vector of 32-bit integers with
+vector<42 x !llvm.ptr>             // Vector of 42 pointers.
+vector<[4] x i32>                  // Scalable vector of 32-bit integers with
                                    // size divisible by 4.
 !llvm.array<2 x vector<2 x i32>>   // Array of 2 vectors of 2 32-bit integers.
 !llvm.array<2 x vec<2 x ptr>> // Array of 2 vectors of 2 pointers.

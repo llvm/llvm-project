@@ -563,23 +563,19 @@ public:
   template <class _Rep, class _Period>
   future_status _LIBCPP_HIDE_FROM_ABI wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const;
   template <class _Clock, class _Duration>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS future_status
-  wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const;
+  _LIBCPP_HIDE_FROM_ABI future_status wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const {
+    unique_lock<mutex> __lk(__mut_);
+    if (__state_ & deferred)
+      return future_status::deferred;
+    while (!(__state_ & ready) && _Clock::now() < __abs_time)
+      __cv_.wait_until(__lk, __abs_time);
+    if (__state_ & ready)
+      return future_status::ready;
+    return future_status::timeout;
+  }
 
   virtual void __execute();
 };
-
-template <class _Clock, class _Duration>
-future_status __assoc_sub_state::wait_until(const chrono::time_point<_Clock, _Duration>& __abs_time) const {
-  unique_lock<mutex> __lk(__mut_);
-  if (__state_ & deferred)
-    return future_status::deferred;
-  while (!(__state_ & ready) && _Clock::now() < __abs_time)
-    __cv_.wait_until(__lk, __abs_time);
-  if (__state_ & ready)
-    return future_status::ready;
-  return future_status::timeout;
-}
 
 template <class _Rep, class _Period>
 inline future_status __assoc_sub_state::wait_for(const chrono::duration<_Rep, _Period>& __rel_time) const {
@@ -1347,8 +1343,17 @@ class _LIBCPP_EXPORTED_FROM_ABI promise<void> {
 
 public:
   promise();
-  template <class _Allocator>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS promise(allocator_arg_t, const _Allocator& __a);
+  template <class _Alloc>
+  _LIBCPP_HIDE_FROM_ABI promise(allocator_arg_t, const _Alloc& __a0) {
+    typedef __assoc_sub_state_alloc<_Alloc> _State;
+    typedef typename __allocator_traits_rebind<_Alloc, _State>::type _A2;
+    typedef __allocator_destructor<_A2> _D2;
+    _A2 __a(__a0);
+    unique_ptr<_State, _D2> __hold(__a.allocate(1), _D2(__a, 1));
+    ::new ((void*)std::addressof(*__hold.get())) _State(__a0);
+    __state_ = std::addressof(*__hold.release());
+  }
+
   _LIBCPP_HIDE_FROM_ABI promise(promise&& __rhs) _NOEXCEPT : __state_(__rhs.__state_) { __rhs.__state_ = nullptr; }
   promise(const promise& __rhs) = delete;
   ~promise();
@@ -1373,17 +1378,6 @@ public:
   void set_value_at_thread_exit();
   void set_exception_at_thread_exit(exception_ptr __p);
 };
-
-template <class _Alloc>
-promise<void>::promise(allocator_arg_t, const _Alloc& __a0) {
-  typedef __assoc_sub_state_alloc<_Alloc> _State;
-  typedef typename __allocator_traits_rebind<_Alloc, _State>::type _A2;
-  typedef __allocator_destructor<_A2> _D2;
-  _A2 __a(__a0);
-  unique_ptr<_State, _D2> __hold(__a.allocate(1), _D2(__a, 1));
-  ::new ((void*)std::addressof(*__hold.get())) _State(__a0);
-  __state_ = std::addressof(*__hold.release());
-}
 
 template <class _Rp>
 inline _LIBCPP_HIDE_FROM_ABI void swap(promise<_Rp>& __x, promise<_Rp>& __y) _NOEXCEPT {

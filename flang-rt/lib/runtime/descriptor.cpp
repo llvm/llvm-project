@@ -170,7 +170,7 @@ RT_API_ATTRS int Descriptor::Allocate() {
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
-  void *p{alloc(byteSize ? byteSize : 1)};
+  void *p{alloc(byteSize ? byteSize : 1, /*asyncId=*/-1)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }

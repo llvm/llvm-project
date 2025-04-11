@@ -91,6 +91,7 @@ class LValue {
   mlir::Type elementType;
 
   void initialize(clang::QualType type, clang::Qualifiers quals) {
+    assert(!cir::MissingFeatures::lvalueBaseInfo());
     this->type = type;
     this->quals = quals;
   }
@@ -123,6 +124,7 @@ public:
     r.v = address.getPointer();
     r.elementType = address.getElementType();
     r.initialize(t, t.getQualifiers());
+    assert(!cir::MissingFeatures::lvalueBaseInfo());
     return r;
   }
 };

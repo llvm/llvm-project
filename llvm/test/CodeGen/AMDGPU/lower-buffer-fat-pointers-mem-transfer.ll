@@ -1724,21 +1724,3 @@ define void @memset_pattern_unknown(ptr addrspace(7) inreg %ptr, i32 inreg %leng
   call void @llvm.experimental.memset.pattern.p7.i32.i32(ptr addrspace(7) %ptr, i32 1, i32 %length, i1 false)
   ret void
 }
-
-;;; Buffer load to LDS
-
-declare void @llvm.amdgcn.buffer.fat.ptr.load.lds(ptr addrspace(7), ptr addrspace(3), i32 immarg, i32 immarg, i32 immarg)
-
-define void @llvm_amdgcn_buffer_fat_ptr_load_lds(ptr addrspace(7) inreg %p, ptr addrspace(3) inreg %l, i32 %idx) {
-; CHECK-LABEL: define void @llvm_amdgcn_buffer_fat_ptr_load_lds(
-; CHECK-SAME: { ptr addrspace(8), i32 } inreg [[P:%.*]], ptr addrspace(3) inreg [[L:%.*]], i32 [[IDX:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[P_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 0
-; CHECK-NEXT:    [[P_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[P]], 1
-; CHECK-NEXT:    [[Q:%.*]] = add i32 [[P_OFF]], [[IDX]]
-; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8) [[P_RSRC]], ptr addrspace(3) [[L]], i32 4, i32 [[Q]], i32 0, i32 16, i32 0)
-; CHECK-NEXT:    ret void
-;
-  %q = getelementptr i8, ptr addrspace(7) %p, i32 %idx
-  call void @llvm.amdgcn.buffer.fat.ptr.load.lds(ptr addrspace(7) %q, ptr addrspace(3) %l, i32 4, i32 16, i32 0)
-  ret void
-}

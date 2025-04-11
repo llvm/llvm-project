@@ -37,9 +37,11 @@ struct DeviceLibABIVersion {
   /// and below works with ROCm 5.0 and below which does not have
   /// abi_version_*.bc. Code object v5 requires abi_version_500.bc.
   bool requiresLibrary() { return ABIVersion >= 500; }
-  std::string toString() {
+  std::string toString() { return Twine(getAsCodeObjectVersion()).str(); }
+
+  unsigned getAsCodeObjectVersion() const {
     assert(ABIVersion % 100 == 0 && "Not supported");
-    return Twine(ABIVersion / 100).str();
+    return ABIVersion / 100;
   }
 };
 

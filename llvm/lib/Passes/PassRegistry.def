@@ -61,7 +61,9 @@ MODULE_PASS("coro-early", CoroEarlyPass())
 MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("ctx-instr-gen",
             PGOInstrumentationGen(PGOInstrumentationType::CTXPROF))
-MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass())
+MODULE_PASS("ctx-prof-flatten", PGOCtxProfFlatteningPass(/*IsPreThinlink=*/false))
+MODULE_PASS("ctx-prof-flatten-prethinlink",
+            PGOCtxProfFlatteningPass(/*IsPreThinlink=*/true))
 MODULE_PASS("noinline-nonprevailing", NoinlineNonPrevailing())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("debugify", NewPMDebugifyPass())

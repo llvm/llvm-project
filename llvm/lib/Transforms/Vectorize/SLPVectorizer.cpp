@@ -1264,9 +1264,8 @@ static void fixupOrderingIndices(MutableArrayRef<unsigned> Order) {
 
 /// \returns a bitset for selecting opcodes. false for Opcode0 and true for
 /// Opcode1.
-static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, unsigned Opcode0,
-                                      unsigned Opcode1) {
-  Type *ScalarTy = VL[0]->getType();
+static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
+                                      unsigned Opcode0, unsigned Opcode1) {
   unsigned ScalarTyNumElements = getNumElements(ScalarTy);
   SmallBitVector OpcodeMask(VL.size() * ScalarTyNumElements, false);
   for (unsigned Lane : seq<unsigned>(VL.size())) {
@@ -5598,6 +5597,71 @@ static bool isMaskedLoadCompress(
   return TotalVecCost < GatherCost;
 }
 
+/// Checks if strided loads can be generated out of \p VL loads with pointers \p
+/// PointerOps:
+/// 1. Target with strided load support is detected.
+/// 2. The number of loads is greater than MinProfitableStridedLoads, or the
+/// potential stride <= MaxProfitableLoadStride and the potential stride is
+/// power-of-2 (to avoid perf regressions for the very small number of loads)
+/// and max distance > number of loads, or potential stride is -1.
+/// 3. The loads are ordered, or number of unordered loads <=
+/// MaxProfitableUnorderedLoads, or loads are in reversed order. (this check is
+/// to avoid extra costs for very expensive shuffles).
+/// 4. Any pointer operand is an instruction with the users outside of the
+/// current graph (for masked gathers extra extractelement instructions
+/// might be required).
+static bool isStridedLoad(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
+                          ArrayRef<unsigned> Order,
+                          const TargetTransformInfo &TTI, const DataLayout &DL,
+                          ScalarEvolution &SE,
+                          const bool IsAnyPointerUsedOutGraph, const int Diff) {
+  const unsigned Sz = VL.size();
+  const unsigned AbsoluteDiff = std::abs(Diff);
+  Type *ScalarTy = VL.front()->getType();
+  auto *VecTy = getWidenedType(ScalarTy, Sz);
+  if (IsAnyPointerUsedOutGraph ||
+      (AbsoluteDiff > Sz &&
+       (Sz > MinProfitableStridedLoads ||
+        (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
+         AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
+      Diff == -(static_cast<int>(Sz) - 1)) {
+    int Stride = Diff / static_cast<int>(Sz - 1);
+    if (Diff != Stride * static_cast<int>(Sz - 1))
+      return false;
+    Align Alignment =
+        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
+            ->getAlign();
+    if (!TTI.isLegalStridedLoadStore(VecTy, Alignment))
+      return false;
+    Value *Ptr0;
+    Value *PtrN;
+    if (Order.empty()) {
+      Ptr0 = PointerOps.front();
+      PtrN = PointerOps.back();
+    } else {
+      Ptr0 = PointerOps[Order.front()];
+      PtrN = PointerOps[Order.back()];
+    }
+    // Iterate through all pointers and check if all distances are
+    // unique multiple of Dist.
+    SmallSet<int, 4> Dists;
+    for (Value *Ptr : PointerOps) {
+      int Dist = 0;
+      if (Ptr == PtrN)
+        Dist = Diff;
+      else if (Ptr != Ptr0)
+        Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+      // If the strides are not the same or repeated, we can't
+      // vectorize.
+      if (((Dist / Stride) * Stride) != Dist || !Dists.insert(Dist).second)
+        break;
+    }
+    if (Dists.size() == Sz)
+      return true;
+  }
+  return false;
+}
+
 BoUpSLP::LoadsState
 BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
                            SmallVectorImpl<unsigned> &Order,
@@ -5671,59 +5735,17 @@ BoUpSLP::canVectorizeLoads(ArrayRef<Value *> VL, const Value *VL0,
       return LoadsState::Vectorize;
     // Simple check if not a strided access - clear order.
     bool IsPossibleStrided = *Diff % (Sz - 1) == 0;
-    // Try to generate strided load node if:
-    // 1. Target with strided load support is detected.
-    // 2. The number of loads is greater than MinProfitableStridedLoads,
-    // or the potential stride <= MaxProfitableLoadStride and the
-    // potential stride is power-of-2 (to avoid perf regressions for the very
-    // small number of loads) and max distance > number of loads, or potential
-    // stride is -1.
-    // 3. The loads are ordered, or number of unordered loads <=
-    // MaxProfitableUnorderedLoads, or loads are in reversed order.
-    // (this check is to avoid extra costs for very expensive shuffles).
-    // 4. Any pointer operand is an instruction with the users outside of the
-    // current graph (for masked gathers extra extractelement instructions
-    // might be required).
+    // Try to generate strided load node.
     auto IsAnyPointerUsedOutGraph =
         IsPossibleStrided && any_of(PointerOps, [&](Value *V) {
           return isa<Instruction>(V) && any_of(V->users(), [&](User *U) {
                    return !isVectorized(U) && !MustGather.contains(U);
                  });
         });
-    const unsigned AbsoluteDiff = std::abs(*Diff);
     if (IsPossibleStrided &&
-        (IsAnyPointerUsedOutGraph ||
-         (AbsoluteDiff > Sz &&
-          (Sz > MinProfitableStridedLoads ||
-           (AbsoluteDiff <= MaxProfitableLoadStride * Sz &&
-            AbsoluteDiff % Sz == 0 && has_single_bit(AbsoluteDiff / Sz)))) ||
-         *Diff == -(static_cast<int>(Sz) - 1))) {
-      int Stride = *Diff / static_cast<int>(Sz - 1);
-      if (*Diff == Stride * static_cast<int>(Sz - 1)) {
-        Align Alignment =
-            cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-                ->getAlign();
-        if (TTI->isLegalStridedLoadStore(VecTy, Alignment)) {
-          // Iterate through all pointers and check if all distances are
-          // unique multiple of Dist.
-          SmallSet<int, 4> Dists;
-          for (Value *Ptr : PointerOps) {
-            int Dist = 0;
-            if (Ptr == PtrN)
-              Dist = *Diff;
-            else if (Ptr != Ptr0)
-              Dist = *getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, *DL, *SE);
-            // If the strides are not the same or repeated, we can't
-            // vectorize.
-            if (((Dist / Stride) * Stride) != Dist ||
-                !Dists.insert(Dist).second)
-              break;
-          }
-          if (Dists.size() == Sz)
-            return LoadsState::StridedVectorize;
-        }
-      }
-    }
+        isStridedLoad(VL, PointerOps, Order, *TTI, *DL, *SE,
+                      IsAnyPointerUsedOutGraph, *Diff))
+      return LoadsState::StridedVectorize;
     bool IsMasked;
     unsigned InterleaveFactor;
     SmallVector<int> CompressMask;
@@ -6667,11 +6689,12 @@ void BoUpSLP::reorderTopToBottom() {
     // to take into account their order when looking for the most used order.
     if (TE->hasState() && TE->isAltShuffle() &&
         TE->State != TreeEntry::SplitVectorize) {
-      VectorType *VecTy =
-          getWidenedType(TE->Scalars[0]->getType(), TE->Scalars.size());
+      Type *ScalarTy = TE->Scalars[0]->getType();
+      VectorType *VecTy = getWidenedType(ScalarTy, TE->Scalars.size());
       unsigned Opcode0 = TE->getOpcode();
       unsigned Opcode1 = TE->getAltOpcode();
-      SmallBitVector OpcodeMask(getAltInstrMask(TE->Scalars, Opcode0, Opcode1));
+      SmallBitVector OpcodeMask(
+          getAltInstrMask(TE->Scalars, ScalarTy, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
         VFToOrderedEntries[TE->getVectorFactor()].insert(TE.get());
@@ -8352,12 +8375,13 @@ static bool isAlternateInstruction(const Instruction *I,
 
 bool BoUpSLP::areAltOperandsProfitable(const InstructionsState &S,
                                        ArrayRef<Value *> VL) const {
+  Type *ScalarTy = S.getMainOp()->getType();
   unsigned Opcode0 = S.getOpcode();
   unsigned Opcode1 = S.getAltOpcode();
-  SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
+  SmallBitVector OpcodeMask(getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
   // If this pattern is supported by the target then consider it profitable.
-  if (TTI->isLegalAltInstr(getWidenedType(S.getMainOp()->getType(), VL.size()),
-                           Opcode0, Opcode1, OpcodeMask))
+  if (TTI->isLegalAltInstr(getWidenedType(ScalarTy, VL.size()), Opcode0,
+                           Opcode1, OpcodeMask))
     return true;
   SmallVector<ValueList> Operands;
   for (unsigned I : seq<unsigned>(S.getMainOp()->getNumOperands())) {
@@ -9061,87 +9085,101 @@ getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
   return std::make_pair(MainOp, AltOp);
 }
 
+/// Checks that every instruction appears once in the list and if not, packs
+/// them, building \p ReuseShuffleIndices mask. The list of unique scalars is
+/// extended by poison values to the whole register size.
+static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
+                                SmallVectorImpl<int> &ReuseShuffleIndices,
+                                const TargetTransformInfo &TTI,
+                                const TargetLibraryInfo &TLI,
+                                const InstructionsState &S,
+                                const BoUpSLP::EdgeInfo &UserTreeIdx,
+                                bool DoNotFail) {
+  // Check that every instruction appears once in this bundle.
+  SmallVector<Value *> UniqueValues;
+  SmallVector<Value *> NonUniqueValueVL;
+  SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
+  for (Value *V : VL) {
+    if (isConstant(V)) {
+      ReuseShuffleIndices.emplace_back(
+          isa<PoisonValue>(V) ? PoisonMaskElem : UniqueValues.size());
+      UniqueValues.emplace_back(V);
+      continue;
+    }
+    auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
+    ReuseShuffleIndices.emplace_back(Res.first->second);
+    if (Res.second)
+      UniqueValues.emplace_back(V);
+  }
+  size_t NumUniqueScalarValues = UniqueValues.size();
+  bool IsFullVectors = hasFullVectorsOrPowerOf2(
+      TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
+  if (NumUniqueScalarValues == VL.size() &&
+      (VectorizeNonPowerOf2 || IsFullVectors)) {
+    ReuseShuffleIndices.clear();
+  } else {
+    // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
+    if ((UserTreeIdx.UserTE &&
+         UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(TTI)) ||
+        !hasFullVectorsOrPowerOf2(TTI, getValueType(VL.front()), VL.size())) {
+      LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                           "for nodes with padding.\n");
+      return false;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
+    if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
+        (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
+           return isa<UndefValue>(V) || !isConstant(V);
+         }))) {
+      if (DoNotFail && UniquePositions.size() > 1 &&
+          NumUniqueScalarValues > 1 && S.getMainOp()->isSafeToRemove() &&
+          all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
+        // Find the number of elements, which forms full vectors.
+        unsigned PWSz = getFullVectorNumberOfElements(
+            TTI, UniqueValues.front()->getType(), UniqueValues.size());
+        PWSz = std::min<unsigned>(PWSz, VL.size());
+        if (PWSz == VL.size()) {
+          ReuseShuffleIndices.clear();
+        } else {
+          NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
+          NonUniqueValueVL.append(
+              PWSz - UniqueValues.size(),
+              PoisonValue::get(UniqueValues.front()->getType()));
+          // Check that extended with poisons operations are still valid for
+          // vectorization (div/rem are not allowed).
+          if (!getSameOpcode(NonUniqueValueVL, TLI).valid()) {
+            LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+            return false;
+          }
+          VL = NonUniqueValueVL;
+        }
+        return true;
+      }
+      LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+      return false;
+    }
+    VL = UniqueValues;
+  }
+  return true;
+}
+
 void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
                             const EdgeInfo &UserTreeIdx,
                             unsigned InterleaveFactor) {
   assert((allConstant(VL) || allSameType(VL)) && "Invalid types!");
 
   SmallVector<int> ReuseShuffleIndices;
-  SmallVector<Value *> UniqueValues;
-  SmallVector<Value *> NonUniqueValueVL;
+  SmallVector<Value *> NonUniqueValueVL(VL.begin(), VL.end());
   auto TryToFindDuplicates = [&](const InstructionsState &S,
                                  bool DoNotFail = false) {
-    // Check that every instruction appears once in this bundle.
-    SmallDenseMap<Value *, unsigned, 16> UniquePositions(VL.size());
-    for (Value *V : VL) {
-      if (isConstant(V)) {
-        ReuseShuffleIndices.emplace_back(
-            isa<PoisonValue>(V) ? PoisonMaskElem : UniqueValues.size());
-        UniqueValues.emplace_back(V);
-        continue;
-      }
-      auto Res = UniquePositions.try_emplace(V, UniqueValues.size());
-      ReuseShuffleIndices.emplace_back(Res.first->second);
-      if (Res.second)
-        UniqueValues.emplace_back(V);
+    if (tryToFindDuplicates(NonUniqueValueVL, ReuseShuffleIndices, *TTI, *TLI,
+                            S, UserTreeIdx, DoNotFail)) {
+      VL = NonUniqueValueVL;
+      return true;
     }
-    size_t NumUniqueScalarValues = UniqueValues.size();
-    bool IsFullVectors = hasFullVectorsOrPowerOf2(
-        *TTI, getValueType(UniqueValues.front()), NumUniqueScalarValues);
-    if (NumUniqueScalarValues == VL.size() &&
-        (VectorizeNonPowerOf2 || IsFullVectors)) {
-      ReuseShuffleIndices.clear();
-    } else {
-      // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-      if ((UserTreeIdx.UserTE &&
-           UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(*TTI)) ||
-          !hasFullVectorsOrPowerOf2(*TTI, getValueType(VL.front()),
-                                    VL.size())) {
-        LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
-                             "for nodes with padding.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return false;
-      }
-      LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-      if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
-          (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
-             return isa<UndefValue>(V) || !isConstant(V);
-           }))) {
-        if (DoNotFail && UniquePositions.size() > 1 &&
-            NumUniqueScalarValues > 1 && S.getMainOp()->isSafeToRemove() &&
-            all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
-          // Find the number of elements, which forms full vectors.
-          unsigned PWSz = getFullVectorNumberOfElements(
-              *TTI, UniqueValues.front()->getType(), UniqueValues.size());
-          PWSz = std::min<unsigned>(PWSz, VL.size());
-          if (PWSz == VL.size()) {
-            ReuseShuffleIndices.clear();
-          } else {
-            NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
-            NonUniqueValueVL.append(
-                PWSz - UniqueValues.size(),
-                PoisonValue::get(UniqueValues.front()->getType()));
-            // Check that extended with poisons operations are still valid for
-            // vectorization (div/rem are not allowed).
-            if (!getSameOpcode(NonUniqueValueVL, *TLI).valid()) {
-              LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-              auto Invalid = ScheduleBundle::invalid();
-              newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-              return false;
-            }
-            VL = NonUniqueValueVL;
-          }
-          return true;
-        }
-        LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
-        return false;
-      }
-      VL = UniqueValues;
-    }
-    return true;
+    auto Invalid = ScheduleBundle::invalid();
+    newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx);
+    return false;
   };
 
   InstructionsState S = getSameOpcode(VL, *TLI);
@@ -9270,7 +9308,7 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     VectorType *VecTy = getWidenedType(ScalarTy, VL.size());
     unsigned Opcode0 = LocalState.getOpcode();
     unsigned Opcode1 = LocalState.getAltOpcode();
-    SmallBitVector OpcodeMask(getAltInstrMask(VL, Opcode0, Opcode1));
+    SmallBitVector OpcodeMask(getAltInstrMask(VL, ScalarTy, Opcode0, Opcode1));
     // Enable split node, only if all nodes do not form legal alternate
     // instruction (like X86 addsub).
     SmallPtrSet<Value *, 4> UOp1(llvm::from_range, Op1);
@@ -9609,8 +9647,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
 
   BlockScheduling &BS = *BSRef;
 
+  SetVector<Value *> UniqueValues(VL.begin(), VL.end());
   std::optional<ScheduleBundle *> BundlePtr =
-      BS.tryScheduleBundle(UniqueValues, this, S);
+      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -13200,7 +13239,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // order.
       unsigned Opcode0 = E->getOpcode();
       unsigned Opcode1 = E->getAltOpcode();
-      SmallBitVector OpcodeMask(getAltInstrMask(E->Scalars, Opcode0, Opcode1));
+      SmallBitVector OpcodeMask(
+          getAltInstrMask(E->Scalars, ScalarTy, Opcode0, Opcode1));
       // If this pattern is supported by the target then we consider the
       // order.
       if (TTIRef.isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask)) {
@@ -16080,11 +16120,9 @@ public:
         unsigned VF = std::max(CommonMask.size(), Mask.size());
         for (unsigned Idx = 0, Sz = CommonMask.size(); Idx < Sz; ++Idx)
           if (CommonMask[Idx] == PoisonMaskElem && Mask[Idx] != PoisonMaskElem)
-            CommonMask[Idx] =
-                V->getType() != V1->getType()
-                    ? Idx + VF
-                    : Mask[Idx] + cast<FixedVectorType>(V1->getType())
-                                      ->getNumElements();
+            CommonMask[Idx] = V->getType() != V1->getType()
+                                  ? Idx + VF
+                                  : Mask[Idx] + getVF(V1);
         if (V->getType() != V1->getType())
           V1 = createShuffle(V1, nullptr, Mask);
         InVectors.front() = V;

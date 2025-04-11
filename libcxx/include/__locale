@@ -45,6 +45,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_EXPORTED_FROM_ABI locale;
 
+template <class _CharT>
+class collate;
+
 template <class _Facet>
 _LIBCPP_HIDE_FROM_ABI bool has_facet(const locale&) _NOEXCEPT;
 
@@ -84,7 +87,12 @@ public:
   const locale& operator=(const locale&) _NOEXCEPT;
 
   template <class _Facet>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS locale combine(const locale&) const;
+  _LIBCPP_HIDE_FROM_ABI locale combine(const locale& __other) const {
+    if (!std::has_facet<_Facet>(__other))
+      __throw_runtime_error("locale::combine: locale missing facet");
+
+    return locale(*this, std::addressof(const_cast<_Facet&>(std::use_facet<_Facet>(__other))));
+  }
 
   // locale operations:
   string name() const;
@@ -93,8 +101,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool operator!=(const locale& __y) const { return !(*this == __y); }
 #  endif
   template <class _CharT, class _Traits, class _Allocator>
-  _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS bool
-  operator()(const basic_string<_CharT, _Traits, _Allocator>&, const basic_string<_CharT, _Traits, _Allocator>&) const;
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const basic_string<_CharT, _Traits, _Allocator>& __x,
+                                        const basic_string<_CharT, _Traits, _Allocator>& __y) const {
+    return std::use_facet<std::collate<_CharT> >(*this).compare(
+               __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
+  }
 
   // global locale objects:
   static locale global(const locale&);
@@ -153,14 +164,6 @@ public: // only needed for tests
 template <class _Facet>
 inline _LIBCPP_HIDE_FROM_ABI locale::locale(const locale& __other, _Facet* __f) {
   __install_ctor(__other, __f, __f ? __f->id.__get() : 0);
-}
-
-template <class _Facet>
-locale locale::combine(const locale& __other) const {
-  if (!std::has_facet<_Facet>(__other))
-    std::__throw_runtime_error("locale::combine: locale missing facet");
-
-  return locale(*this, std::addressof(const_cast<_Facet&>(std::use_facet<_Facet>(__other))));
 }
 
 template <class _Facet>
@@ -288,13 +291,6 @@ protected:
   string_type do_transform(const char_type* __lo, const char_type* __hi) const override;
 };
 #  endif
-
-template <class _CharT, class _Traits, class _Allocator>
-bool locale::operator()(const basic_string<_CharT, _Traits, _Allocator>& __x,
-                        const basic_string<_CharT, _Traits, _Allocator>& __y) const {
-  return std::use_facet<std::collate<_CharT> >(*this).compare(
-             __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
-}
 
 // template <class charT> class ctype
 

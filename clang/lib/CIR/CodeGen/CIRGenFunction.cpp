@@ -135,6 +135,71 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
+bool CIRGenFunction::containsLabel(const Stmt *s, bool ignoreCaseStmts) {
+  // Null statement, not a label!
+  if (!s)
+    return false;
+
+  // If this is a label, we have to emit the code, consider something like:
+  // if (0) {  ...  foo:  bar(); }  goto foo;
+  //
+  // TODO: If anyone cared, we could track __label__'s, since we know that you
+  // can't jump to one from outside their declared region.
+  if (isa<LabelStmt>(s))
+    return true;
+
+  // If this is a case/default statement, and we haven't seen a switch, we
+  // have to emit the code.
+  if (isa<SwitchCase>(s) && !ignoreCaseStmts)
+    return true;
+
+  // If this is a switch statement, we want to ignore case statements when we
+  // recursively process the sub-statements of the switch. If we haven't
+  // encountered a switch statement, we treat case statements like labels, but
+  // if we are processing a switch statement, case statements are expected.
+  if (isa<SwitchStmt>(s))
+    ignoreCaseStmts = true;
+
+  // Scan subexpressions for verboten labels.
+  return std::any_of(s->child_begin(), s->child_end(),
+                     [=](const Stmt *subStmt) {
+                       return containsLabel(subStmt, ignoreCaseStmts);
+                     });
+}
+
+/// If the specified expression does not fold to a constant, or if it does but
+/// contains a label, return false.  If it constant folds return true and set
+/// the boolean result in Result.
+bool CIRGenFunction::constantFoldsToBool(const Expr *cond, bool &resultBool,
+                                         bool allowLabels) {
+  llvm::APSInt resultInt;
+  if (!constantFoldsToSimpleInteger(cond, resultInt, allowLabels))
+    return false;
+
+  resultBool = resultInt.getBoolValue();
+  return true;
+}
+
+/// If the specified expression does not fold to a constant, or if it does
+/// fold but contains a label, return false. If it constant folds, return
+/// true and set the folded value.
+bool CIRGenFunction::constantFoldsToSimpleInteger(const Expr *cond,
+                                                  llvm::APSInt &resultInt,
+                                                  bool allowLabels) {
+  // FIXME: Rename and handle conversion of other evaluatable things
+  // to bool.
+  Expr::EvalResult result;
+  if (!cond->EvaluateAsInt(result, getContext()))
+    return false; // Not foldable, not integer or not fully evaluatable.
+
+  llvm::APSInt intValue = result.Val.getInt();
+  if (!allowLabels && containsLabel(cond))
+    return false; // Contains a label.
+
+  resultInt = intValue;
+  return true;
+}
+
 void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {

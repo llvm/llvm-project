@@ -277,25 +277,25 @@ llvm.func @masked_gather_intr_wrong_type(%ptrs : vector<7xf32>, %mask : vector<7
 
 // -----
 
-llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : !llvm.vec<7 x ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
-  // expected-error @below{{expected operand #1 type to be '!llvm.vec<? x 7 x  ptr>'}}
-  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (!llvm.vec<7 x ptr>, vector<[7]xi1>) -> vector<[7]xf32>
+llvm.func @masked_gather_intr_wrong_type_scalable(%ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) -> vector<[7]xf32> {
+  // expected-error @below{{expected operand #1 type to be 'vector<[7]x!llvm.ptr>'}}
+  %0 = llvm.intr.masked.gather %ptrs, %mask { alignment = 1: i32} : (vector<7x!llvm.ptr>, vector<[7]xi1>) -> vector<[7]xf32>
   llvm.return %0 : vector<[7]xf32>
 }
 
 // -----
 
-llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : !llvm.vec<7xptr>, %mask : vector<7xi1>) {
+llvm.func @masked_scatter_intr_wrong_type(%vec : f32, %ptrs : vector<7x!llvm.ptr>, %mask : vector<7xi1>) {
   // expected-error @below{{op operand #0 must be LLVM dialect-compatible vector type, but got 'f32'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into !llvm.vec<7xptr>
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : f32, vector<7xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 
 // -----
 
-llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : !llvm.vec<7xptr>, %mask : vector<[7]xi1>) {
-  // expected-error @below{{expected operand #2 type to be '!llvm.vec<? x 7 x  ptr>'}}
-  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into !llvm.vec<7xptr>
+llvm.func @masked_scatter_intr_wrong_type_scalable(%vec : vector<[7]xf32>, %ptrs : vector<7x!llvm.ptr>, %mask : vector<[7]xi1>) {
+  // expected-error @below{{expected operand #2 type to be 'vector<[7]x!llvm.ptr>'}}
+  llvm.intr.masked.scatter %vec, %ptrs, %mask { alignment = 1: i32} : vector<[7]xf32>, vector<[7]xi1> into vector<7x!llvm.ptr>
   llvm.return
 }
 

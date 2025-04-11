@@ -183,6 +183,14 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.SInt32Ty;
       break;
 
+    case BuiltinType::NullPtr:
+      // Add proper CIR type for it? this looks mostly useful for sema related
+      // things (like for overloads accepting void), for now, given that
+      // `sizeof(std::nullptr_t)` is equal to `sizeof(void *)`, model
+      // std::nullptr_t as !cir.ptr<!void>
+      resultType = builder.getVoidPtrTy();
+      break;
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.SInt32Ty;

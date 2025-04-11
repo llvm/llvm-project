@@ -6823,7 +6823,7 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
         return true;
     }
 
-    if (size_t N = Desc->getNumElems()) {
+    if (unsigned N = Desc->getNumElems()) {
       for (ssize_t I = N - 1; I >= 0; --I) {
         if (!this->emitConstUint64(I, Loc))
           return false;

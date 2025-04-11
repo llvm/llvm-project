@@ -92,7 +92,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_long_composites",
          SPIRV::Extension::Extension::SPV_INTEL_long_composites},
         {"SPV_INTEL_fp_max_error",
-         SPIRV::Extension::Extension::SPV_INTEL_fp_max_error}};
+         SPIRV::Extension::Extension::SPV_INTEL_fp_max_error},
+        {"SPV_INTEL_ternary_bitwise_function",
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
