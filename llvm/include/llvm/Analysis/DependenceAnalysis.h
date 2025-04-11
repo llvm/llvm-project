@@ -52,6 +52,8 @@ namespace llvm {
   class ScalarEvolution;
   class SCEV;
   class SCEVConstant;
+  class SCEVPredicate;
+  class SCEVUnionPredicate;
   class raw_ostream;
 
   /// Dependence - This class represents a dependence between two memory
@@ -349,12 +351,14 @@ namespace llvm {
     const SCEV *getSplitIteration(const Dependence &Dep, unsigned Level);
 
     Function *getFunction() const { return F; }
+    SCEVUnionPredicate getRuntimeAssumptions();
 
   private:
     AAResults *AA;
     ScalarEvolution *SE;
     LoopInfo *LI;
     Function *F;
+    SmallVector<const SCEVPredicate *, 4> Assumptions;
 
     /// Subscript - This private struct represents a pair of subscripts from
     /// a pair of potentially multi-dimensional array references. We use a

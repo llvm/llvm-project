@@ -10971,6 +10971,67 @@ bool ScalarEvolution::isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero,
   return all_of(Mul->operands(), NonRecursive) && (OrZero || isKnownNonZero(S));
 }
 
+bool ScalarEvolution::isKnownMultipleOf(
+    const SCEV *S, uint64_t M,
+    SmallVectorImpl<const SCEVPredicate *> &Assumptions) {
+  if (M == 0)
+    return false;
+  if (M == 1)
+    return true;
+
+  // Recursively check AddRec operands.
+  if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S))
+    return isKnownMultipleOf(AddRec->getStart(), M, Assumptions) &&
+           isKnownMultipleOf(AddRec->getStepRecurrence(*this), M, Assumptions);
+
+  // For a constant, check that "S % M == 0".
+  if (auto *Cst = dyn_cast<SCEVConstant>(S)) {
+    APInt C = Cst->getAPInt();
+    return C.urem(M) == 0;
+  }
+
+  // Basic tests have failed.
+  // Record "S % M == 0" in the runtime Assumptions.
+  auto recordRuntimePredicate = [&](const SCEV *S) -> void {
+    auto *STy = dyn_cast<IntegerType>(S->getType());
+    const SCEV *SmodM =
+        getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
+    const SCEV *Zero = getZero(STy);
+
+    // Check whether "S % M == 0" is known at compile time.
+    if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
+      return;
+
+    const SCEVPredicate *P =
+        getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
+
+    // Detect redundant predicates.
+    for (auto *A : Assumptions)
+      if (A->implies(P, *this))
+        return;
+
+    Assumptions.push_back(P);
+    return;
+  };
+
+  // Expressions like "n".
+  if (isa<SCEVUnknown>(S)) {
+    recordRuntimePredicate(S);
+    return true;
+  }
+
+  // Expressions like "n + 1" and "n * 3".
+  if (isa<SCEVAddExpr>(S) || isa<SCEVMulExpr>(S)) {
+    if (SCEVExprContains(S, [](const SCEV *X) { return isa<SCEVUnknown>(X); }))
+      recordRuntimePredicate(S);
+    return true;
+  }
+
+  LLVM_DEBUG(dbgs() << "SCEV node not handled yet in isKnownMultipleOf: " << *S
+                    << "\n");
+  return false;
+}
+
 std::pair<const SCEV *, const SCEV *>
 ScalarEvolution::SplitIntoInitAndPostInc(const Loop *L, const SCEV *S) {
   // Compute SCEV on entry of loop L.
