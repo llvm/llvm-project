@@ -175,14 +175,24 @@ std::optional<std::string> LLDBServerPluginMockGPU::GetConnectionURL() {
   return std::nullopt;
 }
 
-void LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
+GPUPluginBreakpointHitResponse 
+LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
   Log *log = GetLog(GDBRLog::Plugin);
   std::string json_string;
+  std::string &bp_identifier = args.breakpoint.identifier;
   llvm::raw_string_ostream os(json_string);
   os << toJSON(args);
+  LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\"):\nJSON:\n%s", 
+            bp_identifier.c_str(), json_string.c_str());
 
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\")", 
-            json_string.c_str());
+  GPUPluginBreakpointHitResponse response;
+  if (bp_identifier == "gpu_initialize") {
+    response.disable_bp = true;
+    LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\") disabling breakpoint", 
+              bp_identifier.c_str());
+    // response.connect_url = GetConnectionURL();
+  }
+  return response;
 }
 
 void LLDBServerPluginMockGPU::InitializePluginInfo() {

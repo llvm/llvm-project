@@ -643,10 +643,29 @@ bool GDBRemoteCommunicationClient::GPUBreakpointHit(
   os << toJSON(args);
   packet.PutEscapedBytes(json_string.c_str(), json_string.size());
   StringExtractorGDBRemote response;
+  
   if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
-      PacketResult::Success)
-    return response.IsOKResponse();
-  return false;
+      PacketResult::Success) {
+    if (!response.Empty()) {
+      if (llvm::Expected<GPUPluginBreakpointHitResponse> info = 
+          llvm::json::parse<GPUPluginBreakpointHitResponse>(response.Peek(), 
+              "GPUPluginBreakpointHitResponse")) {
+        if (info->disable_bp) {
+          // TODO: disable BP
+        }
+        if (info->breakpoints) {
+          // TODO: set new breakpoints
+        }
+        if (info->connect_url) {
+          // TODO: connect to URL
+        }
+        return true; // Auto continue
+      } else {
+        llvm::consumeError(info.takeError());
+      }
+    }
+  }
+  return false; // Stop at BP
 }
 
 bool GDBRemoteCommunicationClient::GetThreadExtendedInfoSupported() {
