@@ -154,9 +154,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, src);
-    memref::LinearizedMemRefInfo linearizedInfo;
     OpFoldResult linearizedIndices;
-    std::tie(linearizedInfo, linearizedIndices) =
+    std::tie(std::ignore, linearizedIndices) =
         memref::getLinearizedMemRefOffsetAndSize(
             rewriter, loc, elementBitWidth, elementBitWidth,
             stridedMetadata.getConstifiedMixedOffset(),
@@ -173,8 +172,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     // the maximum of each dimension size * stride.
     SmallVector<AffineExpr> productExpressions;
     SmallVector<Value> productResults;
-    unsigned sourceRank =
-        cast<ShapedType>(readOp.getSource().getType()).getRank();
+    unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
 
     SmallVector<AffineExpr> symbols(2 * sourceRank);
     SmallVector<Value> offsetValues(2 * sourceRank);
