@@ -719,7 +719,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
 
   if (const FunctionDecl *CalleeDecl = CE->getDirectCallee();
       CalleeDecl && CalleeDecl->hasAttr<NotTailCalledAttr>()) {
-    Diag(St->getBeginLoc(), diag::err_musttail_mismatch) << CalleeDecl;
+    Diag(St->getBeginLoc(), diag::err_musttail_mismatch) << true << CalleeDecl;
     return false;
   }
 

@@ -7,7 +7,7 @@ int __attribute__((not_tail_called)) foo1(int a) {
 
 int foo2(int a) {
     [[clang::musttail]] 
-    return foo1(a);  // expected-error{{cannot perform a tail call to function'foo1' because its signature is incompatible with the calling function}}
+    return foo1(a);  // expected-error {{cannot perform a tail call to function 'foo1' because its signature is incompatible with the calling function}}
 }
 
 int main() {
