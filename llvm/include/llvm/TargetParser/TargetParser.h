@@ -106,12 +106,8 @@ enum GPUKind : uint32_t {
   GK_GFX1151 = 95,
   GK_GFX1152 = 96,
   GK_GFX1153 = 97,
-#if LLPC_BUILD_NPI
-  GK_GFX115F = 98,
-#else /* LLPC_BUILD_NPI */
   GK_GFX115E = 98,
   GK_GFX115F = 99,
-#endif /* LLPC_BUILD_NPI */
 
   GK_GFX1170 = 100,
 
