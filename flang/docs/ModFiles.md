@@ -14,138 +14,136 @@ local:
 ---
 ```
 
-Module files hold information from a module that is necessary to compile 
-program units that depend on the module.
+Module files hold information from a module (or submodule) that is
+necessary to compile program units in other source files that depend on that module.
+Program units in the same source file as the module do not read
+module files, as this compiler parses entire source files and processes
+the program units it contains in dependency order.
 
 ## Name
 
-Module files must be searchable by module name. They are typically named
-`<modulename>.mod`. The advantage of using `.mod` is that it is consistent with
-other compilers so users will know what they are. Also, makefiles and scripts
-often use `rm *.mod` to clean up.
+Module files are named according to the module's name, suffixed with `.mod`.
+This is consistent with other compilers and expected by makefiles and
+other build systems.
+
+Module files for submodules are named with their ancestor module's name
+as a prefix, separated by a hyphen.
+E.g., `module-submod.mod` is generated for submodule `submod' of module
+`module`.
+Some other compilers use a distinct filename suffix for submodules,
+but this one doesn't.
 
 The disadvantage of using the same name as other compilers is that it is not
 clear which compiler created a `.mod` file and files from multiple compilers
-cannot be in the same directory. This could be solved by adding something
-between the module name and extension, e.g. `<modulename>-f18.mod`.  If this
-is needed, Flang's fc1 accepts the option `-module-suffix` to alter the suffix
-used for the module file.
+cannot be in the same directory. This can be solved by adding something
+between the module name and extension, e.g. `<modulename>-f18.mod`.  When
+this is needed, Flang accepts the option `-module-suffix` to alter the suffix.
 
 ## Format
 
-Module files will be Fortran source.
-Declarations of all visible entities will be included, along with private
-entities that they depend on.
-Entity declarations that span multiple statements will be collapsed into
-a single *type-declaration-statement*.
-Executable statements will be omitted.
+Module files are Fortran free form source code.
+(One can, in principle, copy `foo.mod` into `tmp.f90`, recompile it,
+and obtain a matching `foo.mod` file.)
+They include the declarations of all visible locally defined entities along
+with the private entities on which they depend.
 
 ### Header
 
-There will be a header containing extra information that cannot be expressed
-in Fortran. This will take the form of a comment or directive
-at the beginning of the file.
+Module files begin with a UTF-8 byte order mark and a few lines of
+Fortran comments.
+(Pro tip: use `dd if=foo.mod bs=1 skip=3 2>/dev/null` to skip the byte order
+mark and dump the rest of the module.)
+The first comment begins `!mod$` and contains a version number
+and hash code.
+Further `!need$` comments contain the names and hash codes of other modules
+on which this module depends, and whether those modules are intrinsic
+or not to Fortran.
 
-If it's a comment, the module file reader would have to strip it out and
-perform *ad hoc* parsing on it. If it's a directive the compiler could
-parse it like other directives as part of the grammar.
-Processing the header before parsing might result in better error messages
-when the `.mod` file is invalid.
-
-Regardless of whether the header is a comment or directive we can use the
-same string to introduce it: `!mod$`.
-
-Information in the header:
-- Magic string to confirm it is an f18 `.mod` file
-- Version information: to indicate the version of the file format, in case it changes,
-  and the version of the compiler that wrote the file, for diagnostics.
-- Checksum of the body of the current file
-- Modules we depend on and the checksum of their module file when the current
-  module file is created
-- The source file that produced the `.mod` file? This could be used in error messages.
+The header comments do not contain timestamps or original source file paths.
 
 ### Body
 
-The body will consist of minimal Fortran source for the required declarations.
-The order will match the order they first appeared in the source.
+The body comprises minimal Fortran source for the required declarations.
+Their order generally matches the order they appeared in the original
+source code for the module.
+All types are explicit, and all non-character literal constants are
+marked with explicit kind values.
 
-Some normalization will take place:
-- extraneous spaces will be removed
-- implicit types will be made explicit
-- attributes will be written in a consistent order
-- entity declarations will be combined into a single declaration
-- function return types specified in a *prefix-spec* will be replaced by
-  an entity declaration
-- etc.
+Declarations of objects, interfaces, types, and other entities are
+regenerated from the compiler's symbol table.
+So entity declarations that spanned multiple statements in the source
+program are effectively collapsed into a single *type-declaration-statement*.
+Constant expressions that appear in initializers, bounds, and other sites
+appear in the module file as their folded values.
+Any compiler directives (`!omp$`, `!acc$`, &c.) relevant to the declarations
+of names are also included in the module file.
+
+Executable statements are omitted.
+If we ever want to do Fortran-level inline expansion of procedures
+in the future,
+we will have to "unparse" the executable parts of their definitions.
 
 #### Symbols included
 
-All public symbols from the module need to be included.
+All public symbols from the module are included.
 
 In addition, some private symbols are needed:
 - private types that appear in the public API
 - private components of non-private derived types
 - private parameters used in non-private declarations (initial values, kind parameters)
-- others?
-
-It might be possible to anonymize private names if users don't want them exposed
-in the `.mod` file. (Currently they are readable in PGI `.mod` files.)
 
 #### USE association
 
-A module that contains `USE` statements needs them represented in the
-`.mod` file.
-Each use-associated symbol will be written as a separate *use-only* statement,
-possibly with renaming.
-
-Alternatives:
-- Emit a single `USE` for each module, listing all of the symbols that were
-  use-associated in the *only-list*.
-- Detect when all of the symbols from a module are imported (either by a *use-stmt*
-  without an *only-list* or because all of the public symbols of the module
-  have been listed in *only-list*s). In that case collapse them into a single *use-stmt*.
-- Emit the *use-stmt*s that appeared in the original source.
+Entities that have been included in a module by means of USE association
+are represented in the module file with `USE` statements.
+Name aliases are sometimes necessary when an entity from another
+module is needed for a declaration and conflicts with another
+entity of the same name.
 
 ## Reading and writing module files
 
 ### Options
 
-The compiler will have command-line options to specify where to search
+The compiler has command-line options to specify where to search
 for module files and where to write them. By default it will be the current
 directory for both.
 
-For PGI, `-I` specifies directories to search for include files and module
-files. `-module` specifics a directory to write module files in as well as to
-search for them. gfortran is similar except it uses `-J` instead of `-module`.
+`-I` specifies directories to search for include files and module
+files.
+`-J`, and its alias `-module-dir`, specify a directory into which module files are written
+as well as to search for them.
 
-The search order for module files is:
-1. The `-module` directory (Note: for gfortran the `-J` directory is not searched).
-2. The current directory
-3. The `-I` directories in the order they appear on the command line
+`-fintrinsic-modules-path` is available to specify an alternative location
+for Fortran's intrinsic modules.
 
 ### Writing module files
 
 When writing a module file, if the existing one matches what would be written,
 the timestamp is not updated.
 
-Module files will be written after semantics, i.e. after the compiler has
-determined the module is valid Fortran.<br>
-**NOTE:** PGI does create `.mod` files sometimes even when the module has a
-compilation error.
-
-Question: If the compiler can get far enough to determine it is compiling a module
-but then encounters an error, should it delete the existing `.mod` file?
-PGI does not, gfortran does.
+Module files are written only after semantic analysis completes without
+a fatal error message.
 
 ### Reading module files
 
 When the compiler finds a `.mod` file it needs to read, it firsts checks the first
-line and verifies it is a valid module file. It can also verify checksums of
-modules it depends on and report if they are out of date.
+line and verifies it is a valid module file.
+The header checksum must match the file's contents.
+(Pro tip: if a developer needs to hack the contents of a module file, they can
+recompile it afterwards as Fortran source to regenerate it with its new hash.)
 
-If the header is valid, the module file will be run through the parser and name
-resolution to recreate the symbols from the module. Once the symbol table is
-populated the parse tree can be discarded.
+The known hashes of dependent modules are used to disambiguate modules whose
+names match module files in multiple search directories, as well as to
+detect dependent modules whose recompilation has rendered a module file
+obsolete.
+
+The hash codes used in module files also serve as a means of protection from
+updates to code in other packages.
+If a project A uses module files from package B, and package B is updated in
+a way that causes its module files to be updated, then the modules in A that
+depend on those modules in B will no longer be accepted for use until they
+have also been regenerated.
+This feature can catch errors that other compilers cannot.
 
 When processing `.mod` files we know they are valid Fortran with these properties:
 1. The input (without the header) is already in the "cooked input" format.
@@ -155,15 +153,7 @@ When processing `.mod` files we know they are valid Fortran with these propertie
 ## Error messages referring to modules
 
 With this design, diagnostics can refer to names in modules and can emit a
-normalized declaration of an entity but not point to its location in the
-source.
-
-If the header includes the source file it came from, that could be included in
-a diagnostic but we still wouldn't have line numbers.
-
-To provide line numbers and character positions or source lines as the user
-wrote them we would have to save some amount of provenance information in the
-module file as well.
+normalized declaration of an entity.
 
 ## Hermetic modules files
 
