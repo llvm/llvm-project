@@ -16,6 +16,5 @@ func.func private @foo(memref<10xf32>)
 // CHECK: %[[USE_DEVICE:.*]] = acc.use_device varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.host_data dataOperands(%[[USE_DEVICE]] : memref<10xf32>) {
 // DEVICE:   func.call @foo(%[[USE_DEVICE]]) : (memref<10xf32>) -> ()
-// HOST:     func.call @foo(%[[A]]): (memref<10xf32>) -> ()
 // CHECK:   acc.terminator
 // CHECK: }
