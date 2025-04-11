@@ -59,9 +59,8 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 
     // If there are no ICmp users, return early.
     if (II.user_empty() ||
-        none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); })) {
+        none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); }))
       return false;
-    }
 
     bool Changed = false;
     for (User *U : make_early_inc_range(II.users())) {
@@ -96,6 +95,8 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
       II.eraseFromParent();
     return Changed;
   }
+  default:
+    llvm_unreachable("Unexpected intrinsic ID in optimizeUniformIntrinsic");
   }
   return false;
 }
@@ -114,12 +115,10 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
     Intrinsic::ID IID = Func.getIntrinsicID();
     if (!llvm::is_contained(Intrinsics, IID))
       continue;
-
     for (User *U : Func.users()) {
-      if (auto *II = dyn_cast<IntrinsicInst>(U)) {
-        if (II->getFunction() == &F)
-          IsChanged |= optimizeUniformIntrinsic(*II, UI);
-      }
+      auto *II = cast<IntrinsicInst>(U);
+      if (II->getFunction() == &F)
+        IsChanged |= optimizeUniformIntrinsic(*II, UI);
     }
   }
   return IsChanged;
@@ -131,9 +130,8 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
   const auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
   bool IsChanged = runUniformIntrinsicCombine(F, UI);
 
-  if (!IsChanged) {
+  if (!IsChanged)
     return PreservedAnalyses::all();
-  }
   PreservedAnalyses PA;
   PA.preserve<UniformityInfoAnalysis>();
   return PA;
