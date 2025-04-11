@@ -235,6 +235,151 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
+static std::optional<llvm::StringRef>
+GetDemangledBasename(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  return demangled_name.slice(info->BasenameRange.first,
+                              info->BasenameRange.second);
+}
+
+static std::optional<llvm::StringRef>
+GetDemangledTemplateArguments(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  if (info->ArgumentsRange.first < info->BasenameRange.second)
+    return std::nullopt;
+
+  return demangled_name.slice(info->BasenameRange.second,
+                              info->ArgumentsRange.first);
+}
+
+static std::optional<llvm::StringRef>
+GetDemangledReturnTypeLHS(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  if (info->ScopeRange.first >= demangled_name.size())
+    return std::nullopt;
+
+  return demangled_name.substr(0, info->ScopeRange.first);
+}
+
+static std::optional<llvm::StringRef>
+GetDemangledFunctionQualifiers(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  if (info->QualifiersRange.second < info->QualifiersRange.first)
+    return std::nullopt;
+
+  return demangled_name.slice(info->QualifiersRange.first,
+                              info->QualifiersRange.second);
+}
+
+static std::optional<llvm::StringRef>
+GetDemangledReturnTypeRHS(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  if (info->QualifiersRange.first < info->ArgumentsRange.second)
+    return std::nullopt;
+
+  return demangled_name.slice(info->ArgumentsRange.second,
+                              info->QualifiersRange.first);
+}
+
+static std::optional<llvm::StringRef>
+GetDemangledScope(const SymbolContext &sc) {
+  Mangled mangled = sc.GetPossiblyInlinedFunctionName();
+  if (!mangled)
+    return std::nullopt;
+
+  auto demangled_name = mangled.GetDemangledName().GetStringRef();
+  if (demangled_name.empty())
+    return std::nullopt;
+
+  const std::optional<DemangledNameInfo> &info = mangled.GetDemangledInfo();
+  if (!info)
+    return std::nullopt;
+
+  // Function without a basename is nonsense.
+  if (!info->hasBasename())
+    return std::nullopt;
+
+  if (info->ScopeRange.second < info->ScopeRange.first)
+    return std::nullopt;
+
+  return demangled_name.slice(info->ScopeRange.first, info->ScopeRange.second);
+}
+
 bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // This method tries to parse simple method definitions which are presumably
   // most comman in user programs. Definitions that can be parsed by this
@@ -1694,8 +1839,9 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
 
-  const char *cstr = sc.GetPossiblyInlinedFunctionName(
-      Mangled::NamePreference::ePreferDemangled);
+  const char *cstr = sc.GetPossiblyInlinedFunctionName()
+                         .GetName(Mangled::NamePreference::ePreferDemangled)
+                         .AsCString();
   if (!cstr)
     return false;
 
@@ -1736,6 +1882,89 @@ bool CPlusPlusLanguage::GetFunctionDisplayName(
   }
   case FunctionNameRepresentation::eNameWithNoArgs:
   case FunctionNameRepresentation::eName:
+    return false;
+  }
+}
+bool CPlusPlusLanguage::HandleFrameFormatVariable(
+    const SymbolContext &sc, const ExecutionContext *exe_ctx,
+    FormatEntity::Entry::Type type, Stream &s) {
+  assert(sc.function);
+
+  switch (type) {
+  case FormatEntity::Entry::Type::FunctionScope: {
+    std::optional<llvm::StringRef> scope = GetDemangledScope(sc);
+    if (!scope)
+      return false;
+
+    s << *scope;
+
+    return true;
+  }
+
+  case FormatEntity::Entry::Type::FunctionBasename: {
+    std::optional<llvm::StringRef> name = GetDemangledBasename(sc);
+    if (!name)
+      return false;
+
+    s << *name;
+
+    return true;
+  }
+
+  case FormatEntity::Entry::Type::FunctionTemplateArguments: {
+    std::optional<llvm::StringRef> template_args =
+        GetDemangledTemplateArguments(sc);
+    if (!template_args)
+      return false;
+
+    s << *template_args;
+
+    return true;
+  }
+
+  case FormatEntity::Entry::Type::FunctionFormattedArguments: {
+    VariableList args;
+    if (auto variable_list_sp = GetFunctionVariableList(sc))
+      variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                                 args);
+
+    ExecutionContextScope *exe_scope =
+        exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+    s << '(';
+    FormatEntity::PrettyPrintFunctionArguments(s, args, exe_scope);
+    s << ')';
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionReturnRight: {
+    std::optional<llvm::StringRef> return_rhs = GetDemangledReturnTypeRHS(sc);
+    if (!return_rhs)
+      return false;
+
+    s << *return_rhs;
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionReturnLeft: {
+    std::optional<llvm::StringRef> return_lhs = GetDemangledReturnTypeLHS(sc);
+    if (!return_lhs)
+      return false;
+
+    s << *return_lhs;
+
+    return true;
+  }
+  case FormatEntity::Entry::Type::FunctionQualifiers: {
+    std::optional<llvm::StringRef> quals = GetDemangledFunctionQualifiers(sc);
+    if (!quals)
+      return false;
+
+    s << *quals;
+
+    return true;
+  }
+  default:
     return false;
   }
 }
