@@ -166,7 +166,8 @@ public:
     std::string Name = Def->getValueAsString("name").str();
 
     // Clang calls the 'unknown' value 'invalid'.
-    if (Name == "unknown") return "Invalid";
+    if (Name == "unknown")
+      return "Invalid";
 
     // Clang entries all start with a capital letter, so apply that.
     Name[0] = std::toupper(Name[0]);

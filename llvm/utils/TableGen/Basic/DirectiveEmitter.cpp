@@ -786,9 +786,9 @@ static void generateClauseSet(ArrayRef<const Record *> Clauses, raw_ostream &OS,
   for (const auto &C : Clauses) {
     VersionedClause VerClause(C);
     if (FE == DirectiveClauseFE::Flang) {
-    OS << "    llvm::" << DirLang.getCppNamespace()
-       << "::Clause::" << DirLang.getClausePrefix()
-       << VerClause.getClause().getFormattedName() << ",\n";
+      OS << "    llvm::" << DirLang.getCppNamespace()
+         << "::Clause::" << DirLang.getClausePrefix()
+         << VerClause.getClause().getFormattedName() << ",\n";
     } else {
       assert(FE == DirectiveClauseFE::Clang);
       assert(DirLang.getName() == "OpenACC");
@@ -801,8 +801,7 @@ static void generateClauseSet(ArrayRef<const Record *> Clauses, raw_ostream &OS,
 
 // Generate an enum set for the 4 kinds of clauses linked to a directive.
 static void generateDirectiveClauseSets(const DirectiveLanguage &DirLang,
-                                        DirectiveClauseFE FE,
-                                        raw_ostream &OS) {
+                                        DirectiveClauseFE FE, raw_ostream &OS) {
 
   std::string IfDefName{"GEN_"};
   IfDefName += getFESpelling(FE).upper();
@@ -865,8 +864,8 @@ static void generateDirectiveClauseMap(const DirectiveLanguage &DirLang,
     OS << "  {";
     if (FE == DirectiveClauseFE::Flang) {
       OS << TopLevelNS << "::" << DirLang.getCppNamespace()
-      << "::Directive::" << DirLang.getDirectivePrefix()
-      << Dir.getFormattedName() << ",\n";
+         << "::Directive::" << DirLang.getDirectivePrefix()
+         << Dir.getFormattedName() << ",\n";
     } else {
       assert(FE == DirectiveClauseFE::Clang);
       assert(DirLang.getName() == "OpenACC");
