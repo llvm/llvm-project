@@ -207,9 +207,11 @@ Interpreter::Interpreter(lldb::TargetSP target, llvm::StringRef expr,
       m_exe_ctx_scope(frame_sp) {}
 
 llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode *node) {
-
-  // Traverse an AST pointed by the `node`.
-  return node->Accept(this);
+  // Evaluate an AST.
+  auto value_or_error = node->Accept(this);
+  // Return the computed value-or-error. The caller is responsible for
+  // checking if an error occured during the evaluation.
+  return value_or_error;
 }
 
 llvm::Expected<lldb::ValueObjectSP>
@@ -230,6 +232,54 @@ Interpreter::Visit(const IdentifierNode *node) {
   }
 
   return identifier;
+}
+
+llvm::Expected<lldb::ValueObjectSP>
+Interpreter::Visit(const UnaryOpNode *node) {
+  Status error;
+  auto rhs_or_err = Evaluate(node->rhs());
+  if (!rhs_or_err) {
+    return rhs_or_err;
+  }
+  lldb::ValueObjectSP rhs = *rhs_or_err;
+
+  switch (node->kind()) {
+  case UnaryOpKind::Deref: {
+    lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_default_dynamic);
+    if (dynamic_rhs)
+      rhs = dynamic_rhs;
+
+    CompilerType rhs_type = rhs->GetCompilerType();
+    if (!rhs_type.IsReferenceType() && !rhs_type.IsPointerType())
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "not a pointer or reference type",
+          node->rhs()->GetLocation());
+
+    if (rhs_type.IsPointerToVoid()) {
+      return llvm::make_error<DILDiagnosticError>(
+          m_expr, "indirection not permitted on operand of type 'void *'",
+          node->GetLocation());
+    }
+    lldb::ValueObjectSP child_sp = rhs->Dereference(error);
+    if (error.Success())
+      rhs = child_sp;
+
+    return rhs;
+  }
+  case UnaryOpKind::AddrOf: {
+    Status error;
+    lldb::ValueObjectSP value = rhs->AddressOf(error);
+    if (error.Fail()) {
+      return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
+                                                  node->GetLocation());
+    }
+    return value;
+  }
+  }
+
+  // Unsupported/invalid operation.
+  return llvm::make_error<DILDiagnosticError>(
+      m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
 }
 
 } // namespace lldb_private::dil
