@@ -1973,7 +1973,7 @@ let Predicates = [FeatureVector] in {
             (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
 }
 
-// In-register i128 sign-extensions on arch15.
+// In-register i128 sign-extensions on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg VR128:$x, i8)), (VUPLG (VSEGB VR128:$x))>;
   def : Pat<(i128 (sext_inreg VR128:$x, i16)), (VUPLG (VSEGH VR128:$x))>;
@@ -1993,7 +1993,7 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VREPG VR128:$x, 1), (VREPIB 64))>;
 }
 
-// Sign-extensions from GPR to i128 on arch15.
+// Sign-extensions from GPR to i128 on z17.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg (anyext GR32:$x), i8)),
             (VUPLG (VLVGP (LGBR (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$x, subreg_l32)),
