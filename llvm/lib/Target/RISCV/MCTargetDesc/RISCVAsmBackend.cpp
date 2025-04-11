@@ -95,6 +95,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 12, 20, 0},
+      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -573,6 +574,21 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     unsigned Bit14_0 = Value & 0x7fff;
     unsigned Bit18_15 = (Value >> 15) & 0xf;
     Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
+    return Value;
+  }
+  case RISCV::fixup_riscv_qc_e_jump_plt: {
+    if (!isInt<32>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
+    if (Value & 0x1)
+      Ctx.reportError(Fixup.getLoc(), "fixup value must be 2-byte aligned");
+    uint64_t Bit31_16 = (Value >> 16) & 0xffff;
+    uint64_t Bit12 = (Value >> 12) & 0x1;
+    uint64_t Bit10_5 = (Value >> 5) & 0x3f;
+    uint64_t Bit15_13 = (Value >> 13) & 0x7;
+    uint64_t Bit4_1 = (Value >> 1) & 0xf;
+    uint64_t Bit11 = (Value >> 11) & 0x1;
+    Value = (Bit31_16 << 32ull) | (Bit12 << 31) | (Bit10_5 << 25) |
+            (Bit15_13 << 17) | (Bit4_1 << 8) | (Bit11 << 7);
     return Value;
   }
   }
