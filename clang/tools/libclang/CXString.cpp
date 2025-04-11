@@ -43,6 +43,7 @@ namespace cxstring {
 CXString createEmpty() {
   CXString Str;
   Str.data = "";
+  Str.length = 0;
   Str.private_flags = CXS_Unmanaged;
   return Str;
 }
@@ -50,6 +51,7 @@ CXString createEmpty() {
 CXString createNull() {
   CXString Str;
   Str.data = nullptr;
+  Str.length = 0;
   Str.private_flags = CXS_Unmanaged;
   return Str;
 }
@@ -60,6 +62,7 @@ CXString createRef(const char *String) {
 
   CXString Str;
   Str.data = String;
+  Str.length = -1;
   Str.private_flags = CXS_Unmanaged;
   return Str;
 }
@@ -71,10 +74,7 @@ CXString createDup(const char *String) {
   if (String[0] == '\0')
     return createEmpty();
 
-  CXString Str;
-  Str.data = strdup(String);
-  Str.private_flags = CXS_Malloc;
-  return Str;
+  return createDup(StringRef(String));
 }
 
 CXString createRef(StringRef String) {
@@ -91,11 +91,13 @@ CXString createRef(StringRef String) {
 }
 
 CXString createDup(StringRef String) {
-  CXString Result;
   char *Spelling = static_cast<char *>(llvm::safe_malloc(String.size() + 1));
-  memmove(Spelling, String.data(), String.size());
+  memcpy(Spelling, String.data(), String.size());
   Spelling[String.size()] = 0;
+
+  CXString Result;
   Result.data = Spelling;
+  Result.length = String.size();
   Result.private_flags = (unsigned) CXS_Malloc;
   return Result;
 }
@@ -103,6 +105,7 @@ CXString createDup(StringRef String) {
 CXString createCXString(CXStringBuf *buf) {
   CXString Str;
   Str.data = buf;
+  Str.length = -1;
   Str.private_flags = (unsigned) CXS_StringBuf;
   return Str;
 }
@@ -162,6 +165,13 @@ const char *clang_getCString(CXString string) {
     return static_cast<const cxstring::CXStringBuf *>(string.data)->Data.data();
   }
   return static_cast<const char *>(string.data);
+}
+
+const char *clang_getCStringAndLength(CXString string, size_t *length) {
+  auto ret = clang_getCString(string);
+  *length =
+      string.length == static_cast<size_t>(-1) ? strlen(ret) : string.length;
+  return ret;
 }
 
 void clang_disposeString(CXString string) {
