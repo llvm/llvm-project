@@ -1,14 +1,17 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  Analysis
   BinaryFormat
   BitWriter
   Core
   IRReader
   Linker
+  MC
   Option
   Object
-  TargetParser
   Support
+  Target
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS SYCLLinkOpts.td)

@@ -312,16 +312,16 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
   // Iterate over every disjoint partition of the def-use graph.
   for (const auto &E : ECs) {
-    if (!E.isLeader())
+    if (!E->isLeader())
       continue;
+
     ConstantRange R(MaxIntegerBW + 1, false);
     bool Fail = false;
     Type *ConvertedToTy = nullptr;
 
     // For every member of the partition, union all the ranges together.
-    for (auto MI = ECs.member_begin(E), ME = ECs.member_end(); MI != ME; ++MI) {
-      Instruction *I = *MI;
-      auto SeenI = SeenInsts.find(I);
+    for (Instruction *I : ECs.members(*E)) {
+      auto *SeenI = SeenInsts.find(I);
       if (SeenI == SeenInsts.end())
         continue;
 
@@ -349,7 +349,7 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
 
     // If the set was empty, or we failed, or the range is poisonous,
     // bail out.
-    if (ECs.member_begin(E) == ECs.member_end() || Fail || R.isFullSet() ||
+    if (ECs.member_begin(*E) == ECs.member_end() || Fail || R.isFullSet() ||
         R.isSignWrappedSet())
       continue;
     assert(ConvertedToTy && "Must have set the convertedtoty by this point!");
@@ -389,8 +389,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
       }
     }
 
-    for (auto MI = ECs.member_begin(E), ME = ECs.member_end(); MI != ME; ++MI)
-      convert(*MI, Ty);
+    for (Instruction *I : ECs.members(*E))
+      convert(I, Ty);
     MadeChange = true;
   }
 

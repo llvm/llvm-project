@@ -1247,6 +1247,7 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
     case DiagnosticsEngine::ak_nestednamespec:
     case DiagnosticsEngine::ak_declcontext:
     case DiagnosticsEngine::ak_attr:
+    case DiagnosticsEngine::ak_expr:
       getDiags()->ConvertArgToString(Kind, getRawArg(ArgNo),
                                      StringRef(Modifier, ModifierLen),
                                      StringRef(Argument, ArgumentLen),

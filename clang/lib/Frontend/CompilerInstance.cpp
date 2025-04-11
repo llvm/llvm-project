@@ -452,7 +452,7 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   HeaderSearch *HeaderInfo =
       new HeaderSearch(getHeaderSearchOpts(), getSourceManager(),
                        getDiagnostics(), getLangOpts(), &getTarget());
-  PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOptsPtr(),
+  PP = std::make_shared<Preprocessor>(Invocation->getPreprocessorOpts(),
                                       getDiagnostics(), getLangOpts(),
                                       getSourceManager(), *HeaderInfo, *this,
                                       /*IdentifierInfoLookup=*/nullptr,

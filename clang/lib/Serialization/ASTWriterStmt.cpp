@@ -1932,7 +1932,9 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
   Record.push_back(E->isParenTypeId());
 
   Record.push_back(E->isGlobalNew());
-  Record.push_back(E->passAlignment());
+  ImplicitAllocationParameters IAP = E->implicitAllocationParameters();
+  Record.push_back(isAlignedAllocation(IAP.PassAlignment));
+  Record.push_back(isTypeAwareAllocation(IAP.PassTypeIdentity));
   Record.push_back(E->doesUsualArrayDeleteWantSize());
   Record.push_back(E->CXXNewExprBits.HasInitializer);
   Record.push_back(E->CXXNewExprBits.StoredInitializationStyle);
@@ -2229,6 +2231,7 @@ void ASTStmtWriter::VisitSubstNonTypeTemplateParmExpr(
   CurrentPackingBits.addBit((bool)E->getPackIndex());
   if (auto PackIndex = E->getPackIndex())
     Record.push_back(*PackIndex + 1);
+  CurrentPackingBits.addBit(E->getFinal());
 
   Record.AddSourceLocation(E->getNameLoc());
   Record.AddStmt(E->getReplacement());
@@ -2271,7 +2274,7 @@ void ASTStmtWriter::VisitCXXFoldExpr(CXXFoldExpr *E) {
   Record.AddSourceLocation(E->LParenLoc);
   Record.AddSourceLocation(E->EllipsisLoc);
   Record.AddSourceLocation(E->RParenLoc);
-  Record.push_back(E->NumExpansions);
+  Record.push_back(E->NumExpansions.toInternalRepresentation());
   Record.AddStmt(E->SubExprs[0]);
   Record.AddStmt(E->SubExprs[1]);
   Record.AddStmt(E->SubExprs[2]);
@@ -3014,9 +3017,7 @@ void ASTStmtWriter::VisitOpenACCWaitConstruct(OpenACCWaitConstruct *S) {
 
 void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   VisitStmt(S);
-  Record.writeEnum(S->Kind);
-  Record.AddSourceRange(S->Range);
-  Record.AddSourceLocation(S->DirectiveLoc);
+  VisitOpenACCConstructStmt(S);
   Record.writeEnum(S->getAtomicKind());
   Record.AddStmt(S->getAssociatedStmt());
 

@@ -1321,7 +1321,7 @@ ModuleLocalNameLookupTrait::internal_key_type
 ModuleLocalNameLookupTrait::GetInternalKey(const external_key_type &Key) {
   DeclarationNameKey Name(Key.first);
 
-  std::optional<unsigned> ModuleHash = getPrimaryModuleHash(Key.second);
+  UnsignedOrNone ModuleHash = getPrimaryModuleHash(Key.second);
   if (!ModuleHash)
     return {Name, 0};
 
@@ -2616,6 +2616,14 @@ bool ASTReader::shouldDisableValidationForFile(
   return false;
 }
 
+static std::pair<StringRef, StringRef>
+getUnresolvedInputFilenames(const ASTReader::RecordData &Record,
+                            const StringRef InputBlob) {
+  uint16_t AsRequestedLength = Record[7];
+  return {InputBlob.substr(0, AsRequestedLength),
+          InputBlob.substr(AsRequestedLength)};
+}
+
 InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   // If this ID is bogus, just return an empty input file.
   if (ID == 0 || ID > F.InputFileInfosLoaded.size())
@@ -2659,11 +2667,12 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.Transient = static_cast<bool>(Record[4]);
   R.TopLevel = static_cast<bool>(Record[5]);
   R.ModuleMap = static_cast<bool>(Record[6]);
-  uint16_t AsRequestedLength = Record[7];
-  R.UnresolvedImportedFilenameAsRequested = Blob.substr(0, AsRequestedLength);
-  R.UnresolvedImportedFilename = Blob.substr(AsRequestedLength);
-  if (R.UnresolvedImportedFilename.empty())
-    R.UnresolvedImportedFilename = R.UnresolvedImportedFilenameAsRequested;
+  auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
+      getUnresolvedInputFilenames(Record, Blob);
+  R.UnresolvedImportedFilenameAsRequested = UnresolvedFilenameAsRequested;
+  R.UnresolvedImportedFilename = UnresolvedFilename.empty()
+                                     ? UnresolvedFilenameAsRequested
+                                     : UnresolvedFilename;
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
   if (!MaybeEntry) // FIXME this drops errors on the floor.
@@ -3317,6 +3326,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       auto Result = ReadASTCore(ImportedFile, ImportedKind, ImportLoc, &F,
                                 Loaded, StoredSize, StoredModTime,
                                 StoredSignature, Capabilities);
+
+      // Check the AST we just read from ImportedFile contains a different
+      // module than we expected (ImportedName). This can occur for C++20
+      // Modules when given a mismatch via -fmodule-file=<name>=<file>
+      if (IsImportingStdCXXModule) {
+        if (const auto *Imported =
+                getModuleManager().lookupByFileName(ImportedFile);
+            Imported != nullptr && Imported->ModuleName != ImportedName) {
+          Diag(diag::err_failed_to_find_module_file) << ImportedName;
+          Result = Missing;
+        }
+      }
 
       // If we diagnosed a problem, produce a backtrace.
       bool recompilingFinalized = Result == OutOfDate &&
@@ -5704,6 +5725,11 @@ bool ASTReader::readASTFileControlBlock(
   bool DoneWithControlBlock = false;
   SmallString<0> PathBuf;
   PathBuf.reserve(256);
+  // Additional path buffer to use when multiple paths need to be resolved.
+  // For example, when deserializing input files that contains a path that was
+  // resolved from a vfs overlay and an external location.
+  SmallString<0> AdditionalPathBuf;
+  AdditionalPathBuf.reserve(256);
   while (!DoneWithControlBlock) {
     Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
     if (!MaybeEntry) {
@@ -5835,9 +5861,21 @@ bool ASTReader::readASTFileControlBlock(
           break;
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
-          auto Filename = ResolveImportedPath(PathBuf, Blob, ModuleDir);
+          auto [UnresolvedFilenameAsRequested, UnresolvedFilename] =
+              getUnresolvedInputFilenames(Record, Blob);
+          auto FilenameAsRequestedBuf = ResolveImportedPath(
+              PathBuf, UnresolvedFilenameAsRequested, ModuleDir);
+          StringRef Filename;
+          if (UnresolvedFilename.empty())
+            Filename = *FilenameAsRequestedBuf;
+          else {
+            auto FilenameBuf = ResolveImportedPath(
+                AdditionalPathBuf, UnresolvedFilename, ModuleDir);
+            Filename = *FilenameBuf;
+          }
           shouldContinue = Listener.visitInputFile(
-              *Filename, isSystemFile, Overridden, /*IsExplicitModule=*/false);
+              *FilenameAsRequestedBuf, Filename, isSystemFile, Overridden,
+              /*IsExplicitModule=*/false);
           break;
         }
         if (!shouldContinue)
@@ -9661,6 +9699,10 @@ ExternalASTSource::ExtKind ASTReader::hasExternalDefinitions(const Decl *FD) {
   return I->second ? EK_Never : EK_Always;
 }
 
+bool ASTReader::wasThisDeclarationADefinition(const FunctionDecl *FD) {
+  return ThisDeclarationWasADefinitionSet.contains(FD);
+}
+
 Selector ASTReader::getLocalSelector(ModuleFile &M, unsigned LocalID) {
   return DecodeSelector(getGlobalSelectorID(M, LocalID));
 }
@@ -12711,36 +12753,37 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::PresentOrCopy:
   case OpenACCClauseKind::Copy: {
     SourceLocation LParenLoc = readSourceLocation();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyClause::Create(getContext(), ClauseKind, BeginLoc,
-                                     LParenLoc, VarList, EndLoc);
+                                     LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::CopyIn:
   case OpenACCClauseKind::PCopyIn:
   case OpenACCClauseKind::PresentOrCopyIn: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsReadOnly = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyInClause::Create(getContext(), ClauseKind, BeginLoc,
-                                       LParenLoc, IsReadOnly, VarList, EndLoc);
+                                       LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::CopyOut:
   case OpenACCClauseKind::PCopyOut:
   case OpenACCClauseKind::PresentOrCopyOut: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsZero = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCopyOutClause::Create(getContext(), ClauseKind, BeginLoc,
-                                        LParenLoc, IsZero, VarList, EndLoc);
+                                        LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::Create:
   case OpenACCClauseKind::PCreate:
   case OpenACCClauseKind::PresentOrCreate: {
     SourceLocation LParenLoc = readSourceLocation();
-    bool IsZero = readBool();
+    OpenACCModifierKind ModList = readEnum<OpenACCModifierKind>();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
     return OpenACCCreateClause::Create(getContext(), ClauseKind, BeginLoc,
-                                       LParenLoc, IsZero, VarList, EndLoc);
+                                       LParenLoc, ModList, VarList, EndLoc);
   }
   case OpenACCClauseKind::Async: {
     SourceLocation LParenLoc = readSourceLocation();
@@ -12880,7 +12923,7 @@ static unsigned getStableHashForModuleName(StringRef PrimaryModuleName) {
   return ID.computeStableHash();
 }
 
-std::optional<unsigned> clang::getPrimaryModuleHash(const Module *M) {
+UnsignedOrNone clang::getPrimaryModuleHash(const Module *M) {
   if (!M)
     return std::nullopt;
 

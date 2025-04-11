@@ -31,6 +31,13 @@ using namespace llvm;
 
 namespace {
 
+/// Return true if stripping the bundle from a call will result in invalid IR.
+static bool shouldKeepBundleTag(uint32_t BundleTagID) {
+  // In convergent functions using convergencectrl bundles, all convergent calls
+  // must use the convergence bundles so don't try to remove them.
+  return BundleTagID == LLVMContext::OB_convergencectrl;
+}
+
 /// Given ChunksToKeep, produce a map of calls and indexes of operand bundles
 /// to be preserved for each call.
 class OperandBundleRemapper : public InstVisitor<OperandBundleRemapper> {
@@ -52,9 +59,12 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for (unsigned BundleIndex : seq(Call.getNumOperandBundles()))
-      if (O.shouldKeep()) // Should we keep this one?
+    for (unsigned BundleIndex : seq(Call.getNumOperandBundles())) {
+      if (shouldKeepBundleTag(
+              Call.getOperandBundleAt(BundleIndex).getTagID()) ||
+          O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
+    }
   }
 };
 

@@ -62,8 +62,6 @@
 TABLE_FUNCTION_DECL(float2, log2_tbl);
 TABLE_FUNCTION_DECL(float2, log10_tbl);
 TABLE_FUNCTION_DECL(uint4, pibits_tbl);
-TABLE_FUNCTION_DECL(float2, sinhcosh_tbl);
-TABLE_FUNCTION_DECL(float2, cbrt_tbl);
 
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_head);
 CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl_ep_tail);
@@ -73,6 +71,10 @@ CLC_TABLE_FUNCTION_DECL(float, log_inv_tbl);
 CLC_TABLE_FUNCTION_DECL(float, exp_tbl);
 CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_head);
 CLC_TABLE_FUNCTION_DECL(float, exp_tbl_ep_tail);
+CLC_TABLE_FUNCTION_DECL(float, cbrt_tbl_head);
+CLC_TABLE_FUNCTION_DECL(float, cbrt_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(float, sinhcosh_tbl_head);
+CLC_TABLE_FUNCTION_DECL(float, sinhcosh_tbl_tail);
 
 #ifdef cl_khr_fp64
 
@@ -84,11 +86,15 @@ CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_head);
 CLC_TABLE_FUNCTION_DECL(double, atan_jby256_tbl_tail);
 CLC_TABLE_FUNCTION_DECL(double, two_to_jby64_ep_tbl_head);
 CLC_TABLE_FUNCTION_DECL(double, two_to_jby64_ep_tbl_tail);
-TABLE_FUNCTION_DECL(double2, sinh_tbl);
-TABLE_FUNCTION_DECL(double2, cosh_tbl);
-TABLE_FUNCTION_DECL(double, cbrt_inv_tbl);
-TABLE_FUNCTION_DECL(double2, cbrt_dbl_tbl);
-TABLE_FUNCTION_DECL(double2, cbrt_rem_tbl);
+CLC_TABLE_FUNCTION_DECL(double, sinh_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, sinh_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(double, cosh_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, cosh_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(double, cbrt_inv_tbl);
+CLC_TABLE_FUNCTION_DECL(double, cbrt_dbl_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, cbrt_dbl_tbl_tail);
+CLC_TABLE_FUNCTION_DECL(double, cbrt_rem_tbl_head);
+CLC_TABLE_FUNCTION_DECL(double, cbrt_rem_tbl_tail);
 CLC_TABLE_FUNCTION_DECL(double, powlog_tbl_head);
 CLC_TABLE_FUNCTION_DECL(double, powlog_tbl_tail);
 CLC_TABLE_FUNCTION_DECL(double, log_f_inv_tbl_head);

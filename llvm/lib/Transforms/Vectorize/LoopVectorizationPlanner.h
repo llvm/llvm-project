@@ -249,10 +249,10 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Name));
   }
 
-  VPScalarCastRecipe *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
-                                       Type *ResultTy, DebugLoc DL) {
+  VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
+                                  Type *ResultTy, DebugLoc DL) {
     return tryInsertInstruction(
-        new VPScalarCastRecipe(Opcode, Op, ResultTy, DL));
+        new VPInstructionWithType(Opcode, Op, ResultTy, DL));
   }
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
@@ -263,10 +263,10 @@ public:
   VPScalarIVStepsRecipe *
   createScalarIVSteps(Instruction::BinaryOps InductionOpcode,
                       FPMathOperator *FPBinOp, VPValue *IV, VPValue *Step,
-                      VPValue *VF) {
+                      VPValue *VF, DebugLoc DL) {
     return tryInsertInstruction(new VPScalarIVStepsRecipe(
         IV, Step, VF, InductionOpcode,
-        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags()));
+        FPBinOp ? FPBinOp->getFastMathFlags() : FastMathFlags(), DL));
   }
 
   //===--------------------------------------------------------------------===//
