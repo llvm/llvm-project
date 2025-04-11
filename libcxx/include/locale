@@ -2419,7 +2419,7 @@ bool money_get<_CharT, _InputIterator>::__do_get(
           return false;
         }
       }
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case money_base::none:
       if (__p != 3) {
         while (__b != __e && __ct.is(ctype_base::space, *__b))

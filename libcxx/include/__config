@@ -1124,9 +1124,6 @@ typedef __char32_t char32_t;
     __attribute__((__format__(archetype, format_string_index, first_format_arg_index)))
 #  define _LIBCPP_PACKED __attribute__((__packed__))
 
-// Use a function like macro to imply that it must be followed by a semicolon
-#  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
-
 #  if __has_attribute(__no_sanitize__) && !defined(_LIBCPP_COMPILER_GCC)
 #    define _LIBCPP_NO_CFI __attribute__((__no_sanitize__("cfi")))
 #  else

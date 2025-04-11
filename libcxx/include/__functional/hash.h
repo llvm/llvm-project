@@ -64,10 +64,10 @@ struct __murmur2_or_cityhash<_Size, 32> {
     switch (__len) {
     case 3:
       __h ^= static_cast<_Size>(__data[2] << 16);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 2:
       __h ^= static_cast<_Size>(__data[1] << 8);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 1:
       __h ^= __data[0];
       __h *= __m;
