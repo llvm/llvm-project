@@ -122,7 +122,15 @@ constexpr Definition g_function_child_entries[] = {
     Definition("pc-offset", EntryType::FunctionPCOffset),
     Definition("initial-function", EntryType::FunctionInitial),
     Definition("changed", EntryType::FunctionChanged),
-    Definition("is-optimized", EntryType::FunctionIsOptimized)};
+    Definition("is-optimized", EntryType::FunctionIsOptimized),
+    Definition("scope", EntryType::FunctionScope),
+    Definition("basename", EntryType::FunctionBasename),
+    Definition("template-arguments", EntryType::FunctionTemplateArguments),
+    Definition("formatted-arguments", EntryType::FunctionFormattedArguments),
+    Definition("return-left", EntryType::FunctionReturnLeft),
+    Definition("return-right", EntryType::FunctionReturnRight),
+    Definition("qualifiers", EntryType::FunctionQualifiers),
+};
 
 constexpr Definition g_line_child_entries[] = {
     Entry::DefinitionWithChildren("file", EntryType::LineEntryFile,
@@ -353,6 +361,13 @@ const char *FormatEntity::Entry::TypeToCString(Type t) {
     ENUM_TO_CSTR(FunctionNameWithArgs);
     ENUM_TO_CSTR(FunctionNameNoArgs);
     ENUM_TO_CSTR(FunctionMangledName);
+    ENUM_TO_CSTR(FunctionScope);
+    ENUM_TO_CSTR(FunctionBasename);
+    ENUM_TO_CSTR(FunctionTemplateArguments);
+    ENUM_TO_CSTR(FunctionFormattedArguments);
+    ENUM_TO_CSTR(FunctionReturnLeft);
+    ENUM_TO_CSTR(FunctionReturnRight);
+    ENUM_TO_CSTR(FunctionQualifiers);
     ENUM_TO_CSTR(FunctionAddrOffset);
     ENUM_TO_CSTR(FunctionAddrOffsetConcrete);
     ENUM_TO_CSTR(FunctionLineOffset);
@@ -1167,8 +1182,9 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
 
-  const char *cstr =
-      sc.GetPossiblyInlinedFunctionName(Mangled::ePreferDemangled);
+  const char *cstr = sc.GetPossiblyInlinedFunctionName()
+                         .GetName(Mangled::ePreferDemangled)
+                         .AsCString();
   if (!cstr)
     return false;
 
@@ -1186,7 +1202,8 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   return true;
 }
 
-static bool HandleFunctionNameWithArgs(Stream &s,const ExecutionContext *exe_ctx,
+static bool HandleFunctionNameWithArgs(Stream &s,
+                                       const ExecutionContext *exe_ctx,
                                        const SymbolContext &sc) {
   Language *language_plugin = nullptr;
   bool language_plugin_handled = false;
@@ -1711,8 +1728,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferDemangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferDemangled)
+                           .AsCString();
     if (!name)
       return false;
 
@@ -1743,8 +1761,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       return true;
     }
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferDemangledWithoutArguments);
+    const char *name =
+        sc->GetPossiblyInlinedFunctionName()
+            .GetName(Mangled::NamePreference::ePreferDemangledWithoutArguments)
+            .AsCString();
     if (!name)
       return false;
 
@@ -1753,19 +1773,38 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
   }
 
+  case Entry::Type::FunctionScope:
+  case Entry::Type::FunctionBasename:
+  case Entry::Type::FunctionTemplateArguments:
+  case Entry::Type::FunctionFormattedArguments:
+  case Entry::Type::FunctionReturnRight:
+  case Entry::Type::FunctionReturnLeft:
+  case Entry::Type::FunctionQualifiers: {
+    if (!sc->function)
+      return false;
+
+    Language *language_plugin =
+        Language::FindPlugin(sc->function->GetLanguage());
+    if (!language_plugin)
+      return false;
+
+    return language_plugin->HandleFrameFormatVariable(*sc, exe_ctx, entry.type,
+                                                      s);
+  }
+
   case Entry::Type::FunctionNameWithArgs: {
     if (!sc)
       return false;
 
     return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
   }
-
   case Entry::Type::FunctionMangledName: {
     if (!sc)
       return false;
 
-    const char *name = sc->GetPossiblyInlinedFunctionName(
-        Mangled::NamePreference::ePreferMangled);
+    const char *name = sc->GetPossiblyInlinedFunctionName()
+                           .GetName(Mangled::NamePreference::ePreferMangled)
+                           .AsCString();
     if (!name)
       return false;
 
