@@ -389,10 +389,10 @@ define <2 x double> @extract_2xf64(ptr addrspace(1) %p0, ptr addrspace(1) %p1, i
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0xbff00000
-; GCN-NEXT:    v_cmp_lt_f64_e32 vcc, -1.0, v[4:5]
-; GCN-NEXT:    v_cndmask_b32_e64 v1, v0, -2.0, vcc
-; GCN-NEXT:    v_cmp_lt_f64_e32 vcc, -1.0, v[6:7]
-; GCN-NEXT:    v_cndmask_b32_e64 v3, v0, -2.0, vcc
+; GCN-NEXT:    v_cmp_nlt_f64_e32 vcc, -1.0, v[4:5]
+; GCN-NEXT:    v_cndmask_b32_e32 v1, -2.0, v0, vcc
+; GCN-NEXT:    v_cmp_nlt_f64_e32 vcc, -1.0, v[6:7]
+; GCN-NEXT:    v_cndmask_b32_e32 v3, -2.0, v0, vcc
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
