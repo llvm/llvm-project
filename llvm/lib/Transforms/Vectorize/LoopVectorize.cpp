@@ -4878,6 +4878,16 @@ void LoopVectorizationCostModel::collectElementTypesForWidening() {
   }
 }
 
+/// Get the VF scaling factor applied to the recipe's output, if the recipe has
+/// one.
+static unsigned getVFScaleFactor(VPRecipeBase *R) {
+  if (auto *RR = dyn_cast<VPReductionPHIRecipe>(R))
+    return RR->getVFScaleFactor();
+  if (auto *RR = dyn_cast<VPPartialReductionRecipe>(R))
+    return RR->getVFScaleFactor();
+  return 1;
+}
+
 /// Estimate the register usage for \p Plan and vectorization factors in \p VFs
 /// by calculating the highest number of values that are live at a single
 /// location as a rough estimate. Returns the register usage for each VF in \p
@@ -5032,10 +5042,19 @@ calculateRegisterUsage(VPlan &Plan, ArrayRef<ElementCount> VFs,
           // even in the scalar case.
           RegUsage[ClassID] += 1;
         } else {
+          // The output from scaled phis and scaled reductions actually has
+          // fewer lanes than the VF.
+          unsigned ScaleFactor = getVFScaleFactor(R);
+          ElementCount VF = VFs[J].divideCoefficientBy(ScaleFactor);
+          LLVM_DEBUG(if (VF != VFs[J]) {
+            dbgs() << "LV(REG): Scaled down VF from " << VFs[J] << " to " << VF
+                   << " for " << *R << "\n";
+          });
+
           for (VPValue *DefV : R->definedValues()) {
             Type *ScalarTy = TypeInfo.inferScalarType(DefV);
             unsigned ClassID = TTI.getRegisterClassForType(true, ScalarTy);
-            RegUsage[ClassID] += GetRegUsage(ScalarTy, VFs[J]);
+            RegUsage[ClassID] += GetRegUsage(ScalarTy, VF);
           }
         }
       }
@@ -9141,8 +9160,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
   if (isa<LoadInst>(Instr) || isa<StoreInst>(Instr))
     return tryToWidenMemory(Instr, Operands, Range);
 
-  if (getScalingForReduction(Instr))
-    return tryToCreatePartialReduction(Instr, Operands);
+  if (std::optional<unsigned> ScaleFactor = getScalingForReduction(Instr))
+    return tryToCreatePartialReduction(Instr, Operands, ScaleFactor.value());
 
   if (!shouldWiden(Instr, Range))
     return nullptr;
@@ -9166,7 +9185,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(
 
 VPRecipeBase *
 VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
-                                             ArrayRef<VPValue *> Operands) {
+                                             ArrayRef<VPValue *> Operands,
+                                             unsigned ScaleFactor) {
   assert(Operands.size() == 2 &&
          "Unexpected number of operands for partial reduction");
 
@@ -9199,7 +9219,7 @@ VPRecipeBuilder::tryToCreatePartialReduction(Instruction *Reduction,
     BinOp = Builder.createSelect(Mask, BinOp, Zero, Reduction->getDebugLoc());
   }
   return new VPPartialReductionRecipe(ReductionOpcode, BinOp, Accumulator,
-                                      Reduction);
+                                      ScaleFactor, Reduction);
 }
 
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
