@@ -42,6 +42,13 @@ Potentially Breaking Changes
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
 
+- New LLVM optimizations have been implemented that optimize pointer arithmetic on
+  null pointers more aggressively.  As part of this, clang has implemented a special
+  case for old-style offsetof idioms like ``((int)(&(((struct S *)0)->field)))``, to
+  ensure they are not caught by these optimizations.  It is also possible to use
+  ``-fwrapv-pointer`` or   ``-fno-delete-null-pointer-checks`` to make pointer arithmetic
+  on null pointers well-defined. (#GH130734, #GH130742)
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -92,6 +99,8 @@ C++2c Feature Support
 - Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
 
 - Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
+
+- Implemented `P2719R4 Type-aware allocation and deallocation functions <https://wg21.link/P2719>`_.
 
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -161,6 +170,18 @@ C23 Feature Support
   scope.
 - Fixed a bug where you could not cast a null pointer constant to type
   ``nullptr_t``. Fixes #GH133644.
+
+C11 Feature Support
+^^^^^^^^^^^^^^^^^^^
+- Implemented `WG14 N1285 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1285.htm>`_
+  which introduces the notion of objects with a temporary lifetime. When an
+  expression resulting in an rvalue with structure or union type and that type
+  contains a member of array type, the expression result is an automatic storage
+  duration object with temporary lifetime which begins when the expression is
+  evaluated and ends at the evaluation of the containing full expression. This
+  functionality is also implemented for earlier C language modes because the
+  C99 semantics will never be implemented (it would require dynamic allocations
+  of memory which leaks, which users would not appreciate).
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -280,6 +301,8 @@ Improvements to Clang's diagnostics
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
   prefixes.
+- Clang now in more cases avoids printing 'type-parameter-X-X' instead of the name of
+  the template parameter.
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
@@ -385,6 +408,10 @@ Bug Fixes to Attribute Support
 - Corrected the diagnostic for the ``callback`` attribute when passing too many
   or too few attribute argument indicies for the specified callback function.
   (#GH47451)
+
+- No longer crashing on ``__attribute__((align_value(N)))`` during template
+  instantiation when the function parameter type is not a pointer or reference.
+  (#GH26612)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^

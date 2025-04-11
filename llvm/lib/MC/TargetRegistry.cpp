@@ -77,15 +77,6 @@ MCStreamer *Target::createMCObjectStreamer(
   return S;
 }
 
-MCStreamer *Target::createMCObjectStreamer(
-    const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-    std::unique_ptr<MCObjectWriter> &&OW,
-    std::unique_ptr<MCCodeEmitter> &&Emitter, const MCSubtargetInfo &STI, bool,
-    bool, bool) const {
-  return createMCObjectStreamer(T, Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), STI);
-}
-
 MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<formatted_raw_ostream> OS,
                                       MCInstPrinter *IP,
@@ -102,17 +93,6 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
 
   createAsmTargetStreamer(*S, OSRef, IP);
   return S;
-}
-
-MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
-                                      std::unique_ptr<formatted_raw_ostream> OS,
-                                      bool IsVerboseAsm, bool UseDwarfDirectory,
-                                      MCInstPrinter *IP,
-                                      std::unique_ptr<MCCodeEmitter> &&CE,
-                                      std::unique_ptr<MCAsmBackend> &&TAB,
-                                      bool ShowInst) const {
-  return createAsmStreamer(Ctx, std::move(OS), IP, std::move(CE),
-                           std::move(TAB));
 }
 
 iterator_range<TargetRegistry::iterator> TargetRegistry::targets() {

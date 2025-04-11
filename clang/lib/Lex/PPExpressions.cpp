@@ -26,6 +26,7 @@
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -592,6 +593,15 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
                                      Token &PeekTok, bool ValueLive,
                                      bool &IncludedUndefinedIds,
                                      Preprocessor &PP) {
+  if (PP.getPreprocessorOpts().SingleFileParseMode && IncludedUndefinedIds) {
+    // The single-file parse mode behavior kicks in as soon as single identifier
+    // is undefined. If we've already seen one, there's no point in continuing
+    // with the rest of the expression. Besides saving work, this also prevents
+    // calling undefined function-like macros.
+    PP.DiscardUntilEndOfDirective(PeekTok);
+    return true;
+  }
+
   unsigned PeekPrec = getPrecedence(PeekTok.getKind());
   // If this token isn't valid, report the error.
   if (PeekPrec == ~0U) {
