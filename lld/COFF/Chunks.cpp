@@ -570,14 +570,14 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   // to match the value in the EC load config, which is expected to be
   // a relocatable pointer to the __chpe_metadata symbol.
   COFFLinkerContext &ctx = file->symtab.ctx;
-  if (ctx.hybridSymtab && ctx.symtab.loadConfigSym &&
-      ctx.symtab.loadConfigSym->getChunk() == this &&
-      ctx.hybridSymtab->loadConfigSym &&
-      ctx.symtab.loadConfigSize >=
+  if (ctx.hybridSymtab && ctx.hybridSymtab->loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSym->getChunk() == this &&
+      ctx.symtab.loadConfigSym &&
+      ctx.hybridSymtab->loadConfigSize >=
           offsetof(coff_load_configuration64, CHPEMetadataPointer) +
               sizeof(coff_load_configuration64::CHPEMetadataPointer))
     res->emplace_back(
-        ctx.symtab.loadConfigSym->getRVA() +
+        ctx.hybridSymtab->loadConfigSym->getRVA() +
             offsetof(coff_load_configuration64, CHPEMetadataPointer),
         IMAGE_REL_BASED_DIR64);
 }

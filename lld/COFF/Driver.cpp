@@ -662,9 +662,9 @@ void LinkerDriver::setMachine(MachineTypes machine) {
     if (machine == ARM64EC)
       ctx.symtabEC = &ctx.symtab;
   } else {
-    ctx.symtab.machine = ARM64;
-    ctx.hybridSymtab.emplace(ctx, ARM64EC);
-    ctx.symtabEC = &*ctx.hybridSymtab;
+    ctx.symtab.machine = ARM64EC;
+    ctx.hybridSymtab.emplace(ctx, ARM64);
+    ctx.symtabEC = &ctx.symtab;
   }
 
   addWinSysRootLibSearchPaths();
@@ -981,12 +981,9 @@ void LinkerDriver::createImportLibrary(bool asLib) {
     }
   };
 
-  if (ctx.hybridSymtab) {
-    getExports(ctx.symtab, nativeExports);
-    getExports(*ctx.hybridSymtab, exports);
-  } else {
-    getExports(ctx.symtab, exports);
-  }
+  getExports(ctx.symtab, exports);
+  if (ctx.hybridSymtab)
+    getExports(*ctx.hybridSymtab, nativeExports);
 
   std::string libName = getImportName(asLib);
   std::string path = getImplibPath();
@@ -1818,10 +1815,6 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
-  // Most of main arguments apply either to both or only to EC symbol table on
-  // ARM64X target.
-  SymbolTable &mainSymtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
-
   // Handle /nodefaultlib:<filename>
   {
     llvm::TimeTraceScope timeScope2("Nodefaultlib");
@@ -1903,11 +1896,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /alternatename
   for (auto *arg : args.filtered(OPT_alternatename))
-    mainSymtab.parseAlternateName(arg->getValue());
+    ctx.symtab.parseAlternateName(arg->getValue());
 
   // Handle /include
   for (auto *arg : args.filtered(OPT_incl))
-    mainSymtab.addGCRoot(arg->getValue());
+    ctx.symtab.addGCRoot(arg->getValue());
 
   // Handle /implib
   if (auto *arg = args.getLastArg(OPT_implib))
@@ -2056,7 +2049,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /aligncomm
   for (auto *arg : args.filtered(OPT_aligncomm))
-    mainSymtab.parseAligncomm(arg->getValue());
+    ctx.symtab.parseAligncomm(arg->getValue());
 
   // Handle /manifestdependency.
   for (auto *arg : args.filtered(OPT_manifestdependency))
@@ -2307,19 +2300,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
         if (!e.extName.empty() && !isDecorated(e.extName))
           e.extName = saver().save("_" + e.extName);
       }
-      mainSymtab.exports.push_back(e);
+      ctx.symtab.exports.push_back(e);
     }
   }
 
   // Handle /def
   if (auto *arg = args.getLastArg(OPT_deffile)) {
     // parseModuleDefs mutates Config object.
-    mainSymtab.parseModuleDefs(arg->getValue());
+    ctx.symtab.parseModuleDefs(arg->getValue());
     if (ctx.hybridSymtab) {
       // MSVC ignores the /defArm64Native argument on non-ARM64X targets.
       // It is also ignored if the /def option is not specified.
       if (auto *arg = args.getLastArg(OPT_defarm64native))
-        ctx.symtab.parseModuleDefs(arg->getValue());
+        ctx.hybridSymtab->parseModuleDefs(arg->getValue());
     }
   }
 
@@ -2336,7 +2329,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // and after the early return when just writing an import library.
   if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN) {
     llvm::TimeTraceScope timeScope("Infer subsystem");
-    config->subsystem = mainSymtab.inferSubsystem();
+    config->subsystem = ctx.symtab.inferSubsystem();
     if (config->subsystem == IMAGE_SUBSYSTEM_UNKNOWN)
       Fatal(ctx) << "subsystem must be defined";
   }
@@ -2702,7 +2695,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /output-def (MinGW specific).
   if (auto *arg = args.getLastArg(OPT_output_def))
-    writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
+    writeDefFile(ctx, arg->getValue(), ctx.symtab.exports);
 
   // Set extra alignment for .comm symbols
   ctx.forEachSymtab([&](SymbolTable &symtab) {
