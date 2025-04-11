@@ -128,6 +128,12 @@ struct {
 #define ZCMOP_BITMASK (1ULL << 6)
 #define ZAWRS_GROUPID 1
 #define ZAWRS_BITMASK (1ULL << 7)
+#define ZILSD_GROUPID 1
+#define ZILSD_BITMASK (1ULL << 8)
+#define ZCLSD_GROUPID 1
+#define ZCLSD_BITMASK (1ULL << 9)
+#define ZCMP_GROUPID 1
+#define ZCMP_BITMASK (1ULL << 10)
 
 #if defined(__linux__)
 
