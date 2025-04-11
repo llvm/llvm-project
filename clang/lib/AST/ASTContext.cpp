@@ -13104,6 +13104,32 @@ unsigned ASTContext::getStaticLocalNumber(const VarDecl *VD) const {
   return I != StaticLocalNumbers.end() ? I->second : 1;
 }
 
+void ASTContext::setIsDestroyingOperatorDelete(const FunctionDecl *FD,
+                                               bool IsDestroying) {
+  if (!IsDestroying) {
+    assert(!DestroyingOperatorDeletes.contains(FD->getCanonicalDecl()));
+    return;
+  }
+  DestroyingOperatorDeletes.insert(FD->getCanonicalDecl());
+}
+
+bool ASTContext::isDestroyingOperatorDelete(const FunctionDecl *FD) const {
+  return DestroyingOperatorDeletes.contains(FD->getCanonicalDecl());
+}
+
+void ASTContext::setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
+                                                   bool IsTypeAware) {
+  if (!IsTypeAware) {
+    assert(!TypeAwareOperatorNewAndDeletes.contains(FD->getCanonicalDecl()));
+    return;
+  }
+  TypeAwareOperatorNewAndDeletes.insert(FD->getCanonicalDecl());
+}
+
+bool ASTContext::isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const {
+  return TypeAwareOperatorNewAndDeletes.contains(FD->getCanonicalDecl());
+}
+
 MangleNumberingContext &
 ASTContext::getManglingNumberContext(const DeclContext *DC) {
   assert(LangOpts.CPlusPlus);  // We don't need mangling numbers for plain C.

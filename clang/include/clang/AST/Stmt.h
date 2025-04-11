@@ -891,6 +891,10 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     unsigned ShouldPassAlignment : 1;
 
+    /// Should the type identity be passed to the allocation function?
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ShouldPassTypeIdentity : 1;
+
     /// If this is an array allocation, does the usual deallocation
     /// function for the allocated type want to know the allocated size?
     LLVM_PREFERRED_TYPE(bool)
