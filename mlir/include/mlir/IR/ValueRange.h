@@ -115,6 +115,10 @@ private:
 
 /// This class provides a mutable adaptor for a range of operands. It allows for
 /// setting, inserting, and erasing operands from the given range.
+///
+/// (Note that when using AttrSizedOperandSegments, making changes to a
+/// MutableOperandRange invalidates other MutableOperandRange's in memory; you
+/// must get a new mutable adaptor for the other operand ranges).
 class MutableOperandRange {
 public:
   /// A pair of a named attribute corresponding to an operand segment attribute,
