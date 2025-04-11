@@ -545,6 +545,7 @@ set(files
   __math/traits.h
   __math/trigonometric_functions.h
   __mbstate_t.h
+  __mdspan/aligned_accessor.h
   __mdspan/default_accessor.h
   __mdspan/extents.h
   __mdspan/layout_left.h
@@ -569,6 +570,7 @@ set(files
   __memory/destroy.h
   __memory/destruct_n.h
   __memory/inout_ptr.h
+  __memory/is_sufficiently_aligned.h
   __memory/noexcept_move_assign_container.h
   __memory/out_ptr.h
   __memory/pointer_traits.h
