@@ -36,6 +36,7 @@ public:
   void HandleTranslationUnit(ASTContext &Context) override;
   bool VisitNamespaceDecl(const NamespaceDecl *D);
   bool VisitRecordDecl(const RecordDecl *D);
+  bool VisitVarDecl(const VarDecl *D);
   bool VisitEnumDecl(const EnumDecl *D);
   bool VisitCXXMethodDecl(const CXXMethodDecl *D);
   bool VisitFunctionDecl(const FunctionDecl *D);
