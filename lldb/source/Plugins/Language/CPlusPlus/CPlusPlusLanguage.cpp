@@ -1746,11 +1746,12 @@ static bool PrintFunctionNameWithArgs(Stream &s,
     variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
                                                args);
 
-  if (args.GetSize() > 0) {
-    PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
-  } else {
-    s.PutCString(cstr);
-  }
+  if (args.GetSize() > 0)
+    return PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+
+  // FIXME: can we just unconditionally call PrettyPrintFunctionNameWithArgs?
+  // It should be able to handle the "no arguments" case.
+  s.PutCString(cstr);
 
   return true;
 }
