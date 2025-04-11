@@ -1755,7 +1755,8 @@ private:
           // tags all result variables with one of the largest types to allow
           // them to share the same storage. Convert this to the actual type.
           if (resultRef.getType() != resultRefType)
-            resultRef = builder->createConvert(loc, resultRefType, resultRef);
+            resultRef = builder->createConvertWithVolatileCast(
+                loc, resultRefType, resultRef);
           return builder->create<fir::LoadOp>(loc, resultRef);
         });
     genExitRoutine(false, resultVal);

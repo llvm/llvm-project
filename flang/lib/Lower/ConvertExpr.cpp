@@ -6306,7 +6306,8 @@ private:
       mlir::Value buffi = computeCoordinate(buff, off);
       llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
           builder, loc, memcpyType(), buffi, v.getAddr(), byteSz);
-      createCallMemcpy(args, /*isVolatile=*/false);
+      const bool isVolatile = fir::isa_volatile_type(v.getAddr().getType());
+      createCallMemcpy(args, isVolatile);
 
       // Save the incremented buffer position.
       builder.create<fir::StoreOp>(loc, endOff, buffPos);
@@ -6356,7 +6357,9 @@ private:
             mlir::Value buffi = computeCoordinate(buff, off);
             llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
                 builder, loc, memcpyType(), buffi, v.getAddr(), eleSz);
-            createCallMemcpy(args, /*isVolatile=*/false);
+            const bool isVolatile =
+                fir::isa_volatile_type(v.getAddr().getType());
+            createCallMemcpy(args, isVolatile);
 
             builder.create<fir::StoreOp>(loc, plusOne, buffPos);
           }
