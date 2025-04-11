@@ -427,6 +427,7 @@ module std [system] {
     module count                                  { header "__algorithm/count.h" }
     module equal_range                            { header "__algorithm/equal_range.h" }
     module equal                                  { header "__algorithm/equal.h" }
+    module fill_fill_n_common                     { header "__algorithm/fill_fill_n_common.h" }
     module fill_n                                 { header "__algorithm/fill_n.h" }
     module fill                                   { header "__algorithm/fill.h" }
     module find_end                               { header "__algorithm/find_end.h" }

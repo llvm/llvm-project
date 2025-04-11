@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <deque>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -128,6 +129,24 @@ constexpr bool test_vector_bool(std::size_t N) {
 }
 #endif
 
+/*TEST_CONSTEXPR_CXX23*/ void
+test_segmented_range() { // TODO: Mark this test as TEST_CONSTEXPR_CXX23 when std::deque is constexpr
+  {                      // std::deque
+    std::deque<int> in(20);
+    std::deque<int> expected(in.size(), 42);
+    std::ranges::fill(in, 42);
+    assert(in == expected);
+  }
+  { // join_view
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {0, 0}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::ranges::fill(jv, 42);
+    for (const auto& vec : v)
+      for (auto n : vec)
+        assert(n == 42);
+  }
+}
+
 constexpr bool test() {
   test_iterators<cpp17_output_iterator<int*>, sentinel_wrapper<cpp17_output_iterator<int*>>>();
   test_iterators<cpp20_output_iterator<int*>, sentinel_wrapper<cpp20_output_iterator<int*>>>();
@@ -226,6 +245,9 @@ constexpr bool test() {
     }
   }
 #endif
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_segmented_range();
 
   return true;
 }
