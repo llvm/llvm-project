@@ -7,17 +7,11 @@ define i1 @and_ord(float %a, float %b) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fucomp %st(0)
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    setnp %cl
-; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setnp %al
-; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_ord:
@@ -40,17 +34,11 @@ define i1 @or_uno(float %a, float %b) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
-; X86-NEXT:    fucomp %st(0)
-; X86-NEXT:    fnstsw %ax
-; X86-NEXT:    # kill: def $ah killed $ah killed $ax
-; X86-NEXT:    sahf
-; X86-NEXT:    setp %cl
-; X86-NEXT:    fucomp %st(0)
+; X86-NEXT:    fucompp
 ; X86-NEXT:    fnstsw %ax
 ; X86-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-NEXT:    sahf
 ; X86-NEXT:    setp %al
-; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_uno:
