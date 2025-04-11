@@ -328,6 +328,11 @@ enum class OpenACCClauseKind : uint8_t {
   /// constructs.
   Wait,
 
+  /// 'shortloop' is represented in the ACC.td file, but isn't present in the
+  /// standard. This appears to be an old extension for the nvidia fortran
+  // compiler, but seemingly not elsewhere. Put it here as a placeholder, but it
+  // is never expected to be generated.
+  Shortloop,
   /// Represents an invalid clause, for the purposes of parsing. Should be
   /// 'last'.
   Invalid,
@@ -486,6 +491,9 @@ inline StreamTy &printOpenACCClauseKind(StreamTy &Out, OpenACCClauseKind K) {
   case OpenACCClauseKind::Wait:
     return Out << "wait";
 
+  case OpenACCClauseKind::Shortloop:
+    llvm_unreachable("Shortloop shouldn't be generated in clang");
+    LLVM_FALLTHROUGH;
   case OpenACCClauseKind::Invalid:
     return Out << "<invalid>";
   }

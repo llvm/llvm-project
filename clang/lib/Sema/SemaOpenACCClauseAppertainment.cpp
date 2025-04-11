@@ -26,7 +26,7 @@ namespace {
 class AccClauseSet {
   // We're just using a uint64_t as our underlying rep, so if this size ever
   // gets bigger than 64, we probably need a pair of uint64_ts.
-  static_assert(static_assert<unsigned>(OpenACCClauseKind::Invalid) < 64);
+  static_assert(static_cast<unsigned>(OpenACCClauseKind::Invalid) < 64);
   uint64_t Data;
 
   void setBit(OpenACCClauseKind C) {
@@ -61,13 +61,14 @@ struct LLVMClauseLists {
   AccClauseSet Required;
 };
 struct LLVMDirectiveClauseRelationships {
-  llvm::acc::Directive DirKind;
+  OpenACCDirectiveKind DirKind;
   LLVMClauseLists Lists;
 };
 
 } // namespace
 
-// TODO: ERICH: WOULD NEED Own DIRECTIVE_CLAUSE_SETS
+// This introduces these in a llvm::acc namespace, so make sure this stays in
+// the global namespace.
 #define GEN_CLANG_DIRECTIVE_CLAUSE_SETS
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
@@ -81,10 +82,9 @@ LLVMDirectiveClauseRelationships Relations[] =
 
 const LLVMClauseLists &getListsForDirective(OpenACCDirectiveKind DK) {
 
-  llvm::acc::Directive Dir = getLLVMDirectiveFromClangDirective(DK);
   auto Res = llvm::find_if(Relations,
                            [=](const LLVMDirectiveClauseRelationships &Rel) {
-                             return Rel.DirKind == Dir;
+                             return Rel.DirKind == DK;
                            });
   assert(Res != std::end(Relations) && "Unknown directive kind?");
 

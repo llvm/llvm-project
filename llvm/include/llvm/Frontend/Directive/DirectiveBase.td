@@ -113,6 +113,10 @@ class Clause<string c> {
   // Set the prefix as optional.
   // `clause([prefix]: value)`
   bit isPrefixOptional = true;
+
+  // When necessary because it isn't covered by rules, the name used in the
+  // clause in the clang::OpenACCClauseKind enum.
+  string clangAccSpelling = "";
 }
 
 // Hold information about clause validity by version.

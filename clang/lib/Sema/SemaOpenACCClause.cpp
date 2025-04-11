@@ -215,6 +215,8 @@ public:
       return nullptr;
 
     switch (Clause.getClauseKind()) {
+    case OpenACCClauseKind::Shortloop:
+      llvm_unreachable("Shortloop shouldn't be generated in clang");
     case OpenACCClauseKind::Invalid:
       return nullptr;
 #define VISIT_CLAUSE(CLAUSE_NAME)                                              \
