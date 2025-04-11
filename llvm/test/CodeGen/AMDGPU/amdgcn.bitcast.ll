@@ -1114,19 +1114,23 @@ define amdgpu_kernel void @f64_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_f64 v[0:1], s[4:5], 1.0
-; GCN-NEXT:    v_and_b32_e32 v2, 0xffff0000, v1
-; GCN-NEXT:    v_add_i32_e32 v1, vcc, 2, v1
-; GCN-NEXT:    v_and_b32_e32 v3, 0xffff0000, v0
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, 2, v0
-; GCN-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GCN-NEXT:    v_or_b32_e32 v1, v2, v1
-; GCN-NEXT:    v_or_b32_e32 v0, v3, v0
-; GCN-NEXT:    v_add_i32_e32 v1, vcc, 0x20000, v1
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, 0x20000, v0
+; GCN-NEXT:    v_readfirstlane_b32 s2, v0
+; GCN-NEXT:    v_readfirstlane_b32 s4, v1
+; GCN-NEXT:    s_and_b32 s5, s4, 0xffff0000
+; GCN-NEXT:    s_add_i32 s4, s4, 2
+; GCN-NEXT:    s_and_b32 s6, s2, 0xffff0000
+; GCN-NEXT:    s_add_i32 s2, s2, 2
+; GCN-NEXT:    s_and_b32 s4, s4, 0xffff
+; GCN-NEXT:    s_and_b32 s2, s2, 0xffff
+; GCN-NEXT:    s_or_b32 s4, s5, s4
+; GCN-NEXT:    s_or_b32 s2, s6, s2
+; GCN-NEXT:    s_add_i32 s4, s4, 0x20000
+; GCN-NEXT:    s_add_i32 s5, s2, 0x20000
+; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    v_mov_b32_e32 v0, s5
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
 ;
@@ -1139,14 +1143,20 @@ define amdgpu_kernel void @f64_to_v4i16(ptr addrspace(1) %out, ptr addrspace(1) 
 ; VI-NEXT:    v_mov_b32_e32 v3, s1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_add_f64 v[0:1], s[2:3], 1.0
-; VI-NEXT:    v_and_b32_e32 v4, 0xffff0000, v0
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 2, v0
-; VI-NEXT:    v_and_b32_e32 v5, 0xffff0000, v1
-; VI-NEXT:    v_add_u32_e32 v1, vcc, 2, v1
-; VI-NEXT:    v_or_b32_sdwa v1, v5, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_add_u32_e32 v1, vcc, 0x20000, v1
-; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x20000, v0
+; VI-NEXT:    v_readfirstlane_b32 s0, v1
+; VI-NEXT:    v_readfirstlane_b32 s1, v0
+; VI-NEXT:    s_and_b32 s2, s1, 0xffff0000
+; VI-NEXT:    s_add_i32 s1, s1, 2
+; VI-NEXT:    s_and_b32 s3, s0, 0xffff0000
+; VI-NEXT:    s_add_i32 s0, s0, 2
+; VI-NEXT:    s_and_b32 s0, s0, 0xffff
+; VI-NEXT:    s_and_b32 s1, s1, 0xffff
+; VI-NEXT:    s_or_b32 s0, s3, s0
+; VI-NEXT:    s_or_b32 s1, s2, s1
+; VI-NEXT:    s_add_i32 s0, s0, 0x20000
+; VI-NEXT:    s_add_i32 s1, s1, 0x20000
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
 ;
