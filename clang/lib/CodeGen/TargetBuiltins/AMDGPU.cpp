@@ -238,6 +238,9 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   case 4: // __MEMORY_SCOPE_SINGLE
     SSID = llvm::SyncScope::SingleThread;
     break;
+  case 5: // __MEMORY_SCOPE_CLUSTR
+    SSID = getLLVMContext().getOrInsertSyncScopeID("cluster");
+    break;
   default:
     SSID = llvm::SyncScope::System;
     break;
