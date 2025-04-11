@@ -1381,7 +1381,7 @@ public:
 
   /// Return the maximum number of waves per SIMD for kernels using \p VGPRs
   /// VGPRs
-  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs) const;
+  unsigned getOccupancyWithNumVGPRs(unsigned VGPRs, bool IsDynamicVGPR) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p F, each workgroup
@@ -1531,8 +1531,8 @@ public:
   unsigned getMaxNumSGPRs(const Function &F) const;
 
   /// \returns VGPR allocation granularity supported by the subtarget.
-  unsigned getVGPRAllocGranule() const {
-    return AMDGPU::IsaInfo::getVGPRAllocGranule(this);
+  unsigned getVGPRAllocGranule(bool IsDynamicVGPR) const {
+    return AMDGPU::IsaInfo::getVGPRAllocGranule(this, IsDynamicVGPR);
   }
 
   /// \returns VGPR encoding granularity supported by the subtarget.
@@ -1552,20 +1552,20 @@ public:
   }
 
   /// \returns Addressable number of VGPRs supported by the subtarget.
-  unsigned getAddressableNumVGPRs() const {
-    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this);
+  unsigned getAddressableNumVGPRs(bool IsDynamicVGPR) const {
+    return AMDGPU::IsaInfo::getAddressableNumVGPRs(this, IsDynamicVGPR);
   }
 
   /// \returns the minimum number of VGPRs that will prevent achieving more than
   /// the specified number of waves \p WavesPerEU.
-  unsigned getMinNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU);
+  unsigned getMinNumVGPRs(unsigned WavesPerEU, bool IsDynamicVGPR) const {
+    return AMDGPU::IsaInfo::getMinNumVGPRs(this, WavesPerEU, IsDynamicVGPR);
   }
 
   /// \returns the maximum number of VGPRs that can be used and still achieved
   /// at least the specified number of waves \p WavesPerEU.
-  unsigned getMaxNumVGPRs(unsigned WavesPerEU) const {
-    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU);
+  unsigned getMaxNumVGPRs(unsigned WavesPerEU, bool IsDynamicVGPR) const {
+    return AMDGPU::IsaInfo::getMaxNumVGPRs(this, WavesPerEU, IsDynamicVGPR);
   }
 
   /// \returns max num VGPRs. This is the common utility function

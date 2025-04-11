@@ -199,8 +199,18 @@ unsigned getMaxVGPRs(const TargetMachine &TM, const Function &F) {
   if (!TM.getTargetTriple().isAMDGCN())
     return 128;
 
+  bool IsDynamicVGPR = false;
+  if (F.hasFnAttribute("amdgpu-dynamic-vgpr"))
+    IsDynamicVGPR = F.getFnAttribute("amdgpu-dynamic-vgpr").getValueAsBool();
+
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  unsigned MaxVGPRs = ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first);
+
+  // FIXME: Delete after all users are migrated to use the attribute.
+  if (ST.isDynamicVGPREnabled())
+    IsDynamicVGPR = true;
+
+  unsigned MaxVGPRs =
+      ST.getMaxNumVGPRs(ST.getWavesPerEU(F).first, IsDynamicVGPR);
 
   // A non-entry function has only 32 caller preserved registers.
   // Do not promote alloca which will force spilling unless we know the function
