@@ -320,7 +320,10 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))
       return eServerPacketType_jThreadsInfo;
-
+    if (PACKET_MATCHES("jGPUPluginInitialize"))
+      return eServerPacketType_jGPUPluginInitialize;
+    if (PACKET_STARTS_WITH("jGPUPluginBreakpointHit:"))
+      return eServerPacketType_jGPUPluginBreakpointHit;
     if (PACKET_MATCHES("jLLDBTraceSupported"))
       return eServerPacketType_jLLDBTraceSupported;
     if (PACKET_STARTS_WITH("jLLDBTraceStop:"))

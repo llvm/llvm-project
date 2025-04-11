@@ -35,6 +35,7 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -257,7 +258,10 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
   RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_jGPUPluginInitialize,
       &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize);
-  }
+      RegisterMemberFunctionHandler(
+        StringExtractorGDBRemote::eServerPacketType_jGPUPluginBreakpointHit,
+        &GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit);
+    }
 
 void GDBRemoteCommunicationServerLLGS::SetLaunchInfo(
     const ProcessLaunchInfo &info) {
@@ -3686,29 +3690,42 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
 GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize(
     StringExtractorGDBRemote &) {
+  std::vector<GPUPluginInfo> infos;
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  bool first = true;
+  os << "[";
+  for (auto &plugin_up: m_plugins) {
+    if (first)
+      first = false;
+    else
+      os << ",";
+    os << toJSON(plugin_up->GetPluginInfo());
+  }
+  os << "]";
+  StreamGDBRemote response;
+  response.PutEscapedBytes(json_string.data(), json_string.size());
+  return SendPacketNoLock(response.GetString());
+}
 
-  // // Ensure we have a debugged process.
-  // if (!m_current_process ||
-  //     (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID))
-  //     return SendErrorResponse(llvm::make_error<StringError>(
-  //       inconvertibleErrorCode(), "No current process and no PID provided"));
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
+    StringExtractorGDBRemote &packet) {
 
-  // StreamString response;
-  // const bool threads_with_valid_stop_info_only = false;
-  // llvm::Expected<json::Value> threads_info =
-  //     GetJSONThreadsInfo(*m_current_process, threads_with_valid_stop_info_only);
-  // if (!threads_info) {
-  //   LLDB_LOG_ERROR(log, threads_info.takeError(),
-  //                  "failed to prepare a packet for pid {1}: {0}",
-  //                  m_current_process->GetID());
-  //   return SendErrorResponse(52);
-  // }
+  packet.ConsumeFront("jGPUPluginBreakpointHit:");
+  Expected<GPUPluginBreakpointHitArgs> args =
+      json::parse<GPUPluginBreakpointHitArgs>(packet.Peek(), 
+                                              "GPUPluginBreakpointHitArgs");
+  if (!args)
+    return SendErrorResponse(args.takeError());
 
-  // response.AsRawOstream() << *threads_info;
-  // StreamGDBRemote escaped_response;
-  // escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
-  // return SendPacketNoLock(escaped_response.GetString());
-  return SendErrorResponse(99);
+  for (auto &plugin_up: m_plugins) {
+    if (plugin_up->GetPluginName() == args->plugin_name) {
+      plugin_up->BreakpointWasHit(*args);
+      return SendOKResponse();
+    }
+  }
+  return SendErrorResponse(Status::FromErrorString("Invalid plugin name."));
 }
 
 

@@ -14,6 +14,12 @@ using namespace lldb_server;
 
 
 LLDBServerPlugin::LLDBServerPlugin(GDBServer &native_process) :
-    m_native_process(native_process) {}
+  m_native_process(native_process) {}
 
 LLDBServerPlugin::~LLDBServerPlugin() {}
+
+const GPUPluginInfo &LLDBServerPlugin::GetPluginInfo() {
+  if (m_info.name.empty())
+    InitializePluginInfo();
+  return m_info;
+}

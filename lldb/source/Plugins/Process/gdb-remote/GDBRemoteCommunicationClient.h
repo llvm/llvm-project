@@ -33,6 +33,10 @@
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
+
+  struct GPUPluginBreakpointHitArgs;
+  struct GPUPluginInfo;
+
 namespace process_gdb_remote {
 
 /// The offsets used by the target when relocating the executable. Decoded from
@@ -433,7 +437,9 @@ public:
 
   StructuredData::ObjectSP GetThreadsInfo();
 
-  StructuredData::ObjectSP GetGPUPluginInfo();
+  std::optional<std::vector<GPUPluginInfo>> GetGPUPluginInfos();
+
+  bool GPUBreakpointHit(const GPUPluginBreakpointHitArgs &args);
 
   bool GetThreadExtendedInfoSupported();
 

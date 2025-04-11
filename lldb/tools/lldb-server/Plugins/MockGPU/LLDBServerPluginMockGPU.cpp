@@ -57,6 +57,10 @@ LLDBServerPluginMockGPU::~LLDBServerPluginMockGPU() {
   CloseFDs();
 }
 
+llvm::StringRef LLDBServerPluginMockGPU::GetPluginName() {
+  return "mock-gpu";
+}
+
 void LLDBServerPluginMockGPU::CloseFDs() {
   if (m_fds[0] != -1) {
     close(m_fds[0]);
@@ -169,4 +173,36 @@ std::optional<std::string> LLDBServerPluginMockGPU::GetConnectionURL() {
     }
   }
   return std::nullopt;
+}
+
+void LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
+  Log *log = GetLog(GDBRLog::Plugin);
+  std::string json_string;
+  llvm::raw_string_ostream os(json_string);
+  os << toJSON(args);
+
+  LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\")", 
+            json_string.c_str());
+}
+
+void LLDBServerPluginMockGPU::InitializePluginInfo() {
+  m_info.name = GetPluginName();
+  m_info.description = "Mock GPU plugin";
+  
+  GPUBreakpointInfo bp1;
+  bp1.identifier = "gpu_initialize";
+  bp1.shlib = "a.out";
+  bp1.function_name = "gpu_initialize";
+  bp1.symbol_names.push_back("printf");
+  bp1.symbol_names.push_back("puts");
+
+  GPUBreakpointInfo bp2;
+  bp2.identifier = "gpu_shlib_load";
+  bp2.shlib = "a.out";
+  bp2.function_name = "gpu_shlib_load";
+  bp2.symbol_names.push_back("g_shlib_list");
+  bp2.symbol_names.push_back("invalid_symbol");
+
+  m_info.breakpoints.emplace_back(std::move(bp1));
+  m_info.breakpoints.emplace_back(std::move(bp2));
 }
