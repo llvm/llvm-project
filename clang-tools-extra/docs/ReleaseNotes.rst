@@ -182,6 +182,10 @@ Changes in existing checks
   ``constexpr`` and ``static``` values on member initialization and by detecting
   explicit casting of built-in types within member list initialization.
 
+- Improved :doc:`modernize-use-integer-sign-comparison
+  <clang-tidy/checks/modernize/use-integer-sign-comparison>` check by matching
+  valid integer expressions not directly wrapped around an implicit cast.
+
 - Improved :doc:`modernize-use-ranges
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.

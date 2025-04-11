@@ -39,9 +39,11 @@ intCastExpression(bool IsSigned,
   // std::cmp_{} functions trigger a compile-time error if either LHS or RHS
   // is a non-integer type, char, enum or bool
   // (unsigned char/ signed char are Ok and can be used).
-  auto IntTypeExpr = expr(hasType(hasCanonicalType(qualType(
+  const auto HasIntegerType = hasType(hasCanonicalType(qualType(
       isInteger(), IsSigned ? isSignedInteger() : isUnsignedInteger(),
-      unless(isActualChar()), unless(booleanType()), unless(enumType())))));
+      unless(isActualChar()), unless(booleanType()), unless(enumType()))));
+
+  auto IntTypeExpr = expr(HasIntegerType);
 
   const auto ImplicitCastExpr =
       CastBindName.empty() ? implicitCastExpr(hasSourceExpression(IntTypeExpr))
@@ -52,8 +54,17 @@ intCastExpression(bool IsSigned,
   const auto StaticCastExpr = cxxStaticCastExpr(has(ImplicitCastExpr));
   const auto FunctionalCastExpr = cxxFunctionalCastExpr(has(ImplicitCastExpr));
 
+  // Match function calls or variable references not directly wrapped by an
+  // implicit cast
+  const auto CallIntExpr = CastBindName.empty()
+                               ? callExpr(HasIntegerType)
+                               : callExpr(HasIntegerType).bind(CastBindName);
+  const auto DeclRefIntExpr =
+      CastBindName.empty() ? declRefExpr(HasIntegerType)
+                           : declRefExpr(HasIntegerType).bind(CastBindName);
+
   return expr(anyOf(ImplicitCastExpr, CStyleCastExpr, StaticCastExpr,
-                    FunctionalCastExpr));
+                    FunctionalCastExpr, CallIntExpr));
 }
 
 static StringRef parseOpCode(BinaryOperator::Opcode Code) {
