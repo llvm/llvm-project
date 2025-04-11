@@ -581,7 +581,7 @@ bool Writer::createThunks(OutputSection *os, int margin) {
 
 // Create a code map for CHPE metadata.
 void Writer::createECCodeMap() {
-  if (!ctx.symtabEC)
+  if (!ctx.symtab.isEC())
     return;
 
   // Clear the map in case we were're recomputing the map after adding
@@ -617,8 +617,7 @@ void Writer::createECCodeMap() {
 
   closeRange();
 
-  Symbol *tableCountSym =
-      ctx.symtabEC->findUnderscore("__hybrid_code_map_count");
+  Symbol *tableCountSym = ctx.symtab.findUnderscore("__hybrid_code_map_count");
   cast<DefinedAbsolute>(tableCountSym)->setVA(codeMap.size());
 }
 
@@ -2234,11 +2233,10 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
 
 // Create CHPE metadata chunks.
 void Writer::createECChunks() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
-  for (Symbol *s : symtab->expSymbols) {
+  for (Symbol *s : ctx.symtab.expSymbols) {
     auto sym = dyn_cast<Defined>(s);
     if (!sym || !sym->getChunk())
       continue;
@@ -2257,9 +2255,9 @@ void Writer::createECChunks() {
       // we should use the #foo$hp_target symbol as the redirection target.
       // First, try to look up the $hp_target symbol. If it can't be found,
       // assume it's a regular function and look for #foo instead.
-      Symbol *targetSym = symtab->find((targetName + "$hp_target").str());
+      Symbol *targetSym = ctx.symtab.find((targetName + "$hp_target").str());
       if (!targetSym)
-        targetSym = symtab->find(targetName);
+        targetSym = ctx.symtab.find(targetName);
       Defined *t = dyn_cast_or_null<Defined>(targetSym);
       if (t && isArm64EC(t->getChunk()->getMachine()))
         exportThunks.push_back({chunk, t});
@@ -2268,20 +2266,20 @@ void Writer::createECChunks() {
 
   auto codeMapChunk = make<ECCodeMapChunk>(codeMap);
   rdataSec->addChunk(codeMapChunk);
-  Symbol *codeMapSym = symtab->findUnderscore("__hybrid_code_map");
+  Symbol *codeMapSym = ctx.symtab.findUnderscore("__hybrid_code_map");
   replaceSymbol<DefinedSynthetic>(codeMapSym, codeMapSym->getName(),
                                   codeMapChunk);
 
   CHPECodeRangesChunk *ranges = make<CHPECodeRangesChunk>(exportThunks);
   rdataSec->addChunk(ranges);
   Symbol *rangesSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points");
   replaceSymbol<DefinedSynthetic>(rangesSym, rangesSym->getName(), ranges);
 
   CHPERedirectionChunk *entryPoints = make<CHPERedirectionChunk>(exportThunks);
   a64xrmSec->addChunk(entryPoints);
   Symbol *entryPointsSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
 }
@@ -2385,8 +2383,7 @@ void Writer::setSectionPermissions() {
 
 // Set symbols used by ARM64EC metadata.
 void Writer::setECSymbols() {
-  SymbolTable *symtab = ctx.symtabEC;
-  if (!symtab)
+  if (!ctx.symtab.isEC())
     return;
 
   llvm::stable_sort(exportThunks, [](const std::pair<Chunk *, Defined *> &a,
@@ -2395,45 +2392,45 @@ void Writer::setECSymbols() {
   });
 
   ChunkRange &chpePdata = ctx.hybridSymtab ? hybridPdata : pdata;
-  Symbol *rfeTableSym = symtab->findUnderscore("__arm64x_extra_rfe_table");
+  Symbol *rfeTableSym = ctx.symtab.findUnderscore("__arm64x_extra_rfe_table");
   replaceSymbol<DefinedSynthetic>(rfeTableSym, "__arm64x_extra_rfe_table",
                                   chpePdata.first);
 
   if (chpePdata.first) {
     Symbol *rfeSizeSym =
-        symtab->findUnderscore("__arm64x_extra_rfe_table_size");
+        ctx.symtab.findUnderscore("__arm64x_extra_rfe_table_size");
     cast<DefinedAbsolute>(rfeSizeSym)
         ->setVA(chpePdata.last->getRVA() + chpePdata.last->getSize() -
                 chpePdata.first->getRVA());
   }
 
   Symbol *rangesCountSym =
-      symtab->findUnderscore("__x64_code_ranges_to_entry_points_count");
+      ctx.symtab.findUnderscore("__x64_code_ranges_to_entry_points_count");
   cast<DefinedAbsolute>(rangesCountSym)->setVA(exportThunks.size());
 
   Symbol *entryPointCountSym =
-      symtab->findUnderscore("__arm64x_redirection_metadata_count");
+      ctx.symtab.findUnderscore("__arm64x_redirection_metadata_count");
   cast<DefinedAbsolute>(entryPointCountSym)->setVA(exportThunks.size());
 
-  Symbol *iatSym = symtab->findUnderscore("__hybrid_auxiliary_iat");
+  Symbol *iatSym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat");
   replaceSymbol<DefinedSynthetic>(iatSym, "__hybrid_auxiliary_iat",
                                   idata.auxIat.empty() ? nullptr
                                                        : idata.auxIat.front());
 
-  Symbol *iatCopySym = symtab->findUnderscore("__hybrid_auxiliary_iat_copy");
+  Symbol *iatCopySym = ctx.symtab.findUnderscore("__hybrid_auxiliary_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       iatCopySym, "__hybrid_auxiliary_iat_copy",
       idata.auxIatCopy.empty() ? nullptr : idata.auxIatCopy.front());
 
   Symbol *delayIatSym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat");
   replaceSymbol<DefinedSynthetic>(
       delayIatSym, "__hybrid_auxiliary_delayload_iat",
       delayIdata.getAuxIat().empty() ? nullptr
                                      : delayIdata.getAuxIat().front());
 
   Symbol *delayIatCopySym =
-      symtab->findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
+      ctx.symtab.findUnderscore("__hybrid_auxiliary_delayload_iat_copy");
   replaceSymbol<DefinedSynthetic>(
       delayIatCopySym, "__hybrid_auxiliary_delayload_iat_copy",
       delayIdata.getAuxIatCopy().empty() ? nullptr
@@ -2448,16 +2445,16 @@ void Writer::setECSymbols() {
       if (auto thunkChunk =
               dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
         altEntrySym = thunkChunk->target;
-      symtab->findUnderscore("__arm64x_native_entrypoint")
+      ctx.symtab.findUnderscore("__arm64x_native_entrypoint")
           ->replaceKeepingName(altEntrySym, sizeof(SymbolUnion));
     }
 
-    if (symtab->edataStart)
+    if (ctx.symtab.edataStart)
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXPORT_TABLE * sizeof(data_directory) +
               offsetof(data_directory, Size),
-          symtab->edataEnd->getRVA() - symtab->edataStart->getRVA() +
-              symtab->edataEnd->getSize());
+          ctx.symtab.edataEnd->getRVA() - ctx.symtab.edataStart->getRVA() +
+              ctx.symtab.edataEnd->getSize());
     if (hybridPdata.first) {
       ctx.dynamicRelocs->set(
           dataDirOffset64 + EXCEPTION_TABLE * sizeof(data_directory) +
