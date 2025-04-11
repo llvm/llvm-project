@@ -1327,7 +1327,7 @@ Status Process::Resume() {
     LLDB_LOGF(log, "(plugin = %s) -- SetRunning failed, not resuming.",
               GetPluginName().data());
     return Status::FromErrorString(
-        "Resume request failed - process still running.");
+        "resume request failed - process already running");
   }
   Status error = PrivateResume();
   if (!error.Success()) {
@@ -1343,7 +1343,7 @@ Status Process::ResumeSynchronous(Stream *stream) {
   if (!m_public_run_lock.SetRunning()) {
     LLDB_LOGF(log, "Process::Resume: -- SetRunning failed, not resuming.");
     return Status::FromErrorString(
-        "Resume request failed - process still running.");
+        "resume request failed: process already running");
   }
 
   ListenerSP listener_sp(

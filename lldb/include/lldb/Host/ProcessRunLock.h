@@ -31,7 +31,7 @@ public:
   bool ReadUnlock();
 
   /// Set the process to running. Returns true if the process was stopped.
-  /// Return true if the process was running.
+  /// Return false if the process was running.
   bool SetRunning();
 
   /// Set the process to stopped. Returns true if the process was stopped.
