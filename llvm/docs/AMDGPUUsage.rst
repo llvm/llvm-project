@@ -804,6 +804,7 @@ For example:
                                                   message.
 
      cu-stores       TODO                         On GFX12.5, controls whether ``scope:SCOPE_CU`` stores may be used.
+                                                  This is enabled by default.
                                                   If disabled, all stores will be done at ``scope:SCOPE_SE`` or greater.
 
      =============== ============================ ==================================================
