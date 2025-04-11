@@ -2524,6 +2524,16 @@ void CGOpenMPRuntime::emitForDispatchInit(
                       Args);
 }
 
+llvm::Value *CGOpenMPRuntime::createRuntimeFunctionArgAddrSpaceCast(
+    CodeGenFunction &CGF, llvm::FunctionCallee RuntimeFcn, size_t ArgIdx,
+    llvm::Value *Arg) {
+  llvm::Type *ParamTy = RuntimeFcn.getFunctionType()->getParamType(ArgIdx);
+  llvm::Type *ArgTy = Arg->getType();
+  if (!ParamTy->isPointerTy())
+    return Arg;
+  return CGF.Builder.CreateAddrSpaceCast(Arg, ParamTy);
+}
+
 void CGOpenMPRuntime::emitForDispatchDeinit(CodeGenFunction &CGF,
                                             SourceLocation Loc) {
   if (!CGF.HaveInsertPoint())
@@ -2572,12 +2582,18 @@ static void emitForStaticInitCall(
       ThreadId,
       CGF.Builder.getInt32(addMonoNonMonoModifier(CGF.CGM, Schedule, M1,
                                                   M2)), // Schedule type
-      Values.IL.emitRawPointer(CGF),                    // &isLastIter
-      Values.LB.emitRawPointer(CGF),                    // &LB
-      Values.UB.emitRawPointer(CGF),                    // &UB
-      Values.ST.emitRawPointer(CGF),                    // &Stride
-      CGF.Builder.getIntN(Values.IVSize, 1),            // Incr
-      Chunk                                             // Chunk
+      CGOpenMPRuntime::createRuntimeFunctionArgAddrSpaceCast(
+          CGF, ForStaticInitFunction, 3,
+          Values.IL.emitRawPointer(CGF)), // &isLastIter
+      CGOpenMPRuntime::createRuntimeFunctionArgAddrSpaceCast(
+          CGF, ForStaticInitFunction, 4, Values.LB.emitRawPointer(CGF)), // &LB
+      CGOpenMPRuntime::createRuntimeFunctionArgAddrSpaceCast(
+          CGF, ForStaticInitFunction, 5, Values.UB.emitRawPointer(CGF)), // &UB
+      CGOpenMPRuntime::createRuntimeFunctionArgAddrSpaceCast(
+          CGF, ForStaticInitFunction, 6,
+          Values.ST.emitRawPointer(CGF)),    // &Stride
+      CGF.Builder.getIntN(Values.IVSize, 1), // Incr
+      Chunk                                  // Chunk
   };
   CGF.EmitRuntimeCall(ForStaticInitFunction, Args);
 }

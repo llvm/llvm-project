@@ -1217,11 +1217,13 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
     CGBuilderTy &Bld = CGF.Builder;
     llvm::Value *NumThreadsVal = NumThreads;
     llvm::Function *WFn = WrapperFunctionsMap[OutlinedFn];
+    llvm::FunctionCallee RuntimeFn = OMPBuilder.getOrCreateRuntimeFunction(
+        CGM.getModule(), OMPRTL___kmpc_parallel_51);
     llvm::Value *ID = llvm::ConstantPointerNull::get(CGM.Int8PtrTy);
     if (WFn)
       ID = Bld.CreateBitOrPointerCast(WFn, CGM.Int8PtrTy);
-    llvm::Value *FnPtr = Bld.CreateBitOrPointerCast(OutlinedFn, CGM.Int8PtrTy);
-
+    llvm::Value *FnPtr = Bld.CreateAddrSpaceCast(OutlinedFn, CGM.Int8PtrTy);
+    FnPtr = Bld.CreateBitOrPointerCast(FnPtr, CGM.Int8PtrTy);
     // Create a private scope that will globalize the arguments
     // passed from the outside of the target region.
     // TODO: Is that needed?
@@ -1268,14 +1270,15 @@ void CGOpenMPRuntimeGPU::emitParallelCall(CodeGenFunction &CGF,
         IfCondVal,
         NumThreadsVal,
         llvm::ConstantInt::get(CGF.Int32Ty, -1),
-        FnPtr,
-        ID,
-        Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
-                                   CGF.VoidPtrPtrTy),
+        createRuntimeFunctionArgAddrSpaceCast(CGF, RuntimeFn, 5, FnPtr),
+        createRuntimeFunctionArgAddrSpaceCast(CGF, RuntimeFn, 6, ID),
+        createRuntimeFunctionArgAddrSpaceCast(
+            CGF, RuntimeFn, 7,
+            Bld.CreateBitOrPointerCast(CapturedVarsAddrs.emitRawPointer(CGF),
+                                       CGF.VoidPtrPtrTy)),
         llvm::ConstantInt::get(CGM.SizeTy, CapturedVars.size())};
-    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
-                            CGM.getModule(), OMPRTL___kmpc_parallel_51),
-                        Args);
+
+    CGF.EmitRuntimeCall(RuntimeFn, Args);
   };
 
   RegionCodeGenTy RCG(ParallelGen);
