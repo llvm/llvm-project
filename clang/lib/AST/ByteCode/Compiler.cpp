@@ -3380,7 +3380,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       // Always invalid.
       return this->emitInvalid(E);
     }
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
+  } else if (!OperatorNew
+                  ->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   const Descriptor *Desc;
@@ -3600,7 +3601,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   const FunctionDecl *OperatorDelete = E->getOperatorDelete();
 
-  if (!OperatorDelete->isReplaceableGlobalAllocationFunction())
+  if (!OperatorDelete->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
@@ -3628,15 +3629,22 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
   const Type *TypeInfoType = E->getType().getTypePtr();
 
+  auto canonType = [](const Type *T) {
+    return T->getCanonicalTypeUnqualified().getTypePtr();
+  };
+
   if (!E->isPotentiallyEvaluated()) {
     if (DiscardResult)
       return true;
 
     if (E->isTypeOperand())
       return this->emitGetTypeid(
-          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
-    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
-                               TypeInfoType, E);
+          canonType(E->getTypeOperand(Ctx.getASTContext()).getTypePtr()),
+          TypeInfoType, E);
+
+    return this->emitGetTypeid(
+        canonType(E->getExprOperand()->getType().getTypePtr()), TypeInfoType,
+        E);
   }
 
   // Otherwise, we need to evaluate the expression operand.
@@ -4820,9 +4828,9 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
   const FunctionDecl *FuncDecl = E->getDirectCallee();
   // Calls to replaceable operator new/operator delete.
-  if (FuncDecl && FuncDecl->isReplaceableGlobalAllocationFunction()) {
-    if (FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_New ||
-        FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+  if (FuncDecl &&
+      FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
+    if (FuncDecl->getDeclName().isAnyOperatorNew()) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
     } else {
       assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);

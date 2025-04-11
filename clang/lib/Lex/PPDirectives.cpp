@@ -2073,6 +2073,15 @@ void Preprocessor::HandleIncludeDirective(SourceLocation HashLoc,
     return;
 
   if (FilenameTok.isNot(tok::header_name)) {
+    if (FilenameTok.is(tok::identifier) && PPOpts.SingleFileParseMode) {
+      // If we saw #include IDENTIFIER and lexing didn't turn in into a header
+      // name, it was undefined. In 'single-file-parse' mode, just skip the
+      // directive without emitting diagnostics - the identifier might be
+      // normally defined in previously-skipped include directive.
+      DiscardUntilEndOfDirective();
+      return;
+    }
+
     Diag(FilenameTok.getLocation(), diag::err_pp_expects_filename);
     if (FilenameTok.isNot(tok::eod))
       DiscardUntilEndOfDirective();

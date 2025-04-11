@@ -1032,7 +1032,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1061,7 +1062,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -1076,7 +1078,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -1091,7 +1094,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
-        /*no_inline=*/nullptr, /*always_inline=*/nullptr);
+        /*no_inline=*/nullptr, /*always_inline=*/nullptr,
+        /*inline_hint=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
