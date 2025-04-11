@@ -1236,12 +1236,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   SourceMgr.pushModuleBuildStack(ModuleName,
     FullSourceLoc(ImportLoc, getSourceManager()));
 
-  // Make sure that the failed-module structure has been allocated in
-  // the importing instance, and propagate the pointer to the newly-created
-  // instance.
-  if (!hasFailedModulesSet())
-    createFailedModulesSet();
-  Instance.setFailedModulesSet(getFailedModulesSetPtr());
+  // Make a copy for the new instance.
+  Instance.FailedModules = FailedModules;
 
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't
@@ -1284,6 +1280,9 @@ bool CompilerInstance::compileModule(SourceLocation ImportLoc,
   // Propagate the statistics to the parent FileManager.
   if (!getFrontendOpts().ModulesShareFileManager)
     getFileManager().AddStats(Instance.getFileManager());
+
+  // Propagate the failed modules to the parent instance.
+  FailedModules = std::move(Instance.FailedModules);
 
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams
@@ -1987,7 +1986,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   }
 
   // Check whether we have already attempted to build this module (but failed).
-  if (FailedModules && FailedModules->hasAlreadyFailed(ModuleName)) {
+  if (FailedModules.contains(ModuleName)) {
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
         << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
     return nullptr;
@@ -1998,8 +1997,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
                                ModuleFilename)) {
     assert(getDiagnostics().hasErrorOccurred() &&
            "undiagnosed error in compileModuleAndReadAST");
-    if (FailedModules)
-      FailedModules->addFailed(ModuleName);
+    FailedModules.insert(ModuleName);
     return nullptr;
   }
 
