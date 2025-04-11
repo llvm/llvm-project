@@ -1466,7 +1466,7 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
                                         Module *Module,
                                         StringRef ModuleFileName) {
   auto Instance = createCompilerInstanceForModuleCompile(
-      ImportingInstance, ImportLoc, Module, ModuleFileName);
+      ImportingInstance, ModuleNameLoc, Module, ModuleFileName);
 
   if (!compileModule(ImportingInstance, ModuleNameLoc,
                      Module->getTopLevelModuleName(), ModuleFileName,
