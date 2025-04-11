@@ -1398,7 +1398,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
 
   LiveRangeEdit::Remat RM(ValNo);
   RM.OrigMI = DefMI;
-  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx, true))
+  if (!Edit.canRematerializeAt(RM, ValNo, CopyIdx))
     return false;
 
   DebugLoc DL = CopyMI->getDebugLoc();

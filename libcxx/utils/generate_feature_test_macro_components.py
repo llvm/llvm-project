@@ -13,6 +13,7 @@ from typing import (
 )
 import functools
 import json
+from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
 
 
 def get_libcxx_paths():
@@ -320,7 +321,7 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_algorithms",
             "values": {
                 "c++20": 201806,
-                # "c++26": 202306, # P2562R1 constexpr Stable Sorting
+                "c++26": 202306,
             },
             "headers": ["algorithm", "utility"],
         },
@@ -520,7 +521,6 @@ feature_test_macros = [
             "name": "__cpp_lib_flat_set",
             "values": {"c++23": 202207},
             "headers": ["flat_set"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_format",
@@ -1081,7 +1081,6 @@ feature_test_macros = [
             "name": "__cpp_lib_ranges_iota",
             "values": {"c++23": 202202},
             "headers": ["numeric"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_join_with",
@@ -1194,7 +1193,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
@@ -1211,7 +1210,7 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "_LIBCPP_HAS_THREADS",
+            "test_suite_guard": "!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS",
             "libcxx_guard": "_LIBCPP_HAS_THREADS",
         },
         {
@@ -2012,7 +2011,8 @@ def get_ftms(
                         else:
                             break
 
-                entry[std] = last
+                if last:
+                    entry[std] = last
         result[feature["name"]] = entry
 
     return result
@@ -2208,6 +2208,18 @@ class FeatureTestMacros:
 
         return get_ftms(self.__data, self.std_dialects, True)
 
+    def is_implemented(self, ftm: Ftm, std: Std) -> bool:
+        """Has the FTM `ftm` been implemented in the dialect `std`?"""
+
+        # When a paper for C++20 has not been implemented in libc++, then there will be no
+        # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
+        # has no entry in standard_ftms for e.g. C++11.
+        if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
+            return False
+
+        return self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+
+
     @functools.cached_property
     def ftm_metadata(self) -> Dict[Ftm, Metadata]:
         """Returns the metadata of the FTMs defined in the Standard.
@@ -2241,7 +2253,7 @@ class FeatureTestMacros:
                     continue
                 last_value = value
 
-                implemented = self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+                implemented = self.is_implemented(ftm, std)
                 entry = VersionHeader(
                     value,
                     implemented,

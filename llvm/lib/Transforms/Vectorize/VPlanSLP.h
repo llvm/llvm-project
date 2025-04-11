@@ -50,10 +50,9 @@ public:
   VPInterleavedAccessInfo(VPlan &Plan, InterleavedAccessInfo &IAI);
 
   ~VPInterleavedAccessInfo() {
-    SmallPtrSet<InterleaveGroup<VPInstruction> *, 4> DelSet;
     // Avoid releasing a pointer twice.
-    for (auto &I : InterleaveGroupMap)
-      DelSet.insert(I.second);
+    SmallPtrSet<InterleaveGroup<VPInstruction> *, 4> DelSet(
+        llvm::from_range, llvm::make_second_range(InterleaveGroupMap));
     for (auto *Ptr : DelSet)
       delete Ptr;
   }

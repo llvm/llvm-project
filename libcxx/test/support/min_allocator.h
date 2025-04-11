@@ -481,7 +481,7 @@ struct tiny_size_allocator {
 
   template <class U>
   struct rebind {
-    using other = tiny_size_allocator<MaxSize, T>;
+    using other = tiny_size_allocator<MaxSize, U>;
   };
 
   tiny_size_allocator() = default;

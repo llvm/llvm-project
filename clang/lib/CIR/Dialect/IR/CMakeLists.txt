@@ -6,13 +6,17 @@ add_clang_library(MLIRCIR
 
   DEPENDS
   MLIRCIROpsIncGen
-  MLIRCIRAttrsEnumsGen
+  MLIRCIREnumsGen
+  MLIRCIROpInterfacesIncGen
+  MLIRCIRLoopOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRCIRInterfaces
   MLIRDLTIDialect
   MLIRDataLayoutInterfaces
   MLIRFuncDialect
+  MLIRLoopLikeInterface
   MLIRCIRInterfaces
   clangAST
   )

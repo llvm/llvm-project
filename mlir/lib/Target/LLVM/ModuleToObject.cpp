@@ -68,8 +68,8 @@ ModuleToObject::getOrCreateTargetMachine() {
   }
 
   // Create the target machine using the target.
-  targetMachine.reset(
-      target->createTargetMachine(triple, chip, features, {}, {}));
+  targetMachine.reset(target->createTargetMachine(llvm::Triple(triple), chip,
+                                                  features, {}, {}));
   if (!targetMachine)
     return std::nullopt;
   return targetMachine.get();
@@ -233,7 +233,7 @@ void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   if (targetMachine) {
     // Set the data layout and target triple of the module.
     module.setDataLayout((*targetMachine)->createDataLayout());
-    module.setTargetTriple((*targetMachine)->getTargetTriple().getTriple());
+    module.setTargetTriple((*targetMachine)->getTargetTriple());
   }
 }
 

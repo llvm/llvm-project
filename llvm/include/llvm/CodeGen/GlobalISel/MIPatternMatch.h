@@ -33,6 +33,12 @@ template <typename Pattern>
   return P.match(MRI, &MI);
 }
 
+template <typename Pattern>
+[[nodiscard]] bool mi_match(const MachineInstr &MI,
+                            const MachineRegisterInfo &MRI, Pattern &&P) {
+  return P.match(MRI, &MI);
+}
+
 // TODO: Extend for N use.
 template <typename SubPatternT> struct OneUse_match {
   SubPatternT SubPat;
@@ -337,6 +343,19 @@ template <> struct bind_helper<MachineInstr *> {
   }
 };
 
+template <> struct bind_helper<const MachineInstr *> {
+  static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
+                   Register Reg) {
+    MI = MRI.getVRegDef(Reg);
+    return MI;
+  }
+  static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
+                   const MachineInstr *Inst) {
+    MI = Inst;
+    return MI;
+  }
+};
+
 template <> struct bind_helper<LLT> {
   static bool bind(const MachineRegisterInfo &MRI, LLT &Ty, Register Reg) {
     Ty = MRI.getType(Reg);
@@ -368,6 +387,9 @@ template <typename Class> struct bind_ty {
 
 inline bind_ty<Register> m_Reg(Register &R) { return R; }
 inline bind_ty<MachineInstr *> m_MInstr(MachineInstr *&MI) { return MI; }
+inline bind_ty<const MachineInstr *> m_MInstr(const MachineInstr *&MI) {
+  return MI;
+}
 inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
 inline bind_ty<CmpInst::Predicate> m_Pred(CmpInst::Predicate &P) { return P; }
 inline operand_type_match m_Pred() { return operand_type_match(); }
@@ -418,7 +440,7 @@ inline bind_ty<const ConstantFP *> m_GFCst(const ConstantFP *&C) { return C; }
 
 // General helper for all the binary generic MI such as G_ADD/G_SUB etc
 template <typename LHS_P, typename RHS_P, unsigned Opcode,
-          bool Commutable = false>
+          bool Commutable = false, unsigned Flags = MachineInstr::NoFlags>
 struct BinaryOp_match {
   LHS_P L;
   RHS_P R;
@@ -426,18 +448,20 @@ struct BinaryOp_match {
   BinaryOp_match(const LHS_P &LHS, const RHS_P &RHS) : L(LHS), R(RHS) {}
   template <typename OpTy>
   bool match(const MachineRegisterInfo &MRI, OpTy &&Op) {
-    MachineInstr *TmpMI;
+    const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
-        return (L.match(MRI, TmpMI->getOperand(1).getReg()) &&
-                R.match(MRI, TmpMI->getOperand(2).getReg())) ||
-               // NOTE: When trying the alternative operand ordering
-               // with a commutative operation, it is imperative to always run
-               // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-               // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
-               // expected.
-               (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
-                               R.match(MRI, TmpMI->getOperand(1).getReg())));
+        if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
+            // NOTE: When trying the alternative operand ordering
+            // with a commutative operation, it is imperative to always run
+            // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
+            // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
+            // expected.
+            (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(1).getReg())))
+          return false;
+        return (TmpMI->getFlags() & Flags) == Flags;
       }
     }
     return false;
@@ -464,7 +488,7 @@ struct BinaryOpc_match {
                // NOTE: When trying the alternative operand ordering
                // with a commutative operation, it is imperative to always run
                // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-               // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
+               // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
                // expected.
                (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
                                R.match(MRI, TmpMI->getOperand(1).getReg())));
@@ -557,6 +581,19 @@ template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true> m_GOr(const LHS &L,
                                                                 const RHS &R) {
   return BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true,
+                      MachineInstr::Disjoint>
+m_GDisjointOr(const LHS &L, const RHS &R) {
+  return BinaryOp_match<LHS, RHS, TargetOpcode::G_OR, true,
+                        MachineInstr::Disjoint>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_GAddLike(const LHS &L, const RHS &R) {
+  return m_any_of(m_GAdd(L, R), m_GDisjointOr(L, R));
 }
 
 template <typename LHS, typename RHS>
@@ -717,7 +754,7 @@ struct CompareOp_match {
     // NOTE: When trying the alternative operand ordering
     // with a commutative operation, it is imperative to always run
     // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-    // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as expected.
+    // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as expected.
     if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
         P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
       return true;

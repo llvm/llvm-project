@@ -4,7 +4,8 @@ Clang Maintainers
 
 This file is a list of the
 `maintainers <https://llvm.org/docs/DeveloperPolicy.html#maintainers>`_ for
-Clang.
+Clang. The list of current Clang Area Team members can be found
+`here <https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt>`_.
 
 .. contents::
    :depth: 2
@@ -157,6 +158,11 @@ OpenBSD driver
 ~~~~~~~~~~~~~~
 | Brad Smith
 | brad\@comstyle.com (email), brad (Phabricator), brad0 (GitHub)
+
+Offloading driver
+~~~~~~~~~~~~~~~~~
+| Joseph Huber
+| joseph.huber\@amd.com (email), jhuber6 (GitHub)
 
 
 Driver parts not covered by someone else

@@ -26,6 +26,6 @@ if [[ ! -d "${MONOREPO_ROOT}/libcxx/utils/ci" ]]; then
     echo "Was unable to find the root of the LLVM monorepo; are you running from within the monorepo?"
     exit 1
 fi
-docker pull ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9
-docker run -it --volume "${MONOREPO_ROOT}:/llvm" --workdir "/llvm" --cap-add=SYS_PTRACE ghcr.io/llvm/libcxx-linux-builder:b319dfef21f6c7b0bc6a356d6b9f41a3b3b98ae9 \
+docker pull ghcr.io/llvm/libcxx-linux-builder:b6bb9dc5abd7c6452c13a53fa8949cb259db459b
+docker run -it --volume "${MONOREPO_ROOT}:/llvm" --workdir "/llvm" --cap-add=SYS_PTRACE ghcr.io/llvm/libcxx-linux-builder:b6bb9dc5abd7c6452c13a53fa8949cb259db459b \
     bash -c 'git config --global --add safe.directory /llvm ; exec bash'

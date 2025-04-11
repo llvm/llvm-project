@@ -339,6 +339,30 @@ namespace PR48606 {
   static_assert(f());
 }
 
+/// This used to crash because of an assertion in the implementation
+/// of the This instruction.
+namespace ExplicitThisOnArrayElement {
+  struct S {
+    int a = 12;
+    constexpr S(int a) {
+      this->a = a;
+    }
+  };
+
+  template <class _Tp, class... _Args>
+  constexpr void construct_at(_Tp *__location, _Args &&...__args) {
+    new (__location) _Tp(__args...);
+  }
+
+  constexpr bool foo() {
+    auto *M = std::allocator<S>().allocate(13); // both-note {{allocation performed here was not deallocated}}
+    construct_at(M, 12);
+    return true;
+  }
+
+  static_assert(foo()); // both-error {{not an integral constant expression}}
+}
+
 #ifdef BYTECODE
 constexpr int N = [] // expected-error {{must be initialized by a constant expression}} \
                      // expected-note {{assignment to dereferenced one-past-the-end pointer is not allowed in a constant expression}} \
@@ -352,3 +376,18 @@ constexpr int N = [] // expected-error {{must be initialized by a constant expre
     return s.a[0];
 }();
 #endif
+
+namespace MemMove {
+  constexpr int foo() {
+    int *a = std::allocator<int>{}.allocate(1);
+    new(a) int{123};
+
+    int b;
+    __builtin_memmove(&b, a, sizeof(int));
+
+    std::allocator<int>{}.deallocate(a);
+    return b;
+  }
+
+  static_assert(foo() == 123);
+}

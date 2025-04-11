@@ -111,7 +111,9 @@ public:
   // Process Control
   Status WillResume() override;
 
-  Status DoResume() override;
+  bool SupportsReverseDirection() override;
+
+  Status DoResume(lldb::RunDirection direction) override;
 
   Status DoHalt(bool &caused_stop) override;
 
@@ -433,6 +435,9 @@ private:
                                            StoppointCallbackContext *context,
                                            lldb::user_id_t break_id,
                                            lldb::user_id_t break_loc_id);
+
+  /// Remove the breakpoints associated with thread creation from the Target.
+  void RemoveNewThreadBreakpoints();
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;

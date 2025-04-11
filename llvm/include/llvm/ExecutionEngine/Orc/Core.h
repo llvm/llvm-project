@@ -1653,11 +1653,11 @@ public:
   /// (using registerJITDispatchHandler) and called from the executor.
   template <typename SPSSignature, typename HandlerT>
   static JITDispatchHandlerFunction wrapAsyncWithSPS(HandlerT &&H) {
-    return [H = std::forward<HandlerT>(H)](
-               SendResultFunction SendResult,
-               const char *ArgData, size_t ArgSize) mutable {
-      shared::WrapperFunction<SPSSignature>::handleAsync(ArgData, ArgSize, H,
-                                                         std::move(SendResult));
+    return [H = std::forward<HandlerT>(H)](SendResultFunction SendResult,
+                                           const char *ArgData,
+                                           size_t ArgSize) mutable {
+      shared::WrapperFunction<SPSSignature>::handleAsync(
+          ArgData, ArgSize, std::move(SendResult), H);
     };
   }
 

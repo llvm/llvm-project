@@ -4,8 +4,8 @@
 // RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %s -o %t.arm64ec.obj
 
 // RUN: lld-link -machine:arm64x -dll -noentry %t.arm64.obj %t.arm64ec.obj -out:%t.dll 2>&1 | FileCheck --check-prefix=WARN %s
-// WARN:      lld-link: warning: {{.*}}.arm64.obj: locally defined symbol imported: func
-// WARN-NEXT: lld-link: warning: {{.*}}.arm64ec.obj: locally defined symbol imported: func
+// WARN:      lld-link: warning: {{.*}}.arm64.obj: locally defined symbol imported: func (native symbol)
+// WARN-NEXT: lld-link: warning: {{.*}}.arm64ec.obj: locally defined symbol imported: func (EC symbol)
 
 // RUN: llvm-readobj --hex-dump=.test %t.dll | FileCheck --check-prefix=TEST %s
 // TEST: 0x180005000 00300000 08300000

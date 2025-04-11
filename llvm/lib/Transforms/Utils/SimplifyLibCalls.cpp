@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
@@ -2575,8 +2577,10 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           KnownFPClass::OrderedLessThanZeroMask | fcSubnormal,
           /*Depth=*/0, SQ);
       Function *F = Log->getParent()->getParent();
-      IsKnownNoErrno = Known.cannotBeOrderedLessThanZero() &&
-                       Known.isKnownNeverLogicalZero(*F, Ty);
+      const fltSemantics &FltSem = Ty->getScalarType()->getFltSemantics();
+      IsKnownNoErrno =
+          Known.cannotBeOrderedLessThanZero() &&
+          Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
       auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
@@ -2806,7 +2810,9 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
           computeKnownFPClass(CI->getOperand(1), fcZero | fcSubnormal,
                               /*Depth=*/0, SQ);
       Function *F = CI->getParent()->getParent();
-      IsNoNan = Known1.isKnownNeverLogicalZero(*F, CI->getType());
+      const fltSemantics &FltSem =
+          CI->getType()->getScalarType()->getFltSemantics();
+      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 

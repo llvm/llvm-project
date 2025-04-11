@@ -1743,6 +1743,9 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     // TODO: Support case for NarrowDef = NarrowUse->getOperand(1).
     if (NarrowUse->getOperand(0) != NarrowDef)
       return false;
+    // We cannot use a different extend kind for the same operand.
+    if (NarrowUse->getOperand(1) == NarrowDef)
+      return false;
     if (!SE->isKnownNegative(RHS))
       return false;
     bool ProvedSubNUW = SE->isKnownPredicateAt(ICmpInst::ICMP_UGE, LHS,

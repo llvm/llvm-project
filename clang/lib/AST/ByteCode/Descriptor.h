@@ -175,8 +175,8 @@ public:
   const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
-  Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, bool IsConst,
-             bool IsTemporary, bool IsMutable);
+  Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+             MetadataSize MD, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of primitives.
   Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD, size_t NumElems,
@@ -200,13 +200,14 @@ public:
              bool IsTemporary, bool IsMutable);
 
   /// Allocates a dummy descriptor.
-  Descriptor(const DeclTy &D);
+  Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
 
   /// Make this descriptor a dummy descriptor.
   void makeDummy() { IsDummy = true; }
 
   QualType getType() const;
   QualType getElemQualType() const;
+  QualType getDataType(const ASTContext &Ctx) const;
   SourceLocation getLocation() const;
   SourceInfo getLoc() const;
 
@@ -263,7 +264,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && !IsDummy; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }

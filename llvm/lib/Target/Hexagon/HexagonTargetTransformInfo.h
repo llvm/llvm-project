@@ -157,8 +157,10 @@ public:
     return 1;
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment);
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment);
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned AddressSpace);
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned AddressSpace);
 
   /// @}
 

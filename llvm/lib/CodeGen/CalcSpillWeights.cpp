@@ -335,6 +335,10 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   if (isRematerializable(LI, LIS, VRM, *MF.getSubtarget().getInstrInfo()))
     TotalWeight *= 0.5F;
 
+  // Finally, we scale the weight by the scale factor of register class.
+  const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
+  TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
+
   if (IsLocalSplitArtifact)
     return normalize(TotalWeight, Start->distance(*End), NumInstr);
   return normalize(TotalWeight, LI.getSize(), NumInstr);

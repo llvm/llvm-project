@@ -15,7 +15,7 @@
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 10
 define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
-  %tid = load volatile i32, ptr addrspace(1) undef
+  %tid = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "", "a,a,a,a,a,a,a,a,a"(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9)
   %p1 = getelementptr inbounds i32, ptr addrspace(1) %p, i32 %tid
   %p2 = getelementptr inbounds i32, ptr addrspace(1) %p1, i32 4
@@ -38,16 +38,16 @@ define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
   %v9 = load volatile i32, ptr addrspace(1) %p9
   %v10 = load volatile i32, ptr addrspace(1) %p10
   call void asm sideeffect "", "v,v,v,v,v,v,v,v,v,v"(i32 %v1, i32 %v2, i32 %v3, i32 %v4, i32 %v5, i32 %v6, i32 %v7, i32 %v8, i32 %v9, i32 %v10)
-  store volatile i32 %v1, ptr addrspace(1) undef
-  store volatile i32 %v2, ptr addrspace(1) undef
-  store volatile i32 %v3, ptr addrspace(1) undef
-  store volatile i32 %v4, ptr addrspace(1) undef
-  store volatile i32 %v5, ptr addrspace(1) undef
-  store volatile i32 %v6, ptr addrspace(1) undef
-  store volatile i32 %v7, ptr addrspace(1) undef
-  store volatile i32 %v8, ptr addrspace(1) undef
-  store volatile i32 %v9, ptr addrspace(1) undef
-  store volatile i32 %v10, ptr addrspace(1) undef
+  store volatile i32 %v1, ptr addrspace(1) poison
+  store volatile i32 %v2, ptr addrspace(1) poison
+  store volatile i32 %v3, ptr addrspace(1) poison
+  store volatile i32 %v4, ptr addrspace(1) poison
+  store volatile i32 %v5, ptr addrspace(1) poison
+  store volatile i32 %v6, ptr addrspace(1) poison
+  store volatile i32 %v7, ptr addrspace(1) poison
+  store volatile i32 %v8, ptr addrspace(1) poison
+  store volatile i32 %v9, ptr addrspace(1) poison
+  store volatile i32 %v10, ptr addrspace(1) poison
   ret void
 }
 
@@ -84,7 +84,7 @@ define amdgpu_kernel void @max_11_vgprs_used_9a(ptr addrspace(1) %p) #0 {
 ; GFX908: VGPRBlocks: 2
 ; GFX908: NumVGPRsForWavesPerEU: 11
 define amdgpu_kernel void @max_11_vgprs_used_1a_partial_spill(ptr addrspace(1) %p) #0 {
-  %tid = load volatile i32, ptr addrspace(1) undef
+  %tid = load volatile i32, ptr addrspace(1) poison
   call void asm sideeffect "", "a"(i32 1)
   %p1 = getelementptr inbounds i64, ptr addrspace(1) %p, i32 %tid
   %p2 = getelementptr inbounds i64, ptr addrspace(1) %p1, i32 8

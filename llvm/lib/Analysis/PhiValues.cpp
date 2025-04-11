@@ -100,7 +100,7 @@ void PhiValues::processPhi(const PHINode *Phi,
           if (OpDepthNumber != RootDepthNumber) {
             auto It = ReachableMap.find(OpDepthNumber);
             if (It != ReachableMap.end())
-              Reachable.insert(It->second.begin(), It->second.end());
+              Reachable.insert_range(It->second);
           }
         } else
           Reachable.insert(Op);

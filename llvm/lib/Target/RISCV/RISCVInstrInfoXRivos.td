@@ -67,6 +67,38 @@ defm RI_VUNZIP2A_V : VALU_IV_V<"ri.vunzip2a", 0b001000>;
 defm RI_VUNZIP2B_V : VALU_IV_V<"ri.vunzip2b", 0b011000>;
 }
 
+// These are modeled after the int binop VL nodes
+def ri_vzipeven_vl : SDNode<"RISCVISD::RI_VZIPEVEN_VL", SDT_RISCVIntBinOp_VL>;
+def ri_vzipodd_vl : SDNode<"RISCVISD::RI_VZIPODD_VL", SDT_RISCVIntBinOp_VL>;
+def ri_vzip2a_vl : SDNode<"RISCVISD::RI_VZIP2A_VL", SDT_RISCVIntBinOp_VL>;
+
+multiclass RIVPseudoVALU_VV {
+  foreach m = MxList in
+    defm "" : VPseudoBinaryV_VV<m, Commutable=0>;
+}
+
+let Predicates = [HasVendorXRivosVizip],
+  Constraints = "@earlyclobber $rd, $rd = $passthru" in {
+defm PseudoRI_VZIPEVEN   : RIVPseudoVALU_VV;
+defm PseudoRI_VZIPODD   : RIVPseudoVALU_VV;
+defm PseudoRI_VZIP2A   : RIVPseudoVALU_VV;
+}
+
+multiclass RIVPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                              list<VTypeInfo> vtilist = AllIntegerVectors,
+                              bit isSEWAware = false> {
+  foreach vti = vtilist in
+    let Predicates = GetVTypePredicates<vti>.Predicates in
+      def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                           vti.RegClass, isSEWAware>;
+}
+
+defm : RIVPatBinaryVL_VV<ri_vzipeven_vl, "PseudoRI_VZIPEVEN">;
+defm : RIVPatBinaryVL_VV<ri_vzipodd_vl, "PseudoRI_VZIPODD">;
+defm : RIVPatBinaryVL_VV<ri_vzip2a_vl, "PseudoRI_VZIP2A">;
+
 //===----------------------------------------------------------------------===//
 // XRivosVisni
 //===----------------------------------------------------------------------===//

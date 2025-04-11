@@ -3210,11 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-
-      // Queue up the class type into which this points.
-      Queue.push_back(MemberPtr->getClass());
-
-      // And directly continue with the pointee type.
+      if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
+        addAssociatedClassesAndNamespaces(Result, Class);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
@@ -4533,7 +4530,6 @@ static void getNestedNameSpecifierIdentifiers(
     II = NNS->getAsNamespaceAlias()->getIdentifier();
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::TypeSpec:
     II = QualType(NNS->getAsType(), 0).getBaseTypeIdentifier();
     break;
@@ -4898,8 +4894,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
       NNS = NestedNameSpecifier::Create(Context, NNS, ND);
       ++NumSpecifiers;
     } else if (auto *RD = dyn_cast_or_null<RecordDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, RD->isTemplateDecl(),
-                                        RD->getTypeForDecl());
+      NNS = NestedNameSpecifier::Create(Context, NNS, RD->getTypeForDecl());
       ++NumSpecifiers;
     }
   }

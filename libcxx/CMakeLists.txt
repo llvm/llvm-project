@@ -522,13 +522,7 @@ function(cxx_add_basic_build_flags target)
   # the dylib when get ODR used by another function.
   target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility-inlines-hidden)
 
-  # Our visibility annotations are not quite right for non-Clang compilers,
-  # so we end up not exporting all the symbols we should. In the future, we
-  # can improve the situation by providing an explicit list of exported
-  # symbols on all compilers.
-  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
-  endif()
+  target_add_compile_flags_if_supported(${target} PRIVATE -fvisibility=hidden)
 
   # Build with -fsized-deallocation, which is default in recent versions of Clang.
   # TODO(LLVM 21): This can be dropped once we only support Clang >= 19.

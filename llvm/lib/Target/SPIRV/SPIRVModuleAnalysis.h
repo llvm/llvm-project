@@ -35,6 +35,7 @@ enum ModuleSectionType {
   MB_DebugNames,           // All OpName and OpMemberName intrs.
   MB_DebugStrings,         // All OpString intrs.
   MB_DebugModuleProcessed, // All OpModuleProcessed instructions.
+  MB_AliasingInsts,        // SPV_INTEL_memory_access_aliasing instructions.
   MB_Annotations,          // OpDecorate, OpMemberDecorate etc.
   MB_TypeConstVars,        // OpTypeXXX, OpConstantXXX, and global OpVariables.
   MB_NonSemanticGlobalDI,  // OpExtInst with e.g. DebugSource, DebugTypeBasic.
@@ -99,7 +100,7 @@ public:
   void addCapabilities(const CapabilityList &ToAdd);
   void addCapability(Capability::Capability ToAdd) { addCapabilities({ToAdd}); }
   void addExtensions(const ExtensionList &ToAdd) {
-    AllExtensions.insert(ToAdd.begin(), ToAdd.end());
+    AllExtensions.insert_range(ToAdd);
   }
   void addExtension(Extension::Extension ToAdd) { AllExtensions.insert(ToAdd); }
   // Add the given requirements to the lists. If constraints conflict, or these
