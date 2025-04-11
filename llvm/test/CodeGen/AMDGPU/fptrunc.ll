@@ -240,7 +240,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; VI-SAFE-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; VI-SAFE-GISEL-NEXT:    s_add_i32 s2, s2, s6
 ; VI-SAFE-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
-; VI-SAFE-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; VI-SAFE-GISEL-NEXT:    s_cmovk_i32 s2, 0x7c00
 ; VI-SAFE-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
 ; VI-SAFE-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
 ; VI-SAFE-GISEL-NEXT:    s_lshr_b32 s3, s3, 16
@@ -365,7 +365,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX10-SAFE-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; GFX10-SAFE-GISEL-NEXT:    s_add_i32 s2, s2, s6
 ; GFX10-SAFE-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
-; GFX10-SAFE-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; GFX10-SAFE-GISEL-NEXT:    s_cmovk_i32 s2, 0x7c00
 ; GFX10-SAFE-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
 ; GFX10-SAFE-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
 ; GFX10-SAFE-GISEL-NEXT:    s_lshr_b32 s3, s3, 16
@@ -501,7 +501,7 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s6, s7, s6
 ; GFX11-SAFE-GISEL-NEXT:    s_add_i32 s2, s2, s6
 ; GFX11-SAFE-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
-; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; GFX11-SAFE-GISEL-NEXT:    s_cmovk_i32 s2, 0x7c00
 ; GFX11-SAFE-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
 ; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
 ; GFX11-SAFE-GISEL-NEXT:    s_lshr_b32 s3, s3, 16
