@@ -161,10 +161,11 @@ void __asan_poison_memory_region(void const volatile *addr, uptr size) {
 
     u32 stack_id = StackDepotPut(stack);
 
-    PoisonRecord record{.stack_id = stack_id,
-                        .thread_id = current_tid,
-                        .begin = beg_addr,
-                        .end = end_addr};
+    PoisonRecord record;
+    record.stack_id = stack_id;
+    record.thread_id = current_tid;
+    record.begin = beg_addr;
+    record.end = end_addr;
     AddPoisonRecord(record);
   }
 

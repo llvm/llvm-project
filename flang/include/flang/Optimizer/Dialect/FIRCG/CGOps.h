@@ -10,14 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_CODEGEN_CGOPS_H
-#define OPTIMIZER_CODEGEN_CGOPS_H
+#ifndef OPTIMIZER_DIALECT_FIRCG_CGOPS_H
+#define OPTIMIZER_DIALECT_FIRCG_CGOPS_H
 
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
 #define GET_OP_CLASSES
-#include "flang/Optimizer/CodeGen/CGOps.h.inc"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h.inc"
 
-#endif
+#endif // OPTIMIZER_DIALECT_FIRCG_CGOPS_H
