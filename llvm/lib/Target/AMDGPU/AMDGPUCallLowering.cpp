@@ -513,28 +513,29 @@ void AMDGPUCallLowering::lowerPreloadedParameter(
   LLT ScalarTy = LLT::scalar(DL.getTypeSizeInBits(ArgTy));
   unsigned TotalSize = 0;
   SmallVector<Register> SrcRegs(PreloadRegs.size());
-
-  for (auto &&[Idx, PhysReg] : enumerate(PreloadRegs)) {
+  
+  for (auto [Idx, PhysReg] : enumerate(PreloadRegs)) {
     Register VReg = MRI.getLiveInVirtReg(PhysReg);
     TypeSize RegSize = TRI->getRegSizeInBits(VReg, MRI);
-
+    
     if (!MRI.getVRegDef(VReg)) {
       MRI.setType(VReg, LLT::scalar(RegSize));
       B.getMBB().addLiveIn(PhysReg);
       B.buildInstr(TargetOpcode::COPY).addDef(VReg).addReg(PhysReg);
     }
-
-    if (DL.getTypeStoreSize(ArgTy) < 4 && Alignment < 4) {
-      int64_t AlignDownOffset = alignDown(ArgOffset, 4);
+    
+    constexpr const unsigned SGPRSize = 4;
+    // Arg is preloaded into the previous SGPR.
+    if (DL.getTypeStoreSize(ArgTy) < SGPRSize && Alignment < SGPRSize) {
+      int64_t AlignDownOffset = alignDown(ArgOffset, SGPRSize);
       int64_t OffsetDiff = ArgOffset - AlignDownOffset;
       auto ShiftAmt = B.buildConstant(LLT::scalar(32), OffsetDiff * 8);
       auto Shift = B.buildRotateLeft(LLT::scalar(RegSize), VReg, ShiftAmt);
 
-      if (ResTy.isVector()) {
+      if (ResTy.isVector())
         B.buildBitcast(VRegs[0], B.buildTrunc(ScalarTy, Shift));
-      } else {
+      else
         B.buildTrunc(VRegs[0], Shift);
-      }
 
       return;
     }

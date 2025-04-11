@@ -2544,10 +2544,11 @@ static bool allocPreloadKernArg(uint64_t &LastExplicitArgOffset,
   GCNUserSGPRUsageInfo &SGPRInfo = Info.getUserSGPRInfo();
   const Align KernelArgBaseAlign = Align(16);
   Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
-  unsigned NumAllocSGPRs = alignTo(ArgSize, 4) / 4;
+  constexpr const unsigned SGPRSize = 4;
+  unsigned NumAllocSGPRs = alignTo(ArgSize, SGPRSize) / SGPRSize;
 
   // Arg is preloaded into the previous SGPR.
-  if (ArgSize < 4 && Alignment < 4) {
+  if (ArgSize < SGPRSize && Alignment < SGPRSize) {
     assert(Idx >= 1 && "No previous SGPR");
     AMDGPUFunctionArgInfo &ArgInfo = Info.getArgInfo();
     auto &ArgDesc = ArgInfo.PreloadKernArgs[Idx];
@@ -2557,7 +2558,7 @@ static bool allocPreloadKernArg(uint64_t &LastExplicitArgOffset,
   }
 
   unsigned Padding = ArgOffset - LastExplicitArgOffset;
-  unsigned PaddingSGPRs = alignTo(Padding, 4) / 4;
+  unsigned PaddingSGPRs = alignTo(Padding, SGPRSize) / SGPRSize;
   // Check for free user SGPRs for preloading.
   if (PaddingSGPRs + NumAllocSGPRs > SGPRInfo.getNumFreeUserSGPRs())
     return false;
@@ -2577,7 +2578,7 @@ static bool allocPreloadKernArg(uint64_t &LastExplicitArgOffset,
     CCInfo.AllocateReg(Reg);
   }
 
-  LastExplicitArgOffset = NumAllocSGPRs * 4 + ArgOffset;
+  LastExplicitArgOffset = NumAllocSGPRs * SGPRSize + ArgOffset;
   return true;
 }
 
