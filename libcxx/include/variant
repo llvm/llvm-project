@@ -1299,7 +1299,7 @@ public:
     __impl_.__swap(__that.__impl_);
   }
 
-#    if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_EXPLICIT_THIS_PARAMETER
+#    if _LIBCPP_STD_VER >= 26
   // Helper class to implement [variant.visit]/10
   //   Constraints: The call to visit does not use an explicit template-argument-list
   //   that begins with a type template-argument.
@@ -1316,7 +1316,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Rp visit(this _Self&& __self, _Visitor&& __visitor) {
     return std::visit<_Rp>(std::forward<_Visitor>(__visitor), std::__forward_as<_Self, variant>(__self));
   }
-#    endif
+#    endif // _LIBCPP_STD_VER >= 26
 
 private:
   __variant_detail::__impl<_Types...> __impl_;
