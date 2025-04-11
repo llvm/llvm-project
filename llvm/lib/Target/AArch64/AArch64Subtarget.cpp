@@ -268,6 +268,8 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseV2:
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
+    LLVM_FALLTHROUGH;
   case NeoverseV3:
     EpilogueVectorizationMinVF = 8;
     MaxInterleaveFactor = 4;
