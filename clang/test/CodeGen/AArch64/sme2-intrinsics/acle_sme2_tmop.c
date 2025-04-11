@@ -76,6 +76,15 @@ void test_svtmopa_lane_za32_f16_f16(svfloat16x2_t zn, svfloat16_t zm, svuint8_t 
   SME_ACLE_FUNC(svtmopa_lane_za32,_f16_f16,)(1, zn, zm, zk, 3);
 }
 
+// CHECK-LABEL: @test_svtmopa_lane_za32_f32_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.tmopa.nxv4f32(i32 1, <vscale x 4 x float> [[ZN_COERCE0:%.*]], <vscale x 4 x float> [[ZN_COERCE1:%.*]], <vscale x 4 x float> [[ZM:%.*]], <vscale x 16 x i8> [[ZK:%.*]], i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_svtmopa_lane_za32_f32_f32(svfloat32x2_t zn, svfloat32_t zm, svuint8_t zk) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svtmopa_lane_za32,_f32_f32,)(1, zn, zm, zk, 3);
+}
+
 // CHECK-LABEL: @test_svtmopa_lane_za32_bf16_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.tmopa.nxv8bf16(i32 1, <vscale x 8 x bfloat> [[ZN_COERCE0:%.*]], <vscale x 8 x bfloat> [[ZN_COERCE1:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], <vscale x 16 x i8> [[ZK:%.*]], i32 3)
@@ -103,10 +112,22 @@ void test_svtmopa_lane_za16_bf16_bf16(svbfloat16x2_t zn, svbfloat16_t zm, svuint
   SME_ACLE_FUNC(svtmopa_lane_za16,_bf16_bf16,)(1, zn, zm, zk, 3);
 }
 
-//void test_svtmopa_lane_za16_mf8_mf8_fpm(svfloat32x2_t zn, svfloat32_t zm, svuint8_t zk, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-//  SME_ACLE_FUNC(svtmopa_lane_za16,_mf8_mf8,_fpm)(1, zn, zm, zk, 3, fpmr);
-//}
+// CHECK-LABEL: @test_svtmopa_lane_za16_mf8_mf8_fpm(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.tmopa.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZK:%.*]], i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_svtmopa_lane_za16_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, svuint8_t zk, fpm_t fpmr) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svtmopa_lane_za16,_mf8_mf8,_fpm)(1, zn, zm, zk, 3, fpmr);
+}
 
-//void test_svtmopa_lane_za32_mf8_mf8_fpm(svfloat32x2_t zn, svfloat32_t zm, svuint8_t zk, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-//  SME_ACLE_FUNC(svtmopa_lane_za32,_mf8_mf8,_fpm)(1, zn, zm, zk, 3, fpmr);
-//}
+// CHECK-LABEL: @test_svtmopa_lane_za32_mf8_mf8_fpm(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.aarch64.set.fpmr(i64 [[FPMR:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.tmopa.nxv16i8(i32 1, <vscale x 16 x i8> [[ZN_COERCE0:%.*]], <vscale x 16 x i8> [[ZN_COERCE1:%.*]], <vscale x 16 x i8> [[ZM:%.*]], <vscale x 16 x i8> [[ZK:%.*]], i32 3)
+// CHECK-NEXT:    ret void
+//
+void test_svtmopa_lane_za32_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, svuint8_t zk, fpm_t fpmr) __arm_streaming __arm_inout("za") {
+  SME_ACLE_FUNC(svtmopa_lane_za32,_mf8_mf8,_fpm)(1, zn, zm, zk, 3, fpmr);
+}
