@@ -58,7 +58,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 7
   ; CHECK:     Size: 1
   ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
   ; CHECK:   IsROV: 0
@@ -76,7 +76,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 5
   ; CHECK:     Size: 1
   ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
   ; CHECK:   IsROV: 0
@@ -99,7 +99,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 10
   ; CHECK:   Globally Coherent: 0
-  ; CHECK:   HasCounter: 0
+  ; CHECK:   Counter Direction: Unknown
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
   ; CHECK:   IsROV: 0

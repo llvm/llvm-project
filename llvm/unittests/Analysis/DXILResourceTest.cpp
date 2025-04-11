@@ -127,7 +127,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
                 TestMD.get(1, GV, "BufferOut", 2, 3, 1, 11, false, false, false,
                            nullptr));
     EXPECT_EQ(RI.GloballyCoherent, false);
-    EXPECT_EQ(RI.HasCounter, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // struct BufType0 { int i; float f; double d; };
@@ -279,8 +280,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
 
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/2, /*LowerBound=*/0, /*Size=*/1,
-        RTI.getHandleTy(),
-        /*Symbol=*/nullptr, /*GloballyCoherent=*/true, /*HasCounter=*/false);
+        RTI.getHandleTy());
+    RI.setGloballyCoherent(true);
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "OutputTexture");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00005002U, 0x00000204U);
@@ -289,7 +290,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
                            false, TestMD.get(0, 4)));
 
     EXPECT_EQ(RI.GloballyCoherent, true);
-    EXPECT_EQ(RI.HasCounter, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // RasterizerOrderedBuffer<float4> ROB;
@@ -313,7 +315,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
                 TestMD.get(0, GV, "ROB", 0, 0, 1, 10, false, false, true,
                            TestMD.get(0, 9)));
     EXPECT_EQ(RI.GloballyCoherent, false);
-    EXPECT_EQ(RI.HasCounter, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // RWStructuredBuffer<ParticleMotion> g_OutputBuffer : register(u2);
@@ -331,8 +334,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
 
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/2, /*Size=*/1,
-        RTI.getHandleTy(),
-        /*Symbol=*/nullptr, /*GloballyCoherent=*/false, /*HasCounter=*/true);
+        RTI.getHandleTy());
+    RI.setCounterDirection(ResourceCounterDirection::Increment);
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "g_OutputBuffer");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000920cU, 0x00000014U);
@@ -340,7 +343,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
                 TestMD.get(0, GV, "g_OutputBuffer", 0, 2, 1, 12, false, true,
                            false, TestMD.get(1, 20)));
     EXPECT_EQ(RI.GloballyCoherent, false);
-    EXPECT_EQ(RI.HasCounter, true);
+    EXPECT_EQ(RI.hasCounter(), true);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Increment);
   }
 
   // RWTexture2DMSArray<uint, 8> g_rw_t2dmsa;
@@ -368,7 +372,8 @@ TEST(DXILResource, AnnotationsAndMetadata) {
                 TestMD.get(0, GV, "g_rw_t2dmsa", 0, 0, 1, 8, false, false,
                            false, TestMD.get(0, 5)));
     EXPECT_EQ(RI.GloballyCoherent, false);
-    EXPECT_EQ(RI.HasCounter, false);
+    EXPECT_EQ(RI.hasCounter(), false);
+    EXPECT_EQ(RI.CounterDirection, ResourceCounterDirection::Unknown);
   }
 
   // cbuffer cb0 { float4 g_X; float4 g_Y; }

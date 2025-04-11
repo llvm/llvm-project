@@ -306,6 +306,13 @@ public:
 
 //===----------------------------------------------------------------------===//
 
+enum class ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+  Invalid,
+};
+
 class ResourceInfo {
 public:
   struct ResourceBinding {
@@ -333,20 +340,22 @@ private:
   GlobalVariable *Symbol = nullptr;
 
 public:
-  bool GloballyCoherent;
-  bool HasCounter;
+  bool GloballyCoherent = false;
+  ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
 
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
                uint32_t Size, TargetExtType *HandleTy,
-               GlobalVariable *Symbol = nullptr, bool GloballyCoherent = false,
-               bool HasCounter = false)
+               GlobalVariable *Symbol = nullptr)
       : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Symbol(Symbol), GloballyCoherent(GloballyCoherent),
-        HasCounter(HasCounter) {}
+        Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
   void setGloballyCoherent(bool V) { GloballyCoherent = V; }
-  void setHasCounter(bool V) { HasCounter = V; }
+  void setCounterDirection(ResourceCounterDirection V) { CounterDirection = V; }
+
+  bool hasCounter() const {
+    return CounterDirection != ResourceCounterDirection::Unknown;
+  }
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }

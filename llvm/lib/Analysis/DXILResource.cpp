@@ -573,7 +573,7 @@ MDTuple *ResourceInfo::getAsMetadata(Module &M,
     if (RTI.isUAV()) {
       ResourceTypeInfo::UAVInfo UAVFlags = RTI.getUAV();
       MDVals.push_back(getBoolMD(GloballyCoherent));
-      MDVals.push_back(getBoolMD(HasCounter));
+      MDVals.push_back(getBoolMD(hasCounter()));
       MDVals.push_back(getBoolMD(UAVFlags.IsROV));
     } else {
       // All SRVs include sample count in the metadata, but it's only meaningful
@@ -617,7 +617,7 @@ ResourceInfo::getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const {
   bool IsGloballyCoherent = IsUAV && GloballyCoherent;
   uint8_t SamplerCmpOrHasCounter = 0;
   if (IsUAV)
-    SamplerCmpOrHasCounter = HasCounter;
+    SamplerCmpOrHasCounter = hasCounter();
   else if (RTI.isSampler())
     SamplerCmpOrHasCounter = RTI.getSamplerType() == SamplerType::Comparison;
 
@@ -667,7 +667,22 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
      << "    Size: " << Binding.Size << "\n";
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
-  OS << "  HasCounter: " << HasCounter << "\n";
+  OS << "  Counter Direction: ";
+
+  switch (CounterDirection) {
+  case ResourceCounterDirection::Increment:
+    OS << "Increment\n";
+    break;
+  case ResourceCounterDirection::Decrement:
+    OS << "Decrement\n";
+    break;
+  case ResourceCounterDirection::Unknown:
+    OS << "Unknown\n";
+    break;
+  case ResourceCounterDirection::Invalid:
+    OS << "Invalid\n";
+    break;
+  }
 
   RTI.print(OS, DL);
 }
