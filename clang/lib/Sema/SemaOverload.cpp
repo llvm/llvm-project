@@ -3709,6 +3709,10 @@ static bool isQualificationConversionStep(QualType FromType, QualType ToType,
     ToQuals.removeObjCGCAttr();
   }
 
+  // __ptrauth qualifiers must match exactly.
+  if (FromQuals.getPointerAuth() != ToQuals.getPointerAuth())
+    return false;
+
   //   -- for every j > 0, if const is in cv 1,j then const is in cv
   //      2,j, and similarly for volatile.
   if (!CStyle && !ToQuals.compatiblyIncludes(FromQuals, Ctx))
@@ -11463,6 +11467,17 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
           << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
           << ToParamRange << FromTy << FromQs.getObjCGCAttr()
           << ToQs.getObjCGCAttr() << (unsigned)isObjectArgument << I + 1;
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
+      return;
+    }
+
+    if (!FromQs.getPointerAuth().isEquivalent(ToQs.getPointerAuth())) {
+      S.Diag(Fn->getLocation(), diag::note_ovl_candidate_bad_ptrauth)
+          << (unsigned)FnKindPair.first << (unsigned)FnKindPair.second << FnDesc
+          << FromTy << !!FromQs.getPointerAuth()
+          << FromQs.getPointerAuth().getAsString() << !!ToQs.getPointerAuth()
+          << ToQs.getPointerAuth().getAsString() << I + 1
+          << (FromExpr ? FromExpr->getSourceRange() : SourceRange());
       MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }

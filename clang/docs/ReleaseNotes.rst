@@ -510,6 +510,8 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+-  Support for __ptrauth type qualifier has been added.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
