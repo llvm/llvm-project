@@ -75,7 +75,7 @@ struct __has_storage_type<vector<bool, _Allocator> > {
 };
 
 template <class _Allocator>
-class _LIBCPP_TEMPLATE_VIS vector<bool, _Allocator> {
+class vector<bool, _Allocator> {
 public:
   typedef vector __self;
   typedef bool value_type;
@@ -519,7 +519,7 @@ private:
   friend class __bit_iterator<vector, false>;
   friend class __bit_iterator<vector, true>;
   friend struct __bit_array<vector>;
-  friend struct _LIBCPP_TEMPLATE_VIS hash<vector>;
+  friend struct hash<vector>;
 };
 
 template <class _Allocator>
@@ -1109,8 +1109,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t vector<bool, _Allocator>::__hash_code() con
 }
 
 template <class _Allocator>
-struct _LIBCPP_TEMPLATE_VIS hash<vector<bool, _Allocator> >
-    : public __unary_function<vector<bool, _Allocator>, size_t> {
+struct hash<vector<bool, _Allocator> > : public __unary_function<vector<bool, _Allocator>, size_t> {
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 size_t
   operator()(const vector<bool, _Allocator>& __vec) const _NOEXCEPT {
     return __vec.__hash_code();

@@ -78,6 +78,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -1086,6 +1087,15 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
   if (SchedStrategy == "max-memory-clause")
     return createGCNMaxMemoryClauseMachineScheduler(C);
+
+  if (SchedStrategy == "iterative-ilp")
+    return createIterativeILPMachineScheduler(C);
+
+  if (SchedStrategy == "iterative-minreg")
+    return createMinRegScheduler(C);
+
+  if (SchedStrategy == "iterative-maxocc")
+    return createIterativeGCNMaxOccupancyMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);
 }
@@ -2184,7 +2194,7 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   //
   // Here we add a stand-alone hazard recognizer pass which can handle all
   // cases.
-  // TODO: addPass(PostRAHazardRecognizerPass());
+  addPass(PostRAHazardRecognizerPass());
   addPass(AMDGPUWaitSGPRHazardsPass());
 
   if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {

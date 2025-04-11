@@ -820,8 +820,9 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
 //===----------------------------------------------------------------------===//
 
 def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [Pure,
-    TypesMatchWith<"result type matches vector element type", "vector", "res",
-                   "LLVM::getVectorElementType($_self)">]> {
+    TypesMatchWith<
+        "result type matches vector element type", "vector", "res",
+        "::llvm::cast<::mlir::VectorType>($_self).getElementType()">]> {
   let summary = "Extract an element from an LLVM vector.";
 
   let arguments = (ins LLVM_AnyVector:$vector, AnySignlessInteger:$position);
@@ -881,7 +882,8 @@ def LLVM_ExtractValueOp : LLVM_Op<"extractvalue", [Pure]> {
 
 def LLVM_InsertElementOp : LLVM_Op<"insertelement", [Pure,
     TypesMatchWith<"argument type matches vector element type", "vector",
-                   "value", "LLVM::getVectorElementType($_self)">,
+                   "value",
+                   "::llvm::cast<::mlir::VectorType>($_self).getElementType()">,
     AllTypesMatch<["res", "vector"]>]> {
   let summary = "Insert an element into an LLVM vector.";
 

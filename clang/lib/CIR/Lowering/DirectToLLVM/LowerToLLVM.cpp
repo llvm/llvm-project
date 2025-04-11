@@ -828,6 +828,26 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+mlir::LogicalResult CIRToLLVMGetGlobalOpLowering::matchAndRewrite(
+    cir::GetGlobalOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  // FIXME(cir): Premature DCE to avoid lowering stuff we're not using.
+  // CIRGen should mitigate this and not emit the get_global.
+  if (op->getUses().empty()) {
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
+  mlir::Type type = getTypeConverter()->convertType(op.getType());
+  mlir::Operation *newop =
+      rewriter.create<mlir::LLVM::AddressOfOp>(op.getLoc(), type, op.getName());
+
+  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+
+  rewriter.replaceOp(op, newop);
+  return mlir::success();
+}
+
 /// Replace CIR global with a region initialized LLVM global and update
 /// insertion point to the end of the initializer block.
 void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
@@ -1418,6 +1438,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMCmpOpLowering,
                CIRToLLVMConstantOpLowering,
                CIRToLLVMFuncOpLowering,
+               CIRToLLVMGetGlobalOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering
       // clang-format on
