@@ -158,6 +158,39 @@ entry:
   ret <2 x i64> %out
 }
 
+define <2 x i32> @dupzext_v2i32_v2i64_trunc(i32 %src, <2 x i32> %b) {
+; CHECK-SD-LABEL: dupzext_v2i32_v2i64_trunc:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    dup v1.2s, w0
+; CHECK-SD-NEXT:    smull v0.2d, v1.2s, v0.2s
+; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dupzext_v2i32_v2i64_trunc:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    dup v1.2d, x8
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    mov x10, v1.d[1]
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    mul x9, x10, x11
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    ret
+entry:
+  %in = zext i32 %src to i64
+  %ext.b = zext <2 x i32> %b to <2 x i64>
+  %broadcast.splatinsert = insertelement <2 x i64> poison, i64 %in, i64 0
+  %broadcast.splat = shufflevector <2 x i64> %broadcast.splatinsert, <2 x i64> poison, <2 x i32> zeroinitializer
+  %prod = mul nuw <2 x i64> %broadcast.splat, %ext.b
+  %out = trunc <2 x i64> %prod to <2 x i32>
+  ret <2 x i32> %out
+}
+
 ; Unsupported combines
 
 define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {
@@ -319,17 +352,16 @@ define void @typei1_orig(i64 %a, ptr %p, ptr %q) {
 ;
 ; CHECK-GI-LABEL: typei1_orig:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ldr q1, [x2]
+; CHECK-GI-NEXT:    ldr q0, [x2]
 ; CHECK-GI-NEXT:    cmp x0, #0
-; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
 ; CHECK-GI-NEXT:    cset w8, gt
-; CHECK-GI-NEXT:    neg v1.8h, v1.8h
-; CHECK-GI-NEXT:    dup v2.8h, w8
-; CHECK-GI-NEXT:    mvn v0.16b, v0.16b
-; CHECK-GI-NEXT:    mul v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    cmeq v1.8h, v1.8h, #0
+; CHECK-GI-NEXT:    neg v0.8h, v0.8h
+; CHECK-GI-NEXT:    dup v1.8h, w8
+; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    cmtst v0.8h, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    mvn v1.16b, v1.16b
-; CHECK-GI-NEXT:    uzp1 v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    sshr v0.16b, v0.16b, #7
 ; CHECK-GI-NEXT:    str q0, [x1]
@@ -407,11 +439,10 @@ define <8 x i16> @shufsext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: shufsext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
-; CHECK-GI-NEXT:    sshll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI13_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -460,11 +491,10 @@ define <8 x i16> @shufzext_v8i8_v8i16(<8 x i8> %src, <8 x i8> %b) {
 ;
 ; CHECK-GI-LABEL: shufzext_v8i8_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI15_0
-; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-GI-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI15_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-GI-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-GI-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-GI-NEXT:    mul v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:

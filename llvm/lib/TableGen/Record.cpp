@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -83,6 +84,7 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
+  FoldingSet<InstancesOpInit> TheInstancesOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -106,7 +108,8 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
   OS << "TheArgumentInitPool size = " << TheArgumentInitPool.size() << '\n';
   OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
   OS << "TheIntInitPool size = " << TheIntInitPool.size() << '\n';
-  OS << "TheBitsInitPool size = " << TheBitsInitPool.size() << '\n';
+  OS << "StringInitStringPool size = " << StringInitStringPool.size() << '\n';
+  OS << "StringInitCodePool size = " << StringInitCodePool.size() << '\n';
   OS << "TheListInitPool size = " << TheListInitPool.size() << '\n';
   OS << "TheUnOpInitPool size = " << TheUnOpInitPool.size() << '\n';
   OS << "TheBinOpInitPool size = " << TheBinOpInitPool.size() << '\n';
@@ -671,7 +674,7 @@ const StringInit *StringInit::get(RecordKeeper &RK, StringRef V,
   detail::RecordKeeperImpl &RKImpl = RK.getImpl();
   auto &InitMap = Fmt == SF_String ? RKImpl.StringInitStringPool
                                    : RKImpl.StringInitCodePool;
-  auto &Entry = *InitMap.insert(std::make_pair(V, nullptr)).first;
+  auto &Entry = *InitMap.try_emplace(V, nullptr).first;
   if (!Entry.second)
     Entry.second = new (RKImpl.Allocator) StringInit(RK, Entry.getKey(), Fmt);
   return Entry.second;
@@ -917,6 +920,13 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
       return NewInit;
     break;
 
+  case INITIALIZED:
+    if (isa<UnsetInit>(LHS))
+      return IntInit::get(RK, 0);
+    if (LHS->isConcrete())
+      return IntInit::get(RK, 1);
+    break;
+
   case NOT:
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK))))
@@ -1005,8 +1015,7 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
           const auto *InnerList = dyn_cast<ListInit>(InnerInit);
           if (!InnerList)
             return std::nullopt;
-          for (const Init *InnerElem : InnerList->getValues())
-            Flattened.push_back(InnerElem);
+          llvm::append_range(Flattened, InnerList->getValues());
         };
         return Flattened;
       };
@@ -1051,6 +1060,9 @@ std::string UnOpInit::getAsString() const {
     break;
   case TOUPPER:
     Result = "!toupper";
+    break;
+  case INITIALIZED:
+    Result = "!initialized";
     break;
   }
   return Result + "(" + LHS->getAsString() + ")";
@@ -1306,6 +1318,23 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       return DagInit::get(Op, nullptr, Args, ArgNames);
     }
     break;
+  }
+  case MATCH: {
+    const auto *StrInit = dyn_cast<StringInit>(LHS);
+    if (!StrInit)
+      return this;
+
+    const auto *RegexInit = dyn_cast<StringInit>(RHS);
+    if (!RegexInit)
+      return this;
+
+    StringRef RegexStr = RegexInit->getValue();
+    llvm::Regex Matcher(RegexStr);
+    if (!Matcher.isValid())
+      PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
+
+    return BitInit::get(LHS->getRecordKeeper(),
+                        Matcher.match(StrInit->getValue()));
   }
   case LISTCONCAT: {
     const auto *LHSs = dyn_cast<ListInit>(LHS);
@@ -1575,6 +1604,9 @@ std::string BinOpInit::getAsString() const {
   case RANGEC:
     return LHS->getAsString() + "..." + RHS->getAsString();
   case CONCAT: Result = "!con"; break;
+  case MATCH:
+    Result = "!match";
+    break;
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
@@ -1664,7 +1696,7 @@ static const Init *ForeachDagApply(const Init *LHS, const DagInit *MHSd,
     else
       NewArg = ItemApply(LHS, Arg, RHS, CurRec);
 
-    NewArgs.push_back(std::make_pair(NewArg, ArgName));
+    NewArgs.emplace_back(NewArg, ArgName);
     if (Arg != NewArg)
       Change = true;
   }
@@ -2083,10 +2115,12 @@ const Init *IsAOpInit::Fold() const {
       return IntInit::get(getRecordKeeper(), 1);
 
     if (isa<RecordRecTy>(CheckType)) {
-      // If the target type is not a subclass of the expression type, or if
-      // the expression has fully resolved to a record, we know that it can't
-      // be of the required type.
-      if (!CheckType->typeIsConvertibleTo(TI->getType()) || isa<DefInit>(Expr))
+      // If the target type is not a subclass of the expression type once the
+      // expression has been made concrete, or if the expression has fully
+      // resolved to a record, we know that it can't be of the required type.
+      if ((!CheckType->typeIsConvertibleTo(TI->getType()) &&
+           Expr->isConcrete()) ||
+          isa<DefInit>(Expr))
         return IntInit::get(getRecordKeeper(), 0);
     } else {
       // We treat non-record types as not castable.
@@ -2188,6 +2222,70 @@ std::string ExistsOpInit::getAsString() const {
       .str();
 }
 
+static void ProfileInstancesOpInit(FoldingSetNodeID &ID, const RecTy *Type,
+                                   const Init *Regex) {
+  ID.AddPointer(Type);
+  ID.AddPointer(Regex);
+}
+
+const InstancesOpInit *InstancesOpInit::get(const RecTy *Type,
+                                            const Init *Regex) {
+  FoldingSetNodeID ID;
+  ProfileInstancesOpInit(ID, Type, Regex);
+
+  detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
+  void *IP = nullptr;
+  if (const InstancesOpInit *I =
+          RK.TheInstancesOpInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  InstancesOpInit *I = new (RK.Allocator) InstancesOpInit(Type, Regex);
+  RK.TheInstancesOpInitPool.InsertNode(I, IP);
+  return I;
+}
+
+void InstancesOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileInstancesOpInit(ID, Type, Regex);
+}
+
+const Init *InstancesOpInit::Fold(const Record *CurRec, bool IsFinal) const {
+  if (CurRec && !IsFinal)
+    return this;
+
+  const auto *RegexInit = dyn_cast<StringInit>(Regex);
+  if (!RegexInit)
+    return this;
+
+  StringRef RegexStr = RegexInit->getValue();
+  llvm::Regex Matcher(RegexStr);
+  if (!Matcher.isValid())
+    PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
+
+  const RecordKeeper &RK = Type->getRecordKeeper();
+  SmallVector<Init *, 8> Selected;
+  for (auto &Def : RK.getAllDerivedDefinitionsIfDefined(Type->getAsString()))
+    if (Matcher.match(Def->getName()))
+      Selected.push_back(Def->getDefInit());
+
+  return ListInit::get(Selected, Type);
+}
+
+const Init *InstancesOpInit::resolveReferences(Resolver &R) const {
+  const Init *NewRegex = Regex->resolveReferences(R);
+  if (Regex != NewRegex || R.isFinal())
+    return get(Type, NewRegex)->Fold(R.getCurrentRecord(), R.isFinal());
+  return this;
+}
+
+const Init *InstancesOpInit::getBit(unsigned Bit) const {
+  return VarBitInit::get(this, Bit);
+}
+
+std::string InstancesOpInit::getAsString() const {
+  return "!instances<" + Type->getAsString() + ">(" + Regex->getAsString() +
+         ")";
+}
+
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
   if (const auto *RecordType = dyn_cast<RecordRecTy>(getType())) {
     for (const Record *Rec : RecordType->getClasses()) {
@@ -2250,7 +2348,7 @@ const VarInit *VarInit::get(StringRef VN, const RecTy *T) {
 
 const VarInit *VarInit::get(const Init *VN, const RecTy *T) {
   detail::RecordKeeperImpl &RK = T->getRecordKeeper().getImpl();
-  VarInit *&I = RK.TheVarInitPool[std::make_pair(T, VN)];
+  VarInit *&I = RK.TheVarInitPool[{T, VN}];
   if (!I)
     I = new (RK.Allocator) VarInit(VN, T);
   return I;
@@ -2275,7 +2373,7 @@ const Init *VarInit::resolveReferences(Resolver &R) const {
 
 const VarBitInit *VarBitInit::get(const TypedInit *T, unsigned B) {
   detail::RecordKeeperImpl &RK = T->getRecordKeeper().getImpl();
-  VarBitInit *&I = RK.TheVarBitInitPool[std::make_pair(T, B)];
+  VarBitInit *&I = RK.TheVarBitInitPool[{T, B}];
   if (!I)
     I = new (RK.Allocator) VarBitInit(T, B);
   return I;
@@ -2451,7 +2549,7 @@ std::string VarDefInit::getAsString() const {
 
 const FieldInit *FieldInit::get(const Init *R, const StringInit *FN) {
   detail::RecordKeeperImpl &RK = R->getRecordKeeper().getImpl();
-  FieldInit *&I = RK.TheFieldInitPool[std::make_pair(R, FN)];
+  FieldInit *&I = RK.TheFieldInitPool[{R, FN}];
   if (!I)
     I = new (RK.Allocator) FieldInit(R, FN);
   return I;

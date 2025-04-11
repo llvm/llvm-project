@@ -645,7 +645,7 @@ namespace test24 {
     foo();
   }
 
-  static char bar() {}
+  static char bar() { return 0; }
   void test1() {
     // CHECK: call noundef signext i8 @_ZN6test24L3barEv()
     bar();
@@ -839,7 +839,7 @@ namespace test36 {
   template<unsigned> struct A { };
 
   template<typename ...Types>
-  auto f1(Types... values) -> A<sizeof...(values)> { }
+  auto f1(Types... values) -> A<sizeof...(values)> { return {}; }
 
   // CHECK: define weak_odr {{.*}} @_ZN6test362f1IJifEEENS_1AIXsZfp_EEEDpT_
   template A<2> f1(int, float);
@@ -1158,6 +1158,12 @@ template void f16<int>(int, __remove_volatile(int));
 template <typename T> void f17(T, __remove_restrict(T)) {}
 template void f17<int>(int, __remove_restrict(int));
 // CHECK-LABEL: @_ZN6test553f17IiEEvT_u17__remove_restrictIS1_E
+
+struct S{};
+template <class T> void f18(decltype(__builtin_structured_binding_size(T))) {}
+template void f18<S>(__SIZE_TYPE__);
+// CHECK: void @_ZN6test553f18INS_1SEEEvDTu33__builtin_structured_binding_sizeT_EE
+
 } // namespace test55
 
 namespace test56 {

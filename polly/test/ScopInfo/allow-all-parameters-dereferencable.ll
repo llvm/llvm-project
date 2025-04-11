@@ -28,7 +28,7 @@
 ; CODE-RTC-NEXT: br i1 %{{[a-zA-Z0-9\.]*}}, label %polly.preload.exec, label %polly.preload.merge
 
 ; Check that we don't generate a runtime check because we treat all
-; parameters as dereferencable.
+; parameters as dereferenceable.
 ; CODE-NOT: polly.preload.cond:                               ; preds = %polly.preload.begin
 ; CODE-NOT: br i1 %{{r1:[a-zA-Z0-9]*}}, label %polly.preload.exec, label %polly.preload.merge
 

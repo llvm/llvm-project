@@ -1,0 +1,14 @@
+header: sys/time.h
+header_template: time.h.def
+standards: Linux
+macros: []
+types:
+  - type_name: struct_timeval
+enums: []
+objects: []
+functions:
+  - name: utimes
+    return_type: int
+    arguments:
+      - type: const char*
+      - type: const struct timeval*

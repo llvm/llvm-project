@@ -115,8 +115,9 @@ void ASTImporterLookupTable::remove(DeclContext *DC, NamedDecl *ND) {
 #ifndef NDEBUG
   if (!EraseResult) {
     std::string Message =
-        llvm::formatv("Trying to remove not contained Decl '{0}' of type {1}",
-                      Name.getAsString(), DC->getDeclKindName())
+        llvm::formatv(
+            "Trying to remove not contained Decl '{0}' of type {1} from a {2}",
+            Name.getAsString(), ND->getDeclKindName(), DC->getDeclKindName())
             .str();
     llvm_unreachable(Message.c_str());
   }
@@ -125,18 +126,18 @@ void ASTImporterLookupTable::remove(DeclContext *DC, NamedDecl *ND) {
 
 void ASTImporterLookupTable::add(NamedDecl *ND) {
   assert(ND);
-  DeclContext *DC = ND->getDeclContext()->getPrimaryContext();
+  DeclContext *DC = ND->getDeclContext();
   add(DC, ND);
-  DeclContext *ReDC = DC->getRedeclContext()->getPrimaryContext();
+  DeclContext *ReDC = DC->getRedeclContext();
   if (DC != ReDC)
     add(ReDC, ND);
 }
 
 void ASTImporterLookupTable::remove(NamedDecl *ND) {
   assert(ND);
-  DeclContext *DC = ND->getDeclContext()->getPrimaryContext();
+  DeclContext *DC = ND->getDeclContext();
   remove(DC, ND);
-  DeclContext *ReDC = DC->getRedeclContext()->getPrimaryContext();
+  DeclContext *ReDC = DC->getRedeclContext();
   if (DC != ReDC)
     remove(ReDC, ND);
 }
@@ -161,7 +162,7 @@ void ASTImporterLookupTable::updateForced(NamedDecl *ND, DeclContext *OldDC) {
 
 ASTImporterLookupTable::LookupResult
 ASTImporterLookupTable::lookup(DeclContext *DC, DeclarationName Name) const {
-  auto DCI = LookupTable.find(DC->getPrimaryContext());
+  auto DCI = LookupTable.find(DC);
   if (DCI == LookupTable.end())
     return {};
 
@@ -178,7 +179,7 @@ bool ASTImporterLookupTable::contains(DeclContext *DC, NamedDecl *ND) const {
 }
 
 void ASTImporterLookupTable::dump(DeclContext *DC) const {
-  auto DCI = LookupTable.find(DC->getPrimaryContext());
+  auto DCI = LookupTable.find(DC);
   if (DCI == LookupTable.end())
     llvm::errs() << "empty\n";
   const auto &FoundNameMap = DCI->second;
@@ -196,8 +197,7 @@ void ASTImporterLookupTable::dump(DeclContext *DC) const {
 void ASTImporterLookupTable::dump() const {
   for (const auto &Entry : LookupTable) {
     DeclContext *DC = Entry.first;
-    StringRef Primary = DC->getPrimaryContext() ? " primary" : "";
-    llvm::errs() << "== DC:" << cast<Decl>(DC) << Primary << "\n";
+    llvm::errs() << "== DC:" << cast<Decl>(DC) << "\n";
     dump(DC);
   }
 }

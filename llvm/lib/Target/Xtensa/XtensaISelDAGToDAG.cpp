@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "Xtensa.h"
 #include "XtensaTargetMachine.h"
-#include "XtensaUtils.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
@@ -27,9 +27,16 @@ using namespace llvm;
 namespace {
 
 class XtensaDAGToDAGISel : public SelectionDAGISel {
+  const XtensaSubtarget *Subtarget = nullptr;
+
 public:
-  XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
+  explicit XtensaDAGToDAGISel(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISel(TM, OptLevel) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<XtensaSubtarget>();
+    return SelectionDAGISel::runOnMachineFunction(MF);
+  }
 
   void Select(SDNode *Node) override;
 
@@ -68,7 +75,7 @@ public:
       ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
       int64_t OffsetVal = CN->getSExtValue();
 
-      Valid = isValidAddrOffset(Scale, OffsetVal);
+      Valid = Xtensa::isValidAddrOffset(Scale, OffsetVal);
 
       if (Valid) {
         // If the first operand is a FI, get the TargetFI Node.

@@ -646,8 +646,7 @@ ObjectFile::GetLoadableData(Target &target) {
   for (size_t i = 0; i < section_count; ++i) {
     LoadableData loadable;
     SectionSP section_sp = section_list->GetSectionAtIndex(i);
-    loadable.Dest =
-        target.GetSectionLoadList().GetSectionLoadAddress(section_sp);
+    loadable.Dest = target.GetSectionLoadAddress(section_sp);
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
     // We can skip sections like bss
@@ -774,6 +773,15 @@ uint32_t ObjectFile::GetCacheHash() {
   strm.Format("{0}-{1}-{2}", m_file, GetType(), GetStrata());
   m_cache_hash = llvm::djbHash(strm.GetString());
   return *m_cache_hash;
+}
+
+std::string ObjectFile::GetObjectName() const {
+  if (ModuleSP module_sp = GetModule())
+    if (ConstString object_name = module_sp->GetObjectName())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+                           object_name.GetString())
+          .str();
+  return GetFileSpec().GetFilename().GetString();
 }
 
 namespace llvm {

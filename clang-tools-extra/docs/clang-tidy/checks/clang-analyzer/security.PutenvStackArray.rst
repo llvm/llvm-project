@@ -1,4 +1,6 @@
 .. title:: clang-tidy - clang-analyzer-security.PutenvStackArray
+.. meta::
+   :http-equiv=refresh: 5;URL=https://clang.llvm.org/docs/analyzer/checkers.html#security-putenvstackarray-c
 
 clang-analyzer-security.PutenvStackArray
 ========================================

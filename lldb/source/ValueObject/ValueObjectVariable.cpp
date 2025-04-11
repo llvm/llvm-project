@@ -110,14 +110,10 @@ ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return *child_count <= max ? *child_count : max;
 }
 
-std::optional<uint64_t> ValueObjectVariable::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());
-
-  if (!type.IsValid())
-    return {};
-
   return type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
 }
 
@@ -160,8 +156,7 @@ bool ValueObjectVariable::UpdateValue() {
       variable->CalculateSymbolContext(&sc);
       if (sc.function)
         loclist_base_load_addr =
-            sc.function->GetAddressRange().GetBaseAddress().GetLoadAddress(
-                target);
+            sc.function->GetAddress().GetLoadAddress(target);
     }
     Value old_value(m_value);
     llvm::Expected<Value> maybe_value = expr_list.Evaluate(

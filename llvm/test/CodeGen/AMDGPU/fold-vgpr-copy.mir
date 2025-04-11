@@ -55,8 +55,7 @@ body:             |
 
 # GCN-LABEL: name: fma_sgpr_sgpr_use
 # GCN:      %0:sgpr_32 = IMPLICIT_DEF
-# GCN-NEXT: %2:vgpr_32 = V_MOV_B32_e32 1234567, implicit $exec
-# GCN-NEXT: %3:vgpr_32 = V_FMAC_F32_e64 0, %0, 0, 1234567, 0, %2, 0, 0, implicit $mode, implicit $exec
+# GCN: %3:vgpr_32 = V_FMA_F32_e64 0, %0, 0, 1234567, 0, 1234567, 0, 0, implicit $mode, implicit $exec
 ---
 name: fma_sgpr_sgpr_use
 body: |

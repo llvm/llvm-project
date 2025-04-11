@@ -13,7 +13,7 @@
 ; RUN: not %flang_fc1 -fdebug-unparse-no-sema -x f95 %s 2>&1 | FileCheck %s --check-prefix=ERROR
 ; RUN: not %flang_fc1 -fsyntax-only %s -x f95 2>&1 | FileCheck %s --check-prefix=ERROR
 
-; ERROR: Could not parse {{.*}}parse-error.f95
+; ERROR: Could not scan {{.*}}parse-error.ll
 
 define void @foo() {
   ret void

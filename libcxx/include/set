@@ -512,8 +512,9 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/set>
+#else
 #  include <__algorithm/equal.h>
 #  include <__algorithm/lexicographical_compare.h>
 #  include <__algorithm/lexicographical_compare_three_way.h>
@@ -521,6 +522,7 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #  include <__config>
 #  include <__functional/is_transparent.h>
 #  include <__functional/operations.h>
+#  include <__fwd/set.h>
 #  include <__iterator/erase_if_container.h>
 #  include <__iterator/iterator_traits.h>
 #  include <__iterator/ranges_iterator_traits.h>
@@ -569,9 +571,6 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Compare, class _Allocator>
-class multiset;
-
-template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set {
 public:
   // types:
@@ -708,7 +707,7 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~set() { static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1002,9 +1001,9 @@ operator<=(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare,
 
 #  else // _LIBCPP_STD_VER <= 17
 
-template <class _Key, class _Allocator>
+template <class _Key, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
-operator<=>(const set<_Key, _Allocator>& __x, const set<_Key, _Allocator>& __y) {
+operator<=>(const set<_Key, _Compare, _Allocator>& __x, const set<_Key, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), std::__synth_three_way);
 }
 
@@ -1033,7 +1032,7 @@ struct __container_traits<set<_Key, _Compare, _Allocator> > {
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee = true;
 };
 
-template <class _Key, class _Compare = less<_Key>, class _Allocator = allocator<_Key> >
+template <class _Key, class _Compare, class _Allocator>
 class _LIBCPP_TEMPLATE_VIS multiset {
 public:
   // types:
@@ -1173,7 +1172,9 @@ public:
   }
 #  endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI ~multiset() { static_assert(sizeof(__diagnose_non_const_comparator<_Key, _Compare>()), ""); }
+  _LIBCPP_HIDE_FROM_ABI ~multiset() {
+    static_assert(sizeof(std::__diagnose_non_const_comparator<_Key, _Compare>()), "");
+  }
 
   _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return __tree_.begin(); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT { return __tree_.begin(); }
@@ -1469,9 +1470,9 @@ operator<=(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key,
 
 #  else // _LIBCPP_STD_VER <= 17
 
-template <class _Key, class _Allocator>
+template <class _Key, class _Compare, class _Allocator>
 _LIBCPP_HIDE_FROM_ABI __synth_three_way_result<_Key>
-operator<=>(const multiset<_Key, _Allocator>& __x, const multiset<_Key, _Allocator>& __y) {
+operator<=>(const multiset<_Key, _Compare, _Allocator>& __x, const multiset<_Key, _Compare, _Allocator>& __y) {
   return std::lexicographical_compare_three_way(__x.begin(), __x.end(), __y.begin(), __y.end(), __synth_three_way);
 }
 
@@ -1524,6 +1525,6 @@ _LIBCPP_POP_MACROS
 #    include <stdexcept>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SET

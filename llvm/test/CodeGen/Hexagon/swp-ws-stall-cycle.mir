@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc --march=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
 # RUN: -window-sched=force -filetype=null -verify-machineinstrs \
 # RUN: -window-region-limit=1 -window-search-ratio=100 -window-diff-limit=0 \
 # RUN: 2>&1 | FileCheck %s

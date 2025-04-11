@@ -1,33 +1,20 @@
-/*
- * Copyright (c) 2014 Advanced Micro Devices, Inc.
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "sincos_helpers.h"
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sincos_helpers.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 #include <clc/relational/clc_isinf.h>
 #include <clc/relational/clc_isnan.h>
-
-#include "math.h"
-#include "sincos_helpers.h"
-#include "tables.h"
 
 _CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
   int ix = as_int(x);
@@ -48,7 +35,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_tan(float x) {
 _CLC_UNARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_tan, float);
 
 #ifdef cl_khr_fp64
-#include "sincosD_piby4.h"
+#include <clc/math/clc_sincos_piby4.h>
 
 _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   double y = __clc_fabs(x);
@@ -61,9 +48,10 @@ _CLC_DEF _CLC_OVERLOAD double __clc_tan(double x) {
   else
     __clc_remainder_piby2_large(y, &r, &rr, &regn);
 
-  double2 tt = __clc_tan_piby4(r, rr);
+  double lead, tail;
+  __clc_tan_piby4(r, rr, &lead, &tail);
 
-  int2 t = as_int2(regn & 1 ? tt.y : tt.x);
+  int2 t = as_int2(regn & 1 ? tail : lead);
   t.hi ^= (x < 0.0) << 31;
 
   return __clc_isnan(x) || __clc_isinf(x) ? as_double(QNANBITPATT_DP64)

@@ -23,24 +23,26 @@ namespace llvm {
 
 class AArch64MCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum Specifier : uint16_t {
     // clang-format off
+    None          = 0,
     // Symbol locations specifying (roughly speaking) what calculation should be
     // performed to construct the final address for the relocated
     // symbol. E.g. direct, via the GOT, ...
-    VK_ABS      = 0x001,
-    VK_SABS     = 0x002,
-    VK_PREL     = 0x003,
-    VK_GOT      = 0x004,
-    VK_DTPREL   = 0x005,
-    VK_GOTTPREL = 0x006,
-    VK_TPREL    = 0x007,
-    VK_TLSDESC  = 0x008,
-    VK_SECREL   = 0x009,
-    VK_AUTH     = 0x00a,
-    VK_AUTHADDR = 0x00b,
-    VK_GOT_AUTH = 0x00c,
-    VK_SymLocBits = 0x00f,
+    VK_ABS          = 0x001,
+    VK_SABS         = 0x002,
+    VK_PREL         = 0x003,
+    VK_GOT          = 0x004,
+    VK_DTPREL       = 0x005,
+    VK_GOTTPREL     = 0x006,
+    VK_TPREL        = 0x007,
+    VK_TLSDESC      = 0x008,
+    VK_SECREL       = 0x009,
+    VK_AUTH         = 0x00a,
+    VK_AUTHADDR     = 0x00b,
+    VK_GOT_AUTH     = 0x00c,
+    VK_TLSDESC_AUTH = 0x00d,
+    VK_SymLocBits   = 0x00f,
 
     // Variants specifying which part of the final address calculation is
     // used. E.g. the low 12 bits for an ADD/LDR, the middle 16 bits for a
@@ -67,55 +69,71 @@ public:
     // omitted in line with assembly syntax here (VK_LO12 rather than VK_LO12_NC
     // since a user would write ":lo12:").
     VK_CALL              = VK_ABS,
-    VK_ABS_PAGE          = VK_ABS      | VK_PAGE,
-    VK_ABS_PAGE_NC       = VK_ABS      | VK_PAGE    | VK_NC,
-    VK_ABS_G3            = VK_ABS      | VK_G3,
-    VK_ABS_G2            = VK_ABS      | VK_G2,
-    VK_ABS_G2_S          = VK_SABS     | VK_G2,
-    VK_ABS_G2_NC         = VK_ABS      | VK_G2      | VK_NC,
-    VK_ABS_G1            = VK_ABS      | VK_G1,
-    VK_ABS_G1_S          = VK_SABS     | VK_G1,
-    VK_ABS_G1_NC         = VK_ABS      | VK_G1      | VK_NC,
-    VK_ABS_G0            = VK_ABS      | VK_G0,
-    VK_ABS_G0_S          = VK_SABS     | VK_G0,
-    VK_ABS_G0_NC         = VK_ABS      | VK_G0      | VK_NC,
-    VK_LO12              = VK_ABS      | VK_PAGEOFF | VK_NC,
-    VK_PREL_G3           = VK_PREL     | VK_G3,
-    VK_PREL_G2           = VK_PREL     | VK_G2,
-    VK_PREL_G2_NC        = VK_PREL     | VK_G2      | VK_NC,
-    VK_PREL_G1           = VK_PREL     | VK_G1,
-    VK_PREL_G1_NC        = VK_PREL     | VK_G1      | VK_NC,
-    VK_PREL_G0           = VK_PREL     | VK_G0,
-    VK_PREL_G0_NC        = VK_PREL     | VK_G0      | VK_NC,
-    VK_GOT_LO12          = VK_GOT      | VK_PAGEOFF | VK_NC,
-    VK_GOT_PAGE          = VK_GOT      | VK_PAGE,
-    VK_GOT_PAGE_LO15     = VK_GOT      | VK_LO15    | VK_NC,
-    VK_GOT_AUTH_LO12     = VK_GOT_AUTH | VK_PAGEOFF | VK_NC,
-    VK_GOT_AUTH_PAGE     = VK_GOT_AUTH | VK_PAGE,
-    VK_DTPREL_G2         = VK_DTPREL   | VK_G2,
-    VK_DTPREL_G1         = VK_DTPREL   | VK_G1,
-    VK_DTPREL_G1_NC      = VK_DTPREL   | VK_G1      | VK_NC,
-    VK_DTPREL_G0         = VK_DTPREL   | VK_G0,
-    VK_DTPREL_G0_NC      = VK_DTPREL   | VK_G0      | VK_NC,
-    VK_DTPREL_HI12       = VK_DTPREL   | VK_HI12,
-    VK_DTPREL_LO12       = VK_DTPREL   | VK_PAGEOFF,
-    VK_DTPREL_LO12_NC    = VK_DTPREL   | VK_PAGEOFF | VK_NC,
-    VK_GOTTPREL_PAGE     = VK_GOTTPREL | VK_PAGE,
-    VK_GOTTPREL_LO12_NC  = VK_GOTTPREL | VK_PAGEOFF | VK_NC,
-    VK_GOTTPREL_G1       = VK_GOTTPREL | VK_G1,
-    VK_GOTTPREL_G0_NC    = VK_GOTTPREL | VK_G0      | VK_NC,
-    VK_TPREL_G2          = VK_TPREL    | VK_G2,
-    VK_TPREL_G1          = VK_TPREL    | VK_G1,
-    VK_TPREL_G1_NC       = VK_TPREL    | VK_G1      | VK_NC,
-    VK_TPREL_G0          = VK_TPREL    | VK_G0,
-    VK_TPREL_G0_NC       = VK_TPREL    | VK_G0      | VK_NC,
-    VK_TPREL_HI12        = VK_TPREL    | VK_HI12,
-    VK_TPREL_LO12        = VK_TPREL    | VK_PAGEOFF,
-    VK_TPREL_LO12_NC     = VK_TPREL    | VK_PAGEOFF | VK_NC,
-    VK_TLSDESC_LO12      = VK_TLSDESC  | VK_PAGEOFF,
-    VK_TLSDESC_PAGE      = VK_TLSDESC  | VK_PAGE,
-    VK_SECREL_LO12       = VK_SECREL   | VK_PAGEOFF,
-    VK_SECREL_HI12       = VK_SECREL   | VK_HI12,
+    VK_ABS_PAGE          = VK_ABS          | VK_PAGE,
+    VK_ABS_PAGE_NC       = VK_ABS          | VK_PAGE    | VK_NC,
+    VK_ABS_G3            = VK_ABS          | VK_G3,
+    VK_ABS_G2            = VK_ABS          | VK_G2,
+    VK_ABS_G2_S          = VK_SABS         | VK_G2,
+    VK_ABS_G2_NC         = VK_ABS          | VK_G2      | VK_NC,
+    VK_ABS_G1            = VK_ABS          | VK_G1,
+    VK_ABS_G1_S          = VK_SABS         | VK_G1,
+    VK_ABS_G1_NC         = VK_ABS          | VK_G1      | VK_NC,
+    VK_ABS_G0            = VK_ABS          | VK_G0,
+    VK_ABS_G0_S          = VK_SABS         | VK_G0,
+    VK_ABS_G0_NC         = VK_ABS          | VK_G0      | VK_NC,
+    VK_LO12              = VK_ABS          | VK_PAGEOFF | VK_NC,
+    VK_PREL_G3           = VK_PREL         | VK_G3,
+    VK_PREL_G2           = VK_PREL         | VK_G2,
+    VK_PREL_G2_NC        = VK_PREL         | VK_G2      | VK_NC,
+    VK_PREL_G1           = VK_PREL         | VK_G1,
+    VK_PREL_G1_NC        = VK_PREL         | VK_G1      | VK_NC,
+    VK_PREL_G0           = VK_PREL         | VK_G0,
+    VK_PREL_G0_NC        = VK_PREL         | VK_G0      | VK_NC,
+    VK_GOT_LO12          = VK_GOT          | VK_PAGEOFF | VK_NC,
+    VK_GOT_PAGE          = VK_GOT          | VK_PAGE,
+    VK_GOT_PAGE_LO15     = VK_GOT          | VK_LO15    | VK_NC,
+    VK_GOT_AUTH_LO12     = VK_GOT_AUTH     | VK_PAGEOFF | VK_NC,
+    VK_GOT_AUTH_PAGE     = VK_GOT_AUTH     | VK_PAGE,
+    VK_DTPREL_G2         = VK_DTPREL       | VK_G2,
+    VK_DTPREL_G1         = VK_DTPREL       | VK_G1,
+    VK_DTPREL_G1_NC      = VK_DTPREL       | VK_G1      | VK_NC,
+    VK_DTPREL_G0         = VK_DTPREL       | VK_G0,
+    VK_DTPREL_G0_NC      = VK_DTPREL       | VK_G0      | VK_NC,
+    VK_DTPREL_HI12       = VK_DTPREL       | VK_HI12,
+    VK_DTPREL_LO12       = VK_DTPREL       | VK_PAGEOFF,
+    VK_DTPREL_LO12_NC    = VK_DTPREL       | VK_PAGEOFF | VK_NC,
+    VK_GOTTPREL_PAGE     = VK_GOTTPREL     | VK_PAGE,
+    VK_GOTTPREL_LO12_NC  = VK_GOTTPREL     | VK_PAGEOFF | VK_NC,
+    VK_GOTTPREL_G1       = VK_GOTTPREL     | VK_G1,
+    VK_GOTTPREL_G0_NC    = VK_GOTTPREL     | VK_G0      | VK_NC,
+    VK_TPREL_G2          = VK_TPREL        | VK_G2,
+    VK_TPREL_G1          = VK_TPREL        | VK_G1,
+    VK_TPREL_G1_NC       = VK_TPREL        | VK_G1      | VK_NC,
+    VK_TPREL_G0          = VK_TPREL        | VK_G0,
+    VK_TPREL_G0_NC       = VK_TPREL        | VK_G0      | VK_NC,
+    VK_TPREL_HI12        = VK_TPREL        | VK_HI12,
+    VK_TPREL_LO12        = VK_TPREL        | VK_PAGEOFF,
+    VK_TPREL_LO12_NC     = VK_TPREL        | VK_PAGEOFF | VK_NC,
+    VK_TLSDESC_LO12      = VK_TLSDESC      | VK_PAGEOFF,
+    VK_TLSDESC_PAGE      = VK_TLSDESC      | VK_PAGE,
+    VK_TLSDESC_AUTH_LO12 = VK_TLSDESC_AUTH | VK_PAGEOFF,
+    VK_TLSDESC_AUTH_PAGE = VK_TLSDESC_AUTH | VK_PAGE,
+    VK_SECREL_LO12       = VK_SECREL       | VK_PAGEOFF,
+    VK_SECREL_HI12       = VK_SECREL       | VK_HI12,
+
+    // ELF relocation specifiers in data directives:
+    VK_PLT          = 0x400,
+    VK_GOTPCREL,
+
+    // Mach-O @ relocation specifiers:
+    M_GOT,
+    M_GOTPAGE,
+    M_GOTPAGEOFF,
+    M_PAGE,
+    M_PAGEOFF,
+    M_TLVP,
+    M_TLVPPAGE,
+    M_TLVPPAGEOFF,
 
     VK_INVALID  = 0xfff
     // clang-format on
@@ -123,25 +141,25 @@ public:
 
 private:
   const MCExpr *Expr;
-  const VariantKind Kind;
+  const Specifier specifier;
 
 protected:
-  explicit AArch64MCExpr(const MCExpr *Expr, VariantKind Kind)
-    : Expr(Expr), Kind(Kind) {}
+  explicit AArch64MCExpr(const MCExpr *Expr, Specifier S)
+      : Expr(Expr), specifier(S) {}
 
 public:
   /// @name Construction
   /// @{
 
-  static const AArch64MCExpr *create(const MCExpr *Expr, VariantKind Kind,
-                                   MCContext &Ctx);
+  static const AArch64MCExpr *create(const MCExpr *Expr, Specifier,
+                                     MCContext &Ctx);
 
   /// @}
   /// @name Accessors
   /// @{
 
   /// Get the kind of this expression.
-  VariantKind getKind() const { return Kind; }
+  Specifier getSpecifier() const { return specifier; }
 
   /// Get the expression this modifier applies to.
   const MCExpr *getSubExpr() const { return Expr; }
@@ -150,21 +168,21 @@ public:
   /// @name VariantKind information extractors.
   /// @{
 
-  static VariantKind getSymbolLoc(VariantKind Kind) {
-    return static_cast<VariantKind>(Kind & VK_SymLocBits);
+  static Specifier getSymbolLoc(Specifier S) {
+    return static_cast<Specifier>(S & VK_SymLocBits);
   }
 
-  static VariantKind getAddressFrag(VariantKind Kind) {
-    return static_cast<VariantKind>(Kind & VK_AddressFragBits);
+  static Specifier getAddressFrag(Specifier S) {
+    return static_cast<Specifier>(S & VK_AddressFragBits);
   }
 
-  static bool isNotChecked(VariantKind Kind) { return Kind & VK_NC; }
+  static bool isNotChecked(Specifier S) { return S & VK_NC; }
 
   /// @}
 
-  /// Convert the variant kind into an ELF-appropriate modifier
+  /// Return the string representation of the ELF relocation specifier
   /// (e.g. ":got:", ":lo12:").
-  StringRef getVariantKindName() const;
+  StringRef getSpecifierName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -172,11 +190,8 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
@@ -198,7 +213,7 @@ public:
 
   AArch64PACKey::ID getKey() const { return Key; }
   uint16_t getDiscriminator() const { return Discriminator; }
-  bool hasAddressDiversity() const { return getKind() == VK_AUTHADDR; }
+  bool hasAddressDiversity() const { return getSpecifier() == VK_AUTHADDR; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
 
@@ -206,15 +221,12 @@ public:
 
   MCFragment *findAssociatedFragment() const override;
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-
   static bool classof(const MCExpr *E) {
     return isa<AArch64MCExpr>(E) && classof(cast<AArch64MCExpr>(E));
   }
 
   static bool classof(const AArch64MCExpr *E) {
-    return E->getKind() == VK_AUTH || E->getKind() == VK_AUTHADDR;
+    return E->getSpecifier() == VK_AUTH || E->getSpecifier() == VK_AUTHADDR;
   }
 };
 } // end namespace llvm

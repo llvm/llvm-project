@@ -17,6 +17,7 @@
 #define HWCAP_ASIMDHP (1ULL << 10)
 #define HWCAP_DIT (1ULL << 24)
 #define HWCAP_SSBS (1ULL << 28)
+#define HWCAP_GCS (1ULL << 32)
 
 #define HWCAP2_BTI (1ULL << 17)
 #define HWCAP2_MTE (1ULL << 18)
@@ -47,6 +48,21 @@ Arm64RegisterFlagsDetector::DetectFPMRFields(uint64_t hwcap, uint64_t hwcap2) {
       {"F8D", 6, 8, &fp8_format_enum},
       {"F8S2", 3, 5, &fp8_format_enum},
       {"F8S1", 0, 2, &fp8_format_enum},
+  };
+}
+
+Arm64RegisterFlagsDetector::Fields
+Arm64RegisterFlagsDetector::DetectGCSFeatureFields(uint64_t hwcap,
+                                                   uint64_t hwcap2) {
+  (void)hwcap2;
+
+  if (!(hwcap & HWCAP_GCS))
+    return {};
+
+  return {
+      {"PUSH", 2},
+      {"WRITE", 1},
+      {"ENABLE", 0},
   };
 }
 

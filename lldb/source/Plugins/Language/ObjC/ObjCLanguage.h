@@ -142,6 +142,9 @@ public:
   std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const override;
 
+  std::pair<lldb::FunctionNameType, llvm::StringRef>
+  GetFunctionNameInfo(ConstString name) const override;
+
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 
   lldb::TypeCategoryImplSP GetFormatters() override;

@@ -30,6 +30,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace llvm {
 
@@ -61,6 +62,7 @@ enum DiagnosticKind {
   DK_Generic,
   DK_GenericWithLoc,
   DK_InlineAsm,
+  DK_RegAllocFailure,
   DK_ResourceLimit,
   DK_StackSize,
   DK_Linker,
@@ -149,7 +151,7 @@ public:
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(MsgStr) {}
 
   DiagnosticInfoGeneric(const Instruction *I, const Twine &ErrMsg,
-                        DiagnosticSeverity Severity = DS_Warning)
+                        DiagnosticSeverity Severity = DS_Error)
       : DiagnosticInfo(DK_Generic, Severity), MsgStr(ErrMsg), Inst(I) {}
 
   const Twine &getMsgStr() const { return MsgStr; }
@@ -399,6 +401,32 @@ public:
   }
 };
 
+class DiagnosticInfoRegAllocFailure : public DiagnosticInfoWithLocationBase {
+private:
+  /// Message to be reported.
+  const Twine &MsgStr;
+
+public:
+  /// \p MsgStr is the message to be reported to the frontend.
+  /// This class does not copy \p MsgStr, therefore the reference must be valid
+  /// for the whole life time of the Diagnostic.
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                const DiagnosticLocation &DL,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  DiagnosticInfoRegAllocFailure(const Twine &MsgStr, const Function &Fn,
+                                DiagnosticSeverity Severity = DS_Error);
+
+  const Twine &getMsgStr() const { return MsgStr; }
+
+  /// \see DiagnosticInfo::print.
+  void print(DiagnosticPrinter &DP) const override;
+
+  static bool classof(const DiagnosticInfo *DI) {
+    return DI->getKind() == DK_RegAllocFailure;
+  }
+};
+
 /// Diagnostic information for stack size etc. reporting.
 /// This is basically a function and a size.
 class DiagnosticInfoResourceLimit : public DiagnosticInfoWithLocationBase {
@@ -585,82 +613,47 @@ protected:
 /// common base class.  This allows returning the result of the insertion
 /// directly by value, e.g. return OptimizationRemarkAnalysis(...) << "blah".
 template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               StringRef>
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            StringRef>
                S) {
   R.insert(S);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
-/// Also allow r-value for the remark to allow insertion into a
-/// temporarily-constructed remark.
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               StringRef>
-               S) {
-  R.insert(S);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::Argument>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::Argument>
                A) {
   R.insert(A);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::Argument>
-               A) {
-  R.insert(A);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setIsVerbose>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setIsVerbose>
                V) {
   R.insert(V);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-RemarkT &
+decltype(auto)
 operator<<(RemarkT &&R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setIsVerbose>
-               V) {
-  R.insert(V);
-  return R;
-}
-
-template <class RemarkT>
-RemarkT &
-operator<<(RemarkT &R,
-           std::enable_if_t<
-               std::is_base_of<DiagnosticInfoOptimizationBase, RemarkT>::value,
-               DiagnosticInfoOptimizationBase::setExtraArgs>
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setExtraArgs>
                EA) {
   R.insert(EA);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 
 /// Common features for diagnostics dealing with optimization remarks

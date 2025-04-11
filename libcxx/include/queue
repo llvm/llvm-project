@@ -254,8 +254,9 @@ template <class T, class Container, class Compare>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/queue>
+#else
 #  include <__algorithm/make_heap.h>
 #  include <__algorithm/pop_heap.h>
 #  include <__algorithm/push_heap.h>
@@ -427,6 +428,12 @@ public:
   template <class _T1, class _OtherContainer>
   friend _LIBCPP_HIDE_FROM_ABI bool
   operator<(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
+
+#  if _LIBCPP_STD_VER >= 20
+  template <class _T1, three_way_comparable _OtherContainer>
+  friend _LIBCPP_HIDE_FROM_ABI compare_three_way_result_t<_OtherContainer>
+  operator<=>(const queue<_T1, _OtherContainer>& __x, const queue<_T1, _OtherContainer>& __y);
+#  endif
 };
 
 #  if _LIBCPP_STD_VER >= 17
@@ -496,8 +503,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const queue<_Tp, _Container>& __x, 
 template <class _Tp, three_way_comparable _Container>
 _LIBCPP_HIDE_FROM_ABI compare_three_way_result_t<_Container>
 operator<=>(const queue<_Tp, _Container>& __x, const queue<_Tp, _Container>& __y) {
-  // clang 16 bug: declaring `friend operator<=>` causes "use of overloaded operator '*' is ambiguous" errors
-  return __x.__get_container() <=> __y.__get_container();
+  return __x.c <=> __y.c;
 }
 
 #  endif
@@ -954,6 +960,6 @@ _LIBCPP_POP_MACROS
 #    include <functional>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_QUEUE

@@ -90,17 +90,6 @@ better the overall user experience. It would be good to improve Clang's
 performance as well as to find ways to proactively alert us when we've
 introduced a change that has significant negative impact on build times.</li>
 
-<li><b>Complete support for the experimental constant expression interpreter
-</b>: Clang's production constant expression interpreter computes a constant
-expression result by walking over AST nodes, performing calculations as it
-goes. This does not have good performance properties, and so we've begun work
-on an <a href="https://clang.llvm.org/docs/ConstantInterpreter.html">
-experimental constant expression interpreter</a> that works by converting the
-AST into bytecode that is interpreted. This effort has a long tail of work left
-to complete because it requires implementing byte code for every kind of
-expression and type that can be used in a constant expression for C++ and C.
-</li>
-
 <li><b>Improve clang-doc</b>: Clang's library-based design allows it to be used
 by a variety of tools that reason about source code.
 <a href="https://clang.llvm.org/extra/clang-doc.html">clang-doc</a> is one
@@ -161,7 +150,7 @@ a text editor could change.</p></li>
 that demonstrates the problem down to something small. There are many ways to
 do this; ask on <a href="https://discourse.llvm.org/c/clang">Discourse</a>,
 <a href="https://discord.com/channels/636084430946959380/636725486533345280">Discord</a>
-for advice.</p>
+(<a href="https://discord.gg/xS7Z362">invite link</a>) for advice.</p>
 
 </div>
 </body>

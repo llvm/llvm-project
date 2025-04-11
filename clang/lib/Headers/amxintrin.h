@@ -234,7 +234,7 @@ typedef int _tile1024i_1024a
     __attribute__((__vector_size__(1024), __aligned__(1024)));
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
-static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_TILE
 _tile_loadd_internal(unsigned short m, unsigned short n, const void *base,
                      __SIZE_TYPE__ stride) {
   return __builtin_ia32_tileloadd64_internal(m, n, base,
@@ -242,7 +242,7 @@ _tile_loadd_internal(unsigned short m, unsigned short n, const void *base,
 }
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
-static __inline__ _tile1024i __DEFAULT_FN_ATTRS_INT8
+static __inline__ _tile1024i __DEFAULT_FN_ATTRS_TILE
 _tile_loaddt1_internal(unsigned short m, unsigned short n, const void *base,
                        __SIZE_TYPE__ stride) {
   return __builtin_ia32_tileloaddt164_internal(m, n, base,
@@ -278,7 +278,7 @@ _tile_dpbuud_internal(unsigned short m, unsigned short n, unsigned short k,
 }
 
 /// This is internal intrinsic. C/C++ user should avoid calling it directly.
-static __inline__ void __DEFAULT_FN_ATTRS_INT8
+static __inline__ void __DEFAULT_FN_ATTRS_TILE
 _tile_stored_internal(unsigned short m, unsigned short n, void *base,
                       __SIZE_TYPE__ stride, _tile1024i tile) {
   return __builtin_ia32_tilestored64_internal(m, n, base,

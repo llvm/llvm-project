@@ -36,7 +36,7 @@ class LegalizationArtifactCombiner {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
-  GISelKnownBits *KB;
+  GISelValueTracking *VT;
 
   static bool isArtifactCast(unsigned Opc) {
     switch (Opc) {
@@ -53,8 +53,8 @@ class LegalizationArtifactCombiner {
 public:
   LegalizationArtifactCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                                const LegalizerInfo &LI,
-                               GISelKnownBits *KB = nullptr)
-      : Builder(B), MRI(MRI), LI(LI), KB(KB) {}
+                               GISelValueTracking *VT = nullptr)
+      : Builder(B), MRI(MRI), LI(LI), VT(VT) {}
 
   bool tryCombineAnyExt(MachineInstr &MI,
                         SmallVectorImpl<MachineInstr *> &DeadInsts,
@@ -70,7 +70,7 @@ public:
     // aext(trunc x) - > aext/copy/trunc x
     Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       if (MRI.getType(DstReg) == MRI.getType(TruncSrc))
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
@@ -136,7 +136,7 @@ public:
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
           isConstantUnsupported(DstTy))
         return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       APInt MaskVal = APInt::getAllOnes(SrcTy.getScalarSizeInBits());
       if (SextSrc && (DstTy != MRI.getType(SextSrc)))
@@ -151,7 +151,7 @@ public:
       // OptLevel results in significant compile-time and O0 code-size
       // improvements. Inserting unnecessary instructions between boolean defs
       // and uses hinders a lot of folding during ISel.
-      if (KB && (KB->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
+      if (VT && (VT->getKnownZeroes(AndSrc) | ExtMaskVal).isAllOnes()) {
         replaceRegOrBuildCopy(DstReg, AndSrc, MRI, Builder, UpdatedDefs,
                               Observer);
       } else {
@@ -207,14 +207,14 @@ public:
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_SEXT_INREG, {DstTy}}))
         return false;
-      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
+      LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI);
       LLT SrcTy = MRI.getType(SrcReg);
       uint64_t SizeInBits = SrcTy.getScalarSizeInBits();
       if (DstTy != MRI.getType(TruncSrc))
         TruncSrc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc).getReg(0);
       // Elide G_SEXT_INREG if possible. This is similar to eliding G_AND in
       // tryCombineZExt. Refer to the comment in tryCombineZExt for rationale.
-      if (KB && KB->computeNumSignBits(TruncSrc) >
+      if (VT && VT->computeNumSignBits(TruncSrc) >
                     DstTy.getScalarSizeInBits() - SizeInBits)
         replaceRegOrBuildCopy(DstReg, TruncSrc, MRI, Builder, UpdatedDefs,
                               Observer);
@@ -360,7 +360,7 @@ public:
       LLT FoundRegTy = MRI.getType(FoundReg);
       if (DstTy == FoundRegTy) {
         LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_[S,Z,ANY]EXT/G_TRUNC...): "
-                          << MI;);
+                          << MI);
 
         replaceRegOrBuildCopy(DstReg, FoundReg, MRI, Builder, UpdatedDefs,
                               Observer);
@@ -392,7 +392,7 @@ public:
         // G_ANYEXT (G_IMPLICIT_DEF) -> G_IMPLICIT_DEF
         if (!isInstLegal({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
           return false;
-        LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
+        LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI);
         auto Impl = Builder.buildUndef(DstTy);
         replaceRegOrBuildCopy(DstReg, Impl.getReg(0), MRI, Builder, UpdatedDefs,
                               Observer);
@@ -402,8 +402,10 @@ public:
         // bits will be 0 for G_ZEXT and 0/1 for the G_SEXT.
         if (isConstantUnsupported(DstTy))
           return false;
-        LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildConstant(DstReg, 0);
+        LLVM_DEBUG(dbgs() << ".. Combine G_[SZ]EXT(G_IMPLICIT_DEF): " << MI);
+        auto Cnst = Builder.buildConstant(DstTy, 0);
+        replaceRegOrBuildCopy(DstReg, Cnst.getReg(0), MRI, Builder, UpdatedDefs,
+                              Observer);
         UpdatedDefs.push_back(DstReg);
       }
 

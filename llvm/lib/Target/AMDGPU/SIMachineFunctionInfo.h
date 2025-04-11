@@ -289,6 +289,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   unsigned PSInputAddr = 0;
   unsigned PSInputEnable = 0;
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   SIMode Mode;
   std::optional<FrameIndex> ScavengeFI;
@@ -297,6 +298,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue LongBranchReservedReg;
 
   bool HasInitWholeWave = false;
+
+  unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -333,6 +336,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
     YamlIO.mapOptional("psInputAddr", MFI.PSInputAddr, 0u);
     YamlIO.mapOptional("psInputEnable", MFI.PSInputEnable, 0u);
+    YamlIO.mapOptional("maxMemoryClusterDWords", MFI.MaxMemoryClusterDWords,
+                       DefaultMemoryClusterDWordsLimit);
     YamlIO.mapOptional("mode", MFI.Mode, SIMode());
     YamlIO.mapOptional("highBitsOf32BitAddress",
                        MFI.HighBitsOf32BitAddress, 0u);
@@ -347,6 +352,8 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
+                       MFI.ScratchReservedForDynamicVGPRs, 0);
   }
 };
 
@@ -452,6 +459,10 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+  // The size in bytes of the scratch space reserved for the CWSR trap handler
+  // to spill some of the dynamic VGPRs.
+  unsigned ScratchReservedForDynamicVGPRs = 0;
+
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -487,7 +498,9 @@ private:
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
 
-  mutable std::optional<bool> UsesAGPRs;
+  // Maximum number of dwords that can be clusterred during instruction
+  // scheduler stage.
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
 
   MCPhysReg getNextUserSGPR() const;
 
@@ -773,6 +786,15 @@ public:
 
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
+  }
+
+  // This is only used if we need to save any dynamic VGPRs in scratch.
+  unsigned getScratchReservedForDynamicVGPRs() const {
+    return ScratchReservedForDynamicVGPRs;
+  }
+
+  void setScratchReservedForDynamicVGPRs(unsigned SizeInBytes) {
+    ScratchReservedForDynamicVGPRs = SizeInBytes;
   }
 
   // Add user SGPRs.
@@ -1109,6 +1131,8 @@ public:
     limitOccupancy(MF);
   }
 
+  unsigned getMaxMemoryClusterDWords() const { return MaxMemoryClusterDWords; }
+
   bool mayNeedAGPRs() const {
     return MayNeedAGPRs;
   }
@@ -1116,9 +1140,6 @@ public:
   // \returns true if a function has a use of AGPRs via inline asm or
   // has a call which may use it.
   bool mayUseAGPRs(const Function &F) const;
-
-  // \returns true if a function needs or may need AGPRs.
-  bool usesAGPRs(const MachineFunction &MF) const;
 
   /// \returns Default/requested number of work groups for this function.
   SmallVector<unsigned> getMaxNumWorkGroups() const { return MaxNumWorkGroups; }

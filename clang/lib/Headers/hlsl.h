@@ -16,7 +16,15 @@
 #pragma clang diagnostic ignored "-Whlsl-dxc-compatability"
 #endif
 
+// Basic types, type traits and type-independent templates.
 #include "hlsl/hlsl_basic_types.h"
+#include "hlsl/hlsl_detail.h"
+
+// HLSL standard library function declarations/definitions.
+#include "hlsl/hlsl_alias_intrinsics.h"
+#if __HLSL_VERSION <= __HLSL_202x
+#include "hlsl/hlsl_compat_overloads.h"
+#endif
 #include "hlsl/hlsl_intrinsics.h"
 
 #if defined(__clang__)

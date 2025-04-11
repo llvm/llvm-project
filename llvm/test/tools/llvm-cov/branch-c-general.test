@@ -114,7 +114,7 @@
 
 
 
-//      REPORT: Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
+// REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
 // REPORT-NEXT: simple_loops                      8       0 100.00%         9       0 100.00%         6       0 100.00%
 // REPORT-NEXT: conditionals                     24       0 100.00%        15       0 100.00%        16       2  87.50%
@@ -164,3 +164,7 @@
 // HTML-INDEX: 79.07% (136/172)
 // HTML-INDEX: <tr class='light-row-bold'>
 // HTML-INDEX: Totals
+
+// RUN: yaml2obj %S/Inputs/branch-c-general-single.yaml -o %t.o
+// RUN: llvm-profdata merge %S/Inputs/branch-c-general-single.proftext -o %t.profdata
+// RUN: llvm-cov show --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs %S/Inputs/branch-c-general.c | FileCheck %S/Inputs/branch-c-general.c -D#C=1

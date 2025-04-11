@@ -28,6 +28,11 @@
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 \
 // RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
+// ###  The last run to check with the highest SM and PTX version available
+// ###  to make sure target builtins are still accepted.
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx87 \
+// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -202,7 +207,7 @@ __device__ void exit() {
 // NVVM intrinsics
 
 // The idea is not to test all intrinsics, just that Clang is recognizing the
-// builtins defined in BuiltinsNVPTX.def
+// builtins defined in BuiltinsNVPTX.td
 __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call float @llvm.nvvm.fmax.f
   float t1 = __nvvm_fmax_f(f1, f2);
@@ -328,10 +333,10 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
   // CHECK: atomicrmw fadd ptr {{.*}} seq_cst, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.dec.32.p0
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 

@@ -69,15 +69,18 @@ static Expected<Symbol &> getMachOStubTarget(LinkGraph &G, Block &B) {
 namespace llvm {
 
 Error registerMachOGraphInfo(Session &S, LinkGraph &G) {
+  std::lock_guard<std::mutex> Lock(S.M);
+
   auto FileName = sys::path::filename(G.getName());
-  if (S.FileInfos.count(FileName)) {
+  auto [It, Inserted] = S.FileInfos.try_emplace(FileName);
+  if (!Inserted) {
     return make_error<StringError>("When -check is passed, file names must be "
                                    "distinct (duplicate: \"" +
                                        FileName + "\")",
                                    inconvertibleErrorCode());
   }
 
-  auto &FileInfo = S.FileInfos[FileName];
+  auto &FileInfo = It->second;
   LLVM_DEBUG({
     dbgs() << "Registering MachO file info for \"" << FileName << "\"\n";
   });

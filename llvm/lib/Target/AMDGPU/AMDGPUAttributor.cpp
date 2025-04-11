@@ -17,14 +17,11 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define DEBUG_TYPE "amdgpu-attributor"
-
-namespace llvm {
-void initializeCycleInfoWrapperPassPass(PassRegistry &);
-} // namespace llvm
 
 using namespace llvm;
 
@@ -110,6 +107,8 @@ intrinsicToAttrMask(Intrinsic::ID ID, bool &NonKernelOnly, bool &NeedsImplicit,
     return CodeObjectVersion >= AMDGPU::AMDHSA_COV5 ? IMPLICIT_ARG_PTR
                                                     : QUEUE_PTR;
   case Intrinsic::trap:
+  case Intrinsic::debugtrap:
+  case Intrinsic::ubsantrap:
     if (SupportsGetDoorBellID) // GetDoorbellID support implemented since V4.
       return CodeObjectVersion >= AMDGPU::AMDHSA_COV4 ? NOT_IMPLICIT_INPUT
                                                       : QUEUE_PTR;
@@ -154,7 +153,14 @@ public:
 
   TargetMachine &TM;
 
-  enum ConstantStatus { DS_GLOBAL = 1 << 0, ADDR_SPACE_CAST = 1 << 1 };
+  enum ConstantStatus : uint8_t {
+    NONE = 0,
+    DS_GLOBAL = 1 << 0,
+    ADDR_SPACE_CAST_PRIVATE_TO_FLAT = 1 << 1,
+    ADDR_SPACE_CAST_LOCAL_TO_FLAT = 1 << 2,
+    ADDR_SPACE_CAST_BOTH_TO_FLAT =
+        ADDR_SPACE_CAST_PRIVATE_TO_FLAT | ADDR_SPACE_CAST_LOCAL_TO_FLAT
+  };
 
   /// Check if the subtarget has aperture regs.
   bool hasApertureRegs(Function &F) {
@@ -233,13 +239,20 @@ public:
   }
 
 private:
-  /// Check if the ConstantExpr \p CE requires the queue pointer.
-  static bool visitConstExpr(const ConstantExpr *CE) {
+  /// Check if the ConstantExpr \p CE uses an addrspacecast from private or
+  /// local to flat. These casts may require the queue pointer.
+  static uint8_t visitConstExpr(const ConstantExpr *CE) {
+    uint8_t Status = NONE;
+
     if (CE->getOpcode() == Instruction::AddrSpaceCast) {
       unsigned SrcAS = CE->getOperand(0)->getType()->getPointerAddressSpace();
-      return castRequiresQueuePtr(SrcAS);
+      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS)
+        Status |= ADDR_SPACE_CAST_PRIVATE_TO_FLAT;
+      else if (SrcAS == AMDGPUAS::LOCAL_ADDRESS)
+        Status |= ADDR_SPACE_CAST_LOCAL_TO_FLAT;
     }
-    return false;
+
+    return Status;
   }
 
   /// Get the constant access bitmap for \p C.
@@ -254,8 +267,7 @@ private:
       Result = DS_GLOBAL;
 
     if (const auto *CE = dyn_cast<ConstantExpr>(C))
-      if (visitConstExpr(CE))
-        Result |= ADDR_SPACE_CAST;
+      Result |= visitConstExpr(CE);
 
     for (const Use &U : C->operands()) {
       const auto *OpC = dyn_cast<Constant>(U);
@@ -284,19 +296,13 @@ public:
     if (IsNonEntryFunc && (Access & DS_GLOBAL))
       return true;
 
-    return !HasAperture && (Access & ADDR_SPACE_CAST);
+    return !HasAperture && (Access & ADDR_SPACE_CAST_BOTH_TO_FLAT);
   }
 
   bool checkConstForAddrSpaceCastFromPrivate(const Constant *C) {
     SmallPtrSet<const Constant *, 8> Visited;
     uint8_t Access = getConstantAccess(C, Visited);
-
-    if (Access & ADDR_SPACE_CAST)
-      if (const auto *CE = dyn_cast<ConstantExpr>(C))
-        if (CE->getOperand(0)->getType()->getPointerAddressSpace() ==
-            AMDGPUAS::PRIVATE_ADDRESS)
-          return true;
-    return false;
+    return Access & ADDR_SPACE_CAST_PRIVATE_TO_FLAT;
   }
 
 private:
@@ -1228,6 +1234,8 @@ static bool inlineAsmUsesAGPRs(const InlineAsm *IA) {
   return false;
 }
 
+// TODO: Migrate to range merge of amdgpu-agpr-alloc.
+// FIXME: Why is this using Attribute::NoUnwind?
 struct AAAMDGPUNoAGPR
     : public IRAttribute<Attribute::NoUnwind,
                          StateWrapper<BooleanState, AbstractAttribute>,
@@ -1243,7 +1251,10 @@ struct AAAMDGPUNoAGPR
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    if (F->hasFnAttribute("amdgpu-no-agpr"))
+    auto [MinNumAGPR, MaxNumAGPR] =
+        AMDGPU::getIntegerPairAttribute(*F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                        /*OnlyFirstRequired=*/true);
+    if (MinNumAGPR == 0)
       indicateOptimisticFixpoint();
   }
 
@@ -1290,7 +1301,7 @@ struct AAAMDGPUNoAGPR
       return ChangeStatus::UNCHANGED;
     LLVMContext &Ctx = getAssociatedFunction()->getContext();
     return A.manifestAttrs(getIRPosition(),
-                           {Attribute::get(Ctx, "amdgpu-no-agpr")});
+                           {Attribute::get(Ctx, "amdgpu-agpr-alloc", "0")});
   }
 
   const std::string getName() const override { return "AAAMDGPUNoAGPR"; }

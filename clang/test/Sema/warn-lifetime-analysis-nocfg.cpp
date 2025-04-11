@@ -777,3 +777,102 @@ void test4() {
 }
 
 } // namespace LifetimeboundInterleave
+
+namespace GH120206 {
+struct S {
+  std::string_view s;
+};
+
+struct [[gsl::Owner]] Q1 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test1(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q1().get()->s : sv;
+  if (c == 1)
+    return  c > 1 ? Q1().get()->s : sv;
+  Q1 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+struct Q2 {
+  const S* get() const [[clang::lifetimebound]];
+};
+std::string_view test2(int c, std::string_view sv) {
+  std::string_view k = c > 1 ? Q2().get()->s : sv;
+  if (c == 1)
+    return c > 1 ? Q2().get()->s : sv;
+  Q2 q;
+  return c > 1 ? q.get()->s : sv;
+}
+
+} // namespace GH120206
+
+namespace GH120543 {
+struct S {
+  std::string_view sv;
+  std::string s;
+};
+struct Q {
+  const S* get() const [[clang::lifetimebound]];
+};
+
+std::string_view foo(std::string_view sv [[clang::lifetimebound]]);
+
+void test1() {
+  std::string_view k1 = S().sv; // OK
+  std::string_view k2 = S().s; // expected-warning {{object backing the pointer will}}
+  
+  std::string_view k3 = Q().get()->sv; // OK
+  std::string_view k4  = Q().get()->s; // expected-warning {{object backing the pointer will}}
+
+  std::string_view lb1 = foo(S().s); // expected-warning {{object backing the pointer will}}
+  std::string_view lb2 = foo(Q().get()->s); // expected-warning {{object backing the pointer will}}
+}
+
+struct Bar {};
+struct Foo {
+  std::vector<Bar> v;
+};
+Foo getFoo();
+void test2() {
+  const Foo& foo = getFoo();
+  const Bar& bar = foo.v.back(); // OK
+}
+
+struct Foo2 {
+   std::unique_ptr<Bar> bar;
+};
+
+struct Test {
+  Test(Foo2 foo) : bar(foo.bar.get()), // OK
+      storage(std::move(foo.bar)) {};
+
+  Bar* bar;
+  std::unique_ptr<Bar> storage;
+};
+
+} // namespace GH120543
+
+namespace GH127195 {
+template <typename T>
+struct StatusOr {
+  T* operator->() [[clang::lifetimebound]];
+  T* value() [[clang::lifetimebound]];
+};
+
+const char* foo() {
+  StatusOr<std::string> s;
+  return s->data(); // expected-warning {{address of stack memory associated with local variable}}
+  
+  StatusOr<std::string_view> s2;
+  return s2->data();
+
+  StatusOr<StatusOr<std::string_view>> s3;
+  return s3.value()->value()->data();
+
+  // FIXME: nested cases are not supported now.
+  StatusOr<StatusOr<std::string>> s4;
+  return s4.value()->value()->data();
+}
+
+} // namespace GH127195

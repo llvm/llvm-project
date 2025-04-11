@@ -16,6 +16,14 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "clang/CIR/Interfaces/CIRFPTypeInterface.h"
+
+namespace cir {
+
+bool isAnyFloatingPointType(mlir::Type t);
+bool isFPOrFPVectorTy(mlir::Type);
+
+} // namespace cir
 
 //===----------------------------------------------------------------------===//
 // CIR Dialect Tablegen'd Types

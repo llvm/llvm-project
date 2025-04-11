@@ -24,7 +24,7 @@ entry:
 
 define internal void @callee1(ptr nocapture noundef readonly %q, i1 %c) {
 ; CHECK-LABEL: define internal void @callee1(
-; CHECK-SAME: ptr nocapture noundef readonly [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: ptr noundef readonly captures(none) [[Q:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
@@ -69,7 +69,7 @@ entry:
 
 define internal void @callee2(ptr nocapture noundef readonly %q, i1 %c) {
 ; CHECK-LABEL: define internal void @callee2(
-; CHECK-SAME: ptr nocapture noundef readonly [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-SAME: ptr noundef readonly captures(none) [[Q:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:

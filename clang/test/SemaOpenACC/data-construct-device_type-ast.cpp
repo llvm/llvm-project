@@ -13,9 +13,10 @@ void TemplUses() {
   // CHECK-NEXT: FunctionDecl{{.*}}TemplUses
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc data device_type(T) dtype(T)
+#pragma acc data default(none) device_type(T) dtype(T)
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: device_type(T)
   // CHECK-NEXT: dtype(T)
   // CHECK-NEXT: NullStmt
@@ -28,6 +29,7 @@ void TemplUses() {
 
   // Argument to 'device-type' is just an identifier, so we don't transform it.
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
+  // CHECK-NEXT: default(none)
   // CHECK-NEXT: device_type(T)
   // CHECK-NEXT: dtype(T)
   // CHECK-NEXT: NullStmt

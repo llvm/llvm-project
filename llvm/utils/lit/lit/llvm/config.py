@@ -169,8 +169,14 @@ class LLVMConfig(object):
                 features.add("target-aarch64")
             elif re.match(r"^arm.*", target_triple):
                 features.add("target-arm")
-            if re.match(r'^ppc64le.*-linux', target_triple):
-                features.add('target=powerpc64le-linux')
+            elif re.match(r"^ppc64le.*-linux", target_triple):
+                features.add("target=powerpc64le-linux")
+            elif re.match(r"^riscv64-.*-elf", target_triple):
+                features.add("target-riscv64")
+            elif re.match(r"^riscv32-.*-elf.", target_triple):
+                features.add("target-riscv32")
+            elif re.match(r"^loongarch64.*", target_triple):
+                features.add("target-loongarch64")
 
         if not user_is_root():
             features.add("non-root-user")
@@ -348,6 +354,14 @@ class LLVMConfig(object):
             return major_version_number >= 5
 
         return False
+
+    # Normalize 3-field target triple to 4-field triple with "unknown" as environment
+    def normalize_triple(self, triple):
+        compoments = triple.split("-", maxsplit=3)
+        if len(compoments) == 4:
+            return triple
+        assert len(compoments) == 3
+        return triple + "-unknown"
 
     def make_itanium_abi_triple(self, triple):
         m = re.match(r"(\w+)-(\w+)-(\w+)", triple)
@@ -659,7 +673,9 @@ class LLVMConfig(object):
             self.config.substitutions.append(
                 (
                     "%itanium_abi_triple",
-                    self.make_itanium_abi_triple(self.config.target_triple),
+                    self.normalize_triple(
+                        self.make_itanium_abi_triple(self.config.target_triple)
+                    ),
                 )
             )
             self.config.substitutions.append(

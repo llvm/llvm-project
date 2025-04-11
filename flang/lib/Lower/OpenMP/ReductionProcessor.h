@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 
@@ -113,7 +114,7 @@ public:
   /// value `initValue`, and the reduction combiner carried over from `reduce`.
   /// TODO: add atomic region.
   static mlir::omp::DeclareReductionOp
-  createDeclareReduction(fir::FirOpBuilder &builder,
+  createDeclareReduction(AbstractConverter &builder,
                          llvm::StringRef reductionOpName,
                          const ReductionIdentifier redId, mlir::Type type,
                          mlir::Location loc, bool isByRef);
@@ -121,12 +122,13 @@ public:
   /// Creates a reduction declaration and associates it with an OpenMP block
   /// directive.
   template <class T>
-  static void addDeclareReduction(
+  static void processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
       const T &reduction, llvm::SmallVectorImpl<mlir::Value> &reductionVars,
       llvm::SmallVectorImpl<bool> &reduceVarByRef,
       llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
-      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols);
+      llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+      mlir::omp::ReductionModifierAttr *reductionMod = nullptr);
 };
 
 template <typename FloatOp, typename IntegerOp>

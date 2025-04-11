@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = true} {
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEsp : !llvm.ptr
     %1 = llvm.mlir.constant(10 : index) : i64
@@ -30,12 +30,12 @@ module attributes {omp.is_target_device = true} {
 }
 
 
-// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) {
+// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_{{.*}}(ptr %{{.*}}, ptr %[[ARG1:.*]]) #{{[0-9]+}} {
 
 // CHECK: %[[ARG1_ALLOCA:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[ARG1]], ptr %[[ARG1_ALLOCA]], align 8
 // CHECK: %[[LOAD_ARG1_ALLOCA:.*]] = load ptr, ptr %[[ARG1_ALLOCA]], align 8
 // CHECK: store i32 20, ptr %[[LOAD_ARG1_ALLOCA]], align 4
-// CHECK: %[[GEP_ARG1_ALLOCA:.*]] = getelementptr [10 x i32], ptr %[[LOAD_ARG1_ALLOCA]], i32 0, i64 4
+// CHECK: %[[GEP_ARG1_ALLOCA:.*]] = getelementptr inbounds nuw i8, ptr %[[LOAD_ARG1_ALLOCA]], i64 16
 // CHECK: store i32 10, ptr %[[GEP_ARG1_ALLOCA]], align 4
 

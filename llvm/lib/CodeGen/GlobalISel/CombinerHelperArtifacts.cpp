@@ -29,7 +29,7 @@
 using namespace llvm;
 
 bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
-                                         BuildFnTy &MatchInfo) {
+                                         BuildFnTy &MatchInfo) const {
   const GMerge *Merge = cast<GMerge>(&MI);
 
   Register Dst = Merge->getReg(0);
@@ -58,7 +58,7 @@ bool CombinerHelper::matchMergeXAndUndef(const MachineInstr &MI,
 }
 
 bool CombinerHelper::matchMergeXAndZero(const MachineInstr &MI,
-                                        BuildFnTy &MatchInfo) {
+                                        BuildFnTy &MatchInfo) const {
   const GMerge *Merge = cast<GMerge>(&MI);
 
   Register Dst = Merge->getReg(0);

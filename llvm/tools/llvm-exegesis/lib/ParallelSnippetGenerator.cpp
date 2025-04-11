@@ -90,9 +90,9 @@ static bool hasVariablesWithTiedOperands(const Instruction &Instr) {
 ParallelSnippetGenerator::~ParallelSnippetGenerator() = default;
 
 void ParallelSnippetGenerator::instantiateMemoryOperands(
-    const unsigned ScratchSpacePointerInReg,
+    const MCRegister ScratchSpacePointerInReg,
     std::vector<InstructionTemplate> &Instructions) const {
-  if (ScratchSpacePointerInReg == 0)
+  if (!ScratchSpacePointerInReg)
     return; // no memory operands.
   const auto &ET = State.getExegesisTarget();
   const unsigned MemStep = ET.getMaxMemoryAccessSize();
@@ -261,10 +261,10 @@ generateSnippetForInstrAvoidingDefUseOverlap(
     if (Op.isReg() && Op.isImplicit() && !Op.isMemory()) {
       assert(Op.isImplicitReg() && "Not an implicit register operand?");
       if (Op.isUse())
-        ImplicitUses.set(Op.getImplicitReg());
+        ImplicitUses.set(Op.getImplicitReg().id());
       else {
         assert(Op.isDef() && "Not a use and not a def?");
-        ImplicitDefs.set(Op.getImplicitReg());
+        ImplicitDefs.set(Op.getImplicitReg().id());
       }
     }
   }
@@ -300,7 +300,7 @@ ParallelSnippetGenerator::generateCodeTemplates(
       Instr.hasMemoryOperands()
           ? State.getExegesisTarget().getScratchMemoryRegister(
                 State.getTargetMachine().getTargetTriple())
-          : 0;
+          : MCRegister();
   const AliasingConfigurations SelfAliasing(Instr, Instr, ForbiddenRegisters);
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";

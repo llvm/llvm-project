@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=bpfel -verify-machineinstrs -show-mc-encoding -mcpu=v1 | FileCheck %s
-; RUN: llc < %s -march=bpfel -verify-machineinstrs -show-mc-encoding -mcpu=v3 | FileCheck --check-prefix=CHECK-V3 %s
+; RUN: llc < %s -mtriple=bpfel -verify-machineinstrs -show-mc-encoding -mcpu=v1 | FileCheck %s
+; RUN: llc < %s -mtriple=bpfel -verify-machineinstrs -show-mc-encoding -mcpu=v3 | FileCheck --check-prefix=CHECK-V3 %s
 
 ; CHECK-LABEL: test_load_add_32
 ; CHECK: lock *(u32 *)(r1 + 0) += r2

@@ -15,6 +15,8 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Object/ELFObjectFile.h"
+#include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ObjectYAML/yaml2obj.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -27,21 +29,23 @@ StructType *offloading::getEntryTy(Module &M) {
       StructType::getTypeByName(C, "struct.__tgt_offload_entry");
   if (!EntryTy)
     EntryTy = StructType::create(
-        "struct.__tgt_offload_entry", PointerType::getUnqual(C),
-        PointerType::getUnqual(C), M.getDataLayout().getIntPtrType(C),
-        Type::getInt32Ty(C), Type::getInt32Ty(C));
+        "struct.__tgt_offload_entry", Type::getInt64Ty(C), Type::getInt16Ty(C),
+        Type::getInt16Ty(C), Type::getInt32Ty(C), PointerType::getUnqual(C),
+        PointerType::getUnqual(C), Type::getInt64Ty(C), Type::getInt64Ty(C),
+        PointerType::getUnqual(C));
   return EntryTy;
 }
 
-// TODO: Rework this interface to be more generic.
 std::pair<Constant *, GlobalVariable *>
-offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
-                                          StringRef Name, uint64_t Size,
-                                          int32_t Flags, int32_t Data) {
-  llvm::Triple Triple(M.getTargetTriple());
-  Type *Int8PtrTy = PointerType::getUnqual(M.getContext());
+offloading::getOffloadingEntryInitializer(Module &M, object::OffloadKind Kind,
+                                          Constant *Addr, StringRef Name,
+                                          uint64_t Size, uint32_t Flags,
+                                          uint64_t Data, Constant *AuxAddr) {
+  const llvm::Triple &Triple = M.getTargetTriple();
+  Type *PtrTy = PointerType::getUnqual(M.getContext());
+  Type *Int64Ty = Type::getInt64Ty(M.getContext());
   Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
+  Type *Int16Ty = Type::getInt16Ty(M.getContext());
 
   Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
 
@@ -64,23 +68,29 @@ offloading::getOffloadingEntryInitializer(Module &M, Constant *Addr,
 
   // Construct the offloading entry.
   Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
+      ConstantExpr::getNullValue(Int64Ty),
+      ConstantInt::get(Int16Ty, 1),
+      ConstantInt::get(Int16Ty, Kind),
       ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, Data),
-  };
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, PtrTy),
+      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, PtrTy),
+      ConstantInt::get(Int64Ty, Size),
+      ConstantInt::get(Int64Ty, Data),
+      AuxAddr ? ConstantExpr::getPointerBitCastOrAddrSpaceCast(AuxAddr, PtrTy)
+              : ConstantExpr::getNullValue(PtrTy)};
   Constant *EntryInitializer = ConstantStruct::get(getEntryTy(M), EntryData);
   return {EntryInitializer, Str};
 }
 
-void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
-                                     uint64_t Size, int32_t Flags, int32_t Data,
+void offloading::emitOffloadingEntry(Module &M, object::OffloadKind Kind,
+                                     Constant *Addr, StringRef Name,
+                                     uint64_t Size, uint32_t Flags,
+                                     uint64_t Data, Constant *AuxAddr,
                                      StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
-  auto [EntryInitializer, NameGV] =
-      getOffloadingEntryInitializer(M, Addr, Name, Size, Flags, Data);
+  auto [EntryInitializer, NameGV] = getOffloadingEntryInitializer(
+      M, Kind, Addr, Name, Size, Flags, Data, AuxAddr);
 
   StringRef Prefix =
       Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";
@@ -95,12 +105,12 @@ void offloading::emitOffloadingEntry(Module &M, Constant *Addr, StringRef Name,
     Entry->setSection((SectionName + "$OE").str());
   else
     Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
+  Entry->setAlignment(Align(object::OffloadBinary::getAlignment()));
 }
 
 std::pair<GlobalVariable *, GlobalVariable *>
 offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
-  llvm::Triple Triple(M.getTargetTriple());
+  const llvm::Triple &Triple = M.getTargetTriple();
 
   auto *ZeroInitilaizer =
       ConstantAggregateZero::get(ArrayType::get(getEntryTy(M), 0u));
@@ -127,6 +137,7 @@ offloading::getOffloadEntryArray(Module &M, StringRef SectionName) {
         M, ZeroInitilaizer->getType(), true, GlobalVariable::InternalLinkage,
         ZeroInitilaizer, "__dummy." + SectionName);
     DummyEntry->setSection(SectionName);
+    DummyEntry->setAlignment(Align(object::OffloadBinary::getAlignment()));
     appendToCompilerUsed(M, DummyEntry);
   } else {
     // The COFF linker will merge sections containing a '$' together into a
@@ -363,5 +374,88 @@ Error llvm::offloading::amdgpu::getAMDGPUMetaDataFromImage(
         return Err;
     }
   }
+  return Error::success();
+}
+Error offloading::intel::containerizeOpenMPSPIRVImage(
+    std::unique_ptr<MemoryBuffer> &Img) {
+  constexpr char INTEL_ONEOMP_OFFLOAD_VERSION[] = "1.0";
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_VERSION = 1;
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT = 2;
+  constexpr int NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX = 3;
+
+  // Start creating notes for the ELF container.
+  std::vector<ELFYAML::NoteEntry> Notes;
+  std::string Version = toHex(INTEL_ONEOMP_OFFLOAD_VERSION);
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(Version),
+                                        NT_INTEL_ONEOMP_OFFLOAD_VERSION});
+
+  // The AuxInfo string will hold auxiliary information for the image.
+  // ELFYAML::NoteEntry structures will hold references to the
+  // string, so we have to make sure the string is valid.
+  std::string AuxInfo;
+
+  // TODO: Pass compile/link opts
+  StringRef CompileOpts = "";
+  StringRef LinkOpts = "";
+
+  unsigned ImageFmt = 1; // SPIR-V format
+
+  AuxInfo = toHex((Twine(0) + Twine('\0') + Twine(ImageFmt) + Twine('\0') +
+                   CompileOpts + Twine('\0') + LinkOpts)
+                      .str());
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(AuxInfo),
+                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_AUX});
+
+  std::string ImgCount = toHex(Twine(1).str()); // always one image per ELF
+  Notes.emplace_back(ELFYAML::NoteEntry{"INTELONEOMPOFFLOAD",
+                                        yaml::BinaryRef(ImgCount),
+                                        NT_INTEL_ONEOMP_OFFLOAD_IMAGE_COUNT});
+
+  std::string YamlFile;
+  llvm::raw_string_ostream YamlFileStream(YamlFile);
+
+  // Write the YAML template file.
+
+  // We use 64-bit little-endian ELF currently.
+  ELFYAML::FileHeader Header{};
+  Header.Class = ELF::ELFCLASS64;
+  Header.Data = ELF::ELFDATA2LSB;
+  Header.Type = ELF::ET_DYN;
+  // Use an existing Intel machine type as there is not one specifically for
+  // Intel GPUs.
+  Header.Machine = ELF::EM_IA_64;
+
+  // Create a section with notes.
+  ELFYAML::NoteSection Section{};
+  Section.Type = ELF::SHT_NOTE;
+  Section.AddressAlign = 0;
+  Section.Name = ".note.inteloneompoffload";
+  Section.Notes.emplace(std::move(Notes));
+
+  ELFYAML::Object Object{};
+  Object.Header = Header;
+  Object.Chunks.push_back(
+      std::make_unique<ELFYAML::NoteSection>(std::move(Section)));
+
+  // Create the section that will hold the image
+  ELFYAML::RawContentSection ImageSection{};
+  ImageSection.Type = ELF::SHT_PROGBITS;
+  ImageSection.AddressAlign = 0;
+  std::string Name = "__openmp_offload_spirv_0";
+  ImageSection.Name = Name;
+  ImageSection.Content =
+      llvm::yaml::BinaryRef(arrayRefFromStringRef(Img->getBuffer()));
+  Object.Chunks.push_back(
+      std::make_unique<ELFYAML::RawContentSection>(std::move(ImageSection)));
+  Error Err = Error::success();
+  llvm::yaml::yaml2elf(
+      Object, YamlFileStream,
+      [&Err](const Twine &Msg) { Err = createStringError(Msg); }, UINT64_MAX);
+  if (Err)
+    return Err;
+
+  Img = MemoryBuffer::getMemBufferCopy(YamlFile);
   return Error::success();
 }

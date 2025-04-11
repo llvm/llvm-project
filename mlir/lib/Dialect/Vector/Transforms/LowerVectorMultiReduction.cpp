@@ -308,12 +308,6 @@ struct TwoDimMultiReductionToElementWise
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
-    if (maskableOp.isMasked())
-      // TODO: Support masking.
-      return failure();
-
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
     // Rank-2 ["parallel", "reduce"] or bail.
     if (srcRank != 2)
@@ -330,15 +324,33 @@ struct TwoDimMultiReductionToElementWise
     if (!elementType.isIntOrIndexOrFloat())
       return failure();
 
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto maskableOp =
+        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
+    Operation *rootOp;
+    Value mask = nullptr;
+    if (maskableOp.isMasked()) {
+      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+      rootOp = maskableOp.getMaskingOp();
+      mask = maskableOp.getMaskingOp().getMask();
+    } else {
+      rootOp = multiReductionOp;
+    }
+
     Value result = multiReductionOp.getAcc();
     for (int64_t i = 0; i < srcShape[0]; i++) {
       auto operand = rewriter.create<vector::ExtractOp>(
           loc, multiReductionOp.getSource(), i);
-      result = makeArithReduction(rewriter, loc, multiReductionOp.getKind(),
-                                  operand, result);
+      Value extractMask = nullptr;
+      if (mask) {
+        extractMask = rewriter.create<vector::ExtractOp>(loc, mask, i);
+      }
+      result =
+          makeArithReduction(rewriter, loc, multiReductionOp.getKind(), operand,
+                             result, /*fastmath=*/nullptr, extractMask);
     }
 
-    rewriter.replaceOp(multiReductionOp, result);
+    rewriter.replaceOp(rootOp, result);
     return success();
   }
 };
@@ -486,7 +498,7 @@ struct LowerVectorMultiReductionPass
     populateVectorMultiReductionLoweringPatterns(loweringPatterns,
                                                  this->loweringStrategy);
 
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
       signalPassFailure();
   }
 

@@ -20,6 +20,7 @@ void TemplFunc() {
   for (unsigned i = 0; i < 5; ++i);
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}}serial loop
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: ForStmt
   // CHECK: NullStmt
 
@@ -65,6 +66,7 @@ void TemplFunc() {
   //
   // CHECK-NEXT: OpenACCCombinedConstruct{{.*}}serial loop
   // CHECK-NEXT: self clause
+  // CHECK-NEXT: <<<NULL>>
   // CHECK-NEXT: ForStmt
   // CHECK: NullStmt
 

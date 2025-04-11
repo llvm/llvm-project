@@ -39,11 +39,10 @@ class AllocationCheckerHelper {
 public:
   AllocationCheckerHelper(
       const parser::Allocation &alloc, AllocateCheckerInfo &info)
-      : allocateInfo_{info}, allocateObject_{std::get<parser::AllocateObject>(
-                                 alloc.t)},
-        allocateShapeSpecRank_{ShapeSpecRank(alloc)}, allocateCoarraySpecRank_{
-                                                          CoarraySpecRank(
-                                                              alloc)} {}
+      : allocateInfo_{info}, allocation_{alloc},
+        allocateObject_{std::get<parser::AllocateObject>(alloc.t)},
+        allocateShapeSpecRank_{ShapeSpecRank(alloc)},
+        allocateCoarraySpecRank_{CoarraySpecRank(alloc)} {}
 
   bool RunChecks(SemanticsContext &context);
 
@@ -84,6 +83,7 @@ private:
   }
 
   AllocateCheckerInfo &allocateInfo_;
+  const parser::Allocation &allocation_;
   const parser::AllocateObject &allocateObject_;
   const int allocateShapeSpecRank_{0};
   const int allocateCoarraySpecRank_{0};
@@ -616,9 +616,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   }
   if (allocateInfo_.gotPinned) {
     std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
-    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) {
+    if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::CUDAUsage)) {
       context.Say(name_.source,
-          "Object in ALLOCATE must have PINNED attribute when PINNED option is specified"_err_en_US);
+          "Object in ALLOCATE should have PINNED attribute when PINNED option is specified"_warn_en_US);
     }
   }
   if (allocateInfo_.gotStream) {
@@ -690,6 +692,31 @@ bool AllocationCheckerHelper::RunCoarrayRelatedChecks(
             .Attach(ultimate_->name(), "Declared here with corank %d"_en_US,
                 corank_);
         return false;
+      }
+      if (const auto &coarraySpec{
+              std::get<std::optional<parser::AllocateCoarraySpec>>(
+                  allocation_.t)}) {
+        int dim{0};
+        for (const auto &spec :
+            std::get<std::list<parser::AllocateCoshapeSpec>>(coarraySpec->t)) {
+          if (auto ubv{evaluate::ToInt64(
+                  GetExpr(context, std::get<parser::BoundExpr>(spec.t)))}) {
+            if (auto *lbx{GetExpr(context,
+                    std::get<std::optional<parser::BoundExpr>>(spec.t))}) {
+              auto lbv{evaluate::ToInt64(*lbx)};
+              if (lbv && *ubv < *lbv) {
+                context.Say(name_.source,
+                    "Upper cobound %jd is less than lower cobound %jd of codimension %d"_err_en_US,
+                    std::intmax_t{*ubv}, std::intmax_t{*lbv}, dim + 1);
+              }
+            } else if (*ubv < 1) {
+              context.Say(name_.source,
+                  "Upper cobound %jd of codimension %d is less than 1"_err_en_US,
+                  std::intmax_t{*ubv}, dim + 1);
+            }
+          }
+          ++dim;
+        }
       }
     }
   } else { // Not a coarray

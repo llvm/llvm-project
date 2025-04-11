@@ -600,6 +600,7 @@ static bool hasSameElementsOrSplat(ShapedType type, const Values &values) {
 
 //===----------------------------------------------------------------------===//
 // AttributeElementIterator
+//===----------------------------------------------------------------------===//
 
 DenseElementsAttr::AttributeElementIterator::AttributeElementIterator(
     DenseElementsAttr attr, size_t index)
@@ -647,6 +648,7 @@ Attribute DenseElementsAttr::AttributeElementIterator::operator*() const {
 
 //===----------------------------------------------------------------------===//
 // BoolElementIterator
+//===----------------------------------------------------------------------===//
 
 DenseElementsAttr::BoolElementIterator::BoolElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
@@ -659,6 +661,7 @@ bool DenseElementsAttr::BoolElementIterator::operator*() const {
 
 //===----------------------------------------------------------------------===//
 // IntElementIterator
+//===----------------------------------------------------------------------===//
 
 DenseElementsAttr::IntElementIterator::IntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
@@ -674,6 +677,7 @@ APInt DenseElementsAttr::IntElementIterator::operator*() const {
 
 //===----------------------------------------------------------------------===//
 // ComplexIntElementIterator
+//===----------------------------------------------------------------------===//
 
 DenseElementsAttr::ComplexIntElementIterator::ComplexIntElementIterator(
     DenseElementsAttr attr, size_t dataIndex)
@@ -1544,8 +1548,15 @@ DenseResourceElementsAttr DenseResourceElementsAttr::get(ShapedType type,
   return get(type, manager.insert(blobName, std::move(blob)));
 }
 
+ArrayRef<char> DenseResourceElementsAttr::getData() {
+  if (AsmResourceBlob *blob = this->getRawHandle().getBlob())
+    return blob->getDataAs<char>();
+  return {};
+}
+
 //===----------------------------------------------------------------------===//
 // DenseResourceElementsAttrBase
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// Instantiations of this class provide utilities for interacting with native

@@ -13,6 +13,7 @@
 #include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
+#include "llvm/ExecutionEngine/JITLink/XCOFF.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
 #include "llvm/ExecutionEngine/JITLink/i386.h"
 #include "llvm/ExecutionEngine/JITLink/loongarch.h"
@@ -424,7 +425,7 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
     if (E.getTarget().hasName()) {
       ErrStream << "\"" << E.getTarget().getName() << "\"";
     } else
-      ErrStream << E.getTarget().getBlock().getSection().getName() << " + "
+      ErrStream << E.getTarget().getSection().getName() << " + "
                 << formatv("{0:x}", E.getOffset());
     ErrStream << " at address " << formatv("{0:x}", E.getTarget().getAddress())
               << " is out of range of " << G.getEdgeKindName(E.getKind())
@@ -501,38 +502,21 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer,
     return createLinkGraphFromELFObject(ObjectBuffer, std::move(SSP));
   case file_magic::coff_object:
     return createLinkGraphFromCOFFObject(ObjectBuffer, std::move(SSP));
+  case file_magic::xcoff_object_64:
+    return createLinkGraphFromXCOFFObject(ObjectBuffer, std::move(SSP));
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
 }
 
 std::unique_ptr<LinkGraph>
-absoluteSymbolsLinkGraph(const Triple &TT,
-                         std::shared_ptr<orc::SymbolStringPool> SSP,
+absoluteSymbolsLinkGraph(Triple TT, std::shared_ptr<orc::SymbolStringPool> SSP,
                          orc::SymbolMap Symbols) {
-  unsigned PointerSize;
-  endianness Endianness =
-      TT.isLittleEndian() ? endianness::little : endianness::big;
-  switch (TT.getArch()) {
-  case Triple::aarch64:
-  case llvm::Triple::riscv64:
-  case Triple::x86_64:
-    PointerSize = 8;
-    break;
-  case llvm::Triple::arm:
-  case llvm::Triple::riscv32:
-  case llvm::Triple::x86:
-    PointerSize = 4;
-    break;
-  default:
-    llvm::report_fatal_error("unhandled target architecture");
-  }
-
   static std::atomic<uint64_t> Counter = {0};
   auto Index = Counter.fetch_add(1, std::memory_order_relaxed);
   auto G = std::make_unique<LinkGraph>(
-      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP), TT,
-      PointerSize, Endianness, /*GetEdgeKindName=*/nullptr);
+      "<Absolute Symbols " + std::to_string(Index) + ">", std::move(SSP),
+      std::move(TT), SubtargetFeatures(), getGenericEdgeKindName);
   for (auto &[Name, Def] : Symbols) {
     auto &Sym =
         G->addAbsoluteSymbol(*Name, Def.getAddress(), /*Size=*/0,
@@ -551,6 +535,8 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_ELF(std::move(G), std::move(Ctx));
   case Triple::COFF:
     return link_COFF(std::move(G), std::move(Ctx));
+  case Triple::XCOFF:
+    return link_XCOFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

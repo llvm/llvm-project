@@ -105,60 +105,27 @@ static mlir::Value getBufferizedExprMustFreeFlag(mlir::Value bufferizedExpr) {
 static std::pair<hlfir::Entity, mlir::Value>
 createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
                 mlir::Type exprType, mlir::Value shape,
-                mlir::ValueRange extents, mlir::ValueRange lenParams,
+                llvm::ArrayRef<mlir::Value> extents,
+                llvm::ArrayRef<mlir::Value> lenParams,
                 std::optional<hlfir::Entity> polymorphicMold) {
-  mlir::Type sequenceType = hlfir::getFortranElementOrSequenceType(exprType);
-  llvm::StringRef tmpName{".tmp.array"};
+  auto sequenceType = mlir::cast<fir::SequenceType>(
+      hlfir::getFortranElementOrSequenceType(exprType));
 
-  if (polymorphicMold) {
-    // Create *allocated* polymorphic temporary using the dynamic type
-    // of the mold and the provided shape/extents. The created temporary
-    // array will be written element per element, that is why it has to be
-    // allocated.
-    mlir::Type boxHeapType = fir::HeapType::get(sequenceType);
-    mlir::Value alloc = fir::factory::genNullBoxStorage(
-        builder, loc, fir::ClassType::get(boxHeapType));
-    mlir::Value isHeapAlloc = builder.createBool(loc, true);
-    fir::FortranVariableFlagsAttr declAttrs =
-        fir::FortranVariableFlagsAttr::get(
-            builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
-
+  auto genTempDeclareOp =
+      [](fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value memref,
+         llvm::StringRef name, mlir::Value shape,
+         llvm::ArrayRef<mlir::Value> typeParams,
+         fir::FortranVariableFlagsAttr attrs) -> mlir::Value {
     auto declareOp =
-        builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
-                                         /*shape=*/nullptr, lenParams,
-                                         /*dummy_scope=*/nullptr, declAttrs);
+        builder.create<hlfir::DeclareOp>(loc, memref, name, shape, typeParams,
+                                         /*dummy_scope=*/nullptr, attrs);
+    return declareOp.getBase();
+  };
 
-    int rank = extents.size();
-    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
-                                          polymorphicMold->getFirBase(), rank);
-    if (!extents.empty()) {
-      mlir::Type idxTy = builder.getIndexType();
-      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-      unsigned dim = 0;
-      for (mlir::Value extent : extents) {
-        mlir::Value dimIndex = builder.createIntegerConstant(loc, idxTy, dim++);
-        fir::runtime::genAllocatableSetBounds(builder, loc, alloc, dimIndex,
-                                              one, extent);
-      }
-    }
-    if (!lenParams.empty()) {
-      // We should call AllocatableSetDerivedLength() here.
-      // TODO: does the mold provide the length parameters or
-      // the operation itself or should they be in sync?
-      TODO(loc, "polymorphic type with length parameters in HLFIR");
-    }
-    fir::runtime::genAllocatableAllocate(builder, loc, alloc);
-
-    return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
-  }
-
-  mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
-                                                     extents, lenParams);
-  auto declareOp = builder.create<hlfir::DeclareOp>(
-      loc, allocmem, tmpName, shape, lenParams,
-      /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
-  mlir::Value trueVal = builder.createBool(loc, true);
-  return {hlfir::Entity{declareOp.getBase()}, trueVal};
+  auto [base, isHeapAlloc] = builder.createArrayTemp(
+      loc, sequenceType, shape, extents, lenParams, genTempDeclareOp,
+      polymorphicMold ? polymorphicMold->getFirBase() : nullptr);
+  return {hlfir::Entity{base}, builder.createBool(loc, isHeapAlloc)};
 }
 
 /// Copy \p source into a new temporary and package the temporary into a
@@ -362,6 +329,7 @@ struct GetLengthOpConversion
     if (!length)
       return rewriter.notifyMatchFailure(
           getLength, "could not deduce length from GetLengthOp operand");
+    length = builder.createConvert(loc, builder.getIndexType(), length);
     rewriter.replaceOp(getLength, length);
     return mlir::success();
   }
@@ -760,8 +728,10 @@ struct HLFIRListener : public mlir::OpBuilder::Listener {
 struct ElementalOpConversion
     : public mlir::OpConversionPattern<hlfir::ElementalOp> {
   using mlir::OpConversionPattern<hlfir::ElementalOp>::OpConversionPattern;
-  explicit ElementalOpConversion(mlir::MLIRContext *ctx)
-      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx} {
+  explicit ElementalOpConversion(mlir::MLIRContext *ctx,
+                                 bool optimizeEmptyElementals = false)
+      : mlir::OpConversionPattern<hlfir::ElementalOp>{ctx},
+        optimizeEmptyElementals(optimizeEmptyElementals) {
     // This pattern recursively converts nested ElementalOp's
     // by cloning and then converting them, so we have to allow
     // for recursive pattern application. The recursion is bounded
@@ -783,12 +753,17 @@ struct ElementalOpConversion
     if (adaptor.getMold())
       mold = getBufferizedExprStorage(adaptor.getMold());
     auto extents = hlfir::getIndexExtents(loc, builder, shape);
-    auto [temp, cleanup] =
-        createArrayTemp(loc, builder, elemental.getType(), shape, extents,
-                        adaptor.getTypeparams(), mold);
+    llvm::SmallVector<mlir::Value> typeParams(adaptor.getTypeparams().begin(),
+                                              adaptor.getTypeparams().end());
+    auto [temp, cleanup] = createArrayTemp(loc, builder, elemental.getType(),
+                                           shape, extents, typeParams, mold);
     // If the box load is needed, we'd better place it outside
     // of the loop nest.
     temp = derefPointersAndAllocatables(loc, builder, temp);
+
+    if (optimizeEmptyElementals)
+      extents = fir::factory::updateRuntimeExtentsForEmptyArrays(builder, loc,
+                                                                 extents);
 
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
@@ -860,6 +835,9 @@ struct ElementalOpConversion
     rewriter.replaceOp(elemental, bufferizedExpr);
     return mlir::success();
   }
+
+private:
+  bool optimizeEmptyElementals = false;
 };
 struct CharExtremumOpConversion
     : public mlir::OpConversionPattern<hlfir::CharExtremumOp> {
@@ -931,6 +909,8 @@ struct EvaluateInMemoryOpConversion
 
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
+  using BufferizeHLFIRBase<BufferizeHLFIR>::BufferizeHLFIRBase;
+
   void runOnOperation() override {
     // TODO: make this a pass operating on FuncOp. The issue is that
     // FirOpBuilder helpers may generate new FuncOp because of runtime/llvm
@@ -942,13 +922,13 @@ public:
     auto module = this->getOperation();
     auto *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns
-        .insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
-                AssociateOpConversion, CharExtremumOpConversion,
-                ConcatOpConversion, DestroyOpConversion, ElementalOpConversion,
-                EndAssociateOpConversion, EvaluateInMemoryOpConversion,
-                NoReassocOpConversion, SetLengthOpConversion,
-                ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns.insert<ApplyOpConversion, AsExprOpConversion, AssignOpConversion,
+                    AssociateOpConversion, CharExtremumOpConversion,
+                    ConcatOpConversion, DestroyOpConversion,
+                    EndAssociateOpConversion, EvaluateInMemoryOpConversion,
+                    NoReassocOpConversion, SetLengthOpConversion,
+                    ShapeOfOpConversion, GetLengthOpConversion>(context);
+    patterns.insert<ElementalOpConversion>(context, optimizeEmptyElementals);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
     // It must be erased by its parent converter and there is no explicit

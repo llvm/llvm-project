@@ -1,7 +1,6 @@
 ; Check that debug intrinsics do not affect code generation.
 
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
 
 define i64 @simulate(<2 x i32> %a) {
 entry:
@@ -54,10 +53,10 @@ end:                                        ; preds = %body
 ; X86-CHECK: callq  lrand48
 ; X86-CHECK: movq  %rax, %rbx
 
-define i64 @simulateWithDbgDeclare(<2 x i32> %a) local_unnamed_addr  {
+define i64 @simulateWithDbgDeclare(<2 x i32> %a, ptr %ptr) local_unnamed_addr  {
 entry:
   %rand = tail call i64 @lrand48() #3
-  tail call void @llvm.dbg.declare(metadata i64 %rand, metadata !6, metadata !7), !dbg !8
+  tail call void @llvm.dbg.declare(metadata ptr %ptr, metadata !6, metadata !7), !dbg !8
   br label %body
 
 body:                                        ; preds = %body, %entry

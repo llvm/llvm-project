@@ -238,9 +238,6 @@ protected:
   /// Elide resources when generating bytecode.
   bool elideResourceDataFromBytecodeFlag = false;
 
-  /// Enable the Debugger action hook: Debugger can intercept MLIR Actions.
-  bool enableDebuggerActionHookFlag = false;
-
   /// IRDL file to register before processing the input.
   std::string irdlFileFlag = "";
 
@@ -325,7 +322,7 @@ LogicalResult MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                           DialectRegistry &registry);
 
 /// Implementation for tools like `mlir-opt`.
-/// This function can be used with registrationAndParseCLIOptions so that
+/// This function can be used with registerAndParseCLIOptions so that
 /// CLI options can be accessed before running MlirOptMain.
 /// - inputFilename is the name of the input mlir file.
 /// - outputFilename is the name of the output file.

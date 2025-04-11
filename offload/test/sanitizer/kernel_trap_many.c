@@ -32,4 +32,4 @@ int main(void) {
 // TRACE: OFFLOAD ERROR: execution interrupted by hardware trap instruction
 // TRACE:     launchKernel
 // NDEBG:     main
-// DEBUG:     main {{.*}}kernel_trap_many.c:
+// DEBUG:     main {{.*}}kernel_trap_many.c

@@ -4,7 +4,7 @@
 set(ORC_COMMON_SOURCES
   debug.cpp
   dlfcn_wrapper.cpp
-  extensible_rtti.cpp
+  rtti.cpp
   log_error_to_stderr.cpp
   run_program_wrapper.cpp
   resolve.cpp
@@ -18,7 +18,7 @@ set(ORC_COMMON_IMPL_HEADERS
   endianness.h
   error.h
   executor_address.h
-  extensible_rtti.h
+  rtti.h
   simple_packed_serialization.h
   stl_extras.h
   wrapper_function_utils.h
@@ -53,6 +53,7 @@ if (APPLE)
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
     sysv_reenter.arm64.S
+    sysv_reenter.x86-64.S
     )
 
   set(ORC_IMPL_HEADERS
@@ -119,6 +120,7 @@ else() # not Apple
       elfnix_tls.aarch64.S
       elfnix_tls.ppc64.S
       sysv_reenter.arm64.S
+      sysv_reenter.x86-64.S
       )
   endif()
 

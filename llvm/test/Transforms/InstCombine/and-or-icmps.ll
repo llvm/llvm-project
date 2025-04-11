@@ -1445,8 +1445,7 @@ define i1 @bitwise_and_logical_and_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_and_logical_and_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[TMP4]], i1 [[C1]], i1 false
@@ -1796,8 +1795,7 @@ define i1 @bitwise_or_logical_or_icmps_comm2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @bitwise_or_logical_or_icmps_comm2(
 ; CHECK-NEXT:    [[C1:%.*]] = icmp eq i8 [[Y:%.*]], 42
 ; CHECK-NEXT:    [[Z_SHIFT:%.*]] = shl nuw i8 1, [[Z:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = freeze i8 [[Z_SHIFT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[TMP1]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = or i8 [[Z_SHIFT]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i8 [[X:%.*]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[OR2:%.*]] = select i1 [[TMP4]], i1 true, i1 [[C1]]
@@ -2068,12 +2066,10 @@ define i1 @bitwise_and_logical_and_masked_icmp_allzeros_poison1(i1 %c, i32 %x, i
 
 define i1 @bitwise_and_logical_and_masked_icmp_allzeros_poison2(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allzeros_poison2(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = or i32 [[Y1:%.*]], 8
+; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], 0
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[C2]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %x.m1 = and i32 %x, 8
@@ -2120,12 +2116,10 @@ define i1 @bitwise_and_logical_and_masked_icmp_allones_poison1(i1 %c, i32 %x, i3
 
 define i1 @bitwise_and_logical_and_masked_icmp_allones_poison2(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @bitwise_and_logical_and_masked_icmp_allones_poison2(
-; CHECK-NEXT:    [[X_M1:%.*]] = and i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[C1:%.*]] = icmp ne i32 [[X_M1]], 0
-; CHECK-NEXT:    [[AND1:%.*]] = select i1 [[C1]], i1 [[C:%.*]], i1 false
-; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Y:%.*]] = or i32 [[Y1:%.*]], 8
+; CHECK-NEXT:    [[X_M2:%.*]] = and i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[X_M2]], [[Y]]
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[C2]]
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[C2]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND2]]
 ;
   %x.m1 = and i32 %x, 8
@@ -3414,4 +3408,32 @@ define i1 @and_ugt_to_mask_off_by_one(i8 %x) {
   %cmp2 = icmp eq i8 %and, 0
   %and2 = and i1 %cmp, %cmp2
   ret i1 %and2
+}
+
+; TODO: shall fold to trunc nuw i8 (and %x, %y) to i1.
+define i1 @and_icmp_ne_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range(i8 0, 2) %y) {
+; CHECK-LABEL: @and_icmp_ne_with_binary_range_operands(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp ne i8 %x, 0
+  %icmp2 = icmp ne i8 %y, 0
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
+}
+
+; TODO: shall fold to trunc nuw i8 (and %x, %y) to i1.
+define i1 @and_icmp_eq_with_binary_range_operands(i8 range(i8 0, 2) %x, i8 range(i8 0, 2) %y) {
+; CHECK-LABEL: @and_icmp_eq_with_binary_range_operands(
+; CHECK-NEXT:    [[ICMP1:%.*]] = icmp ne i8 [[X:%.*]], 0
+; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i8 [[Y:%.*]], 0
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[ICMP1]], [[ICMP2]]
+; CHECK-NEXT:    ret i1 [[RET]]
+;
+  %icmp1 = icmp eq i8 %x, 1
+  %icmp2 = icmp eq i8 %y, 1
+  %ret = and i1 %icmp1, %icmp2
+  ret i1 %ret
 }

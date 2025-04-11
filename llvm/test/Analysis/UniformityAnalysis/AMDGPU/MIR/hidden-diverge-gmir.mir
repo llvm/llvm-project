@@ -1,24 +1,24 @@
 # RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
 # CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
 # CHECK-LABEL: BLOCK bb.0
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_XOR %{{[0-9]*}}:_, %{{[0-9]*}}:_
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.1
-# CHECK: DIVERGENT: G_BR %bb.2
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt)
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_XOR %{{[0-9]*}}:_, %{{[0-9]*}}:_
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK:     DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.1
+# CHECK:     DIVERGENT: G_BR %bb.2
 # CHECK-LABEL: BLOCK bb.1
 # CHECK-LABEL: BLOCK bb.2
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.1, %{{[0-9]*}}:_(s32), %bb.0
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_PHI %{{[0-9]*}}:_(s1), %bb.1, %{{[0-9]*}}:_(s1), %bb.0
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
-# CHECK: DIVERGENT: G_BR %bb.4
+# CHECK-NOT: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.1, %{{[0-9]*}}:_(s32), %bb.0
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_PHI %{{[0-9]*}}:_(s1), %bb.1, %{{[0-9]*}}:_(s1), %bb.0
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK:     DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
+# CHECK:     DIVERGENT: G_BR %bb.4
 # CHECK-LABEL: BLOCK bb.3
 # CHECK-LABEL: BLOCK bb.4
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.2, %{{[0-9]*}}:_(s32), %bb.3
+# CHECK:     DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.2, %{{[0-9]*}}:_(s32), %bb.3
 
 ---
 name:            hidden_diverge

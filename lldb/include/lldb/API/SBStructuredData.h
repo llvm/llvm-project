@@ -115,6 +115,7 @@ protected:
   friend class SBLaunchInfo;
   friend class SBDebugger;
   friend class SBFrame;
+  friend class SBError;
   friend class SBTarget;
   friend class SBProcess;
   friend class SBThread;

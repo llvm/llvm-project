@@ -8,7 +8,7 @@ add_libc_unittest(
     waitpid_test.cpp
   DEPENDS
     libc.include.sys_wait
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.sys.wait.waitpid
 )
 
@@ -20,6 +20,6 @@ add_libc_unittest(
     wait4_test.cpp
   DEPENDS
     libc.include.sys_wait
-    libc.src.errno.errno 
+    libc.src.errno.errno
     libc.src.sys.wait.wait4
 )

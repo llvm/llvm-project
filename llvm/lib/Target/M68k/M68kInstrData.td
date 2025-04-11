@@ -337,20 +337,16 @@ class MxMOVEM_RM_Pseudo<MxType TYPE, MxOperand MEMOp>
     : MxPseudo<(outs TYPE.ROp:$dst), (ins MEMOp:$src)>;
 
 // Mem <- Reg
-def MOVM8jm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16jm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32jm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8pm_P  : MxMOVEM_MR_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16pm_P : MxMOVEM_MR_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32pm_P : MxMOVEM_MR_Pseudo<MxType32r, MxType32.POp>;
 
 // Reg <- Mem
-def MOVM8mj_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.JOp>;
 def MOVM16mj_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.JOp>;
 def MOVM32mj_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.JOp>;
 
-def MOVM8mp_P  : MxMOVEM_RM_Pseudo<MxType8d,  MxType8.POp>;
 def MOVM16mp_P : MxMOVEM_RM_Pseudo<MxType16r, MxType16.POp>;
 def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 
@@ -365,13 +361,14 @@ def MOVM32mp_P : MxMOVEM_RM_Pseudo<MxType32r, MxType32.POp>;
 // ons that will be resolved sometime after RA pass.
 //===----------------------------------------------------------------------===//
 
+/// Move to CCR
 /// --------------------------------------------------
 ///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
 /// --------------------------------------------------
 ///                               | EFFECTIVE ADDRESS
 ///  0  1  0  0  0  1  0  0  1  1 |   MODE  |   REG
 /// --------------------------------------------------
-let Defs = [CCR] in
+let Defs = [CCR] in {
 class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
     : MxInst<(outs CCRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
   let Inst = (ascend
@@ -382,6 +379,7 @@ class MxMoveToCCR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 
 class MxMoveToCCRPseudo<MxOperand MEMOp>
     : MxPseudo<(outs CCRC:$dst), (ins MEMOp:$src)>;
+} // let Defs = [CCR]
 
 let mayLoad = 1 in
 foreach AM = MxMoveSupportedAMs in {
@@ -435,6 +433,64 @@ foreach AM = MxMoveSupportedAMs in {
 // Only data register is allowed.
 def MOV16dc : MxMoveFromCCR_R;
 def MOV8dc  : MxMoveFromCCR_RPseudo<MxOp8AddrMode_d.Op>;
+
+/// Move to SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  1  1  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Defs = [SR] in {
+class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
+    : MxInst<(outs SRC:$dst), (ins MEMOp:$src), "move.w\t$src, $dst", []> {
+  let Inst = (ascend
+    (descend 0b0100011011, SRC_ENC.EA),
+    SRC_ENC.Supplement
+  );
+}
+} // let Defs = [SR]
+
+let mayLoad = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16s # AM : MxMoveToSR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                                !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16sd : MxMoveToSR<MxOp16AddrMode_d.Op, MxMoveSrcOpEnc_d>;
+
+/// Move from SR
+/// --------------------------------------------------
+///  F  E  D  C  B  A  9  8  7  6 | 5  4  3 | 2  1  0
+/// --------------------------------------------------
+///                               | EFFECTIVE ADDRESS
+///  0  1  0  0  0  0  0  0  1  1 |   MODE  |   REG
+/// --------------------------------------------------
+let Uses = [SR] in {
+class MxMoveFromSR_R
+    : MxInst<(outs MxDRD16:$dst), (ins SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ AtLeastM68010 ]> {
+  let Inst = (descend 0b0100000011, MxEncAddrMode_d<"dst">.EA);
+}
+
+class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
+    : MxInst<(outs), (ins MEMOp:$dst, SRC:$src), "move.w\t$src, $dst", []>,
+      Requires<[ AtLeastM68010 ]> {
+  let Inst = (ascend
+    (descend 0b0100000011, DST_ENC.EA),
+    DST_ENC.Supplement
+  );
+}
+} // let Uses = [SR]
+
+let mayStore = 1 in
+foreach AM = MxMoveSupportedAMs in {
+  def MOV16 # AM # s
+    : MxMoveFromSR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
+                      !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
+} // foreach AM
+
+def MOV16ds : MxMoveFromSR_R;
 
 //===----------------------------------------------------------------------===//
 // LEA

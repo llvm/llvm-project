@@ -18,6 +18,7 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #ifdef __EMSCRIPTEN__
 #include "Wasm.h"
+#include <dlfcn.h>
 #endif // __EMSCRIPTEN__
 
 #include "clang/AST/ASTConsumer.h"
@@ -711,6 +712,14 @@ llvm::Error Interpreter::Undo(unsigned N) {
 }
 
 llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+#ifdef __EMSCRIPTEN__
+  void *handle = dlopen(name, RTLD_NOW | RTLD_GLOBAL);
+  if (!handle) {
+    llvm::errs() << dlerror() << '\n';
+    return llvm::make_error<llvm::StringError>("Failed to load dynamic library",
+                                               llvm::inconvertibleErrorCode());
+  }
+#else
   auto EE = getExecutionEngine();
   if (!EE)
     return EE.takeError();
@@ -719,11 +728,10 @@ llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
 
   if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
           name, DL.getGlobalPrefix()))
-    // FIXME: Eventually we should put each library in its own JITDylib and
-    //        turn off process symbols by default.
-    EE->getProcessSymbolsJITDylib()->addGenerator(std::move(*DLSG));
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
   else
     return DLSG.takeError();
+#endif
 
   return llvm::Error::success();
 }

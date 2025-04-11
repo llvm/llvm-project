@@ -583,8 +583,9 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 
 */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/unordered_map>
+#else
 #  include <__algorithm/is_permutation.h>
 #  include <__assert>
 #  include <__config>
@@ -602,6 +603,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #  include <__memory/pointer_traits.h>
 #  include <__memory/unique_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
+#  include <__new/launder.h>
 #  include <__node_handle>
 #  include <__ranges/concepts.h>
 #  include <__ranges/container_compatible_range.h>
@@ -615,7 +617,6 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #  include <__type_traits/type_identity.h>
 #  include <__utility/forward.h>
 #  include <__utility/pair.h>
-#  include <new> // launder
 #  include <stdexcept>
 #  include <tuple>
 #  include <version>
@@ -1783,7 +1784,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) {
   iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 
@@ -1791,7 +1792,7 @@ template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 const _Tp& unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::at(const key_type& __k) const {
   const_iterator __i = find(__k);
   if (__i == end())
-    __throw_out_of_range("unordered_map::at: key not found");
+    std::__throw_out_of_range("unordered_map::at: key not found");
   return __i->second;
 }
 
@@ -1841,7 +1842,7 @@ struct __container_traits<unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc> > {
   //  other than the container's hash function from within an insert or emplace function
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
-      __nothrow_invokable<_Hash, const _Key&>::value;
+      __is_nothrow_invocable_v<_Hash, const _Key&>;
 };
 
 template <class _Key,
@@ -2541,7 +2542,7 @@ struct __container_traits<unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc> > 
   //  other than the container's hash function from within an insert or emplace function
   //  inserting a single element, the insertion has no effect.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
-      __nothrow_invokable<_Hash, const _Key&>::value;
+      __is_nothrow_invocable_v<_Hash, const _Key&>;
 };
 
 _LIBCPP_END_NAMESPACE_STD
@@ -2571,6 +2572,6 @@ _LIBCPP_POP_MACROS
 #    include <iterator>
 #    include <type_traits>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_UNORDERED_MAP

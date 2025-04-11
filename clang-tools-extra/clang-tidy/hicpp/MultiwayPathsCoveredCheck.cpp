@@ -160,7 +160,7 @@ void MultiwayPathsCoveredCheck::handleSwitchWithoutDefault(
     }
     if (const auto *BitfieldDecl =
             Result.Nodes.getNodeAs<FieldDecl>("bitfield")) {
-      return twoPow(BitfieldDecl->getBitWidthValue(*Result.Context));
+      return twoPow(BitfieldDecl->getBitWidthValue());
     }
 
     return static_cast<std::size_t>(0);

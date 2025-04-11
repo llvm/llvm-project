@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon  < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; This test checks that S2_tstbit_i instruction is generated
 ; and it does not assert.

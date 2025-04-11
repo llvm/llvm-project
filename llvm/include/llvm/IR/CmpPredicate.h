@@ -24,6 +24,9 @@ class CmpPredicate {
   bool HasSameSign;
 
 public:
+  /// Default constructor.
+  CmpPredicate() : Pred(CmpInst::BAD_ICMP_PREDICATE), HasSameSign(false) {}
+
   /// Constructed implictly with a either Predicate and samesign information, or
   /// just a Predicate, dropping samesign information.
   CmpPredicate(CmpInst::Predicate Pred, bool HasSameSign = false)
@@ -38,6 +41,10 @@ public:
   /// Query samesign information, for optimizations.
   bool hasSameSign() const { return HasSameSign; }
 
+  /// Drops samesign information. This is used when the samesign information
+  /// should be dropped explicitly.
+  CmpInst::Predicate dropSameSign() const { return Pred; }
+
   /// Compares two CmpPredicates taking samesign into account and returns the
   /// canonicalized CmpPredicate if they match. An alternative to operator==.
   ///
@@ -50,12 +57,30 @@ public:
   static std::optional<CmpPredicate> getMatching(CmpPredicate A,
                                                  CmpPredicate B);
 
+  /// Attempts to return a signed CmpInst::Predicate from the CmpPredicate. If
+  /// the CmpPredicate has samesign, return ICmpInst::getSignedPredicate,
+  /// dropping samesign information. Otherwise, return the predicate, dropping
+  /// samesign information.
+  CmpInst::Predicate getPreferredSignedPredicate() const;
+
   /// An operator== on the underlying Predicate.
   bool operator==(CmpInst::Predicate P) const { return Pred == P; }
+  bool operator!=(CmpInst::Predicate P) const { return Pred != P; }
 
   /// There is no operator== defined on CmpPredicate. Use getMatching instead to
   /// get the canonicalized matching CmpPredicate.
   bool operator==(CmpPredicate) const = delete;
+  bool operator!=(CmpPredicate) const = delete;
+
+  /// Do a ICmpInst::getCmpPredicate() or CmpInst::getPredicate(), as
+  /// appropriate.
+  static CmpPredicate get(const CmpInst *Cmp);
+
+  /// Get the swapped predicate of a CmpPredicate.
+  static CmpPredicate getSwapped(CmpPredicate P);
+
+  /// Get the swapped predicate of a CmpInst.
+  static CmpPredicate getSwapped(const CmpInst *Cmp);
 };
 } // namespace llvm
 

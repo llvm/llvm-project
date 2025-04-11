@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/Support/InstructionCost.h"
 #include <cstdint>
 #include <optional>
 
@@ -47,6 +48,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
+  static const FeatureBitset InlineInverseFeatures;
+
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
 
@@ -70,8 +73,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
-      unsigned Opcode, Type *Val, unsigned Index, bool HasRealUse,
-      const Instruction *I = nullptr, Value *Scalar = nullptr,
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {});
 
 public:
@@ -87,6 +90,10 @@ public:
 
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const;
+
+  uint64_t getFeatureMask(const Function &F) const;
+
+  bool isMultiversionedFunction(const Function &F) const;
 
   /// \name Scalar TTI Implementations
   /// @{
@@ -283,11 +290,13 @@ public:
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
 
-  bool isLegalMaskedLoad(Type *DataType, Align Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, Align Alignment,
+                         unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
-  bool isLegalMaskedStore(Type *DataType, Align Alignment) {
+  bool isLegalMaskedStore(Type *DataType, Align Alignment,
+                          unsigned /*AddressSpace*/) {
     return isLegalMaskedLoadStore(DataType, Alignment);
   }
 
@@ -357,6 +366,13 @@ public:
     return BaseT::isLegalNTLoad(DataType, Alignment);
   }
 
+  InstructionCost
+  getPartialReductionCost(unsigned Opcode, Type *InputTypeA, Type *InputTypeB,
+                          Type *AccumType, ElementCount VF,
+                          TTI::PartialReductionExtendKind OpAExtend,
+                          TTI::PartialReductionExtendKind OpBExtend,
+                          std::optional<unsigned> BinOp) const;
+
   bool enableOrderedReductions() const { return true; }
 
   InstructionCost getInterleavedMemoryOpCost(
@@ -387,9 +403,7 @@ public:
     return TailFoldingStyle::DataWithoutLaneMask;
   }
 
-  bool preferFixedOverScalableIfEqualCost() const {
-    return ST->useFixedOverScalableIfEqualCost();
-  }
+  bool preferFixedOverScalableIfEqualCost() const;
 
   unsigned getEpilogueVectorizationMinVF() const;
 
@@ -404,14 +418,22 @@ public:
   bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                    ElementCount VF) const;
 
-  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+  bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return ST->hasSVE();
   }
 
   InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
                                              std::optional<FastMathFlags> FMF,
                                              TTI::TargetCostKind CostKind);
+
+  InstructionCost getExtendedReductionCost(unsigned Opcode, bool IsUnsigned,
+                                           Type *ResTy, VectorType *ValTy,
+                                           std::optional<FastMathFlags> FMF,
+                                           TTI::TargetCostKind CostKind);
+
+  InstructionCost getMulAccReductionCost(
+      bool IsUnsigned, Type *ResTy, VectorType *Ty,
+      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput);
 
   InstructionCost getShuffleCost(TTI::ShuffleKind Kind, VectorType *Tp,
                                  ArrayRef<int> Mask,
@@ -430,7 +452,7 @@ public:
   /// mode represented by AM for this target, for a load/store
   /// of the specified type.
   /// If the AM is supported, the return value must be >= 0.
-  /// If the AM is not supported, it returns a negative value.
+  /// If the AM is not supported, it returns an invalid cost.
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,
                                        int64_t Scale, unsigned AddrSpace) const;

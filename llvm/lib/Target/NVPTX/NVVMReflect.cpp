@@ -21,6 +21,7 @@
 #include "NVPTX.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -46,29 +47,25 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-reflect"
 
-namespace llvm { void initializeNVVMReflectPass(PassRegistry &); }
-
 namespace {
 class NVVMReflect : public FunctionPass {
 public:
   static char ID;
   unsigned int SmVersion;
   NVVMReflect() : NVVMReflect(0) {}
-  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {
-    initializeNVVMReflectPass(*PassRegistry::getPassRegistry());
-  }
+  explicit NVVMReflect(unsigned int Sm) : FunctionPass(ID), SmVersion(Sm) {}
 
   bool runOnFunction(Function &) override;
 };
-}
+} // namespace
 
 FunctionPass *llvm::createNVVMReflectPass(unsigned int SmVersion) {
   return new NVVMReflect(SmVersion);
 }
 
 static cl::opt<bool>
-NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
-                   cl::desc("NVVM reflection, enabled by default"));
+    NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
+                       cl::desc("NVVM reflection, enabled by default"));
 
 char NVVMReflect::ID = 0;
 INITIALIZE_PASS(NVVMReflect, "nvvm-reflect",
@@ -188,8 +185,7 @@ static bool runNVVMReflect(Function &F, unsigned SmVersion) {
   // until we find a terminator that we can then remove.
   while (!ToSimplify.empty()) {
     Instruction *I = ToSimplify.pop_back_val();
-    if (Constant *C =
-            ConstantFoldInstruction(I, F.getDataLayout())) {
+    if (Constant *C = ConstantFoldInstruction(I, F.getDataLayout())) {
       for (User *U : I->users())
         if (Instruction *I = dyn_cast<Instruction>(U))
           ToSimplify.push_back(I);

@@ -99,14 +99,6 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"FK_PCRel_2", 0, 16, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_4", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
       {"FK_PCRel_8", 0, 64, MCFixupKindInfo::FKF_IsPCRel},
-      {"FK_GPRel_1", 0, 8, 0},
-      {"FK_GPRel_2", 0, 16, 0},
-      {"FK_GPRel_4", 0, 32, 0},
-      {"FK_GPRel_8", 0, 64, 0},
-      {"FK_DTPRel_4", 0, 32, 0},
-      {"FK_DTPRel_8", 0, 64, 0},
-      {"FK_TPRel_4", 0, 32, 0},
-      {"FK_TPRel_8", 0, 64, 0},
       {"FK_SecRel_1", 0, 8, 0},
       {"FK_SecRel_2", 0, 16, 0},
       {"FK_SecRel_4", 0, 32, 0},
@@ -115,6 +107,12 @@ const MCFixupKindInfo &MCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 
   assert((size_t)Kind <= std::size(Builtins) && "Unknown fixup kind");
   return Builtins[Kind];
+}
+
+bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
+                                         const MCValue &Target,
+                                         const MCSubtargetInfo *) {
+  return Target.getSpecifier();
 }
 
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,

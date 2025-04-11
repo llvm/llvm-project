@@ -76,7 +76,8 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
 
   StringRef Hello = "hello";
   auto SSA1 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, std::make_shared<orc::SymbolStringPool>(), nullptr,
+      *MemMgr, std::make_shared<SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), nullptr,
       {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA1, Succeeded());
 
@@ -93,7 +94,8 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
   EXPECT_EQ(Counter->InitCount, 1);
 
   auto SSA2 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, std::make_shared<orc::SymbolStringPool>(), nullptr,
+      *MemMgr, std::make_shared<SymbolStringPool>(),
+      Triple("x86_64-apple-darwin"), nullptr,
       {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA2, Succeeded());
 
@@ -137,10 +139,11 @@ TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
   auto Mapper = cantFail(InProcessMemoryMapper::Create());
   auto MemMgr = std::make_unique<MapperJITLinkMemoryManager>(16 * 1024 * 1024,
                                                              std::move(Mapper));
-  auto SSP = std::make_shared<orc::SymbolStringPool>();
+  auto SSP = std::make_shared<SymbolStringPool>();
 
   auto SSA1 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, SSP, nullptr, {{MemProt::Read, {1024, Align(1)}}});
+      *MemMgr, SSP, Triple("x86_64-apple-darwin"), nullptr,
+      {{MemProt::Read, {1024, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA1, Succeeded());
   auto SegInfo1 = SSA1->getSegInfo(MemProt::Read);
   ExecutorAddr TargetAddr1(SegInfo1.Addr);
@@ -148,7 +151,8 @@ TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
   EXPECT_THAT_EXPECTED(FA1, Succeeded());
 
   auto SSA2 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, SSP, nullptr, {{MemProt::Read, {1024, Align(1)}}});
+      *MemMgr, SSP, Triple("x86_64-apple-darwin"), nullptr,
+      {{MemProt::Read, {1024, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA2, Succeeded());
   auto FA2 = SSA2->finalize();
   EXPECT_THAT_EXPECTED(FA2, Succeeded());
@@ -160,7 +164,8 @@ TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
   EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
 
   auto SSA3 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, SSP, nullptr, {{MemProt::Read, {2048, Align(1)}}});
+      *MemMgr, SSP, Triple("x86_64-apple-darwin"), nullptr,
+      {{MemProt::Read, {2048, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA3, Succeeded());
 
   auto SegInfo3 = SSA3->getSegInfo(MemProt::Read);

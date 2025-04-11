@@ -72,7 +72,7 @@ inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
 /// Retrieve the depth and index of an unexpanded parameter pack.
 inline std::pair<unsigned, unsigned>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
-  if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
+  if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
   return getDepthAndIndex(cast<NamedDecl *>(UPP.first));

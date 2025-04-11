@@ -22,6 +22,8 @@ class SiFiveP400IsWorstCaseMXSEW<string mx, int sew, list<string> MxList, bit is
   bit c = !and(!eq(mx, LLMUL), !eq(sew, SSEW));
 }
 
+defvar SiFiveP400VLEN = 128;
+
 // 1 Micro-Op per cycle.
 class SiFiveP400GetLMulCycles<string mx> {
   int c = !cond(
@@ -35,19 +37,31 @@ class SiFiveP400GetLMulCycles<string mx> {
   );
 }
 
-// Latency for segmented loads and stores are calculated as vl * nf.
-class SiFiveP400GetCyclesSegmented<string mx, int sew, int nf> {
-  defvar VLEN = 128;
-  defvar VLUpperBound = !cond(
-    !eq(mx, "M1") : !div(VLEN, sew),
-    !eq(mx, "M2") : !div(!mul(VLEN, 2), sew),
-    !eq(mx, "M4") : !div(!mul(VLEN, 4), sew),
-    !eq(mx, "M8") : !div(!mul(VLEN, 8), sew),
-    !eq(mx, "MF2") : !div(!div(VLEN, 2), sew),
-    !eq(mx, "MF4") : !div(!div(VLEN, 4), sew),
-    !eq(mx, "MF8") : !div(!div(VLEN, 8), sew),
+class SiFiveP400GetVLMAX<string mx, int sew> {
+  defvar LMUL = SiFiveP400GetLMulCycles<mx>.c;
+  int val = !cond(
+    !eq(mx, "MF2") : !div(!div(SiFiveP400VLEN, 2), sew),
+    !eq(mx, "MF4") : !div(!div(SiFiveP400VLEN, 4), sew),
+    !eq(mx, "MF8") : !div(!div(SiFiveP400VLEN, 8), sew),
+    true: !div(!mul(SiFiveP400VLEN, LMUL), sew)
   );
-  int c = !mul(VLUpperBound, nf);
+}
+
+class SiFiveP400StridedLdStLatency<string mx, int sew> {
+  defvar VL = SiFiveP400GetVLMAX<mx, sew>.val;
+  int val = !cond(
+    !eq(VL, 2):  13,
+    !eq(VL, 4):  18,
+    !eq(VL, 8):  22,
+    !eq(VL, 16): 30,
+    // VL=32,64,128
+    true: !sub(VL, 2)
+  );
+}
+
+// Latency for segmented loads and stores are calculated as vl * nf.
+class SiFiveP400SegmentedLdStCycles<string mx, int sew, int nf> {
+  int c = !mul(SiFiveP400GetVLMAX<mx, sew>.val, nf);
 }
 
 // Both variants of floating point vector reductions are based on numbers collected
@@ -119,7 +133,7 @@ class SiFiveP400VSM3CCycles<string mx> {
 
 def SiFiveP400Model : SchedMachineModel {
   let IssueWidth = 3;         // 3 micro-ops are dispatched per cycle.
-  let MicroOpBufferSize = 56; // Max micro-ops that can be buffered.
+  let MicroOpBufferSize = 96; // Max micro-ops that can be buffered.
   let LoadLatency = 4;        // Cycles for loads to access the cache.
   let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,
@@ -182,7 +196,7 @@ def P400WriteCMOV : SchedWriteRes<[SiFiveP400Branch, SiFiveP400IEXQ1]> {
 }
 def : InstRW<[P400WriteCMOV], (instrs PseudoCCMOVGPRNoX0)>;
 
-let Latency = 3 in {
+let Latency = 2 in {
 // Integer multiplication
 def : WriteRes<WriteIMul, [SiFiveP400MulDiv]>;
 def : WriteRes<WriteIMul32, [SiFiveP400MulDiv]>;
@@ -368,57 +382,37 @@ def : WriteRes<WriteVSETIVLI, [SiFiveP400SYS]>;
 def : WriteRes<WriteVSETVL, [SiFiveP400SYS]>;
 
 // 7. Vector Loads and Stores
-// FIXME: This unit is still being improved, currently
-// it is based on stage numbers. Estimates are optimistic,
-// latency may be longer.
-foreach mx = SchedMxList in {
-  defvar LMulLat = SiFiveP400GetLMulCycles<mx>.c;
-  defvar IsWorstCase = SiFiveP400IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 8, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVLDE",    [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDM",    [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDFF",   [SiFiveP400VLD], mx, IsWorstCase>;
-  }
-  let Latency = 12, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVLDS8",   [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDS16",  [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDS32",  [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDS64",  [SiFiveP400VLD], mx, IsWorstCase>;
-  }
-  let Latency = 12, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVLDUX8",  [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDUX16", [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDUX32", [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDUX64", [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX8",  [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX16", [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX32", [SiFiveP400VLD], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVLDOX64", [SiFiveP400VLD], mx, IsWorstCase>;
-  }
-}
 
+// Note that the latency of vector loads are measured by consuming the loaded
+// value with vmv.x.s before subtracting the latency of vmv.x.s from the number.
 foreach mx = SchedMxList in {
   defvar LMulLat = SiFiveP400GetLMulCycles<mx>.c;
   defvar IsWorstCase = SiFiveP400IsWorstCaseMX<mx, SchedMxList>.c;
-  let Latency = 8, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVSTE",    [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTM",    [SiFiveP400VST], mx, IsWorstCase>;
+  let Latency = 8 in {
+    let ReleaseAtCycles = [LMulLat] in {
+      defm "" : LMULWriteResMX<"WriteVLDE",  [SiFiveP400VLD], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDFF", [SiFiveP400VLD], mx, IsWorstCase>;
+
+      defm "" : LMULWriteResMX<"WriteVSTE",  [SiFiveP400VST], mx, IsWorstCase>;
+    }
+
+    // Mask load and store have a maximum EMUL of 1.
+    let ReleaseAtCycles = [SiFiveP400GetLMulCycles<"M1">.c] in {
+      defm "" : LMULWriteResMX<"WriteVLDM",  [SiFiveP400VLD], mx, IsWorstCase=!eq(mx, "M1")>;
+      defm "" : LMULWriteResMX<"WriteVSTM",  [SiFiveP400VST], mx, IsWorstCase=!eq(mx, "M1")>;
+    }
   }
-  let Latency = 12, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVSTS8",   [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTS16",  [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTS32",  [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTS64",  [SiFiveP400VST], mx, IsWorstCase>;
-  }
-  let Latency = 12, ReleaseAtCycles = [LMulLat] in {
-    defm "" : LMULWriteResMX<"WriteVSTUX8",  [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTUX16", [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTUX32", [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTUX64", [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX8",  [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX16", [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX32", [SiFiveP400VST], mx, IsWorstCase>;
-    defm "" : LMULWriteResMX<"WriteVSTOX64", [SiFiveP400VST], mx, IsWorstCase>;
+  foreach eew = [8, 16, 32, 64] in {
+    let Latency = SiFiveP400StridedLdStLatency<mx, eew>.val,
+        ReleaseAtCycles = [SiFiveP400GetVLMAX<mx, eew>.val] in {
+      defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SiFiveP400VLD], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SiFiveP400VLD], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SiFiveP400VLD], mx, IsWorstCase>;
+
+      defm "" : LMULWriteResMX<"WriteVSTS"  # eew, [SiFiveP400VST], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTUX" # eew, [SiFiveP400VST], mx, IsWorstCase>;
+      defm "" : LMULWriteResMX<"WriteVSTOX" # eew, [SiFiveP400VST], mx, IsWorstCase>;
+    }
   }
 }
 
@@ -426,7 +420,7 @@ foreach mx = SchedMxList in {
   foreach nf=2-8 in {
     foreach eew = [8, 16, 32, 64] in {
       defvar IsWorstCase = SiFiveP400IsWorstCaseMX<mx, SchedMxList>.c;
-      defvar LMulLat = SiFiveP400GetCyclesSegmented<mx, eew, nf>.c;
+      defvar LMulLat = SiFiveP400SegmentedLdStCycles<mx, eew, nf>.c;
       let Latency = !add(12, LMulLat), ReleaseAtCycles = [!add(12, LMulLat)] in {
         defm "" : LMULWriteResMX<"WriteVLSEG" # nf # "e" #eew,   [SiFiveP400VLD], mx, IsWorstCase>;
         defm "" : LMULWriteResMX<"WriteVLSEGFF" # nf # "e" #eew, [SiFiveP400VLD], mx, IsWorstCase>;

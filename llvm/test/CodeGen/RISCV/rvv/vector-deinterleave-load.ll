@@ -16,18 +16,22 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>} @vector_deinterleave_load_nxv16i
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v8, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vim v14, v10, 1, v0
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    vmerge.vim v10, v12, 1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v12, v10, 1, v0
-; CHECK-NEXT:    vnsrl.wi v8, v12, 0
-; CHECK-NEXT:    vnsrl.wi v10, v12, 8
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vmsne.vi v8, v10, 0
+; CHECK-NEXT:    vmerge.vim v8, v12, 1, v0
+; CHECK-NEXT:    vnsrl.wi v12, v8, 0
+; CHECK-NEXT:    vnsrl.wi v14, v8, 8
+; CHECK-NEXT:    vmsne.vi v0, v12, 0
+; CHECK-NEXT:    vmsne.vi v8, v14, 0
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 32 x i1>, ptr %p
-  %retval = call {<vscale x 16 x i1>, <vscale x 16 x i1>} @llvm.vector.deinterleave2.nxv32i1(<vscale x 32 x i1> %vec)
-  ret {<vscale x 16 x i1>, <vscale x 16 x i1>} %retval
+  %deinterleaved.results = call {<vscale x 16 x i1>, <vscale x 16 x i1>} @llvm.vector.deinterleave2.nxv32i1(<vscale x 32 x i1> %vec)
+  %t0 = extractvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } undef, <vscale x 16 x i1> %t0, 0
+  %res1 = insertvalue { <vscale x 16 x i1>, <vscale x 16 x i1> } %res0, <vscale x 16 x i1> %t1, 1
+  ret {<vscale x 16 x i1>, <vscale x 16 x i1>} %res1
 }
 
 define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_load_nxv16i8_nxv32i8(ptr %p) {
@@ -37,8 +41,12 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>} @vector_deinterleave_load_nxv16i
 ; CHECK-NEXT:    vlseg2e8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 32 x i8>, ptr %p
-  %retval = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
-  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %retval
+  %deinterleaved.results = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
+  %t0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } undef, <vscale x 16 x i8> %t0, 0
+  %res1 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %res0, <vscale x 16 x i8> %t1, 1
+  ret {<vscale x 16 x i8>, <vscale x 16 x i8>} %res1
 }
 
 ; Shouldn't be lowered to vlseg because it's unaligned
@@ -51,8 +59,12 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i1
 ; CHECK-NEXT:    vnsrl.wi v10, v12, 16
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x i16>, ptr %p, align 1
-  %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)
-  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %retval
+  %deinterleaved.results = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)
+  %t0 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } undef, <vscale x 8 x i16> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %res0, <vscale x 8 x i16> %t1, 1
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %res1
 }
 
 define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i16_nxv16i16(ptr %p) {
@@ -62,8 +74,12 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>} @vector_deinterleave_load_nxv8i1
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x i16>, ptr %p
-  %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)
-  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %retval
+  %deinterleaved.results = call {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16> %vec)
+  %t0 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } undef, <vscale x 8 x i16> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x i16>, <vscale x 8 x i16> } %res0, <vscale x 8 x i16> %t1, 1
+  ret {<vscale x 8 x i16>, <vscale x 8 x i16>} %res1
 }
 
 define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_load_nxv4i32_nxvv8i32(ptr %p) {
@@ -73,8 +89,12 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>} @vector_deinterleave_load_nxv4i3
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 8 x i32>, ptr %p
-  %retval = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec)
-  ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %retval
+  %deinterleaved.results = call {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %vec)
+  %t0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } undef, <vscale x 4 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %res0, <vscale x 4 x i32> %t1, 1
+  ret {<vscale x 4 x i32>, <vscale x 4 x i32>} %res1
 }
 
 define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_load_nxv2i64_nxv4i64(ptr %p) {
@@ -84,8 +104,12 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>} @vector_deinterleave_load_nxv2i6
 ; CHECK-NEXT:    vlseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 4 x i64>, ptr %p
-  %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %vec)
-  ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %retval
+  %deinterleaved.results = call {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64> %vec)
+  %t0 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } undef, <vscale x 2 x i64> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i64>, <vscale x 2 x i64> } %res0, <vscale x 2 x i64> %t1, 1
+  ret {<vscale x 2 x i64>, <vscale x 2 x i64>} %res1
 }
 
 define {<vscale x 4 x i64>, <vscale x 4 x i64>} @vector_deinterleave_load_nxv4i64_nxv8i64(ptr %p) {
@@ -95,8 +119,12 @@ define {<vscale x 4 x i64>, <vscale x 4 x i64>} @vector_deinterleave_load_nxv4i6
 ; CHECK-NEXT:    vlseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 8 x i64>, ptr %p
-  %retval = call {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %vec)
-  ret {<vscale x 4 x i64>, <vscale x 4 x i64>} %retval
+  %deinterleaved.results = call {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %vec)
+  %t0 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } undef, <vscale x 4 x i64> %t0, 0
+  %res1 = insertvalue { <vscale x 4 x i64>, <vscale x 4 x i64> } %res0, <vscale x 4 x i64> %t1, 1
+  ret {<vscale x 4 x i64>, <vscale x 4 x i64>} %res1
 }
 
 ; This shouldn't be lowered to a vlseg because EMUL * NFIELDS >= 8
@@ -106,73 +134,57 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_load_nxv8i6
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a2, 24
-; CHECK-NEXT:    mul a1, a1, a2
+; CHECK-NEXT:    slli a1, a1, 4
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; CHECK-NEXT:    li a1, 85
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
+; CHECK-NEXT:    vmv.v.x v16, a1
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    vl8re64.v v16, (a0)
-; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
-; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    vmseq.vi v24, v8, 0
-; CHECK-NEXT:    vl8re64.v v8, (a0)
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vmnot.m v6, v24
-; CHECK-NEXT:    vcompress.vm v8, v16, v24
-; CHECK-NEXT:    vmv1r.v v13, v24
-; CHECK-NEXT:    vcompress.vm v24, v16, v6
-; CHECK-NEXT:    vmv1r.v v12, v6
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
-; CHECK-NEXT:    add a0, sp, a0
-; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vcompress.vm v0, v16, v13
+; CHECK-NEXT:    li a1, 170
+; CHECK-NEXT:    vl8re64.v v0, (a0)
+; CHECK-NEXT:    vmv.v.x v17, a1
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vcompress.vm v8, v24, v16
+; CHECK-NEXT:    vmv1r.v v12, v16
+; CHECK-NEXT:    vmv1r.v v13, v17
+; CHECK-NEXT:    vcompress.vm v16, v24, v13
+; CHECK-NEXT:    vcompress.vm v24, v0, v12
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
-; CHECK-NEXT:    vcompress.vm v0, v16, v12
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vcompress.vm v24, v0, v13
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmv4r.v v12, v16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv4r.v v12, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
-; CHECK-NEXT:    vmv4r.v v28, v16
-; CHECK-NEXT:    vmv8r.v v16, v24
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vmv4r.v v20, v24
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    li a1, 24
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x i64>, ptr %p
-  %retval = call {<vscale x 8 x i64>, <vscale x 8 x i64>} @llvm.vector.deinterleave2.nxv16i64(<vscale x 16 x i64> %vec)
-  ret {<vscale x 8 x i64>, <vscale x 8 x i64>} %retval
+  %deinterleaved.results = call {<vscale x 8 x i64>, <vscale x 8 x i64>} @llvm.vector.deinterleave2.nxv16i64(<vscale x 16 x i64> %vec)
+  %t0 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } undef, <vscale x 8 x i64> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x i64>, <vscale x 8 x i64> } %res0, <vscale x 8 x i64> %t1, 1
+  ret {<vscale x 8 x i64>, <vscale x 8 x i64>} %res1
 }
-
-declare {<vscale x 16 x i1>, <vscale x 16 x i1>} @llvm.vector.deinterleave2.nxv32i1(<vscale x 32 x i1>)
-declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8>)
-declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave2.nxv16i16(<vscale x 16 x i16>)
-declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32>)
-declare {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave2.nxv4i64(<vscale x 4 x i64>)
-declare {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64>)
-declare {<vscale x 8 x i64>, <vscale x 8 x i64>} @llvm.vector.deinterleave2.nxv16i64(<vscale x 16 x i64>)
 
 ; Floats
 
@@ -183,8 +195,12 @@ define {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @vector_deinterleave_load_
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 4 x bfloat>, ptr %p
-  %retval = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave2.nxv4bf16(<vscale x 4 x bfloat> %vec)
-  ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} %retval
+  %deinterleaved.results = call {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} @llvm.vector.deinterleave2.nxv4bf16(<vscale x 4 x bfloat> %vec)
+  %t0 = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } undef, <vscale x 2 x bfloat> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x bfloat>, <vscale x 2 x bfloat> } %res0, <vscale x 2 x bfloat> %t1, 1
+  ret {<vscale x 2 x bfloat>, <vscale x 2 x bfloat>} %res1
 }
 
 define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_load_nxv4bf16_nxv8bf16(ptr %p) {
@@ -194,8 +210,12 @@ define {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @vector_deinterleave_load_
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 8 x bfloat>, ptr %p
-  %retval = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave2.nxv8bf16(<vscale x 8 x bfloat> %vec)
-  ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} %retval
+  %deinterleaved.results = call {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} @llvm.vector.deinterleave2.nxv8bf16(<vscale x 8 x bfloat> %vec)
+  %t0 = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } undef, <vscale x 4 x bfloat> %t0, 0
+  %res1 = insertvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %res0, <vscale x 4 x bfloat> %t1, 1
+  ret {<vscale x 4 x bfloat>, <vscale x 4 x bfloat>} %res1
 }
 
 define {<vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_load_nxv2f16_nxv4f16(ptr %p) {
@@ -205,8 +225,12 @@ define {<vscale x 2 x half>, <vscale x 2 x half>} @vector_deinterleave_load_nxv2
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 4 x half>, ptr %p
-  %retval = call {<vscale x 2 x half>, <vscale x 2 x half>} @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %vec)
-  ret {<vscale x 2 x half>, <vscale x 2 x half>} %retval
+  %deinterleaved.results = call {<vscale x 2 x half>, <vscale x 2 x half>} @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half> %vec)
+  %t0 = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x half>, <vscale x 2 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x half>, <vscale x 2 x half> } undef, <vscale x 2 x half> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x half>, <vscale x 2 x half> } %res0, <vscale x 2 x half> %t1, 1
+  ret {<vscale x 2 x half>, <vscale x 2 x half>} %res1
 }
 
 define {<vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_load_nxv4f16_nxv8f16(ptr %p) {
@@ -216,8 +240,12 @@ define {<vscale x 4 x half>, <vscale x 4 x half>} @vector_deinterleave_load_nxv4
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 8 x half>, ptr %p
-  %retval = call {<vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %vec)
-  ret {<vscale x 4 x half>, <vscale x 4 x half>} %retval
+  %deinterleaved.results = call {<vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half> %vec)
+  %t0 = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 4 x half>, <vscale x 4 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } undef, <vscale x 4 x half> %t0, 0
+  %res1 = insertvalue { <vscale x 4 x half>, <vscale x 4 x half> } %res0, <vscale x 4 x half> %t1, 1
+  ret {<vscale x 4 x half>, <vscale x 4 x half>} %res1
 }
 
 define {<vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_load_nxv2f32_nxv4f32(ptr %p) {
@@ -227,8 +255,12 @@ define {<vscale x 2 x float>, <vscale x 2 x float>} @vector_deinterleave_load_nx
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 4 x float>, ptr %p
-  %retval = call {<vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %vec)
-  ret {<vscale x 2 x float>, <vscale x 2 x float>} %retval
+  %deinterleaved.results = call {<vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float> %vec)
+  %t0 = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x float>, <vscale x 2 x float> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } undef, <vscale x 2 x float> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x float>, <vscale x 2 x float> } %res0, <vscale x 2 x float> %t1, 1
+  ret {<vscale x 2 x float>, <vscale x 2 x float>} %res1
 }
 
 define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_load_nxv8bf16_nxv16bf16(ptr %p) {
@@ -238,8 +270,12 @@ define {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @vector_deinterleave_load_
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x bfloat>, ptr %p
-  %retval = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave2.nxv16bf16(<vscale x 16 x bfloat> %vec)
-  ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %retval
+  %deinterleaved.results = call {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} @llvm.vector.deinterleave2.nxv16bf16(<vscale x 16 x bfloat> %vec)
+  %t0 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } undef, <vscale x 8 x bfloat> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res0, <vscale x 8 x bfloat> %t1, 1
+  ret {<vscale x 8 x bfloat>, <vscale x 8 x bfloat>} %res1
 }
 
 define {<vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_load_nxv8f16_nxv16f16(ptr %p) {
@@ -249,8 +285,12 @@ define {<vscale x 8 x half>, <vscale x 8 x half>} @vector_deinterleave_load_nxv8
 ; CHECK-NEXT:    vlseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 16 x half>, ptr %p
-  %retval = call {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %vec)
-  ret {<vscale x 8 x half>, <vscale x 8 x half>} %retval
+  %deinterleaved.results = call {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half> %vec)
+  %t0 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 8 x half>, <vscale x 8 x half> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } undef, <vscale x 8 x half> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x half>, <vscale x 8 x half> } %res0, <vscale x 8 x half> %t1, 1
+  ret {<vscale x 8 x half>, <vscale x 8 x half>} %res1
 }
 
 define {<vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_load_nxv4f32_nxv8f32(ptr %p) {
@@ -260,8 +300,12 @@ define {<vscale x 4 x float>, <vscale x 4 x float>} @vector_deinterleave_load_nx
 ; CHECK-NEXT:    vlseg2e32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 8 x float>, ptr %p
-  %retval = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %vec)
-  ret  {<vscale x 4 x float>, <vscale x 4 x float>} %retval
+  %deinterleaved.results = call {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float> %vec)
+  %t0 = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 4 x float>, <vscale x 4 x float> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } undef, <vscale x 4 x float> %t0, 0
+  %res1 = insertvalue { <vscale x 4 x float>, <vscale x 4 x float> } %res0, <vscale x 4 x float> %t1, 1
+  ret {<vscale x 4 x float>, <vscale x 4 x float>} %res1
 }
 
 define {<vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_load_nxv2f64_nxv4f64(ptr %p) {
@@ -271,8 +315,12 @@ define {<vscale x 2 x double>, <vscale x 2 x double>} @vector_deinterleave_load_
 ; CHECK-NEXT:    vlseg2e64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 4 x double>, ptr %p
-  %retval = call {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %vec)
-  ret {<vscale x 2 x double>, <vscale x 2 x double>} %retval
+  %deinterleaved.results = call {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double> %vec)
+  %t0 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } undef, <vscale x 2 x double> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x double>, <vscale x 2 x double> } %res0, <vscale x 2 x double> %t1, 1
+  ret {<vscale x 2 x double>, <vscale x 2 x double>} %res1
 }
 
 define {<vscale x 2 x ptr>, <vscale x 2 x ptr>} @vector_deinterleave_load_nxv2p0_nxv4p0(ptr %p) {
@@ -288,14 +336,75 @@ define {<vscale x 2 x ptr>, <vscale x 2 x ptr>} @vector_deinterleave_load_nxv2p0
 ; RV64-NEXT:    vlseg2e64.v v8, (a0)
 ; RV64-NEXT:    ret
   %vec = load <vscale x 4 x ptr>, ptr %p
-  %retval = call {<vscale x 2 x ptr>, <vscale x 2 x ptr>} @llvm.vector.deinterleave2.nxv4p0(<vscale x 4 x ptr> %vec)
-  ret {<vscale x 2 x ptr>, <vscale x 2 x ptr>} %retval
+  %deinterleaved.results = call {<vscale x 2 x ptr>, <vscale x 2 x ptr>} @llvm.vector.deinterleave2.nxv4p0(<vscale x 4 x ptr> %vec)
+  %t0 = extractvalue { <vscale x 2 x ptr>, <vscale x 2 x ptr> } %deinterleaved.results, 0
+  %t1 = extractvalue { <vscale x 2 x ptr>, <vscale x 2 x ptr> } %deinterleaved.results, 1
+  %res0 = insertvalue { <vscale x 2 x ptr>, <vscale x 2 x ptr> } undef, <vscale x 2 x ptr> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x ptr>, <vscale x 2 x ptr> } %res0, <vscale x 2 x ptr> %t1, 1
+  ret {<vscale x 2 x ptr>, <vscale x 2 x ptr>} %res1
 }
 
-declare {<vscale x 2 x half>,<vscale x 2 x half>} @llvm.vector.deinterleave2.nxv4f16(<vscale x 4 x half>)
-declare {<vscale x 4 x half>, <vscale x 4 x half>} @llvm.vector.deinterleave2.nxv8f16(<vscale x 8 x half>)
-declare {<vscale x 2 x float>, <vscale x 2 x float>} @llvm.vector.deinterleave2.nxv4f32(<vscale x 4 x float>)
-declare {<vscale x 8 x half>, <vscale x 8 x half>} @llvm.vector.deinterleave2.nxv16f16(<vscale x 16 x half>)
-declare {<vscale x 4 x float>, <vscale x 4 x float>} @llvm.vector.deinterleave2.nxv8f32(<vscale x 8 x float>)
-declare {<vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>)
-declare {<vscale x 2 x ptr>, <vscale x 2 x ptr>} @llvm.vector.deinterleave2.nxv4p0(<vscale x 4 x ptr>)
+define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @vector_deinterleave_load_factor4(ptr %p) {
+; CHECK-LABEL: vector_deinterleave_load_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 32 x i8>, ptr %p
+  %d0 = call {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> %vec)
+  %d0.0 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %d0, 0
+  %d0.1 = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } %d0, 1
+  %d1 = call {<vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave2.nxv16i8(<vscale x 16 x i8> %d0.0)
+  %t0 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } %d1, 0
+  %t2 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } %d1, 1
+  %d2 = call {<vscale x 8 x i8>, <vscale x 8 x i8>} @llvm.vector.deinterleave2.nxv16i8(<vscale x 16 x i8> %d0.1)
+  %t1 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } %d2, 0
+  %t3 = extractvalue { <vscale x 8 x i8>, <vscale x 8 x i8> } %d2, 1
+
+  %res0 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } undef, <vscale x 8 x i8> %t0, 0
+  %res1 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res0, <vscale x 8 x i8> %t1, 1
+  %res2 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res1, <vscale x 8 x i8> %t2, 2
+  %res3 = insertvalue { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res2, <vscale x 8 x i8> %t3, 3
+  ret { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } %res3
+}
+
+define {<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>} @vector_deinterleave_load_factor8(ptr %ptr) {
+; CHECK-LABEL: vector_deinterleave_load_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg8e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %vec = load <vscale x 16 x i32>, ptr %ptr
+  %d0 = call { <vscale x 8 x i32>, <vscale x 8 x i32> } @llvm.vector.deinterleave2.nxv16i32(<vscale x 16 x i32> %vec)
+  %d0.0 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d0, 0
+  %d0.1 = extractvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } %d0, 1
+  %d1 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %d0.0)
+  %d1.0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d1, 0
+  %d1.1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d1, 1
+  %d2 = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.vector.deinterleave2.nxv8i32(<vscale x 8 x i32> %d0.1)
+  %d2.0 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d2, 0
+  %d2.1 = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32> } %d2, 1
+
+  %d3 = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %d1.0)
+  %t0 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d3, 0
+  %t4 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d3, 1
+  %d4 = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %d1.1)
+  %t2 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d4, 0
+  %t6 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d4, 1
+  %d5 = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %d2.0)
+  %t1 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d5, 0
+  %t5 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d5, 1
+  %d6 = call { <vscale x 2 x i32>, <vscale x 2 x i32> } @llvm.vector.deinterleave2.nxv4i32(<vscale x 4 x i32> %d2.1)
+  %t3 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d6, 0
+  %t7 = extractvalue { <vscale x 2 x i32>, <vscale x 2 x i32> } %d6, 1
+
+  %res0 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } undef, <vscale x 2 x i32> %t0, 0
+  %res1 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res0, <vscale x 2 x i32> %t1, 1
+  %res2 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res1, <vscale x 2 x i32> %t2, 2
+  %res3 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res2, <vscale x 2 x i32> %t3, 3
+  %res4 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res3, <vscale x 2 x i32> %t4, 4
+  %res5 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res4, <vscale x 2 x i32> %t5, 5
+  %res6 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res5, <vscale x 2 x i32> %t6, 6
+  %res7 = insertvalue { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res6, <vscale x 2 x i32> %t7, 7
+  ret { <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32> } %res7
+}

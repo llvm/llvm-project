@@ -129,14 +129,14 @@ private:
   // Static values member
   static constexpr size_t __size_         = sizeof...(_Values);
   static constexpr size_t __size_dynamic_ = ((_Values == _DynTag) + ... + 0);
-  using _StaticValues                     = __static_array<_TStatic, _Values...>;
-  using _DynamicValues                    = __possibly_empty_array<_TDynamic, __size_dynamic_>;
+  using _StaticValues _LIBCPP_NODEBUG     = __static_array<_TStatic, _Values...>;
+  using _DynamicValues _LIBCPP_NODEBUG    = __possibly_empty_array<_TDynamic, __size_dynamic_>;
 
   // Dynamic values member
   _LIBCPP_NO_UNIQUE_ADDRESS _DynamicValues __dyn_vals_;
 
   // static mapping of indices to the position in the dynamic values array
-  using _DynamicIdxMap = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
+  using _DynamicIdxMap _LIBCPP_NODEBUG = __static_partial_sums<static_cast<size_t>(_Values == _DynTag)...>;
 
   template <size_t... _Indices>
   _LIBCPP_HIDE_FROM_ABI static constexpr _DynamicValues __zeros(index_sequence<_Indices...>) noexcept {
@@ -292,7 +292,8 @@ private:
   static constexpr rank_type __rank_dynamic_ = ((_Extents == dynamic_extent) + ... + 0);
 
   // internal storage type using __maybe_static_array
-  using _Values = __mdspan_detail::__maybe_static_array<_IndexType, size_t, dynamic_extent, _Extents...>;
+  using _Values _LIBCPP_NODEBUG =
+      __mdspan_detail::__maybe_static_array<_IndexType, size_t, dynamic_extent, _Extents...>;
   [[no_unique_address]] _Values __vals_;
 
 public:
@@ -439,13 +440,13 @@ struct __make_dextents;
 
 template <class _IndexType, size_t _Rank, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, _Rank, extents<_IndexType, _ExtentsPack...>> {
-  using type =
+  using type _LIBCPP_NODEBUG =
       typename __make_dextents< _IndexType, _Rank - 1, extents<_IndexType, dynamic_extent, _ExtentsPack...>>::type;
 };
 
 template <class _IndexType, size_t... _ExtentsPack>
 struct __make_dextents< _IndexType, 0, extents<_IndexType, _ExtentsPack...>> {
-  using type = extents<_IndexType, _ExtentsPack...>;
+  using type _LIBCPP_NODEBUG = extents<_IndexType, _ExtentsPack...>;
 };
 
 } // namespace __mdspan_detail

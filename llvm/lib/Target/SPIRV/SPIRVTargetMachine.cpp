@@ -48,6 +48,16 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVModuleAnalysisPass(PR);
   initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PR);
   initializeSPIRVStructurizerPass(PR);
+  initializeSPIRVPreLegalizerCombinerPass(PR);
+  initializeSPIRVLegalizePointerCastPass(PR);
+  initializeSPIRVRegularizerPass(PR);
+  initializeSPIRVPreLegalizerPass(PR);
+  initializeSPIRVPostLegalizerPass(PR);
+  initializeSPIRVMergeRegionExitTargetsPass(PR);
+  initializeSPIRVEmitIntrinsicsPass(PR);
+  initializeSPIRVEmitNonSemanticDIPass(PR);
+  initializeSPIRVPrepareFunctionsPass(PR);
+  initializeSPIRVStripConvergentIntrinsicsPass(PR);
 }
 
 static std::string computeDataLayout(const Triple &TT) {
@@ -208,6 +218,8 @@ void SPIRVPassConfig::addIRPasses() {
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
+  if (TM.getSubtargetImpl()->isVulkanEnv())
+    addPass(createSPIRVLegalizePointerCastPass(&getTM<SPIRVTargetMachine>()));
   TargetPassConfig::addISelPrepare();
 }
 
@@ -217,6 +229,7 @@ bool SPIRVPassConfig::addIRTranslator() {
 }
 
 void SPIRVPassConfig::addPreLegalizeMachineIR() {
+  addPass(createSPIRVPreLegalizerCombiner());
   addPass(createSPIRVPreLegalizerPass());
 }
 

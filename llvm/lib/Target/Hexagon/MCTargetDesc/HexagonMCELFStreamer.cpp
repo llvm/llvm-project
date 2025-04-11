@@ -182,6 +182,12 @@ static unsigned featureToArchVersion(unsigned Feature) {
   case Hexagon::ArchV73:
   case Hexagon::ExtensionHVXV73:
     return 73;
+  case Hexagon::ArchV75:
+  case Hexagon::ExtensionHVXV75:
+    return 75;
+  case Hexagon::ArchV79:
+  case Hexagon::ExtensionHVXV79:
+    return 79;
   }
   llvm_unreachable("Expected valid arch feature");
   return 0;

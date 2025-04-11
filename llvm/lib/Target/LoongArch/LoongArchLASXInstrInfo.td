@@ -186,10 +186,10 @@ class LASX2RI10_Load<bits<32> op, Operand ImmOpnd = simm10_lsl2>
 class LASX2RI11_Load<bits<32> op, Operand ImmOpnd = simm11_lsl1>
     : Fmt2RI11_XRI<op, (outs LASX256:$xd), (ins GPR:$rj, ImmOpnd:$imm11),
                   "$xd, $rj, $imm11">;
-class LASX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12>
+class LASX2RI12_Load<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_XRI<op, (outs LASX256:$xd), (ins GPR:$rj, ImmOpnd:$imm12),
                   "$xd, $rj, $imm12">;
-class LASX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12>
+class LASX2RI12_Store<bits<32> op, Operand ImmOpnd = simm12_addlike>
     : Fmt2RI12_XRI<op, (outs), (ins LASX256:$xd, GPR:$rj, ImmOpnd:$imm12),
                   "$xd, $rj, $imm12">;
 
@@ -1561,6 +1561,12 @@ def : Pat<(vector_insert v8f32:$vd, FPR32:$fj, uimm3:$imm),
           (XVINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm3:$imm)>;
 def : Pat<(vector_insert v4f64:$vd, FPR64:$fj, uimm2:$imm),
           (XVINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm2:$imm)>;
+
+// scalar_to_vector
+def : Pat<(v8f32 (scalar_to_vector FPR32:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32)>;
+def : Pat<(v4f64 (scalar_to_vector FPR64:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64)>; 
 
 // XVPICKVE2GR_W[U]
 def : Pat<(loongarch_vpick_sext_elt v8i32:$xd, uimm3:$imm, i32),

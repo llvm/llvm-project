@@ -70,6 +70,8 @@ def : GINodeEquiv<G_SDIV, sdiv>;
 def : GINodeEquiv<G_UDIV, udiv>;
 def : GINodeEquiv<G_SREM, srem>;
 def : GINodeEquiv<G_UREM, urem>;
+def : GINodeEquiv<G_SDIVREM, sdivrem>;
+def : GINodeEquiv<G_UDIVREM, udivrem>;
 def : GINodeEquiv<G_AND, and>;
 def : GINodeEquiv<G_OR, or>;
 def : GINodeEquiv<G_XOR, xor>;

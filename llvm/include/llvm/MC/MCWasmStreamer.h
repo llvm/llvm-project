@@ -45,7 +45,6 @@ public:
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
                       uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -68,10 +67,7 @@ public:
   void finishImpl() override;
 
 private:
-  void emitInstToFragment(const MCInst &Inst, const MCSubtargetInfo &) override;
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
-
-  void fixSymbolsInTLSFixups(const MCExpr *expr);
 
   bool SeenIdent;
 };

@@ -1115,9 +1115,8 @@ define <vscale x 1 x i64> @vandn_vx_vp_nxv1i64(i64 %a, <vscale x 1 x i64> %b, <v
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
-; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v9, (a0), zero
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v9, (a0), zero
 ; CHECK-RV32-NEXT:    vand.vv v8, v8, v9, v0.t
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1139,9 +1138,8 @@ define <vscale x 1 x i64> @vandn_vx_vp_nxv1i64(i64 %a, <vscale x 1 x i64> %b, <v
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8
-; CHECK-ZVKB32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; CHECK-ZVKB32-NEXT:    vlse64.v v9, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
+; CHECK-ZVKB32-NEXT:    vlse64.v v9, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vand.vv v8, v8, v9, v0.t
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, 16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 0
@@ -1208,9 +1206,8 @@ define <vscale x 2 x i64> @vandn_vx_vp_nxv2i64(i64 %a, <vscale x 2 x i64> %b, <v
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
-; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-RV32-NEXT:    vand.vv v8, v8, v10, v0.t
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1232,9 +1229,8 @@ define <vscale x 2 x i64> @vandn_vx_vp_nxv2i64(i64 %a, <vscale x 2 x i64> %b, <v
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8
-; CHECK-ZVKB32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
-; CHECK-ZVKB32-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
+; CHECK-ZVKB32-NEXT:    vlse64.v v10, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vand.vv v8, v8, v10, v0.t
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, 16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 0
@@ -1301,9 +1297,8 @@ define <vscale x 4 x i64> @vandn_vx_vp_nxv4i64(i64 %a, <vscale x 4 x i64> %b, <v
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
-; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-RV32-NEXT:    vand.vv v8, v8, v12, v0.t
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1325,9 +1320,8 @@ define <vscale x 4 x i64> @vandn_vx_vp_nxv4i64(i64 %a, <vscale x 4 x i64> %b, <v
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8
-; CHECK-ZVKB32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
-; CHECK-ZVKB32-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
+; CHECK-ZVKB32-NEXT:    vlse64.v v12, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vand.vv v8, v8, v12, v0.t
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, 16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 0
@@ -1394,9 +1388,8 @@ define <vscale x 8 x i64> @vandn_vx_vp_nxv8i64(i64 %a, <vscale x 8 x i64> %b, <v
 ; CHECK-RV32-NEXT:    sw a0, 8(sp)
 ; CHECK-RV32-NEXT:    sw a1, 12(sp)
 ; CHECK-RV32-NEXT:    addi a0, sp, 8
-; CHECK-RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-RV32-NEXT:    vand.vv v8, v8, v16, v0.t
 ; CHECK-RV32-NEXT:    addi sp, sp, 16
 ; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
@@ -1418,9 +1411,8 @@ define <vscale x 8 x i64> @vandn_vx_vp_nxv8i64(i64 %a, <vscale x 8 x i64> %b, <v
 ; CHECK-ZVKB32-NEXT:    sw a0, 8(sp)
 ; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
 ; CHECK-ZVKB32-NEXT:    addi a0, sp, 8
-; CHECK-ZVKB32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
-; CHECK-ZVKB32-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-ZVKB32-NEXT:    vlse64.v v16, (a0), zero
 ; CHECK-ZVKB32-NEXT:    vand.vv v8, v8, v16, v0.t
 ; CHECK-ZVKB32-NEXT:    addi sp, sp, 16
 ; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 0
@@ -1436,4 +1428,118 @@ define <vscale x 8 x i64> @vandn_vx_vp_nxv8i64(i64 %a, <vscale x 8 x i64> %b, <v
   %splat.not.a = shufflevector <vscale x 8 x i64> %head.not.a, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
   %x = call <vscale x 8 x i64> @llvm.vp.and.nxv8i64(<vscale x 8 x i64> %b, <vscale x 8 x i64> %splat.not.a, <vscale x 8 x i1> %mask, i32 %evl)
   ret <vscale x 8 x i64> %x
+}
+
+define <vscale x 1 x i16> @vandn_vx_vp_imm16(<vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vandn_vx_vp_imm16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVKB-LABEL: vandn_vx_vp_imm16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    lui a1, 1048568
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vandn.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    ret
+  %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 %evl)
+  ret <vscale x 1 x i16> %a
+}
+
+define <vscale x 1 x i16> @vandn_vx_vp_swapped_imm16(<vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vandn_vx_vp_swapped_imm16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVKB-LABEL: vandn_vx_vp_swapped_imm16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    lui a1, 1048568
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vandn.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    ret
+  %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> %x, <vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i1> %mask, i32 %evl)
+  ret <vscale x 1 x i16> %a
+}
+
+define <vscale x 1 x i64> @vandn_vx_vp_imm64(<vscale x 1 x i64> %x, <vscale x 1 x i1> %mask, i32 zeroext %evl) {
+; CHECK-RV32-LABEL: vandn_vx_vp_imm64:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    addi sp, sp, -16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-RV32-NEXT:    lui a1, 1044480
+; CHECK-RV32-NEXT:    li a2, 255
+; CHECK-RV32-NEXT:    sw a2, 8(sp)
+; CHECK-RV32-NEXT:    sw a1, 12(sp)
+; CHECK-RV32-NEXT:    addi a1, sp, 8
+; CHECK-RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-RV32-NEXT:    vlse64.v v9, (a1), zero
+; CHECK-RV32-NEXT:    vand.vv v8, v8, v9, v0.t
+; CHECK-RV32-NEXT:    addi sp, sp, 16
+; CHECK-RV32-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-RV32-NEXT:    ret
+;
+; CHECK-RV64-LABEL: vandn_vx_vp_imm64:
+; CHECK-RV64:       # %bb.0:
+; CHECK-RV64-NEXT:    li a1, -1
+; CHECK-RV64-NEXT:    slli a1, a1, 56
+; CHECK-RV64-NEXT:    addi a1, a1, 255
+; CHECK-RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-RV64-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-RV64-NEXT:    ret
+;
+; CHECK-ZVKB32-LABEL: vandn_vx_vp_imm64:
+; CHECK-ZVKB32:       # %bb.0:
+; CHECK-ZVKB32-NEXT:    addi sp, sp, -16
+; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-ZVKB32-NEXT:    lui a1, 1044480
+; CHECK-ZVKB32-NEXT:    li a2, 255
+; CHECK-ZVKB32-NEXT:    sw a2, 8(sp)
+; CHECK-ZVKB32-NEXT:    sw a1, 12(sp)
+; CHECK-ZVKB32-NEXT:    addi a1, sp, 8
+; CHECK-ZVKB32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVKB32-NEXT:    vlse64.v v9, (a1), zero
+; CHECK-ZVKB32-NEXT:    vand.vv v8, v8, v9, v0.t
+; CHECK-ZVKB32-NEXT:    addi sp, sp, 16
+; CHECK-ZVKB32-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-ZVKB32-NEXT:    ret
+;
+; CHECK-ZVKB64-LABEL: vandn_vx_vp_imm64:
+; CHECK-ZVKB64:       # %bb.0:
+; CHECK-ZVKB64-NEXT:    lui a1, 1048560
+; CHECK-ZVKB64-NEXT:    srli a1, a1, 8
+; CHECK-ZVKB64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-ZVKB64-NEXT:    vandn.vx v8, v8, a1, v0.t
+; CHECK-ZVKB64-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.vp.and.nxv1i64(<vscale x 1 x i64> %x, <vscale x 1 x i64> splat (i64 -72057594037927681), <vscale x 1 x i1> %mask, i32 %evl)
+  ret <vscale x 1 x i64> %a
+}
+
+define <vscale x 1 x i16> @vand_vadd_vx_vp_imm16(<vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 zeroext %evl) {
+; CHECK-LABEL: vand_vadd_vx_vp_imm16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, 8
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    vadd.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    ret
+;
+; CHECK-ZVKB-LABEL: vand_vadd_vx_vp_imm16:
+; CHECK-ZVKB:       # %bb.0:
+; CHECK-ZVKB-NEXT:    lui a1, 8
+; CHECK-ZVKB-NEXT:    addi a1, a1, -1
+; CHECK-ZVKB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-ZVKB-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    vadd.vx v8, v8, a1, v0.t
+; CHECK-ZVKB-NEXT:    ret
+  %a = call <vscale x 1 x i16> @llvm.vp.and.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %x, <vscale x 1 x i1> %mask, i32 %evl)
+  %b = call <vscale x 1 x i16> @llvm.vp.add.nxv1i16(<vscale x 1 x i16> splat (i16 32767), <vscale x 1 x i16> %a, <vscale x 1 x i1> %mask, i32 %evl)
+  ret <vscale x 1 x i16> %b
 }

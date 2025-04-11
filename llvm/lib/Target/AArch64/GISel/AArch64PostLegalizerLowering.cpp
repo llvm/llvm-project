@@ -405,6 +405,19 @@ void applyEXT(MachineInstr &MI, ShuffleVectorPseudo &MatchInfo) {
   MI.eraseFromParent();
 }
 
+void applyFullRev(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy.getSizeInBits() == 128 &&
+         "Expected 128bit vector in applyFullRev");
+  MachineIRBuilder MIRBuilder(MI);
+  auto Cst = MIRBuilder.buildConstant(LLT::scalar(32), 8);
+  auto Rev = MIRBuilder.buildInstr(AArch64::G_REV64, {DstTy}, {Src});
+  MIRBuilder.buildInstr(AArch64::G_EXT, {Dst}, {Rev, Rev, Cst});
+  MI.eraseFromParent();
+}
+
 bool matchNonConstInsert(MachineInstr &MI, MachineRegisterInfo &MRI) {
   assert(MI.getOpcode() == TargetOpcode::G_INSERT_VECTOR_ELT);
 
@@ -1243,8 +1256,7 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
-  // TODO: Make CombinerHelper methods const.
-  mutable CombinerHelper Helper;
+  const CombinerHelper Helper;
   const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig;
   const AArch64Subtarget &STI;
 
@@ -1274,7 +1286,7 @@ AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
     GISelCSEInfo *CSEInfo,
     const AArch64PostLegalizerLoweringImplRuleConfig &RuleConfig,
     const AArch64Subtarget &STI)
-    : Combiner(MF, CInfo, TPC, /*KB*/ nullptr, CSEInfo),
+    : Combiner(MF, CInfo, TPC, /*VT*/ nullptr, CSEInfo),
       Helper(Observer, B, /*IsPreLegalize*/ true), RuleConfig(RuleConfig),
       STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
@@ -1310,8 +1322,6 @@ void AArch64PostLegalizerLowering::getAnalysisUsage(AnalysisUsage &AU) const {
 
 AArch64PostLegalizerLowering::AArch64PostLegalizerLowering()
     : MachineFunctionPass(ID) {
-  initializeAArch64PostLegalizerLoweringPass(*PassRegistry::getPassRegistry());
-
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }

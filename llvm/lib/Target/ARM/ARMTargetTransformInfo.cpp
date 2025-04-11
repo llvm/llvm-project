@@ -83,9 +83,8 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
   if (!isPowerOf2_32(Alignment))
     return nullptr;
 
-  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
+  return Builder.CreateAlignedLoad(II.getType(), II.getArgOperand(0),
+                                   Align(Alignment));
 }
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
@@ -1123,7 +1122,8 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) {
   return false;
 }
 
-bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
+bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                   unsigned /*AddressSpace*/) {
   if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
     return false;
 
@@ -1459,16 +1459,73 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
   if (LooksLikeAFreeShift())
     return 0;
 
+  // When targets have both DSP and MVE we find that the
+  // the compiler will attempt to vectorize as well as using
+  // scalar (S/U)MLAL operations. This is in cases where we have
+  // the pattern ext(mul(ext(i16), ext(i16))) we find
+  // that codegen performs better when only using (S/U)MLAL scalar
+  // ops instead of trying to mix vector ops with (S/U)MLAL ops. We therefore
+  // check if a mul instruction is used in a (U/S)MLAL pattern.
+  auto MulInDSPMLALPattern = [&](const Instruction *I, unsigned Opcode,
+                                 Type *Ty) -> bool {
+    if (!ST->hasDSP())
+      return false;
+
+    if (!I)
+      return false;
+
+    if (Opcode != Instruction::Mul)
+      return false;
+
+    if (Ty->isVectorTy())
+      return false;
+
+    auto ValueOpcodesEqual = [](const Value *LHS, const Value *RHS) -> bool {
+      return cast<Instruction>(LHS)->getOpcode() ==
+             cast<Instruction>(RHS)->getOpcode();
+    };
+    auto IsExtInst = [](const Value *V) -> bool {
+      return isa<ZExtInst>(V) || isa<SExtInst>(V);
+    };
+    auto IsExtensionFromHalf = [](const Value *V) -> bool {
+      return cast<Instruction>(V)->getOperand(0)->getType()->isIntegerTy(16);
+    };
+
+    // We check the arguments of the instruction to see if they're extends
+    auto *BinOp = dyn_cast<BinaryOperator>(I);
+    if (!BinOp)
+      return false;
+    Value *Op0 = BinOp->getOperand(0);
+    Value *Op1 = BinOp->getOperand(1);
+    if (IsExtInst(Op0) && IsExtInst(Op1) && ValueOpcodesEqual(Op0, Op1)) {
+      // We're interested in an ext of an i16
+      if (!I->getType()->isIntegerTy(32) || !IsExtensionFromHalf(Op0) ||
+          !IsExtensionFromHalf(Op1))
+        return false;
+      // We need to check if this result will be further extended to i64
+      // and that all these uses are SExt
+      for (auto *U : I->users())
+        if (!IsExtInst(U))
+          return false;
+      return true;
+    }
+
+    return false;
+  };
+
+  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
+    return 0;
+
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
   // for "multiple beats" potentially needed by MVE instructions.
   int BaseCost = 1;
   if (ST->hasMVEIntegerOps() && Ty->isVectorTy())
     BaseCost = ST->getMVEVectorCostFactor(CostKind);
 
-  // The rest of this mostly follows what is done in BaseT::getArithmeticInstrCost,
-  // without treating floats as more expensive that scalars or increasing the
-  // costs for custom operations. The results is also multiplied by the
-  // MVEVectorCostFactor where appropriate.
+  // The rest of this mostly follows what is done in
+  // BaseT::getArithmeticInstrCost, without treating floats as more expensive
+  // that scalars or increasing the costs for custom operations. The results is
+  // also multiplied by the MVEVectorCostFactor where appropriate.
   if (TLI->isOperationLegalOrCustomOrPromote(ISDOpcode, LT.second))
     return LT.first * BaseCost;
 
@@ -1539,9 +1596,11 @@ ARMTTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *Src, Align Alignment,
                                   unsigned AddressSpace,
                                   TTI::TargetCostKind CostKind) {
   if (ST->hasMVEIntegerOps()) {
-    if (Opcode == Instruction::Load && isLegalMaskedLoad(Src, Alignment))
+    if (Opcode == Instruction::Load &&
+        isLegalMaskedLoad(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
-    if (Opcode == Instruction::Store && isLegalMaskedStore(Src, Alignment))
+    if (Opcode == Instruction::Store &&
+        isLegalMaskedStore(Src, Alignment, AddressSpace))
       return ST->getMVEVectorCostFactor(CostKind);
   }
   if (!isa<FixedVectorType>(Src))
@@ -1785,7 +1844,7 @@ ARMTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
 InstructionCost ARMTTIImpl::getExtendedReductionCost(
     unsigned Opcode, bool IsUnsigned, Type *ResTy, VectorType *ValTy,
-    FastMathFlags FMF, TTI::TargetCostKind CostKind) {
+    std::optional<FastMathFlags> FMF, TTI::TargetCostKind CostKind) {
   EVT ValVT = TLI->getValueType(DL, ValTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
@@ -2592,11 +2651,32 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       return;
   }
 
+  // For processors with low overhead branching (LOB), runtime unrolling the
+  // innermost loop is often detrimental to performance. In these cases the loop
+  // remainder gets unrolled into a series of compare-and-jump blocks, which in
+  // deeply nested loops get executed multiple times, negating the benefits of
+  // LOB. This is particularly noticable when the loop trip count of the
+  // innermost loop varies within the outer loop, such as in the case of
+  // triangular matrix decompositions. In these cases we will prefer to not
+  // unroll the innermost loop, with the intention for it to be executed as a
+  // low overhead loop.
+  bool Runtime = true;
+  if (ST->hasLOB()) {
+    if (SE.hasLoopInvariantBackedgeTakenCount(L)) {
+      const auto *BETC = SE.getBackedgeTakenCount(L);
+      auto *Outer = L->getOutermostLoop();
+      if ((L != Outer && Outer != L->getParentLoop()) ||
+          (L != Outer && BETC && !SE.isLoopInvariant(BETC, Outer))) {
+        Runtime = false;
+      }
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Cost of loop: " << Cost << "\n");
   LLVM_DEBUG(dbgs() << "Default Runtime Unroll Count: " << UnrollCount << "\n");
 
   UP.Partial = true;
-  UP.Runtime = true;
+  UP.Runtime = Runtime;
   UP.UnrollRemainder = true;
   UP.DefaultUnrollRuntimeCount = UnrollCount;
   UP.UnrollAndJam = true;
@@ -2613,22 +2693,21 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferInLoopReduction(RecurKind Kind, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
-  switch (Opcode) {
-  case Instruction::Add:
+  switch (Kind) {
+  case RecurKind::Add:
     return ScalarBits <= 64;
   default:
     return false;
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
+                                                 Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;
@@ -2649,7 +2728,7 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
     return 0;
   }
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {

@@ -30,8 +30,9 @@ inline namespace fundamentals_v1 {
 
  */
 
-#if 0
-#else // 0
+#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/experimental/utility>
+#else
 #  include <__config>
 #  include <utility>
 
@@ -48,6 +49,6 @@ _LIBCPP_END_NAMESPACE_LFTS
 #  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #    include <cstddef>
 #  endif
-#endif // 0
+#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif /* _LIBCPP_EXPERIMENTAL_UTILITY */

@@ -17,6 +17,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-selectiondag-info"
 
+bool SystemZSelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= SystemZISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= SystemZISD::LAST_MEMORY_OPCODE;
+}
+
+bool SystemZSelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= SystemZISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= SystemZISD::LAST_STRICTFP_OPCODE;
+}
+
 static unsigned getMemMemLenAdj(unsigned Op) {
   return Op == SystemZISD::MEMSET_MVC ? 2 : 1;
 }

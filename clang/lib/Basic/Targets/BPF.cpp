@@ -22,13 +22,16 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::BPF::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
-#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsBPF.inc"
-    , {
-#define BUILTIN CLANG_BUILTIN_ENTRY
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
 #include "clang/Basic/BuiltinsBPF.inc"
-      });
+#undef GET_BUILTIN_INFOS
+};
+static_assert(std::size(BuiltinInfos) == NumBuiltins);
 
 void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
@@ -72,6 +75,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__BPF_FEATURE_SDIV_SMOD");
     Builder.defineMacro("__BPF_FEATURE_GOTOL");
     Builder.defineMacro("__BPF_FEATURE_ST");
+    Builder.defineMacro("__BPF_FEATURE_LOAD_ACQ_STORE_REL");
   }
 }
 
@@ -86,9 +90,9 @@ void BPFTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-BPFTargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard>
+BPFTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 bool BPFTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,

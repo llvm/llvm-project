@@ -546,8 +546,7 @@ static std::string Sprintf(const char *format, ...) {
 
 static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
   lldb_private::Address so_addr;
-  if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                       so_addr))
+  if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return "";
 
   lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
@@ -561,8 +560,7 @@ static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
 static void GetSymbolDeclarationFromAddress(ProcessSP process_sp, addr_t addr,
                                             Declaration &decl) {
   lldb_private::Address so_addr;
-  if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(addr,
-                                                                       so_addr))
+  if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return;
 
   lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
@@ -600,8 +598,7 @@ addr_t InstrumentationRuntimeTSan::GetFirstNonInternalFramePc(
     addr_t addr = *maybe_addr;
 
     lldb_private::Address so_addr;
-    if (!process_sp->GetTarget().GetSectionLoadList().ResolveLoadAddress(
-            addr, so_addr))
+    if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
       continue;
 
     if (so_addr.GetModule() == runtime_module_sp)
@@ -867,13 +864,14 @@ bool InstrumentationRuntimeTSan::NotifyBreakpointHit(
               CreateStopReasonWithInstrumentationData(
                   *thread_sp, stop_reason_description, report));
 
-    StreamFile &s = process_sp->GetTarget().GetDebugger().GetOutputStream();
-    s.Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
-             "info -s' to get extended information about the "
-             "report.\n");
+    lldb::StreamSP s =
+        process_sp->GetTarget().GetDebugger().GetAsyncOutputStream();
+    s->Printf("ThreadSanitizer report breakpoint hit. Use 'thread "
+              "info -s' to get extended information about the "
+              "report.\n");
 
     return true; // Return true to stop the target
-  } else
+  }
     return false; // Let target run
 }
 

@@ -545,6 +545,8 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
 #endif
 
+  unsigned fpos_t_sz = sizeof(fpos_t);
+
   const unsigned long __sanitizer_bufsiz = BUFSIZ;
 
   const unsigned IOCTL_NOT_PRESENT = 0;
@@ -1091,7 +1093,7 @@ CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_len);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_level);
 CHECK_SIZE_AND_OFFSET(cmsghdr, cmsg_type);
 
-#if SANITIZER_LINUX && (__ANDROID_API__ >= 21 || __GLIBC_PREREQ (2, 14))
+#  if SANITIZER_LINUX && (SANITIZER_ANDROID || __GLIBC_PREREQ(2, 14))
 CHECK_TYPE_SIZE(mmsghdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_hdr);
 CHECK_SIZE_AND_OFFSET(mmsghdr, msg_len);

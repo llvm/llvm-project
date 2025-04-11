@@ -145,7 +145,8 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
-    ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
+    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = G_CONSTANT i32 -64769
     %1:_(s64) = COPY $x10

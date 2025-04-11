@@ -96,8 +96,7 @@ static void TrackDefUses(MachineInstr *MI, RegisterSet &Defs, RegisterSet &Uses,
 
   auto InsertUsesDefs = [&](RegList &Regs, RegisterSet &UsesDefs) {
     for (unsigned Reg : Regs)
-      for (MCPhysReg Subreg : TRI->subregs_inclusive(Reg))
-        UsesDefs.insert(Subreg);
+      UsesDefs.insert_range(TRI->subregs_inclusive(Reg));
   };
 
   InsertUsesDefs(LocalDefs, Defs);
@@ -226,7 +225,7 @@ bool Thumb2ITBlock::InsertITInstructions(MachineBasicBlock &MBB) {
     // IT blocks are limited to one conditional op if -arm-restrict-it
     // is set: skip the loop
     if (!restrictIT) {
-      LLVM_DEBUG(dbgs() << "Allowing complex IT block\n";);
+      LLVM_DEBUG(dbgs() << "Allowing complex IT block\n");
       // Branches, including tricky ones like LDM_RET, need to end an IT
       // block so check the instruction we just put in the block.
       for (; MBBI != E && Pos &&

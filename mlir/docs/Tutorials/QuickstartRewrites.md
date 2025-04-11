@@ -216,25 +216,6 @@ In case ODS patterns and `matchAndRewrite`-style functions are not sufficient
 you can also specify rewrites as a general set of `RewritePattern`s:
 
 ```c++
-/// Multi-step rewrite using "match" and "rewrite". This allows for separating
-/// the concerns of matching and rewriting.
-struct ConvertTFLeakyRelu : public RewritePattern {
-  ConvertTFLeakyRelu(MLIRContext *context)
-      : RewritePattern("tf.LeakyRelu", 1, context) {}
-
-  LogicalResult match(Operation *op) const override {
-    return success();
-  }
-
-  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TFL::LeakyReluOp>(
-        op, op->getResult(0).getType(), op->getOperand(0),
-        /*alpha=*/op->getAttrOfType<FloatAttr>("alpha"));
-  }
-};
-
-/// Single-step rewrite with "matchAndRewrite". This allows for performing the
-/// rewrite immediately upon a successful match.
 struct ConvertTFLeakyRelu : public RewritePattern {
   ConvertTFLeakyRelu(MLIRContext *context)
       : RewritePattern("tf.LeakyRelu", 1, context) {}
