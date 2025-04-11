@@ -3161,7 +3161,7 @@ def err_musttail_member_mismatch : Error<
 def note_musttail_callee_defined_here : Note<"%0 declared here">;
 def note_tail_call_required : Note<"tail call required by %0 attribute here">;
 def err_musttail_mismatch : Error<
-  "cannot perform a tail call to function %select{| %1}0 because its signature "
+  "cannot perform a tail call to function%select{| %1}0 because its signature "
   "is incompatible with the calling function">;
 def note_musttail_mismatch : Note<
     "target function "
