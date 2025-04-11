@@ -1163,6 +1163,8 @@ public:
   virtual void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
                                      bool IsRelatedToDecl,
                                      ASTContext &Ctx) const = 0;
+
+  virtual SmallVector<const Expr *, 1> getUnsafePtrs() const = 0;
 };
 
 /// Fixable gadgets correspond to code patterns that aren't always unsafe but
@@ -1245,6 +1247,10 @@ public:
 
     return std::move(Uses);
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
+  }
 };
 
 /// A decrement of a pointer-type value is unsafe as it may run the pointer
@@ -1287,6 +1293,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Op->getSubExpr()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1336,6 +1346,10 @@ public:
     }
 
     return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {ASE->getBase()->IgnoreParenImpCasts()};
   }
 };
 
@@ -1400,6 +1414,11 @@ public:
 
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override {
+    return {Ptr->IgnoreParenImpCasts()};
+  }
+
   // FIXME: pointer adding zero should be fine
   // FIXME: this gadge will need a fix-it
 };
@@ -1457,6 +1476,8 @@ public:
     }
     return {};
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A pointer initialization expression of the form:
@@ -1689,6 +1710,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 /// A call of a constructor that performs unchecked buffer operations
@@ -1727,6 +1750,8 @@ public:
   SourceLocation getSourceLoc() const override { return Op->getBeginLoc(); }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Warning gadget for unsafe invocation of span::data method.
@@ -1793,6 +1818,8 @@ private:
       return true;
     return false;
   }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 class UnsafeLibcFunctionCallGadget : public WarningGadget {
@@ -1896,6 +1923,8 @@ public:
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
 // Represents expressions of the form `DRE[*]` in the Unspecified Lvalue
@@ -2466,6 +2495,52 @@ template <typename NodeTy> struct CompareNode {
            N2->getBeginLoc().getRawEncoding();
   }
 };
+
+std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
+  class MockReporter : public UnsafeBufferUsageHandler {
+  public:
+    MockReporter() {}
+    void handleUnsafeOperation(const Stmt *, bool, ASTContext &) override {}
+    void handleUnsafeLibcCall(const CallExpr *, unsigned, ASTContext &,
+                              const Expr *UnsafeArg = nullptr) override {}
+    void handleUnsafeOperationInContainer(const Stmt *, bool,
+                                          ASTContext &) override {}
+    void handleUnsafeVariableGroup(const VarDecl *,
+                                   const VariableGroupsManager &, FixItList &&,
+                                   const Decl *,
+                                   const FixitStrategy &) override {}
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    std::string getUnsafeBufferUsageAttributeTextAt(
+        SourceLocation, StringRef WSSuffix = "") const override {
+      return "";
+    }
+  };
+
+  FixableGadgetList FixableGadgets;
+  WarningGadgetList WarningGadgets;
+  DeclUseTracker Tracker;
+  MockReporter IgnoreHandler;
+
+  findGadgets(FD->getBody(), FD->getASTContext(), IgnoreHandler, false,
+              FixableGadgets, WarningGadgets, Tracker);
+
+  std::set<const Expr *> Result;
+  for (auto &G : WarningGadgets) {
+    for (const Expr *E : G->getUnsafePtrs()) {
+      Result.insert(E);
+    }
+  }
+
+  return Result;
+}
 
 struct WarningGadgetSets {
   std::map<const VarDecl *, std::set<const WarningGadget *>,
