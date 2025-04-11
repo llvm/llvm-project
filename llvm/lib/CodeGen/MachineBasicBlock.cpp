@@ -35,6 +35,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -55,6 +56,7 @@ MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
   Insts.Parent = this;
   if (B)
     IrrLoopHeaderWeight = B->getIrrLoopHeaderWeight();
+  LiveInRegUnits.resize(MF.getSubtarget().getRegisterInfo()->getNumRegUnits());
 }
 
 MachineBasicBlock::~MachineBasicBlock() = default;
@@ -597,6 +599,15 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
   printName(OS, 0);
 }
 
+void MachineBasicBlock::addLiveInRegUnit(MCRegister Reg, LaneBitmask LaneMask) {
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
+  for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
+    LaneBitmask UnitMask = (*Unit).second;
+    if ((UnitMask & LaneMask).any())
+      LiveInRegUnits.set((*Unit).first);
+  }
+}
+
 void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
   LiveInVector::iterator I = find_if(
       LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
@@ -604,21 +615,34 @@ void MachineBasicBlock::removeLiveIn(MCRegister Reg, LaneBitmask LaneMask) {
     return;
 
   I->LaneMask &= ~LaneMask;
-  if (I->LaneMask.none())
+  if (I->LaneMask.none()) {
     LiveIns.erase(I);
+    removeLiveInRegUnit(I->PhysReg);
+  }
 }
 
 MachineBasicBlock::livein_iterator
 MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
   // Get non-const version of iterator.
   LiveInVector::iterator LI = LiveIns.begin() + (I - LiveIns.begin());
+  removeLiveInRegUnit(LI->PhysReg);
   return LiveIns.erase(LI);
 }
 
+void MachineBasicBlock::removeLiveInRegUnit(MCRegister Reg) {
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
+  for (MCRegUnit Unit : TRI->regunits(Reg))
+    LiveInRegUnits.reset(Unit);
+}
+
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
-  livein_iterator I = find_if(
-      LiveIns, [Reg](const RegisterMaskPair &LI) { return LI.PhysReg == Reg; });
-  return I != livein_end() && (I->LaneMask & LaneMask).any();
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
+  for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
+    LaneBitmask UnitMask = (*Unit).second;
+    if ((UnitMask & LaneMask).any() && LiveInRegUnits.test((*Unit).first))
+      return true;
+  }
+  return false;
 }
 
 void MachineBasicBlock::sortUniqueLiveIns() {
@@ -1751,12 +1775,14 @@ MachineBasicBlock::getEndClobberMask(const TargetRegisterInfo *TRI) const {
 
 void MachineBasicBlock::clearLiveIns() {
   LiveIns.clear();
+  LiveInRegUnits.reset();
 }
 
 void MachineBasicBlock::clearLiveIns(
     std::vector<RegisterMaskPair> &OldLiveIns) {
   assert(OldLiveIns.empty() && "Vector must be empty");
   std::swap(LiveIns, OldLiveIns);
+  LiveInRegUnits.reset();
 }
 
 MachineBasicBlock::livein_iterator MachineBasicBlock::livein_begin() const {
