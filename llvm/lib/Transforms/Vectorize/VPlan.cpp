@@ -1216,6 +1216,13 @@ VPlan *VPlan::duplicate() {
     NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
   CreatedBlocks.truncate(NumBlocksBeforeCloning);
 
+  // Update ExitBlocks of the new plan.
+  for (VPBlockBase *VPB : NewPlan->CreatedBlocks) {
+    if (VPB->getNumSuccessors() == 0 && isa<VPIRBasicBlock>(VPB) &&
+        VPB != NewScalarHeader)
+      NewPlan->ExitBlocks.push_back(cast<VPIRBasicBlock>(VPB));
+  }
+
   return NewPlan;
 }
 
@@ -1404,6 +1411,13 @@ void VPValue::replaceUsesWithIf(
     // increment the index if the number of users did not change.
     if (!RemovedUser)
       J++;
+  }
+}
+
+void VPUser::replaceUsesOfWith(VPValue *From, VPValue *To) {
+  for (unsigned Idx = 0; Idx != getNumOperands(); ++Idx) {
+    if (getOperand(Idx) == From)
+      setOperand(Idx, To);
   }
 }
 

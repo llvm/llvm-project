@@ -1145,16 +1145,17 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
+    constexpr size_t NumPatterns = std::tuple_size_v<std::tuple<PatternTs...>>;
+
     SmallVector<SDValue> Leaves;
     collectLeaves(N, Leaves);
-    if (Leaves.size() != std::tuple_size_v<std::tuple<PatternTs...>>)
+    if (Leaves.size() != NumPatterns)
       return false;
 
     // Matches[I][J] == true iff sd_context_match(Leaves[I], Ctx,
     // std::get<J>(Patterns)) == true
-    std::array<SmallBitVector, std::tuple_size_v<std::tuple<PatternTs...>>>
-        Matches;
-    for (size_t I = 0, N = Leaves.size(); I < N; I++) {
+    std::array<SmallBitVector, NumPatterns> Matches;
+    for (size_t I = 0; I != NumPatterns; I++) {
       SmallVector<bool> MatchResults;
       std::apply(
           [&](auto &...P) {
@@ -1163,7 +1164,7 @@ template <typename... PatternTs> struct ReassociatableOpc_match {
           Patterns);
     }
 
-    SmallBitVector Used(std::tuple_size_v<std::tuple<PatternTs...>>);
+    SmallBitVector Used(NumPatterns);
     return reassociatableMatchHelper(Matches, Used);
   }
 

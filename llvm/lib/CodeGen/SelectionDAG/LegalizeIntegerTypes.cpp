@@ -849,27 +849,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  unsigned NewOpc = N->getOpcode();
+  unsigned NewOpc =
+      TLI.getPreferredFPToIntOpcode(N->getOpcode(), N->getValueType(0), NVT);
   SDLoc dl(N);
-
-  // If we're promoting a UINT to a larger size and the larger FP_TO_UINT is
-  // not Legal, check to see if we can use FP_TO_SINT instead.  (If both UINT
-  // and SINT conversions are Custom, there is no way to tell which is
-  // preferable. We choose SINT because that's the right thing on PPC.)
-  if (N->getOpcode() == ISD::FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NVT))
-    NewOpc = ISD::FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::STRICT_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::STRICT_FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
-    NewOpc = ISD::STRICT_FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::VP_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::VP_FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, NVT))
-    NewOpc = ISD::VP_FP_TO_SINT;
 
   SDValue Res;
   if (N->isStrictFPOpcode()) {

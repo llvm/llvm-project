@@ -211,7 +211,7 @@ template <class... Types>
 // clang-format on
 
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/tuple>
+#  include <__cxx03/__config>
 #else
 #  include <__compare/common_comparison_category.h>
 #  include <__compare/ordering.h>
@@ -535,7 +535,7 @@ __memberwise_forward_assign(_Dest& __dest, _Source&& __source, __tuple_types<_Up
 }
 
 template <class... _Tp>
-class _LIBCPP_TEMPLATE_VIS _LIBCPP_NO_SPECIALIZATIONS tuple {
+class _LIBCPP_NO_SPECIALIZATIONS tuple {
   typedef __tuple_impl<typename __make_tuple_indices<sizeof...(_Tp)>::type, _Tp...> _BaseT;
 
   _BaseT __base_;
@@ -1010,7 +1010,7 @@ _LIBCPP_DIAGNOSTIC_PUSH
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
 #    endif
 template <>
-class _LIBCPP_TEMPLATE_VIS tuple<> {
+class tuple<> {
 public:
   constexpr tuple() _NOEXCEPT = default;
   template <class _Alloc>
@@ -1366,7 +1366,7 @@ tuple_cat(_Tuple0&& __t0, _Tuples&&... __tpls) {
 }
 
 template <class... _Tp, class _Alloc>
-struct _LIBCPP_TEMPLATE_VIS uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
+struct uses_allocator<tuple<_Tp...>, _Alloc> : true_type {};
 
 #    if _LIBCPP_STD_VER >= 17
 #      define _LIBCPP_NOEXCEPT_RETURN(...)                                                                             \
