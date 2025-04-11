@@ -1728,12 +1728,14 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
   if (CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(FD))
     return S.isUsualDeallocationFunction(Method);
 
-  if (FD->getOverloadedOperator() != OO_Delete &&
-      FD->getOverloadedOperator() != OO_Array_Delete)
+  if (!FD->getDeclName().isAnyOperatorDelete())
     return false;
 
-  unsigned UsualParams = 1;
+  if (FD->isTypeAwareOperatorNewOrDelete())
+    return FunctionDecl::RequiredTypeAwareDeleteParameterCount ==
+           FD->getNumParams();
 
+  unsigned UsualParams = 1;
   if (S.getLangOpts().SizedDeallocation && UsualParams < FD->getNumParams() &&
       S.Context.hasSameUnqualifiedType(
           FD->getParamDecl(UsualParams)->getType(),
@@ -1751,15 +1753,56 @@ static bool isNonPlacementDeallocationFunction(Sema &S, FunctionDecl *FD) {
 
 namespace {
   struct UsualDeallocFnInfo {
-    UsualDeallocFnInfo() : Found(), FD(nullptr) {}
-    UsualDeallocFnInfo(Sema &S, DeclAccessPair Found)
+    UsualDeallocFnInfo()
+        : Found(), FD(nullptr),
+          IDP(AlignedAllocationMode::No, SizedDeallocationMode::No) {}
+    UsualDeallocFnInfo(Sema &S, DeclAccessPair Found, QualType AllocType,
+                       SourceLocation Loc)
         : Found(Found), FD(dyn_cast<FunctionDecl>(Found->getUnderlyingDecl())),
-          Destroying(false), HasSizeT(false), HasAlignValT(false),
+          Destroying(false),
+          IDP({AllocType, TypeAwareAllocationMode::No,
+               AlignedAllocationMode::No, SizedDeallocationMode::No}),
           CUDAPref(SemaCUDA::CFP_Native) {
-      // A function template declaration is never a usual deallocation function.
-      if (!FD)
-        return;
+      // A function template declaration is only a usual deallocation function
+      // if it is a typed delete.
+      if (!FD) {
+        if (AllocType.isNull())
+          return;
+        auto *FTD = dyn_cast<FunctionTemplateDecl>(Found->getUnderlyingDecl());
+        if (!FTD)
+          return;
+        FunctionDecl *InstantiatedDecl =
+            S.BuildTypeAwareUsualDelete(FTD, AllocType, Loc);
+        if (!InstantiatedDecl)
+          return;
+        FD = InstantiatedDecl;
+      }
       unsigned NumBaseParams = 1;
+      if (FD->isTypeAwareOperatorNewOrDelete()) {
+        // If this is a type aware operator delete we instantiate an appropriate
+        // specialization of std::type_identity<>. If we do not know the
+        // type being deallocated, or if the type-identity parameter of the
+        // deallocation function does not match the constructed type_identity
+        // specialization we reject the declaration.
+        if (AllocType.isNull()) {
+          FD = nullptr;
+          return;
+        }
+        QualType TypeIdentityTag = FD->getParamDecl(0)->getType();
+        QualType ExpectedTypeIdentityTag =
+            S.tryBuildStdTypeIdentity(AllocType, Loc);
+        if (ExpectedTypeIdentityTag.isNull()) {
+          FD = nullptr;
+          return;
+        }
+        if (!S.Context.hasSameType(TypeIdentityTag, ExpectedTypeIdentityTag)) {
+          FD = nullptr;
+          return;
+        }
+        IDP.PassTypeIdentity = TypeAwareAllocationMode::Yes;
+        ++NumBaseParams;
+      }
+
       if (FD->isDestroyingOperatorDelete()) {
         Destroying = true;
         ++NumBaseParams;
@@ -1770,13 +1813,13 @@ namespace {
               FD->getParamDecl(NumBaseParams)->getType(),
               S.Context.getSizeType())) {
         ++NumBaseParams;
-        HasSizeT = true;
+        IDP.PassSize = SizedDeallocationMode::Yes;
       }
 
       if (NumBaseParams < FD->getNumParams() &&
           FD->getParamDecl(NumBaseParams)->getType()->isAlignValT()) {
         ++NumBaseParams;
-        HasAlignValT = true;
+        IDP.PassAlignment = AlignedAllocationMode::Yes;
       }
 
       // In CUDA, determine how much we'd like / dislike to call this.
@@ -1787,31 +1830,69 @@ namespace {
 
     explicit operator bool() const { return FD; }
 
-    bool isBetterThan(const UsualDeallocFnInfo &Other, bool WantSize,
-                      bool WantAlign) const {
+    int Compare(Sema &S, const UsualDeallocFnInfo &Other,
+                ImplicitDeallocationParameters TargetIDP) const {
+      assert(!TargetIDP.Type.isNull() ||
+             !isTypeAwareAllocation(Other.IDP.PassTypeIdentity));
+
       // C++ P0722:
       //   A destroying operator delete is preferred over a non-destroying
       //   operator delete.
       if (Destroying != Other.Destroying)
-        return Destroying;
+        return Destroying ? 1 : -1;
+
+      const ImplicitDeallocationParameters &OtherIDP = Other.IDP;
+      // Selection for type awareness has priority over alignment and size
+      if (IDP.PassTypeIdentity != OtherIDP.PassTypeIdentity)
+        return IDP.PassTypeIdentity == TargetIDP.PassTypeIdentity ? 1 : -1;
 
       // C++17 [expr.delete]p10:
       //   If the type has new-extended alignment, a function with a parameter
       //   of type std::align_val_t is preferred; otherwise a function without
       //   such a parameter is preferred
-      if (HasAlignValT != Other.HasAlignValT)
-        return HasAlignValT == WantAlign;
+      if (IDP.PassAlignment != OtherIDP.PassAlignment)
+        return IDP.PassAlignment == TargetIDP.PassAlignment ? 1 : -1;
 
-      if (HasSizeT != Other.HasSizeT)
-        return HasSizeT == WantSize;
+      if (IDP.PassSize != OtherIDP.PassSize)
+        return IDP.PassSize == TargetIDP.PassSize ? 1 : -1;
+
+      if (isTypeAwareAllocation(IDP.PassTypeIdentity)) {
+        // Type aware allocation involves templates so we need to choose
+        // the best type
+        FunctionTemplateDecl *PrimaryTemplate = FD->getPrimaryTemplate();
+        FunctionTemplateDecl *OtherPrimaryTemplate =
+            Other.FD->getPrimaryTemplate();
+        if ((!PrimaryTemplate) != (!OtherPrimaryTemplate))
+          return OtherPrimaryTemplate ? 1 : -1;
+
+        if (PrimaryTemplate && OtherPrimaryTemplate) {
+          const auto *DC = dyn_cast<CXXRecordDecl>(Found->getDeclContext());
+          const auto *OtherDC =
+              dyn_cast<CXXRecordDecl>(Other.Found->getDeclContext());
+          unsigned ImplicitArgCount = Destroying + IDP.getNumImplicitArgs();
+          if (FunctionTemplateDecl *Best = S.getMoreSpecializedTemplate(
+                  PrimaryTemplate, OtherPrimaryTemplate, SourceLocation(),
+                  TPOC_Call, ImplicitArgCount,
+                  DC ? QualType(DC->getTypeForDecl(), 0) : QualType{},
+                  OtherDC ? QualType(OtherDC->getTypeForDecl(), 0) : QualType{},
+                  false)) {
+            return Best == PrimaryTemplate ? 1 : -1;
+          }
+        }
+      }
 
       // Use CUDA call preference as a tiebreaker.
-      return CUDAPref > Other.CUDAPref;
+      if (CUDAPref > Other.CUDAPref)
+        return 1;
+      if (CUDAPref == Other.CUDAPref)
+        return 0;
+      return -1;
     }
 
     DeclAccessPair Found;
     FunctionDecl *FD;
-    bool Destroying, HasSizeT, HasAlignValT;
+    bool Destroying;
+    ImplicitDeallocationParameters IDP;
     SemaCUDA::CUDAFunctionPreference CUDAPref;
   };
 }
@@ -1826,32 +1907,62 @@ static bool hasNewExtendedAlignment(Sema &S, QualType AllocType) {
              S.getASTContext().getTargetInfo().getNewAlign();
 }
 
+static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
+                                SourceRange Range, bool Diagnose,
+                                CXXRecordDecl *NamingClass, DeclAccessPair Decl,
+                                FunctionDecl *Operator) {
+  if (Operator->isTypeAwareOperatorNewOrDelete()) {
+    QualType SelectedTypeIdentityParameter =
+        Operator->getParamDecl(0)->getType();
+    if (S.RequireCompleteType(StartLoc, SelectedTypeIdentityParameter,
+                              diag::err_incomplete_type))
+      return true;
+  }
+
+  // FIXME: DiagnoseUseOfDecl?
+  if (Operator->isDeleted()) {
+    if (Diagnose) {
+      StringLiteral *Msg = Operator->getDeletedMessage();
+      S.Diag(StartLoc, diag::err_deleted_function_use)
+          << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
+      S.NoteDeletedFunction(Operator);
+    }
+    return true;
+  }
+
+  return S.CheckAllocationAccess(StartLoc, Range, NamingClass, Decl, Diagnose);
+}
+
 /// Select the correct "usual" deallocation function to use from a selection of
 /// deallocation functions (either global or class-scope).
 static UsualDeallocFnInfo resolveDeallocationOverload(
-    Sema &S, LookupResult &R, bool WantSize, bool WantAlign,
+    Sema &S, LookupResult &R, const ImplicitDeallocationParameters &IDP,
+    SourceLocation Loc,
     llvm::SmallVectorImpl<UsualDeallocFnInfo> *BestFns = nullptr) {
-  UsualDeallocFnInfo Best;
 
+  UsualDeallocFnInfo Best;
   for (auto I = R.begin(), E = R.end(); I != E; ++I) {
-    UsualDeallocFnInfo Info(S, I.getPair());
+    UsualDeallocFnInfo Info(S, I.getPair(), IDP.Type, Loc);
     if (!Info || !isNonPlacementDeallocationFunction(S, Info.FD) ||
         Info.CUDAPref == SemaCUDA::CFP_Never)
       continue;
 
+    if (!isTypeAwareAllocation(IDP.PassTypeIdentity) &&
+        isTypeAwareAllocation(Info.IDP.PassTypeIdentity))
+      continue;
     if (!Best) {
       Best = Info;
       if (BestFns)
         BestFns->push_back(Info);
       continue;
     }
-
-    if (Best.isBetterThan(Info, WantSize, WantAlign))
+    int ComparisonResult = Best.Compare(S, Info, IDP);
+    if (ComparisonResult > 0)
       continue;
 
     //   If more than one preferred function is found, all non-preferred
     //   functions are eliminated from further consideration.
-    if (BestFns && Info.isBetterThan(Best, WantSize, WantAlign))
+    if (BestFns && ComparisonResult < 0)
       BestFns->clear();
 
     Best = Info;
@@ -1867,6 +1978,7 @@ static UsualDeallocFnInfo resolveDeallocationOverload(
 /// we need to store the array size (even if the type is
 /// trivially-destructible).
 static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
+                                         TypeAwareAllocationMode PassType,
                                          QualType allocType) {
   const RecordType *record =
     allocType->getBaseElementTypeUnsafe()->getAs<RecordType>();
@@ -1892,10 +2004,12 @@ static bool doesUsualArrayDeleteWantSize(Sema &S, SourceLocation loc,
   // C++17 [expr.delete]p10:
   //   If the deallocation functions have class scope, the one without a
   //   parameter of type std::size_t is selected.
-  auto Best = resolveDeallocationOverload(
-      S, ops, /*WantSize*/false,
-      /*WantAlign*/hasNewExtendedAlignment(S, allocType));
-  return Best && Best.HasSizeT;
+  ImplicitDeallocationParameters IDP = {
+      allocType, PassType,
+      alignedAllocationModeFromBool(hasNewExtendedAlignment(S, allocType)),
+      SizedDeallocationMode::No};
+  auto Best = resolveDeallocationOverload(S, ops, IDP, loc);
+  return Best && isSizedDeallocation(Best.IDP.PassSize);
 }
 
 ExprResult
@@ -2012,8 +2126,7 @@ void Sema::diagnoseUnavailableAlignedAllocation(const FunctionDecl &FD,
         getASTContext().getTargetInfo().getPlatformName());
     VersionTuple OSVersion = alignedAllocMinVersion(T.getOS());
 
-    OverloadedOperatorKind Kind = FD.getDeclName().getCXXOverloadedOperator();
-    bool IsDelete = Kind == OO_Delete || Kind == OO_Array_Delete;
+    bool IsDelete = FD.getDeclName().isAnyOperatorDelete();
     Diag(Loc, diag::err_aligned_allocation_unavailable)
         << IsDelete << FD.getType().getAsString() << OSName
         << OSVersion.getAsString() << OSVersion.empty();
@@ -2307,27 +2420,31 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   unsigned Alignment =
       AllocType->isDependentType() ? 0 : Context.getTypeAlign(AllocType);
   unsigned NewAlignment = Context.getTargetInfo().getNewAlign();
-  bool PassAlignment = getLangOpts().AlignedAllocation &&
-                       Alignment > NewAlignment;
+  ImplicitAllocationParameters IAP = {
+      AllocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+      alignedAllocationModeFromBool(getLangOpts().AlignedAllocation &&
+                                    Alignment > NewAlignment)};
 
   if (CheckArgsForPlaceholders(PlacementArgs))
     return ExprError();
 
   AllocationFunctionScope Scope = UseGlobal ? AFS_Global : AFS_Both;
+  SourceRange AllocationParameterRange = Range;
+  if (PlacementLParen.isValid() && PlacementRParen.isValid())
+    AllocationParameterRange = SourceRange(PlacementLParen, PlacementRParen);
   if (!AllocType->isDependentType() &&
       !Expr::hasAnyTypeDependentArguments(PlacementArgs) &&
-      FindAllocationFunctions(
-          StartLoc, SourceRange(PlacementLParen, PlacementRParen), Scope, Scope,
-          AllocType, ArraySize.has_value(), PassAlignment, PlacementArgs,
-          OperatorNew, OperatorDelete))
+      FindAllocationFunctions(StartLoc, AllocationParameterRange, Scope, Scope,
+                              AllocType, ArraySize.has_value(), IAP,
+                              PlacementArgs, OperatorNew, OperatorDelete))
     return ExprError();
 
   // If this is an array allocation, compute whether the usual array
   // deallocation function for the type has a size_t parameter.
   bool UsualArrayDeleteWantsSize = false;
   if (ArraySize && !AllocType->isDependentType())
-    UsualArrayDeleteWantsSize =
-        doesUsualArrayDeleteWantSize(*this, StartLoc, AllocType);
+    UsualArrayDeleteWantsSize = doesUsualArrayDeleteWantSize(
+        *this, StartLoc, IAP.PassTypeIdentity, AllocType);
 
   SmallVector<Expr *, 8> AllPlaceArgs;
   if (OperatorNew) {
@@ -2339,10 +2456,16 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // arguments. Skip the first parameter because we don't have a corresponding
     // argument. Skip the second parameter too if we're passing in the
     // alignment; we've already filled it in.
-    unsigned NumImplicitArgs = PassAlignment ? 2 : 1;
-    if (GatherArgumentsForCall(PlacementLParen, OperatorNew, Proto,
-                               NumImplicitArgs, PlacementArgs, AllPlaceArgs,
-                               CallType))
+    unsigned NumImplicitArgs = 1;
+    if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+      assert(OperatorNew->isTypeAwareOperatorNewOrDelete());
+      NumImplicitArgs++;
+    }
+    if (isAlignedAllocation(IAP.PassAlignment))
+      NumImplicitArgs++;
+    if (GatherArgumentsForCall(AllocationParameterRange.getBegin(), OperatorNew,
+                               Proto, NumImplicitArgs, PlacementArgs,
+                               AllPlaceArgs, CallType))
       return ExprError();
 
     if (!AllPlaceArgs.empty())
@@ -2377,10 +2500,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     IntegerLiteral AllocationSizeLiteral(
         Context, AllocationSize.value_or(llvm::APInt::getZero(SizeTyWidth)),
-        SizeTy, SourceLocation());
+        SizeTy, StartLoc);
     // Otherwise, if we failed to constant-fold the allocation size, we'll
     // just give up and pass-in something opaque, that isn't a null pointer.
-    OpaqueValueExpr OpaqueAllocationSize(SourceLocation(), SizeTy, VK_PRValue,
+    OpaqueValueExpr OpaqueAllocationSize(StartLoc, SizeTy, VK_PRValue,
                                          OK_Ordinary, /*SourceExpr=*/nullptr);
 
     // Let's synthesize the alignment argument in case we will need it.
@@ -2393,7 +2516,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
         Context,
         llvm::APInt(Context.getTypeSize(SizeTy),
                     Alignment / Context.getCharWidth()),
-        SizeTy, SourceLocation());
+        SizeTy, StartLoc);
     ImplicitCastExpr DesiredAlignment(ImplicitCastExpr::OnStack, AlignValT,
                                       CK_IntegralCast, &AlignmentLiteral,
                                       VK_PRValue, FPOptionsOverride());
@@ -2404,7 +2527,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     CallArgs.emplace_back(AllocationSize
                               ? static_cast<Expr *>(&AllocationSizeLiteral)
                               : &OpaqueAllocationSize);
-    if (PassAlignment)
+    if (isAlignedAllocation(IAP.PassAlignment))
       CallArgs.emplace_back(&DesiredAlignment);
     CallArgs.insert(CallArgs.end(), PlacementArgs.begin(), PlacementArgs.end());
 
@@ -2415,7 +2538,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
     // Warn if the type is over-aligned and is being allocated by (unaligned)
     // global operator new.
-    if (PlacementArgs.empty() && !PassAlignment &&
+    if (PlacementArgs.empty() && !isAlignedAllocation(IAP.PassAlignment) &&
         (OperatorNew->isImplicit() ||
          (OperatorNew->getBeginLoc().isValid() &&
           getSourceManager().isInSystemHeader(OperatorNew->getBeginLoc())))) {
@@ -2502,10 +2625,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   }
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
-                            PassAlignment, UsualArrayDeleteWantsSize,
-                            PlacementArgs, TypeIdParens, ArraySize, InitStyle,
-                            Initializer, ResultType, AllocTypeInfo, Range,
-                            DirectInitRange);
+                            IAP, UsualArrayDeleteWantsSize, PlacementArgs,
+                            TypeIdParens, ArraySize, InitStyle, Initializer,
+                            ResultType, AllocTypeInfo, Range, DirectInitRange);
 }
 
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
@@ -2546,10 +2668,17 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
   return false;
 }
 
-static bool resolveAllocationOverload(
-    Sema &S, LookupResult &R, SourceRange Range, SmallVectorImpl<Expr *> &Args,
-    bool &PassAlignment, FunctionDecl *&Operator,
-    OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
+enum class ResolveMode { Typed, Untyped };
+static bool resolveAllocationOverloadInterior(
+    Sema &S, LookupResult &R, SourceRange Range, ResolveMode Mode,
+    SmallVectorImpl<Expr *> &Args, AlignedAllocationMode &PassAlignment,
+    FunctionDecl *&Operator, OverloadCandidateSet *AlignedCandidates,
+    Expr *AlignArg, bool Diagnose) {
+  unsigned NonTypeArgumentOffset = 0;
+  if (Mode == ResolveMode::Typed) {
+    ++NonTypeArgumentOffset;
+  }
+
   OverloadCandidateSet Candidates(R.getNameLoc(),
                                   OverloadCandidateSet::CSK_Normal);
   for (LookupResult::iterator Alloc = R.begin(), AllocEnd = R.end();
@@ -2557,6 +2686,9 @@ static bool resolveAllocationOverload(
     // Even member operator new/delete are implicitly treated as
     // static, so don't use AddMemberCandidate.
     NamedDecl *D = (*Alloc)->getUnderlyingDecl();
+    bool IsTypeAware = D->getAsFunction()->isTypeAwareOperatorNewOrDelete();
+    if (IsTypeAware == (Mode != ResolveMode::Typed))
+      continue;
 
     if (FunctionTemplateDecl *FnTemplate = dyn_cast<FunctionTemplateDecl>(D)) {
       S.AddTemplateOverloadCandidate(FnTemplate, Alloc.getPair(),
@@ -2590,13 +2722,13 @@ static bool resolveAllocationOverload(
     //   If no matching function is found and the allocated object type has
     //   new-extended alignment, the alignment argument is removed from the
     //   argument list, and overload resolution is performed again.
-    if (PassAlignment) {
-      PassAlignment = false;
-      AlignArg = Args[1];
-      Args.erase(Args.begin() + 1);
-      return resolveAllocationOverload(S, R, Range, Args, PassAlignment,
-                                       Operator, &Candidates, AlignArg,
-                                       Diagnose);
+    if (isAlignedAllocation(PassAlignment)) {
+      PassAlignment = AlignedAllocationMode::No;
+      AlignArg = Args[NonTypeArgumentOffset + 1];
+      Args.erase(Args.begin() + NonTypeArgumentOffset + 1);
+      return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
+                                               PassAlignment, Operator,
+                                               &Candidates, AlignArg, Diagnose);
     }
 
     // MSVC will fall back on trying to find a matching global operator new
@@ -2606,16 +2738,22 @@ static bool resolveAllocationOverload(
     // FIXME: Find out how this interacts with the std::align_val_t fallback
     // once MSVC implements it.
     if (R.getLookupName().getCXXOverloadedOperator() == OO_Array_New &&
-        S.Context.getLangOpts().MSVCCompat) {
+        S.Context.getLangOpts().MSVCCompat && Mode != ResolveMode::Typed) {
       R.clear();
       R.setLookupName(S.Context.DeclarationNames.getCXXOperatorName(OO_New));
       S.LookupQualifiedName(R, S.Context.getTranslationUnitDecl());
       // FIXME: This will give bad diagnostics pointing at the wrong functions.
-      return resolveAllocationOverload(S, R, Range, Args, PassAlignment,
-                                       Operator, /*Candidates=*/nullptr,
-                                       /*AlignArg=*/nullptr, Diagnose);
+      return resolveAllocationOverloadInterior(S, R, Range, Mode, Args,
+                                               PassAlignment, Operator,
+                                               /*Candidates=*/nullptr,
+                                               /*AlignArg=*/nullptr, Diagnose);
     }
-
+    if (Mode == ResolveMode::Typed) {
+      // If we can't find a matching type aware operator we don't consider this
+      // a failure.
+      Operator = nullptr;
+      return false;
+    }
     if (Diagnose) {
       // If this is an allocation of the form 'new (p) X' for some object
       // pointer p (or an expression that will decay to such a pointer),
@@ -2639,16 +2777,21 @@ static bool resolveAllocationOverload(
       SmallVector<OverloadCandidate*, 32> AlignedCands;
       llvm::SmallVector<Expr*, 4> AlignedArgs;
       if (AlignedCandidates) {
-        auto IsAligned = [](OverloadCandidate &C) {
-          return C.Function->getNumParams() > 1 &&
-                 C.Function->getParamDecl(1)->getType()->isAlignValT();
+        auto IsAligned = [NonTypeArgumentOffset](OverloadCandidate &C) {
+          auto AlignArgOffset = NonTypeArgumentOffset + 1;
+          return C.Function->getNumParams() > AlignArgOffset &&
+                 C.Function->getParamDecl(AlignArgOffset)
+                     ->getType()
+                     ->isAlignValT();
         };
         auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
 
-        AlignedArgs.reserve(Args.size() + 1);
-        AlignedArgs.push_back(Args[0]);
+        AlignedArgs.reserve(Args.size() + NonTypeArgumentOffset + 1);
+        for (unsigned Idx = 0; Idx < NonTypeArgumentOffset + 1; ++Idx)
+          AlignedArgs.push_back(Args[Idx]);
         AlignedArgs.push_back(AlignArg);
-        AlignedArgs.append(Args.begin() + 1, Args.end());
+        AlignedArgs.append(Args.begin() + NonTypeArgumentOffset + 1,
+                           Args.end());
         AlignedCands = AlignedCandidates->CompleteCandidates(
             S, OCD_AllCandidates, AlignedArgs, R.getNameLoc(), IsAligned);
 
@@ -2688,14 +2831,75 @@ static bool resolveAllocationOverload(
   llvm_unreachable("Unreachable, bad result from BestViableFunction");
 }
 
-bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
-                                   AllocationFunctionScope NewScope,
-                                   AllocationFunctionScope DeleteScope,
-                                   QualType AllocType, bool IsArray,
-                                   bool &PassAlignment, MultiExprArg PlaceArgs,
-                                   FunctionDecl *&OperatorNew,
-                                   FunctionDecl *&OperatorDelete,
-                                   bool Diagnose) {
+enum class DeallocLookupMode { Untyped, OptionallyTyped };
+
+static void LookupGlobalDeallocationFunctions(Sema &S, SourceLocation Loc,
+                                              LookupResult &FoundDelete,
+                                              DeallocLookupMode Mode,
+                                              DeclarationName Name) {
+  S.LookupQualifiedName(FoundDelete, S.Context.getTranslationUnitDecl());
+  if (Mode != DeallocLookupMode::OptionallyTyped) {
+    // We're going to remove either the typed or the non-typed
+    bool RemoveTypedDecl = Mode == DeallocLookupMode::Untyped;
+    LookupResult::Filter Filter = FoundDelete.makeFilter();
+    while (Filter.hasNext()) {
+      FunctionDecl *FD = Filter.next()->getUnderlyingDecl()->getAsFunction();
+      if (FD->isTypeAwareOperatorNewOrDelete() == RemoveTypedDecl)
+        Filter.erase();
+    }
+    Filter.done();
+  }
+}
+
+static bool resolveAllocationOverload(
+    Sema &S, LookupResult &R, SourceRange Range, SmallVectorImpl<Expr *> &Args,
+    ImplicitAllocationParameters &IAP, FunctionDecl *&Operator,
+    OverloadCandidateSet *AlignedCandidates, Expr *AlignArg, bool Diagnose) {
+  Operator = nullptr;
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+    assert(S.isStdTypeIdentity(Args[0]->getType(), nullptr));
+    // The internal overload resolution work mutates the argument list
+    // in accordance with the spec. We may want to change that in future,
+    // but for now we deal with this by making a copy of the non-type-identity
+    // arguments.
+    SmallVector<Expr *> UntypedParameters;
+    UntypedParameters.reserve(Args.size() - 1);
+    UntypedParameters.push_back(Args[1]);
+    // Type aware allocation implicitly includes the alignment parameter so
+    // only include it in the untyped parameter list if alignment was explicitly
+    // requested
+    if (isAlignedAllocation(IAP.PassAlignment))
+      UntypedParameters.push_back(Args[2]);
+    UntypedParameters.append(Args.begin() + 3, Args.end());
+
+    AlignedAllocationMode InitialAlignmentMode = IAP.PassAlignment;
+    IAP.PassAlignment = AlignedAllocationMode::Yes;
+    if (resolveAllocationOverloadInterior(
+            S, R, Range, ResolveMode::Typed, Args, IAP.PassAlignment, Operator,
+            AlignedCandidates, AlignArg, Diagnose))
+      return true;
+    if (Operator)
+      return false;
+
+    // If we got to this point we could not find a matching typed operator
+    // so we update the IAP flags, and revert to our stored copy of the
+    // type-identity-less argument list.
+    IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
+    IAP.PassAlignment = InitialAlignmentMode;
+    Args = UntypedParameters;
+  }
+  assert(!S.isStdTypeIdentity(Args[0]->getType(), nullptr));
+  return resolveAllocationOverloadInterior(
+      S, R, Range, ResolveMode::Untyped, Args, IAP.PassAlignment, Operator,
+      AlignedCandidates, AlignArg, Diagnose);
+}
+
+bool Sema::FindAllocationFunctions(
+    SourceLocation StartLoc, SourceRange Range,
+    AllocationFunctionScope NewScope, AllocationFunctionScope DeleteScope,
+    QualType AllocType, bool IsArray, ImplicitAllocationParameters &IAP,
+    MultiExprArg PlaceArgs, FunctionDecl *&OperatorNew,
+    FunctionDecl *&OperatorDelete, bool Diagnose) {
   // --- Choosing an allocation function ---
   // C++ 5.3.4p8 - 14 & 18
   // 1) If looking in AFS_Global scope for allocation functions, only look in
@@ -2707,28 +2911,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   //   placement form.
 
   SmallVector<Expr*, 8> AllocArgs;
-  AllocArgs.reserve((PassAlignment ? 2 : 1) + PlaceArgs.size());
-
-  // We don't care about the actual value of these arguments.
-  // FIXME: Should the Sema create the expression and embed it in the syntax
-  // tree? Or should the consumer just recalculate the value?
-  // FIXME: Using a dummy value will interact poorly with attribute enable_if.
-  QualType SizeTy = Context.getSizeType();
-  unsigned SizeTyWidth = Context.getTypeSize(SizeTy);
-  IntegerLiteral Size(Context, llvm::APInt::getZero(SizeTyWidth), SizeTy,
-                      SourceLocation());
-  AllocArgs.push_back(&Size);
-
-  QualType AlignValT = Context.VoidTy;
-  if (PassAlignment) {
-    DeclareGlobalNewDelete();
-    AlignValT = Context.getTypeDeclType(getStdAlignValT());
-  }
-  CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
-  if (PassAlignment)
-    AllocArgs.push_back(&Align);
-
-  AllocArgs.insert(AllocArgs.end(), PlaceArgs.begin(), PlaceArgs.end());
+  AllocArgs.reserve(IAP.getNumImplicitArgs() + PlaceArgs.size());
 
   // C++ [expr.new]p8:
   //   If the allocated type is a non-array type, the allocation
@@ -2740,6 +2923,50 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       IsArray ? OO_Array_New : OO_New);
 
   QualType AllocElemType = Context.getBaseElementType(AllocType);
+
+  // We don't care about the actual value of these arguments.
+  // FIXME: Should the Sema create the expression and embed it in the syntax
+  // tree? Or should the consumer just recalculate the value?
+  // FIXME: Using a dummy value will interact poorly with attribute enable_if.
+
+  // We use size_t as a stand in so that we can construct the init
+  // expr on the stack
+  QualType TypeIdentity = Context.getSizeType();
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+    QualType SpecializedTypeIdentity =
+        tryBuildStdTypeIdentity(IAP.Type, StartLoc);
+    if (!SpecializedTypeIdentity.isNull()) {
+      TypeIdentity = SpecializedTypeIdentity;
+      if (RequireCompleteType(StartLoc, TypeIdentity,
+                              diag::err_incomplete_type))
+        return true;
+    } else
+      IAP.PassTypeIdentity = TypeAwareAllocationMode::No;
+  }
+  TypeAwareAllocationMode OriginalTypeAwareState = IAP.PassTypeIdentity;
+
+  CXXScalarValueInitExpr TypeIdentityParam(TypeIdentity, nullptr, StartLoc);
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity))
+    AllocArgs.push_back(&TypeIdentityParam);
+
+  QualType SizeTy = Context.getSizeType();
+  unsigned SizeTyWidth = Context.getTypeSize(SizeTy);
+  IntegerLiteral Size(Context, llvm::APInt::getZero(SizeTyWidth), SizeTy,
+                      SourceLocation());
+  AllocArgs.push_back(&Size);
+
+  QualType AlignValT = Context.VoidTy;
+  bool IncludeAlignParam = isAlignedAllocation(IAP.PassAlignment) ||
+                           isTypeAwareAllocation(IAP.PassTypeIdentity);
+  if (IncludeAlignParam) {
+    DeclareGlobalNewDelete();
+    AlignValT = Context.getTypeDeclType(getStdAlignValT());
+  }
+  CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
+  if (IncludeAlignParam)
+    AllocArgs.push_back(&Align);
+
+  AllocArgs.insert(AllocArgs.end(), PlaceArgs.begin(), PlaceArgs.end());
 
   // Find the allocation function.
   {
@@ -2783,8 +3010,8 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     // We do our own custom access checks below.
     R.suppressDiagnostics();
 
-    if (resolveAllocationOverload(*this, R, Range, AllocArgs, PassAlignment,
-                                  OperatorNew, /*Candidates=*/nullptr,
+    if (resolveAllocationOverload(*this, R, Range, AllocArgs, IAP, OperatorNew,
+                                  /*Candidates=*/nullptr,
                                   /*AlignArg=*/nullptr, Diagnose))
       return true;
   }
@@ -2846,6 +3073,23 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   }
 
   bool FoundGlobalDelete = FoundDelete.empty();
+  bool IsClassScopedTypeAwareNew =
+      isTypeAwareAllocation(IAP.PassTypeIdentity) &&
+      OperatorNew->getDeclContext()->isRecord();
+  auto DiagnoseMissingTypeAwareCleanupOperator = [&](bool IsPlacementOperator) {
+    assert(isTypeAwareAllocation(IAP.PassTypeIdentity));
+    if (Diagnose) {
+      Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
+          << OperatorNew->getDeclName() << IsPlacementOperator << DeleteName;
+      Diag(OperatorNew->getLocation(), diag::note_type_aware_operator_declared)
+          << OperatorNew->isTypeAwareOperatorNewOrDelete()
+          << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+    }
+  };
+  if (IsClassScopedTypeAwareNew && FoundDelete.empty()) {
+    DiagnoseMissingTypeAwareCleanupOperator(/*isPlacementNew=*/false);
+    return true;
+  }
   if (FoundDelete.empty()) {
     FoundDelete.clear(LookupOrdinaryName);
 
@@ -2853,7 +3097,11 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
       return true;
 
     DeclareGlobalNewDelete();
-    LookupQualifiedName(FoundDelete, Context.getTranslationUnitDecl());
+    DeallocLookupMode LookupMode = isTypeAwareAllocation(OriginalTypeAwareState)
+                                       ? DeallocLookupMode::OptionallyTyped
+                                       : DeallocLookupMode::Untyped;
+    LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete, LookupMode,
+                                      DeleteName);
   }
 
   FoundDelete.suppressDiagnostics();
@@ -2873,7 +3121,13 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   // FIXME: Should (size_t, std::align_val_t) also be considered non-placement?
   // This affects whether an exception from the constructor of an overaligned
   // type uses the sized or non-sized form of aligned operator delete.
-  bool isPlacementNew = !PlaceArgs.empty() || OperatorNew->param_size() != 1 ||
+
+  unsigned NonPlacementNewArgCount = 1; // size parameter
+  if (isTypeAwareAllocation(IAP.PassTypeIdentity))
+    NonPlacementNewArgCount =
+        /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
+  bool isPlacementNew = !PlaceArgs.empty() ||
+                        OperatorNew->param_size() != NonPlacementNewArgCount ||
                         OperatorNew->isVariadic();
 
   if (isPlacementNew) {
@@ -2891,9 +3145,16 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     {
       auto *Proto = OperatorNew->getType()->castAs<FunctionProtoType>();
 
-      SmallVector<QualType, 4> ArgTypes;
+      SmallVector<QualType, 6> ArgTypes;
+      int InitialParamOffset = 0;
+      if (isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+        ArgTypes.push_back(TypeIdentity);
+        InitialParamOffset = 1;
+      }
       ArgTypes.push_back(Context.VoidPtrTy);
-      for (unsigned I = 1, N = Proto->getNumParams(); I < N; ++I)
+      for (unsigned I = ArgTypes.size() - InitialParamOffset,
+                    N = Proto->getNumParams();
+           I < N; ++I)
         ArgTypes.push_back(Proto->getParamType(I));
 
       FunctionProtoType::ExtProtoInfo EPI;
@@ -2929,6 +3190,10 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     if (getLangOpts().CUDA)
       CUDA().EraseUnwantedMatches(getCurFunctionDecl(/*AllowLambda=*/true),
                                   Matches);
+    if (Matches.empty() && isTypeAwareAllocation(IAP.PassTypeIdentity)) {
+      DiagnoseMissingTypeAwareCleanupOperator(isPlacementNew);
+      return true;
+    }
   } else {
     // C++1y [expr.new]p22:
     //   For a non-placement allocation function, the normal deallocation
@@ -2938,11 +3203,14 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     // without a size_t argument, but prefers a non-member operator delete
     // with a size_t where possible (which it always is in this case).
     llvm::SmallVector<UsualDeallocFnInfo, 4> BestDeallocFns;
+    ImplicitDeallocationParameters IDP = {
+        AllocElemType, OriginalTypeAwareState,
+        alignedAllocationModeFromBool(
+            hasNewExtendedAlignment(*this, AllocElemType)),
+        sizedDeallocationModeFromBool(FoundGlobalDelete)};
     UsualDeallocFnInfo Selected = resolveDeallocationOverload(
-        *this, FoundDelete, /*WantSize*/ FoundGlobalDelete,
-        /*WantAlign*/ hasNewExtendedAlignment(*this, AllocElemType),
-        &BestDeallocFns);
-    if (Selected)
+        *this, FoundDelete, IDP, StartLoc, &BestDeallocFns);
+    if (Selected && BestDeallocFns.empty())
       Matches.push_back(std::make_pair(Selected.Found, Selected.FD));
     else {
       // If we failed to select an operator, all remaining functions are viable
@@ -2958,6 +3226,35 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
   //   deallocation function will be called.
   if (Matches.size() == 1) {
     OperatorDelete = Matches[0].second;
+    bool FoundTypeAwareOperator =
+        OperatorDelete->isTypeAwareOperatorNewOrDelete() ||
+        OperatorNew->isTypeAwareOperatorNewOrDelete();
+    if (Diagnose && FoundTypeAwareOperator) {
+      bool MismatchedTypeAwareness =
+          OperatorDelete->isTypeAwareOperatorNewOrDelete() !=
+          OperatorNew->isTypeAwareOperatorNewOrDelete();
+      bool MismatchedContext =
+          OperatorDelete->getDeclContext() != OperatorNew->getDeclContext();
+      if (MismatchedTypeAwareness || MismatchedContext) {
+        FunctionDecl *Operators[] = {OperatorDelete, OperatorNew};
+        bool TypeAwareOperatorIndex =
+            OperatorNew->isTypeAwareOperatorNewOrDelete();
+        Diag(StartLoc, diag::err_mismatching_type_aware_cleanup_deallocator)
+            << Operators[TypeAwareOperatorIndex]->getDeclName()
+            << isPlacementNew
+            << Operators[!TypeAwareOperatorIndex]->getDeclName()
+            << Operators[TypeAwareOperatorIndex]->getDeclContext();
+        Diag(OperatorNew->getLocation(),
+             diag::note_type_aware_operator_declared)
+            << OperatorNew->isTypeAwareOperatorNewOrDelete()
+            << OperatorNew->getDeclName() << OperatorNew->getDeclContext();
+        Diag(OperatorDelete->getLocation(),
+             diag::note_type_aware_operator_declared)
+            << OperatorDelete->isTypeAwareOperatorNewOrDelete()
+            << OperatorDelete->getDeclName()
+            << OperatorDelete->getDeclContext();
+      }
+    }
 
     // C++1z [expr.new]p23:
     //   If the lookup finds a usual deallocation function (3.7.4.2)
@@ -2968,22 +3265,26 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     if (getLangOpts().CPlusPlus11 && isPlacementNew &&
         isNonPlacementDeallocationFunction(*this, OperatorDelete)) {
       UsualDeallocFnInfo Info(*this,
-                              DeclAccessPair::make(OperatorDelete, AS_public));
+                              DeclAccessPair::make(OperatorDelete, AS_public),
+                              AllocElemType, StartLoc);
       // Core issue, per mail to core reflector, 2016-10-09:
       //   If this is a member operator delete, and there is a corresponding
       //   non-sized member operator delete, this isn't /really/ a sized
       //   deallocation function, it just happens to have a size_t parameter.
-      bool IsSizedDelete = Info.HasSizeT;
+      bool IsSizedDelete = isSizedDeallocation(Info.IDP.PassSize);
       if (IsSizedDelete && !FoundGlobalDelete) {
-        auto NonSizedDelete =
-            resolveDeallocationOverload(*this, FoundDelete, /*WantSize*/false,
-                                        /*WantAlign*/Info.HasAlignValT);
-        if (NonSizedDelete && !NonSizedDelete.HasSizeT &&
-            NonSizedDelete.HasAlignValT == Info.HasAlignValT)
+        ImplicitDeallocationParameters SizeTestingIDP = {
+            AllocElemType, Info.IDP.PassTypeIdentity, Info.IDP.PassAlignment,
+            SizedDeallocationMode::No};
+        auto NonSizedDelete = resolveDeallocationOverload(
+            *this, FoundDelete, SizeTestingIDP, StartLoc);
+        if (NonSizedDelete &&
+            !isSizedDeallocation(NonSizedDelete.IDP.PassSize) &&
+            NonSizedDelete.IDP.PassAlignment == Info.IDP.PassAlignment)
           IsSizedDelete = false;
       }
 
-      if (IsSizedDelete) {
+      if (IsSizedDelete && !isTypeAwareAllocation(IAP.PassTypeIdentity)) {
         SourceRange R = PlaceArgs.empty()
                             ? SourceRange()
                             : SourceRange(PlaceArgs.front()->getBeginLoc(),
@@ -2994,9 +3295,11 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
               << DeleteName;
       }
     }
+    if (CheckDeleteOperator(*this, StartLoc, Range, Diagnose,
+                            FoundDelete.getNamingClass(), Matches[0].first,
+                            Matches[0].second))
+      return true;
 
-    CheckAllocationAccess(StartLoc, Range, FoundDelete.getNamingClass(),
-                          Matches[0].first);
   } else if (!Matches.empty()) {
     // We found multiple suitable operators. Per [expr.new]p20, that means we
     // call no 'operator delete' function, but we should at least warn the user.
@@ -3175,9 +3478,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
 
   QualType BadAllocType;
-  bool HasBadAllocExceptionSpec
-    = (Name.getCXXOverloadedOperator() == OO_New ||
-       Name.getCXXOverloadedOperator() == OO_Array_New);
+  bool HasBadAllocExceptionSpec = Name.isAnyOperatorNew();
   if (HasBadAllocExceptionSpec) {
     if (!getLangOpts().CPlusPlus11) {
       BadAllocType = Context.getTypeDeclType(getStdBadAlloc());
@@ -3257,21 +3558,29 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
   }
 }
 
-FunctionDecl *Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
-                                                  bool CanProvideSize,
-                                                  bool Overaligned,
-                                                  DeclarationName Name) {
+FunctionDecl *
+Sema::FindUsualDeallocationFunction(SourceLocation StartLoc,
+                                    ImplicitDeallocationParameters IDP,
+                                    DeclarationName Name) {
   DeclareGlobalNewDelete();
 
   LookupResult FoundDelete(*this, Name, StartLoc, LookupOrdinaryName);
-  LookupQualifiedName(FoundDelete, Context.getTranslationUnitDecl());
+  LookupGlobalDeallocationFunctions(*this, StartLoc, FoundDelete,
+                                    DeallocLookupMode::OptionallyTyped, Name);
 
   // FIXME: It's possible for this to result in ambiguity, through a
   // user-declared variadic operator delete or the enable_if attribute. We
   // should probably not consider those cases to be usual deallocation
   // functions. But for now we just make an arbitrary choice in that case.
-  auto Result = resolveDeallocationOverload(*this, FoundDelete, CanProvideSize,
-                                            Overaligned);
+  auto Result = resolveDeallocationOverload(*this, FoundDelete, IDP, StartLoc);
+  if (!Result)
+    return nullptr;
+
+  if (CheckDeleteOperator(*this, StartLoc, StartLoc, /*Diagnose=*/true,
+                          FoundDelete.getNamingClass(), Result.Found,
+                          Result.FD))
+    return nullptr;
+
   assert(Result.FD && "operator delete missing from global scope?");
   return Result.FD;
 }
@@ -3282,21 +3591,30 @@ FunctionDecl *Sema::FindDeallocationFunctionForDestructor(SourceLocation Loc,
                                                           bool Diagnose) {
 
   FunctionDecl *OperatorDelete = nullptr;
-  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, Diagnose))
+  QualType DeallocType = Context.getRecordType(RD);
+  ImplicitDeallocationParameters IDP = {
+      DeallocType, ShouldUseTypeAwareOperatorNewOrDelete(),
+      AlignedAllocationMode::No, SizedDeallocationMode::No};
+
+  if (FindDeallocationFunction(Loc, RD, Name, OperatorDelete, IDP, Diagnose))
     return nullptr;
+
   if (OperatorDelete)
     return OperatorDelete;
 
   // If there's no class-specific operator delete, look up the global delete.
-  return FindUsualDeallocationFunction(
-      Loc, true, hasNewExtendedAlignment(*this, Context.getRecordType(RD)),
-      Name);
+  QualType RecordType = Context.getRecordType(RD);
+  IDP.PassAlignment =
+      alignedAllocationModeFromBool(hasNewExtendedAlignment(*this, RecordType));
+  IDP.PassSize = SizedDeallocationMode::Yes;
+  return FindUsualDeallocationFunction(Loc, IDP, Name);
 }
 
 bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
                                     DeclarationName Name,
-                                    FunctionDecl *&Operator, bool Diagnose,
-                                    bool WantSize, bool WantAligned) {
+                                    FunctionDecl *&Operator,
+                                    ImplicitDeallocationParameters IDP,
+                                    bool Diagnose) {
   LookupResult Found(*this, Name, StartLoc, LookupOrdinaryName);
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
@@ -3309,36 +3627,22 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
 
   Found.suppressDiagnostics();
 
-  bool Overaligned =
-      WantAligned || hasNewExtendedAlignment(*this, Context.getRecordType(RD));
+  if (!isAlignedAllocation(IDP.PassAlignment) &&
+      hasNewExtendedAlignment(*this, Context.getRecordType(RD)))
+    IDP.PassAlignment = AlignedAllocationMode::Yes;
 
   // C++17 [expr.delete]p10:
   //   If the deallocation functions have class scope, the one without a
   //   parameter of type std::size_t is selected.
   llvm::SmallVector<UsualDeallocFnInfo, 4> Matches;
-  resolveDeallocationOverload(*this, Found, /*WantSize*/ WantSize,
-                              /*WantAlign*/ Overaligned, &Matches);
+  resolveDeallocationOverload(*this, Found, IDP, StartLoc, &Matches);
 
   // If we could find an overload, use it.
   if (Matches.size() == 1) {
     Operator = cast<CXXMethodDecl>(Matches[0].FD);
-
-    // FIXME: DiagnoseUseOfDecl?
-    if (Operator->isDeleted()) {
-      if (Diagnose) {
-        StringLiteral *Msg = Operator->getDeletedMessage();
-        Diag(StartLoc, diag::err_deleted_function_use)
-            << (Msg != nullptr) << (Msg ? Msg->getString() : StringRef());
-        NoteDeletedFunction(Operator);
-      }
-      return true;
-    }
-
-    if (CheckAllocationAccess(StartLoc, SourceRange(), Found.getNamingClass(),
-                              Matches[0].Found, Diagnose) == AR_inaccessible)
-      return true;
-
-    return false;
+    return CheckDeleteOperator(*this, StartLoc, StartLoc, Diagnose,
+                               Found.getNamingClass(), Matches[0].Found,
+                               Operator);
   }
 
   // We found multiple suitable operators; complain about the ambiguity.
@@ -3762,9 +4066,12 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
                                       ArrayForm ? OO_Array_Delete : OO_Delete);
 
     if (PointeeRD) {
+      ImplicitDeallocationParameters IDP = {
+          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
+          AlignedAllocationMode::No, SizedDeallocationMode::No};
       if (!UseGlobal &&
           FindDeallocationFunction(StartLoc, PointeeRD, DeleteName,
-                                   OperatorDelete))
+                                   OperatorDelete, IDP))
         return ExprError();
 
       // If we're allocating an array of records, check whether the
@@ -3773,16 +4080,17 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         // If the user specifically asked to use the global allocator,
         // we'll need to do the lookup into the class.
         if (UseGlobal)
-          UsualArrayDeleteWantsSize =
-            doesUsualArrayDeleteWantSize(*this, StartLoc, PointeeElem);
+          UsualArrayDeleteWantsSize = doesUsualArrayDeleteWantSize(
+              *this, StartLoc, IDP.PassTypeIdentity, PointeeElem);
 
         // Otherwise, the usual operator delete[] should be the
         // function we just found.
-        else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete))
-          UsualArrayDeleteWantsSize =
-            UsualDeallocFnInfo(*this,
-                               DeclAccessPair::make(OperatorDelete, AS_public))
-              .HasSizeT;
+        else if (isa_and_nonnull<CXXMethodDecl>(OperatorDelete)) {
+          UsualDeallocFnInfo UDFI(
+              *this, DeclAccessPair::make(OperatorDelete, AS_public), Pointee,
+              StartLoc);
+          UsualArrayDeleteWantsSize = isSizedDeallocation(UDFI.IDP.PassSize);
+        }
       }
 
       if (!PointeeRD->hasIrrelevantDestructor()) {
@@ -3815,8 +4123,13 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       bool Overaligned = hasNewExtendedAlignment(*this, Pointee);
 
       // Look for a global declaration.
-      OperatorDelete = FindUsualDeallocationFunction(StartLoc, CanProvideSize,
-                                                     Overaligned, DeleteName);
+      ImplicitDeallocationParameters IDP = {
+          Pointee, ShouldUseTypeAwareOperatorNewOrDelete(),
+          alignedAllocationModeFromBool(Overaligned),
+          sizedDeallocationModeFromBool(CanProvideSize)};
+      OperatorDelete = FindUsualDeallocationFunction(StartLoc, IDP, DeleteName);
+      if (!OperatorDelete)
+        return ExprError();
     }
 
     if (OperatorDelete->isInvalidDecl())
@@ -3838,11 +4151,21 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
 
     DiagnoseUseOfDecl(OperatorDelete, StartLoc);
 
+    unsigned AddressParamIdx = 0;
+    if (OperatorDelete->isTypeAwareOperatorNewOrDelete()) {
+      QualType TypeIdentity = OperatorDelete->getParamDecl(0)->getType();
+      if (RequireCompleteType(StartLoc, TypeIdentity,
+                              diag::err_incomplete_type))
+        return ExprError();
+      AddressParamIdx = 1;
+    }
+
     // Convert the operand to the type of the first parameter of operator
     // delete. This is only necessary if we selected a destroying operator
     // delete that we are going to call (non-virtually); converting to void*
     // is trivial and left to AST consumers to handle.
-    QualType ParamType = OperatorDelete->getParamDecl(0)->getType();
+    QualType ParamType =
+        OperatorDelete->getParamDecl(AddressParamIdx)->getType();
     if (!IsVirtualDelete && !ParamType->getPointeeType()->isVoidType()) {
       Qualifiers Qs = Pointee.getQualifiers();
       if (Qs.hasCVRQualifiers()) {

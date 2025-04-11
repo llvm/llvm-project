@@ -1,5 +1,5 @@
-# For arch15 and above.
-# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=arch15 -show-encoding %s \
+# For z17 and above.
+# RUN: llvm-mc -triple s390x-linux-gnu -mcpu=z17 -show-encoding %s \
 # RUN:   | FileCheck %s
 
 #CHECK: bdepg	%r0, %r0, %r0           # encoding: [0xb9,0x6d,0x00,0x00]

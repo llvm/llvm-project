@@ -1,4 +1,4 @@
-//===-- CGOps.h -------------------------------------------------*- C++ -*-===//
+//===-- SafeTempArrayCopyAttrInterface.cpp --------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,14 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPTIMIZER_CODEGEN_CGOPS_H
-#define OPTIMIZER_CODEGEN_CGOPS_H
+#include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.h"
 
-#include "flang/Optimizer/Dialect/FIRAttr.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-
-#define GET_OP_CLASSES
-#include "flang/Optimizer/CodeGen/CGOps.h.inc"
-
-#endif
+#include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.cpp.inc"
