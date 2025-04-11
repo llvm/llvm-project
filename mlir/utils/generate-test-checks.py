@@ -236,7 +236,8 @@ def process_attribute_references(line, attribute_namer):
 # Pre-process a line of input to remove any character sequences that will be
 # problematic with FileCheck.
 def preprocess_line(line):
-    # If input line has `{{` i.e. in a StrAttr with serialized proto.
+    # Replace any `{{` with escaped replacements. `{{` corresponds to regex
+    # checks in FileCheck.
     output_line = line.replace("{{", "{{\\{\\{}}")
 
     # Replace any double brackets, '[[' with escaped replacements. '[['
