@@ -2704,6 +2704,8 @@ namespace llvm {
 /// scheduling "phases"), we can reenter this mutation framework more than once
 /// for a given region.
 std::unique_ptr<ScheduleDAGMutation>
-llvm::createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
+createIGroupLPDAGMutation(AMDGPU::SchedulingPhase Phase) {
   return std::make_unique<IGroupLPDAGMutation>(Phase);
+}
+
 }
