@@ -56,7 +56,7 @@
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-b64"
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-bpT:0x100000000" "-bpD:0x110000000"
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-lc"
-! AIX64-LD-PER-TARGET-SHARED-SAME:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64-ibm-aix{{/|\\\\}}libflang_rt.runtime.a"
+! AIX64-LD-PER-TARGET-SHARED-SAME:     "-lflang_rt.runtime"
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-lm"
 ! AIX64-LD-PER-TARGET-SHARED-SAME:     "-lpthread"
 
@@ -71,7 +71,7 @@
 ! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! LOP64-LD-PER-TARGET-DEFAULT:     "{{.*}}ld{{(.exe)?}}"
 ! LOP64-LD-PER-TARGET-DEFAULT-NOT: "-bnso"
-! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64le-unknown-linux-gnu{{/|\\\\}}libflang_rt.runtime.so"
+! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-lflang_rt.runtime"
 ! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-lm"
 ! LOP64-LD-PER-TARGET-DEFAULT-SAME:     "-lc"
 
@@ -100,7 +100,7 @@
 ! LOP64-LD-PER-TARGET-SHARED:     "-fc1" "-triple" "powerpc64le-unknown-linux-gnu"
 ! LOP64-LD-PER-TARGET-SHARED-SAME:     "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 ! LOP64-LD-PER-TARGET-SHARED:     "{{.*}}ld{{(.exe)?}}"
-! AIX64-LD-PER-TARGET-NOT: "-bnso"
-! LOP64-LD-PER-TARGET-SHARED-SAME:     "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}powerpc64le-unknown-linux-gnu{{/|\\\\}}libflang_rt.runtime.so"
+! LOP64-LD-PER-TARGET-SHARED-NOT: "-bnso"
+! LOP64-LD-PER-TARGET-SHARED-SAME:     "-lflang_rt.runtime"
 ! LOP64-LD-PER-TARGET-SHARED-SAME:     "-lm"
 ! LOP64-LD-PER-TARGET-SHARED-SAME:     "-lc"
