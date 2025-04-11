@@ -4567,7 +4567,8 @@ public:
                               const ObjCIvarDecl *Ivar);
   llvm::Value *EmitIvarOffsetAsPointerDiff(const ObjCInterfaceDecl *Interface,
                                            const ObjCIvarDecl *Ivar);
-  LValue EmitLValueForField(LValue Base, const FieldDecl *Field);
+  LValue EmitLValueForField(LValue Base, const FieldDecl *Field,
+                            bool IsInBounds = true);
   LValue EmitLValueForLambdaField(const FieldDecl *Field);
   LValue EmitLValueForLambdaField(const FieldDecl *Field,
                                   llvm::Value *ThisValue);
@@ -4696,6 +4697,8 @@ public:
   EmitOrigPointerRValue(const Expr *E);
 
   bool isPointerKnownNonNull(const Expr *E);
+  /// Check whether the underlying base pointer is a constant null.
+  bool isUnderlyingBasePointerConstantNull(const Expr *E);
 
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
