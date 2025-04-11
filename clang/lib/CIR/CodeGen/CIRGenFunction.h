@@ -579,6 +579,9 @@ public:
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
+  void emitStoreThroughBitfieldLValue(RValue src, LValue dst,
+                                      mlir::Value &result);
+
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
   /// Note: CIR defers most of the special casting to the final lowering passes
@@ -592,6 +595,11 @@ public:
   void emitVarDecl(const clang::VarDecl &d);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
+
+  /// Given an assignment `*lhs = rhs`, emit a test that checks if \p rhs is
+  /// nonnull, if 1\p LHS is marked _Nonnull.
+  void emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                            clang::SourceLocation loc);
 
   /// ----------------------
   /// CIR build helpers
