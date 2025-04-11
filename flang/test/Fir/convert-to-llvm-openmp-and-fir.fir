@@ -799,8 +799,8 @@ func.func @_QPs(%arg0: !fir.ref<complex<f32>> {fir.bindc_name = "x"}) {
 //CHECK:  omp.parallel   {
 //CHECK:    %[[CONST_1:.*]] = llvm.mlir.constant(1 : i32) : i32
 //CHECK:    %[[ALLOCA_1:.*]] = llvm.alloca %[[CONST_1:.*]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-//CHECK:    %[[LOAD:.*]] = llvm.load %[[ALLOCA]] : !llvm.ptr -> !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
-//CHECK:    llvm.store %[[LOAD]], %[[ALLOCA_1]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>, !llvm.ptr
+//CHECK:    %[[SIZE:.*]] = llvm.mlir.constant(24 : i32) : i32
+//CHECK:    "llvm.intr.memcpy"(%[[ALLOCA_1]], %[[ALLOCA]], %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 //CHECK:    %[[GEP:.*]] = llvm.getelementptr %[[ALLOCA_1]][0, 0] : (!llvm.ptr) -> !llvm.ptr
 //CHECK:    %[[LOAD_2:.*]] = llvm.load %[[GEP]] : !llvm.ptr -> !llvm.ptr
 //CHECK:    omp.terminator
@@ -1017,7 +1017,7 @@ func.func @omp_map_common_block_using_common_block_symbol() {
     %8 = fir.load %4 : !fir.ref<i32>
     %9 = arith.addi %8, %c20_i32 : i32
     fir.store %9 to %7 : !fir.ref<i32>
-        omp.terminator
+    omp.terminator
   }
   return
 }
@@ -1054,7 +1054,7 @@ func.func @omp_map_common_block_using_common_block_members() {
     %9 = fir.load %arg0 : !fir.ref<i32>
     %10 = arith.muli %9, %c10_i32 : i32
     fir.store %10 to %arg1 : !fir.ref<i32>
-   omp.terminator
+    omp.terminator
   }
   return
 }
@@ -1155,8 +1155,7 @@ func.func @map_dtype_alloca_mem2(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_
   %c0 = arith.constant 0 : index
   // CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
   %0 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c4 : index) extent(%c4 : index) stride(%c1 : index) start_idx(%c0 : index) {stride_in_bytes = true}
-  // CHECK: %[[LOAD_9:.*]] = llvm.load %[[ARG_0]] : !llvm.ptr -> [[DESC_TY]]
-  // CHECK: llvm.store %[[LOAD_9]], %[[DTYPE_ALLOCATABLE_ALOCA]] : [[DESC_TY]], !llvm.ptr
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1168,8 +1167,7 @@ func.func @map_dtype_alloca_mem2(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_
   %4 = omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%3 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%0) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
   // CHECK: %[[MAP_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[GEP_DTYPE_MEMBER]] : !llvm.ptr, [[DESC_TY2]]) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
   %5 = omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  // CHECK: %[[LOAD_16:.*]] = llvm.load %[[ARG_0]] : !llvm.ptr -> [[DESC_TY]]
-  // CHECK: llvm.store %[[LOAD_16]], %[[DTYPE_ALLOCATABLE_ALOCA_2]] : [[DESC_TY]], !llvm.ptr  
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %6 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA_2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1205,8 +1203,7 @@ func.func @map_nested_dtype_alloca_mem(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.
   %c0 = arith.constant 0 : index
   // CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
   %0 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c4 : index) extent(%c4 : index) stride(%c1 : index) start_idx(%c0 : index) {stride_in_bytes = true}
-  // CHECK:  %[[LOAD_11:.*]] = llvm.load %[[ARG_0]] : !llvm.ptr -> [[DESC_TY]]
-  // CHECK:  llvm.store %[[LOAD_11]], %[[DTYPE_ALLOCATABLE_ALOCA]] : [[DESC_TY]], !llvm.ptr  
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   %1 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32,nest:!fir.type<_QFRecTy2{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>}>>>>
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_GEP_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
@@ -1220,8 +1217,7 @@ func.func @map_nested_dtype_alloca_mem(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.
   %5 = omp.map.info var_ptr(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.array<?xi32>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%4 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) bounds(%0) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
   // CHECK: %[[MAP_NESTED_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[GEP_NESTED_DTYPE_ALLOCATABLE_MEMBER]] : !llvm.ptr, [[DESC_TY2]]) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
   %6 = omp.map.info var_ptr(%3 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-  // CHECK: %[[LOAD_19:.*]] = llvm.load %[[ARG_0]] : !llvm.ptr -> [[DESC_TY]]
-  // CHECK: llvm.store %[[LOAD_19]], %[[DTYPE_ALLOCATABLE_ALOCA_2]] : [[DESC_TY]], !llvm.ptr
+  // CHECK: "llvm.intr.memcpy"(%[[DTYPE_ALLOCATABLE_ALOCA_2]], %[[ARG_0]], {{.*}}) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK: %[[GEP_DTYPE_BADDR:.*]] = llvm.getelementptr %[[DTYPE_ALLOCATABLE_ALOCA_2]][0, 0] : (!llvm.ptr) -> !llvm.ptr, [[DESC_TY]]
   // CHECK: %[[LOAD_GEP_DTYPE_BADDR:.*]] = llvm.load %[[GEP_DTYPE_BADDR]] : !llvm.ptr -> !llvm.ptr
   %7 = fir.load %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QFRecTy{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32,nest:!fir.type<_QFRecTy2{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<?xi32>>>,k:i32}>}>>>>
