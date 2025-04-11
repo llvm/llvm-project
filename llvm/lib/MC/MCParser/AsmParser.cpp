@@ -757,8 +757,6 @@ extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
-enum { DEFAULT_ADDRSPACE = 0 };
-
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
     : MCAsmParser(Ctx, Out, SM, MAI), CurBuffer(CB ? CB : SM.getMainFileID()),
