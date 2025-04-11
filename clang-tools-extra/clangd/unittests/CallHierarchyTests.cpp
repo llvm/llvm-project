@@ -45,6 +45,7 @@ using ::testing::UnorderedElementsAre;
 // Helpers for matching call hierarchy data structures.
 MATCHER_P(withName, N, "") { return arg.name == N; }
 MATCHER_P(withDetail, N, "") { return arg.detail == N; }
+MATCHER_P(withFile, N, "") { return arg.uri.file() == N; }
 MATCHER_P(withSelectionRange, R, "") { return arg.selectionRange == R; }
 
 template <class ItemMatcher>
@@ -387,10 +388,17 @@ TEST(CallHierarchy, MultiFileCpp) {
                                 bool IsDeclaration) {
     std::vector<CallHierarchyItem> Items =
         prepareCallHierarchy(AST, Pos, TUPath);
-    ASSERT_THAT(Items, ElementsAre(withName("caller3")));
+    ASSERT_THAT(
+        Items,
+        ElementsAre(AllOf(
+            withName("caller3"),
+            withFile(testPath(IsDeclaration ? "caller3.hh" : "caller3.cc")))));
     auto OutgoingLevel1 = outgoingCalls(Items[0], Index.get());
     ASSERT_THAT(
         OutgoingLevel1,
+        // fromRanges are interpreted in the context of Items[0]'s file.
+        // If that's the header, we can't get ranges from the implementation
+        // file!      
         ElementsAre(
             AllOf(to(AllOf(withName("caller1"), withDetail("nsa::caller1"))),
                   IsDeclaration ? oFromRanges()
