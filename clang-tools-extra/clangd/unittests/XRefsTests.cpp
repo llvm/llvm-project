@@ -1091,7 +1091,7 @@ TEST(LocateSymbol, All) {
       )objc",
       R"cpp(
         struct PointerIntPairInfo {
-          static void *getPointer(void *Value);
+          static void *$decl[[getPointer]](void *Value);
         };
 
         template <typename Info = PointerIntPairInfo> struct PointerIntPair {

@@ -315,9 +315,9 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::resolveMemberExpr(
 
 std::vector<const NamedDecl *>
 HeuristicResolverImpl::resolveDeclRefExpr(const DependentScopeDeclRefExpr *RE) {
-  return resolveDependentMember(
-      resolveNestedNameSpecifierToType(RE->getQualifier()), RE->getDeclName(),
-      StaticFilter);
+  QualType Qualifier = resolveNestedNameSpecifierToType(RE->getQualifier());
+  Qualifier = simplifyType(Qualifier, nullptr, /*UnwrapPointer=*/false);
+  return resolveDependentMember(Qualifier, RE->getDeclName(), StaticFilter);
 }
 
 std::vector<const NamedDecl *>
