@@ -11,16 +11,27 @@
 
 #include "GDBRemoteCommunicationHistory.h"
 
+#include <condition_variable>
 #include <future>
 #include <mutex>
+#include <queue>
 #include <string>
+#include <vector>
+
 #include "lldb/Core/Communication.h"
+#include "lldb/Host/Config.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Listener.h"
+#include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
+namespace repro {
+class PacketRecorder;
+}
 namespace process_gdb_remote {
 
 enum GDBStoppointType {
@@ -150,6 +161,8 @@ public:
                                  // fork/exec to avoid having to connect/accept
 
   void DumpHistory(Stream &strm);
+
+  void SetPacketRecorder(repro::PacketRecorder *recorder);
 
   static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
                                     GDBRemoteCommunication &server);
