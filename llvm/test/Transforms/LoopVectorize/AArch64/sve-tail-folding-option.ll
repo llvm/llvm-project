@@ -11,6 +11,8 @@
 ; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -sve-tail-folding=default -mcpu=neoverse-v1 | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
 ; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v1 -sve-tail-folding=default | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
 ; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v1 | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
+; Simple tail-folding is also enabled by default on neoverse-v2. Use same check prefix.
+; RUN: opt < %s -passes=loop-vectorize -sve-tail-folding-insn-threshold=0 -S -mcpu=neoverse-v2 | FileCheck %s -check-prefix=CHECK-NEOVERSE-V1
 
 target triple = "aarch64-unknown-linux-gnu"
 
