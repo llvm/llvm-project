@@ -4751,20 +4751,25 @@ def HLSLResourceBinding: InheritableAttr {
 
   private:
       RegisterType RegType;
-      unsigned SlotNumber;
+      int SlotNumber; // -1 if the register slot was not specified
       unsigned SpaceNumber;
 
   public:
-      void setBinding(RegisterType RT, unsigned SlotNum, unsigned SpaceNum) {
+      void setBinding(RegisterType RT, int SlotNum, unsigned SpaceNum) {
         RegType = RT;
         SlotNumber = SlotNum;
         SpaceNumber = SpaceNum;
       }
+      bool isImplicit() const {
+        return SlotNumber < 0;
+      }
       RegisterType getRegisterType() const {
+        assert(!isImplicit() && "binding does not have register slot");
         return RegType;
       }
       unsigned getSlotNumber() const {
-        return SlotNumber;
+        assert(!isImplicit() && "binding does not have register slot");
+        return (unsigned)SlotNumber;
       }
       unsigned getSpaceNumber() const {
         return SpaceNumber;
