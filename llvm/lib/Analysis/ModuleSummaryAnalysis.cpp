@@ -222,7 +222,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     // Produce a summary from type.test intrinsics. We only summarize type.test
     // intrinsics that are used other than by an llvm.assume intrinsic.
@@ -250,7 +251,8 @@ static void addIntrinsicToSummary(
     auto *TypeId = dyn_cast<MDString>(TypeMDVal->getMetadata());
     if (!TypeId)
       break;
-    GlobalValue::GUID Guid = GlobalValue::getGUID(TypeId->getString());
+    GlobalValue::GUID Guid =
+        GlobalValue::getGUIDAssumingExternalLinkage(TypeId->getString());
 
     SmallVector<DevirtCallSite, 4> DevirtCalls;
     SmallVector<Instruction *, 4> LoadedPtrs;
@@ -904,7 +906,8 @@ static void computeAliasSummary(ModuleSummaryIndex &Index, const GlobalAlias &A,
 
 // Set LiveRoot flag on entries matching the given value name.
 static void setLiveRoot(ModuleSummaryIndex &Index, StringRef Name) {
-  if (ValueInfo VI = Index.getValueInfo(GlobalValue::getGUID(Name)))
+  if (ValueInfo VI =
+          Index.getValueInfo(GlobalValue::getGUIDAssumingExternalLinkage(Name)))
     for (const auto &Summary : VI.getSummaryList())
       Summary->setLive(true);
 }
