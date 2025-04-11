@@ -1556,6 +1556,9 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
   if (processIfEntryValueDbgDeclare(FuncInfo, Address, Expr, Var, DbgLoc))
     return true;
 
+  if (!Address->getType()->isPointerTy())
+    return false;
+
   MachineFunction *MF = FuncInfo.MF;
   const DataLayout &DL = MF->getDataLayout();
 
@@ -3276,6 +3279,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   case ISD::WRITE_REGISTER:
     Select_WRITE_REGISTER(NodeToMatch);
     return;
+  case ISD::POISON:
   case ISD::UNDEF:
     Select_UNDEF(NodeToMatch);
     return;

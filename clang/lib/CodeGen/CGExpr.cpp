@@ -393,55 +393,49 @@ pushTemporaryCleanup(CodeGenFunction &CGF, const MaterializeTemporaryExpr *M,
     }
   }
 
-  CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
-  if (const RecordType *RT =
-          E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-    // Get the destructor for the reference temporary.
-    auto *ClassDecl = cast<CXXRecordDecl>(RT->getDecl());
-    if (!ClassDecl->hasTrivialDestructor())
-      ReferenceTemporaryDtor = ClassDecl->getDestructor();
-  }
+  QualType::DestructionKind DK = E->getType().isDestructedType();
+  if (DK != QualType::DK_none) {
+    switch (M->getStorageDuration()) {
+    case SD_Static:
+    case SD_Thread: {
+      CXXDestructorDecl *ReferenceTemporaryDtor = nullptr;
+      if (const RecordType *RT =
+              E->getType()->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
+        // Get the destructor for the reference temporary.
+        if (auto *ClassDecl = dyn_cast<CXXRecordDecl>(RT->getDecl());
+            ClassDecl && !ClassDecl->hasTrivialDestructor())
+          ReferenceTemporaryDtor = ClassDecl->getDestructor();
+      }
 
-  if (!ReferenceTemporaryDtor)
-    return;
+      if (!ReferenceTemporaryDtor)
+        return;
 
-  // Call the destructor for the temporary.
-  switch (M->getStorageDuration()) {
-  case SD_Static:
-  case SD_Thread: {
-    llvm::FunctionCallee CleanupFn;
-    llvm::Constant *CleanupArg;
-    if (E->getType()->isArrayType()) {
-      CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
-          ReferenceTemporary, E->getType(),
-          CodeGenFunction::destroyCXXObject, CGF.getLangOpts().Exceptions,
-          dyn_cast_or_null<VarDecl>(M->getExtendingDecl()));
-      CleanupArg = llvm::Constant::getNullValue(CGF.Int8PtrTy);
-    } else {
-      CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(
-          GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete));
-      CleanupArg = cast<llvm::Constant>(ReferenceTemporary.emitRawPointer(CGF));
+      llvm::FunctionCallee CleanupFn;
+      llvm::Constant *CleanupArg;
+      if (E->getType()->isArrayType()) {
+        CleanupFn = CodeGenFunction(CGF.CGM).generateDestroyHelper(
+            ReferenceTemporary, E->getType(), CodeGenFunction::destroyCXXObject,
+            CGF.getLangOpts().Exceptions,
+            dyn_cast_or_null<VarDecl>(M->getExtendingDecl()));
+        CleanupArg = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+      } else {
+        CleanupFn = CGF.CGM.getAddrAndTypeOfCXXStructor(
+            GlobalDecl(ReferenceTemporaryDtor, Dtor_Complete));
+        CleanupArg =
+            cast<llvm::Constant>(ReferenceTemporary.emitRawPointer(CGF));
+      }
+      CGF.CGM.getCXXABI().registerGlobalDtor(
+          CGF, *cast<VarDecl>(M->getExtendingDecl()), CleanupFn, CleanupArg);
+    } break;
+    case SD_FullExpression:
+      CGF.pushDestroy(DK, ReferenceTemporary, E->getType());
+      break;
+    case SD_Automatic:
+      CGF.pushLifetimeExtendedDestroy(DK, ReferenceTemporary, E->getType());
+      break;
+    case SD_Dynamic:
+      llvm_unreachable("temporary cannot have dynamic storage duration");
     }
-    CGF.CGM.getCXXABI().registerGlobalDtor(
-        CGF, *cast<VarDecl>(M->getExtendingDecl()), CleanupFn, CleanupArg);
-    break;
-  }
-
-  case SD_FullExpression:
-    CGF.pushDestroy(NormalAndEHCleanup, ReferenceTemporary, E->getType(),
-                    CodeGenFunction::destroyCXXObject,
-                    CGF.getLangOpts().Exceptions);
-    break;
-
-  case SD_Automatic:
-    CGF.pushLifetimeExtendedDestroy(NormalAndEHCleanup,
-                                    ReferenceTemporary, E->getType(),
-                                    CodeGenFunction::destroyCXXObject,
-                                    CGF.getLangOpts().Exceptions);
-    break;
-
-  case SD_Dynamic:
-    llvm_unreachable("temporary cannot have dynamic storage duration");
   }
 }
 
@@ -660,8 +654,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
     case SubobjectAdjustment::MemberPointerAdjustment: {
       llvm::Value *Ptr = EmitScalarExpr(Adjustment.Ptr.RHS);
-      Object = EmitCXXMemberDataPointerAddress(E, Object, Ptr,
-                                               Adjustment.Ptr.MPT);
+      Object = EmitCXXMemberDataPointerAddress(
+          E, Object, Ptr, Adjustment.Ptr.MPT, /*IsInBounds=*/true);
       break;
     }
     }
@@ -3621,18 +3615,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
         .addAttribute(llvm::Attribute::NoUnwind);
   }
   B.addUWTableAttr(llvm::UWTableKind::Default);
-  // Add more precise attributes to recoverable ubsan handlers for better
-  // optimizations.
-  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && MayReturn) {
-    // __ubsan_handle_dynamic_type_cache_miss reads the vtable, which is also
-    // accessible by the current module.
-    if (CheckHandler != SanitizerHandler::DynamicTypeCacheMiss)
-      B.addMemoryAttr(llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) |
-                      llvm::MemoryEffects::inaccessibleMemOnly());
-    // If the handler does not return, it must interact with the environment in
-    // an observable way.
-    B.addAttribute(llvm::Attribute::MustProgress);
-  }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
@@ -4790,6 +4772,13 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
                                   Base.getBaseInfo(), TBAAAccessInfo());
 }
 
+bool CodeGenFunction::isUnderlyingBasePointerConstantNull(const Expr *E) {
+  const Expr *UnderlyingBaseExpr = E->IgnoreParens();
+  while (auto *BaseMemberExpr = dyn_cast<MemberExpr>(UnderlyingBaseExpr))
+    UnderlyingBaseExpr = BaseMemberExpr->getBase()->IgnoreParens();
+  return getContext().isSentinelNullExpr(UnderlyingBaseExpr);
+}
+
 LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
     EmitIgnoredExpr(E->getBase());
@@ -4797,6 +4786,11 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   }
 
   Expr *BaseExpr = E->getBase();
+  // Check whether the underlying base pointer is a constant null.
+  // If so, we do not set inbounds flag for GEP to avoid breaking some
+  // old-style offsetof idioms.
+  bool IsInBounds = !getLangOpts().PointerOverflowDefined &&
+                    !isUnderlyingBasePointerConstantNull(BaseExpr);
   // If this is s.x, emit s as an lvalue.  If it is s->x, emit s as a scalar.
   LValue BaseLV;
   if (E->isArrow()) {
@@ -4818,7 +4812,7 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
 
   NamedDecl *ND = E->getMemberDecl();
   if (auto *Field = dyn_cast<FieldDecl>(ND)) {
-    LValue LV = EmitLValueForField(BaseLV, Field);
+    LValue LV = EmitLValueForField(BaseLV, Field, IsInBounds);
     setObjCGCLValueClass(getContext(), E, LV);
     if (getLangOpts().OpenMP) {
       // If the member was explicitly marked as nontemporal, mark it as
@@ -4904,12 +4898,15 @@ unsigned CodeGenFunction::getDebugInfoFIndex(const RecordDecl *Rec,
 /// Get the address of a zero-sized field within a record. The resulting
 /// address doesn't necessarily have the right type.
 static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
-                                       const FieldDecl *Field) {
+                                       const FieldDecl *Field,
+                                       bool IsInBounds) {
   CharUnits Offset = CGF.getContext().toCharUnitsFromBits(
       CGF.getContext().getFieldOffset(Field));
   if (Offset.isZero())
     return Base;
   Base = Base.withElementType(CGF.Int8Ty);
+  if (!IsInBounds)
+    return CGF.Builder.CreateConstByteGEP(Base, Offset);
   return CGF.Builder.CreateConstInBoundsByteGEP(Base, Offset);
 }
 
@@ -4918,16 +4915,16 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
 ///
 /// The resulting address doesn't necessarily have the right type.
 static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
-                                      const FieldDecl *field) {
+                                      const FieldDecl *field, bool IsInBounds) {
   if (isEmptyFieldForLayout(CGF.getContext(), field))
-    return emitAddrOfZeroSizeField(CGF, base, field);
+    return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
   const RecordDecl *rec = field->getParent();
 
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  if (CGF.getLangOpts().PointerOverflowDefined)
+  if (!IsInBounds)
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
 
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
@@ -4965,8 +4962,8 @@ static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
   return false;
 }
 
-LValue CodeGenFunction::EmitLValueForField(LValue base,
-                                           const FieldDecl *field) {
+LValue CodeGenFunction::EmitLValueForField(LValue base, const FieldDecl *field,
+                                           bool IsInBounds) {
   LValueBaseInfo BaseInfo = base.getBaseInfo();
 
   if (field->isBitField()) {
@@ -4989,7 +4986,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
           (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>())) {
         if (Idx != 0) {
           // For structs, we GEP to the field that the record layout suggests.
-          if (getLangOpts().PointerOverflowDefined)
+          if (!IsInBounds)
             Addr = Builder.CreateConstGEP2_32(Addr, 0, Idx, field->getName());
           else
             Addr = Builder.CreateStructGEP(Addr, Idx, field->getName());
@@ -5102,7 +5099,7 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
     if (!IsInPreservedAIRegion &&
         (!getDebugInfo() || !rec->hasAttr<BPFPreserveAccessIndexAttr>()))
       // For structs, we GEP to the field that the record layout suggests.
-      addr = emitAddrOfFieldStorage(*this, addr, field);
+      addr = emitAddrOfFieldStorage(*this, addr, field, IsInBounds);
     else
       // Remember the original struct field index
       addr = emitPreserveStructAccess(*this, base, addr, field);
@@ -5146,7 +5143,9 @@ CodeGenFunction::EmitLValueForFieldInitialization(LValue Base,
   if (!FieldType->isReferenceType())
     return EmitLValueForField(Base, Field);
 
-  Address V = emitAddrOfFieldStorage(*this, Base.getAddress(), Field);
+  Address V = emitAddrOfFieldStorage(
+      *this, Base.getAddress(), Field,
+      /*IsInBounds=*/!getLangOpts().PointerOverflowDefined);
 
   // Make sure that the address is pointing to the right type.
   llvm::Type *llvmType = ConvertTypeForMem(FieldType);
@@ -6296,9 +6295,10 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
 
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
-  Address MemberAddr =
-    EmitCXXMemberDataPointerAddress(E, BaseAddr, OffsetV, MPT, &BaseInfo,
-                                    &TBAAInfo);
+  bool IsInBounds = !getLangOpts().PointerOverflowDefined &&
+                    !isUnderlyingBasePointerConstantNull(E->getLHS());
+  Address MemberAddr = EmitCXXMemberDataPointerAddress(
+      E, BaseAddr, OffsetV, MPT, IsInBounds, &BaseInfo, &TBAAInfo);
 
   return MakeAddrLValue(MemberAddr, MPT->getPointeeType(), BaseInfo, TBAAInfo);
 }
