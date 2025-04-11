@@ -33,7 +33,6 @@ func.func @za0_d_f64() -> i32 {
   //   2.1, 2.1, 2.1, 2.1
   //   3.1, 3.1, 3.1, 3.1
   //
-  %tilesize = arith.muli %svl_d, %svl_d : index
   %mem1 = memref.alloca(%svl_d, %svl_d) : memref<?x?xf64>
   %init_0 = arith.constant 0.1 : f64
   scf.for %i = %c0 to %svl_d step %c1_index iter_args(%val = %init_0) -> (f64) {
@@ -171,9 +170,7 @@ func.func @load_store_two_za_s_tiles() -> i32 {
   %svl_s = arm_sme.streaming_vl <word>
 
   // Allocate memory for two 32-bit element tiles.
-  %size_of_tile = arith.muli %svl_s, %svl_s : index
   %svl_s_x_2 = arith.muli %svl_s, %c2_index : index
-  %size_of_two_tiles = arith.muli %size_of_tile, %c2_index : index
   %mem1 = memref.alloca(%svl_s_x_2, %svl_s) : memref<?x?xi32>
 
   // Fill memory that tile 1 will be loaded from with '1' and '2' for tile 2.

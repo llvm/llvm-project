@@ -14,10 +14,9 @@ func.func @entry() {
 
   // Calculate the size of a 32-bit tile, e.g. ZA{n}.s.
   %svl_s = arm_sme.streaming_vl <word>
-  %za_s_size = arith.muli %svl_s, %svl_s : index
 
   // Allocate memory.
-  %mem1 = memref.alloca(%za_s_size, %svl_s) : memref<?x?xi32>
+  %mem1 = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
 
   // Fill each "row" of "mem1" with row number.
   //
