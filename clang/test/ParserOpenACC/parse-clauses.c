@@ -1080,11 +1080,27 @@ void device_type() {
 #pragma acc parallel dtype(31, "bar")
   {}
 
+  // expected-error@+4{{invalid value 'ident' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+3{{invalid value 'auto' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+2{{invalid value 'int' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+1{{invalid value 'float' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
 #pragma acc parallel device_type(ident, auto, int, float)
   {}
+  // expected-error@+4{{invalid value 'ident' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+3{{invalid value 'auto' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+2{{invalid value 'int' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+1{{invalid value 'float' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
 #pragma acc parallel dtype(ident, auto, int, float)
   {}
 
+  // expected-error@+8{{invalid value 'ident' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+7{{invalid value 'auto' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+6{{invalid value 'int' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+5{{invalid value 'float' in 'device_type' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+4{{invalid value 'ident' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+3{{invalid value 'auto' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+2{{invalid value 'int' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
+  // expected-error@+1{{invalid value 'float' in 'dtype' clause; valid values are 'default', 'nvidia', 'acc_device_nvidia', 'radeon', 'host', 'multicore'}}
 #pragma acc parallel device_type(ident, auto, int, float) dtype(ident, auto, int, float)
   {}
 }

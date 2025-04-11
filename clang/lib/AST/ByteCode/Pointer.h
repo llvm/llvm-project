@@ -525,6 +525,8 @@ public:
   }
 
   bool isWeak() const {
+    if (isFunctionPointer())
+      return asFunctionPointer().isWeak();
     if (!isBlockPointer())
       return false;
 

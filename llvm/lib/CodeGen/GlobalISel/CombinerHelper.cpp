@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -382,6 +383,45 @@ void CombinerHelper::applyCombineConcatVectors(
   else
     Builder.buildBuildVector(NewDstReg, Ops);
   replaceRegWith(MRI, DstReg, NewDstReg);
+  MI.eraseFromParent();
+}
+
+bool CombinerHelper::matchCombineShuffleToBuildVector(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_SHUFFLE_VECTOR &&
+         "Invalid instruction");
+  auto &Shuffle = cast<GShuffleVector>(MI);
+
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+
+  LLT SrcVec1Type = MRI.getType(SrcVec1);
+  LLT SrcVec2Type = MRI.getType(SrcVec2);
+  return SrcVec1Type.isVector() && SrcVec2Type.isVector();
+}
+
+void CombinerHelper::applyCombineShuffleToBuildVector(MachineInstr &MI) const {
+  auto &Shuffle = cast<GShuffleVector>(MI);
+
+  Register SrcVec1 = Shuffle.getSrc1Reg();
+  Register SrcVec2 = Shuffle.getSrc2Reg();
+  LLT EltTy = MRI.getType(SrcVec1).getElementType();
+  int Width = MRI.getType(SrcVec1).getNumElements();
+
+  auto Unmerge1 = Builder.buildUnmerge(EltTy, SrcVec1);
+  auto Unmerge2 = Builder.buildUnmerge(EltTy, SrcVec2);
+
+  SmallVector<Register> Extracts;
+  // Select only applicable elements from unmerged values.
+  for (int Val : Shuffle.getMask()) {
+    if (Val == -1)
+      Extracts.push_back(Builder.buildUndef(EltTy).getReg(0));
+    else if (Val < Width)
+      Extracts.push_back(Unmerge1.getReg(Val));
+    else
+      Extracts.push_back(Unmerge2.getReg(Val - Width));
+  }
+
+  Builder.buildBuildVector(MI.getOperand(0).getReg(), Extracts);
   MI.eraseFromParent();
 }
 
