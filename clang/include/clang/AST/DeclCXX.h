@@ -4281,7 +4281,7 @@ public:
         [](BindingDecl *BD) { return BD->isParameterPack(); });
 
     Bindings = Bindings.drop_front(BeforePackBindings.size());
-    if (!Bindings.empty()) {
+    if (!Bindings.empty() && Bindings.front()->getBinding()) {
       PackBindings = Bindings.front()->getBindingPackDecls();
       Bindings = Bindings.drop_front();
     }
