@@ -259,13 +259,17 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   getHwStage(CC)[".entry_point_symbol"] =
       MsgPackDoc.getNode(Name, /*Copy=*/true);
 
-  // Set .entry_point which is defined
-  // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
-  SmallString<16> EPName("_amdgpu_");
-  raw_svector_ostream EPNameOS(EPName);
-  EPNameOS << getStageName(CC) + 1;
-  getHwStage(CC)[".entry_point"] =
-      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  // For pal version 3.6 and above, entry_point is no longer required
+  if (getPALMajorVersion() < 3 ||
+      (getPALMajorVersion() == 3 && getPALMinorVersion() < 6)) {
+    // Set .entry_point which is defined
+    // to be _amdgpu_<stage>_main and _amdgpu_cs_main for non-shader functions
+    SmallString<16> EPName("_amdgpu_");
+    raw_svector_ostream EPNameOS(EPName);
+    EPNameOS << getStageName(CC) + 1 << "_main";
+    getHwStage(CC)[".entry_point"] =
+        MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
+  }
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
