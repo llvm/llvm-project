@@ -2011,7 +2011,8 @@ def get_ftms(
                         else:
                             break
 
-                entry[std] = last
+                if last:
+                    entry[std] = last
         result[feature["name"]] = entry
 
     return result
@@ -2207,6 +2208,18 @@ class FeatureTestMacros:
 
         return get_ftms(self.__data, self.std_dialects, True)
 
+    def is_implemented(self, ftm: Ftm, std: Std) -> bool:
+        """Has the FTM `ftm` been implemented in the dialect `std`?"""
+
+        # When a paper for C++20 has not been implemented in libc++, then there will be no
+        # FTM entry in implemented_ftms for C++23 and later. Similarly, a paper like <format>
+        # has no entry in standard_ftms for e.g. C++11.
+        if not std in self.implemented_ftms[ftm].keys() or not std in self.standard_ftms[ftm].keys():
+            return False
+
+        return self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+
+
     @functools.cached_property
     def ftm_metadata(self) -> Dict[Ftm, Metadata]:
         """Returns the metadata of the FTMs defined in the Standard.
@@ -2240,7 +2253,7 @@ class FeatureTestMacros:
                     continue
                 last_value = value
 
-                implemented = self.implemented_ftms[ftm][std] == self.standard_ftms[ftm][std]
+                implemented = self.is_implemented(ftm, std)
                 entry = VersionHeader(
                     value,
                     implemented,
