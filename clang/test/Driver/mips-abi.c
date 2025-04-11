@@ -115,6 +115,20 @@
 // MIPS-ARCH-P5600: "-target-cpu" "p5600"
 // MIPS-ARCH-P5600: "-target-abi" "o32"
 //
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=p5600 -mmsa -mnan=2008 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-P5600-MSA %s
+// MIPS-ARCH-P5600-MSA: "-target-cpu" "p5600"
+// MIPS-ARCH-P5600-MSA: "-target-feature" "+msa"
+// MIPS-ARCH-P5600-MSA: "-target-feature" "+fp64"
+//
+// RUN: %clang --target=mips-linux-gnu -### -c %s \
+// RUN:        -march=p5600 -mmsa -mnan=2008 2>&1 \
+// RUN:   | FileCheck -check-prefix=MIPS-ARCH-P5600-NAN2008 %s
+// MIPS-ARCH-P5600-NAN2008: "-target-cpu" "p5600"
+// MIPS-ARCH-P5600-NAN2008: "-target-feature" "+nan2008"
+// MIPS-ARCH-P5600-NAN2008: "-target-feature" "+abs2008"
+//
 // RUN: not %clang --target=mips-linux-gnu -c %s \
 // RUN:        -march=p5600 -mabi=64 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS-ARCH-P5600-N64 %s
