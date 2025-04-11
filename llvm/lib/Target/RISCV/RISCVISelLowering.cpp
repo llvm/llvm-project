@@ -23376,19 +23376,36 @@ static const Intrinsic::ID FixedVlsegIntrIds[] = {
 /// %vec0 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 0
 /// %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
 bool RISCVTargetLowering::lowerInterleavedLoad(
-    LoadInst *LI, ArrayRef<ShuffleVectorInst *> Shuffles,
+    Instruction *LoadOp, ArrayRef<ShuffleVectorInst *> Shuffles,
     ArrayRef<unsigned> Indices, unsigned Factor) const {
   assert(Indices.size() == Shuffles.size());
 
-  IRBuilder<> Builder(LI);
+  const DataLayout &DL = LoadOp->getDataLayout();
+  IRBuilder<> Builder(LoadOp);
 
   auto *VTy = cast<FixedVectorType>(Shuffles[0]->getType());
-  if (!isLegalInterleavedAccessType(VTy, Factor, LI->getAlign(),
-                                    LI->getPointerAddressSpace(),
-                                    LI->getDataLayout()))
+
+  Align PtrAlignment;
+  unsigned PtrAddrSpace;
+  Value *BaseAddr;
+  if (auto *LI = dyn_cast<LoadInst>(LoadOp)) {
+    BaseAddr = LI->getPointerOperand();
+    PtrAlignment = LI->getAlign();
+    PtrAddrSpace = LI->getPointerAddressSpace();
+  } else {
+    auto *VPLoad = cast<VPIntrinsic>(LoadOp);
+    assert(VPLoad->getIntrinsicID() == Intrinsic::vp_load);
+    BaseAddr = VPLoad->getArgOperand(0);
+    PtrAlignment = VPLoad->getParamAlign(0).value_or(
+        DL.getABITypeAlign(VTy->getElementType()));
+    PtrAddrSpace = cast<PointerType>(BaseAddr->getType())->getAddressSpace();
+  }
+
+  if (!isLegalInterleavedAccessType(VTy, Factor, PtrAlignment, PtrAddrSpace,
+                                    DL))
     return false;
 
-  auto *XLenTy = Type::getIntNTy(LI->getContext(), Subtarget.getXLen());
+  auto *XLenTy = Type::getIntNTy(LoadOp->getContext(), Subtarget.getXLen());
 
   // If the segment load is going to be performed segment at a time anyways
   // and there's only one element used, use a strided load instead.  This
@@ -23397,7 +23414,7 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
     unsigned ScalarSizeInBytes = VTy->getScalarSizeInBits() / 8;
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Indices[0] * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(LI->getPointerOperand(), Offset);
+    Value *BasePtr = Builder.CreatePtrAdd(BaseAddr, Offset);
     Value *Mask = Builder.getAllOnesMask(VTy->getElementCount());
     Value *VL = Builder.getInt32(VTy->getNumElements());
 
@@ -23406,16 +23423,16 @@ bool RISCVTargetLowering::lowerInterleavedLoad(
                                 {VTy, BasePtr->getType(), Stride->getType()},
                                 {BasePtr, Stride, Mask, VL});
     CI->addParamAttr(
-        0, Attribute::getWithAlignment(CI->getContext(), LI->getAlign()));
+        0, Attribute::getWithAlignment(CI->getContext(), PtrAlignment));
     Shuffles[0]->replaceAllUsesWith(CI);
     return true;
   };
 
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
 
-  CallInst *VlsegN = Builder.CreateIntrinsic(
-      FixedVlsegIntrIds[Factor - 2], {VTy, LI->getPointerOperandType(), XLenTy},
-      {LI->getPointerOperand(), VL});
+  CallInst *VlsegN = Builder.CreateIntrinsic(FixedVlsegIntrIds[Factor - 2],
+                                             {VTy, BaseAddr->getType(), XLenTy},
+                                             {BaseAddr, VL});
 
   for (unsigned i = 0; i < Shuffles.size(); i++) {
     Value *SubVec = Builder.CreateExtractValue(VlsegN, Indices[i]);
@@ -23447,21 +23464,39 @@ static const Intrinsic::ID FixedVssegIntrIds[] = {
 ///
 /// Note that the new shufflevectors will be removed and we'll only generate one
 /// vsseg3 instruction in CodeGen.
-bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
+bool RISCVTargetLowering::lowerInterleavedStore(Instruction *StoreOp,
                                                 ShuffleVectorInst *SVI,
                                                 unsigned Factor) const {
-  IRBuilder<> Builder(SI);
+  const DataLayout &DL = StoreOp->getDataLayout();
+  IRBuilder<> Builder(StoreOp);
+
   auto Mask = SVI->getShuffleMask();
   auto *ShuffleVTy = cast<FixedVectorType>(SVI->getType());
   // Given SVI : <n*factor x ty>, then VTy : <n x ty>
   auto *VTy = FixedVectorType::get(ShuffleVTy->getElementType(),
                                    ShuffleVTy->getNumElements() / Factor);
-  if (!isLegalInterleavedAccessType(VTy, Factor, SI->getAlign(),
-                                    SI->getPointerAddressSpace(),
-                                    SI->getDataLayout()))
+
+  Align PtrAlignment;
+  unsigned PtrAddrSpace;
+  Value *BaseAddr;
+  if (auto *SI = dyn_cast<StoreInst>(StoreOp)) {
+    BaseAddr = SI->getPointerOperand();
+    PtrAlignment = SI->getAlign();
+    PtrAddrSpace = SI->getPointerAddressSpace();
+  } else {
+    auto *VPStore = cast<VPIntrinsic>(StoreOp);
+    assert(VPStore->getIntrinsicID() == Intrinsic::vp_store);
+    BaseAddr = VPStore->getArgOperand(1);
+    PtrAlignment = VPStore->getParamAlign(1).value_or(
+        DL.getABITypeAlign(VTy->getElementType()));
+    PtrAddrSpace = cast<PointerType>(BaseAddr->getType())->getAddressSpace();
+  }
+
+  if (!isLegalInterleavedAccessType(VTy, Factor, PtrAlignment, PtrAddrSpace,
+                                    DL))
     return false;
 
-  auto *XLenTy = Type::getIntNTy(SI->getContext(), Subtarget.getXLen());
+  auto *XLenTy = Type::getIntNTy(StoreOp->getContext(), Subtarget.getXLen());
 
   unsigned Index;
   // If the segment store only has one active lane (i.e. the interleave is
@@ -23474,7 +23509,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
     auto *DataVTy = cast<FixedVectorType>(Data->getType());
     Value *Stride = ConstantInt::get(XLenTy, Factor * ScalarSizeInBytes);
     Value *Offset = ConstantInt::get(XLenTy, Index * ScalarSizeInBytes);
-    Value *BasePtr = Builder.CreatePtrAdd(SI->getPointerOperand(), Offset);
+    Value *BasePtr = Builder.CreatePtrAdd(BaseAddr, Offset);
     Value *Mask = Builder.getAllOnesMask(DataVTy->getElementCount());
     Value *VL = Builder.getInt32(VTy->getNumElements());
 
@@ -23483,14 +23518,14 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
         {Data->getType(), BasePtr->getType(), Stride->getType()},
         {Data, BasePtr, Stride, Mask, VL});
     CI->addParamAttr(
-        1, Attribute::getWithAlignment(CI->getContext(), SI->getAlign()));
+        1, Attribute::getWithAlignment(CI->getContext(), PtrAlignment));
 
     return true;
   }
 
   Function *VssegNFunc = Intrinsic::getOrInsertDeclaration(
-      SI->getModule(), FixedVssegIntrIds[Factor - 2],
-      {VTy, SI->getPointerOperandType(), XLenTy});
+      StoreOp->getModule(), FixedVssegIntrIds[Factor - 2],
+      {VTy, BaseAddr->getType(), XLenTy});
 
   SmallVector<Value *, 10> Ops;
   SmallVector<int, 16> NewShuffleMask;
@@ -23510,7 +23545,7 @@ bool RISCVTargetLowering::lowerInterleavedStore(StoreInst *SI,
   // potentially under larger LMULs) because we checked that the fixed vector
   // type fits in isLegalInterleavedAccessType
   Value *VL = ConstantInt::get(XLenTy, VTy->getNumElements());
-  Ops.append({SI->getPointerOperand(), VL});
+  Ops.append({BaseAddr, VL});
 
   Builder.CreateCall(VssegNFunc, Ops);
 

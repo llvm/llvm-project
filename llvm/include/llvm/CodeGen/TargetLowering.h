@@ -3157,11 +3157,11 @@ public:
   /// Lower an interleaved load to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p LI is the vector load instruction.
+  /// \p LoadOp is a vector load or vp.load instruction.
   /// \p Shuffles is the shufflevector list to DE-interleave the loaded vector.
   /// \p Indices is the corresponding indices for each shufflevector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedLoad(LoadInst *LI,
+  virtual bool lowerInterleavedLoad(Instruction *LoadOp,
                                     ArrayRef<ShuffleVectorInst *> Shuffles,
                                     ArrayRef<unsigned> Indices,
                                     unsigned Factor) const {
@@ -3171,10 +3171,11 @@ public:
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p SI is the vector store instruction.
+  /// \p StoreOp is a vector store or vp.store instruction.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  virtual bool lowerInterleavedStore(Instruction *StoreOp,
+                                     ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
     return false;
   }
