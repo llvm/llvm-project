@@ -11,8 +11,6 @@ define <4 x float> @bar(ptr %a1p, ptr %a2p, <4 x float> %a3, <4 x float> %a4, <1
 ; CHECK-NEXT:    subq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 144
 ; CHECK-NEXT:    vmovaps %xmm1, %xmm13
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm5 = [3,20,1,17]
-; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm5
 ; CHECK-NEXT:    vunpcklps {{.*#+}} ymm0 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[4],ymm3[4],ymm2[5],ymm3[5]
 ; CHECK-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[2,1,2,3]
 ; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4,21,1,17,4,21,5,21]
@@ -21,6 +19,8 @@ define <4 x float> @bar(ptr %a1p, ptr %a2p, <4 x float> %a3, <4 x float> %a4, <1
 ; CHECK-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4,20,1,27]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm4
+; CHECK-NEXT:    vpmovsxbd {{.*#+}} xmm5 = [3,20,1,17]
+; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm5
 ; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm7 = [5,20,1,19,5,20,5,23]
 ; CHECK-NEXT:    vpermi2ps %zmm3, %zmm2, %zmm7
 ; CHECK-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [4,20,1,19,4,20,5,23]
