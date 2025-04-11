@@ -1054,9 +1054,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
   if (ST.hasCvtPkF16F32Inst()) {
-    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}});
-    if (TM.Options.UnsafeFPMath)
-      FPTruncActions.legalFor({V2S16, V2S64});
+    FPTruncActions.legalFor({{S32, S64}, {S16, S32}, {V2S16, V2S32}})
+                  .customFor({V2S16, V2S64});
   } else
     FPTruncActions.legalFor({{S32, S64}, {S16, S32}});
   FPTruncActions.scalarize(0).lower();
@@ -2156,6 +2155,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FMINNUM_IEEE:
   case TargetOpcode::G_FMAXNUM_IEEE:
     return legalizeMinNumMaxNum(Helper, MI);
+  case TargetOpcode::G_FPTRUNC:
+    return legalizeFPTrunc(Helper, MI, MRI);
   case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     return legalizeExtractVectorElt(MI, MRI, B);
   case TargetOpcode::G_INSERT_VECTOR_ELT:
@@ -2740,6 +2741,29 @@ bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(LegalizerHelper &Helper,
     return true;
 
   return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
+}
+
+bool AMDGPULegalizerInfo::legalizeFPTrunc(LegalizerHelper &Helper,
+                                          MachineInstr &MI,
+                                          MachineRegisterInfo &MRI) const {
+  // TODO: We should only use fast math flag. But the global option is
+  // still used here to be consistent, especially when the fast math flag is
+  // not working for FP_ROUND on the SelectDAG path at this moment.
+  MachineFunction &MF = Helper.MIRBuilder.getMF();
+  bool AllowInaccurateFPTRUNC = MI.getFlag(MachineInstr::FmAfn) ||
+                                MF.getTarget().Options.UnsafeFPMath;
+
+  if (AllowInaccurateFPTRUNC) {
+    // Use the tablegen pattern to select native instructions.
+    return true;
+  }
+
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+
+  // Scalarize the vector and fall through to lower f64 -> f16.
+  return Helper.fewerElementsVector(MI, 0, DstTy.getElementType()) ==
+         LegalizerHelper::Legalized;
 }
 
 bool AMDGPULegalizerInfo::legalizeExtractVectorElt(

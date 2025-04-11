@@ -6893,8 +6893,18 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   EVT DstVT = Op.getValueType();
-  if (DstVT == MVT::v2f16)
-    return DAG.getTarget().Options.UnsafeFPMath ? Op : SDValue();
+
+  if (DstVT == MVT::v2f16) {
+    // FIXME: We should only use fast math flag here. However, the fast math
+    // flag is lost during fptrunc to fp_round lowering. In addition, the flag
+    // is not propagated during subsequent lowering.
+    bool AllowInaccurateFP_ROUND = Op->getFlags().hasApproximateFuncs() ||
+                                   DAG.getTarget().Options.UnsafeFPMath;
+    // With fast math, the tablegen pattern is used to select native
+    // instructions. Otherwise, the vector will be scalarized and custom lowered
+    // to preserve the precision.
+    return AllowInaccurateFP_ROUND ? Op : SDValue();
+  }
 
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
