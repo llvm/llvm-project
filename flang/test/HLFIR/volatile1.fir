@@ -152,9 +152,3 @@ fir.global internal @_QFEarr : !fir.array<10xi32> {
 // CHECK:           fir.has_value %[[VAL_0]] : !fir.array<10xi32>
 // CHECK:         }
 // CHECK:         func.func private @_FortranAAssign(!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) attributes {fir.runtime}
-
-// CHECK-LABEL:   fir.global linkonce @_QQclX6d159f5b212633743d299e4aa5142350 constant : !fir.char<1,79> {
-// CHECK:           %[[VAL_0:.*]] = fir.string_lit "/local/home/amancinelli/lorado/src/llvm-project/flang/test/HLFIR/volatile1.fir\00"(79) : !fir.char<1,79>
-// CHECK:           fir.has_value %[[VAL_0]] : !fir.char<1,79>
-// CHECK:         }
-
