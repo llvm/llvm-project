@@ -3093,6 +3093,10 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Call.isNoInline())
     return InlineResult::failure("noinline call site attribute");
 
+  // Don't inline functions that are loader replaceable.
+  if (Callee->hasFnAttribute("loader-replaceable"))
+    return InlineResult::failure("loader replaceable function attribute");
+
   return std::nullopt;
 }
 
