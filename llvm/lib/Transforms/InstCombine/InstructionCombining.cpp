@@ -3087,12 +3087,22 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return nullptr;
 
   if (GEP.getNumIndices() == 1) {
-    // We can only preserve inbounds if the original gep is inbounds, the add
-    // is nsw, and the add operands are non-negative.
-    auto CanPreserveInBounds = [&](bool AddIsNSW, Value *Idx1, Value *Idx2) {
+    auto CanPreserveNoWrapFlags = [&](bool AddIsNSW, bool AddIsNUW, Value *Idx1,
+                                      Value *Idx2) {
+      // Preserve "inbounds nuw" if the original gep is "inbounds nuw",
+      // and the add is "nuw".
+      if (GEP.isInBounds() && GEP.hasNoUnsignedWrap() && AddIsNUW)
+        return GEPNoWrapFlags::inBounds() | GEPNoWrapFlags::noUnsignedWrap();
+      // Preserve "inbounds" if the original gep is "inbounds", the add
+      // is "nsw", and the add operands are non-negative.
       SimplifyQuery Q = SQ.getWithInstruction(&GEP);
-      return GEP.isInBounds() && AddIsNSW && isKnownNonNegative(Idx1, Q) &&
-             isKnownNonNegative(Idx2, Q);
+      if (GEP.isInBounds() && AddIsNSW && isKnownNonNegative(Idx1, Q) &&
+          isKnownNonNegative(Idx2, Q))
+        return GEPNoWrapFlags::inBounds();
+      // Preserve "nuw" if the original gep is "nuw", and the add is "nuw".
+      if (GEP.hasNoUnsignedWrap() && AddIsNUW)
+        return GEPNoWrapFlags::noUnsignedWrap();
+      return GEPNoWrapFlags::none();
     };
 
     // Try to replace ADD + GEP with GEP + GEP.
@@ -3104,15 +3114,15 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
       //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
-      bool IsInBounds = CanPreserveInBounds(
-          cast<OverflowingBinaryOperator>(GEP.getOperand(1))->hasNoSignedWrap(),
-          Idx1, Idx2);
+      bool NSW = match(GEP.getOperand(1), m_NSWAddLike(m_Value(), m_Value()));
+      bool NUW = match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()));
+      GEPNoWrapFlags NWFlags = CanPreserveNoWrapFlags(NSW, NUW, Idx1, Idx2);
       auto *NewPtr =
           Builder.CreateGEP(GEP.getSourceElementType(), GEP.getPointerOperand(),
-                            Idx1, "", IsInBounds);
-      return replaceInstUsesWith(
-          GEP, Builder.CreateGEP(GEP.getSourceElementType(), NewPtr, Idx2, "",
-                                 IsInBounds));
+                            Idx1, "", NWFlags);
+      return replaceInstUsesWith(GEP,
+                                 Builder.CreateGEP(GEP.getSourceElementType(),
+                                                   NewPtr, Idx2, "", NWFlags));
     }
     ConstantInt *C;
     if (match(GEP.getOperand(1), m_OneUse(m_SExtLike(m_OneUse(m_NSWAdd(
@@ -3123,17 +3133,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       // %newptr = getelementptr i32, ptr %ptr, i32 %idx1
       // %newgep = getelementptr i32, ptr %newptr, i32 idx2
-      bool IsInBounds = CanPreserveInBounds(
-          /*IsNSW=*/true, Idx1, C);
+      GEPNoWrapFlags NWFlags = CanPreserveNoWrapFlags(
+          /*IsNSW=*/true, /*IsNUW=*/false, Idx1, C);
       auto *NewPtr = Builder.CreateGEP(
           GEP.getSourceElementType(), GEP.getPointerOperand(),
-          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "",
-          IsInBounds);
+          Builder.CreateSExt(Idx1, GEP.getOperand(1)->getType()), "", NWFlags);
       return replaceInstUsesWith(
           GEP,
           Builder.CreateGEP(GEP.getSourceElementType(), NewPtr,
                             Builder.CreateSExt(C, GEP.getOperand(1)->getType()),
-                            "", IsInBounds));
+                            "", NWFlags));
     }
   }
 
