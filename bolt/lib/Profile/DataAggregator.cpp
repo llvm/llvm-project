@@ -871,7 +871,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
 
   BinaryContext &BC = BF.getBinaryContext();
 
-  if (!BF.isSimple())
+  if (BF.empty())
     return std::nullopt;
 
   assert(BF.hasCFG() && "can only record traces in CFG state");
