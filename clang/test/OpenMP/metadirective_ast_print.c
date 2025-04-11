@@ -78,10 +78,7 @@ void foo(void) {
   for (int i = 0; i < 16; i++)
     ;
 
-#pragma omp metadirective when(user = {condition(0)}	\
-			       : parallel for) otherwise()
-  for (int i=0; i<10; i++)
-    ;
+
 #pragma omp metadirective when(user = {condition(0)}	\
 			       : parallel for)
   for (int i=0; i<10; i++)
@@ -92,10 +89,7 @@ void foo(void) {
   for (int i=0; i<10; i++)
     ;
 
-#pragma omp metadirective when(user = {condition(1)}	\
-			       : parallel for) otherwise()
-  for (int i=0; i<10; i++)
-    ;
+
 #pragma omp metadirective when(user = {condition(1)}	\
 			       : parallel for)
   for (int i=0; i<10; i++)
@@ -105,6 +99,17 @@ void foo(void) {
 						    : parallel) default(parallel for)
   for (int i=0; i<10; i++)
     ;
+#if _OPENMP >= 202111
+    #pragma omp metadirective when(user = {condition(0)}	\
+                 : parallel for) otherwise()
+      for (int i=0; i<10; i++)
+        ;
+    
+    #pragma omp metadirective when(user = {condition(1)}	\
+                : parallel for) otherwise()
+      for (int i=0; i<10; i++)
+        ;
+#endif
 }
 
 // CHECK: void bar(void);
