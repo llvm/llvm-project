@@ -73,9 +73,9 @@ protected:
     PredicatedScalarEvolution PSE(*SE, *L);
     auto Plan = std::make_unique<VPlan>(L);
     VPlanHCFGBuilder HCFGBuilder(L, LI.get(), *Plan);
-    HCFGBuilder.buildHierarchicalCFG();
-    VPlanTransforms::introduceTopLevelVectorLoopRegion(
-        *Plan, IntegerType::get(*Ctx, 64), PSE, true, false, L);
+    HCFGBuilder.buildPlainCFG();
+    VPlanTransforms::createLoopRegions(*Plan, IntegerType::get(*Ctx, 64), PSE,
+                                       true, false, L);
     return Plan;
   }
 };

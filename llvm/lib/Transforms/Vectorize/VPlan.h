@@ -57,6 +57,7 @@ class SCEV;
 class Type;
 class VPBasicBlock;
 class VPBuilder;
+class VPDominatorTree;
 class VPRegionBlock;
 class VPlan;
 class VPLane;
