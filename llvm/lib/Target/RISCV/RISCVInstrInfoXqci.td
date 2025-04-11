@@ -153,6 +153,18 @@ def simm32_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
+def PseudoQCJumpSymbol : AsmOperandClass {
+  let Name = "PseudoQCJumpSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidPseudoQCJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
+  let ParserMethod = "parsePseudoQCJumpSymbol";
+}
+
+def pseudo_qc_jump_symbol : Operand<XLenVT> {
+  let ParserMatchClass = PseudoQCJumpSymbol;
+}
+
 //===----------------------------------------------------------------------===//
 // Instruction Formats
 //===----------------------------------------------------------------------===//
@@ -708,7 +720,7 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
     : RVInst48<(outs), (ins simm32_lsb0:$imm31),
-               opcodestr, "$imm31", [], InstFormatOther> {
+               opcodestr, "$imm31", [], InstFormatQC_EJ> {
   bits<31> imm31;
 
   let Inst{47-32} = imm31{30-15};
@@ -1218,6 +1230,16 @@ def PseudoQC_E_SB : PseudoStore<"qc.e.sb">;
 def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
+
+let isCall = 0, isBarrier = 1, isTerminator = 1,
+    isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
+def PseudoQC_E_J : Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
+                          "qc.e.j", "$func">;
+
+let isCall = 1, Defs = [X1], isCodeGenOnly = 0, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoQC_E_JAL: Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
+                           "qc.e.jal", "$func">;
 
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
