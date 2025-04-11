@@ -434,6 +434,8 @@ public:
   /// should be returned.
   RValue emitAnyExpr(const clang::Expr *e);
 
+  LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
 
   /// Emit code and set up symbol table for a variable declaration with auto,
@@ -604,15 +606,16 @@ public:
 private:
   template <typename Op>
   mlir::LogicalResult
-  emitOpenACCOp(mlir::Location start,
+  emitOpenACCOp(mlir::Location start, OpenACCDirectiveKind dirKind,
+                SourceLocation dirLoc,
                 llvm::ArrayRef<const OpenACCClause *> clauses);
   // Function to do the basic implementation of an operation with an Associated
   // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
-  mlir::LogicalResult
-  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
-                              llvm::ArrayRef<const OpenACCClause *> clauses,
-                              const Stmt *associatedStmt);
+  mlir::LogicalResult emitOpenACCOpAssociatedStmt(
+      mlir::Location start, mlir::Location end, OpenACCDirectiveKind dirKind,
+      SourceLocation dirLoc, llvm::ArrayRef<const OpenACCClause *> clauses,
+      const Stmt *associatedStmt);
 
 public:
   mlir::LogicalResult

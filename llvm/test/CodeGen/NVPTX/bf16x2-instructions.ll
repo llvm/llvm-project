@@ -192,10 +192,10 @@ define void @test_ldst_v3bf16(ptr %a, ptr %b) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [test_ldst_v3bf16_param_0];
 ; CHECK-NEXT:    ld.u64 %rd2, [%rd1];
-; CHECK-NEXT:    { .reg .b32 tmp; mov.b64 {tmp, %r1}, %rd2; }
+; CHECK-NEXT:    mov.b64 {_, %r1}, %rd2;
 ; CHECK-NEXT:    ld.param.u64 %rd3, [test_ldst_v3bf16_param_1];
 ; CHECK-NEXT:    st.u32 [%rd3], %rd2;
-; CHECK-NEXT:    { .reg .b16 tmp; mov.b32 {%rs1, tmp}, %r1; }
+; CHECK-NEXT:    mov.b32 {%rs1, _}, %r1;
 ; CHECK-NEXT:    st.b16 [%rd3+4], %rs1;
 ; CHECK-NEXT:    ret;
   %t1 = load <3 x bfloat>, ptr %a
