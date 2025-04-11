@@ -69,7 +69,13 @@
 
 // Availability markup is disabled when building the library, or when a non-Clang
 // compiler is used because only Clang supports the necessary attributes.
-#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) || !defined(_LIBCPP_COMPILER_CLANG_BASED)
+//
+// We also allow users to force-disable availability markup via the `_LIBCPP_DISABLE_AVAILABILITY`
+// macro because that is the only way to work around a Clang bug related to availability
+// attributes: https://github.com/llvm/llvm-project/issues/134151.
+// Once that bug has been fixed, we should remove the macro.
+#if defined(_LIBCPP_BUILDING_LIBRARY) || defined(_LIBCXXABI_BUILDING_LIBRARY) ||                                       \
+    !defined(_LIBCPP_COMPILER_CLANG_BASED) || defined(_LIBCPP_DISABLE_AVAILABILITY)
 #  undef _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 #  define _LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS 0
 #endif
