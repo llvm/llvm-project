@@ -2088,7 +2088,7 @@ def fno_discard_value_names : Flag<["-"], "fno-discard-value-names">,
   Group<f_clang_Group>, Visibility<[ClangOption, DXCOption]>,
   HelpText<"Do not discard value names in LLVM IR">;
 defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
-  LangOpts<"DollarIdents">, Default<!strconcat("!", asm_preprocessor.KeyPath)>,
+  LangOpts<"DollarIdents">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Allow">,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option], " '$' in identifiers">>;
