@@ -257,7 +257,7 @@ LLVMSymbolizer::findSymbolCommon(const T &ModuleSpecifier, StringRef Symbol,
     if (LineInfo.FileName != DILineInfo::BadString) {
       if (Opts.Demangle)
         LineInfo.FunctionName = DemangleName(LineInfo.FunctionName, Info);
-      Result.push_back(LineInfo);
+      Result.push_back(std::move(LineInfo));
     }
   }
 
