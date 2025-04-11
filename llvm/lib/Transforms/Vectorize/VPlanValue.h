@@ -336,6 +336,7 @@ public:
     VPPartialReductionSC,
     VPReplicateSC,
     VPScalarIVStepsSC,
+    VPWidenStridedLoadSC,
     VPVectorPointerSC,
     VPVectorEndPointerSC,
     VPWidenCallSC,
