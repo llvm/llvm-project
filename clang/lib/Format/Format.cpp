@@ -4036,6 +4036,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
   LangOpts.DeclSpecKeyword = 1; // To get __declspec.
   LangOpts.C99 = 1; // To get kw_restrict for non-underscore-prefixed restrict.
+  LangOpts.DollarIdents = 1; // For $identifier$ testing.
 
   return LangOpts;
 }
