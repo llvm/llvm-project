@@ -762,7 +762,7 @@ declare float @nearbyintf(float)
 ; CHECK: declare x86_fp80 @nearbyintl(x86_fp80) [[MEMNONE_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare x86_fp80 @nearbyintl(x86_fp80)
 
-; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE:#[0-9]+]]
+; CHECK-LINUX: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE]]
 ; CHECK-OPEN: declare noundef i32 @open(ptr noundef readonly captures(none), i32 noundef, ...) [[NOFREE:#[0-9]+]]
 declare i32 @open(ptr, i32, ...)
 
@@ -781,7 +781,7 @@ declare void @perror(ptr)
 ; CHECK: declare noalias noundef ptr @popen(ptr noundef readonly captures(none), ptr noundef readonly captures(none)) [[NOFREE_NOUNWIND]]
 declare ptr @popen(ptr, ptr)
 
-; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE:#[0-9]+]]
+; CHECK: declare i32 @posix_memalign(ptr, i64, i64) [[NOFREE]]
 declare i32 @posix_memalign(ptr, i64, i64)
 
 ; CHECK: declare double @pow(double, double) [[ERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
