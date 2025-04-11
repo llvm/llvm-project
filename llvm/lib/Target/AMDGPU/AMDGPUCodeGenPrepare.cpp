@@ -1582,13 +1582,12 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
     return false;
 
   unsigned OrigBit = OldType->getScalarSizeInBits();
-  unsigned MaxBitsNeeded = OrigBit;
 
   if (Opc != Instruction::Add && Opc != Instruction::Mul)
     llvm_unreachable("Unexpected opcode, only valid for Instruction::Add and "
                      "Instruction::Mul.");
 
-  MaxBitsNeeded = computeKnownBits(I, DL).countMaxActiveBits();
+  unsigned MaxBitsNeeded = computeKnownBits(I, DL).countMaxActiveBits();
 
   MaxBitsNeeded = std::max<unsigned>(bit_ceil(MaxBitsNeeded), 8);
   Type *NewType = DL.getSmallestLegalIntType(I->getContext(), MaxBitsNeeded);
