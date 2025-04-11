@@ -1584,25 +1584,14 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
   unsigned OrigBit = OldType->getScalarSizeInBits();
   unsigned MaxBitsNeeded = OrigBit;
 
-  switch (Opc) {
-  case Instruction::Add:
-    MaxBitsNeeded = KnownBits::add(computeKnownBits(I->getOperand(0), DL),
-                                   computeKnownBits(I->getOperand(1), DL))
-                        .countMaxActiveBits();
-    break;
-  case Instruction::Mul:
-    MaxBitsNeeded = KnownBits::mul(computeKnownBits(I->getOperand(0), DL),
-                                   computeKnownBits(I->getOperand(1), DL))
-                        .countMaxActiveBits();
-    break;
-  default:
+  if (Opc != Instruction::Add && Opc != Instruction::Mul)
     llvm_unreachable("Unexpected opcode, only valid for Instruction::Add and "
                      "Instruction::Mul.");
-  }
+
+  MaxBitsNeeded = computeKnownBits(I, DL).countMaxActiveBits();
 
   MaxBitsNeeded = std::max<unsigned>(bit_ceil(MaxBitsNeeded), 8);
-  Type *NewType =
-      DL.getSmallestLegalIntType(I->getType()->getContext(), MaxBitsNeeded);
+  Type *NewType = DL.getSmallestLegalIntType(I->getContext(), MaxBitsNeeded);
   if (!NewType)
     return false;
   unsigned NewBit = NewType->getIntegerBitWidth();
