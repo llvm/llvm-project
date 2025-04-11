@@ -204,6 +204,10 @@ Changes in existing checks
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
+- Improved :doc:`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check by fixing
+  false positives on out-of-line explicitly defaulted functions.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

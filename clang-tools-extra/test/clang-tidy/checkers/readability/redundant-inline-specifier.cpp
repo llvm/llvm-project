@@ -158,6 +158,4 @@ public:
 };
 
 inline B::~B() = default;
-// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: function '~B' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
-// CHECK-FIXES: B::~B() = default;
 }
