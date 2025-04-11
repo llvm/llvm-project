@@ -12,7 +12,6 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
@@ -135,15 +134,8 @@ void Statusline::Redraw(bool update) {
     exe_ctx.SetTargetPtr(&m_debugger.GetSelectedOrDummyTarget());
 
   SymbolContext symbol_ctx;
-  if (ProcessSP process_sp = exe_ctx.GetProcessSP()) {
-    // Check if the process is stopped, and if it is, make sure it remains
-    // stopped until we've computed the symbol context.
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process_sp->GetRunLock())) {
-      if (auto frame_sp = exe_ctx.GetFrameSP())
-        symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
-    }
-  }
+  if (auto frame_sp = exe_ctx.GetFrameSP())
+    symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
 
   StreamString stream;
   if (auto *format = m_debugger.GetStatuslineFormat())
