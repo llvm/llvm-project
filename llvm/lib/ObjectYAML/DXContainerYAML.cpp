@@ -14,7 +14,9 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <utility>
 
 namespace llvm {
 
@@ -29,11 +31,16 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
-    const object::DirectX::RootSignature &Data)
-    : Version(Data.getVersion()),
-      NumStaticSamplers(Data.getNumStaticSamplers()),
-      StaticSamplersOffset(Data.getStaticSamplersOffset()) {
+llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+DXContainerYAML::RootSignatureYamlDesc::create(
+    const object::DirectX::RootSignature &Data) {
+
+  RootSignatureYamlDesc RootSigDesc;
+
+  RootSigDesc.Version = Data.getVersion();
+  RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
+  RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
+
   uint32_t Flags = Data.getFlags();
   for (const auto &PH : Data.param_headers()) {
 
@@ -43,8 +50,7 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
     llvm::Expected<dxbc::RootParameterType> TypeOrErr =
         dxbc::safeParseParameterType(PH.ParameterType);
     if (Error E = TypeOrErr.takeError()) {
-      llvm::errs() << "Error: " << E << "\n";
-      continue;
+      return std::move(E);
     }
 
     NewP.Type = TypeOrErr.get();
@@ -52,24 +58,21 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
     llvm::Expected<dxbc::ShaderVisibility> VisibilityOrErr =
         dxbc::safeParseShaderVisibility(PH.ShaderVisibility);
     if (Error E = VisibilityOrErr.takeError()) {
-      llvm::errs() << "Error: " << E << "\n";
-      continue;
+      return std::move(E);
     }
     NewP.Visibility = VisibilityOrErr.get();
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
     if (Error E = ParamViewOrErr.takeError()) {
-      llvm::errs() << "Error: " << E << "\n";
-      continue;
+      return std::move(E);
     }
     object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
 
     if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
       llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
       if (Error E = ConstantsOrErr.takeError()) {
-        llvm::errs() << "Error: " << E << "\n";
-        continue;
+        return std::move(E);
       }
 
       auto Constants = *ConstantsOrErr;
@@ -78,11 +81,12 @@ DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
       NewP.Constants.ShaderRegister = Constants.ShaderRegister;
       NewP.Constants.RegisterSpace = Constants.RegisterSpace;
     }
-    Parameters.push_back(NewP);
+    RootSigDesc.Parameters.push_back(NewP);
   }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
-  Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+  RootSigDesc.Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+  return RootSigDesc;
 }
 
 uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {

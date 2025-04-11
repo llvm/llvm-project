@@ -92,9 +92,6 @@ struct RootParameterYamlDesc {
 };
 
 struct RootSignatureYamlDesc {
-  RootSignatureYamlDesc() = default;
-  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
-
   uint32_t Version;
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
@@ -107,7 +104,12 @@ struct RootSignatureYamlDesc {
     return make_range(Parameters.begin(), Parameters.end());
   }
 
+  static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+  create(const object::DirectX::RootSignature &Data);
+
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+
+  RootSignatureYamlDesc() = default;
 };
 
 using ResourceFlags = dxbc::PSV::ResourceFlags;
