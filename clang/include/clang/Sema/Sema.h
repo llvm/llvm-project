@@ -12262,16 +12262,16 @@ public:
     bool PrevLastDiagnosticIgnored;
 
   public:
-    explicit SFINAETrap(Sema &SemaRef, bool AccessCheckingSFINAE = false)
+    explicit SFINAETrap(Sema &SemaRef, bool TestWellformedSFINAE = false)
         : SemaRef(SemaRef), PrevSFINAEErrors(SemaRef.NumSFINAEErrors),
           PrevInNonInstantiationSFINAEContext(
               SemaRef.InNonInstantiationSFINAEContext),
           PrevAccessCheckingSFINAE(SemaRef.AccessCheckingSFINAE),
           PrevLastDiagnosticIgnored(
               SemaRef.getDiagnostics().isLastDiagnosticIgnored()) {
-      if (!SemaRef.isSFINAEContext())
+      if (TestWellformedSFINAE || !SemaRef.isSFINAEContext())
         SemaRef.InNonInstantiationSFINAEContext = true;
-      SemaRef.AccessCheckingSFINAE = AccessCheckingSFINAE;
+      SemaRef.AccessCheckingSFINAE = TestWellformedSFINAE;
     }
 
     ~SFINAETrap() {
@@ -12301,7 +12301,7 @@ public:
 
   public:
     explicit TentativeAnalysisScope(Sema &SemaRef)
-        : SemaRef(SemaRef), Trap(SemaRef, true),
+        : SemaRef(SemaRef), Trap(SemaRef, /*TestWellformedSFINAE=*/true),
           PrevDisableTypoCorrection(SemaRef.DisableTypoCorrection) {
       SemaRef.DisableTypoCorrection = true;
     }

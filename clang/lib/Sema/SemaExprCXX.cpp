@@ -5521,7 +5521,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   {
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(S, /*TestWellformedSFINAE=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     // const ClassT& obj;
@@ -6132,7 +6132,7 @@ static ExprResult CheckConvertibilityForTypeTraits(
   // trap at translation unit scope.
   EnterExpressionEvaluationContext Unevaluated(
       Self, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(Self, /*AccessCheckingSFINAE=*/true);
+  Sema::SFINAETrap SFINAE(Self, /*TestWellformedSFINAE=*/true);
   Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
   InitializationSequence Init(Self, To, Kind, From);
   if (Init.Failed())
@@ -6255,7 +6255,7 @@ static bool EvaluateBooleanTypeTrait(Sema &S, TypeTrait Kind,
     // trap at translation unit scope.
     EnterExpressionEvaluationContext Unevaluated(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(S, /*TestWellformedSFINAE=*/true);
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
     InitializedEntity To(
         InitializedEntity::InitializeTemporary(S.Context, Args[0]));
@@ -6595,7 +6595,7 @@ static bool EvaluateBinaryTypeTrait(Sema &Self, TypeTrait BTT, const TypeSourceI
     // trap at translation unit scope.
     EnterExpressionEvaluationContext Unevaluated(
         Self, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(Self, /*AccessCheckingSFINAE=*/true);
+    Sema::SFINAETrap SFINAE(Self, /*TestWellformedSFINAE=*/true);
     Sema::ContextRAII TUContext(Self, Self.Context.getTranslationUnitDecl());
     ExprResult Result = Self.BuildBinOp(/*S=*/nullptr, KeyLoc, BO_Assign, &Lhs,
                                         &Rhs);
