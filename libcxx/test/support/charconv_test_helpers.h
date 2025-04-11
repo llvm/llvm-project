@@ -19,7 +19,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <type_traits>
-
 #include "test_macros.h"
 
 #if TEST_STD_VER < 11
@@ -163,15 +162,6 @@ private:
 #ifndef TEST_HAS_NO_INT128
     static TEST_CONSTEXPR_CXX23 __int128_t fromchars128_impl(char const* p, char const* ep, int base, true_type)
     {
-        if (!TEST_IS_CONSTANT_EVALUATED) {
-            char* last;
-            __int128_t r = strtoll(p, &last, base);
-            if(errno != ERANGE) {
-                assert(last == ep);
-                return r;
-            }
-        }
-
         // When the value doesn't fit in a long long use from_chars. This is
         // not ideal since it does a round-trip test instead if using an
         // external source.
@@ -185,15 +175,6 @@ private:
 
     static TEST_CONSTEXPR_CXX23 __uint128_t fromchars128_impl(char const* p, char const* ep, int base, false_type)
     {
-        if (!TEST_IS_CONSTANT_EVALUATED) {
-            char* last;
-            __uint128_t r = strtoull(p, &last, base);
-            if(errno != ERANGE) {
-                assert(last == ep);
-                return r;
-            }
-        }
-
         __uint128_t r;
         std::from_chars_result s = std::from_chars(p, ep, r, base);
         assert(s.ec == std::errc{});
