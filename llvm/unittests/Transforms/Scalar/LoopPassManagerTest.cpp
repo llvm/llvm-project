@@ -329,16 +329,12 @@ public:
   }
 };
 
-template<std::size_t Tag, typename MemberPtrT>
-struct PrivateVisitor {
+template <size_t Tag, typename MemberPtrT> struct PrivateVisitor {
   inline static MemberPtrT Ptr;
 };
-template<std::size_t Tag, auto MemberPtrV>
-struct PrivateVisitorHelper {
+template <size_t Tag, auto MemberPtrV> struct PrivateVisitorHelper {
   struct Assigner {
-    Assigner() {
-      PrivateVisitor<Tag, decltype(MemberPtrV)>::Ptr = MemberPtrV;
-    }
+    Assigner() { PrivateVisitor<Tag, decltype(MemberPtrV)>::Ptr = MemberPtrV; }
   };
   inline static Assigner A;
 };
@@ -409,7 +405,8 @@ TEST_F(LoopPassManagerTest, Basic) {
     LPM2.addPass(NoOpLoopNestPass());
     LPM2.addPass(NoOpLoopNestPass());
     LPM1.addPass(std::move(LPM2));
-    auto &IsLoopNestPass = LPM1.*PrivateVisitor<0, BitVector LoopPassManager::*>::Ptr;
+    auto &IsLoopNestPass =
+        LPM1.*PrivateVisitor<0, BitVector LoopPassManager::*>::Ptr;
     EXPECT_EQ(IsLoopNestPass.size(), 3u);
     BitVector FTT(3, true);
     FTT[0] = false;
