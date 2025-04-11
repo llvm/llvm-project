@@ -2,9 +2,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize32,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64,+real-true16 -show-encoding %s | FileCheck --check-prefixes=GFX12 %s
 
-// this file will be converted to true16 format when more true16 instructions are supported
-
-v_bfrev_b32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_bfrev_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_bfrev_b32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x70,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
 v_bfrev_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1

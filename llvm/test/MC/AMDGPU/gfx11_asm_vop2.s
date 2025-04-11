@@ -4,7 +4,7 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W32-ERR --implicit-check-not=error: %s
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefix=W64-ERR --implicit-check-not=error: %s
 
-v_add_co_ci_u32_e32 v5, vcc_lo, v1, v2, vcc_lo
+v_add_co_ci_u32 v5, vcc_lo, v1, v2, vcc_lo
 // W32: v_add_co_ci_u32_e32 v5, vcc_lo, v1, v2, vcc_lo ; encoding: [0x01,0x05,0x0a,0x40]
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
-v_bfrev_b32_dpp v5, v1 quad_perm:[3,2,1,0]
+v_bfrev_b32 v5, v1 quad_perm:[3,2,1,0]
 // GFX11: v_bfrev_b32_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x70,0x0a,0x7e,0x01,0x1b,0x00,0xff]
 
 v_bfrev_b32 v5, v1 quad_perm:[0,1,2,3]
@@ -389,6 +389,9 @@ v_cvt_f16_f32 v5.h, v1 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
 v_cvt_f16_f32 v127.h, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX11: v_cvt_f16_f32_dpp v127.h, -|v255| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0x14,0xfe,0x7f,0xff,0x6f,0x35,0x30]
 
+v_cvt_f16_f32 v127.l, v1 row_share:15 row_mask:0x0 bank_mask:0x1
+// GFX11: v_cvt_f16_f32_dpp v127.l, v1 row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x14,0xfe,0x7e,0x01,0x5f,0x01,0x01]
+
 v_cvt_f16_i16 v5.l, v1.l quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f16_i16_dpp v5.l, v1.l quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0xa2,0x0a,0x7e,0x01,0x1b,0x00,0xff]
 
@@ -514,6 +517,9 @@ v_cvt_f32_f16 v5, v1.h row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1 fi:0
 
 v_cvt_f32_f16 v255, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX11: v_cvt_f32_f16_dpp v255, -|v127.h| row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xfa,0x16,0xfe,0x7f,0xff,0x6f,0x35,0x30]
+
+v_cvt_f32_f16 v5, v127.l row_share:15 row_mask:0x0 bank_mask:0x1
+// GFX11: v_cvt_f32_f16_dpp v5, v127.l row_share:15 row_mask:0x0 bank_mask:0x1 ; encoding: [0xfa,0x16,0x0a,0x7e,0x7f,0x5f,0x01,0x01]
 
 v_cvt_f32_i32 v5, v1 quad_perm:[3,2,1,0]
 // GFX11: v_cvt_f32_i32_dpp v5, v1 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0xfa,0x0a,0x0a,0x7e,0x01,0x1b,0x00,0xff]

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11 %s
 
-v_bfrev_b32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0]
+v_bfrev_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: v_bfrev_b32_dpp v5, v1 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0xe9,0x70,0x0a,0x7e,0x01,0x77,0x39,0x05]
 
 v_bfrev_b32 v5, v1 dpp8:[7,6,5,4,3,2,1,0] fi:1

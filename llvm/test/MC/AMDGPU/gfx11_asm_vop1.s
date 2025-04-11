@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize32 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+real-true16,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX11 %s
 
-v_bfrev_b32_e32 v5, v1
+v_bfrev_b32 v5, v1
 // GFX11: v_bfrev_b32_e32 v5, v1                  ; encoding: [0x01,0x71,0x0a,0x7e]
 
 v_bfrev_b32 v5, v255
@@ -463,6 +463,9 @@ v_cvt_f16_f32 v5.h, src_scc
 
 v_cvt_f16_f32 v127.h, 0xaf123456
 // GFX11: v_cvt_f16_f32_e32 v127.h, 0xaf123456    ; encoding: [0xff,0x14,0xfe,0x7f,0x56,0x34,0x12,0xaf]
+
+v_cvt_f16_f32 v127.l, 0.5
+// GFX11: v_cvt_f16_f32_e32 v127.l, 0.5           ; encoding: [0xf0,0x14,0xfe,0x7e]
 
 v_cvt_f16_i16 v5.l, v1.l
 // GFX11: v_cvt_f16_i16_e32 v5.l, v1.l            ; encoding: [0x01,0xa3,0x0a,0x7e]
