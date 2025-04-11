@@ -4256,9 +4256,10 @@ static unsigned getEstimatedRuntimeVF(ElementCount VF,
   return EstimatedVF;
 }
 
-bool LoopVectorizationPlanner::isMoreProfitable(
-    const VectorizationFactor &A, const VectorizationFactor &B,
-    const unsigned MaxTripCount) const {
+bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
+                                                const VectorizationFactor &B,
+                                                const unsigned MaxTripCount,
+                                                bool HasTail) const {
   InstructionCost CostA = A.Cost;
   InstructionCost CostB = B.Cost;
 
@@ -4296,9 +4297,9 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   if (!MaxTripCount)
     return CmpFn(CostA * EstimatedWidthB, CostB * EstimatedWidthA);
 
-  auto GetCostForTC = [MaxTripCount, this](unsigned VF,
-                                           InstructionCost VectorCost,
-                                           InstructionCost ScalarCost) {
+  auto GetCostForTC = [MaxTripCount, HasTail](unsigned VF,
+                                              InstructionCost VectorCost,
+                                              InstructionCost ScalarCost) {
     // If the trip count is a known (possibly small) constant, the trip count
     // will be rounded up to an integer number of iterations under
     // FoldTailByMasking. The total cost in that case will be
@@ -4307,9 +4308,10 @@ bool LoopVectorizationPlanner::isMoreProfitable(
     // some extra overheads, but for the purpose of comparing the costs of
     // different VFs we can use this to compare the total loop-body cost
     // expected after vectorization.
-    if (CM.foldTailByMasking())
-      return VectorCost * divideCeil(MaxTripCount, VF);
-    return VectorCost * (MaxTripCount / VF) + ScalarCost * (MaxTripCount % VF);
+    if (HasTail)
+      return VectorCost * (MaxTripCount / VF) +
+             ScalarCost * (MaxTripCount % VF);
+    return VectorCost * divideCeil(MaxTripCount, VF);
   };
 
   auto RTCostA = GetCostForTC(EstimatedWidthA, CostA, A.ScalarCost);
@@ -4317,10 +4319,12 @@ bool LoopVectorizationPlanner::isMoreProfitable(
   return CmpFn(RTCostA, RTCostB);
 }
 
-bool LoopVectorizationPlanner::isMoreProfitable(
-    const VectorizationFactor &A, const VectorizationFactor &B) const {
+bool LoopVectorizationPlanner::isMoreProfitable(const VectorizationFactor &A,
+                                                const VectorizationFactor &B,
+                                                bool HasTail) const {
   const unsigned MaxTripCount = PSE.getSmallConstantMaxTripCount();
-  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount);
+  return LoopVectorizationPlanner::isMoreProfitable(A, B, MaxTripCount,
+                                                    HasTail);
 }
 
 void LoopVectorizationPlanner::emitInvalidCostRemarks(
@@ -4609,7 +4613,7 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
         continue;
       }
 
-      if (isMoreProfitable(Candidate, ChosenFactor))
+      if (isMoreProfitable(Candidate, ChosenFactor, P->hasScalarTail()))
         ChosenFactor = Candidate;
     }
   }
@@ -4623,7 +4627,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
   }
 
   LLVM_DEBUG(if (ForceVectorization && !ChosenFactor.Width.isScalar() &&
-                 !isMoreProfitable(ChosenFactor, ScalarCost)) dbgs()
+                 !isMoreProfitable(ChosenFactor, ScalarCost,
+                                   !CM.foldTailByMasking())) dbgs()
              << "LV: Vectorization seems to be not beneficial, "
              << "but was forced by a user.\n");
   return ChosenFactor;
@@ -4789,7 +4794,7 @@ VectorizationFactor LoopVectorizationPlanner::selectEpilogueVectorizationFactor(
     }
 
     if (Result.Width.isScalar() ||
-        isMoreProfitable(NextVF, Result, MaxTripCount))
+        isMoreProfitable(NextVF, Result, MaxTripCount, !CM.foldTailByMasking()))
       Result = NextVF;
   }
 
@@ -7768,11 +7773,11 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-      if (isMoreProfitable(CurrentFactor, BestFactor))
+      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
         BestFactor = CurrentFactor;
 
       // If profitable add it to ProfitableVF list.
-      if (isMoreProfitable(CurrentFactor, ScalarFactor))
+      if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
         ProfitableVFs.push_back(CurrentFactor);
     }
   }
