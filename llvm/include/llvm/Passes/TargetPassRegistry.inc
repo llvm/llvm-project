@@ -83,7 +83,7 @@ if (PIC) {
 
 #define ADD_PASS_WITH_PARAMS(NAME, CREATE_PASS, PARSER)                        \
   if (PassBuilder::checkParametrizedPassName(Name, NAME)) {                    \
-    auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME);        \
+    auto Params = PassBuilder::parsePassParameters(PARSER, Name, NAME, PB);    \
     if (!Params) {                                                             \
       errs() << NAME ": " << toString(Params.takeError()) << '\n';             \
       return false;                                                            \

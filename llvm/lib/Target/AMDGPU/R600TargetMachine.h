@@ -42,7 +42,8 @@ public:
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opt,
-                             PassInstrumentationCallbacks *PIC) override;
+                             PassInstrumentationCallbacks *PIC,
+                             PassBuilder &) override;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;
 
@@ -65,7 +66,7 @@ class R600CodeGenPassBuilder
     : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
 public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
-                         PassInstrumentationCallbacks *PIC);
+                         PassInstrumentationCallbacks *PIC, PassBuilder &PB);
 
   void addPreISel(AddIRPass &addPass) const;
   void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
