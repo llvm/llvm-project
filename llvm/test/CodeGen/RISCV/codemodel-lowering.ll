@@ -69,31 +69,27 @@ define void @lower_blockaddress() nounwind {
 ; RV32I-SMALL-LABEL: lower_blockaddress:
 ; RV32I-SMALL:       # %bb.0:
 ; RV32I-SMALL-NEXT:    lui a0, %hi(addr)
-; RV32I-SMALL-NEXT:    li a1, 1
-; RV32I-SMALL-NEXT:    sw a1, %lo(addr)(a0)
+; RV32I-SMALL-NEXT:    sw a0, %lo(addr)(a0)
 ; RV32I-SMALL-NEXT:    ret
 ;
 ; RV32I-MEDIUM-LABEL: lower_blockaddress:
 ; RV32I-MEDIUM:       # %bb.0:
 ; RV32I-MEDIUM-NEXT:  .Lpcrel_hi1:
 ; RV32I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(addr)
-; RV32I-MEDIUM-NEXT:    li a1, 1
-; RV32I-MEDIUM-NEXT:    sw a1, %pcrel_lo(.Lpcrel_hi1)(a0)
+; RV32I-MEDIUM-NEXT:    sw a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV32I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-SMALL-LABEL: lower_blockaddress:
 ; RV64I-SMALL:       # %bb.0:
 ; RV64I-SMALL-NEXT:    lui a0, %hi(addr)
-; RV64I-SMALL-NEXT:    li a1, 1
-; RV64I-SMALL-NEXT:    sd a1, %lo(addr)(a0)
+; RV64I-SMALL-NEXT:    sd a0, %lo(addr)(a0)
 ; RV64I-SMALL-NEXT:    ret
 ;
 ; RV64I-MEDIUM-LABEL: lower_blockaddress:
 ; RV64I-MEDIUM:       # %bb.0:
 ; RV64I-MEDIUM-NEXT:  .Lpcrel_hi1:
 ; RV64I-MEDIUM-NEXT:    auipc a0, %pcrel_hi(addr)
-; RV64I-MEDIUM-NEXT:    li a1, 1
-; RV64I-MEDIUM-NEXT:    sd a1, %pcrel_lo(.Lpcrel_hi1)(a0)
+; RV64I-MEDIUM-NEXT:    sd a0, %pcrel_lo(.Lpcrel_hi1)(a0)
 ; RV64I-MEDIUM-NEXT:    ret
 ;
 ; RV64I-LARGE-LABEL: lower_blockaddress:
@@ -101,8 +97,7 @@ define void @lower_blockaddress() nounwind {
 ; RV64I-LARGE-NEXT:  .Lpcrel_hi1:
 ; RV64I-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI1_0)
 ; RV64I-LARGE-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
-; RV64I-LARGE-NEXT:    li a1, 1
-; RV64I-LARGE-NEXT:    sd a1, 0(a0)
+; RV64I-LARGE-NEXT:    sd a0, 0(a0)
 ; RV64I-LARGE-NEXT:    ret
   store volatile ptr blockaddress(@lower_blockaddress, %block), ptr @addr
   ret void

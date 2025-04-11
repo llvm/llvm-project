@@ -6,7 +6,7 @@
 declare void @g(ptr)
 
 ;.
-; CHECK: @[[BA:[a-zA-Z0-9_$"\\.-]+]] = private constant ptr inttoptr (i32 1 to ptr)
+; CHECK: @[[BA:[a-zA-Z0-9_$"\\.-]+]] = private constant ptr poison
 ;.
 define void @f() {
 ; CHECK-LABEL: @f(

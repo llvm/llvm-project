@@ -11,7 +11,7 @@
 
 ;.
 ; TUNIT: @code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
-; TUNIT: @bar.l = internal constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
+; TUNIT: @bar.l = internal constant [2 x ptr] undef
 ;.
 ; CGSCC: @code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4
 ; CGSCC: @bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)]

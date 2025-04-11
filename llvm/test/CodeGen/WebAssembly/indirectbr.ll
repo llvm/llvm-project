@@ -32,7 +32,7 @@ target triple = "wasm32"
 ; CHECK-NEXT: .int32
 ; CHECK-NEXT: .int32
 ; CHECK-NEXT: .int32
-; CHECK-NEXT: .int32
+; CHECK-NEXT: .skip 4
 
 define void @test1(ptr readonly %p, ptr %sink) #0 {
 

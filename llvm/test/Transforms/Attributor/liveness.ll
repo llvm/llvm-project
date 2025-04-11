@@ -24,7 +24,7 @@ declare i32 @bar() nosync readnone
 ; and nothing should be deduced for it.
 
 ;.
-; TUNIT: @dead_with_blockaddress_users.l = constant [2 x ptr] [ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 1 to ptr)]
+; TUNIT: @dead_with_blockaddress_users.l = constant [2 x ptr] undef
 ; TUNIT: @a1 = common global i8 0, align 8
 ; TUNIT: @a2 = common global i8 0, align 16
 ; TUNIT: @e = global ptr null

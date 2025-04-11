@@ -21,7 +21,7 @@ declare void @quux()
 ; booleans where at least one operand is true/false/undef.
 
 ;.
-; CHECK: @[[ANCHOR:[a-zA-Z0-9_$"\\.-]+]] = constant [3 x ptr] [ptr blockaddress(@test_indirectbr, [[L1:%.*]]), ptr inttoptr (i32 1 to ptr), ptr blockaddress(@test_indirectbr, [[L3:%.*]])]
+; CHECK: @[[ANCHOR:[a-zA-Z0-9_$"\\.-]+]] = constant [3 x ptr] [ptr blockaddress(@test_indirectbr, [[L1:%.*]]), ptr poison, ptr blockaddress(@test_indirectbr, [[L3:%.*]])]
 ;.
 define void @test_br(i1 %cond, i1 %value) nounwind {
 ; CHECK-LABEL: @test_br(
