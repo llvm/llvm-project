@@ -1828,6 +1828,62 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   llvm_unreachable("Invalid associated statement application");
 }
 
+namespace {
+
+// Routine has some pretty complicated set of rules for how device_type
+// interacts with 'gang', 'worker', 'vector', and 'seq'. Enforce  part of it
+// here.
+bool CheckValidRoutineGangWorkerVectorSeqClauses(
+    SemaOpenACC &SemaRef, SourceLocation DirectiveLoc,
+    ArrayRef<const OpenACCClause *> Clauses) {
+  auto RequiredPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                    OpenACCVectorClause, OpenACCSeqClause>;
+  // The clause handling has assured us that there is no duplicates.  That is,
+  // if there is 1 before a device_type, there are none after a device_type.
+  // If not, there is at most 1 applying to each device_type.
+
+  // What is left to legalize is that either:
+  // 1- there is 1 before the first device_type.
+  // 2- there is 1 AFTER each device_type.
+  auto *FirstDeviceType =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+  // If there is 1 before the first device_type (or at all if no device_type),
+  // we are legal.
+  auto *ClauseItr =
+      std::find_if(Clauses.begin(), FirstDeviceType, RequiredPred);
+
+  if (ClauseItr != FirstDeviceType)
+    return false;
+
+  // If there IS no device_type, and no clause, diagnose.
+  if (FirstDeviceType == Clauses.end())
+    return SemaRef.Diag(DirectiveLoc, diag::err_acc_construct_one_clause_of)
+           << OpenACCDirectiveKind::Routine
+           << "'gang', 'seq', 'vector', or 'worker'";
+
+  // Else, we have to check EACH device_type group. PrevDeviceType is the
+  // device-type before the current group.
+  auto *PrevDeviceType = FirstDeviceType;
+
+  while (PrevDeviceType != Clauses.end()) {
+    auto *NextDeviceType =
+        std::find_if(std::next(PrevDeviceType), Clauses.end(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    ClauseItr = std::find_if(PrevDeviceType, NextDeviceType, RequiredPred);
+
+    if (ClauseItr == NextDeviceType)
+      return SemaRef.Diag((*PrevDeviceType)->getBeginLoc(),
+                          diag::err_acc_clause_routine_one_of_in_region);
+
+    PrevDeviceType = NextDeviceType;
+  }
+
+  return false;
+}
+} // namespace
+
 bool SemaOpenACC::ActOnStartDeclDirective(
     OpenACCDirectiveKind K, SourceLocation StartLoc,
     ArrayRef<const OpenACCClause *> Clauses) {
@@ -1838,6 +1894,9 @@ bool SemaOpenACC::ActOnStartDeclDirective(
   SemaRef.PopExpressionEvaluationContext();
 
   if (DiagnoseRequiredClauses(K, StartLoc, Clauses))
+    return true;
+  if (K == OpenACCDirectiveKind::Routine &&
+      CheckValidRoutineGangWorkerVectorSeqClauses(*this, StartLoc, Clauses))
     return true;
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);

@@ -199,6 +199,93 @@ class SemaOpenACCClauseVisitor {
     llvm_unreachable("didn't return from switch above?");
   }
 
+  // Routine has a pretty complicated set of rules for how device_type and the
+  // gang, worker, vector, and seq clauses work.  So diagnose some of it here.
+  bool CheckValidRoutineGangWorkerVectorSeqNewClause(
+      SemaOpenACC::OpenACCParsedClause &Clause) {
+    if (Clause.getDirectiveKind() != OpenACCDirectiveKind::Routine)
+      return false;
+
+    if (Clause.getClauseKind() != OpenACCClauseKind::Gang &&
+        Clause.getClauseKind() != OpenACCClauseKind::Vector &&
+        Clause.getClauseKind() != OpenACCClauseKind::Worker &&
+        Clause.getClauseKind() != OpenACCClauseKind::Seq)
+      return false;
+    auto ProhibitedPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                        OpenACCVectorClause, OpenACCSeqClause>;
+
+    auto *FirstDeviceType =
+        llvm::find_if(ExistingClauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    if (FirstDeviceType == ExistingClauses.end()) {
+      // If there isn't a device type yet, ANY duplicate is wrong.
+
+      auto *ExistingProhibitedClause =
+          llvm::find_if(ExistingClauses, ProhibitedPred);
+
+      if (ExistingProhibitedClause == ExistingClauses.end())
+        return false;
+
+      SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_clause_cannot_combine)
+          << Clause.getClauseKind()
+          << (*ExistingProhibitedClause)->getClauseKind()
+          << Clause.getDirectiveKind();
+      SemaRef.Diag((*ExistingProhibitedClause)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return true;
+    }
+
+    // At this point we know that this is 'after' a device type. So this is an
+    // error if: 1- there is one BEFORE the 'device_type' 2- there is one
+    // between this and the previous 'device_type'.
+
+    auto *BeforeDeviceType =
+        std::find_if(ExistingClauses.begin(), FirstDeviceType, ProhibitedPred);
+
+    // If there is one before the device_type (and we know we are after a
+    // device_type), than this is ill-formed.
+    if (BeforeDeviceType != FirstDeviceType) {
+      SemaRef.Diag(
+          Clause.getBeginLoc(),
+          diag::err_acc_clause_routine_cannot_combine_before_device_type)
+          << Clause.getClauseKind() << (*BeforeDeviceType)->getClauseKind();
+      SemaRef.Diag((*BeforeDeviceType)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      SemaRef.Diag((*FirstDeviceType)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+      return true;
+    }
+
+    auto LastDeviceTypeItr =
+        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    // We already know there is one in the list, so it is nonsensical to not
+    // have one.
+    assert(LastDeviceTypeItr != ExistingClauses.rend());
+
+    // Get the device-type from-the-front (not reverse) iterator from the
+    // reverse iterator.
+    auto *LastDeviceType = LastDeviceTypeItr.base() - 1;
+
+    auto *ExistingProhibitedSinceLastDevice =
+        std::find_if(LastDeviceType, ExistingClauses.end(), ProhibitedPred);
+
+    // No prohibited ones since the last device-type.
+    if (ExistingProhibitedSinceLastDevice == ExistingClauses.end())
+      return false;
+
+    SemaRef.Diag(Clause.getBeginLoc(),
+                 diag::err_acc_clause_routine_cannot_combine_same_device_type)
+        << Clause.getClauseKind()
+        << (*ExistingProhibitedSinceLastDevice)->getClauseKind();
+    SemaRef.Diag((*ExistingProhibitedSinceLastDevice)->getBeginLoc(),
+                 diag::note_acc_previous_clause_here);
+    SemaRef.Diag((*LastDeviceType)->getBeginLoc(),
+                 diag::note_acc_previous_clause_here);
+    return true;
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
@@ -212,6 +299,8 @@ public:
         SemaRef.DiagnoseExclusiveClauses(Clause.getDirectiveKind(),
                                          Clause.getClauseKind(),
                                          Clause.getBeginLoc(), ExistingClauses))
+      return nullptr;
+    if (CheckValidRoutineGangWorkerVectorSeqNewClause(Clause))
       return nullptr;
 
     switch (Clause.getClauseKind()) {

@@ -153,7 +153,7 @@ void func() {
 #pragma acc routine seq
 void routine_func();
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine clause list
 void routine_func();
 
@@ -161,12 +161,12 @@ void routine_func();
 #pragma acc routine (func_name) seq
 // expected-error@+3{{use of undeclared identifier 'func_name'}}
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine (func_name) clause list
 
 #pragma acc routine (routine_func) seq
 // expected-error@+2{{invalid OpenACC clause 'clause'}}
-// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'seq', 'vector', or 'worker' clause}}
 #pragma acc routine (routine_func) clause list
 
 // expected-error@+2{{expected ')'}}
