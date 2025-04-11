@@ -872,6 +872,32 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
   return nullptr; // no error; we just didn't find anything
 }
 
+char const *SymbolContext::GetPossiblyInlinedFunctionName(
+    Mangled::NamePreference mangling_preference) const {
+  const char *name = nullptr;
+  if (function)
+    name = function->GetMangled().GetName(mangling_preference).AsCString();
+  else if (symbol)
+    name = symbol->GetMangled().GetName(mangling_preference).AsCString();
+
+  if (!block)
+    return name;
+
+  const Block *inline_block = block->GetContainingInlinedBlock();
+  if (!inline_block)
+    return name;
+
+  const InlineFunctionInfo *inline_info =
+      inline_block->GetInlinedFunctionInfo();
+  if (!inline_info)
+    return name;
+
+  // If we do have an inlined frame name, return that.
+  return inline_info->GetMangled()
+      .GetName(mangling_preference)
+      .AsCString(nullptr);
+}
+
 //
 //  SymbolContextSpecifier
 //
