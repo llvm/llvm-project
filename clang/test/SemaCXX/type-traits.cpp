@@ -2673,6 +2673,9 @@ struct FloatWrapper
   }
 };
 
+template<typename A, typename B, bool = __is_convertible(A, B)>
+static void is_convertible_sfinae();
+
 void is_convertible()
 {
   static_assert(__is_convertible(IntWrapper, IntWrapper));
@@ -2697,6 +2700,10 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, const float&));
   static_assert(__is_convertible(float, FloatWrapper&&));
   static_assert(__is_convertible(float, const FloatWrapper&));
+
+  static_assert(!__is_convertible(AllPrivate, AllPrivate));
+  // Make sure we swallow "calling a private constructor" even in SFINAE context.
+  using Result = decltype(is_convertible_sfinae<AllPrivate, AllPrivate>());
 }
 
 void is_nothrow_convertible()
@@ -2821,6 +2828,9 @@ void is_trivial()
 }
 
 template<typename T> struct TriviallyConstructibleTemplate {};
+
+template<typename A, typename B, bool = __is_assignable(A, B)>
+static void is_assignable_sfinae();
 
 void trivial_checks()
 {
@@ -2995,6 +3005,10 @@ void trivial_checks()
   static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_assignable(void, void));
   static_assert(!__is_assignable(const volatile void, const volatile void));
+
+  static_assert(!__is_assignable(AllPrivate, AllPrivate));
+  // Make sure we swallow "'operator=' is a private member" even in SFINAE context.
+  using Result = decltype(is_assignable_sfinae<AllPrivate, AllPrivate>());
 }
 
 void constructible_checks() {
@@ -3191,6 +3205,9 @@ void reference_constructs_from_temporary_checks() {
 
 }
 
+template<typename A, typename B, bool = __reference_converts_from_temporary(A, B)>
+static void reference_converts_from_temporary_sfinae();
+
 void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(int &, int &));
   static_assert(!__reference_converts_from_temporary(int &, int &&));
@@ -3241,6 +3258,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
   static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
 
+  static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
+  // Make sure we swallow "calling a private constructor" even in SFINAE context.
+  using Result = decltype(reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
 }
 
 void array_rank() {
@@ -4074,6 +4094,20 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 };
 
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
+
+struct NotTriviallyEqualityComparablePrivateComparison {
+  int i;
+
+private:
+  bool operator==(const NotTriviallyEqualityComparablePrivateComparison&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparablePrivateComparison));
+
+template<typename T, bool = __is_trivially_equality_comparable(T)>
+static void is_trivially_equality_comparable_sfinae();
+
+// Make sure we swallow "'operator==' is a private member" even in SFINAE context.
+using SFINAEResult = decltype(is_trivially_equality_comparable_sfinae<NotTriviallyEqualityComparablePrivateComparison>());
 
 template<bool B>
 struct MaybeTriviallyEqualityComparable {
