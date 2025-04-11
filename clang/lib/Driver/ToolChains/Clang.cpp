@@ -9476,9 +9476,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         }
 
         if (!OOpt.empty() && OOpt != "0") {
-          CmdArgs.push_back(Args.MakeArgString(
-              "--device-linker=" + TC->getTripleString() +
-              "=--lto-newpm-passes=default<O" + OOpt + ">"));
+          LinkerArgs.push_back(
+            Args.MakeArgString("--lto-newpm-passes=default<O" + OOpt + ">"));
         }
       }
 
