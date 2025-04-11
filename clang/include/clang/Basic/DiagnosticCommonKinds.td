@@ -177,6 +177,9 @@ def err_opencl_unknown_type_specifier : Error<
   "%0 does not support the '%1' "
   "%select{type qualifier|storage class specifier}2">;
 
+def warn_unknown_attribute_namespace : Warning<
+  "unknown attribute namespace '%0'; attribute '%0::%1' ignored">,
+  InGroup<UnknownAttributeNamespaces>;
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,

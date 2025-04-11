@@ -141,6 +141,7 @@ static void optimizeDiagnosticOpts(DiagnosticOptions &Opts,
   Opts.Warnings.clear();
   Opts.UndefPrefixes.clear();
   Opts.Remarks.clear();
+  Opts.UnknownAttributeNamespaces.clear();
 }
 
 static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
