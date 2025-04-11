@@ -3134,7 +3134,6 @@ def warn_function_attribute_ignored_in_stmt : Warning<
   "use '%0' on statements">,
   InGroup<IgnoredAttributes>;
 
-
 def err_musttail_needs_trivial_args : Error<
   "tail call requires that the return value, all parameters, and any "
   "temporaries created by the expression are trivially destructible">;
@@ -3162,7 +3161,7 @@ def err_musttail_member_mismatch : Error<
 def note_musttail_callee_defined_here : Note<"%0 declared here">;
 def note_tail_call_required : Note<"tail call required by %0 attribute here">;
 def err_musttail_mismatch : Error<
-  "cannot perform a tail call to function%select{| %1}0 because its signature "
+  "cannot perform a tail call to function %select{| %1}0 because its signature "
   "is incompatible with the calling function">;
 def note_musttail_mismatch : Note<
     "target function "
