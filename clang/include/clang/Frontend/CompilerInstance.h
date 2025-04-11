@@ -870,6 +870,13 @@ private:
                                                  SourceLocation ModuleNameLoc,
                                                  bool IsInclusionDirective);
 
+  /// Creates a \c CompilerInstance for compiling a module.
+  ///
+  /// This expects a properly initialized \c FrontendInputFile.
+  std::unique_ptr<CompilerInstance> cloneForModuleCompileImpl(
+      SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
+      StringRef OriginalModuleMapFile, StringRef ModuleFileName);
+
 public:
   /// Creates a new \c CompilerInstance for compiling a module.
   ///
