@@ -16,12 +16,14 @@
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 
 namespace mlir::amdgpu {
@@ -132,7 +134,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    if (readOp->hasAttr("amdgpu.transformed"))
+    if (readOp->hasAttr("amdgpu.buffer_transfer_read_needs_mask"))
       return failure();
 
     bool requiresBroadcasting = false;
@@ -148,7 +150,6 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     VectorType vectorType = readOp.getVectorType();
     int64_t vectorSize = vectorType.getNumElements();
     int64_t elementBitWidth = vectorType.getElementTypeBitWidth();
-    // Value linearIndex = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     SmallVector<OpFoldResult> indices = readOp.getIndices();
 
     auto stridedMetadata =
@@ -161,16 +162,15 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
             stridedMetadata.getConstifiedMixedOffset(),
             stridedMetadata.getConstifiedMixedSizes(),
             stridedMetadata.getConstifiedMixedStrides(), indices);
-    // OpFoldResult linearIndexSize = linearizedInfo.linearizedSize;
     Value linearIndex =
         getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
 
-    // Note below doesn't give the correct result for the linearized size.
-    // It compute the mutiplied sizes of all dimensions instead of taking
-    // the maximum of each dimension size * stride.
     // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
+    // Note below doesn't give the correct result for the linearized size.
     // Value totalSize = getValueOrCreateConstantIndexOp(
     //    rewriter, loc, linearizedInfo.linearizedSize);
+    // It compute the mutiplied sizes of all dimensions instead of taking
+    // the maximum of each dimension size * stride.
     SmallVector<AffineExpr> productExpressions;
     SmallVector<Value> productResults;
     unsigned sourceRank =
@@ -201,7 +201,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ule, delta, vectorSizeOffset);
 
-    // 2) check if (detla(bytes) % (32 / elementBitwidth) != 0)
+    // 2) check if (detla_bytes % (32 / elementBitwidth) != 0)
     Value deltaBytes = rewriter.create<arith::MulIOp>(
         loc, delta,
         rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
@@ -219,7 +219,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
     auto thenBuilder = [&](OpBuilder &builder, Location loc) {
       Operation *read = builder.clone(*readOp.getOperation());
-      read->setAttr("amdgpu.transformed", builder.getUnitAttr());
+      read->setAttr("amdgpu.buffer_transfer_read_needs_mask",
+                    builder.getUnitAttr());
       Value readResult = read->getResult(0);
       builder.create<scf::YieldOp>(loc, readResult);
     };
@@ -244,6 +245,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 void mlir::amdgpu::populateAmdgpuTransferReadToLoadPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering>(patterns.getContext());
+  vector::populateVectorTransferLoweringPatterns(patterns);
 }
 
 struct AmdgpuTransferReadToLoadPass final
@@ -252,6 +254,8 @@ struct AmdgpuTransferReadToLoadPass final
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAmdgpuTransferReadToLoadPatterns(patterns);
-    walkAndApplyPatterns(getOperation(), std::move(patterns));
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns)))) {
+      return signalPassFailure();
+    }
   }
 };
