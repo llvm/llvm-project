@@ -2617,10 +2617,9 @@ def err_decltype_auto_initializer_list : Error<
   "cannot deduce 'decltype(auto)' from initializer list">;
 
 // C++17 deduced class template specialization types
-def err_deduced_class_template_compound_type : Error<
-  "cannot %select{form pointer to|form reference to|form array of|"
-  "form function returning|use parentheses when declaring variable with}0 "
-  "deduced class template specialization type">;
+def err_deduced_class_template_compound_type
+    : Error<"cannot form %select{pointer to|reference to|array of|function "
+            "returning}0 deduced class template specialization type">;
 def err_deduced_non_class_or_alias_template_specialization_type : Error<
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
