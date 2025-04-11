@@ -121,11 +121,11 @@ std::string getListOfClauses(AccClauseSet Set) {
 
 OpenACCClauseKind dealiasClauseKind(OpenACCClauseKind CK) {
   switch (CK) {
-    default:
-      return CK;
+  default:
+    return CK;
 #define VISIT_CLAUSE(NAME)
 #define CLAUSE_ALIAS(ALIAS, NAME, DEPRECATED)                                  \
-  case OpenACCClauseKind::ALIAS:                                             \
+  case OpenACCClauseKind::ALIAS:                                               \
     return OpenACCClauseKind::NAME;
 #include "clang/Basic/OpenACCClauses.def"
   }
