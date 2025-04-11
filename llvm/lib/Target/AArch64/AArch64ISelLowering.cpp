@@ -24063,15 +24063,9 @@ static SDValue performSTORECombine(SDNode *N,
       // Handle extracting from lanes != 0.
       SDValue Ext = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL,
                                 Value.getValueType(), Vector, ExtIdx);
-      // FIXME: Using a fixed-size vector for the insertion should not be
-      // necessary, but SVE ISEL is missing some folds to avoid fmovs.
       SDValue Zero = DAG.getVectorIdxConstant(0, DL);
-      EVT InsertVectorVT = EVT::getVectorVT(
-          *DAG.getContext(), ElemVT,
-          ElementCount::getFixed(
-              VectorVT.getVectorElementCount().getKnownMinValue()));
-      ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, InsertVectorVT,
-                              DAG.getUNDEF(InsertVectorVT), Ext, Zero);
+      ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VectorVT,
+                              DAG.getUNDEF(VectorVT), Ext, Zero);
     }
 
     EVT FPMemVT = MemVT == MVT::i8
