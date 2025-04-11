@@ -997,6 +997,9 @@ mlir::OpTrait::impl::verifySameFirstOperandAndResultType(Operation *op) {
 // been implemented yet.
 mlir::LogicalResult cir::FuncOp::verify() { return success(); }
 
+//===----------------------------------------------------------------------===//
+// BinOp
+//===----------------------------------------------------------------------===//
 LogicalResult cir::BinOp::verify() {
   bool noWrap = getNoUnsignedWrap() || getNoSignedWrap();
   bool saturated = getSaturated();
@@ -1026,6 +1029,46 @@ LogicalResult cir::BinOp::verify() {
   // TODO(cir): verify for complex binops
 
   return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ShiftOp
+//===----------------------------------------------------------------------===//
+LogicalResult cir::ShiftOp::verify() {
+  mlir::Operation *op = getOperation();
+  mlir::Type resType = getResult().getType();
+  assert(!cir::MissingFeatures::vectorType());
+  bool isOp0Vec = false;
+  bool isOp1Vec = false;
+  if (isOp0Vec != isOp1Vec)
+    return emitOpError() << "input types cannot be one vector and one scalar";
+  if (isOp1Vec && op->getOperand(1).getType() != resType) {
+    return emitOpError() << "shift amount must have the type of the result "
+                         << "if it is vector shift";
+  }
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// SelectOp
+//===----------------------------------------------------------------------===//
+
+OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
+  mlir::Attribute condition = adaptor.getCondition();
+  if (condition) {
+    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
+    return conditionValue ? getTrueValue() : getFalseValue();
+  }
+
+  // cir.select if %0 then x else x -> x
+  mlir::Attribute trueValue = adaptor.getTrueValue();
+  mlir::Attribute falseValue = adaptor.getFalseValue();
+  if (trueValue && trueValue == falseValue)
+    return trueValue;
+  if (getTrueValue() == getFalseValue())
+    return getTrueValue();
+
+  return {};
 }
 
 //===----------------------------------------------------------------------===//
