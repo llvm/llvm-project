@@ -604,37 +604,42 @@ define <16 x float> @test13(ptr %base, <16 x i32> %ind) {
 
 ; The base pointer is not splat, can't find unform base
 define <16 x float> @test14(ptr %base, i32 %ind, <16 x ptr> %vec) {
-; X64-KNL-LABEL: test14:
-; X64-KNL:       # %bb.0:
-; X64-KNL-NEXT:    vmovq %xmm0, %rax
-; X64-KNL-NEXT:    vmovd %esi, %xmm0
-; X64-KNL-NEXT:    vpbroadcastd %xmm0, %ymm0
-; X64-KNL-NEXT:    vpmovsxdq %ymm0, %zmm0
-; X64-KNL-NEXT:    kxnorw %k0, %k0, %k1
-; X64-KNL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-KNL-NEXT:    vgatherqps (%rax,%zmm0,4), %ymm1 {%k1}
-; X64-KNL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
-; X64-KNL-NEXT:    retq
+; KNL_64-LABEL: test14:
+; KNL_64:       # %bb.0:
+; KNL_64-NEXT:    vmovq %xmm0, %rax
+; KNL_64-NEXT:    vpbroadcastd %esi, %zmm1
+; KNL_64-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_64-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_64-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
+; KNL_64-NEXT:    retq
 ;
-; X86-LABEL: test14:
-; X86:       # %bb.0:
-; X86-NEXT:    vmovd %xmm0, %eax
-; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
-; X86-NEXT:    kxnorw %k0, %k0, %k1
-; X86-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; X86-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
-; X86-NEXT:    retl
+; KNL_32-LABEL: test14:
+; KNL_32:       # %bb.0:
+; KNL_32-NEXT:    vmovd %xmm0, %eax
+; KNL_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; KNL_32-NEXT:    kxnorw %k0, %k0, %k1
+; KNL_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; KNL_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; KNL_32-NEXT:    retl
 ;
-; X64-SKX-LABEL: test14:
-; X64-SKX:       # %bb.0:
-; X64-SKX-NEXT:    vmovq %xmm0, %rax
-; X64-SKX-NEXT:    vpbroadcastd %esi, %ymm0
-; X64-SKX-NEXT:    vpmovsxdq %ymm0, %zmm0
-; X64-SKX-NEXT:    kxnorw %k0, %k0, %k1
-; X64-SKX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-SKX-NEXT:    vgatherqps (%rax,%zmm0,4), %ymm1 {%k1}
-; X64-SKX-NEXT:    vinsertf64x4 $1, %ymm1, %zmm1, %zmm0
-; X64-SKX-NEXT:    retq
+; SKX-LABEL: test14:
+; SKX:       # %bb.0:
+; SKX-NEXT:    vmovq %xmm0, %rax
+; SKX-NEXT:    vpbroadcastd %esi, %zmm1
+; SKX-NEXT:    kxnorw %k0, %k0, %k1
+; SKX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX-NEXT:    vgatherdps (%rax,%zmm1,4), %zmm0 {%k1}
+; SKX-NEXT:    retq
+;
+; SKX_32-LABEL: test14:
+; SKX_32:       # %bb.0:
+; SKX_32-NEXT:    vmovd %xmm0, %eax
+; SKX_32-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm1
+; SKX_32-NEXT:    kxnorw %k0, %k0, %k1
+; SKX_32-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; SKX_32-NEXT:    vgatherdps (%eax,%zmm1,4), %zmm0 {%k1}
+; SKX_32-NEXT:    retl
+
   %broadcast.splatinsert = insertelement <16 x ptr> %vec, ptr %base, i32 1
   %broadcast.splat = shufflevector <16 x ptr> %broadcast.splatinsert, <16 x ptr> undef, <16 x i32> zeroinitializer
 
