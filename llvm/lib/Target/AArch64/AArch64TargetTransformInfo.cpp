@@ -3832,8 +3832,9 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
   if (Ty->getElementType()->isFloatingPointTy())
     return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
                                            CostKind);
-  return DemandedElts.popcount() * (Insert + Extract) *
-         ST->getVectorInsertExtractBaseCost();
+  unsigned VecInstCost =
+      CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
+  return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
 }
 
 InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
