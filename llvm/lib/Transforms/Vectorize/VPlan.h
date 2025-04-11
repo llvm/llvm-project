@@ -1887,9 +1887,9 @@ public:
   void setStepVector(VPValue *V) { setOperand(3, V); }
 
   VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled (4 operands), return the VPValue for the
+    // If the recipe has been unrolled, return the VPValue for the
     // induction increment.
-    return getNumOperands() == 6 ? getOperand(4) : nullptr;
+    return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
@@ -1911,8 +1911,11 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 6 ? getOperand(5) : this;
+    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
+
+private:
+  bool isUnrolled() const { return getNumOperands() == 6; }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
