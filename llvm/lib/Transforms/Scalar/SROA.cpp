@@ -5534,13 +5534,16 @@ bool SROA::propagateStoredValuesToLoads(AllocaInst &AI, AllocaSlices &AS) {
       BeginOffset = S.beginOffset();
       EndOffset = S.endOffset();
     } else if (S.beginOffset() != BeginOffset || S.endOffset() != EndOffset) {
-      LLVM_DEBUG({
-        dbgs() << "Slice does not match range [" << BeginOffset << ", "
-               << EndOffset << ")";
-        AS.print(dbgs(), &S);
-      });
-      AllSameAndValid = false;
+      if (AllSameAndValid) {
+        LLVM_DEBUG({
+          dbgs() << "Slice does not match range [" << BeginOffset << ", "
+                 << EndOffset << ")";
+          AS.print(dbgs(), &S);
+        });
+        AllSameAndValid = false;
+      }
       EndOffset = std::max(EndOffset, S.endOffset());
+      continue;
     }
 
     if (auto *LI = dyn_cast<LoadInst>(User)) {
