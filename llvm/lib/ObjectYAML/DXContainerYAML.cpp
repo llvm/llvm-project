@@ -16,7 +16,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include <utility>
+#include <system_error>
 
 namespace llvm {
 
@@ -47,20 +47,17 @@ DXContainerYAML::RootSignatureYamlDesc::create(
     RootParameterYamlDesc NewP;
     NewP.Offset = PH.ParameterOffset;
 
-    llvm::Expected<dxbc::RootParameterType> TypeOrErr =
-        dxbc::safeParseParameterType(PH.ParameterType);
-    if (Error E = TypeOrErr.takeError()) {
-      return std::move(E);
-    }
+    if (!dxbc::isValidParameterType(PH.ParameterType))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for parameter type");
 
-    NewP.Type = TypeOrErr.get();
+    NewP.Type = (dxbc::RootParameterType)PH.ParameterType;
 
-    llvm::Expected<dxbc::ShaderVisibility> VisibilityOrErr =
-        dxbc::safeParseShaderVisibility(PH.ShaderVisibility);
-    if (Error E = VisibilityOrErr.takeError()) {
-      return std::move(E);
-    }
-    NewP.Visibility = VisibilityOrErr.get();
+    if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for shader visibility");
+
+    NewP.Visibility = (dxbc::ShaderVisibility)PH.ShaderVisibility;
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);

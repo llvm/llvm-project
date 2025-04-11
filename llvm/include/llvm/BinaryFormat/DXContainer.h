@@ -167,14 +167,12 @@ ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
 
 #define ROOT_PARAMETER(Val, Enum)                                              \
   case Val:                                                                    \
-    return dxbc::RootParameterType::Enum;
-inline llvm::Expected<dxbc::RootParameterType>
-safeParseParameterType(uint32_t V) {
+    return true;
+inline bool isValidParameterType(uint32_t V) {
   switch (V) {
 #include "DXContainerConstants.def"
   }
-  return createStringError(std::errc::invalid_argument,
-                           "Invalid value for parameter type");
+  return false;
 }
 
 #define SHADER_VISIBILITY(Val, Enum) Enum = Val,
@@ -186,14 +184,12 @@ ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
 #define SHADER_VISIBILITY(Val, Enum)                                           \
   case Val:                                                                    \
-    return dxbc::ShaderVisibility::Enum;
-inline llvm::Expected<dxbc::ShaderVisibility>
-safeParseShaderVisibility(uint32_t V) {
+    return true;
+inline bool isValidShaderVisibility(uint32_t V) {
   switch (V) {
 #include "DXContainerConstants.def"
   }
-  return createStringError(std::errc::invalid_argument,
-                           "Invalid value for parameter type");
+  return false;
 }
 
 PartType parsePartType(StringRef S);
