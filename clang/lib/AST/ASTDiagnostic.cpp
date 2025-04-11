@@ -128,7 +128,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
+              TST->getTemplateName(), Args, QT);
         }
         break;
       }
@@ -1143,9 +1143,9 @@ class TemplateDiff {
       return nullptr;
 
     Ty = Context.getTemplateSpecializationType(
-        TemplateName(CTSD->getSpecializedTemplate()),
-        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
-        Ty.getLocalUnqualifiedType().getCanonicalType());
+             TemplateName(CTSD->getSpecializedTemplate()),
+             CTSD->getTemplateArgs().asArray(),
+             Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();
   }

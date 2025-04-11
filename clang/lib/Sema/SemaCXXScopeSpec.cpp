@@ -69,14 +69,17 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
 
       // Look through type alias templates, per C++0x [temp.dep.type]p1.
       NNSType = Context.getCanonicalType(NNSType);
-      if (const auto *SpecType =
-              dyn_cast<TemplateSpecializationType>(NNSType)) {
+      if (const TemplateSpecializationType *SpecType
+            = NNSType->getAs<TemplateSpecializationType>()) {
         // We are entering the context of the nested name specifier, so try to
         // match the nested name specifier to either a primary class template
         // or a class template partial specialization.
-        if (ClassTemplateDecl *ClassTemplate =
-                dyn_cast_or_null<ClassTemplateDecl>(
-                    SpecType->getTemplateName().getAsTemplateDecl())) {
+        if (ClassTemplateDecl *ClassTemplate
+              = dyn_cast_or_null<ClassTemplateDecl>(
+                            SpecType->getTemplateName().getAsTemplateDecl())) {
+          QualType ContextType =
+              Context.getCanonicalType(QualType(SpecType, 0));
+
           // FIXME: The fallback on the search of partial
           // specialization using ContextType should be eventually removed since
           // it doesn't handle the case of constrained template parameters
@@ -97,8 +100,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
                   SpecType->template_arguments(), *L, Pos);
             }
           } else {
-            PartialSpec =
-                ClassTemplate->findPartialSpecialization(QualType(SpecType, 0));
+            PartialSpec = ClassTemplate->findPartialSpecialization(ContextType);
           }
 
           if (PartialSpec) {
@@ -120,7 +122,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
           // into that class template definition.
           QualType Injected =
               ClassTemplate->getInjectedClassNameSpecialization();
-          if (Context.hasSameType(Injected, QualType(SpecType, 0)))
+          if (Context.hasSameType(Injected, ContextType))
             return ClassTemplate->getTemplatedDecl();
         }
       } else if (const RecordType *RecordT = NNSType->getAs<RecordType>()) {

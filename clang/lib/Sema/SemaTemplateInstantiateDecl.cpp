@@ -4791,18 +4791,17 @@ TemplateDeclInstantiator::InstantiateClassTemplatePartialSpecialization(
       ClassTemplate->findPartialSpecialization(CTAI.CanonicalConverted,
                                                InstParams, InsertPos);
 
-  // Build the type that describes the converted template arguments of the class
-  // template partial specialization.
-  TypeSourceInfo *WrittenTy = SemaRef.Context.getTemplateSpecializationTypeInfo(
-      TemplateName(ClassTemplate), TemplArgInfo->getLAngleLoc(),
-      InstTemplateArgs, CTAI.CanonicalConverted);
+  // Build the canonical type that describes the converted template
+  // arguments of the class template partial specialization.
+  QualType CanonType = SemaRef.Context.getTemplateSpecializationType(
+      TemplateName(ClassTemplate), CTAI.CanonicalConverted);
 
   // Create the class template partial specialization declaration.
   ClassTemplatePartialSpecializationDecl *InstPartialSpec =
       ClassTemplatePartialSpecializationDecl::Create(
           SemaRef.Context, PartialSpec->getTagKind(), Owner,
           PartialSpec->getBeginLoc(), PartialSpec->getLocation(), InstParams,
-          ClassTemplate, CTAI.CanonicalConverted, WrittenTy->getType(),
+          ClassTemplate, CTAI.CanonicalConverted, CanonType,
           /*PrevDecl=*/nullptr);
 
   InstPartialSpec->setTemplateArgsAsWritten(InstTemplateArgs);

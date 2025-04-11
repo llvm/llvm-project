@@ -7133,9 +7133,10 @@ class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   /// replacement must, recursively, be one of these).
   TemplateName Template;
 
-  TemplateSpecializationType(TemplateName T, bool IsAlias,
+  TemplateSpecializationType(TemplateName T,
                              ArrayRef<TemplateArgument> Args,
-                             QualType Underlying);
+                             QualType Canon,
+                             QualType Aliased);
 
 public:
   /// Determine whether any of the given template arguments are dependent.
@@ -7203,7 +7204,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName T,
-                      ArrayRef<TemplateArgument> Args, QualType Underlying,
+                      ArrayRef<TemplateArgument> Args,
                       const ASTContext &Context);
 
   static bool classof(const Type *T) {
