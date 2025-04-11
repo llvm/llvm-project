@@ -1512,7 +1512,8 @@ static SmallVector<int64_t> getTiledPackShape(linalg::PackOp packOp,
 /// Given:
 /// - an input vector to write,
 /// - the mixed destination sizes for the output tensor,
-/// - and the vector sizes used for vectorization (i.e., the leading N dims),
+/// - and the vector sizes used for vectorization (i.e., the leading N dims,
+///   for some value of N),
 ///
 /// this function generates the following sequence of ops:
 ///
@@ -1537,7 +1538,11 @@ static SmallVector<int64_t> getTiledPackShape(linalg::PackOp packOp,
 ///   %res = vector.transfer_write %input into %dest
 ///       {in_bounds = in_bounds_flags}
 ///
-/// Note: all write offsets are set to 0.
+/// NOTE: all write offsets are set to 0.
+/// NOTE: When N < rank(input), the missing vector sizes are effectively
+/// extracted from the trailing sizes of `destSizes`. This means those sizes
+/// must be static. Supporting dynamic sizes will require the user to specify
+/// the remaining vector sizes. This is left as a TODO.
 static Operation *
 createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value input,
                          SmallVector<OpFoldResult> destSizes,
@@ -1625,6 +1630,9 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value input,
 ///
 /// NOTE: The input vector sizes specify the dimensions corresponding to the
 /// outer dimensions of the output tensor. The remaining dimensions are
+/// computed based on, e.g., the static inner tiles.
+/// Supporting dynamic inner tiles will require the user to specify the
+/// missing vector sizes. This is left as a TODO.
 static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
