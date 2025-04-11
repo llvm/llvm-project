@@ -394,6 +394,17 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   // is equivalent to a simple branch. This reduces code size for wasm, and we
   // defer possible jump table optimizations to the VM.
   setMinimumJumpTableEntries(2);
+
+  // Align bulk memory usage when optimizing for size or otherwise. As well as
+  // reducing code size, prefering high-level primitives can make it easier for
+  // runtimes to make optimisations, especially when explicit bounds checking is
+  // employed.
+  if (Subtarget->hasBulkMemory()) {
+    MaxStoresPerMemset = MaxStoresPerMemsetOptSize;
+    MaxStoresPerMemcpy = MaxStoresPerMemcpyOptSize;
+    MaxStoresPerMemmove = MaxStoresPerMemmoveOptSize;
+    MaxLoadsPerMemcmp = MaxLoadsPerMemcmpOptSize;
+  }
 }
 
 MVT WebAssemblyTargetLowering::getPointerTy(const DataLayout &DL,
