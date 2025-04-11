@@ -242,6 +242,12 @@ public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
+};
+
+struct gnuPropertiesInfo {
+  uint32_t andFeatures = 0;
+  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
 };
 
 // .o file.
@@ -267,7 +273,6 @@ public:
                                  const Elf_Shdr &sec);
 
   uint32_t getSectionIndex(const Elf_Sym &sym) const;
-
 
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
