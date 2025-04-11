@@ -1661,9 +1661,32 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
           ImportTemplateArguments(T->template_arguments(), ToTemplateArgs))
     return std::move(Err);
 
-  if (T->isCanonicalUnqualified())
+  if (T->isCanonicalUnqualified()) {
+    auto reportNoncanonicalArgument = [](const ASTContext &C,
+                                         ArrayRef<TemplateArgument> Args,
+                                         std::string_view Str) {
+      for (const auto &Arg : Args) {
+        TemplateArgument Canon = C.getCanonicalTemplateArgument(Arg);
+        if (Arg.structurallyEquals(Canon))
+          continue;
+        llvm::errs() << "non-canonical pos:" << (&Arg - Args.begin()) << ' '
+                     << Str << '\n';
+        Arg.dump(llvm::errs(), C);
+        llvm::errs() << "canonical:\n";
+        Canon.dump(llvm::errs(), C);
+        return true;
+      }
+      return false;
+    };
+    if (reportNoncanonicalArgument(Importer.getFromContext(),
+                                   T->template_arguments(), "From") ||
+        reportNoncanonicalArgument(Importer.getToContext(), ToTemplateArgs,
+                                   "To"))
+      T->dump(llvm::errs(), Importer.getFromContext());
+
     return Importer.getToContext().getCanonicalTemplateSpecializationType(
         *ToTemplateOrErr, ToTemplateArgs);
+  }
 
   ExpectedType ToUnderlyingOrErr = import(T->desugar());
   if (!ToUnderlyingOrErr)
