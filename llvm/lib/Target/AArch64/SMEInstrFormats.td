@@ -291,7 +291,7 @@ class SME2_ZA_Tile_Vec_Multi_Multi_Pat<string name, SDPatternOperator intrinsic,
           (!cast<Instruction>(name # _PSEUDO) $tile, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1), (REG_SEQUENCE ZPR2Mul2, vt:$Zm1, zsub0, vt:$Zm2, zsub1))>;
 
 class SME2_ZA_TMOP_Pat<string name, SDPatternOperator intrinsic, Operand tile_imm, Operand imm_ty, ValueType vt>
-    : Pat<(intrinsic tile_imm:$tile, vt:$Zn1, vt:$Zn2, vt:$Zm, (nxv16i8 ZK:$Zk), imm_ty:$idx),
+    : Pat<(intrinsic tile_imm:$tile, vt:$Zn1, vt:$Zn2, vt:$Zm, nxv16i8:$Zk, imm_ty:$idx),
           (!cast<Instruction>(name # _PSEUDO) $tile, (REG_SEQUENCE ZPR2Mul2, vt:$Zn1, zsub0, vt:$Zn2, zsub1), $Zm, $Zk, $idx)>;
 
 
