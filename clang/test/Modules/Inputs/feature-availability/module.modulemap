@@ -1,0 +1,9 @@
+module Feature1 {
+  header "feature1.h"
+  export *
+}
+
+module Feature2 {
+  header "feature2.h"
+  export *
+}
