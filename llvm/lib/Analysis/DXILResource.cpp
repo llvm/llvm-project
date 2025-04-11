@@ -467,7 +467,7 @@ uint32_t ResourceTypeInfo::getMultiSampleCount() const {
 }
 
 bool ResourceTypeInfo::operator==(const ResourceTypeInfo &RHS) const {
-  return std::tie(HandleTy) == std::tie(RHS.HandleTy);
+  return HandleTy == RHS.HandleTy;
 }
 
 bool ResourceTypeInfo::operator<(const ResourceTypeInfo &RHS) const {
