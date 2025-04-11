@@ -23,3 +23,16 @@ define void @test_call_alwaysinline() {
 }
 
 attributes #0 = { alwaysinline }
+
+// -----
+
+declare void @f()
+
+; CHECK-LABEL: @test_call_inlinehint
+; CHECK: llvm.call @f() {inline_hint} : () -> ()
+define void @test_call_inlinehint() {
+  call void @f() #0 
+  ret void
+}
+
+attributes #0 = { inlinehint }
