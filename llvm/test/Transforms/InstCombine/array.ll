@@ -109,12 +109,11 @@ entry:
   ret void
 }
 
-; FIXME: Should be transformed as OR+GEP -> GEP+GEP (similar to gep_inbounds_add_nuw below).
 define ptr @gep_inbounds_nuwaddlike(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_nuwaddlike(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i64 [[A]], [[B]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %add = or disjoint i64 %a, %b
@@ -268,18 +267,15 @@ define ptr @gep_inbounds_sext_add_nonneg(ptr %ptr, i32 %a) {
   ret ptr %gep
 }
 
-; FIXME: Could be optimized similar to gep_inbounds_sext_add_nonneg above
-;        (difference is that we are using disjoint OR which is canonical form
-;        of ADD with disjoint operands).
 define ptr @gep_inbounds_sext_addlike_nonneg(ptr %ptr, i32 %a) {
 ; CHECK-LABEL: define ptr @gep_inbounds_sext_addlike_nonneg(
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[A:%.*]]) {
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = icmp sgt i32 [[A]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NNEG]])
-; CHECK-NEXT:    [[ADD:%.*]] = or disjoint i32 [[A]], 10
-; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[ADD]] to i64
+; CHECK-NEXT:    [[IDX:%.*]] = zext nneg i32 [[A]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[IDX]]
-; CHECK-NEXT:    ret ptr [[GEP]]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[GEP]], i64 40
+; CHECK-NEXT:    ret ptr [[GEP1]]
 ;
   %a.nneg = icmp sgt i32 %a, -1
   call void @llvm.assume(i1 %a.nneg)
