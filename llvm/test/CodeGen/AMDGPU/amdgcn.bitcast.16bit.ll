@@ -92,27 +92,17 @@ define i16 @bitcast_f16_to_i16(half %a, i32 %b) {
 ; GCN-LABEL: bitcast_f16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; GCN-NEXT:    v_cvt_f16_f32_e32 v1, v2
+; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB1_3
-; GCN-NEXT:  ; %bb.1: ; %Flow
-; GCN-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
-; GCN-NEXT:    s_cbranch_execnz .LBB1_4
-; GCN-NEXT:  .LBB1_2: ; %end
-; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GCN-NEXT:    s_setpc_b64 s[30:31]
-; GCN-NEXT:  .LBB1_3: ; %cmp.false
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
 ; GCN-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
 ; GCN-NEXT:    s_cbranch_execz .LBB1_2
-; GCN-NEXT:  .LBB1_4: ; %cmp.true
-; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; GCN-NEXT:  ; %bb.1:
+; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GCN-NEXT:    v_add_f32_e32 v0, 0x38000000, v0
 ; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; GCN-NEXT:  .LBB1_2:
 ; GCN-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -249,10 +239,9 @@ define i16 @bitcast_bf16_to_i16(bfloat %a, i32 %b) {
 ; GCN-LABEL: bitcast_bf16_to_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, v0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v2
+; GCN-NEXT:    v_mul_f32_e32 v1, 1.0, v0
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GCN-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_execnz .LBB3_3

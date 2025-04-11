@@ -213,6 +213,7 @@ public:
   inline bool isTargetOpcode() const;
   inline bool isMachineOpcode() const;
   inline bool isUndef() const;
+  inline bool isPoison() const;
   inline unsigned getMachineOpcode() const;
   inline const DebugLoc &getDebugLoc() const;
   inline void dump() const;
@@ -696,6 +697,9 @@ public:
   bool isUndef() const {
     return NodeType == ISD::UNDEF || NodeType == ISD::POISON;
   }
+
+  /// Returns true if the node type is POISON.
+  bool isPoison() const { return NodeType == ISD::POISON; }
 
   /// Test if this node is a memory intrinsic (with valid pointer information).
   bool isMemIntrinsic() const { return SDNodeBits.IsMemIntrinsic; }
@@ -1269,6 +1273,8 @@ inline unsigned SDValue::getMachineOpcode() const {
 inline bool SDValue::isUndef() const {
   return Node->isUndef();
 }
+
+inline bool SDValue::isPoison() const { return Node->isPoison(); }
 
 inline bool SDValue::use_empty() const {
   return !Node->hasAnyUseOfValue(ResNo);
