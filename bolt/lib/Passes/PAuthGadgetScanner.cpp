@@ -265,21 +265,30 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
   OS << ">";
 }
 
-class SrcSafetyAnalysis
-    : public DataflowAnalysis<SrcSafetyAnalysis, SrcState, /*Backward=*/false,
-                              SrcStatePrinter> {
-  using Parent =
-      DataflowAnalysis<SrcSafetyAnalysis, SrcState, false, SrcStatePrinter>;
-  friend Parent;
-
+/// Computes which registers are safe to be used by control flow instructions.
+///
+/// This is the base class for two implementations: a dataflow-based analysis
+/// which is intended to be used for most functions and a simplified CFG-unaware
+/// version for functions without reconstructed CFG.
+class SrcSafetyAnalysis {
 public:
-  SrcSafetyAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+  SrcSafetyAnalysis(BinaryFunction &BF,
                     const std::vector<MCPhysReg> &RegsToTrackInstsFor)
-      : Parent(BF, AllocId), NumRegs(BF.getBinaryContext().MRI->getNumRegs()),
+      : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor) {}
+
   virtual ~SrcSafetyAnalysis() {}
 
+  static std::shared_ptr<SrcSafetyAnalysis>
+  create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+         const std::vector<MCPhysReg> &RegsToTrackInstsFor);
+
+  virtual void run() = 0;
+  virtual ErrorOr<const SrcState &>
+  getStateBefore(const MCInst &Inst) const = 0;
+
 protected:
+  BinaryContext &BC;
   const unsigned NumRegs;
   /// RegToTrackInstsFor is the set of registers for which the dataflow analysis
   /// must compute which the last set of instructions writing to it are.
@@ -296,43 +305,11 @@ protected:
     return S.LastInstWritingReg[Index];
   }
 
-  void preflight() {}
-
   SrcState createEntryState() {
     SrcState S(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
     for (MCPhysReg Reg : BC.MIB->getTrustedLiveInRegs())
       S.SafeToDerefRegs |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/true);
     return S;
-  }
-
-  SrcState getStartingStateAtBB(const BinaryBasicBlock &BB) {
-    if (BB.isEntryPoint())
-      return createEntryState();
-
-    return SrcState();
-  }
-
-  SrcState getStartingStateAtPoint(const MCInst &Point) { return SrcState(); }
-
-  void doConfluence(SrcState &StateOut, const SrcState &StateIn) {
-    SrcStatePrinter P(BC);
-    LLVM_DEBUG({
-      dbgs() << "  SrcSafetyAnalysis::Confluence(\n";
-      dbgs() << "    State 1: ";
-      P.print(dbgs(), StateOut);
-      dbgs() << "\n";
-      dbgs() << "    State 2: ";
-      P.print(dbgs(), StateIn);
-      dbgs() << ")\n";
-    });
-
-    StateOut.merge(StateIn);
-
-    LLVM_DEBUG({
-      dbgs() << "    merged state: ";
-      P.print(dbgs(), StateOut);
-      dbgs() << "\n";
-    });
   }
 
   BitVector getClobberedRegs(const MCInst &Point) const {
@@ -438,8 +415,6 @@ protected:
     return Next;
   }
 
-  StringRef getAnnotationName() const { return StringRef("SrcSafetyAnalysis"); }
-
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst &Inst, BinaryFunction &BF,
@@ -458,13 +433,177 @@ public:
     }
     std::vector<MCInstReference> Result;
     for (const MCInst *Inst : LastWritingInsts) {
-      MCInstInBBReference Ref = MCInstInBBReference::get(Inst, BF);
-      assert(Ref.BB != nullptr && "Expected Inst to be found");
+      MCInstReference Ref = MCInstReference::get(Inst, BF);
+      assert(Ref && "Expected Inst to be found");
       Result.push_back(MCInstReference(Ref));
     }
     return Result;
   }
 };
+
+class DataflowSrcSafetyAnalysis
+    : public SrcSafetyAnalysis,
+      public DataflowAnalysis<DataflowSrcSafetyAnalysis, SrcState,
+                              /*Backward=*/false, SrcStatePrinter> {
+  using DFParent = DataflowAnalysis<DataflowSrcSafetyAnalysis, SrcState, false,
+                                    SrcStatePrinter>;
+  friend DFParent;
+
+  using SrcSafetyAnalysis::BC;
+  using SrcSafetyAnalysis::computeNext;
+
+public:
+  DataflowSrcSafetyAnalysis(BinaryFunction &BF,
+                            MCPlusBuilder::AllocatorIdTy AllocId,
+                            const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
+
+  ErrorOr<const SrcState &> getStateBefore(const MCInst &Inst) const override {
+    return DFParent::getStateBefore(Inst);
+  }
+
+  void run() override { DFParent::run(); }
+
+protected:
+  void preflight() {}
+
+  SrcState getStartingStateAtBB(const BinaryBasicBlock &BB) {
+    if (BB.isEntryPoint())
+      return createEntryState();
+
+    return SrcState();
+  }
+
+  SrcState getStartingStateAtPoint(const MCInst &Point) { return SrcState(); }
+
+  void doConfluence(SrcState &StateOut, const SrcState &StateIn) {
+    SrcStatePrinter P(BC);
+    LLVM_DEBUG({
+      dbgs() << "  DataflowSrcSafetyAnalysis::Confluence(\n";
+      dbgs() << "    State 1: ";
+      P.print(dbgs(), StateOut);
+      dbgs() << "\n";
+      dbgs() << "    State 2: ";
+      P.print(dbgs(), StateIn);
+      dbgs() << ")\n";
+    });
+
+    StateOut.merge(StateIn);
+
+    LLVM_DEBUG({
+      dbgs() << "    merged state: ";
+      P.print(dbgs(), StateOut);
+      dbgs() << "\n";
+    });
+  }
+
+  StringRef getAnnotationName() const { return "DataflowSrcSafetyAnalysis"; }
+};
+
+// A simplified implementation of DataflowSrcSafetyAnalysis for functions
+// lacking CFG information.
+//
+// Let assume the instructions can only be executed linearly unless there is
+// a label to jump to - this should handle both directly jumping to a location
+// encoded as an immediate operand of a branch instruction, as well as saving a
+// branch destination somewhere and passing it to an indirect branch instruction
+// later, provided no arithmetic is performed on the destination address:
+//
+//     ; good: the destination is directly encoded into the branch instruction
+//     cbz x0, some_label
+//
+//     ; good: the branch destination is first stored and then used as-is
+//     adr x1, some_label
+//     br  x1
+//
+//     ; bad: some clever arithmetic is performed manually
+//     adr x1, some_label
+//     add x1, x1, #4
+//     br  x1
+//     ...
+//   some_label:
+//     ; pessimistically reset the state as we are unsure where we came from
+//     ...
+//     ret
+//   JTI0:
+//     .byte some_label - Ltmp0 ; computing offsets using labels may probably
+//                                work too, provided enough information is
+//                                retained by the assembler and linker
+//
+// Then, a function can be split into a number of disjoint contiguous sequences
+// of instructions without labels in between. These sequences can be processed
+// the same way basic blocks are processed by data-flow analysis, assuming
+// pessimistically that all registers are unsafe at the start of each sequence.
+class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis {
+  BinaryFunction &BF;
+  MCPlusBuilder::AllocatorIdTy AllocId;
+  unsigned StateAnnotationIndex;
+
+  void cleanStateAnnotations() {
+    for (auto &I : BF.instrs())
+      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
+  }
+
+  /// Creates a state with all registers marked unsafe (not to be confused
+  /// with empty state).
+  SrcState createUnsafeState() const {
+    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+  }
+
+public:
+  CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
+                              MCPlusBuilder::AllocatorIdTy AllocId,
+                              const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
+    StateAnnotationIndex =
+        BC.MIB->getOrCreateAnnotationIndex("CFGUnawareSrcSafetyAnalysis");
+  }
+
+  void run() override {
+    SrcState S = createEntryState();
+    for (auto &I : BF.instrs()) {
+      MCInst &Inst = I.second;
+
+      // If there is a label before this instruction, it is possible that it
+      // can be jumped-to, thus conservatively resetting S. As an exception,
+      // let's ignore any labels at the beginning of the function, as at least
+      // one label is expected there.
+      if (BF.hasLabelAt(I.first) && &Inst != &BF.instrs().begin()->second) {
+        LLVM_DEBUG({
+          traceInst(BC, "Due to label, resetting the state before", Inst);
+        });
+        S = createUnsafeState();
+      }
+
+      // Check if we need to remove an old annotation (this is the case if
+      // this is the second, detailed, run of the analysis).
+      if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
+        BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
+      // Attach the state *before* this instruction executes.
+      BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+
+      // Compute the state after this instruction executes.
+      S = computeNext(Inst, S);
+    }
+  }
+
+  ErrorOr<const SrcState &> getStateBefore(const MCInst &Inst) const override {
+    return BC.MIB->getAnnotationAs<SrcState>(Inst, StateAnnotationIndex);
+  }
+
+  ~CFGUnawareSrcSafetyAnalysis() { cleanStateAnnotations(); }
+};
+
+std::shared_ptr<SrcSafetyAnalysis>
+SrcSafetyAnalysis::create(BinaryFunction &BF,
+                          MCPlusBuilder::AllocatorIdTy AllocId,
+                          const std::vector<MCPhysReg> &RegsToTrackInstsFor) {
+  if (BF.hasCFG())
+    return std::make_shared<DataflowSrcSafetyAnalysis>(BF, AllocId,
+                                                       RegsToTrackInstsFor);
+  return std::make_shared<CFGUnawareSrcSafetyAnalysis>(BF, AllocId,
+                                                       RegsToTrackInstsFor);
+}
 
 static std::shared_ptr<Report>
 shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
@@ -519,43 +658,51 @@ shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return std::make_shared<GadgetReport>(CallKind, Inst, DestReg);
 }
 
+template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
+  if (BF.hasCFG()) {
+    for (BinaryBasicBlock &BB : BF)
+      for (int64_t I = 0, E = BB.size(); I < E; ++I)
+        Fn(MCInstInBBReference(&BB, I));
+  } else {
+    for (auto I : BF.instrs())
+      Fn(MCInstInBFReference(&BF, I.first));
+  }
+}
+
 FunctionAnalysisResult
 Analysis::findGadgets(BinaryFunction &BF,
                       MCPlusBuilder::AllocatorIdTy AllocatorId) {
   FunctionAnalysisResult Result;
 
-  SrcSafetyAnalysis PRA(BF, AllocatorId, {});
+  auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
   LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
-  PRA.run();
+  Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After src register safety analysis:\n";
     BF.dump();
   });
 
   BinaryContext &BC = BF.getBinaryContext();
-  for (BinaryBasicBlock &BB : BF) {
-    for (int64_t I = 0, E = BB.size(); I < E; ++I) {
-      MCInstReference Inst(&BB, I);
-      const SrcState &S = *PRA.getStateBefore(Inst);
+  iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    const SrcState &S = *Analysis->getStateBefore(Inst);
 
-      // If non-empty state was never propagated from the entry basic block
-      // to Inst, assume it to be unreachable and report a warning.
-      if (S.empty()) {
-        Result.Diagnostics.push_back(std::make_shared<GenericReport>(
-            Inst, "Warning: unreachable instruction found"));
-        continue;
-      }
-
-      if (auto Report = shouldReportReturnGadget(BC, Inst, S))
-        Result.Diagnostics.push_back(Report);
-
-      if (PacRetGadgetsOnly)
-        continue;
-
-      if (auto Report = shouldReportCallGadget(BC, Inst, S))
-        Result.Diagnostics.push_back(Report);
+    // If non-empty state was never propagated from the entry basic block
+    // to Inst, assume it to be unreachable and report a warning.
+    if (S.empty()) {
+      Result.Diagnostics.push_back(std::make_shared<GenericReport>(
+          Inst, "Warning: unreachable instruction found"));
+      return;
     }
-  }
+
+    if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+      Result.Diagnostics.push_back(Report);
+
+    if (PacRetGadgetsOnly)
+      return;
+
+    if (auto Report = shouldReportCallGadget(BC, Inst, S))
+      Result.Diagnostics.push_back(Report);
+  });
   return Result;
 }
 
@@ -571,10 +718,10 @@ void Analysis::computeDetailedInfo(BinaryFunction &BF,
   std::vector<MCPhysReg> RegsToTrackVec(RegsToTrack.begin(), RegsToTrack.end());
 
   // Re-compute the analysis with register tracking.
-  SrcSafetyAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
+  auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, RegsToTrackVec);
   LLVM_DEBUG(
       { dbgs() << "\nRunning detailed src register safety analysis...\n"; });
-  PRWIA.run();
+  Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After detailed src register safety analysis:\n";
     BF.dump();
@@ -585,7 +732,7 @@ void Analysis::computeDetailedInfo(BinaryFunction &BF,
     LLVM_DEBUG(
         { traceInst(BC, "Attaching clobbering info to", Report->Location); });
     (void)BC;
-    Report->setOverwritingInstrs(PRWIA.getLastClobberingInsts(
+    Report->setOverwritingInstrs(Analysis->getLastClobberingInsts(
         Report->Location, BF, Report->getAffectedRegisters()));
   }
 }
@@ -597,9 +744,6 @@ void Analysis::runOnFunction(BinaryFunction &BF,
            << AllocatorId << "\n";
     BF.dump();
   });
-
-  if (!BF.hasCFG())
-    return;
 
   FunctionAnalysisResult FAR = findGadgets(BF, AllocatorId);
   if (FAR.Diagnostics.empty())
@@ -686,8 +830,11 @@ void GadgetReport::generateReport(raw_ostream &OS,
   };
   if (OverwritingInstrs.size() == 1) {
     const MCInstReference OverwInst = OverwritingInstrs[0];
-    assert(OverwInst.ParentKind == MCInstReference::BasicBlockParent);
-    reportFoundGadgetInSingleBBSingleOverwInst(OS, BC, OverwInst, Location);
+    // Printing the details for the MCInstReference::FunctionParent case
+    // is not implemented not to overcomplicate the code, as most functions
+    // are expected to have CFG information.
+    if (OverwInst.ParentKind == MCInstReference::BasicBlockParent)
+      reportFoundGadgetInSingleBBSingleOverwInst(OS, BC, OverwInst, Location);
   }
 }
 
