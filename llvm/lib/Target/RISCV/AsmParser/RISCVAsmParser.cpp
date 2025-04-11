@@ -539,17 +539,16 @@ public:
   // True if operand is a symbol with no modifiers, or a constant with no
   // modifiers and isShiftedInt<N-1, 1>(Op).
   template <int N> bool isBareSimmNLsb0() const {
-    int64_t Imm;
-    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     if (!isImm())
       return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    bool IsValid;
-    if (!IsConstantImm)
-      IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
-    else
-      IsValid = isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Imm()));
-    return IsValid && VK == RISCVMCExpr::VK_None;
+
+    int64_t Imm;
+    if (evaluateConstantImm(getImm(), Imm))
+      return isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Imm()));
+
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_None;
   }
 
   // True if operand is a symbol with no modifiers, or a constant with no
