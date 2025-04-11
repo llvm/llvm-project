@@ -591,6 +591,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   case Decl::Record:
+  case Decl::CXXRecord:
     assert(!cir::MissingFeatures::generateDebugInfo());
     break;
   }

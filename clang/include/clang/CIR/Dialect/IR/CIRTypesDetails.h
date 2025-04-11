@@ -53,7 +53,9 @@ struct StructTypeStorage : public mlir::TypeStorage {
                     bool incomplete, bool packed, bool padded,
                     StructType::RecordKind kind)
       : members(members), name(name), incomplete(incomplete), packed(packed),
-        padded(padded), kind(kind) {}
+        padded(padded), kind(kind) {
+          assert(name || !incomplete && "Incomplete structs must have a name");
+        }
 
   KeyTy getAsKey() const {
     return KeyTy(members, name, incomplete, packed, padded, kind);
@@ -62,9 +64,9 @@ struct StructTypeStorage : public mlir::TypeStorage {
   bool operator==(const KeyTy &key) const {
     if (name)
       return (name == key.name) && (kind == key.kind);
-    return (members == key.members) && (name == key.name) &&
-           (incomplete == key.incomplete) && (packed == key.packed) &&
-           (padded == key.padded) && (kind == key.kind);
+    return std::tie(members, name, incomplete, packed, padded, kind) ==
+               std::tie(key.members, key.name, key.incomplete, key.packed,
+                        key.padded, key.kind);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {

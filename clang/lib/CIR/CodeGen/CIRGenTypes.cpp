@@ -95,28 +95,16 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
 
   PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
   policy.SuppressInlineNamespace = false;
+  policy.AlwaysIncludeTypeForTemplateArgument = true;
+  policy.PrintCanonicalTypes = true;
+  policy.SuppressTagKeyword = true;
 
-  if (recordDecl->getIdentifier()) {
-    recordDecl->printQualifiedName(outStream, policy);
-
-    // Ensure each template specialization has a unique name.
-    if (auto *templateSpecialization =
-            llvm::dyn_cast<ClassTemplateSpecializationDecl>(recordDecl)) {
-      outStream << '<';
-      const ArrayRef<TemplateArgument> args =
-          templateSpecialization->getTemplateArgs().asArray();
-      const auto printer = [&policy, &outStream](const TemplateArgument &arg) {
-        /// Print this template argument to the given output stream.
-        arg.print(policy, outStream, /*IncludeType=*/true);
-      };
-      llvm::interleaveComma(args, outStream, printer);
-      outStream << '>';
-    }
-  } else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl()) {
+  if (recordDecl->getIdentifier())
+    astContext.getRecordType(recordDecl).print(outStream, policy);
+  else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl())
     typedefNameDecl->printQualifiedName(outStream, policy);
-  } else {
+  else
     outStream << builder.getUniqueAnonRecordName();
-  }
 
   if (!suffix.empty())
     outStream << suffix;
@@ -131,7 +119,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   const Type *key = astContext.getTagDeclType(rd).getTypePtr();
   cir::StructType entry = recordDeclTypes[key];
 
-  // Handle forward decl / incomplete types.
+  // If we don't have an entry for this record yet, create one.
+  // We create an incomplete type initially. If `rd` is complete, we will
+  // add the members below.
   if (!entry) {
     auto name = getRecordTypeName(rd, "");
     entry = builder.getIncompleteStructTy(name, rd);

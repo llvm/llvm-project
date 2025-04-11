@@ -5,18 +5,26 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// Declaration with an incomplete struct type.
-struct U *p;
+struct IncompleteS *p;
 
-// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>
+// CIR: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "IncompleteS" incomplete>>
 // LLVM: @p = dso_local global ptr null
 // OGCG: @p = global ptr null, align 8
 
 void f(void) {
-  struct U2 *p;
+  struct IncompleteS *p;
 }
 
-// CIR: cir.func @f()
-// CIR-NEXT: cir.alloca !cir.ptr<!cir.struct<struct "U2" incomplete>>,
-// CIR-SAME:     !cir.ptr<!cir.ptr<!cir.struct<struct "U2" incomplete>>>, ["p"]
-// CIR-NEXT: cir.return
+// CIR:      cir.func @f()
+// CIR-NEXT:   cir.alloca !cir.ptr<!cir.struct<struct "IncompleteS" incomplete>>,
+// CIR-SAME:       !cir.ptr<!cir.ptr<!cir.struct<struct "IncompleteS" incomplete>>>, ["p"]
+// CIR-NEXT:   cir.return
+
+// LLVM:      define void @f()
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   ret void
+
+// OGCG:      define{{.*}} void @f()
+// OGCG-NEXT: entry:
+// OGCG-NEXT:   %[[P:.*]] = alloca ptr, align 8
+// OGCG-NEXT:   ret void

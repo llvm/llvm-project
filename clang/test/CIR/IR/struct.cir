@@ -1,7 +1,9 @@
 // RUN: cir-opt %s | FileCheck %s
 
 module  {
-    cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>
+    cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "S" incomplete>>
+    cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!cir.struct<union "U" incomplete>>
 }
 
-// CHECK: cir.global external @p = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "U" incomplete>>
+// CHECK: cir.global external @p1 = #cir.ptr<null> : !cir.ptr<!cir.struct<struct "S" incomplete>>
+// CHECK: cir.global external @p2 = #cir.ptr<null> : !cir.ptr<!cir.struct<union "U" incomplete>>

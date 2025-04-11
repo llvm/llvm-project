@@ -62,11 +62,13 @@ public:
     case clang::TagTypeKind::Interface:
       llvm_unreachable("interface records are NYI");
     case clang::TagTypeKind::Enum:
-      llvm_unreachable("enum records are NYI");
+      llvm_unreachable("enums are not records");
     }
   }
 
-  /// Get an incomplete CIR struct type.
+  /// Get an incomplete CIR struct type. If we have a complete record
+  /// declaration, we may create an incomplete type and then add the
+  /// members, so \p rd here may be complete.
   cir::StructType getIncompleteStructTy(llvm::StringRef name,
                                         const clang::RecordDecl *rd) {
     const mlir::StringAttr nameAttr = getStringAttr(name);
