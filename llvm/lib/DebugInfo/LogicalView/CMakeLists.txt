@@ -26,6 +26,7 @@ add_lv_impl_folder(Readers
   Readers/LVCodeViewReader.cpp
   Readers/LVCodeViewVisitor.cpp
   Readers/LVDWARFReader.cpp
+  Readers/LVIRReader.cpp
   )
 
 list(APPEND LIBLV_ADDITIONAL_HEADER_DIRS
@@ -41,6 +42,7 @@ add_llvm_component_library(LLVMDebugInfoLogicalView
   ${LIBLV_ADDITIONAL_HEADER_DIRS}
 
   LINK_COMPONENTS
+  AsmPrinter
   BinaryFormat
   Demangle
   Object
