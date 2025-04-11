@@ -106,6 +106,13 @@
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64d"
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64d"
 
+// RUN: env "PATH=" %clang -### %s \
+// RUN:   --target=riscv64-mti-linux-gnu \
+// RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk 2>&1 \
+// RUN:   | FileCheck -check-prefix=MTI-RV64-LINUX-MULTI %s
+
+// MTI-RV64-LINUX-MULTI: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../../../sysroot/../.."
+
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
