@@ -3890,7 +3890,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
   // TODO: since there is no data, we don't know the CheckKind, and therefore
   // cannot inspect CGM.getCodeGenOpts().SanitizeMergeHandlers. We default to
   // NoMerge = false. Users can disable merging by disabling optimization.
-  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail, /*NoMerge=*/ false);
+  EmitTrapCheck(DataIsNotNullPtr, SanitizerHandler::CFICheckFail,
+                /*NoMerge=*/false);
 
   llvm::StructType *SourceLocationTy =
       llvm::StructType::get(VoidPtrTy, Int32Ty, Int32Ty);
@@ -3933,7 +3934,7 @@ void CodeGenFunction::EmitCfiCheckFail() {
       // Although the compiler allows SanitizeMergeHandlers to be set
       // independently of CGM.getLangOpts().Sanitize, Driver/SanitizerArgs.cpp
       // requires that SanitizeMergeHandlers is a subset of Sanitize.
-      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/ false);
+      EmitTrapCheck(Cond, SanitizerHandler::CFICheckFail, /*NoMerge=*/false);
   }
 
   FinishFunction();
