@@ -15,8 +15,8 @@
 //===----------------------------------------------------------------------===//
 
 // A 11-bit signed immediate where the least significant bit is zero.
-def bare_simm11_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<11>;
+def simm11_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = SImmAsmOperand<11, "Lsb0">;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<11>";
@@ -29,26 +29,26 @@ def bare_simm11_lsb0 : Operand<OtherVT> {
   let OperandType = "OPERAND_PCREL";
 }
 
-def bare_simm18 : Operand<XLenVT> {
-  let ParserMatchClass = BareSImmNAsmOperand<18>;
+def simm18 : Operand<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<18>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<18>";
 }
 
-def bare_simm18_lsb0 : Operand<XLenVT> {
-  let ParserMatchClass = BareSImmNLsb0AsmOperand<18>;
+def simm18_lsb0 : Operand<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<18, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<18>";
 }
 
-def bare_simm19_lsb00 : Operand<XLenVT> {
-  let ParserMatchClass = BareSImmNLsb00AsmOperand<19>;
+def simm19_lsb00 : Operand<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<19, "Lsb00">;
   let EncoderMethod = "getImmOpValueAsrN<2>";
   let DecoderMethod = "decodeSImmOperandAndLslN<19, 2>";
 }
 
-def bare_simm20_lsb000 : Operand<XLenVT> {
-  let ParserMatchClass = BareSImmNLsb000AsmOperand<20>;
+def simm20_lsb000 : Operand<XLenVT> {
+  let ParserMatchClass = SImmAsmOperand<20, "Lsb000">;
   let EncoderMethod = "getImmOpValueAsrN<3>";
   let DecoderMethod = "decodeSImmOperandAndLslN<20, 3>";
 }
@@ -58,7 +58,7 @@ def bare_simm20_lsb000 : Operand<XLenVT> {
 //===----------------------------------------------------------------------===//
 
 class NDSRVInstBB<bit cs, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs1, uimmlog2xlen:$cimm, bare_simm11_lsb0:$imm10),
+    : RVInst<(outs), (ins GPR:$rs1, uimmlog2xlen:$cimm, simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatOther>,
       Sched<[WriteJmp, ReadIALU]> {
   bits<10> imm10;
@@ -82,7 +82,7 @@ class NDSRVInstBB<bit cs, string opcodestr>
 }
 
 class NDSRVInstBC<bits<3> funct3, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, bare_simm11_lsb0:$imm10),
+    : RVInst<(outs), (ins GPR:$rs1, uimm7:$cimm, simm11_lsb0:$imm10),
              opcodestr, "$rs1, $cimm, $imm10", [], InstFormatOther>,
       Sched<[WriteJmp, ReadIALU]> {
   bits<10> imm10;
@@ -137,7 +137,7 @@ class NDSRVInstRR<bits<7> funct7, string opcodestr>
 
 // GP: ADDI, LB, LBU
 class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins bare_simm18:$imm18),
+    : RVInst<(outs GPR:$rd), (ins simm18:$imm18),
              opcodestr, "$rd, ${imm18}", [], InstFormatOther> {
   bits<18> imm18;
   bits<5> rd;
@@ -158,7 +158,7 @@ class NDSRVInstLBGP<bits<2> funct2, string opcodestr>
 
 // GP: LH, LHU
 class NDSRVInstLHGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins bare_simm18_lsb0:$imm17),
+    : RVInst<(outs GPR:$rd), (ins simm18_lsb0:$imm17),
              opcodestr, "$rd, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rd;
@@ -176,9 +176,8 @@ class NDSRVInstLHGP<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
-// GP: LW
 class NDSRVInstLWGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins bare_simm19_lsb00:$imm17),
+    : RVInst<(outs GPR:$rd), (ins simm19_lsb00:$imm17),
              opcodestr, "$rd, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rd;
@@ -199,7 +198,7 @@ class NDSRVInstLWGP<bits<3> funct3, string opcodestr>
 
 // GP: LD
 class NDSRVInstLDGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs GPR:$rd), (ins bare_simm20_lsb000:$imm17),
+    : RVInst<(outs GPR:$rd), (ins simm20_lsb000:$imm17),
              opcodestr, "$rd, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rd;
@@ -220,7 +219,7 @@ class NDSRVInstLDGP<bits<3> funct3, string opcodestr>
 
 // GP: SB
 class NDSRVInstSBGP<bits<2> funct2, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, bare_simm18:$imm18),
+    : RVInst<(outs), (ins GPR:$rs2, simm18:$imm18),
              opcodestr, "$rs2, ${imm18}", [], InstFormatOther> {
   bits<18> imm18;
   bits<5> rs2;
@@ -242,7 +241,7 @@ class NDSRVInstSBGP<bits<2> funct2, string opcodestr>
 
 // GP: SH
 class NDSRVInstSHGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, bare_simm18_lsb0:$imm17),
+    : RVInst<(outs), (ins GPR:$rs2, simm18_lsb0:$imm17),
              opcodestr, "$rs2, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rs2;
@@ -263,7 +262,7 @@ class NDSRVInstSHGP<bits<3> funct3, string opcodestr>
 
 // GP: SW
 class NDSRVInstSWGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, bare_simm19_lsb00:$imm17),
+    : RVInst<(outs), (ins GPR:$rs2, simm19_lsb00:$imm17),
              opcodestr, "$rs2, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rs2;
@@ -285,7 +284,7 @@ class NDSRVInstSWGP<bits<3> funct3, string opcodestr>
 
 // GP: SD
 class NDSRVInstSDGP<bits<3> funct3, string opcodestr>
-    : RVInst<(outs), (ins GPR:$rs2, bare_simm20_lsb000:$imm17),
+    : RVInst<(outs), (ins GPR:$rs2, simm20_lsb000:$imm17),
              opcodestr, "$rs2, ${imm17}", [], InstFormatOther> {
   bits<17> imm17;
   bits<5> rs2;
