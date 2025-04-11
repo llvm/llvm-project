@@ -3981,9 +3981,7 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(TemplateArgument(Result.get(),
-                                                  /*IsCanonical=*/false),
-                                 Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get()), Result.get());
     }
 
     case TemplateArgument::Template:
@@ -4943,8 +4941,7 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     E = SemaRef.ActOnConstantExpression(E);
     if (E.isInvalid())
       return true;
-    Output = TemplateArgumentLoc(
-        TemplateArgument(E.get(), /*IsCanonical=*/false), E.get());
+    Output = TemplateArgumentLoc(TemplateArgument(E.get()), E.get());
     return false;
   }
   }
@@ -16134,10 +16131,8 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = TemplateArgument(
-            new (getSema().Context)
-                PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt),
-            /*IsCanonical=*/false);
+        ArgStorage = TemplateArgument(new (getSema().Context) PackExpansionExpr(
+            DRE.get(), E->getPackLoc(), std::nullopt));
       }
       PackArgs = ArgStorage;
     }
