@@ -181,6 +181,16 @@ void PluginManager::Terminate() {
   plugin_map.clear();
 }
 
+llvm::ArrayRef<PluginNamespace> PluginManager::GetPluginNamespaces() {
+  // Currently supported set of plugin namespaces. This will be expanded
+  // over time.
+  static PluginNamespace PluginNamespaces[] = {
+      {"system-runtime", PluginManager::GetSystemRuntimePluginInfo,
+       PluginManager::SetSystemRuntimePluginEnabled}};
+
+  return PluginNamespaces;
+}
+
 template <typename Callback> struct PluginInstance {
   typedef Callback CallbackType;
 

@@ -18,10 +18,12 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-interfaces.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
@@ -54,11 +56,32 @@ struct RegisteredPluginInfo {
   bool enabled = false;
 };
 
+// Define some data structures to describe known plugin "namespaces".
+// The PluginManager is organized into a series of static functions
+// that operate on different types of plugins. For example SystemRuntime
+// and ObjectFile plugins.
+//
+// The namespace name is used a prefix when matching plugin names. For example,
+// if we have an "elf" plugin in the "object-file" namespace then we will
+// match a plugin name pattern against the "object-file.elf" name.
+//
+// The plugin namespace here is used so we can operate on all the plugins
+// of a given type so it is easy to enable or disable them as a group.
+using GetPluginInfo = std::function<std::vector<RegisteredPluginInfo>()>;
+using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
+struct PluginNamespace {
+  llvm::StringRef name;
+  GetPluginInfo get_info;
+  SetPluginEnabled set_enabled;
+};
+
 class PluginManager {
 public:
   static void Initialize();
 
   static void Terminate();
+
+  static llvm::ArrayRef<PluginNamespace> GetPluginNamespaces();
 
   // ABI
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,

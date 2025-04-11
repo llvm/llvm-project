@@ -89,31 +89,6 @@ public:
   bool m_exact_name_match = false;
 };
 
-// Define some data structures to describe known plugin "namespaces".
-// The PluginManager is organized into a series of static functions
-// that operate on different types of plugin. For example SystemRuntime
-// and ObjectFile plugins.
-//
-// The namespace name is used a prefix when matching plugin names. For example,
-// if we have an "elf" plugin in the "object-file" namespace then we will
-// match a plugin name pattern against the "object-file.elf" name.
-//
-// The plugin namespace here is used so we can operate on all the plugins
-// of a given type so it is easy to enable or disable them as a group.
-using GetPluginInfo = std::function<std::vector<RegisteredPluginInfo>()>;
-using SetPluginEnabled = std::function<bool(llvm::StringRef, bool)>;
-struct PluginNamespace {
-  llvm::StringRef name;
-  GetPluginInfo get_info;
-  SetPluginEnabled set_enabled;
-};
-
-// Currently supported set of plugin namespaces. This will be expanded
-// over time.
-PluginNamespace PluginNamespaces[] = {
-    {"system-runtime", PluginManager::GetSystemRuntimePluginInfo,
-     PluginManager::SetSystemRuntimePluginEnabled}};
-
 // Helper function to perform an action on each matching plugin.
 // The action callback is given the containing namespace along with plugin info
 // for each matching plugin.
@@ -124,7 +99,8 @@ static int ActOnMatchingPlugins(
         action) {
   int num_matching = 0;
 
-  for (const PluginNamespace &plugin_namespace : PluginNamespaces) {
+  for (const PluginNamespace &plugin_namespace :
+       PluginManager::GetPluginNamespaces()) {
     std::vector<RegisteredPluginInfo> matching_plugins;
     for (const RegisteredPluginInfo &plugin_info :
          plugin_namespace.get_info()) {
