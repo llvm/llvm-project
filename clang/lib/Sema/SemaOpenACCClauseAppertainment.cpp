@@ -73,8 +73,6 @@ struct LLVMDirectiveClauseRelationships {
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
 namespace {
-
-// TODO: ERIHC: WOULD NEED ON DIRECTIVE_CLAUSE_MAP
 LLVMDirectiveClauseRelationships Relations[] =
 #define GEN_CLANG_DIRECTIVE_CLAUSE_MAP
 #include "llvm/Frontend/OpenACC/ACC.inc"
@@ -120,6 +118,20 @@ std::string getListOfClauses(AccClauseSet Set) {
   OS.flush();
   return OS.str();
 }
+
+OpenACCClauseKind dealiasClauseKind(OpenACCClauseKind CK) {
+  switch (CK) {
+    default:
+      return CK;
+#define VISIT_CLAUSE(NAME)
+#define CLAUSE_ALIAS(ALIAS, NAME, DEPRECATED)                                  \
+  case OpenACCClauseKind::ALIAS:                                             \
+    return OpenACCClauseKind::NAME;
+#include "clang/Basic/OpenACCClauses.def"
+  }
+
+  return CK;
+}
 } // namespace
 
 // Diagnoses if `Clauses` list doesn't have at least one of the required
@@ -136,7 +148,7 @@ bool SemaOpenACC::DiagnoseRequiredClauses(
     return false;
 
   for (auto *C : Clauses) {
-    if (Lists.Required.isSet(C->getClauseKind()))
+    if (Lists.Required.isSet(dealiasClauseKind(C->getClauseKind())))
       return false;
   }
 
@@ -153,12 +165,14 @@ bool SemaOpenACC::DiagnoseAllowedOnceClauses(
   if (DK == OpenACCDirectiveKind::Invalid || CK == OpenACCClauseKind::Invalid)
     return false;
 
+  OpenACCClauseKind Dealiased = dealiasClauseKind(CK);
+
   const LLVMClauseLists &Lists = getListsForDirective(DK);
   if (!Lists.AllowedOnce.isSet(CK))
     return false;
 
   auto Res = llvm::find_if(Clauses, [=](const OpenACCClause *C) {
-    return C->getClauseKind() == CK;
+    return dealiasClauseKind(C->getClauseKind()) == Dealiased;
   });
 
   if (Res == Clauses.end())
@@ -178,13 +192,14 @@ bool SemaOpenACC::DiagnoseExclusiveClauses(
     return false;
 
   const LLVMClauseLists &Lists = getListsForDirective(DK);
+  OpenACCClauseKind Dealiased = dealiasClauseKind(CK);
 
   // If this isn't on the list, this is fine.
-  if (!Lists.AllowedExclusive.isSet(CK))
+  if (!Lists.AllowedExclusive.isSet(Dealiased))
     return false;
 
   for (const OpenACCClause *C : Clauses) {
-    if (Lists.AllowedExclusive.isSet(C->getClauseKind())) {
+    if (Lists.AllowedExclusive.isSet(dealiasClauseKind(C->getClauseKind()))) {
       Diag(ClauseLoc, diag::err_acc_clause_cannot_combine)
           << CK << C->getClauseKind() << DK;
       Diag(C->getBeginLoc(), diag::note_acc_previous_clause_here);
@@ -203,9 +218,11 @@ bool SemaOpenACC::DiagnoseAllowedClauses(OpenACCDirectiveKind DK,
   if (DK == OpenACCDirectiveKind::Invalid || CK == OpenACCClauseKind::Invalid)
     return false;
   const LLVMClauseLists &Lists = getListsForDirective(DK);
+  OpenACCClauseKind Dealiased = dealiasClauseKind(CK);
 
-  if (!Lists.Allowed.isSet(CK) && !Lists.AllowedOnce.isSet(CK) &&
-      !Lists.AllowedExclusive.isSet(CK) && !Lists.Required.isSet(CK))
+  if (!Lists.Allowed.isSet(Dealiased) && !Lists.AllowedOnce.isSet(Dealiased) &&
+      !Lists.AllowedExclusive.isSet(Dealiased) &&
+      !Lists.Required.isSet(Dealiased))
     return Diag(ClauseLoc, diag::err_acc_clause_appertainment) << DK << CK;
 
   return false;
