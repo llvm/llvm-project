@@ -1006,13 +1006,48 @@ func.func @canonicalize_broadcast_shapecast_to_broadcast(%arg0: vector<3xf32>) -
 
 // -----
 
-// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapecast
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_broadcast_ones
+//       CHECK:   vector.broadcast {{.*}} vector<1x1xi8> to vector<1x1x6x1x4xi8>
+//   CHECK-NOT:   vector.shape_cast
+func.func @canonicalize_broadcast_shapecast_to_broadcast_ones(%arg0: vector<1x1xi8>) -> vector<1x1x6x1x4xi8> {
+  %0 = vector.broadcast %arg0 : vector<1x1xi8> to vector<6x4xi8>
+  %1 = vector.shape_cast %0 : vector<6x4xi8> to vector<1x1x6x1x4xi8>
+  return %1 : vector<1x1x6x1x4xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_broadcast_scalar
+//       CHECK:   vector.broadcast {{.*}} f32 to vector<3x4x1xf32>
+//   CHECK-NOT:   vector.shape_cast
+func.func @canonicalize_broadcast_shapecast_to_broadcast_scalar(%arg0: f32) -> vector<3x4x1xf32> {
+  %0 = vector.broadcast %arg0 : f32 to vector<12xf32>
+  %1 = vector.shape_cast %0 : vector<12xf32> to vector<3x4x1xf32>
+  return %1 : vector<3x4x1xf32>
+}
+
+// -----
+
+// In this test, broadcast (2)->(1,2,1) is not legal, but shape_cast (2)->(1,2,1) is.
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_to_shapcast
 //   CHECK-NOT:   vector.broadcast
-//       CHECK:   vector.shape_cast {{.+}} : vector<3x4xf32> to vector<1x12xf32>
-func.func @canonicalize_broadcast_shapecast_to_shapecast(%arg0: vector<3x4xf32>) -> vector<1x12xf32> {
-    %0 = vector.broadcast %arg0 : vector<3x4xf32> to vector<1x1x3x4xf32>
-    %1 = vector.shape_cast %0 : vector<1x1x3x4xf32> to vector<1x12xf32>
-    return %1 : vector<1x12xf32>
+//       CHECK:   vector.shape_cast {{.+}} : vector<2xf32> to vector<1x2x1xf32>
+func.func @canonicalize_broadcast_shapecast_to_shapcast(%arg0 : vector<2xf32>) -> vector<1x2x1xf32> {
+  %0 = vector.broadcast %arg0 : vector<2xf32> to vector<1x2xf32>
+  %1 = vector.shape_cast %0 : vector<1x2xf32> to vector<1x2x1xf32>
+  return %1 : vector<1x2x1xf32>
+}
+
+// -----
+
+// In this test, broadcast (1)->(1,1) and shape_cast (1)->(1,1) are both legal. shape_cast is chosen.
+// CHECK-LABEL: func @canonicalize_broadcast_shapecast_both_possible
+//   CHECK-NOT:   vector.broadcast
+//       CHECK:   vector.shape_cast {{.+}} : vector<1xf32> to vector<1x1xf32>
+func.func @canonicalize_broadcast_shapecast_both_possible(%arg0: vector<1xf32>) -> vector<1x1xf32> {
+    %0 = vector.broadcast %arg0 : vector<1xf32> to vector<1x1x1xf32>
+    %1 = vector.shape_cast %0 : vector<1x1x1xf32> to vector<1x1xf32>
+    return %1 : vector<1x1xf32>
 }
 
 // -----
