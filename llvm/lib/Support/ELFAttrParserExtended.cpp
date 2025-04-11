@@ -114,10 +114,12 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
     uint32_t ExtBASubsectionLength = De.getU32(Cursor);
     if (!Cursor)
       return Cursor.takeError();
-    // Minimal valid Extended Build Attributes subsection header size is at
+    // Minimal valid Extended Build Attributes subsection size is at
     // least 8: length(4) name(at least a single char + null) optionality(1) and
     // type(1)
-    if (ExtBASubsectionLength < 8)
+    // Extended Build Attributes subsection has to fit inside the section.
+    if (ExtBASubsectionLength < 8 ||
+        ExtBASubsectionLength > (Section.size() - Cursor.tell() + 4))
       return createStringError(
           errc::invalid_argument,
           "invalid Extended Build Attributes subsection size at offset: " +
@@ -164,7 +166,7 @@ Error ELFExtendedAttrParser::parse(ArrayRef<uint8_t> Section,
     // Offset in Section
     uint64_t OffsetInSection = Cursor.tell();
     // Size: 4 bytes, Vendor Name: VendorName.size() + 1 (null termination),
-    // optionality: 1, size: 1
+    // optionality: 1, type: 1
     uint32_t BytesAllButAttributes = 4 + (VendorName.size() + 1) + 1 + 1;
     while (Cursor.tell() <
            (OffsetInSection + ExtBASubsectionLength - BytesAllButAttributes)) {
