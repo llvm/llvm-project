@@ -17,6 +17,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1    not %run %t       2>&1 | FileCheck %s --check-prefixes=CHECK-ACDE,CHECK-BDE,CHECK-E
 
 // TODO
+// REQUIRES: linux
 // UNSUPPORTED: android
 
 #include <stdio.h>
