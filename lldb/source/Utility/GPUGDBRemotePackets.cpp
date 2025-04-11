@@ -75,4 +75,23 @@ json::Value toJSON(const GPUPluginBreakpointHitArgs &data) {
              {"symbol_values", data.symbol_values},
             });
 }
+
+bool fromJSON(const llvm::json::Value &value, 
+              GPUPluginBreakpointHitResponse &data,
+              llvm::json::Path path) {
+  ObjectMapper o(value, path);
+  return o && 
+         o.map("disable_bp", data.disable_bp) &&
+         o.mapOptional("breakpoints", data.breakpoints) &&
+         o.mapOptional("connect_url", data.connect_url);
+}
+
+llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
+  return json::Value(
+    Object{{"disable_bp", data.disable_bp}, 
+           {"breakpoints", data.breakpoints},
+           {"connect_url", data.connect_url},
+          });
+}
+
 } // namespace lldb_private

@@ -27,7 +27,8 @@ public:
   bool HandleEventFileDescriptorEvent(int fd) override;
   std::optional<std::string> GetConnectionURL() override;
   void InitializePluginInfo() override;
-  void BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;
+  GPUPluginBreakpointHitResponse 
+  BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;
 
 private:
   void CloseFDs();

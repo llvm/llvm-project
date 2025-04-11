@@ -107,7 +107,8 @@ public:
   /// calling m_process.SetBreakpoint(...) to help implement funcionality,
   /// such as dynamic library loading in GPUs or to synchronize in any other
   /// way with the native process.
-  virtual void BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {}
+  virtual GPUPluginBreakpointHitResponse 
+  BreakpointWasHit(GPUPluginBreakpointHitArgs &args) = 0;
 
   protected:
     GPUPluginInfo m_info;

@@ -3721,8 +3721,14 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
 
   for (auto &plugin_up: m_plugins) {
     if (plugin_up->GetPluginName() == args->plugin_name) {
-      plugin_up->BreakpointWasHit(*args);
-      return SendOKResponse();
+      GPUPluginBreakpointHitResponse bp_response = 
+          plugin_up->BreakpointWasHit(*args);
+      std::string json_string;
+      llvm::raw_string_ostream os(json_string);
+      os << toJSON(bp_response);
+      StreamGDBRemote response;
+      response.PutEscapedBytes(json_string.data(), json_string.size());
+      return SendPacketNoLock(response.GetString());
     }
   }
   return SendErrorResponse(Status::FromErrorString("Invalid plugin name."));

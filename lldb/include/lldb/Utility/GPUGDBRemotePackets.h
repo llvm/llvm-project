@@ -21,10 +21,10 @@ struct SymbolValue {
   std::string name;
   uint64_t value;
 };
-bool fromJSON(const llvm::json::Value &value, SymbolValue &info, 
+bool fromJSON(const llvm::json::Value &value, SymbolValue &data, 
               llvm::json::Path path);
 
-llvm::json::Value toJSON(const SymbolValue &packet);
+llvm::json::Value toJSON(const SymbolValue &data);
 
 struct GPUBreakpointInfo {
   std::string identifier;
@@ -34,10 +34,10 @@ struct GPUBreakpointInfo {
   std::vector<std::string> symbol_names;
 };
 
-bool fromJSON(const llvm::json::Value &value, GPUBreakpointInfo &info,
+bool fromJSON(const llvm::json::Value &value, GPUBreakpointInfo &data,
   llvm::json::Path path);
 
-llvm::json::Value toJSON(const GPUBreakpointInfo &packet);
+llvm::json::Value toJSON(const GPUBreakpointInfo &data);
 
 
 struct GPUPluginInfo {
@@ -46,10 +46,10 @@ struct GPUPluginInfo {
   std::vector<GPUBreakpointInfo> breakpoints;
 };
 
-bool fromJSON(const llvm::json::Value &value, GPUPluginInfo &info,
+bool fromJSON(const llvm::json::Value &value, GPUPluginInfo &data,
   llvm::json::Path path);
 
-llvm::json::Value toJSON(const GPUPluginInfo &packet);
+llvm::json::Value toJSON(const GPUPluginInfo &data);
 
 struct GPUPluginBreakpointHitArgs {
   std::string plugin_name;
@@ -57,10 +57,26 @@ struct GPUPluginBreakpointHitArgs {
   std::vector<SymbolValue> symbol_values;
 };
 
-bool fromJSON(const llvm::json::Value &value, GPUPluginBreakpointHitArgs &info,
+bool fromJSON(const llvm::json::Value &value, GPUPluginBreakpointHitArgs &data,
               llvm::json::Path path);
 
-llvm::json::Value toJSON(const GPUPluginBreakpointHitArgs &packet);
+llvm::json::Value toJSON(const GPUPluginBreakpointHitArgs &data);
+
+struct GPUPluginBreakpointHitResponse {
+  ///< Set to true if this berakpoint should be disabled.
+  bool disable_bp = false; 
+  /// Optional new breakpoints to set.
+  std::optional<std::vector<GPUBreakpointInfo>> breakpoints;
+  /// If a GPU connection is available return a connect URL to use to reverse
+  /// connect to the GPU GDB server.
+  std::optional<std::string> connect_url;
+};
+
+bool fromJSON(const llvm::json::Value &value, 
+              GPUPluginBreakpointHitResponse &data,
+              llvm::json::Path path);
+
+llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data);
 
 } // namespace lldb_private
 
