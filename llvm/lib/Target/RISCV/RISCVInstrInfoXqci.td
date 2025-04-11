@@ -118,11 +118,6 @@ def simm20_li : RISCVOp<XLenVT> {
 
 def simm26 : RISCVSImmLeafOp<26>;
 
-class BareSImmNAsmOperand<int width>
-    : ImmAsmOperand<"BareS", width, ""> {
-  let PredicateMethod = "isBareSimmN<" # width # ">";
-}
-
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
 def bare_simm32 : RISCVOp<XLenVT> {
