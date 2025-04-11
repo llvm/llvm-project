@@ -369,7 +369,7 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
     ```
   }];
   let arguments = (ins
-    Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base,
+    Arg<MemRefRankOf<[AnyType], [2]>, "the reference to load from", [MemRead]>:$base,
     Variadic<Index>:$indices,
     Optional<AnyType>:$padding, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
@@ -443,7 +443,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
     ```
   }];
   let arguments = (ins SMETile:$valueToStore,
-    Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
+    Arg<MemRefRankOf<[AnyType], [2]>, "the reference to store to", [MemWrite]>:$base,
     Variadic<Index>:$indices, Optional<AnyVectorOfNonZeroRank>:$mask,
     ArmSME_TileSliceLayoutAttr:$layout
   );
