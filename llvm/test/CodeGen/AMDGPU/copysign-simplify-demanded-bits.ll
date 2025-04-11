@@ -336,13 +336,13 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x800000
-; GFX9-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
+; GFX9-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v0|, s4
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 32, 0, s[4:5]
 ; GFX9-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; GFX9-NEXT:    v_log_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x42000000
-; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s[4:5]
 ; GFX9-NEXT:    v_sub_f32_e32 v2, v3, v2
 ; GFX9-NEXT:    v_mul_f32_e32 v3, v2, v1
 ; GFX9-NEXT:    s_mov_b32 s4, 0xc2fc0000
