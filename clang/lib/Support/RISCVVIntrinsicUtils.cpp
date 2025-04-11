@@ -1233,6 +1233,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
     STRINGIFY(RVV_REQ_Zvfh)
     STRINGIFY(RVV_REQ_Experimental)
   default:
+    llvm_unreachable("Unsupported RVVRequire!");
     break;
   }
   return OS;
