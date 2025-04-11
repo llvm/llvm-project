@@ -366,7 +366,7 @@ define void @loop3(ptr noalias nocapture noundef writeonly %dst, ptr nocapture n
 ; CHECK-NEXT:    xtn v6.4h, v4.4s
 ; CHECK-NEXT:    xtn v7.4h, v2.4s
 ; CHECK-NEXT:    tbl v2.16b, { v5.16b, v6.16b, v7.16b }, v1.16b
-; CHECK-NEXT:    mov v3.s[0], v2.s[2]
+; CHECK-NEXT:    mov s3, v2.s[2]
 ; CHECK-NEXT:    str d2, [x0]
 ; CHECK-NEXT:    str s3, [x0, #8]
 ; CHECK-NEXT:    add x0, x0, #12

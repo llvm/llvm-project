@@ -8,7 +8,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @test_str_lane_s32(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s32:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    str s0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -39,7 +39,7 @@ entry:
 define void @test_str_lane_s64(ptr %a, <vscale x 2 x i64> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s64:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-NONSTREAMING-NEXT:    mov d0, v0.d[1]
 ; CHECK-NONSTREAMING-NEXT:    str d0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -120,7 +120,7 @@ entry:
 define void @test_str_lane_s8(ptr %a, <vscale x 16 x i8> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s8:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.b[0], v0.b[7]
+; CHECK-NONSTREAMING-NEXT:    mov b0, v0.b[7]
 ; CHECK-NONSTREAMING-NEXT:    str b0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -149,7 +149,7 @@ entry:
 define void @test_str_lane_s16(ptr %a, <vscale x 8 x i16> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s16:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.h[0], v0.h[3]
+; CHECK-NONSTREAMING-NEXT:    mov h0, v0.h[3]
 ; CHECK-NONSTREAMING-NEXT:    str h0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -286,7 +286,7 @@ define void @test_str_reduction_i32_to_i8_negative_offset(ptr %ptr, <vscale x 4 
 define void @test_str_lane_s32_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s32_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    stur s0, [x0, #-32]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -319,7 +319,7 @@ entry:
 define void @test_str_lane_s64_negative_offset(ptr %a, <vscale x 2 x i64> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s64_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-NONSTREAMING-NEXT:    mov d0, v0.d[1]
 ; CHECK-NONSTREAMING-NEXT:    stur d0, [x0, #-64]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -352,7 +352,7 @@ entry:
 define void @test_str_lane_s8_negative_offset(ptr %a, <vscale x 16 x i8> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s8_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.b[0], v0.b[7]
+; CHECK-NONSTREAMING-NEXT:    mov b0, v0.b[7]
 ; CHECK-NONSTREAMING-NEXT:    stur b0, [x0, #-8]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -383,7 +383,7 @@ entry:
 define void @test_str_lane_s16_negative_offset(ptr %a, <vscale x 8 x i16> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_lane_s16_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.h[0], v0.h[3]
+; CHECK-NONSTREAMING-NEXT:    mov h0, v0.h[3]
 ; CHECK-NONSTREAMING-NEXT:    stur h0, [x0, #-16]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -416,7 +416,7 @@ entry:
 define void @test_str_trunc_lane_s32_to_s16(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s16:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    str h0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -450,7 +450,7 @@ entry:
 define void @test_str_trunc_lane_s32_to_s8(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s8:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    str b0, [x0]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -496,7 +496,7 @@ entry:
 define void @test_str_trunc_lane_s32_to_s16_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s16_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    stur h0, [x0, #-16]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;
@@ -531,7 +531,7 @@ entry:
 define void @test_str_trunc_lane_s32_to_s8_negative_offset(ptr %a, <vscale x 4 x i32> %b) {
 ; CHECK-NONSTREAMING-LABEL: test_str_trunc_lane_s32_to_s8_negative_offset:
 ; CHECK-NONSTREAMING:       // %bb.0: // %entry
-; CHECK-NONSTREAMING-NEXT:    mov v0.s[0], v0.s[3]
+; CHECK-NONSTREAMING-NEXT:    mov s0, v0.s[3]
 ; CHECK-NONSTREAMING-NEXT:    stur b0, [x0, #-8]
 ; CHECK-NONSTREAMING-NEXT:    ret
 ;

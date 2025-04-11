@@ -215,7 +215,7 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    umov.b w15, v2[4]
 ; CHECK-NEXT:    str s0, [sp]
-; CHECK-NEXT:    mov.s v3[0], v0[3]
+; CHECK-NEXT:    mov s3, v0[3]
 ; CHECK-NEXT:    and x10, x10, #0x1
 ; CHECK-NEXT:    and x14, x9, #0x1
 ; CHECK-NEXT:    bfi x11, x9, #2, #1
@@ -238,7 +238,7 @@ define <8 x i32> @test_compress_large(<8 x i32> %vec, <8 x i1> %mask) {
 ; CHECK-NEXT:    and x10, x10, #0x7
 ; CHECK-NEXT:    str s1, [x8, x12, lsl #2]
 ; CHECK-NEXT:    and x12, x9, #0x7
-; CHECK-NEXT:    mov.s v0[0], v1[3]
+; CHECK-NEXT:    mov s0, v1[3]
 ; CHECK-NEXT:    and w11, w11, #0x1
 ; CHECK-NEXT:    add x10, x8, x10, lsl #2
 ; CHECK-NEXT:    add x12, x8, x12, lsl #2

@@ -718,8 +718,8 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    uzp1.8h v1, v2, v1
 ; CHECK-NEXT:    uzp1.8b v2, v0, v0
 ; CHECK-NEXT:    uzp1.16b v0, v1, v0
-; CHECK-NEXT:    mov.b v1[0], v2[2]
-; CHECK-NEXT:    mov.h v2[0], v0[4]
+; CHECK-NEXT:    mov b1, v2[2]
+; CHECK-NEXT:    mov h2, v0[4]
 ; CHECK-NEXT:    str d0, [x1]
 ; CHECK-NEXT:    stur b1, [x1, #10]
 ; CHECK-NEXT:    str h2, [x1, #8]
@@ -753,11 +753,11 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    uzp1 v1.16b, v1.16b, v0.16b
 ; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-BE-NEXT:    rev16 v2.16b, v1.16b
-; CHECK-BE-NEXT:    mov v0.b[0], v0.b[2]
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-BE-NEXT:    mov v2.h[0], v2.h[4]
-; CHECK-BE-NEXT:    stur b0, [x1, #10]
+; CHECK-BE-NEXT:    mov b0, v0.b[2]
+; CHECK-BE-NEXT:    mov h2, v2.h[4]
 ; CHECK-BE-NEXT:    str d1, [x1]
+; CHECK-BE-NEXT:    stur b0, [x1, #10]
 ; CHECK-BE-NEXT:    str h2, [x1, #8]
 ; CHECK-BE-NEXT:    add x1, x1, #16
 ; CHECK-BE-NEXT:    b.eq .LBB6_1
@@ -789,11 +789,11 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v1.16b, v1.16b, v0.16b
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-DISABLE-NEXT:    rev16 v2.16b, v1.16b
-; CHECK-DISABLE-NEXT:    mov v0.b[0], v0.b[2]
 ; CHECK-DISABLE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-DISABLE-NEXT:    mov v2.h[0], v2.h[4]
-; CHECK-DISABLE-NEXT:    stur b0, [x1, #10]
+; CHECK-DISABLE-NEXT:    mov b0, v0.b[2]
+; CHECK-DISABLE-NEXT:    mov h2, v2.h[4]
 ; CHECK-DISABLE-NEXT:    str d1, [x1]
+; CHECK-DISABLE-NEXT:    stur b0, [x1, #10]
 ; CHECK-DISABLE-NEXT:    str h2, [x1, #8]
 ; CHECK-DISABLE-NEXT:    add x1, x1, #16
 ; CHECK-DISABLE-NEXT:    b.eq .LBB6_1

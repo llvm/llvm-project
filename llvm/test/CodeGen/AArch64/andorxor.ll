@@ -183,7 +183,7 @@ define void @and_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    stur b1, [x0, #1]
 ; CHECK-SD-NEXT:    ret
@@ -219,7 +219,7 @@ define void @or_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    stur b1, [x0, #1]
 ; CHECK-SD-NEXT:    ret
@@ -255,7 +255,7 @@ define void @xor_v2i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.b }[4], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.b }[4], [x9]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x0]
 ; CHECK-SD-NEXT:    stur b1, [x0, #1]
 ; CHECK-SD-NEXT:    ret
@@ -292,7 +292,7 @@ define void @and_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]
 ; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
@@ -340,7 +340,7 @@ define void @or_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]
 ; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
@@ -388,7 +388,7 @@ define void @xor_v3i8(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str s1, [sp, #12]
 ; CHECK-SD-NEXT:    ldrh w8, [sp, #12]
 ; CHECK-SD-NEXT:    stur b0, [x0, #2]
@@ -693,7 +693,7 @@ define void @and_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #2]
 ; CHECK-SD-NEXT:    ret
@@ -729,7 +729,7 @@ define void @or_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #2]
 ; CHECK-SD-NEXT:    ret
@@ -765,7 +765,7 @@ define void @xor_v2i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    ld1 { v0.h }[2], [x8]
 ; CHECK-SD-NEXT:    ld1 { v1.h }[2], [x9]
 ; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x0]
 ; CHECK-SD-NEXT:    str h1, [x0, #2]
 ; CHECK-SD-NEXT:    ret
@@ -799,7 +799,7 @@ define void @and_v3i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    and x8, x8, x9
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str w8, [x0]
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str h0, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -836,7 +836,7 @@ define void @or_v3i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    orr x8, x8, x9
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str w8, [x0]
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str h0, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;
@@ -873,7 +873,7 @@ define void @xor_v3i16(ptr %p1, ptr %p2) {
 ; CHECK-SD-NEXT:    eor x8, x8, x9
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str w8, [x0]
-; CHECK-SD-NEXT:    mov v0.h[0], v0.h[2]
+; CHECK-SD-NEXT:    mov h0, v0.h[2]
 ; CHECK-SD-NEXT:    str h0, [x0, #4]
 ; CHECK-SD-NEXT:    ret
 ;

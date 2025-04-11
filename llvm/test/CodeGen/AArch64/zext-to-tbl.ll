@@ -1588,13 +1588,13 @@ define void @zext_v8i8_to_v8i128_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    ushll2.2d v3, v0, #0
 ; CHECK-NEXT:    ushll.2d v0, v0, #0
 ; CHECK-NEXT:    str d2, [x1, #96]
-; CHECK-NEXT:    mov.d v2[0], v2[1]
+; CHECK-NEXT:    mov d2, v2[1]
 ; CHECK-NEXT:    str d1, [x1, #64]
-; CHECK-NEXT:    mov.d v1[0], v1[1]
+; CHECK-NEXT:    mov d1, v1[1]
 ; CHECK-NEXT:    str d3, [x1, #32]
-; CHECK-NEXT:    mov.d v3[0], v3[1]
+; CHECK-NEXT:    mov d3, v3[1]
 ; CHECK-NEXT:    str d0, [x1]
-; CHECK-NEXT:    mov.d v0[0], v0[1]
+; CHECK-NEXT:    mov d0, v0[1]
 ; CHECK-NEXT:    str d2, [x1, #112]
 ; CHECK-NEXT:    str d1, [x1, #80]
 ; CHECK-NEXT:    str d3, [x1, #48]
@@ -1629,13 +1629,13 @@ define void @zext_v8i8_to_v8i128_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    ushll2 v3.2d, v0.4s, #0
 ; CHECK-BE-NEXT:    ushll v0.2d, v0.2s, #0
 ; CHECK-BE-NEXT:    str d2, [x1, #104]
-; CHECK-BE-NEXT:    mov v2.d[0], v2.d[1]
+; CHECK-BE-NEXT:    mov d2, v2.d[1]
 ; CHECK-BE-NEXT:    str d1, [x1, #72]
-; CHECK-BE-NEXT:    mov v1.d[0], v1.d[1]
+; CHECK-BE-NEXT:    mov d1, v1.d[1]
 ; CHECK-BE-NEXT:    str d3, [x1, #40]
-; CHECK-BE-NEXT:    mov v3.d[0], v3.d[1]
+; CHECK-BE-NEXT:    mov d3, v3.d[1]
 ; CHECK-BE-NEXT:    str d0, [x1, #8]
-; CHECK-BE-NEXT:    mov v0.d[0], v0.d[1]
+; CHECK-BE-NEXT:    mov d0, v0.d[1]
 ; CHECK-BE-NEXT:    str d2, [x1, #120]
 ; CHECK-BE-NEXT:    str d1, [x1, #88]
 ; CHECK-BE-NEXT:    str d3, [x1, #56]
@@ -2200,7 +2200,7 @@ define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    tbl.16b v7, { v4 }, v2
 ; CHECK-NEXT:    tbl.16b v4, { v4 }, v1
 ; CHECK-NEXT:    stp q7, q6, [x1, #16]
-; CHECK-NEXT:    mov.s v6[0], v5[2]
+; CHECK-NEXT:    mov s6, v5[2]
 ; CHECK-NEXT:    str q4, [x1]
 ; CHECK-NEXT:    str d5, [x1, #48]
 ; CHECK-NEXT:    str s6, [x1, #56]
@@ -2248,7 +2248,7 @@ define void @zext_v20i8_to_v20i24_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    rev64 v4.16b, v4.16b
 ; CHECK-BE-NEXT:    st1 { v5.16b }, [x1]
 ; CHECK-BE-NEXT:    st1 { v16.16b }, [x9]
-; CHECK-BE-NEXT:    mov v6.s[0], v7.s[2]
+; CHECK-BE-NEXT:    mov s6, v7.s[2]
 ; CHECK-BE-NEXT:    str d4, [x1, #48]
 ; CHECK-BE-NEXT:    str s6, [x1, #56]
 ; CHECK-BE-NEXT:    add x1, x1, #64
@@ -2615,7 +2615,7 @@ define void @zext_v23i8_to_v23i48_in_loop(ptr %src, ptr %dst) {
 ; CHECK-BE-NEXT:    rev64 v17.16b, v19.16b
 ; CHECK-BE-NEXT:    add x9, x1, #112
 ; CHECK-BE-NEXT:    tbl v7.16b, { v7.16b }, v1.16b
-; CHECK-BE-NEXT:    mov v18.h[0], v18.h[4]
+; CHECK-BE-NEXT:    mov h18, v18.h[4]
 ; CHECK-BE-NEXT:    st1 { v20.16b }, [x9]
 ; CHECK-BE-NEXT:    add x9, x1, #96
 ; CHECK-BE-NEXT:    st1 { v16.16b }, [x9]

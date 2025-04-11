@@ -462,7 +462,7 @@ define void @test_vrev64(ptr nocapture %source, ptr nocapture %dst) nounwind ssp
 ; CHECK-SD-LABEL: test_vrev64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ldr q0, [x0]
-; CHECK-SD-NEXT:    mov.h v1[0], v0[5]
+; CHECK-SD-NEXT:    mov h1, v0[5]
 ; CHECK-SD-NEXT:    st1.h { v0 }[6], [x1]
 ; CHECK-SD-NEXT:    str h1, [x1, #2]
 ; CHECK-SD-NEXT:    ret

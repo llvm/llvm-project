@@ -50,7 +50,7 @@ define <3 x i32> @uaddo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v3i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    mov v2.s[0], v1.s[2]
+; CHECK-NEXT:    mov s2, v1.s[2]
 ; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    str s2, [x0, #8]

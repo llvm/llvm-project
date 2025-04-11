@@ -868,7 +868,7 @@ define void @rshrn_v2i32_4(<2 x i32> %a, ptr %p) {
 ; CHECK-NEXT:    movi v1.2s, #8
 ; CHECK-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ushr v0.2s, v0.2s, #4
-; CHECK-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-NEXT:    mov s1, v0.s[1]
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret

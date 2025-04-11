@@ -9,7 +9,7 @@ define i16 @test_bitcast_v2i8_to_i16(<2 x i8> %a) {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    ; kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov.s v1[0], v0[1]
+; CHECK-NEXT:    mov s1, v0[1]
 ; CHECK-NEXT:    str b0, [sp, #14]
 ; CHECK-NEXT:    stur b1, [sp, #15]
 ; CHECK-NEXT:    ldrh w0, [sp, #14]

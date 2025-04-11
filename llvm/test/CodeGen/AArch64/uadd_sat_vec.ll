@@ -198,7 +198,7 @@ define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x2]
 ; CHECK-SD-NEXT:    stur b1, [x2, #1]
 ; CHECK-SD-NEXT:    ret
@@ -254,7 +254,7 @@ define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-NEXT:    mov v1.s[1], w11
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    umin v0.2s, v0.2s, v2.2s
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x2]
 ; CHECK-SD-NEXT:    str h1, [x2, #2]
 ; CHECK-SD-NEXT:    ret

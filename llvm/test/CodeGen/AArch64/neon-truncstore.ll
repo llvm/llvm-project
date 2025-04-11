@@ -42,7 +42,7 @@ define void @v2i32_v2i16(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-NEXT:    mov s1, v0.s[1]
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret
@@ -89,7 +89,7 @@ define void @v2i32_v2i8(<2 x i32> %a, ptr %result) {
 ; CHECK-LABEL: v2i32_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-NEXT:    mov s1, v0.s[1]
 ; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    stur b1, [x0, #1]
 ; CHECK-NEXT:    ret
@@ -155,7 +155,7 @@ define void @v2i16_v2i8(<2 x i16> %a, ptr %result) {
 ; CHECK-LABEL: v2i16_v2i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v1.s[0], v0.s[1]
+; CHECK-NEXT:    mov s1, v0.s[1]
 ; CHECK-NEXT:    str b0, [x0]
 ; CHECK-NEXT:    stur b1, [x0, #1]
 ; CHECK-NEXT:    ret

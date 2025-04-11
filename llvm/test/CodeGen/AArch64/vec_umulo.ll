@@ -59,7 +59,7 @@ define <3 x i32> @umulo_v3i32(<3 x i32> %a0, <3 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    uzp2 v2.4s, v3.4s, v2.4s
 ; CHECK-NEXT:    str d1, [x0]
 ; CHECK-NEXT:    cmtst v0.4s, v2.4s, v2.4s
-; CHECK-NEXT:    mov v2.s[0], v1.s[2]
+; CHECK-NEXT:    mov s2, v1.s[2]
 ; CHECK-NEXT:    str s2, [x0, #8]
 ; CHECK-NEXT:    ret
   %t = call {<3 x i32>, <3 x i1>} @llvm.umul.with.overflow.v3i32(<3 x i32> %a0, <3 x i32> %a1)
