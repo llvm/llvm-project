@@ -27,6 +27,8 @@
 extern "C" {
 #endif
 
+#if !defined(__CUDA_ARCH__)
+
 /* 7 SYNCHRONIZATION, BARRIER AND HINT INTRINSICS */
 /* 7.3 Memory barriers */
 #if !__has_builtin(__dmb)
@@ -70,6 +72,7 @@ static __inline__ void __attribute__((__always_inline__, __nodebug__)) __yield(v
   __builtin_arm_yield();
 }
 #endif
+#endif // #if !defined(__CUDA_ARCH__)
 
 #if defined(__ARM_32BIT_STATE) && __ARM_32BIT_STATE
 #define __dbg(t) __builtin_arm_dbg(t)
