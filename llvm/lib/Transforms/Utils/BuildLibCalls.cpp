@@ -437,7 +437,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_scanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -445,7 +444,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_setvbuf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_strndup:
@@ -464,7 +462,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_statvfs:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -472,7 +469,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_sscanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -481,7 +477,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_sprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
@@ -491,7 +486,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_snprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotAlias(F, 0);
     Changed |= setOnlyWritesMemory(F, 0);
@@ -501,7 +495,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_setitimer:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
@@ -509,7 +502,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     break;
   case LibFunc_system:
     // May throw; "system" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -610,14 +602,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_mkdir:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_mktime:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
@@ -653,14 +643,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     break;
   case LibFunc_read:
     // May throw; "read" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_rewind:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_rmdir:
@@ -668,14 +656,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_realpath:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_rename:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -684,14 +670,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_readlink:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_write:
     // May throw; "write" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -739,7 +723,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_chown:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -748,7 +731,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_atoi:
@@ -764,14 +746,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_access:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_fopen:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -781,7 +761,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fdopen:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -789,7 +768,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_feof:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_free:
@@ -819,13 +797,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ftrylockfile:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_ferror:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F);
     break;
@@ -834,7 +810,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fstat:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_frexp:
@@ -850,14 +825,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fstatvfs:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_fgets:
   case LibFunc_fgets_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyWritesMemory(F, 0);
     break;
@@ -865,7 +838,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fread_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
     Changed |= setOnlyWritesMemory(F, 0);
@@ -874,7 +846,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fwrite_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -883,7 +854,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fputs_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -892,7 +862,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -900,32 +869,27 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fgetpos:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_getc:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_getlogin_r:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_getc_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_getenv:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setOnlyReadsMemory(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
@@ -934,44 +898,37 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_getchar_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     break;
   case LibFunc_getitimer:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_getpwnam:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ungetc:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_uname:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_unlink:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_unsetenv:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -979,7 +936,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_utimes:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -989,7 +945,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_putc_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_puts:
@@ -997,19 +952,16 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_perror:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_pread:
     // May throw; "pread" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_pwrite:
     // May throw; "pwrite" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -1018,12 +970,10 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_putchar_unlocked:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     break;
   case LibFunc_popen:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -1033,20 +983,17 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_pclose:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_vscanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_vsscanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1055,7 +1002,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_vfscanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -1063,7 +1009,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_vprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -1071,7 +1016,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_vsprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 1);
@@ -1079,14 +1023,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_vsnprintf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setOnlyReadsMemory(F, 2);
     break;
   case LibFunc_open:
     // May throw; "open" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1094,7 +1036,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_opendir:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1102,13 +1043,11 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_tmpfile:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     break;
   case LibFunc_times:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_htonl:
@@ -1122,7 +1061,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_lstat:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1130,7 +1068,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_lchown:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -1145,7 +1082,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     [[fallthrough]];
   case LibFunc_dunder_strdup:
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     Changed |= setDoesNotCapture(F, 0);
@@ -1160,19 +1096,16 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_under_IO_getc:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_under_IO_putc:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_dunder_isoc99_scanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
     break;
@@ -1181,7 +1114,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_statvfs64:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1189,7 +1121,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_dunder_isoc99_sscanf:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1198,7 +1129,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fopen64:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
@@ -1209,25 +1139,21 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ftello64:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_tmpfile64:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetDoesNotAlias(F);
     break;
   case LibFunc_fstat64:
   case LibFunc_fstatvfs64:
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 1);
     break;
   case LibFunc_open64:
     // May throw; "open" is a valid pthread cancellation point.
-    Changed |= setDoesNotCallback(F);
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setOnlyReadsMemory(F, 0);
@@ -1238,7 +1164,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     // arguments.
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 1);
     break;
@@ -1262,7 +1187,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setIsCold(F);
     Changed |= setNoReturn(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     break;
   case LibFunc_terminate:
     // May callback; terminate_handler may be called
@@ -1279,7 +1203,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotAccessMemory(F);
     Changed |= setDoesNotThrow(F);
-    Changed |= setDoesNotCallback(F);
     break;
   case LibFunc_acos:
   case LibFunc_acosf:
