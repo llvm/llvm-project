@@ -433,7 +433,8 @@ public:
   StateT *getOrCreateState(AnchorT anchor);
 
   /// Get leader lattice anchor in equivalence lattice anchor group, return
-  /// input lattice anchor if input not found in equivalece lattice anchor group.
+  /// input lattice anchor if input not found in equivalece lattice anchor
+  /// group.
   template <typename StateT>
   LatticeAnchor getLeaderAnchorOrSelf(LatticeAnchor latticeAnchor) const;
 
