@@ -400,7 +400,9 @@ def LoadOp : CIR_Op<"load", [
   let summary = "Load value from memory adddress";
   let description = [{
     `cir.load` reads a value (lvalue to rvalue conversion) given an address
-    backed up by a `cir.ptr` type.
+    backed up by a `cir.ptr` type. A unit attribute `deref` can be used to
+    mark the resulting value as used by another operation to dereference
+    a pointer.
 
     Example:
 
@@ -408,14 +410,19 @@ def LoadOp : CIR_Op<"load", [
 
     // Read from local variable, address in %0.
     %1 = cir.load %0 : !cir.ptr<i32>, i32
+
+    // Load address from memory at address %0. %3 is used by at least one
+    // operation that dereferences a pointer.
+    %3 = cir.load deref %0 : !cir.ptr<!cir.ptr<i32>>
     ```
   }];
 
   let arguments = (ins Arg<CIR_PointerType, "the address to load from",
-                           [MemRead]>:$addr);
+                           [MemRead]>:$addr, UnitAttr:$isDeref);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
+    (`deref` $isDeref^)?
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
@@ -465,8 +472,8 @@ def StoreOp : CIR_Op<"store", [
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
-                                              "WhileOp", "ForOp"]>,
+def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "IfOp",
+                                              "DoWhileOp", "WhileOp", "ForOp"]>,
                                  Terminator]> {
   let summary = "Return from function";
   let description = [{
@@ -501,6 +508,58 @@ def ReturnOp : CIR_Op<"return", [ParentOneOf<["FuncOp", "ScopeOp", "DoWhileOp",
   }];
 
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+
+def IfOp : CIR_Op<"if",
+     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments]>{
+
+  let summary = "the if-then-else operation";
+  let description = [{
+    The `cir.if` operation represents an if-then-else construct for
+    conditionally executing two regions of code. The operand is a `cir.bool`
+    type.
+
+    Examples:
+
+    ```mlir
+    cir.if %cond  {
+      ...
+    } else {
+      ...
+    }
+
+    cir.if %cond  {
+      ...
+    }
+
+    cir.if %cond  {
+      ...
+      cir.br ^a
+    ^a:
+      cir.yield
+    }
+    ```
+
+    `cir.if` defines no values and the 'else' can be omitted. The if/else
+    regions must be terminated. If the region has only one block, the terminator
+    can be left out, and `cir.yield` terminator will be inserted implictly.
+    Otherwise, the region must be explicitly terminated.
+  }];
+  let arguments = (ins CIR_BoolType:$condition);
+  let regions = (region AnyRegion:$thenRegion, AnyRegion:$elseRegion);
+  let hasCustomAssemblyFormat=1;
+  let hasVerifier=1;
+  let skipDefaultBuilders=1;
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$cond, "bool":$withElseRegion,
+      CArg<"BuilderCallbackRef", "buildTerminatedBody">:$thenBuilder,
+      CArg<"BuilderCallbackRef", "nullptr">:$elseBuilder)>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -553,8 +612,8 @@ def ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
-                               ParentOneOf<["ScopeOp", "WhileOp", "ForOp",
-                                            "DoWhileOp"]>]> {
+                               ParentOneOf<["IfOp", "ScopeOp", "WhileOp",
+                                            "ForOp", "DoWhileOp"]>]> {
   let summary = "Represents the default branching behaviour of a region";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations,
@@ -1002,6 +1061,47 @@ def ForOp : LoopOpBase<"for"> {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpOp
+//===----------------------------------------------------------------------===//
+
+def CmpOpKind_LT : I32EnumAttrCase<"lt", 1>;
+def CmpOpKind_LE : I32EnumAttrCase<"le", 2>;
+def CmpOpKind_GT : I32EnumAttrCase<"gt", 3>;
+def CmpOpKind_GE : I32EnumAttrCase<"ge", 4>;
+def CmpOpKind_EQ : I32EnumAttrCase<"eq", 5>;
+def CmpOpKind_NE : I32EnumAttrCase<"ne", 6>;
+
+def CmpOpKind : I32EnumAttr<
+    "CmpOpKind",
+    "compare operation kind",
+    [CmpOpKind_LT, CmpOpKind_LE, CmpOpKind_GT,
+     CmpOpKind_GE, CmpOpKind_EQ, CmpOpKind_NE]> {
+  let cppNamespace = "::cir";
+}
+
+def CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
+
+  let summary = "Compare values two values and produce a boolean result";
+  let description = [{
+    `cir.cmp` compares two input operands of the same type and produces a
+    `cir.bool` result. The kinds of comparison available are:
+    [lt,gt,ge,eq,ne]
+
+    ```mlir
+    %7 = cir.cmp(gt, %1, %2) : i32, !cir.bool
+    ```
+  }];
+
+  let results = (outs CIR_BoolType:$result);
+  let arguments = (ins Arg<CmpOpKind, "cmp kind">:$kind,
+                       CIR_AnyType:$lhs, CIR_AnyType:$rhs);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $lhs `,` $rhs  `)` `:` type($lhs) `,` type($result) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // BinOp
 //===----------------------------------------------------------------------===//
 
@@ -1180,6 +1280,37 @@ def GlobalOp : CIR_Op<"global"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+def GetGlobalOp : CIR_Op<"get_global",
+    [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Get the address of a global variable";
+  let description = [{
+    The `cir.get_global` operation retrieves the address pointing to a
+    named global variable. If the global variable is marked constant, writing
+    to the resulting address (such as through a `cir.store` operation) is
+    undefined. The resulting type must always be a `!cir.ptr<...>` type with the
+    same address space as the global variable.
+
+    Example:
+    ```mlir
+    %x = cir.get_global @gv : !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$name);
+  let results = (outs Res<CIR_PointerType, "", []>:$addr);
+
+  let assemblyFormat = [{
+    $name `:` qualified(type($addr)) attr-dict
+  }];
+
+  // `GetGlobalOp` is fully verified by its traits.
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1240,6 +1371,48 @@ def FuncOp : CIR_Op<"func", [
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
+    : Op<CIR_Dialect, mnemonic,
+         !listconcat(extra_traits,
+                     [DeclareOpInterfaceMethods<CIRCallOpInterface>,
+                      DeclareOpInterfaceMethods<SymbolUserOpInterface>])> {
+  let hasCustomAssemblyFormat = 1;
+  let skipDefaultBuilders = 1;
+  let hasVerifier = 0;
+
+  // TODO(cir): for now cir.call is just a tiny shell of what it will become.
+  // More attributes, arguments, and properties will be added in the future as
+  // the upstreaming process moves on. The verifiers is also missing for now,
+  // will add in the future.
+
+  dag commonArgs = (ins FlatSymbolRefAttr:$callee);
+}
+
+def CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {
+  let summary = "call a function";
+  let description = [{
+    The `cir.call` operation represents a direct call to a function that is
+    within the same symbol scope as the call. The callee is encoded as a symbol
+    reference attribute named `callee`.
+
+    Example:
+
+    ```mlir
+    %0 = cir.call @foo()
+    ```
+  }];
+
+  let arguments = commonArgs;
+
+  let builders = [OpBuilder<(ins "mlir::SymbolRefAttr":$callee), [{
+      $_state.addAttribute("callee", callee);
+    }]>];
 }
 
 //===----------------------------------------------------------------------===//

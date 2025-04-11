@@ -128,8 +128,14 @@ private:
 
   void GetFDEIndex();
 
-  bool FDEToUnwindPlan(dw_offset_t offset, Address startaddr,
-                       UnwindPlan &unwind_plan);
+  /// Parsed representation of a Frame Descriptor Entry.
+  struct FDE {
+    AddressRange range;
+    bool for_signal_trap = false;
+    uint32_t return_addr_reg_num = LLDB_INVALID_REGNUM;
+    std::vector<UnwindPlan::Row> rows;
+  };
+  std::optional<FDE> ParseFDE(dw_offset_t offset, const Address &startaddr);
 
   const CIE *GetCIE(dw_offset_t cie_offset);
 

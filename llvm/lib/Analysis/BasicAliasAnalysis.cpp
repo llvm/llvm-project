@@ -1533,6 +1533,16 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   return Alias;
 }
 
+// Return true for an Argument or extractvalue(Argument). These are all known
+// to not alias with FunctionLocal objects and can come up from coerced function
+// arguments.
+static bool isArgumentOrArgumentLike(const Value *V) {
+  if (isa<Argument>(V))
+    return true;
+  auto *E = dyn_cast<ExtractValueInst>(V);
+  return E && isa<Argument>(E->getOperand(0));
+}
+
 /// Provides a bunch of ad-hoc rules to disambiguate in common cases, such as
 /// array references.
 AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
@@ -1585,8 +1595,8 @@ AliasResult BasicAAResult::aliasCheck(const Value *V1, LocationSize V1Size,
 
     // Function arguments can't alias with things that are known to be
     // unambigously identified at the function level.
-    if ((isa<Argument>(O1) && isIdentifiedFunctionLocal(O2)) ||
-        (isa<Argument>(O2) && isIdentifiedFunctionLocal(O1)))
+    if ((isArgumentOrArgumentLike(O1) && isIdentifiedFunctionLocal(O2)) ||
+        (isArgumentOrArgumentLike(O2) && isIdentifiedFunctionLocal(O1)))
       return AliasResult::NoAlias;
 
     // If one pointer is the result of a call/invoke or load and the other is a

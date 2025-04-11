@@ -262,13 +262,8 @@ class DXILPrettyPrinterLegacy : public llvm::ModulePass {
 
 public:
   static char ID;
-  DXILPrettyPrinterLegacy() : ModulePass(ID), OS(dbgs()) {
-    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
-  }
 
-  explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {
-    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {}
 
   StringRef getPassName() const override {
     return "DXIL Metadata Pretty Printer";

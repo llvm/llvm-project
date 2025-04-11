@@ -26,7 +26,12 @@ using namespace llvm;
 
 const MipsMCExpr *MipsMCExpr::create(MipsMCExpr::Specifier S,
                                      const MCExpr *Expr, MCContext &Ctx) {
-  return new (Ctx) MipsMCExpr(S, Expr);
+  return new (Ctx) MipsMCExpr(Expr, S);
+}
+
+const MipsMCExpr *MipsMCExpr::create(const MCSymbol *Sym, Specifier S,
+                                     MCContext &Ctx) {
+  return new (Ctx) MipsMCExpr(MCSymbolRefExpr::create(Sym, Ctx), S);
 }
 
 const MipsMCExpr *MipsMCExpr::createGpOff(MipsMCExpr::Specifier S,
