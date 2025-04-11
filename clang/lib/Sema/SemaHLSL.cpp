@@ -1227,6 +1227,13 @@ bool clang::CreateHLSLAttributedResourceType(
       ContainedTyInfo = CTAttr->getTypeLoc();
       break;
     }
+    case attr::HLSLCounter:
+      if (ResAttrs.Counter) {
+        S.Diag(A->getLocation(), diag::warn_duplicate_attribute_exact) << A;
+        return false;
+      }
+      ResAttrs.Counter = true;
+      break;
     default:
       llvm_unreachable("unhandled resource attribute type");
     }

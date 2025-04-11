@@ -8,8 +8,8 @@ RWByteAddressBuffer Buffer1: register(u1, space2);
 RasterizerOrderedByteAddressBuffer Buffer2: register(u3, space4);
 
 // CHECK: "class.hlsl::ByteAddressBuffer" = type { target("dx.RawBuffer", i8, 0, 0) }
-// CHECK: "class.hlsl::RWByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 0) }
-// CHECK: "class.hlsl::RasterizerOrderedByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 1) }
+// CHECK: "class.hlsl::RWByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 0), target("dx.RawBuffer", i8, 1, 0) }
+// CHECK: "class.hlsl::RasterizerOrderedByteAddressBuffer" = type { target("dx.RawBuffer", i8, 1, 1), target("dx.RawBuffer", i8, 1, 1) }
 
 // CHECK: @_ZL7Buffer0 = internal global %"class.hlsl::ByteAddressBuffer" poison, align 4
 // CHECK: @_ZL7Buffer1 = internal global %"class.hlsl::RWByteAddressBuffer" poison, align 4

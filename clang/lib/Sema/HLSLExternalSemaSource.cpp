@@ -129,9 +129,14 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               ResourceClass RC, bool IsROV,
                                               bool RawBuffer) {
-  return BuiltinTypeDeclBuilder(S, Decl)
-      .addHandleMember(RC, IsROV, RawBuffer)
-      .addDefaultHandleConstructor();
+  BuiltinTypeDeclBuilder BTB(S, Decl);
+  BTB.addHandleMember(RC, IsROV, RawBuffer);
+
+  if (RC == ResourceClass::UAV && RawBuffer)
+    BTB.addCounterHandleMember(RC, IsROV, RawBuffer);
+
+  BTB.addDefaultHandleConstructor();
+  return BTB;
 }
 
 // This function is responsible for constructing the constraint expression for

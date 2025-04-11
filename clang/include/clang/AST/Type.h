@@ -6277,6 +6277,9 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t RawBuffer : 1;
 
+    LLVM_PREFERRED_TYPE(bool)
+    uint8_t Counter : 1;
+
     Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
                bool RawBuffer = false)
         : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
@@ -6284,8 +6287,9 @@ public:
     Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer) ==
-             std::tie(RHS.ResourceClass, RHS.IsROV, RHS.RawBuffer);
+      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
+                      LHS.Counter) ==
+             std::tie(RHS.ResourceClass, RHS.IsROV, RHS.RawBuffer, LHS.Counter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6326,6 +6330,7 @@ public:
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
+    ID.AddBoolean(Attrs.Counter);
   }
 
   static bool classof(const Type *T) {
