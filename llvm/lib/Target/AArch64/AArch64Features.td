@@ -818,6 +818,10 @@ def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-sc
 def FeatureAvoidLDAPUR : SubtargetFeature<"avoid-ldapur", "AvoidLDAPUR", "true",
   "Prefer add+ldapr to offset ldapur">;
 
+// Read the TLS by calling __aarch64_read_tp
+def FeatureReadTpSoft : SubtargetFeature<"read-tp-soft", "ReadTpSoft",
+  "true", "Read thread pointer from __aarch64_read_tp" >;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //

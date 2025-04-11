@@ -395,6 +395,8 @@ def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
 
 def AllowMisalignedMemAccesses : Predicate<"!Subtarget->requiresStrictAlign()">;
 
+def IsReadTPHard : Predicate<"!Subtarget->readTpSoft()">;
+def IsReadTPSoft : Predicate<"Subtarget->readTpSoft()">;
 
 //===----------------------------------------------------------------------===//
 // AArch64-specific DAG Nodes.
@@ -2133,7 +2135,18 @@ def : Pat<(AArch64mrs imm:$id),
 // The thread pointer (on Linux, at least, where this has been implemented) is
 // TPIDR_EL0.
 def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
-                       [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
+                       [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>,
+                       Requires<[IsReadTPHard]>;
+
+// __aarch64_read_tp preserves the registers x1-x7.
+// This is a pseudo inst so that we can get the encoding right,
+// complete with fixup for the aarch64_read_tp function.
+let isCall = 1,
+  Defs = [X0, X16, X17, LR], Uses = [SP] in {
+  def GETbaseTLSsoft : Pseudo<(outs), (ins),
+                       [(set X0, AArch64threadpointer)]>, Sched<[WriteBr]>,
+                       Requires<[IsReadTPSoft]>;
+}
 
 // This gets lowered into a 24-byte instruction sequence
 let Defs = [ X9, X16, X17, NZCV ], Size = 24 in {

@@ -20,6 +20,16 @@ namespace driver {
 namespace tools {
 namespace aarch64 {
 
+enum class ReadTPMode {
+  Invalid,
+  Soft,
+  TPIDR_EL0,
+  TPIDR_EL1,
+  TPIDR_EL2,
+  TPIDR_EL3,
+  TPIDRRO_EL0,
+};
+
 void getAArch64TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const llvm::opt::ArgList &Args,
                               std::vector<llvm::StringRef> &Features,
@@ -28,11 +38,14 @@ void getAArch64TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 std::string getAArch64TargetCPU(const llvm::opt::ArgList &Args,
                                 const llvm::Triple &Triple, llvm::opt::Arg *&A);
 
+ReadTPMode getReadTPMode(const Driver &D, const llvm::opt::ArgList &Args,
+                         const llvm::Triple &Triple, bool ForAS);
+
 void setPAuthABIInTriple(const Driver &D, const llvm::opt::ArgList &Args,
                          llvm::Triple &triple);
 
 } // end namespace aarch64
-} // end namespace target
+} // end namespace tools
 } // end namespace driver
 } // end namespace clang
 

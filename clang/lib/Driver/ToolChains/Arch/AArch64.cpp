@@ -192,6 +192,35 @@ getAArch64MicroArchFeaturesFromMcpu(const Driver &D, StringRef Mcpu,
   return getAArch64MicroArchFeaturesFromMtune(D, CPU, Args, Features);
 }
 
+// Select mode for reading thread pointer (-mtp=).
+aarch64::ReadTPMode aarch64::getReadTPMode(const Driver &D, const ArgList &Args,
+                                           const llvm::Triple &Triple,
+                                           bool ForAS) {
+  Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ);
+  if (A) {
+    aarch64::ReadTPMode ThreadPointer =
+        llvm::StringSwitch<aarch64::ReadTPMode>(A->getValue())
+            .Case("soft", aarch64::ReadTPMode::Soft)
+            .Case("tpidr_el0", aarch64::ReadTPMode::TPIDR_EL0)
+            .Case("tpidr_el1", aarch64::ReadTPMode::TPIDR_EL1)
+            .Case("tpidr_el2", aarch64::ReadTPMode::TPIDR_EL2)
+            .Case("tpidr_el3", aarch64::ReadTPMode::TPIDR_EL3)
+            .Case("tpidrro_el0", aarch64::ReadTPMode::TPIDRRO_EL0)
+            .Case("el0", aarch64::ReadTPMode::TPIDR_EL0)
+            .Case("el1", aarch64::ReadTPMode::TPIDR_EL1)
+            .Case("el2", aarch64::ReadTPMode::TPIDR_EL2)
+            .Case("el3", aarch64::ReadTPMode::TPIDR_EL3)
+            .Default(ReadTPMode::Invalid);
+    if (ThreadPointer != ReadTPMode::Invalid)
+      return ThreadPointer;
+    if (StringRef(A->getValue()).empty())
+      D.Diag(diag::err_drv_missing_arg_mtp) << A->getAsString(Args);
+    else
+      D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
+  }
+  return ReadTPMode::Invalid;
+}
+
 void aarch64::getAArch64TargetFeatures(const Driver &D,
                                        const llvm::Triple &Triple,
                                        const ArgList &Args,
@@ -262,19 +291,20 @@ void aarch64::getAArch64TargetFeatures(const Driver &D,
   // set to a feature list.
   Extensions.toLLVMFeatureList(Features);
 
-  if (Arg *A = Args.getLastArg(options::OPT_mtp_mode_EQ)) {
-    StringRef Mtp = A->getValue();
-    if (Mtp == "el3" || Mtp == "tpidr_el3")
-      Features.push_back("+tpidr-el3");
-    else if (Mtp == "el2" || Mtp == "tpidr_el2")
-      Features.push_back("+tpidr-el2");
-    else if (Mtp == "el1" || Mtp == "tpidr_el1")
-      Features.push_back("+tpidr-el1");
-    else if (Mtp == "tpidrro_el0")
-      Features.push_back("+tpidrro-el0");
-    else if (Mtp != "el0" && Mtp != "tpidr_el0")
-      D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
-  }
+  aarch64::ReadTPMode TPMode = getReadTPMode(D, Args, Triple, ForAS);
+
+  if (TPMode == Soft)
+    Features.push_back("+read-tp-soft");
+  else if (TPMode == TPIDR_EL1)
+    Features.push_back("+tpidr-el1");
+  else if (TPMode == TPIDR_EL2)
+    Features.push_back("+tpidr-el2");
+  else if (TPMode == TPIDR_EL3)
+    Features.push_back("+tpidr-el3");
+  else if (TPMode == TPIDRRO_EL0)
+    Features.push_back("+tpidrro-el0");
+  else if (TPMode != TPIDR_EL0 && TPMode != Soft)
+    D.Diag(diag::err_drv_invalid_mtp) << A->getAsString(Args);
 
   // Enable/disable straight line speculation hardening.
   if (Arg *A = Args.getLastArg(options::OPT_mharden_sls_EQ)) {
