@@ -257,11 +257,10 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
-void CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src, LValue dst,
-                                                    mlir::Value &result) {
+mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src, LValue dst) {
   assert(!cir::MissingFeatures::bitfields());
   cgm.errorNYI("bitfields");
-  result = {};
+  return {};
 }
 
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {

@@ -579,8 +579,7 @@ public:
   /// is 'Ty'.
   void emitStoreThroughLValue(RValue src, LValue dst, bool isInit = false);
 
-  void emitStoreThroughBitfieldLValue(RValue src, LValue dst,
-                                      mlir::Value &result);
+  mlir::Value emitStoreThroughBitfieldLValue(RValue src, LValue dstresult);
 
   /// Given a value and its clang type, returns the value casted to its memory
   /// representation.
