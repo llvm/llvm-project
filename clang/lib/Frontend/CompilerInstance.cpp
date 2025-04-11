@@ -1458,8 +1458,9 @@ static bool compileModule(CompilerInstance &ImportingInstance,
       [&]() {
         std::unique_ptr<FrontendAction> Action(
             new GenerateModuleFromModuleMapAction);
-        if (WrapGenModuleAction)
-          Action = WrapGenModuleAction(FrontendOpts, std::move(Action));
+        if (auto WrapGenModuleAction = Instance.getGenModuleActionWrapper())
+          Action = WrapGenModuleAction(Instance.getFrontendOpts(),
+                                       std::move(Action));
         Instance.ExecuteAction(*Action);
       },
       DesiredStackSize);
