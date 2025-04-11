@@ -296,8 +296,8 @@ define amdgpu_ps void @buffer_store_x1_offen_merged_glc_slc(<4 x i32> inreg %rsr
 ; GFX13-NEXT:    buffer_store_b32 v2, v8, s[0:3], null offen
 ; GFX13-NEXT:    buffer_store_b32 v3, v9, s[0:3], null offen th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_store_b32 v4, v10, s[0:3], null offen th:TH_STORE_NT
-; GFX13-NEXT:    buffer_store_b32 v5, v11, s[0:3], null offen th:TH_STORE_RT_WB
-; GFX13-NEXT:    buffer_store_b32 v6, v0, s[0:3], null offen th:TH_STORE_RT_WB
+; GFX13-NEXT:    buffer_store_b32 v5, v11, s[0:3], null offen th:TH_STORE_WB
+; GFX13-NEXT:    buffer_store_b32 v6, v0, s[0:3], null offen th:TH_STORE_WB
 ; GFX13-NEXT:    s_endpgm
   %a1 = add i32 %a, 4
   %a2 = add i32 %a, 8
