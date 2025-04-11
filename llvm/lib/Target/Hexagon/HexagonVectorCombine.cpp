@@ -43,6 +43,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
+#include "Hexagon.h"
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 
@@ -2930,11 +2931,6 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 }
 
 // Pass management.
-
-namespace llvm {
-void initializeHexagonVectorCombineLegacyPass(PassRegistry &);
-FunctionPass *createHexagonVectorCombineLegacyPass();
-} // namespace llvm
 
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {
