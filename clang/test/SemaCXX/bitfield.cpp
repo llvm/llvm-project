@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -verify
-// RUN: %clang_cc1 %s -verify -Wms-bitfield-compatibility 
+// RUN: %clang_cc1 %s -verify -Wms-bitfield-padding 
 
 // expected-no-diagnostics
 

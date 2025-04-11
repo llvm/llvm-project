@@ -1,5 +1,5 @@
 
-// RUN: %clang_cc1 -fsyntax-only -Wms-bitfield-compatibility -verify -triple armv8 -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -Wms-bitfield-padding -verify -triple armv8 -std=c++23 %s
 // RUN: %clang_cc1 -fsyntax-only -DMS_BITFIELDS -mms-bitfields -verify=msbitfields -triple armv8-apple-macos10.15 -std=c++23 %s
 
 // msbitfields-no-diagnostics
@@ -55,7 +55,7 @@ static_assert(sizeof(F) == 4);
 struct G {
   EnumU32_1 a : 15;
   EnumU64 b : 15;
-  // expected-warning@-1 {{bit-field 'b' of type 'EnumU64' has a different storage size than the preceding bit-field (8 vs 4 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'b' of type 'EnumU64' has a different storage size than the preceding bit-field (8 vs 4 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'a' declared here with type 'EnumU32_1'}}
 };
 
@@ -76,7 +76,7 @@ struct I {
   EnumU8 a : 3;
   EnumI8 b : 5;
   EnumU32_1 c : 10;
-  // expected-warning@-1 {{bit-field 'c' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'c' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'b' declared here with type 'EnumI8'}}
 };
 #ifdef MS_BITFIELDS
@@ -116,10 +116,10 @@ static_assert(sizeof(M) == 4);
 struct N {
   EnumU32_1 a : 10;
   EnumU64 b : 10;
-  // expected-warning@-1 {{bit-field 'b' of type 'EnumU64' has a different storage size than the preceding bit-field (8 vs 4 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'b' of type 'EnumU64' has a different storage size than the preceding bit-field (8 vs 4 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'a' declared here with type 'EnumU32_1'}}
   EnumU32_1 c : 10;
-  // expected-warning@-1 {{bit-field 'c' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 8 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'c' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 8 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-5 {{preceding bit-field 'b' declared here with type 'EnumU64'}}
 };
 
@@ -132,7 +132,7 @@ static_assert(sizeof(N) == 8);
 struct O {
   EnumU16 a : 10;
   EnumU32_1 b : 10;
-  // expected-warning@-1 {{bit-field 'b' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'b' of type 'EnumU32_1' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'a' declared here with type 'EnumU16'}}
 };
 #ifdef MS_BITFIELDS
@@ -144,7 +144,7 @@ static_assert(sizeof(O) == 4);
 struct P {
   EnumU32_1 a : 10;
   EnumU16 b : 10;
-  // expected-warning@-1 {{bit-field 'b' of type 'EnumU16' has a different storage size than the preceding bit-field (2 vs 4 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'b' of type 'EnumU16' has a different storage size than the preceding bit-field (2 vs 4 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'a' declared here with type 'EnumU32_1'}}
 };
 #ifdef MS_BITFIELDS
@@ -156,7 +156,7 @@ static_assert(sizeof(P) == 4);
 struct Q {
   EnumU8 a : 6;
   EnumU16 b : 6;
-  // expected-warning@-1 {{bit-field 'b' of type 'EnumU16' has a different storage size than the preceding bit-field (2 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'b' of type 'EnumU16' has a different storage size than the preceding bit-field (2 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'a' declared here with type 'EnumU8'}}
 };
 #ifdef MS_BITFIELDS
@@ -169,7 +169,7 @@ struct R {
   EnumU16 a : 9;
   EnumU16 b : 9;
   EnumU8 c : 6;
-  // expected-warning@-1 {{bit-field 'c' of type 'EnumU8' has a different storage size than the preceding bit-field (1 vs 2 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'c' of type 'EnumU8' has a different storage size than the preceding bit-field (1 vs 2 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'b' declared here with type 'EnumU16'}}
 };
 
@@ -185,7 +185,7 @@ struct S {
   char c : 4;
   char d : 4;
   short x : 7;
-  // expected-warning@-1 {{bit-field 'x' of type 'short' has a different storage size than the preceding bit-field (2 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // expected-warning@-1 {{bit-field 'x' of type 'short' has a different storage size than the preceding bit-field (2 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // expected-note@-3 {{preceding bit-field 'd' declared here with type 'char'}}
   // This is a false positive. Reporting this correctly requires duplicating the record layout process
   // in target and MS layout modes, and it's also unclear if that's the correct choice for users of

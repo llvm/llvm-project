@@ -652,9 +652,9 @@ def Packed : DiagGroup<"packed", [PackedNonPod]>;
 def PaddedBitField : DiagGroup<"padded-bitfield">;
 def Padded : DiagGroup<"padded", [PaddedBitField]>;
 def UnalignedAccess : DiagGroup<"unaligned-access">;
-def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-compatibility"> {
+def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-padding"> {
   code Documentation = [{
-    Under the MS Windows platform ABI, adjacent bit-fields are not packed if the
+    Under the Microsoft ABI, adjacent bit-fields are not packed if the
     underlying type has a different storage size. This warning indicates that a
     pair of adjacent bit-fields may not pack in the same way due to this behavioural
     difference.
@@ -679,7 +679,7 @@ def MSBitfieldCompatibility : DiagGroup<"ms-bitfield-compatibility"> {
         Enum2 field2 : 1;
       };
 
-    In each of these cases under the MS Windows platform ABI the second bit-field
+    In each of these cases under the Microsoft ABI the second bit-field
     will not be packed with the preceding bit-field, and instead will be aligned
     as if the fields were each separately defined integer fields of their respective
     storage size. For binary compatibility this is obviously and observably

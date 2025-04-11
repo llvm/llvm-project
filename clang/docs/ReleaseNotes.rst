@@ -350,7 +350,7 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
-- A new off-by-default warning ``-Wms-bitfield-compatibility`` has been added to alert to cases where bit-field
+- A new off-by-default warning ``-Wms-bitfield-padding`` has been added to alert to cases where bit-field
   packing may differ under the MS struct ABI (#GH117428).
 
 

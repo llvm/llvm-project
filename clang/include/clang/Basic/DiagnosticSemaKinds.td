@@ -6471,7 +6471,7 @@ def note_change_bitfield_sign : Note<
 def warn_ms_bitfield_mismatched_storage_packing : Warning<
   "bit-field %0 of type %1 has a different storage size than the "
   "preceding bit-field (%2 vs %3 bytes) and will not be packed under "
-  "the MS Windows platform ABI">,
+  "the Microsoft ABI">,
   InGroup<MSBitfieldCompatibility>, DefaultIgnore;
 def note_ms_bitfield_mismatched_storage_size_previous : Note<
   "preceding bit-field %0 declared here with type %1">;

@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=aarch64-linux-gnu
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=x86_64-pc-linux-gnu
 // RUN: %clang_cc1 %s -fsyntax-only -verify -triple=x86_64-scei-ps4
-// RUN: %clang_cc1 %s -fsyntax-only -verify=checkms -triple=i686-apple-darwin9 -Wms-bitfield-compatibility
+// RUN: %clang_cc1 %s -fsyntax-only -verify=checkms -triple=i686-apple-darwin9 -Wms-bitfield-padding
 
 // expected-no-diagnostics
 #include <stddef.h>
@@ -29,10 +29,10 @@ CHECK_ALIGN(struct, a, 1)
 struct __attribute__((packed)) a2 {
   short x : 9; // #a2x
   char : 0; // #a2anon
-  // checkms-warning@-1 {{bit-field '' of type 'char' has a different storage size than the preceding bit-field (1 vs 2 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field '' of type 'char' has a different storage size than the preceding bit-field (1 vs 2 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#a2x {{preceding bit-field 'x' declared here with type 'short'}}
   int y : 17;
-  // checkms-warning@-1 {{bit-field 'y' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field 'y' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#a2anon {{preceding bit-field '' declared here with type 'char'}}
 };
 
@@ -43,7 +43,7 @@ CHECK_ALIGN(struct, a2, 1)
 struct __attribute__((packed)) a3 {
   short x : 9; // #a3x
   int : 0;
-  // checkms-warning@-1 {{bit-field '' of type 'int' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field '' of type 'int' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#a3x {{preceding bit-field 'x' declared here with type 'short'}}
 };
 
@@ -59,7 +59,7 @@ CHECK_ALIGN(struct, a3, 1)
 struct __attribute__((packed)) a4 {
   short x : 9; // #a4x
   int : 1;
-  // checkms-warning@-1 {{bit-field '' of type 'int' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field '' of type 'int' has a different storage size than the preceding bit-field (4 vs 2 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#a4x {{preceding bit-field 'x' declared here with type 'short'}}
 };
 CHECK_SIZE(struct, a4, 2)
@@ -189,7 +189,7 @@ CHECK_OFFSET(struct, g4, c, 3);
 struct g5 {
   char : 1; // #g5
   __attribute__((aligned(1))) int n : 24;
-  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#g5 {{preceding bit-field '' declared here with type 'char'}}
 };
 CHECK_SIZE(struct, g5, 4);
@@ -198,7 +198,7 @@ CHECK_ALIGN(struct, g5, 4);
 struct __attribute__((packed)) g6 {
   char : 1; // #g6
   __attribute__((aligned(1))) int n : 24;
-  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#g6 {{preceding bit-field '' declared here with type 'char'}}
 };
 CHECK_SIZE(struct, g6, 4);
@@ -207,7 +207,7 @@ CHECK_ALIGN(struct, g6, 1);
 struct g7 {
   char : 1; // #g7
   __attribute__((aligned(1))) int n : 25;
-  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#g7 {{preceding bit-field '' declared here with type 'char'}}
 };
 #if defined(__ORBIS__)
@@ -220,7 +220,7 @@ CHECK_ALIGN(struct, g7, 4);
 struct __attribute__((packed)) g8 {
   char : 1; // #g8
   __attribute__((aligned(1))) int n : 25;
-  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the MS Windows platform ABI}}
+  // checkms-warning@-1 {{bit-field 'n' of type 'int' has a different storage size than the preceding bit-field (4 vs 1 bytes) and will not be packed under the Microsoft ABI}}
   // checkms-note@#g8 {{preceding bit-field '' declared here with type 'char'}}
 };
 #if defined(__ORBIS__)
