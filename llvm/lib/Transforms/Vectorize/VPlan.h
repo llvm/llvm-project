@@ -3790,6 +3790,13 @@ public:
   bool hasEarlyExit() const {
     return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
   }
+
+  /// Returns true if the scalar tail may execute after the vector loop. Note
+  /// that this relies on unneeded branches to the scalar tail loop being
+  /// removed.
+  bool hasScalarTail() const {
+    return getScalarPreheader()->getNumPredecessors() != 0;
+  }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
