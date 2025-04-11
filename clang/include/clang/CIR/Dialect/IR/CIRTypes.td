@@ -401,52 +401,51 @@ def VoidPtr : Type<
 }
 
 //===----------------------------------------------------------------------===//
-// StructType
+// RecordType
 //
 // The base type for all RecordDecls.
 //===----------------------------------------------------------------------===//
 
-def CIR_StructType : CIR_Type<"Struct", "struct",
+def CIR_RecordType : CIR_Type<"Record", "record",
     [
       DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
       MutableType,
     ]> {
-  let summary = "CIR struct type";
+  let summary = "CIR record type";
   let description = [{
-    Each unique clang::RecordDecl is mapped to a `cir.struct` and any object in
-    C/C++ that has a struct type will have a `cir.struct` in CIR.
+    Each unique clang::RecordDecl is mapped to a `cir.record` and any object in
+    C/C++ that has a struct or class type will have a `cir.record` in CIR.
 
     There are three possible formats for this type:
 
-     - Identified and complete structs: unique name and a known body.
-     - Identified and incomplete structs: unique name and unknown body.
-     - Anonymous structs: no name and a known body.
+     - Identified and complete records: unique name and a known body.
+     - Identified and incomplete records: unique name and unknown body.
+     - Anonymous records: no name and a known body.
 
-    Identified structs are uniqued by their name, and anonymous structs are
-    uniqued by their body. This means that two anonymous structs with the same
-    body will be the same type, and two identified structs with the same name
-    will be the same type. Attempting to build a struct with an existing name,
+    Identified records are uniqued by their name, and anonymous records are
+    uniqued by their body. This means that two anonymous records with the same
+    body will be the same type, and two identified records with the same name
+    will be the same type. Attempting to build a record with an existing name,
     but a different body will result in an error.
 
     A few examples:
 
     ```mlir
-        !complete = !cir.struct<struct "complete" {!cir.int<u, 8>}>
-        !incomplete = !cir.struct<struct "incomplete" incomplete>
-        !anonymous = !cir.struct<struct {!cir.int<u, 8>}>
+        !complete = !cir.record<struct "complete" {!cir.int<u, 8>}>
+        !incomplete = !cir.record<struct "incomplete" incomplete>
+        !anonymous = !cir.record<struct {!cir.int<u, 8>}>
     ```
 
-    Incomplete structs are mutable, meaning they can be later completed with a
+    Incomplete records are mutable, meaning they can be later completed with a
     body automatically updating in place every type in the code that uses the
-    incomplete struct. Mutability allows for recursive types to be represented,
-    meaning the struct can have members that refer to itself. This is useful for
+    incomplete record. Mutability allows for recursive types to be represented,
+    meaning the record can have members that refer to itself. This is useful for
     representing recursive records and is implemented through a special syntax.
-    In the example below, the `Node` struct has a member that is a pointer to a
-    `Node` struct:
+    In the example below, the `Node` record has a member that is a pointer to a
+    `Node` record:
 
     ```mlir
-        !struct = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct
-        "Node">>}>
+        !s = !cir.record<struct "Node" {!cir.ptr<!cir.record<struct "Node">>}>
     ```
   }];
 
@@ -456,18 +455,18 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     "bool":$incomplete,
     "bool":$packed,
     "bool":$padded,
-    "StructType::RecordKind":$kind
+    "RecordType::RecordKind":$kind
   );
 
   // StorageClass is defined in C++ for mutability.
-  let storageClass = "StructTypeStorage";
+  let storageClass = "RecordTypeStorage";
   let genStorageClass = 0;
 
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
 
   let builders = [
-    // Create an identified and incomplete struct type.
+    // Create an identified and incomplete record type.
     TypeBuilder<(ins
       "mlir::StringAttr":$name,
       "RecordKind":$kind
@@ -480,9 +479,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   let extraClassDeclaration = [{
     using Base::verifyInvariants;
 
-    enum RecordKind : uint32_t { Class, Union, Struct };
+    enum RecordKind : uint32_t { Struct, Union };
 
-    bool isClass() const { return getKind() == RecordKind::Class; };
     bool isStruct() const { return getKind() == RecordKind::Struct; };
     bool isUnion() const { return getKind() == RecordKind::Union; };
     bool isComplete() const { return !isIncomplete(); };
@@ -491,14 +489,12 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     size_t getNumElements() const { return getMembers().size(); };
     std::string getKindAsStr() {
       switch (getKind()) {
-      case RecordKind::Class:
-        return "class";
       case RecordKind::Union:
         return "union";
       case RecordKind::Struct:
         return "struct";
       }
-      llvm_unreachable("Invalid value for StructType::getKind()");
+      llvm_unreachable("Invalid value for RecordType::getKind()");
     }
     std::string getPrefixedName() {
       return getKindAsStr() + "." + getName().getValue().str();
@@ -508,10 +504,10 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   let hasCustomAssemblyFormat = 1;
 }
 
-// Note CIRStructType is used instead of CIR_StructType
+// Note CIRRecordType is used instead of CIR_RecordType
 // because of tablegen conflicts.
-def CIRStructType : Type<
-  CPred<"::mlir::isa<::cir::StructType>($_self)">, "CIR struct type">;
+def CIRRecordType : Type<
+  CPred<"::mlir::isa<::cir::RecordType>($_self)">, "CIR record type">;
 
 //===----------------------------------------------------------------------===//
 // Global type constraints
@@ -519,7 +515,7 @@ def CIRStructType : Type<
 
 def CIR_AnyType : AnyTypeOf<[
   CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
-  CIR_PointerType, CIR_FuncType, CIR_StructType
+  CIR_PointerType, CIR_FuncType, CIR_RecordType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES

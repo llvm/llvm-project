@@ -101,8 +101,8 @@ struct MissingFeatures {
   static bool mayHaveIntegerOverflow() { return false; }
   static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
 
-  // StructType
-  static bool structTypeLayoutInfo() { return false; }
+  // RecordType
+  static bool recordTypeLayoutInfo() { return false; }
 
   // Misc
   static bool cxxABI() { return false; }

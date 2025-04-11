@@ -46,7 +46,7 @@ class CIRGenTypes {
   CIRGenBuilderTy &builder;
 
   /// Contains the CIR type for any converted RecordDecl
-  llvm::DenseMap<const clang::Type *, cir::StructType> recordDeclTypes;
+  llvm::DenseMap<const clang::Type *, cir::RecordType> recordDeclTypes;
 
   /// Hold memoized CIRGenFunctionInfo results
   llvm::FoldingSet<CIRGenFunctionInfo> functionInfos;

@@ -117,14 +117,14 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
   const Type *key = astContext.getTagDeclType(rd).getTypePtr();
-  cir::StructType entry = recordDeclTypes[key];
+  cir::RecordType entry = recordDeclTypes[key];
 
   // If we don't have an entry for this record yet, create one.
   // We create an incomplete type initially. If `rd` is complete, we will
   // add the members below.
   if (!entry) {
     auto name = getRecordTypeName(rd, "");
-    entry = builder.getIncompleteStructTy(name, rd);
+    entry = builder.getIncompleteRecordTy(name, rd);
     recordDeclTypes[key] = entry;
   }
 

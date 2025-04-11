@@ -56,7 +56,7 @@ Type CIRDialect::parseType(DialectAsmParser &parser) const {
 
   // Type is not tablegen'd: try to parse as a raw C++ type.
   return StringSwitch<function_ref<Type()>>(mnemonic)
-      .Case("struct", [&] { return StructType::parse(parser); })
+      .Case("record", [&] { return RecordType::parse(parser); })
       .Default([&] {
         parser.emitError(typeLoc) << "unknown CIR type: " << mnemonic;
         return Type();
@@ -73,10 +73,10 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 }
 
 //===----------------------------------------------------------------------===//
-// StructType Definitions
+// RecordType Definitions
 //===----------------------------------------------------------------------===//
 
-Type StructType::parse(mlir::AsmParser &parser) {
+Type RecordType::parse(mlir::AsmParser &parser) {
   FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
   const auto loc = parser.getCurrentLocation();
   const auto eLoc = parser.getEncodedSourceLoc(loc);
@@ -87,15 +87,13 @@ Type StructType::parse(mlir::AsmParser &parser) {
     return {};
 
   // TODO(cir): in the future we should probably separate types for different
-  // source language declarations such as cir.class, cir.union, and cir.struct
+  // source language declarations such as cir.record and cir.union
   if (parser.parseOptionalKeyword("struct").succeeded())
     kind = RecordKind::Struct;
   else if (parser.parseOptionalKeyword("union").succeeded())
     kind = RecordKind::Union;
-  else if (parser.parseOptionalKeyword("class").succeeded())
-    kind = RecordKind::Class;
   else {
-    parser.emitError(loc, "unknown struct type");
+    parser.emitError(loc, "unknown record type");
     return {};
   }
 
@@ -144,16 +142,16 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (name && incomplete) { // Identified & incomplete
     type = getChecked(eLoc, context, name, kind);
   } else if (!incomplete) { // complete
-    parser.emitError(loc, "complete structs are not yet supported");
+    parser.emitError(loc, "complete records are not yet supported");
   } else { // anonymous & incomplete
-    parser.emitError(loc, "anonymous structs must be complete");
+    parser.emitError(loc, "anonymous records must be complete");
     return {};
   }
 
   return type;
 }
 
-void StructType::print(mlir::AsmPrinter &printer) const {
+void RecordType::print(mlir::AsmPrinter &printer) const {
   FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
   printer << '<';
 
@@ -163,9 +161,6 @@ void StructType::print(mlir::AsmPrinter &printer) const {
     break;
   case RecordKind::Union:
     printer << "union ";
-    break;
-  case RecordKind::Class:
-    printer << "class ";
     break;
   }
 
@@ -194,28 +189,28 @@ void StructType::print(mlir::AsmPrinter &printer) const {
 }
 
 mlir::LogicalResult
-StructType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
+RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                    bool incomplete, bool packed, bool padded,
-                   StructType::RecordKind kind) {
+                   RecordType::RecordKind kind) {
   if (name && name.getValue().empty()) {
-    emitError() << "identified structs cannot have an empty name";
+    emitError() << "identified records cannot have an empty name";
     return mlir::failure();
   }
   return mlir::success();
 }
 
-::llvm::ArrayRef<mlir::Type> StructType::getMembers() const {
+::llvm::ArrayRef<mlir::Type> RecordType::getMembers() const {
   return getImpl()->members;
 }
 
-bool StructType::isIncomplete() const { return getImpl()->incomplete; }
+bool RecordType::isIncomplete() const { return getImpl()->incomplete; }
 
-mlir::StringAttr StructType::getName() const { return getImpl()->name; }
+mlir::StringAttr RecordType::getName() const { return getImpl()->name; }
 
-bool StructType::getIncomplete() const { return getImpl()->incomplete; }
+bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
 
-cir::StructType::RecordKind StructType::getKind() const {
+cir::RecordType::RecordKind RecordType::getKind() const {
   return getImpl()->kind;
 }
 
@@ -224,16 +219,16 @@ cir::StructType::RecordKind StructType::getKind() const {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize
-StructType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+RecordType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                               ::mlir::DataLayoutEntryListRef params) const {
-  assert(!cir::MissingFeatures::structTypeLayoutInfo());
+  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
   return llvm::TypeSize::getFixed(8);
 }
 
 uint64_t
-StructType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                             ::mlir::DataLayoutEntryListRef params) const {
-  assert(!cir::MissingFeatures::structTypeLayoutInfo());
+  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
   return 4;
 }
 
@@ -602,5 +597,5 @@ void CIRDialect::registerTypes() {
       >();
 
   // Register raw C++ types.
-  // TODO(CIR) addTypes<StructType>();
+  // TODO(CIR) addTypes<RecordType>();
 }

@@ -21,7 +21,7 @@
 namespace cir {
 
 namespace detail {
-struct StructTypeStorage;
+struct RecordTypeStorage;
 } // namespace detail
 
 bool isAnyFloatingPointType(mlir::Type t);
