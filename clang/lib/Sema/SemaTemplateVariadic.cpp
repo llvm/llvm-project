@@ -1286,7 +1286,7 @@ TemplateArgumentLoc Sema::getTemplateArgumentPackExpansionPattern(
     Expr *Pattern = Expansion->getPattern();
     Ellipsis = Expansion->getEllipsisLoc();
     NumExpansions = Expansion->getNumExpansions();
-    return TemplateArgumentLoc(Pattern, Pattern);
+    return TemplateArgumentLoc(TemplateArgument(Pattern), Pattern);
   }
 
   case TemplateArgument::TemplateExpansion:

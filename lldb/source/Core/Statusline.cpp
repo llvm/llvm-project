@@ -126,9 +126,7 @@ void Statusline::Redraw(bool update) {
     return;
   }
 
-  StreamString stream;
-  ExecutionContext exe_ctx =
-      m_debugger.GetCommandInterpreter().GetExecutionContext();
+  ExecutionContext exe_ctx = m_debugger.GetSelectedExecutionContext();
 
   // For colors and progress events, the format entity needs access to the
   // debugger, which requires a target in the execution context.
@@ -139,6 +137,7 @@ void Statusline::Redraw(bool update) {
   if (auto frame_sp = exe_ctx.GetFrameSP())
     symbol_ctx = frame_sp->GetSymbolContext(eSymbolContextEverything);
 
+  StreamString stream;
   if (auto *format = m_debugger.GetStatuslineFormat())
     FormatEntity::Format(*format, stream, &symbol_ctx, &exe_ctx, nullptr,
                          nullptr, false, false);

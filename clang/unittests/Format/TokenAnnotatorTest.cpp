@@ -2836,6 +2836,28 @@ TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
   Tokens = Annotate("!cond");
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_TableGenCondOperator);
 
+  // The paste operator should not be treated as a preprocessor directive even
+  // if it is on a separate line.
+  Tokens = Annotate("def x\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[2]);
+  Tokens = Annotate("def x\n"
+                    "#define x\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[5]);
+  Tokens = Annotate("def x\n"
+                    "#ifdef x\n"
+                    "#else\n"
+                    "#endif\n"
+                    "#embed {}");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+  EXPECT_EQ(Tokens[1]->Next, Tokens[9]);
+
   auto AnnotateValue = [this, &Style](StringRef Code) {
     // Values are annotated only in specific context.
     auto Result = annotate(("def X { let V = " + Code + "; }").str(), Style);

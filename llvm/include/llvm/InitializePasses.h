@@ -239,7 +239,7 @@ void initializePostDomViewerWrapperPassPass(PassRegistry &);
 void initializePostDominatorTreeWrapperPassPass(PassRegistry &);
 void initializePostInlineEntryExitInstrumenterPass(PassRegistry &);
 void initializePostMachineSchedulerLegacyPass(PassRegistry &);
-void initializePostRAHazardRecognizerPass(PassRegistry &);
+void initializePostRAHazardRecognizerLegacyPass(PassRegistry &);
 void initializePostRAMachineSinkingPass(PassRegistry &);
 void initializePostRASchedulerLegacyPass(PassRegistry &);
 void initializePreISelIntrinsicLoweringLegacyPassPass(PassRegistry &);

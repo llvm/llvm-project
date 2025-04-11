@@ -7379,6 +7379,14 @@ private:
   friend class ASTStmtWriter;
 };
 
+/// Insertion operator for diagnostics.  This allows sending
+/// Expr into a diagnostic with <<.
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const Expr *E) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
+  return DB;
+}
+
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_EXPR_H

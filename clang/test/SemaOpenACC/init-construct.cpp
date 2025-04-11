@@ -18,9 +18,9 @@ void uses() {
 #pragma acc init
 #pragma acc init if (getI() < getS())
 #pragma acc init device_num(getI())
-#pragma acc init device_type(SOMETHING) device_num(getI())
-#pragma acc init device_type(SOMETHING) if (getI() < getS())
-#pragma acc init device_type(SOMETHING) device_num(getI()) if (getI() < getS())
+#pragma acc init device_type(host) device_num(getI())
+#pragma acc init device_type(nvidia) if (getI() < getS())
+#pragma acc init device_type(multicore) device_num(getI()) if (getI() < getS())
 
   // expected-error@+1{{value of type 'struct NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc init if (NC)
@@ -41,8 +41,8 @@ void TestInst() {
   T t;
 #pragma acc init
 #pragma acc init if (T::value < T{})
-#pragma acc init device_type(SOMETHING) device_num(getI()) if (getI() < getS())
-#pragma acc init device_type(SOMETHING) device_type(T) device_num(t) if (t < T::value) device_num(getI()) if (getI() < getS())
+#pragma acc init device_type(radeon) device_num(getI()) if (getI() < getS())
+#pragma acc init device_type(multicore) device_type(host) device_num(t) if (t < T::value) device_num(getI()) if (getI() < getS())
 
   // expected-error@+1{{value of type 'const NotConvertible' is not contextually convertible to 'bool'}}
 #pragma acc init if (T::NCValue)
