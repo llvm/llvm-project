@@ -3248,8 +3248,8 @@ static bool initGlobalResourceDecl(Sema &S, VarDecl *VD) {
   return initVarDeclWithCtor(S, VD, Args);
 }
 
-// Returns true in the initialization has been handled;
-// Return false to let Clang handle the default initializaton.
+// Returns true if the initialization has been handled.
+// Returns false to use default initialization.
 bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   // Objects in the hlsl_constant address space are initialized
   // externally, so don't synthesize an implicit initializer.
@@ -3261,7 +3261,8 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
     return false;
 
   // FIXME: We currectly support only simple resources - no arrays of resources
-  // or resources in user defined structs).
+  // or resources in user defined structs.
+  // (llvm/llvm-project#133835, llvm/llvm-project#133837)
   if (VD->getType()->isHLSLResourceRecord())
     return initGlobalResourceDecl(SemaRef, VD);
 
