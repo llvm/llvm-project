@@ -1155,9 +1155,10 @@ bool GCNSchedStage::initGCNRegion() {
   Unsched.reserve(DAG.NumRegionInstrs);
   if (StageID == GCNSchedStageID::OccInitialSchedule ||
       StageID == GCNSchedStageID::ILPInitialSchedule) {
+    const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG.TII);
     for (auto &I : DAG) {
       Unsched.push_back(&I);
-      if (AMDGPU::isIGLPMutationOnly(I.getOpcode()))
+      if (SII->isIGLPMutationOnly(I.getOpcode()))
         DAG.RegionsWithIGLPInstrs[RegionIdx] = true;
     }
   } else {
@@ -2041,8 +2042,9 @@ void GCNScheduleDAGMILive::updateRegionBoundaries(
 }
 
 static bool hasIGLPInstrs(ScheduleDAGInstrs *DAG) {
-  return any_of(*DAG, [](MachineBasicBlock::iterator MI) {
-    return AMDGPU::isIGLPMutationOnly(MI->getOpcode());
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(DAG->TII);
+  return any_of(*DAG, [SII](MachineBasicBlock::iterator MI) {
+    return SII->isIGLPMutationOnly(MI->getOpcode());
   });
 }
 

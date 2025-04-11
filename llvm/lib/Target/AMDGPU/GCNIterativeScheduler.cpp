@@ -121,9 +121,9 @@ void GCNIterativeScheduler::printSchedRP(raw_ostream &OS,
 
 void GCNIterativeScheduler::swapIGLPMutations(const Region &R, bool IsReentry) {
   bool HasIGLPInstrs = false;
-
+  const SIInstrInfo *SII = static_cast<const SIInstrInfo *>(TII);
   for (MachineBasicBlock::iterator I = R.Begin; I != R.End; I++) {
-    if (AMDGPU::isIGLPMutationOnly(I->getOpcode())) {
+    if (SII->isIGLPMutationOnly(I->getOpcode())) {
       HasIGLPInstrs = true;
       break;
     }
@@ -134,6 +134,7 @@ void GCNIterativeScheduler::swapIGLPMutations(const Region &R, bool IsReentry) {
     SavedMutations.swap(Mutations);
     auto SchedPhase = IsReentry ? AMDGPU::SchedulingPhase::PreRAReentry
                                 : AMDGPU::SchedulingPhase::Initial;
+
     addMutation(createIGroupLPDAGMutation(SchedPhase));
   }
 }

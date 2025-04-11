@@ -19,10 +19,6 @@ namespace AMDGPU {
 // The current phase of instruction scheduling
 enum class SchedulingPhase { Initial, PreRAReentry, PostRA };
 
-// Return true if the instruction is mutually exclusive with all non-IGLP DAG
-// mutations, requiring all other mutations to be disabled.
-bool isIGLPMutationOnly(unsigned Opcode);
-
 } // namespace AMDGPU
 
 std::unique_ptr<ScheduleDAGMutation>
