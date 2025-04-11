@@ -200,7 +200,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   switch (s.getDirectiveKind()) {
@@ -223,7 +223,7 @@ CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
@@ -233,21 +233,21 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   return emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                                s.clauses());
 }
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   return emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                               s.clauses());
 }
 
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   return emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
                                    s.getDirectiveLoc(), s.clauses());
 }
