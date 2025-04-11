@@ -688,73 +688,44 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
                                 bool hasBA, bool hasGP,
                                 const AArch64BuildAttrSubsections &baInfo,
                                 const gnuPropertiesInfo &gpInfo) {
+
+  auto serializeUnsigned = [&](unsigned valueLow, unsigned valueHigh,
+                               bool isBE) -> std::array<uint8_t, 16> {
+    std::array<uint8_t, 16> arr;
+    for (size_t i = 0; i < 8; ++i) {
+      arr[i] = static_cast<uint8_t>(
+          (static_cast<uint64_t>(valueLow) >> (8 * (isBE ? (7 - i) : i))) &
+          0xFF);
+      arr[i + 8] = static_cast<uint8_t>(
+          (static_cast<uint64_t>(valueHigh) >> (8 * (isBE ? (7 - i) : i))) &
+          0xFF);
+    };
+    return arr;
+  };
+
   if (hasBA && hasGP) {
     if (!gpInfo.aarch64PauthAbiCoreInfo.empty()) {
-      // check for a mismatch
-      auto deserializeArray = [&](size_t offset, bool isBE) {
-        unsigned value = 0;
-        for (size_t i = 0; i < 8; ++i) {
-          if (isBE)
-            value = (value << 8) | gpInfo.aarch64PauthAbiCoreInfo[i + offset];
-          else
-            value |= static_cast<uint64_t>(
-                         gpInfo.aarch64PauthAbiCoreInfo[i + offset])
-                     << (8 * i);
-        };
-        return value;
-      };
-      unsigned gnuPropPauthPlatform = deserializeArray(0, isBE);
-      if (baInfo.pauth.tagPlatform != gnuPropPauthPlatform)
+      auto baPauth = serializeUnsigned(baInfo.pauth.tagPlatform,
+                                       baInfo.pauth.tagSchema, isBE);
+      if (gpInfo.aarch64PauthAbiCoreInfo != ArrayRef<uint8_t>(baPauth))
         ErrAlways(ctx)
             << tPointer
-            << "Pauth Platform mismatch: file contains both GNU properties and "
-               "AArch64 build attributes sections\nGNU properties: "
-            << gnuPropPauthPlatform
-            << "\nAArch64 build attributes: " << baInfo.pauth.tagPlatform;
-      unsigned gnuPropPauthScheme = deserializeArray(8, isBE);
-      if (baInfo.pauth.tagSchema != gnuPropPauthScheme)
-        ErrAlways(ctx)
-            << tPointer
-            << "Pauth Schema mismatch: file contains both GNU properties and "
-               "AArch64 build attributes sections\nGNU properties: "
-            << gnuPropPauthScheme
-            << "\nAArch64 build attributes: " << baInfo.pauth.tagSchema;
+            << " Pauth Data mismatch: file contains both GNU properties and "
+               "AArch64 build attributes sections with different Pauth data";
     }
-    if (baInfo.fAndB.tagBTI != (gpInfo.andFeatures & 0x01))
-      ErrAlways(ctx)
-          << tPointer
-          << "Features BTI mismatch: file contains both GNU properties and "
-             "AArch64 build attributes sections\nGNU properties: "
-          << (gpInfo.andFeatures & 0x01)
-          << "\nAArch64 build attributes: " << baInfo.fAndB.tagBTI;
-    if (baInfo.fAndB.tagPAC != ((gpInfo.andFeatures >> 1) & 0x01))
-      ErrAlways(ctx)
-          << tPointer
-          << "Feature PAC mismatch: file contains both GNU properties and "
-             "AArch64 build attributes sections\nGNU properties: "
-          << ((gpInfo.andFeatures >> 1) & 0x01)
-          << "\nAArch64 build attributes: " << baInfo.fAndB.tagPAC;
-    if (baInfo.fAndB.tagGCS != ((gpInfo.andFeatures >> 2) & 0x01))
-      ErrAlways(ctx)
-          << tPointer
-          << "Feature GCS mismatch: file contains both GNU properties and "
-             "AArch64 build attributes sections\nGNU properties: "
-          << ((gpInfo.andFeatures >> 2) & 0x01)
-          << "\nAArch64 build attributes: " << baInfo.fAndB.tagGCS;
+    if (baInfo.fAndB.tagBTI != (gpInfo.andFeatures & 0x01) ||
+        baInfo.fAndB.tagPAC != ((gpInfo.andFeatures >> 1) & 0x01) ||
+        baInfo.fAndB.tagGCS != ((gpInfo.andFeatures >> 2) & 0x01))
+      ErrAlways(ctx) << tPointer
+                     << " Features Data mismatch: file contains both GNU "
+                        "properties and AArch64 build attributes sections with "
+                        "different And Features data";
   }
 
   if (hasBA && !hasGP) {
     if (baInfo.pauth.tagPlatform || baInfo.pauth.tagSchema) {
-      auto serializeUnsigned = [&](unsigned value, size_t offset, bool isBE) {
-        for (size_t i = 0; i < 8; ++i) {
-          tPointer->aarch64PauthAbiCoreInfoStorage[i + offset] =
-              static_cast<uint8_t>(
-                  (static_cast<uint64_t>(value) >> (8 * (isBE ? (7 - i) : i))) &
-                  0xFF);
-        };
-      };
-      serializeUnsigned(baInfo.pauth.tagPlatform, 0, isBE);
-      serializeUnsigned(baInfo.pauth.tagSchema, 8, isBE);
+      tPointer->aarch64PauthAbiCoreInfoStorage = serializeUnsigned(
+          baInfo.pauth.tagPlatform, baInfo.pauth.tagSchema, isBE);
       tPointer->aarch64PauthAbiCoreInfo =
           tPointer->aarch64PauthAbiCoreInfoStorage;
     }

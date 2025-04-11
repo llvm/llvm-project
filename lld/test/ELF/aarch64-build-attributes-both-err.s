@@ -13,18 +13,8 @@
 // RUN: llvm-mc -triple=aarch64_be %s -filetype=obj -o %t.o
 // RUN: not ld.lld -EB %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 
-// ERR: Pauth Platform mismatch: file contains both GNU properties and AArch64 build attributes sections
-// ERR-NEXT: GNU properties: 305419896
-// ERR-NEXT: AArch64 build attributes: 5
-// ERR: Pauth Schema mismatch: file contains both GNU properties and AArch64 build attributes sections
-// ERR-NEXT: GNU properties: 2271560481
-// ERR-NEXT: AArch64 build attributes: 5
-// ERR: Features BTI mismatch: file contains both GNU properties and AArch64 build attributes sections
-// ERR-NEXT: GNU properties: 0
-// ERR-NEXT: AArch64 build attributes: 1
-// ERR: Feature GCS mismatch: file contains both GNU properties and AArch64 build attributes sections
-// ERR-NEXT: GNU properties: 0
-// ERR-NEXT: AArch64 build attributes: 1
+// ERR: Pauth Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different Pauth data
+// ERR-NEXT: Features Data mismatch: file contains both GNU properties and AArch64 build attributes sections with different And Features data
 
 .aeabi_subsection aeabi_pauthabi, required, uleb128
 .aeabi_attribute Tag_PAuth_Platform, 5
