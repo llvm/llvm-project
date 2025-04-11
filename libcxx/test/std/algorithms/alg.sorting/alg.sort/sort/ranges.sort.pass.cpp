@@ -116,10 +116,8 @@ constexpr void test_iterators() {
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
-#if __cpp_consteval >= 202211L // TODO: Remove this guard when MSVC implements P2564R3.
   test_iterators_1<consteval_random_access_iterator<int*>>();
   test_iterators_1<consteval_contiguous_iterator<int*>>();
-#endif
 }
 
 constexpr bool test() {

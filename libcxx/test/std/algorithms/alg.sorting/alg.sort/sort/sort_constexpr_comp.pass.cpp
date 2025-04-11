@@ -116,7 +116,6 @@ int main(int, char**)
     static_assert(test_pointers<17, int, contiguous_iterator<int**>>());
 
     // Test consteval-only operations
-#  if __cpp_consteval >= 202211L // TODO: Remove this guard when MSVC implements P2564R3.
     (void)test<7, int, consteval_random_access_iterator<int*>>();
     (void)test<7, int, consteval_contiguous_iterator<int*>>();
     (void)test<LargeN, int, consteval_random_access_iterator<int*>>();
@@ -146,7 +145,6 @@ int main(int, char**)
     static_assert(test_pointers<17, const char, consteval_contiguous_iterator<const char**>>());
     static_assert(test_pointers<17, int, consteval_random_access_iterator<int**>>());
     static_assert(test_pointers<17, int, consteval_contiguous_iterator<int**>>());
-#  endif
 #endif
 
     return 0;
