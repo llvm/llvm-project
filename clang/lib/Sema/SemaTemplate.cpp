@@ -4377,6 +4377,13 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
   if (VarTemplateSpecializationDecl *Spec =
           Template->findSpecialization(CTAI.CanonicalConverted, InsertPos)) {
     checkSpecializationReachability(TemplateNameLoc, Spec);
+    if (Spec->getType()->isUndeducedType()) {
+      // We are substituting the initializer of this variable template
+      // specialization.
+      Diag(TemplateNameLoc, diag::err_var_template_spec_type_depends_on_self)
+          << Spec << Spec->getType();
+      return true;
+    }
     // If we already have a variable template specialization, return it.
     return Spec;
   }
