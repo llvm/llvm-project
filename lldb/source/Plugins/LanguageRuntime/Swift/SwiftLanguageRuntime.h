@@ -376,7 +376,9 @@ public:
 
   /// Ask Remote Mirrors about the children of a composite type.
   llvm::Expected<uint32_t> GetNumChildren(CompilerType type,
-                                          ExecutionContextScope *exe_scope);
+                                          ExecutionContextScope *exe_scope,
+                                          bool include_superclass = true,
+                                          bool include_clang_types = true);
 
   /// Determine the enum case name for the \p data value of the enum \p type.
   /// This is performed using Swift reflection.
@@ -422,7 +424,7 @@ public:
       uint64_t &language_flags);
 
   /// Ask Remote Mirrors about the fields of a composite type.
-  std::optional<unsigned> GetNumFields(CompilerType type,
+  llvm::Expected<unsigned> GetNumFields(CompilerType type,
                                         ExecutionContext *exe_ctx);
 
   /// Ask Remote Mirrors for the size of a Swift type.

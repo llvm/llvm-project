@@ -709,8 +709,17 @@ CompilerType GetTypedefedTypeRecursive(CompilerType type) {
 } // namespace
 
 llvm::Expected<uint32_t>
-SwiftLanguageRuntime::GetNumChildren(CompilerType type,
-                                     ExecutionContextScope *exe_scope) {
+SwiftLanguageRuntime::GetNumFields(CompilerType type,
+                                   ExecutionContext *exe_ctx) {
+  if (exe_ctx)
+    return GetNumChildren(type, exe_ctx->GetBestExecutionContextScope(), false,
+                          false);
+ return llvm::createStringError("no execution context");
+}
+
+llvm::Expected<uint32_t> SwiftLanguageRuntime::GetNumChildren(
+    CompilerType type, ExecutionContextScope *exe_scope,
+    bool include_superclass, bool include_clang_types) {
   LLDB_SCOPED_TIMER();
 
   auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
@@ -726,7 +735,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
       return pack_type->count;
 
   // Deal with Clang types.
-  {
+  if (include_clang_types) {
     CompilerType clang_type =
         LookupAnonymousClangType(type.GetMangledTypeName().AsCString());
     if (!clang_type)
@@ -806,7 +815,7 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
       if (GetWeakReferent(ts, type))
         return 1;
       break;
-    default:
+    case swift::reflection::ReferenceKind::Strong:
       break;
     }
 
@@ -838,7 +847,8 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
                type.GetMangledTypeName(), rti->getNumFields());
 
       // The superclass, if any, is an extra child.
-      if (reflection_ctx->LookupSuperclass(*tr, ts.GetDescriptorFinder()))
+      if (include_superclass &&
+          reflection_ctx->LookupSuperclass(*tr, ts.GetDescriptorFinder()))
         return rti->getNumFields() + 1;
       return rti->getNumFields();
     }
@@ -865,91 +875,6 @@ SwiftLanguageRuntime::GetNumChildren(CompilerType type,
   LogUnimplementedTypeKind(__FUNCTION__, type);
   return llvm::createStringError("GetNumChildren unimplemented for type " +
                                  type.GetMangledTypeName().GetString());
-}
-
-std::optional<unsigned>
-SwiftLanguageRuntime::GetNumFields(CompilerType type,
-                                   ExecutionContext *exe_ctx) {
-  auto ts_sp = type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>();
-  if (!ts_sp)
-    return {};
-  auto &ts = *ts_sp;
-
-  using namespace swift::reflection;
-  // Try the static type metadata.
-  const TypeRef *tr = nullptr;
-  auto ti_or_err = GetSwiftRuntimeTypeInfo(
-      type, exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr, &tr);
-  if (!ti_or_err) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), ti_or_err.takeError(), "{0}");
-    return {};
-  }
-  auto *ti = &*ti_or_err;
-
-  // Structs and Tuples.
-  switch (ti->getKind()) {
-  case TypeInfoKind::Record: {
-    // Structs and Tuples.
-    auto *rti = llvm::cast<RecordTypeInfo>(ti);
-    switch (rti->getRecordKind()) {
-    case RecordKind::ExistentialMetatype:
-    case RecordKind::ThickFunction:
-      // There are two fields, `function` and `context`, but they're not exposed
-      // by lldb.
-      return 0;
-    case RecordKind::OpaqueExistential:
-      // `OpaqueExistential` is documented as:
-      //     An existential is a three-word buffer followed by value metadata...
-      // The buffer is exposed as fields named `payload_data_{0,1,2}`, and
-      // the number of fields are increased to match.
-      return rti->getNumFields() + 3;
-    default:
-      return rti->getNumFields();
-    }
-  }
-  case TypeInfoKind::Builtin: {
-    // Clang types without debug info may present themselves like this.
-    return {};
-  }
-  case TypeInfoKind::Enum: {
-    auto *eti = llvm::cast<EnumTypeInfo>(ti);
-    return eti->getNumPayloadCases();
-  }
-  case TypeInfoKind::Reference: {
-    // Objects.
-    auto *rti = llvm::cast<ReferenceTypeInfo>(ti);
-    switch (rti->getReferenceKind()) {
-    case ReferenceKind::Weak:
-    case ReferenceKind::Unowned:
-    case ReferenceKind::Unmanaged:
-      if (auto referent = GetWeakReferent(ts, type))
-        return referent.GetNumFields(exe_ctx);
-      return 0;
-    case ReferenceKind::Strong:
-      ThreadSafeReflectionContext reflection_ctx = GetReflectionContext();
-      if (!reflection_ctx)
-        return {};
-      if (!tr)
-        return {};
-
-      LLDBTypeInfoProvider tip(*this, ts);
-      auto cti_or_err = reflection_ctx->GetClassInstanceTypeInfo(
-          *tr, &tip, ts.GetDescriptorFinder());
-      if (!cti_or_err) {
-        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), cti_or_err.takeError(),
-                        "GetNumFields failed: {0}");
-        return {};
-      }
-      if (auto *rti = llvm::dyn_cast_or_null<RecordTypeInfo>(&*cti_or_err))
-        return rti->getNumFields();
-
-      return {};
-    }
-  }
-  default:
-    LogUnimplementedTypeKind(__FUNCTION__, type);
-    return {};
-  }
 }
 
 static std::pair<SwiftLanguageRuntime::LookupResult, std::optional<size_t>>
