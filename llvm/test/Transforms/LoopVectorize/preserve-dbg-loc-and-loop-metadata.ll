@@ -1,6 +1,5 @@
 ; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S | FileCheck %s -check-prefix DEBUGLOC
-; RUN: opt < %s -passes=debugify,loop-vectorize -force-vector-width=4 -force-widen-divrem-via-safe-divisor=0 -S --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DEBUGLOC
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; This test makes sure we don't duplicate the loop vectorizer's metadata
@@ -34,8 +33,8 @@ for.end:                                          ; preds = %for.body
 define void @widen_ptr_induction_dbg(ptr %start, ptr %end) {
 ; DEBUGLOC-LABEL: define void @widen_ptr_induction_dbg(
 ; DEBUGLOC: vector.body:
+; DEBUGLOC-NEXT: = phi i64
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC:[0-9]+]]
-; DEBUGLOC: = phi i64
 ;
 ; DEBUGLOC: loop:
 ; DEBUGLOC-NEXT: = phi ptr {{.+}}, !dbg ![[PTRIVLOC]]

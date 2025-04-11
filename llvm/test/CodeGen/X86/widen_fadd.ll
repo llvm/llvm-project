@@ -252,16 +252,16 @@ define void @widen_fadd_v2f32_v16f32(ptr %a0, ptr %b0, ptr %c0) {
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm7 = mem[0],zero
 ; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm8 = mem[0],zero
 ; AVX512VL-NEXT:    vaddps %xmm7, %xmm8, %xmm7
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm6
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm4
-; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm5 = [0,2,8,10,0,2,8,10]
-; AVX512VL-NEXT:    # zmm5 = mem[0,1,2,3,0,1,2,3]
-; AVX512VL-NEXT:    vpermi2pd %zmm6, %zmm4, %zmm5
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm3, %zmm2, %zmm2
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
 ; AVX512VL-NEXT:    vpermi2pd %ymm2, %ymm0, %ymm1
-; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm5, %zmm0
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm7, %zmm6, %zmm0
+; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm5, %zmm4, %zmm2
+; AVX512VL-NEXT:    vbroadcasti64x4 {{.*#+}} zmm3 = [0,2,8,10,0,2,8,10]
+; AVX512VL-NEXT:    # zmm3 = mem[0,1,2,3,0,1,2,3]
+; AVX512VL-NEXT:    vpermi2pd %zmm0, %zmm2, %zmm3
+; AVX512VL-NEXT:    vinsertf64x4 $0, %ymm1, %zmm3, %zmm0
 ; AVX512VL-NEXT:    vmovupd %zmm0, (%rdx)
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq

@@ -89,6 +89,7 @@ list(APPEND CLANG_TEST_DEPS
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
     cir-opt
+    cir-translate
     )
 endif()
 
@@ -136,6 +137,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-link
     llvm-lto2
     llvm-mc
     llvm-modextract

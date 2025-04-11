@@ -55,7 +55,8 @@ define void @caller(i32 %n) {
 ; LA64-NEXT:    sub.d $a0, $sp, $a0
 ; LA64-NEXT:    move $sp, $a0
 ; LA64-NEXT:    addi.d $a1, $s8, 0
-; LA64-NEXT:    bl %plt(callee)
+; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
+; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    addi.d $sp, $fp, -64
 ; LA64-NEXT:    ld.d $s8, $sp, 40 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $fp, $sp, 48 # 8-byte Folded Reload

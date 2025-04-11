@@ -10,30 +10,6 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICINSTALLAPI_H
 
 #include "clang/Basic/Diagnostic.h"
-namespace clang {
-namespace diag {
-enum {
-#define DIAG(ENUM, FLAGS, DEFAULT_MAPPING, DESC, GROUP, SFINAE, NOWERROR,      \
-             SHOWINSYSHEADER, SHOWINSYSMACRO, DEFERRABLE, CATEGORY)            \
-  ENUM,
-#define INSTALLAPISTART
-#include "clang/Basic/DiagnosticInstallAPIKinds.inc"
-#undef DIAG
-  NUM_BUILTIN_INSTALLAPI_DIAGNOSTICS
-};
+#include "clang/Basic/DiagnosticInstallAPIInterface.inc"
 
-#define DIAG_ENUM(ENUM_NAME)                                                   \
-  namespace ENUM_NAME {                                                        \
-  enum {
-#define DIAG_ENUM_ITEM(IDX, NAME) NAME = IDX,
-#define DIAG_ENUM_END()                                                        \
-  }                                                                            \
-  ;                                                                            \
-  }
-#include "clang/Basic/DiagnosticInstallAPIEnums.inc"
-#undef DIAG_ENUM_END
-#undef DIAG_ENUM_ITEM
-#undef DIAG_ENUM
-} // namespace diag
-} // namespace clang
 #endif // LLVM_CLANG_BASIC_DIAGNOSTICINSTALLAPI_H

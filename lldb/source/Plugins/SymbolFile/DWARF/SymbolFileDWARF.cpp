@@ -993,21 +993,26 @@ XcodeSDK SymbolFileDWARF::ParseXcodeSDK(CompileUnit &comp_unit) {
   const char *sdk = cu_die.GetAttributeValueAsString(DW_AT_APPLE_sdk, nullptr);
   if (!sdk)
     return {};
-  const char *sysroot =
+  std::string sysroot =
       cu_die.GetAttributeValueAsString(DW_AT_LLVM_sysroot, "");
-  // Register the sysroot path remapping with the module belonging to
-  // the CU as well as the one belonging to the symbol file. The two
-  // would be different if this is an OSO object and module is the
-  // corresponding debug map, in which case both should be updated.
-  ModuleSP module_sp = comp_unit.GetModule();
-  if (module_sp)
-    module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  ModuleSP local_module_sp = m_objfile_sp->GetModule();
-  if (local_module_sp && local_module_sp != module_sp)
-    local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  // RegisterXcodeSDK calls into xcrun which is not aware of CLT, which is
+  // expensive.
+  if (sysroot.find("/Library/Developer/CommandLineTools/SDKs") != 0) {
+    // Register the sysroot path remapping with the module belonging to
+    // the CU as well as the one belonging to the symbol file. The two
+    // would be different if this is an OSO object and module is the
+    // corresponding debug map, in which case both should be updated.
+    ModuleSP module_sp = comp_unit.GetModule();
+    if (module_sp)
+      module_sp->RegisterXcodeSDK(sdk, sysroot);
 
-  return {sdk};
+    ModuleSP local_module_sp = m_objfile_sp->GetModule();
+    if (local_module_sp && local_module_sp != module_sp)
+      local_module_sp->RegisterXcodeSDK(sdk, sysroot);
+  }
+
+  return {sdk, FileSpec{std::move(sysroot)}};
 }
 
 size_t SymbolFileDWARF::ParseFunctions(CompileUnit &comp_unit) {
@@ -2072,8 +2077,9 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
                         location_result->GetScalar().ULongLong();
                     lldb::addr_t byte_size = 1;
                     if (var_sp->GetType())
-                      byte_size =
-                          var_sp->GetType()->GetByteSize(nullptr).value_or(0);
+                      byte_size = llvm::expectedToOptional(
+                                      var_sp->GetType()->GetByteSize(nullptr))
+                                      .value_or(0);
                     m_global_aranges_up->Append(GlobalVariableMap::Entry(
                         file_addr, byte_size, var_sp.get()));
                   }
@@ -3290,7 +3296,7 @@ static DWARFExpressionList GetExprListFromAtLocation(DWARFFormValue form_value,
   if (data.ValidOffset(offset)) {
     data = DataExtractor(data, offset, data.GetByteSize() - offset);
     const DWARFUnit *dwarf_cu = form_value.GetUnit();
-    if (DWARFExpression::ParseDWARFLocationList(dwarf_cu, data, &location_list))
+    if (dwarf_cu->ParseDWARFLocationList(data, location_list))
       location_list.SetFuncFileAddress(func_low_pc);
   }
 
@@ -3617,9 +3623,11 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       DWARFFormValue::IsDataForm(const_value_form.Form());
   if (use_type_size_for_value && type_sp->GetType()) {
     DWARFExpression *location = location_list.GetMutableExpressionAtAddress();
-    location->UpdateValue(const_value_form.Unsigned(),
-                          type_sp->GetType()->GetByteSize(nullptr).value_or(0),
-                          die.GetCU()->GetAddressByteSize());
+    location->UpdateValue(
+        const_value_form.Unsigned(),
+        llvm::expectedToOptional(type_sp->GetType()->GetByteSize(nullptr))
+            .value_or(0),
+        die.GetCU()->GetAddressByteSize());
   }
 
   return std::make_shared<Variable>(

@@ -3,7 +3,7 @@
 
 int a;
 
-// CHECK: @a = external dso_local global i32
+// CHECK: @a = dso_local global i32 0
 
 int b = 2;
 

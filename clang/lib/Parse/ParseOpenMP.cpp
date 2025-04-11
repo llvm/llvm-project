@@ -3355,6 +3355,20 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
 
     Clause = ParseOpenMPClause(CKind, WrongDirective);
     break;
+  case OMPC_self_maps:
+    // OpenMP [6.0, self_maps clause]
+    if (getLangOpts().OpenMP < 60) {
+      Diag(Tok, diag::err_omp_expected_clause)
+          << getOpenMPDirectiveName(OMPD_requires);
+      ErrorFound = true;
+    }
+    if (!FirstClause) {
+      Diag(Tok, diag::err_omp_more_one_clause)
+          << getOpenMPDirectiveName(DKind) << getOpenMPClauseName(CKind) << 0;
+      ErrorFound = true;
+    }
+    Clause = ParseOpenMPClause(CKind, WrongDirective);
+    break;
   case OMPC_update:
     if (!FirstClause) {
       Diag(Tok, diag::err_omp_more_one_clause)
@@ -4333,6 +4347,20 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
             << PreMapName;
       }
       ConsumeToken();
+    } else if (TypeModifier == OMPC_MAP_MODIFIER_self) {
+      Data.MapTypeModifiers.push_back(TypeModifier);
+      Data.MapTypeModifiersLoc.push_back(Tok.getLocation());
+      if (PP.LookAhead(0).isNot(tok::comma) &&
+          PP.LookAhead(0).isNot(tok::colon))
+        Diag(Tok.getLocation(), diag::err_omp_missing_comma)
+            << "map type modifier";
+      if (getLangOpts().OpenMP < 60)
+        Diag(Tok, diag::err_omp_unknown_map_type_modifier)
+            << (getLangOpts().OpenMP >= 51
+                    ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
+                    : 0)
+            << getLangOpts().OpenMPExtensions << 0;
+      ConsumeToken();
     } else {
       // For the case of unknown map-type-modifier or a map-type.
       // Map-type is followed by a colon; the function returns when it
@@ -4354,7 +4382,8 @@ bool Parser::parseMapTypeModifiers(SemaOpenMP::OpenMPVarListDataTy &Data) {
       Diag(Tok, diag::err_omp_unknown_map_type_modifier)
           << (getLangOpts().OpenMP >= 51 ? (getLangOpts().OpenMP >= 52 ? 2 : 1)
                                          : 0)
-          << getLangOpts().OpenMPExtensions;
+          << getLangOpts().OpenMPExtensions
+          << (getLangOpts().OpenMP >= 60 ? 1 : 0);
       ConsumeToken();
     }
     if (getCurToken().is(tok::comma))
@@ -4677,6 +4706,37 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       assert(Tok.is(tok::comma) && "Expected comma.");
       (void)ConsumeToken();
     }
+    // Handle original(private / shared) Modifier
+    if (Kind == OMPC_reduction && getLangOpts().OpenMP >= 60 &&
+        Tok.is(tok::identifier) && PP.getSpelling(Tok) == "original" &&
+        NextToken().is(tok::l_paren)) {
+      // Parse original(private) modifier.
+      ConsumeToken();
+      BalancedDelimiterTracker ParenT(*this, tok::l_paren, tok::r_paren);
+      ParenT.consumeOpen();
+      if (Tok.is(tok::kw_private)) {
+        Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_private;
+        Data.OriginalSharingModifierLoc = Tok.getLocation();
+        ConsumeToken();
+      } else if (Tok.is(tok::identifier) &&
+                 (PP.getSpelling(Tok) == "shared" ||
+                  PP.getSpelling(Tok) == "default")) {
+        Data.OriginalSharingModifier = OMPC_ORIGINAL_SHARING_shared;
+        Data.OriginalSharingModifierLoc = Tok.getLocation();
+        ConsumeToken();
+      } else {
+        Diag(Tok.getLocation(), diag::err_expected)
+            << "'private or shared or default'";
+        SkipUntil(tok::r_paren);
+        return false;
+      }
+      ParenT.consumeClose();
+      if (!Tok.is(tok::comma)) {
+        Diag(Tok.getLocation(), diag::err_expected) << "',' (comma)";
+        return false;
+      }
+      (void)ConsumeToken();
+    }
     ColonProtectionRAIIObject ColonRAII(*this);
     if (getLangOpts().CPlusPlus)
       ParseOptionalCXXScopeSpecifier(Data.ReductionOrMapperIdScopeSpec,
@@ -4829,7 +4889,7 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
       if (getLangOpts().OpenMP < 52) {
         Diag(Tok, diag::err_omp_unknown_map_type_modifier)
             << (getLangOpts().OpenMP >= 51 ? 1 : 0)
-            << getLangOpts().OpenMPExtensions;
+            << getLangOpts().OpenMPExtensions << 0;
         InvalidIterator = true;
       }
     }

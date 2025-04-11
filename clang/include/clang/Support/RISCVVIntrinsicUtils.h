@@ -483,30 +483,28 @@ public:
 
 // RVVRequire should be sync'ed with target features, but only
 // required features used in riscv_vector.td.
-enum RVVRequire : uint32_t {
-  RVV_REQ_None = 0,
-  RVV_REQ_RV64 = 1 << 0,
-  RVV_REQ_Zvfhmin = 1 << 1,
-  RVV_REQ_Xsfvcp = 1 << 2,
-  RVV_REQ_Xsfvfnrclipxfqf = 1 << 3,
-  RVV_REQ_Xsfvfwmaccqqq = 1 << 4,
-  RVV_REQ_Xsfvqmaccdod = 1 << 5,
-  RVV_REQ_Xsfvqmaccqoq = 1 << 6,
-  RVV_REQ_Zvbb = 1 << 7,
-  RVV_REQ_Zvbc = 1 << 8,
-  RVV_REQ_Zvkb = 1 << 9,
-  RVV_REQ_Zvkg = 1 << 10,
-  RVV_REQ_Zvkned = 1 << 11,
-  RVV_REQ_Zvknha = 1 << 12,
-  RVV_REQ_Zvknhb = 1 << 13,
-  RVV_REQ_Zvksed = 1 << 14,
-  RVV_REQ_Zvksh = 1 << 15,
-  RVV_REQ_Zvfbfwma = 1 << 16,
-  RVV_REQ_Zvfbfmin = 1 << 17,
-  RVV_REQ_Zvfh = 1 << 18,
-  RVV_REQ_Experimental = 1 << 19,
-
-  LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Experimental)
+enum RVVRequire {
+  RVV_REQ_RV64,
+  RVV_REQ_Zvfhmin,
+  RVV_REQ_Xsfvcp,
+  RVV_REQ_Xsfvfnrclipxfqf,
+  RVV_REQ_Xsfvfwmaccqqq,
+  RVV_REQ_Xsfvqmaccdod,
+  RVV_REQ_Xsfvqmaccqoq,
+  RVV_REQ_Zvbb,
+  RVV_REQ_Zvbc,
+  RVV_REQ_Zvkb,
+  RVV_REQ_Zvkg,
+  RVV_REQ_Zvkned,
+  RVV_REQ_Zvknha,
+  RVV_REQ_Zvknhb,
+  RVV_REQ_Zvksed,
+  RVV_REQ_Zvksh,
+  RVV_REQ_Zvfbfwma,
+  RVV_REQ_Zvfbfmin,
+  RVV_REQ_Zvfh,
+  RVV_REQ_Experimental,
+  RVV_REQ_NUM,
 };
 
 // Raw RVV intrinsic info, used to expand later.
@@ -518,6 +516,9 @@ struct RVVIntrinsicRecord {
   // Overloaded intrinsic name, could be empty if it can be computed from Name.
   // e.g. vadd
   const char *OverloadedName;
+
+  // Required target features for this intrinsic.
+  uint32_t RequiredExtensions[(RVV_REQ_NUM + 31) / 32];
 
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;
@@ -536,9 +537,6 @@ struct RVVIntrinsicRecord {
 
   // Length of overloaded intrinsic suffix.
   uint8_t OverloadedSuffixSize;
-
-  // Required target features for this intrinsic.
-  uint32_t RequiredExtensions;
 
   // Supported type, mask of BasicType.
   uint8_t TypeRangeMask;

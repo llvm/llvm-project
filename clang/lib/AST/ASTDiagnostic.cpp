@@ -461,8 +461,9 @@ void clang::FormatASTNodeDiagnosticArgument(
     }
     case DiagnosticsEngine::ak_nestednamespec: {
       NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy());
-      NeedQuotes = false;
+      NNS->print(OS, Context.getPrintingPolicy(),
+                 /*ResolveTemplateArguments=*/false,
+                 /*PrintFinalScopeResOp=*/false);
       break;
     }
     case DiagnosticsEngine::ak_declcontext: {
@@ -504,6 +505,14 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
       OS << '\'' << At->getSpelling() << '\'';
+      NeedQuotes = false;
+      break;
+    }
+    case DiagnosticsEngine::ak_expr: {
+      const Expr *E = reinterpret_cast<Expr *>(Val);
+      assert(E && "Received null Expr!");
+      E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      // FIXME: Include quotes when printing expressions.
       NeedQuotes = false;
       break;
     }

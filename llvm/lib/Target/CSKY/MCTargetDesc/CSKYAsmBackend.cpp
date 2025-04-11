@@ -13,6 +13,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "csky-asmbackend"
@@ -71,7 +72,7 @@ CSKYAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
          "Not all fixup kinds added to Infos array");
 
   if (FirstTargetFixupKind <= Kind && Kind < FirstLiteralRelocationKind) {
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < CSKY::NumTargetFixupKinds &&
            "Invalid kind!");
 
     return Infos[Kind];
@@ -262,19 +263,12 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
 bool CSKYAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const uint64_t /*Value*/,
                                            const MCSubtargetInfo * /*STI*/) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
+  if (Target.getSpecifier())
     return true;
   switch (Fixup.getTargetKind()) {
   default:
     break;
-  case CSKY::fixup_csky_got32:
-  case CSKY::fixup_csky_got_imm18_scale4:
-  case CSKY::fixup_csky_gotoff:
-  case CSKY::fixup_csky_gotpc:
-  case CSKY::fixup_csky_plt32:
-  case CSKY::fixup_csky_plt_imm18_scale4:
   case CSKY::fixup_csky_doffset_imm18:
   case CSKY::fixup_csky_doffset_imm18_scale2:
   case CSKY::fixup_csky_doffset_imm18_scale4:

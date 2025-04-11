@@ -16,4 +16,8 @@ bad_function_call::~bad_function_call() noexcept {}
 const char* bad_function_call::what() const noexcept { return "std::bad_function_call"; }
 #endif
 
+size_t __hash_memory(_LIBCPP_NOESCAPE const void* ptr, size_t size) noexcept {
+  return __murmur2_or_cityhash<size_t>()(ptr, size);
+}
+
 _LIBCPP_END_NAMESPACE_STD

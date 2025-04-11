@@ -919,7 +919,7 @@ bool MachineSinking::run(MachineFunction &MF) {
             continue;
 
           if (!aggressivelySinkIntoCycle(Cycle, *I, SunkInstrs))
-            break;
+            continue;
           EverMadeChange = true;
           ++NumCycleSunk;
         }
@@ -2326,8 +2326,7 @@ bool PostRAMachineSinking::tryToSinkCopy(MachineBasicBlock &CurBB,
       for (MCRegUnit Unit : TRI->regunits(MO.getReg())) {
         for (const auto &MIRegs : SeenDbgInstrs.lookup(Unit)) {
           auto &Regs = DbgValsToSinkMap[MIRegs.first];
-          for (Register Reg : MIRegs.second)
-            Regs.push_back(Reg);
+          llvm::append_range(Regs, MIRegs.second);
         }
       }
     }

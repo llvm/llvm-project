@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -1282,6 +1283,14 @@ static raw_ostream &operator<<(raw_ostream &OS,
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
+  // Check that after running the analysis on SourceCode, it produces the
+  // expected diagnostics according to [[unsafe]] annotations.
+  // - No annotations => no diagnostics.
+  // - Given "// [[unsafe]]" annotations on a line, we expect a diagnostic on
+  //   that line.
+  // - Given "// [[unsafe:range_text]]" annotations on a line, we expect a
+  //   diagnostic on that line, and we expect the diagnostic Range (printed as
+  //   a string) to match the "range_text".
   void ExpectDiagnosticsFor(std::string SourceCode,
                             bool IgnoreSmartPointerDereference = true) {
     ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"),
@@ -1336,7 +1345,7 @@ protected:
       T Make();
     )");
     UncheckedOptionalAccessModelOptions Options{IgnoreSmartPointerDereference};
-    std::vector<SourceLocation> Diagnostics;
+    std::vector<UncheckedOptionalAccessDiagnostic> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
@@ -1364,22 +1373,34 @@ protected:
                                   &Annotations,
                               const AnalysisOutputs &AO) {
           llvm::DenseSet<unsigned> AnnotationLines;
-          for (const auto &[Line, _] : Annotations) {
+          llvm::DenseMap<unsigned, std::string> AnnotationRangesInLines;
+          for (const auto &[Line, AnnotationWithMaybeRange] : Annotations) {
             AnnotationLines.insert(Line);
+            auto it = AnnotationWithMaybeRange.find(':');
+            if (it != std::string::npos) {
+              AnnotationRangesInLines[Line] =
+                  AnnotationWithMaybeRange.substr(it + 1);
+            }
           }
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
-          for (SourceLocation &Loc : Diagnostics) {
-            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+          for (const UncheckedOptionalAccessDiagnostic &Diag : Diagnostics) {
+            unsigned Line = SrcMgr.getPresumedLineNumber(Diag.Range.getBegin());
             DiagnosticLines.insert(Line);
             if (!AnnotationLines.contains(Line)) {
               IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
                   new DiagnosticOptions());
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
                                 DiagOpts.get());
-              TD.emitDiagnostic(FullSourceLoc(Loc, SrcMgr),
+              TD.emitDiagnostic(FullSourceLoc(Diag.Range.getBegin(), SrcMgr),
                                 DiagnosticsEngine::Error,
-                                "unexpected diagnostic", {}, {});
+                                "unexpected diagnostic", {Diag.Range}, {});
+            } else {
+              auto it = AnnotationRangesInLines.find(Line);
+              if (it != AnnotationRangesInLines.end()) {
+                EXPECT_EQ(Diag.Range.getAsRange().printToString(SrcMgr),
+                          it->second);
+              }
             }
           }
 
@@ -3829,7 +3850,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
@@ -3851,7 +3872,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
@@ -3870,13 +3891,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3896,13 +3917,13 @@ TEST_P(
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3919,13 +3940,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3945,13 +3966,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A copyA() const { return a; }
-    
+
       A a;
     };
 
@@ -3970,13 +3991,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       A& getA() { return a; }
-    
+
       A a;
     };
 
@@ -4031,23 +4052,23 @@ TEST_P(
     ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
   ExpectDiagnosticsFor(R"cc(
       #include "unchecked_optional_access_test.h"
-  
+
       struct A {
         const $ns::$optional<int>& get() const { return x; }
-      
+
         $ns::$optional<int> x;
       };
-  
+
       struct B {
         const A& getA() const { return a; }
-  
+
         void callWithoutChanges() const { 
           // no-op 
         }
-  
+
         A a;
       };
-  
+
       void target(B& b) {  
         if (b.getA().get().has_value()) {
           b.callWithoutChanges(); // calling const method which cannot change A
@@ -4055,6 +4076,59 @@ TEST_P(
         }
       }
     )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerRefAccessor) {
+  // A crash reproducer for https://github.com/llvm/llvm-project/issues/125589
+  // NOTE: we currently cache const ref accessors's locations.
+  // If we want to support const ref to pointers or bools, we should initialize
+  // their values.
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct PtrWrapper {
+      A*& getPtrRef() const;
+      void reset(A*);
+    };
+
+    void target(PtrWrapper p) {
+      if (p.getPtrRef()->x) {
+        *p.getPtrRef()->x;  // [[unsafe]]
+        p.reset(nullptr);
+        *p.getPtrRef()->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
+TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> fi;
+    };
+    struct B {
+      $ns::$optional<A> fa;
+    };
+
+    void target($ns::$optional<B> opt) {
+      opt.value();  // [[unsafe:<input.cc:12:7>]]
+      if (opt) {
+        opt  // [[unsafe:<input.cc:14:9, line:16:13>]]
+          ->
+            fa.value();
+        if (opt->fa) {
+          opt->fa->fi.value();  // [[unsafe:<input.cc:18:11, col:20>]]
+        }
+      }
+    }
+  )cc");
 }
 
 // FIXME: Add support for:

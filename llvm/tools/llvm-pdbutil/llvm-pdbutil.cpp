@@ -1538,8 +1538,7 @@ int main(int Argc, const char **Argv) {
 
   // Initialize the filters for LinePrinter.
   auto propagate = [&](auto &Target, auto &Reference) {
-    for (std::string &Option : Reference)
-      Target.push_back(Option);
+    llvm::append_range(Target, Reference);
   };
 
   propagate(opts::Filters.ExcludeTypes, opts::pretty::ExcludeTypes);

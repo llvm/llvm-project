@@ -15,6 +15,15 @@
 
 using namespace mlir;
 
+/// Conditions the deletion of the operation to the removal of all its uses.
+static bool forwardToUsers(Operation *op,
+                           SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  for (Value result : op->getResults())
+    for (OpOperand &use : result.getUses())
+      newBlockingUses.push_back(&use);
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
@@ -106,5 +115,23 @@ DeletionKind cir::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     OpBuilder &builder, Value reachingDefinition,
     const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for CastOp
+//===----------------------------------------------------------------------===//
+
+bool cir::CastOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (getKind() == cir::CastKind::bitcast)
+    return forwardToUsers(*this, newBlockingUses);
+  return false;
+}
+
+DeletionKind cir::CastOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }

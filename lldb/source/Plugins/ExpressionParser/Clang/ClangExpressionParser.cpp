@@ -1539,6 +1539,10 @@ lldb_private::Status ClangExpressionParser::DoPrepareForExecution(
       function_name, exe_ctx.GetTargetSP(), sc,
       m_compiler->getTargetOpts().Features);
 
+  if (auto *options = m_expr.GetOptions())
+    execution_unit_sp->AppendPreferredSymbolContexts(
+        options->GetPreferredSymbolContexts());
+
   ClangExpressionHelper *type_system_helper =
       dyn_cast<ClangExpressionHelper>(m_expr.GetTypeSystemHelper());
   ClangExpressionDeclMap *decl_map =

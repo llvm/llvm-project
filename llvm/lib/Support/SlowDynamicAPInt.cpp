@@ -12,7 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-using namespace detail;
+using namespace llvm::detail;
 
 SlowDynamicAPInt::SlowDynamicAPInt(int64_t Val)
     : Val(64, Val, /*isSigned=*/true) {}
@@ -23,94 +23,94 @@ SlowDynamicAPInt &SlowDynamicAPInt::operator=(int64_t Val) {
 }
 SlowDynamicAPInt::operator int64_t() const { return Val.getSExtValue(); }
 
-hash_code detail::hash_value(const SlowDynamicAPInt &X) {
+hash_code llvm::detail::hash_value(const SlowDynamicAPInt &X) {
   return hash_value(X.Val);
 }
 
 /// ---------------------------------------------------------------------------
 /// Convenience operator overloads for int64_t.
 /// ---------------------------------------------------------------------------
-SlowDynamicAPInt &detail::operator+=(SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt &llvm::detail::operator+=(SlowDynamicAPInt &A, int64_t B) {
   return A += SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt &detail::operator-=(SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt &llvm::detail::operator-=(SlowDynamicAPInt &A, int64_t B) {
   return A -= SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt &detail::operator*=(SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt &llvm::detail::operator*=(SlowDynamicAPInt &A, int64_t B) {
   return A *= SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt &detail::operator/=(SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt &llvm::detail::operator/=(SlowDynamicAPInt &A, int64_t B) {
   return A /= SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt &detail::operator%=(SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt &llvm::detail::operator%=(SlowDynamicAPInt &A, int64_t B) {
   return A %= SlowDynamicAPInt(B);
 }
 
-bool detail::operator==(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator==(const SlowDynamicAPInt &A, int64_t B) {
   return A == SlowDynamicAPInt(B);
 }
-bool detail::operator!=(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator!=(const SlowDynamicAPInt &A, int64_t B) {
   return A != SlowDynamicAPInt(B);
 }
-bool detail::operator>(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator>(const SlowDynamicAPInt &A, int64_t B) {
   return A > SlowDynamicAPInt(B);
 }
-bool detail::operator<(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator<(const SlowDynamicAPInt &A, int64_t B) {
   return A < SlowDynamicAPInt(B);
 }
-bool detail::operator<=(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator<=(const SlowDynamicAPInt &A, int64_t B) {
   return A <= SlowDynamicAPInt(B);
 }
-bool detail::operator>=(const SlowDynamicAPInt &A, int64_t B) {
+bool llvm::detail::operator>=(const SlowDynamicAPInt &A, int64_t B) {
   return A >= SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt detail::operator+(const SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt llvm::detail::operator+(const SlowDynamicAPInt &A, int64_t B) {
   return A + SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt detail::operator-(const SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt llvm::detail::operator-(const SlowDynamicAPInt &A, int64_t B) {
   return A - SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt detail::operator*(const SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt llvm::detail::operator*(const SlowDynamicAPInt &A, int64_t B) {
   return A * SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt detail::operator/(const SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt llvm::detail::operator/(const SlowDynamicAPInt &A, int64_t B) {
   return A / SlowDynamicAPInt(B);
 }
-SlowDynamicAPInt detail::operator%(const SlowDynamicAPInt &A, int64_t B) {
+SlowDynamicAPInt llvm::detail::operator%(const SlowDynamicAPInt &A, int64_t B) {
   return A % SlowDynamicAPInt(B);
 }
 
-bool detail::operator==(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator==(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) == B;
 }
-bool detail::operator!=(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator!=(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) != B;
 }
-bool detail::operator>(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator>(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) > B;
 }
-bool detail::operator<(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator<(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) < B;
 }
-bool detail::operator<=(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator<=(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) <= B;
 }
-bool detail::operator>=(int64_t A, const SlowDynamicAPInt &B) {
+bool llvm::detail::operator>=(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) >= B;
 }
-SlowDynamicAPInt detail::operator+(int64_t A, const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::operator+(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) + B;
 }
-SlowDynamicAPInt detail::operator-(int64_t A, const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::operator-(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) - B;
 }
-SlowDynamicAPInt detail::operator*(int64_t A, const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::operator*(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) * B;
 }
-SlowDynamicAPInt detail::operator/(int64_t A, const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::operator/(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) / B;
 }
-SlowDynamicAPInt detail::operator%(int64_t A, const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::operator%(int64_t A, const SlowDynamicAPInt &B) {
   return SlowDynamicAPInt(A) % B;
 }
 
@@ -187,19 +187,19 @@ SlowDynamicAPInt SlowDynamicAPInt::operator/(const SlowDynamicAPInt &O) const {
   return SlowDynamicAPInt(
       runOpWithExpandOnOverflow(Val, O.Val, std::mem_fn(&APInt::sdiv_ov)));
 }
-SlowDynamicAPInt detail::abs(const SlowDynamicAPInt &X) {
+SlowDynamicAPInt llvm::detail::abs(const SlowDynamicAPInt &X) {
   return X >= 0 ? X : -X;
 }
-SlowDynamicAPInt detail::ceilDiv(const SlowDynamicAPInt &LHS,
-                                 const SlowDynamicAPInt &RHS) {
+SlowDynamicAPInt llvm::detail::ceilDiv(const SlowDynamicAPInt &LHS,
+                                       const SlowDynamicAPInt &RHS) {
   if (RHS == -1)
     return -LHS;
   unsigned Width = getMaxWidth(LHS.Val, RHS.Val);
   return SlowDynamicAPInt(APIntOps::RoundingSDiv(
       LHS.Val.sext(Width), RHS.Val.sext(Width), APInt::Rounding::UP));
 }
-SlowDynamicAPInt detail::floorDiv(const SlowDynamicAPInt &LHS,
-                                  const SlowDynamicAPInt &RHS) {
+SlowDynamicAPInt llvm::detail::floorDiv(const SlowDynamicAPInt &LHS,
+                                        const SlowDynamicAPInt &RHS) {
   if (RHS == -1)
     return -LHS;
   unsigned Width = getMaxWidth(LHS.Val, RHS.Val);
@@ -208,14 +208,14 @@ SlowDynamicAPInt detail::floorDiv(const SlowDynamicAPInt &LHS,
 }
 // The RHS is always expected to be positive, and the result
 /// is always non-negative.
-SlowDynamicAPInt detail::mod(const SlowDynamicAPInt &LHS,
-                             const SlowDynamicAPInt &RHS) {
+SlowDynamicAPInt llvm::detail::mod(const SlowDynamicAPInt &LHS,
+                                   const SlowDynamicAPInt &RHS) {
   assert(RHS >= 1 && "mod is only supported for positive divisors!");
   return LHS % RHS < 0 ? LHS % RHS + RHS : LHS % RHS;
 }
 
-SlowDynamicAPInt detail::gcd(const SlowDynamicAPInt &A,
-                             const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::gcd(const SlowDynamicAPInt &A,
+                                   const SlowDynamicAPInt &B) {
   assert(A >= 0 && B >= 0 && "operands must be non-negative!");
   unsigned Width = getMaxWidth(A.Val, B.Val);
   return SlowDynamicAPInt(
@@ -223,8 +223,8 @@ SlowDynamicAPInt detail::gcd(const SlowDynamicAPInt &A,
 }
 
 /// Returns the least common multiple of A and B.
-SlowDynamicAPInt detail::lcm(const SlowDynamicAPInt &A,
-                             const SlowDynamicAPInt &B) {
+SlowDynamicAPInt llvm::detail::lcm(const SlowDynamicAPInt &A,
+                                   const SlowDynamicAPInt &B) {
   SlowDynamicAPInt X = abs(A);
   SlowDynamicAPInt Y = abs(B);
   return (X * Y) / gcd(X, Y);
