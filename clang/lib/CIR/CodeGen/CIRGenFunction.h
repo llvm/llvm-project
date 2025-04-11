@@ -164,7 +164,7 @@ public:
   /// An abstract representation of regular/ObjC call/message targets.
   class AbstractCallee {
     /// The function declaration of the callee.
-    const clang::Decl *calleeDecl;
+    [[maybe_unused]] const clang::Decl *calleeDecl;
 
   public:
     AbstractCallee() : calleeDecl(nullptr) {}
