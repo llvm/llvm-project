@@ -1159,6 +1159,8 @@ void SIFoldOperandsImpl::foldOperand(
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
 
+        if (OpToFold.isGlobal())
+          return;
         if (OpToFold.isImm())
           UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
         else
