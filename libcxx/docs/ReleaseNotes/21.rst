@@ -63,6 +63,9 @@ Improvements and New Features
 
 - The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
 
+- The segmented iterator optimization for ``std::for_each`` has been backported to C++11. Previously it was only available
+  in C++23 and later.
+
 Deprecations and Removals
 -------------------------
 
