@@ -548,7 +548,7 @@ RISCVMCCodeEmitter::getImmOpValueAsrN(const MCInst &MI, unsigned OpNo,
   const MCOperand &MO = MI.getOperand(OpNo);
 
   if (MO.isImm()) {
-    unsigned Res = MO.getImm();
+    uint64_t Res = MO.getImm();
     assert((Res & ((1 << N) - 1)) == 0 && "LSB is non-zero");
     return Res >> N;
   }
