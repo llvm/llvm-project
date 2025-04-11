@@ -3691,20 +3691,24 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize(
     StringExtractorGDBRemote &) {
   std::vector<GPUPluginInfo> infos;
-  std::string json_string;
-  llvm::raw_string_ostream os(json_string);
-  bool first = true;
-  os << "[";
-  for (auto &plugin_up: m_plugins) {
-    if (first)
-      first = false;
-    else
-      os << ",";
-    os << toJSON(plugin_up->GetPluginInfo());
-  }
-  os << "]";
+  for (auto &plugin_up: m_plugins)
+      infos.push_back(plugin_up->GetPluginInfo());
   StreamGDBRemote response;
-  response.PutEscapedBytes(json_string.data(), json_string.size());
+  response.PutAsJSONArray(infos);
+
+  // std::string json_string;
+  // llvm::raw_string_ostream os(json_string);
+  // bool first = true;
+  // os << "[";
+  // for (auto &plugin_up: m_plugins) {
+  //   if (first)
+  //     first = false;
+  //   else
+  //     os << ",";
+  //   os << toJSON(plugin_up->GetPluginInfo());
+  // }
+  // os << "]";
+  // response.PutEscapedBytes(json_string.data(), json_string.size());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -3723,11 +3727,8 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
     if (plugin_up->GetPluginName() == args->plugin_name) {
       GPUPluginBreakpointHitResponse bp_response = 
           plugin_up->BreakpointWasHit(*args);
-      std::string json_string;
-      llvm::raw_string_ostream os(json_string);
-      os << toJSON(bp_response);
       StreamGDBRemote response;
-      response.PutEscapedBytes(json_string.data(), json_string.size());
+      response.PutAsJSON(bp_response);
       return SendPacketNoLock(response.GetString());
     }
   }

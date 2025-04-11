@@ -638,10 +638,7 @@ bool GDBRemoteCommunicationClient::GPUBreakpointHit(
   const GPUPluginBreakpointHitArgs &args) {
   StreamGDBRemote packet;
   packet.PutCString("jGPUPluginBreakpointHit:");
-  std::string json_string;
-  llvm::raw_string_ostream os(json_string);
-  os << toJSON(args);
-  packet.PutEscapedBytes(json_string.c_str(), json_string.size());
+  packet.PutAsJSON(args);
   StringExtractorGDBRemote response;
   
   if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
