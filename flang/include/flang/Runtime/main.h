@@ -15,8 +15,9 @@
 
 struct EnvironmentDefaultList;
 
-FORTRAN_EXTERN_C_BEGIN
 std::thread::id RTNAME(GetMainThreadId)();
+
+FORTRAN_EXTERN_C_BEGIN
 void RTNAME(ProgramStart)(
     int, const char *[], const char *[], const struct EnvironmentDefaultList *);
 void RTNAME(ByteswapOption)(void); // -byteswapio
