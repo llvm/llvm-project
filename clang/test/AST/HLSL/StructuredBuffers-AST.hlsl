@@ -125,7 +125,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' ParmVar {{.*}} 'index' 'unsigned int'
 // CHECK-NEXT: AlwaysInlineAttr
 
-// Subsctript operators
+// Subscript operators
 
 // CHECK-SUBSCRIPT: CXXMethodDecl {{.*}} operator[] 'const element_type &(unsigned int) const'
 // CHECK-SUBSCRIPT-NEXT: ParmVarDecl {{.*}} Index 'unsigned int'
