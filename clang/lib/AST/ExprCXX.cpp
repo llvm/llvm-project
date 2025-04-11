@@ -226,7 +226,8 @@ SourceLocation CXXScalarValueInitExpr::getBeginLoc() const {
 
 // CXXNewExpr
 CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
-                       FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+                       FunctionDecl *OperatorDelete,
+                       const ImplicitAllocationParameters &IAP,
                        bool UsualArrayDeleteWantsSize,
                        ArrayRef<Expr *> PlacementArgs, SourceRange TypeIdParens,
                        std::optional<Expr *> ArraySize,
@@ -245,7 +246,9 @@ CXXNewExpr::CXXNewExpr(bool IsGlobalNew, FunctionDecl *OperatorNew,
 
   CXXNewExprBits.IsGlobalNew = IsGlobalNew;
   CXXNewExprBits.IsArray = ArraySize.has_value();
-  CXXNewExprBits.ShouldPassAlignment = ShouldPassAlignment;
+  CXXNewExprBits.ShouldPassAlignment = isAlignedAllocation(IAP.PassAlignment);
+  CXXNewExprBits.ShouldPassTypeIdentity =
+      isTypeAwareAllocation(IAP.PassTypeIdentity);
   CXXNewExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
   CXXNewExprBits.HasInitializer = Initializer != nullptr;
   CXXNewExprBits.StoredInitializationStyle =
@@ -290,7 +293,7 @@ CXXNewExpr::CXXNewExpr(EmptyShell Empty, bool IsArray,
 
 CXXNewExpr *CXXNewExpr::Create(
     const ASTContext &Ctx, bool IsGlobalNew, FunctionDecl *OperatorNew,
-    FunctionDecl *OperatorDelete, bool ShouldPassAlignment,
+    FunctionDecl *OperatorDelete, const ImplicitAllocationParameters &IAP,
     bool UsualArrayDeleteWantsSize, ArrayRef<Expr *> PlacementArgs,
     SourceRange TypeIdParens, std::optional<Expr *> ArraySize,
     CXXNewInitializationStyle InitializationStyle, Expr *Initializer,
@@ -304,11 +307,10 @@ CXXNewExpr *CXXNewExpr::Create(
       Ctx.Allocate(totalSizeToAlloc<Stmt *, SourceRange>(
                        IsArray + HasInit + NumPlacementArgs, IsParenTypeId),
                    alignof(CXXNewExpr));
-  return new (Mem)
-      CXXNewExpr(IsGlobalNew, OperatorNew, OperatorDelete, ShouldPassAlignment,
-                 UsualArrayDeleteWantsSize, PlacementArgs, TypeIdParens,
-                 ArraySize, InitializationStyle, Initializer, Ty,
-                 AllocatedTypeInfo, Range, DirectInitRange);
+  return new (Mem) CXXNewExpr(
+      IsGlobalNew, OperatorNew, OperatorDelete, IAP, UsualArrayDeleteWantsSize,
+      PlacementArgs, TypeIdParens, ArraySize, InitializationStyle, Initializer,
+      Ty, AllocatedTypeInfo, Range, DirectInitRange);
 }
 
 CXXNewExpr *CXXNewExpr::CreateEmpty(const ASTContext &Ctx, bool IsArray,
