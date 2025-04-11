@@ -903,12 +903,12 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *LoadOp,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
 
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(Instruction *StoreOp, ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
   bool lowerDeinterleaveIntrinsicToLoad(

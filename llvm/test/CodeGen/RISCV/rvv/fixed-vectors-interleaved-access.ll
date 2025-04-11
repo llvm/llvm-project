@@ -176,6 +176,164 @@ define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i
   ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res7
 }
 
+define {<4 x i32>, <4 x i32>} @vpload_factor2(ptr %ptr) {
+; CHECK-LABEL: vpload_factor2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <8 x i32> @llvm.vp.load.v8i32.p0(ptr %ptr, <8 x i1> splat (i1 true), i32 8)
+  %v0 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %v1 = shufflevector <8 x i32> %interleaved.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
+}
+
+
+define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3(ptr %ptr) {
+; CHECK-LABEL: vpload_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> splat (i1 true), i32 12)
+  %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+}
+
+; Load a larger vector but only deinterleave a subset of the elements.
+define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_v16i32(ptr %ptr) {
+; CHECK-LABEL: vpload_factor3_v16i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <16 x i32> @llvm.vp.load.v16i32.p0(ptr %ptr, <16 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, i32 12)
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %v2 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+}
+
+define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor4(ptr %ptr) {
+; CHECK-LABEL: vpload_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <16 x i32> @llvm.vp.load.v16i32.p0(ptr %ptr, <16 x i1> splat (i1 true), i32 16)
+  %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %v1 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %v2 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %v3 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  %res3 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res2, <4 x i32> %v3, 3
+  ret {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res3
+}
+
+define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor5(ptr %ptr) {
+; CHECK-LABEL: vpload_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vlseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <20 x i32> @llvm.vp.load.v20i32.p0(ptr %ptr, <20 x i1> splat (i1 true), i32 20)
+  %v0 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+  %v1 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 1, i32 6, i32 11, i32 16>
+  %v2 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 2, i32 7, i32 12, i32 17>
+  %v3 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 3, i32 8, i32 13, i32 18>
+  %v4 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 4, i32 9, i32 14, i32 19>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  %res3 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res2, <4 x i32> %v3, 3
+  %res4 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res3, <4 x i32> %v4, 4
+  ret {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res4
+}
+
+define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vpload_factor6(ptr %ptr) {
+; CHECK-LABEL: vpload_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vlseg6e16.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <12 x i16> @llvm.vp.load.v12i16.p0(ptr %ptr, <12 x i1> splat (i1 true), i32 12)
+  %v0 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 0, i32 6>
+  %v1 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 1, i32 7>
+  %v2 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 2, i32 8>
+  %v3 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 3, i32 9>
+  %v4 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 4, i32 10>
+  %v5 = shufflevector <12 x i16> %interleaved.vec, <12 x i16> poison, <2 x i32> <i32 5, i32 11>
+  %res0 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} undef, <2 x i16> %v0, 0
+  %res1 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res0, <2 x i16> %v1, 1
+  %res2 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res1, <2 x i16> %v2, 2
+  %res3 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res2, <2 x i16> %v3, 3
+  %res4 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res3, <2 x i16> %v4, 4
+  %res5 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res4, <2 x i16> %v5, 5
+  ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res5
+}
+
+define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vpload_factor7(ptr %ptr) {
+; CHECK-LABEL: vpload_factor7:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vlseg7e16.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <14 x i16> @llvm.vp.load.v14i16.p0(ptr %ptr, <14 x i1> splat (i1 true), i32 14)
+  %v0 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 0, i32 7>
+  %v1 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 1, i32 8>
+  %v2 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 2, i32 9>
+  %v3 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 3, i32 10>
+  %v4 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 4, i32 11>
+  %v5 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 5, i32 12>
+  %v6 = shufflevector <14 x i16> %interleaved.vec, <14 x i16> poison, <2 x i32> <i32 6, i32 13>
+  %res0 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} undef, <2 x i16> %v0, 0
+  %res1 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res0, <2 x i16> %v1, 1
+  %res2 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res1, <2 x i16> %v2, 2
+  %res3 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res2, <2 x i16> %v3, 3
+  %res4 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res3, <2 x i16> %v4, 4
+  %res5 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res4, <2 x i16> %v5, 5
+  %res6 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res5, <2 x i16> %v6, 6
+  ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res6
+}
+
+define {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} @vpload_factor8(ptr %ptr) {
+; CHECK-LABEL: vpload_factor8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vlseg8e16.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = tail call <16 x i16> @llvm.vp.load.v16i16.p0(ptr %ptr, <16 x i1> splat (i1 true), i32 16)
+  %v0 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 0, i32 8>
+  %v1 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 1, i32 9>
+  %v2 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 2, i32 10>
+  %v3 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 3, i32 11>
+  %v4 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 4, i32 12>
+  %v5 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 5, i32 13>
+  %v6 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 6, i32 14>
+  %v7 = shufflevector <16 x i16> %interleaved.vec, <16 x i16> poison, <2 x i32> <i32 7, i32 15>
+  %res0 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} undef, <2 x i16> %v0, 0
+  %res1 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res0, <2 x i16> %v1, 1
+  %res2 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res1, <2 x i16> %v2, 2
+  %res3 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res2, <2 x i16> %v3, 3
+  %res4 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res3, <2 x i16> %v4, 4
+  %res5 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res4, <2 x i16> %v5, 5
+  %res6 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res5, <2 x i16> %v6, 6
+  %res7 = insertvalue {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res6, <2 x i16> %v7, 7
+  ret {<2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>, <2 x i16>} %res7
+}
+
 ; LMUL * NF is > 8 here and so shouldn't be lowered to a vlseg
 define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_factor6_too_big(ptr %ptr) {
 ; RV32-LABEL: load_factor6_too_big:
@@ -192,8 +350,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    li a2, 32
 ; RV32-NEXT:    lui a3, 12
 ; RV32-NEXT:    lui a6, 12291
-; RV32-NEXT:    lui a7, %hi(.LCPI8_0)
-; RV32-NEXT:    addi a7, a7, %lo(.LCPI8_0)
+; RV32-NEXT:    lui a7, %hi(.LCPI16_0)
+; RV32-NEXT:    addi a7, a7, %lo(.LCPI16_0)
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v24, (a5)
 ; RV32-NEXT:    vmv.s.x v0, a3
@@ -278,12 +436,12 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    addi a1, a1, 16
 ; RV32-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
 ; RV32-NEXT:    lui a7, 49164
-; RV32-NEXT:    lui a1, %hi(.LCPI8_1)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_1)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_1)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_1)
 ; RV32-NEXT:    lui t2, 3
 ; RV32-NEXT:    lui t1, 196656
-; RV32-NEXT:    lui a4, %hi(.LCPI8_3)
-; RV32-NEXT:    addi a4, a4, %lo(.LCPI8_3)
+; RV32-NEXT:    lui a4, %hi(.LCPI16_3)
+; RV32-NEXT:    addi a4, a4, %lo(.LCPI16_3)
 ; RV32-NEXT:    lui t0, 786624
 ; RV32-NEXT:    li a5, 48
 ; RV32-NEXT:    lui a6, 768
@@ -462,8 +620,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vrgatherei16.vv v24, v8, v2
-; RV32-NEXT:    lui a1, %hi(.LCPI8_2)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_2)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_2)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_2)
 ; RV32-NEXT:    lui a3, 3073
 ; RV32-NEXT:    addi a3, a3, -1024
 ; RV32-NEXT:    vmv.s.x v0, a3
@@ -527,16 +685,16 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vrgatherei16.vv v28, v8, v3
 ; RV32-NEXT:    vsetivli zero, 10, e32, m4, tu, ma
 ; RV32-NEXT:    vmv.v.v v28, v24
-; RV32-NEXT:    lui a1, %hi(.LCPI8_4)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_4)
-; RV32-NEXT:    lui a2, %hi(.LCPI8_5)
-; RV32-NEXT:    addi a2, a2, %lo(.LCPI8_5)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_4)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_4)
+; RV32-NEXT:    lui a2, %hi(.LCPI16_5)
+; RV32-NEXT:    addi a2, a2, %lo(.LCPI16_5)
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vle16.v v24, (a2)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vle16.v v8, (a1)
-; RV32-NEXT:    lui a1, %hi(.LCPI8_7)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_7)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_7)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_7)
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle16.v v10, (a1)
 ; RV32-NEXT:    csrr a1, vlenb
@@ -564,14 +722,14 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV32-NEXT:    vl8r.v v0, (a1) # vscale x 64-byte Folded Reload
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vrgatherei16.vv v16, v0, v10
-; RV32-NEXT:    lui a1, %hi(.LCPI8_6)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_6)
-; RV32-NEXT:    lui a2, %hi(.LCPI8_8)
-; RV32-NEXT:    addi a2, a2, %lo(.LCPI8_8)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_6)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_6)
+; RV32-NEXT:    lui a2, %hi(.LCPI16_8)
+; RV32-NEXT:    addi a2, a2, %lo(.LCPI16_8)
 ; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; RV32-NEXT:    vle16.v v4, (a1)
-; RV32-NEXT:    lui a1, %hi(.LCPI8_9)
-; RV32-NEXT:    addi a1, a1, %lo(.LCPI8_9)
+; RV32-NEXT:    lui a1, %hi(.LCPI16_9)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI16_9)
 ; RV32-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV32-NEXT:    vle16.v v6, (a1)
 ; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
@@ -658,8 +816,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    li a4, 128
 ; RV64-NEXT:    lui a1, 1
 ; RV64-NEXT:    vle64.v v8, (a3)
-; RV64-NEXT:    lui a3, %hi(.LCPI8_0)
-; RV64-NEXT:    addi a3, a3, %lo(.LCPI8_0)
+; RV64-NEXT:    lui a3, %hi(.LCPI16_0)
+; RV64-NEXT:    addi a3, a3, %lo(.LCPI16_0)
 ; RV64-NEXT:    vmv.s.x v0, a4
 ; RV64-NEXT:    csrr a4, vlenb
 ; RV64-NEXT:    li a5, 61
@@ -847,8 +1005,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vl8r.v v16, (a2) # vscale x 64-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
 ; RV64-NEXT:    vslideup.vi v12, v16, 1, v0.t
-; RV64-NEXT:    lui a2, %hi(.LCPI8_1)
-; RV64-NEXT:    addi a2, a2, %lo(.LCPI8_1)
+; RV64-NEXT:    lui a2, %hi(.LCPI16_1)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI16_1)
 ; RV64-NEXT:    li a3, 192
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vle16.v v6, (a2)
@@ -882,8 +1040,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vrgatherei16.vv v24, v16, v6
 ; RV64-NEXT:    addi a2, sp, 16
 ; RV64-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
-; RV64-NEXT:    lui a2, %hi(.LCPI8_2)
-; RV64-NEXT:    addi a2, a2, %lo(.LCPI8_2)
+; RV64-NEXT:    lui a2, %hi(.LCPI16_2)
+; RV64-NEXT:    addi a2, a2, %lo(.LCPI16_2)
 ; RV64-NEXT:    li a3, 1040
 ; RV64-NEXT:    vmv.s.x v0, a3
 ; RV64-NEXT:    addi a1, a1, -2016
@@ -967,12 +1125,12 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
 ; RV64-NEXT:    vs4r.v v8, (a1) # vscale x 32-byte Folded Spill
-; RV64-NEXT:    lui a1, %hi(.LCPI8_3)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI8_3)
+; RV64-NEXT:    lui a1, %hi(.LCPI16_3)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI16_3)
 ; RV64-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; RV64-NEXT:    vle16.v v20, (a1)
-; RV64-NEXT:    lui a1, %hi(.LCPI8_4)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI8_4)
+; RV64-NEXT:    lui a1, %hi(.LCPI16_4)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI16_4)
 ; RV64-NEXT:    vle16.v v8, (a1)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    li a2, 77
@@ -1023,8 +1181,8 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vl2r.v v8, (a1) # vscale x 16-byte Folded Reload
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vrgatherei16.vv v0, v16, v8
-; RV64-NEXT:    lui a1, %hi(.LCPI8_5)
-; RV64-NEXT:    addi a1, a1, %lo(.LCPI8_5)
+; RV64-NEXT:    lui a1, %hi(.LCPI16_5)
+; RV64-NEXT:    addi a1, a1, %lo(.LCPI16_5)
 ; RV64-NEXT:    vle16.v v20, (a1)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    li a2, 61
@@ -1193,6 +1351,73 @@ define void @store_factor6(ptr %ptr, <2 x i16> %v0, <2 x i16> %v1, <2 x i16> %v2
   %s3 = shufflevector <2 x i16> %v4, <2 x i16> %v5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %interleaved.vec = shufflevector <8 x i16> %s2, <8 x i16> %s3, <12 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11>
   store <12 x i16> %interleaved.vec, ptr %ptr
+  ret void
+}
+
+define void @vpstore_factor2(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1) {
+; CHECK-LABEL: vpstore_factor2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg2e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %interleaved.vec = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  tail call void @llvm.vp.store.v8i32.p0(<8 x i32> %interleaved.vec, ptr %ptr, <8 x i1> splat (i1 true), i32 8)
+  ret void
+}
+
+define void @vpstore_factor3(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2) {
+; CHECK-LABEL: vpstore_factor3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg3e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <12 x i32> <i32 0, i32 4, i32 8, i32 1, i32 5, i32 9, i32 2, i32 6, i32 10, i32 3, i32 7, i32 11>
+  tail call void @llvm.vp.store.v12i32.p0(<12 x i32> %interleaved.vec, ptr %ptr, <12 x i1> splat (i1 true), i32 12)
+  ret void
+}
+
+define void @vpstore_factor4(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3) {
+; CHECK-LABEL: vpstore_factor4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg4e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %interleaved.vec = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+  tail call void @llvm.vp.store.v16i32.p0(<16 x i32> %interleaved.vec, ptr %ptr, <16 x i1> splat (i1 true), i32 16)
+  ret void
+}
+
+define void @vpstore_factor5(ptr %ptr, <4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <4 x i32> %v4) {
+; CHECK-LABEL: vpstore_factor5:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsseg5e32.v v8, (a0)
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <4 x i32> %v0, <4 x i32> %v1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s1 = shufflevector <4 x i32> %v2, <4 x i32> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s2 = shufflevector <8 x i32> %s0, <8 x i32> %s1, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %s3 = shufflevector <4 x i32> %v4, <4 x i32> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <16 x i32> %s2, <16 x i32> %s3, <20 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 1, i32 5, i32 9, i32 13, i32 17, i32 2, i32 6, i32 10, i32 14, i32 18, i32 3, i32 7, i32 11, i32 15, i32 19>
+  tail call void @llvm.vp.store.v20i32.p0(<20 x i32> %interleaved.vec, ptr %ptr, <20 x i1> splat (i1 true), i32 20)
+  ret void
+}
+
+define void @vpstore_factor6(ptr %ptr, <2 x i16> %v0, <2 x i16> %v1, <2 x i16> %v2, <2 x i16> %v3, <2 x i16> %v4, <2 x i16> %v5) {
+; CHECK-LABEL: vpstore_factor6:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vsseg6e16.v v8, (a0)
+; CHECK-NEXT:    ret
+  %s0 = shufflevector <2 x i16> %v0, <2 x i16> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s1 = shufflevector <2 x i16> %v2, <2 x i16> %v3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %s2 = shufflevector <4 x i16> %s0, <4 x i16> %s1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %s3 = shufflevector <2 x i16> %v4, <2 x i16> %v5, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
+  %interleaved.vec = shufflevector <8 x i16> %s2, <8 x i16> %s3, <12 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 1, i32 3, i32 5, i32 7, i32 9, i32 11>
+  tail call void @llvm.vp.store.v12i16.p0(<12 x i16> %interleaved.vec, ptr %ptr, <12 x i1> splat (i1 true), i32 12)
   ret void
 }
 
@@ -1367,4 +1592,158 @@ define void @store_factor4_one_active_slidedown(ptr %ptr, <4 x i32> %v) {
   %v0 = shufflevector <4 x i32> %v, <4 x i32> poison, <16 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 2, i32 undef, i32 undef, i32 undef, i32 3, i32 undef, i32 undef, i32 undef, i32 4,  i32 undef, i32 undef, i32 undef>
   store <16 x i32> %v0, ptr %ptr
   ret void
+}
+
+; Negative tests
+
+define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_mask(ptr %ptr) {
+; RV32-LABEL: invalid_vp_mask:
+; RV32:       # %bb.0:
+; RV32-NEXT:    li a1, 73
+; RV32-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV32-NEXT:    vmv.s.x v11, a1
+; RV32-NEXT:    lui a1, 1
+; RV32-NEXT:    vmv.v.i v10, 8
+; RV32-NEXT:    addi a1, a1, -33
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vmv.s.x v0, a1
+; RV32-NEXT:    li a1, 146
+; RV32-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
+; RV32-NEXT:    vle32.v v12, (a0), v0.t
+; RV32-NEXT:    li a0, 36
+; RV32-NEXT:    vmv.s.x v20, a1
+; RV32-NEXT:    lui a1, %hi(.LCPI40_0)
+; RV32-NEXT:    addi a1, a1, %lo(.LCPI40_0)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vle16.v v21, (a1)
+; RV32-NEXT:    vcompress.vm v8, v12, v11
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v12, 8
+; RV32-NEXT:    vmv1r.v v0, v10
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
+; RV32-NEXT:    vcompress.vm v14, v12, v20
+; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
+; RV32-NEXT:    vmv.s.x v0, a0
+; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
+; RV32-NEXT:    vrgatherei16.vv v10, v12, v21
+; RV32-NEXT:    vmv1r.v v9, v14
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: invalid_vp_mask:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a1, 73
+; RV64-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
+; RV64-NEXT:    vmv.s.x v11, a1
+; RV64-NEXT:    li a1, 146
+; RV64-NEXT:    vmv.s.x v20, a1
+; RV64-NEXT:    lui a1, 1
+; RV64-NEXT:    vmv.v.i v10, 8
+; RV64-NEXT:    addi a1, a1, -33
+; RV64-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV64-NEXT:    vmv.s.x v0, a1
+; RV64-NEXT:    li a1, 36
+; RV64-NEXT:    vsetivli zero, 12, e32, m4, ta, ma
+; RV64-NEXT:    vle32.v v12, (a0), v0.t
+; RV64-NEXT:    li a0, 3
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, 5
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vcompress.vm v8, v12, v11
+; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v16, v12, 8
+; RV64-NEXT:    vmv1r.v v0, v10
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
+; RV64-NEXT:    vcompress.vm v14, v12, v20
+; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
+; RV64-NEXT:    vmv.s.x v0, a1
+; RV64-NEXT:    addi a0, a0, 2
+; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
+; RV64-NEXT:    vmv1r.v v9, v14
+; RV64-NEXT:    ret
+  %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, i32 12)
+  %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+}
+
+define {<4 x i32>, <4 x i32>, <4 x i32>} @invalid_vp_evl(ptr %ptr) {
+; RV32-LABEL: invalid_vp_evl:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
+; RV32-NEXT:    vle32.v v12, (a0)
+; RV32-NEXT:    li a0, 73
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV32-NEXT:    vmv.v.i v0, 8
+; RV32-NEXT:    vmv.s.x v10, a0
+; RV32-NEXT:    li a0, 146
+; RV32-NEXT:    vmv.s.x v11, a0
+; RV32-NEXT:    lui a0, %hi(.LCPI41_0)
+; RV32-NEXT:    addi a0, a0, %lo(.LCPI41_0)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vle16.v v20, (a0)
+; RV32-NEXT:    li a0, 36
+; RV32-NEXT:    vcompress.vm v8, v12, v10
+; RV32-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV32-NEXT:    vslidedown.vi v16, v12, 8
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vrgather.vi v8, v16, 1, v0.t
+; RV32-NEXT:    vcompress.vm v14, v12, v11
+; RV32-NEXT:    vrgather.vi v14, v16, 2, v0.t
+; RV32-NEXT:    vmv.s.x v0, a0
+; RV32-NEXT:    vmerge.vvm v12, v16, v12, v0
+; RV32-NEXT:    vrgatherei16.vv v10, v12, v20
+; RV32-NEXT:    vmv1r.v v9, v14
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: invalid_vp_evl:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 10, e32, m4, ta, ma
+; RV64-NEXT:    vle32.v v12, (a0)
+; RV64-NEXT:    li a0, 73
+; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
+; RV64-NEXT:    vmv.v.i v0, 8
+; RV64-NEXT:    vmv.s.x v10, a0
+; RV64-NEXT:    li a0, 146
+; RV64-NEXT:    vmv.s.x v11, a0
+; RV64-NEXT:    li a0, 36
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vcompress.vm v8, v12, v10
+; RV64-NEXT:    vsetivli zero, 8, e32, m4, ta, ma
+; RV64-NEXT:    vslidedown.vi v16, v12, 8
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV64-NEXT:    vrgather.vi v8, v16, 1, v0.t
+; RV64-NEXT:    vcompress.vm v14, v12, v11
+; RV64-NEXT:    vrgather.vi v14, v16, 2, v0.t
+; RV64-NEXT:    vmv.s.x v0, a0
+; RV64-NEXT:    li a0, 3
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    addi a0, a0, 5
+; RV64-NEXT:    slli a0, a0, 16
+; RV64-NEXT:    addi a0, a0, 2
+; RV64-NEXT:    vmerge.vvm v12, v16, v12, v0
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v9, a0
+; RV64-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV64-NEXT:    vrgatherei16.vv v10, v12, v9
+; RV64-NEXT:    vmv1r.v v9, v14
+; RV64-NEXT:    ret
+  %interleaved.vec = tail call <12 x i32> @llvm.vp.load.v12i32.p0(ptr %ptr, <12 x i1> splat (i1 true), i32 10)
+  %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
+  %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
+  %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
