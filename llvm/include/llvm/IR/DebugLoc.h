@@ -122,10 +122,18 @@ namespace llvm {
 #endif
 
 #if ENABLE_DEBUGLOC_COVERAGE_TRACKING
-    static inline DebugLoc getTemporary() { return DebugLoc(DebugLocKind::Temporary); }
-    static inline DebugLoc getUnknown() { return DebugLoc(DebugLocKind::Unknown); }
-    static inline DebugLoc getCompilerGenerated() { return DebugLoc(DebugLocKind::CompilerGenerated); }
-    static inline DebugLoc getDropped() { return DebugLoc(DebugLocKind::Dropped); }
+    static inline DebugLoc getTemporary() {
+      return DebugLoc(DebugLocKind::Temporary);
+    }
+    static inline DebugLoc getUnknown() {
+      return DebugLoc(DebugLocKind::Unknown);
+    }
+    static inline DebugLoc getCompilerGenerated() {
+      return DebugLoc(DebugLocKind::CompilerGenerated);
+    }
+    static inline DebugLoc getDropped() {
+      return DebugLoc(DebugLocKind::Dropped);
+    }
 #else
     static inline DebugLoc getTemporary() { return DebugLoc(); }
     static inline DebugLoc getUnknown() { return DebugLoc(); }
