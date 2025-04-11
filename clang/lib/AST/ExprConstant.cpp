@@ -8406,6 +8406,17 @@ public:
         return false;
     }
 
+    // If an assertion fails during constant evaluation, give a specific note explaining that
+    if (FD->getName() == "__assert_fail") {
+      const Expr *AssertionExpr = E->getArg(0);
+      const StringLiteral *AssertionText = dyn_cast<StringLiteral>(AssertionExpr->IgnoreParens()->IgnoreParenImpCasts());
+
+      Info.FFDiag(E->getBeginLoc(), diag::note_constexpr_assert_failed)
+          << (AssertionText ? AssertionText->getString() : "<unknown assertion>");
+
+      return false;
+    }
+
     SmallVector<QualType, 4> CovariantAdjustmentPath;
     if (This) {
       auto *NamedMember = dyn_cast<CXXMethodDecl>(FD);
