@@ -11400,7 +11400,7 @@ static QualType mergeEnumWithInteger(ASTContext &Context, const EnumType *ET,
   return {};
 }
 
-QualType ASTContext::mergeTagTypes(QualType LHS, QualType RHS) {
+QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
   // C17 and earlier and C++ disallow two tag definitions within the same TU
   // from being compatible.
   if (LangOpts.CPlusPlus || !LangOpts.C23)
@@ -11712,7 +11712,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                               /*AllowCXX=*/false, IsConditionalOperator);
   case Type::Record:
   case Type::Enum:
-    return mergeTagTypes(LHS, RHS);
+    return mergeTagDefinitions(LHS, RHS);
   case Type::Builtin:
     // Only exactly equal builtin types are compatible, which is tested above.
     return {};
