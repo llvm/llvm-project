@@ -1255,6 +1255,7 @@ LogicalResult Serializer::processOperation(Operation *opInst) {
         return processGlobalVariableOp(op);
       })
       .Case([&](spirv::LoopOp op) { return processLoopOp(op); })
+      .Case([&](spirv::BreakOp op) { return processBreakOp(op); })
       .Case([&](spirv::ReferenceOfOp op) { return processReferenceOfOp(op); })
       .Case([&](spirv::SelectionOp op) { return processSelectionOp(op); })
       .Case([&](spirv::SpecConstantOp op) { return processSpecConstantOp(op); })

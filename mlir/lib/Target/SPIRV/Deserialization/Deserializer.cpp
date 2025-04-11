@@ -2345,6 +2345,46 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
   return success();
 }
 
+LogicalResult spirv::Deserializer::handleEarlyExits() {
+  SmallVector<Block *> loopMergeBlocks;
+
+  // Find all blocks that are loops' merge blocks.
+  for (auto &[_, mergeInfo] : blockMergeInfo)
+    if (mergeInfo.continueBlock)
+      loopMergeBlocks.push_back(mergeInfo.mergeBlock);
+
+  for (auto &[header, mergeInfo] : blockMergeInfo) {
+    // We look for something like `if(x) break; ...` so we only process
+    // selection for now.
+    if (!mergeInfo.continueBlock) {
+      SetVector<Block *> constructBlocks;
+      constructBlocks.insert(header);
+
+      // Iterate over all blocks in the selection. This is similar to
+      // `collectBlocksInConstruct()` but with extra logic inserting
+      // `spirv.mlir.break`. We look for any block inside the selection region
+      // that jumps directly to the loop merge and does not go through the merge
+      // block of the selection. This indicates the unstructured jump so the
+      // branch is replaced with break.
+      for (unsigned i = 0; i < constructBlocks.size(); ++i) {
+        for (Block *successor : constructBlocks[i]->getSuccessors()) {
+          Block *block = constructBlocks[i];
+          if (llvm::is_contained(loopMergeBlocks, successor)) {
+            assert(!block->empty() && block->getNumSuccessors() == 1);
+            block->back().erase();
+            OpBuilder builder(block, block->end());
+            builder.create<spirv::BreakOp>(mergeInfo.loc);
+          }
+          if (successor != mergeInfo.mergeBlock)
+            constructBlocks.insert(successor);
+        }
+      }
+    }
+  }
+
+  return success();
+}
+
 LogicalResult spirv::Deserializer::structurizeControlFlow() {
   LLVM_DEBUG({
     logger.startLine()
@@ -2358,6 +2398,10 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
   });
 
   if (failed(splitConditionalBlocks())) {
+    return failure();
+  }
+
+  if (failed(handleEarlyExits())) {
     return failure();
   }
 

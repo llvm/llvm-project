@@ -576,6 +576,20 @@ LogicalResult Serializer::processLoopOp(spirv::LoopOp loopOp) {
   return success();
 }
 
+LogicalResult Serializer::processBreakOp(spirv::BreakOp breakOp) {
+  auto parentLoopOp = breakOp.getOperation()->getParentOfType<spirv::LoopOp>();
+
+  if (!parentLoopOp)
+    return failure();
+
+  auto *mergeBlock = parentLoopOp.getMergeBlock();
+  auto mergeID = getBlockID(mergeBlock);
+
+  encodeInstructionInto(functionBody, spirv::Opcode::OpBranch, {mergeID});
+
+  return success();
+}
+
 LogicalResult Serializer::processBranchConditionalOp(
     spirv::BranchConditionalOp condBranchOp) {
   auto conditionID = getValueID(condBranchOp.getCondition());

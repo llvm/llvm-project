@@ -335,3 +335,71 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Loop with break statement
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  spirv.func @loop_break(%count : i32) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one  = spirv.Constant 1: i32
+    %five = spirv.Constant 5: i32
+
+    // CHECK: spirv.mlir.loop {
+    spirv.mlir.loop {
+      // CHECK-NEXT: spirv.Branch ^[[HEADER:.+]]({{%.*}}: i32)
+      spirv.Branch ^header(%zero: i32)
+
+    // CHECK-NEXT: ^[[HEADER:.+]]({{%.*}}: i32):
+    ^header(%i : i32):
+      %cmp = spirv.SLessThan %i, %count : i32
+      // CHECK: spirv.BranchConditional {{%.*}}, ^[[BODY:.+]], ^[[MERGE:.+]]
+      spirv.BranchConditional %cmp, ^body, ^merge
+
+    // CHECK-NEXT: ^[[BODY:.+]]:
+    ^body:
+      %cond = spirv.SGreaterThan %i, %five : i32
+
+      // CHECK: spirv.Branch ^[[LINK:.+]]
+      spirv.Branch ^selection
+
+    // COM: Artificial block introduced by block splitting in the deserializer.
+    // CHECK-NEXT: ^[[LINK:.+]]:
+    // CHECK-NEXT: spirv.Branch ^[[SELECTION:.+]]
+
+    // CHECK-NEXT: ^[[SELECTION:.+]]:
+    ^selection:
+      // CHECK-NEXT: spirv.mlir.selection {
+      spirv.mlir.selection {
+        // CHECK-NEXT: spirv.BranchConditional {{%.*}}, ^[[TRUE:.+]], ^[[FALSE:.+]]
+        spirv.BranchConditional %cond, ^true, ^merge
+      // CHECK-NEXT: ^[[TRUE:.+]]:
+      ^true:
+        // CHECK-NEXT: spirv.mlir.break
+        spirv.mlir.break
+      // CHECK-NEXT: ^[[MERGE:.+]]:
+      ^merge:
+        // CHECK-NEXT: spirv.mlir.merge
+        spirv.mlir.merge
+      }
+
+      // CHECK: spirv.Branch ^[[CONTINUE:.+]]
+      spirv.Branch ^continue
+
+    // CHECK-NEXT: ^[[CONTINUE:.+]]:
+    ^continue:
+      %new_i = spirv.IAdd %i, %one : i32
+      // CHECK: spirv.Branch ^[[HEADER:.+]]({{%.*}}: i32)
+      spirv.Branch ^header(%new_i: i32)
+
+    // CHECK-NEXT: ^[[MERGE:.+]]:
+    ^merge:
+      // CHECK-NEXT: spirv.mlir.merge
+      spirv.mlir.merge
+    }
+
+    // CHECK: spirv.Return
+    spirv.Return
+  }
+}
