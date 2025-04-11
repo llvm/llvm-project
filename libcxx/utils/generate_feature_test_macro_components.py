@@ -13,6 +13,7 @@ from typing import (
 )
 import functools
 import json
+from libcxx.header_information import module_c_headers, module_headers, header_restrictions, headers_not_available, libcxx_root
 
 
 def get_libcxx_paths():
