@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 
 namespace llvm {
@@ -92,12 +93,6 @@ class LVBinaryReader : public LVReader {
     if (SectionAddresses.find(Section.getAddress()) == SectionAddresses.end())
       SectionAddresses.emplace(Section.getAddress(), Section);
   }
-
-  // Scopes with ranges for current compile unit. It is used to find a line
-  // giving its exact or closest address. To support comdat functions, all
-  // addresses for the same section are recorded in the same map.
-  using LVSectionRanges = std::map<LVSectionIndex, std::unique_ptr<LVRange>>;
-  LVSectionRanges SectionRanges;
 
   // Image base and virtual address for Executable file.
   uint64_t ImageBaseAddress = 0;
@@ -178,11 +173,6 @@ protected:
 
   Expected<std::pair<LVSectionIndex, object::SectionRef>>
   getSection(LVScope *Scope, LVAddress Address, LVSectionIndex SectionIndex);
-
-  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope);
-  void addSectionRange(LVSectionIndex SectionIndex, LVScope *Scope,
-                       LVAddress LowerAddress, LVAddress UpperAddress);
-  LVRange *getSectionRanges(LVSectionIndex SectionIndex);
 
   void includeInlineeLines(LVSectionIndex SectionIndex, LVScope *Function);
 
