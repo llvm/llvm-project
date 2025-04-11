@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
@@ -557,6 +558,32 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
   // Debug location must be unknown since the first debug location is used
   // to determine the end of the prologue.
   DebugLoc DL;
+
+  // Add mcount instrumentation if necessary.
+  if (MF.getFunction().getFnAttribute("systemz-backend").getValueAsString() ==
+      "insert-mcount") {
+
+    // Store return address 8 bytes above stack pointer.
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::STG))
+        .addReg(SystemZ::R14D)
+        .addReg(SystemZ::R15D)
+        .addImm(8)
+        .addReg(0);
+
+    // Call mcount (Regmask 0 to ensure this will not be moved by the
+    // scheduler.).
+    const uint32_t Mask = 0;
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::CallBRASL))
+        .addGlobalAddress(MF.getFunction().getParent()->getFunction("mcount"))
+        .addRegMask(&Mask);
+
+    // Reload return address drom 8 bytes above stack pointer.
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::LG))
+        .addReg(SystemZ::R14D)
+        .addReg(SystemZ::R15D)
+        .addImm(8)
+        .addReg(0);
+  }
 
   // The current offset of the stack pointer from the CFA.
   int64_t SPOffsetFromCFA = -SystemZMC::ELFCFAOffsetFromInitialSP;
