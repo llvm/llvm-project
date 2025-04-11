@@ -323,6 +323,8 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoInline);
     if (callOp.getAlwaysInlineAttr())
       call->addFnAttr(llvm::Attribute::AlwaysInline);
+    if (callOp.getInlineHintAttr())
+      call->addFnAttr(llvm::Attribute::InlineHint);
 
     if (failed(convertParameterAndResultAttrs(callOp, call, moduleTranslation)))
       return failure();
