@@ -290,8 +290,7 @@ struct DAP {
   ///   \b false if a fatal error was found while executing these commands,
   ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
   bool RunLLDBCommands(llvm::StringRef prefix,
-                       llvm::ArrayRef<std::string> commands,
-                       bool echo_commands = true);
+                       llvm::ArrayRef<std::string> commands);
 
   llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
   llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);

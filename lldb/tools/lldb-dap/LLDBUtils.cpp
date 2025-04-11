@@ -24,14 +24,19 @@ bool RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
 
   bool did_print_prefix = false;
 
-  // Get the default prompt from settings.
-  std::string prompt_string = "(lldb) ";
-  if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
-    const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
+  // We only need the prompt when echoing commands.
+  std::string prompt_string;
+  if (echo_commands) {
+    prompt_string = "(lldb) ";
 
-    if (prompt_length != 0) {
-      prompt_string.resize(prompt_length + 1);
-      prompt.GetStringValue(prompt_string.data(), prompt_string.length());
+    // Get the current prompt from settings.
+    if (const lldb::SBStructuredData prompt = debugger.GetSetting("prompt")) {
+      const size_t prompt_length = prompt.GetStringValue(nullptr, 0);
+
+      if (prompt_length != 0) {
+        prompt_string.resize(prompt_length + 1);
+        prompt.GetStringValue(prompt_string.data(), prompt_string.length());
+      }
     }
   }
 

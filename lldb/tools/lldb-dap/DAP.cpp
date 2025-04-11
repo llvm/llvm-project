@@ -561,12 +561,11 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
 }
 
 bool DAP::RunLLDBCommands(llvm::StringRef prefix,
-                          llvm::ArrayRef<std::string> commands,
-                          bool echo_commands) {
+                          llvm::ArrayRef<std::string> commands) {
   bool required_command_failed = false;
-  std::string output =
-      ::RunLLDBCommands(debugger, prefix, commands, required_command_failed,
-                        /*parse_command_directives*/ true, echo_commands);
+  std::string output = ::RunLLDBCommands(
+      debugger, prefix, commands, required_command_failed,
+      /*parse_command_directives*/ true, /*echo_commands*/ true);
   SendOutput(OutputType::Console, output);
   return !required_command_failed;
 }
