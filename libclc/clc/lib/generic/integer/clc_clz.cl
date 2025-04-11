@@ -11,35 +11,35 @@
 #include <clc/internal/clc.h>
 
 _CLC_OVERLOAD _CLC_DEF char __clc_clz(char x) {
-  return __clc_clz((ushort)(uchar)x) - 8;
+  return __clc_clz(__clc_as_uchar(x));
 }
 
 _CLC_OVERLOAD _CLC_DEF uchar __clc_clz(uchar x) {
-  return __clc_clz((ushort)x) - 8;
+  return __builtin_clzg(x, 8);
 }
 
 _CLC_OVERLOAD _CLC_DEF short __clc_clz(short x) {
-  return x ? __builtin_clzs(x) : 16;
+  return __clc_clz(__clc_as_ushort(x));
 }
 
 _CLC_OVERLOAD _CLC_DEF ushort __clc_clz(ushort x) {
-  return x ? __builtin_clzs(x) : 16;
+  return __builtin_clzg(x, 16);
 }
 
 _CLC_OVERLOAD _CLC_DEF int __clc_clz(int x) {
-  return x ? __builtin_clz(x) : 32;
+  return __clc_clz(__clc_as_uint(x));
 }
 
 _CLC_OVERLOAD _CLC_DEF uint __clc_clz(uint x) {
-  return x ? __builtin_clz(x) : 32;
+  return __builtin_clzg(x, 32);
 }
 
 _CLC_OVERLOAD _CLC_DEF long __clc_clz(long x) {
-  return x ? __builtin_clzl(x) : 64;
+  return __clc_clz(__clc_as_ulong(x));
 }
 
 _CLC_OVERLOAD _CLC_DEF ulong __clc_clz(ulong x) {
-  return x ? __builtin_clzl(x) : 64;
+  return __builtin_clzg(x, 64);
 }
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, char, __clc_clz, char)
