@@ -4241,11 +4241,6 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
         ValScalarTy->isBFloatTy()) {
       auto *ValVTy = cast<FixedVectorType>(ValTy);
 
-      // FIXME: We currently scalarise these.
-      if (ValVTy->getNumElements() > 4)
-        return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred,
-                                         CostKind, Op1Info, Op2Info, I);
-
       // Without dedicated instructions we promote [b]f16 compares to f32.
       auto *PromotedTy =
           VectorType::get(Type::getFloatTy(ValTy->getContext()), ValVTy);
