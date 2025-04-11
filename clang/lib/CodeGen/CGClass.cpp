@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
@@ -146,16 +147,13 @@ Address CodeGenFunction::LoadCXXThisAddress() {
 /// Emit the address of a field using a member data pointer.
 ///
 /// \param E Only used for emergency diagnostics
-Address
-CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
-                                                 llvm::Value *memberPtr,
-                                      const MemberPointerType *memberPtrType,
-                                                 LValueBaseInfo *BaseInfo,
-                                                 TBAAAccessInfo *TBAAInfo) {
+Address CodeGenFunction::EmitCXXMemberDataPointerAddress(
+    const Expr *E, Address base, llvm::Value *memberPtr,
+    const MemberPointerType *memberPtrType, bool IsInBounds,
+    LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo) {
   // Ask the ABI to compute the actual address.
-  llvm::Value *ptr =
-    CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
-                                                 memberPtr, memberPtrType);
+  llvm::Value *ptr = CGM.getCXXABI().EmitMemberDataPointerAddress(
+      *this, E, base, memberPtr, memberPtrType, IsInBounds);
 
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =
@@ -931,7 +929,7 @@ namespace {
     }
 
     void addMemcpyableField(FieldDecl *F) {
-      if (F->isZeroSize(CGF.getContext()))
+      if (isEmptyFieldForLayout(CGF.getContext(), F))
         return;
       if (!FirstField)
         addInitialField(F);
@@ -1882,7 +1880,7 @@ namespace {
                               const CXXDestructorDecl *DD)
        : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
    void PushCleanupForField(const FieldDecl *Field) {
-     if (Field->isZeroSize(Context))
+     if (isEmptyFieldForLayout(Context, Field))
        return;
      unsigned FieldIndex = Field->getFieldIndex();
      if (FieldHasTrivialDestructorBody(Context, Field)) {
