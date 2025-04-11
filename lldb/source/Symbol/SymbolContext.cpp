@@ -895,12 +895,12 @@ char const *SymbolContext::GetPossiblyInlinedFunctionName(
   // If we do have an inlined frame name, return that.
   if (char const *inline_name = inline_info->GetMangled()
                                     .GetName(mangling_preference)
-                                    .AsCString(nullptr))
+                                    .AsCString())
     return inline_name;
 
   // Sometimes an inline frame may not have mangling information,
   // but does have a valid name.
-  return inline_info->GetName().AsCString(nullptr);
+  return inline_info->GetName().AsCString();
 }
 
 //
