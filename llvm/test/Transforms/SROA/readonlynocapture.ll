@@ -482,9 +482,7 @@ define i32 @twoalloc_with_lifetimes() {
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
 ; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @callee(ptr [[A]])
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    [[R:%.*]] = add i32 [[L1]], [[L2]]
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
