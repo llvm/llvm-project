@@ -654,8 +654,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
     case SubobjectAdjustment::MemberPointerAdjustment: {
       llvm::Value *Ptr = EmitScalarExpr(Adjustment.Ptr.RHS);
-      Object = EmitCXXMemberDataPointerAddress(E, Object, Ptr,
-                                               Adjustment.Ptr.MPT);
+      Object = EmitCXXMemberDataPointerAddress(
+          E, Object, Ptr, Adjustment.Ptr.MPT, /*IsInBounds=*/true);
       break;
     }
     }
@@ -6295,9 +6295,10 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
 
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
-  Address MemberAddr =
-    EmitCXXMemberDataPointerAddress(E, BaseAddr, OffsetV, MPT, &BaseInfo,
-                                    &TBAAInfo);
+  bool IsInBounds = !getLangOpts().PointerOverflowDefined &&
+                    !isUnderlyingBasePointerConstantNull(E->getLHS());
+  Address MemberAddr = EmitCXXMemberDataPointerAddress(
+      E, BaseAddr, OffsetV, MPT, IsInBounds, &BaseInfo, &TBAAInfo);
 
   return MakeAddrLValue(MemberAddr, MPT->getPointeeType(), BaseInfo, TBAAInfo);
 }
