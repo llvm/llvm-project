@@ -15,7 +15,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CodeGenOptions.h"
+#include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "flang/Frontend/TextDiagnosticBuffer.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
@@ -533,6 +536,15 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
 }
 
 int main(int argc, char **argv) {
+  // Creating a SemanticsContext require a DiagnosticsEngine
+  Fortran::frontend::TextDiagnosticBuffer *diagsBuffer =
+      new Fortran::frontend::TextDiagnosticBuffer;
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
+      new clang::DiagnosticIDs());
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> diagOpts =
+      new clang::DiagnosticOptions();
+  clang::DiagnosticsEngine diags(diagID, &*diagOpts, diagsBuffer);
+
   [[maybe_unused]] llvm::InitLLVM y(argc, argv);
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -614,7 +626,7 @@ int main(int argc, char **argv) {
   Fortran::parser::AllSources allSources;
   Fortran::parser::AllCookedSources allCookedSources(allSources);
   Fortran::semantics::SemanticsContext semanticsContext{
-      defaultKinds, options.features, langOpts, allCookedSources};
+      defaultKinds, options.features, langOpts, allCookedSources, diags};
   semanticsContext.set_moduleDirectory(moduleDir)
       .set_moduleFileSuffix(moduleSuffix)
       .set_searchDirectories(includeDirs)

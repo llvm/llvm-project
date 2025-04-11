@@ -346,9 +346,9 @@ SemanticsContext::SemanticsContext(
     const common::IntrinsicTypeDefaultKinds &defaultKinds,
     const common::LanguageFeatureControl &languageFeatures,
     const common::LangOptions &langOpts,
-    parser::AllCookedSources &allCookedSources)
+    parser::AllCookedSources &allCookedSources, clang::DiagnosticsEngine &diags)
     : defaultKinds_{defaultKinds}, languageFeatures_{languageFeatures},
-      langOpts_{langOpts}, allCookedSources_{allCookedSources},
+      langOpts_{langOpts}, allCookedSources_{allCookedSources}, diags_{diags},
       intrinsics_{evaluate::IntrinsicProcTable::Configure(defaultKinds_)},
       globalScope_{*this}, intrinsicModulesScope_{globalScope_.MakeScope(
                                Scope::Kind::IntrinsicModules, nullptr)},
