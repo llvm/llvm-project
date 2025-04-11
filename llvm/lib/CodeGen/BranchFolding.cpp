@@ -39,7 +39,6 @@
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -104,7 +103,6 @@ public:
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<TargetPassConfig>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -158,7 +156,6 @@ bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structurized CFG.
   bool EnableTailMerge =
