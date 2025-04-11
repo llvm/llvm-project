@@ -54,6 +54,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/BuildBuiltins.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 #include "llvm/Transforms/Utils/LoopPeel.h"
@@ -8562,7 +8563,7 @@ bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
   return Flush;
 }
 
-OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
                                   AtomicOpValue &X, AtomicOpValue &V,
                                   AtomicOrdering AO) {
@@ -8571,78 +8572,75 @@ OpenMPIRBuilder::createAtomicRead(const LocationDescription &Loc,
 
   assert(X.Var->getType()->isPointerTy() &&
          "OMP Atomic expects a pointer to target memory");
+  assert(V.Var->getType()->isPointerTy() &&
+         "Expecting a pointer for atomic load result");
   Type *XElemTy = X.ElemTy;
-  assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy() || XElemTy->isStructTy()) &&
-         "OMP atomic read expected a scalar type");
 
-  Value *XRead = nullptr;
+  // TODO: Get TLI and TL from frontend
+  Triple T(Builder.GetInsertBlock()->getModule()->getTargetTriple());
+  TargetLibraryInfoImpl TLII(T);
+  TargetLibraryInfo TLI(TLII);
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Twine Name = X.Var->getName();
 
-  if (XElemTy->isIntegerTy()) {
-    LoadInst *XLD =
-        Builder.CreateLoad(XElemTy, X.Var, X.IsVolatile, "omp.atomic.read");
-    XLD->setAtomic(AO);
-    XRead = cast<Value>(XLD);
-  } else if (XElemTy->isStructTy()) {
-    // FIXME: Add checks to ensure __atomic_load is emitted iff the
-    // target does not support `atomicrmw` of the size of the struct
-    LoadInst *OldVal = Builder.CreateLoad(XElemTy, X.Var, "omp.atomic.read");
-    OldVal->setAtomic(AO);
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
-    OpenMPIRBuilder::AtomicInfo atomicInfo(
-        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X.Var);
-    auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
-    XRead = AtomicLoadRes.first;
-    OldVal->eraseFromParent();
-  } else {
-    // We need to perform atomic op as integer
-    IntegerType *IntCastTy =
-        IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    LoadInst *XLoad =
-        Builder.CreateLoad(IntCastTy, X.Var, X.IsVolatile, "omp.atomic.load");
-    XLoad->setAtomic(AO);
-    if (XElemTy->isFloatingPointTy()) {
-      XRead = Builder.CreateBitCast(XLoad, XElemTy, "atomic.flt.cast");
-    } else {
-      XRead = Builder.CreateIntToPtr(XLoad, XElemTy, "atomic.ptr.cast");
-    }
-  }
+  Error ALResult = emitAtomicLoadBuiltin(
+      /*AtomicPtr=*/X.Var,
+      /*RetPtr=*/V.Var,
+      /*TypeOrSize=*/XElemTy,
+      /*IsVolatile=*/X.IsVolatile || V.IsVolatile,
+      /*Memorder=*/AO,
+      /*SyncScope=*/static_cast<SyncScope::ID>(SyncScope::System),
+      /*Align=*/{},
+      /*Builder=*/Builder,
+      /*EmitOptions=*/AtomicEmitOptions(DL, &TLI),
+      /*Name=*/Name + ".atomic.read");
+  if (ALResult)
+    return std::move(ALResult);
+
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Read);
-  if (XRead->getType() != V.Var->getType())
-    XRead = emitImplicitCast(Builder, XRead, V.Var);
-  Builder.CreateStore(XRead, V.Var, V.IsVolatile);
+
   return Builder.saveIP();
 }
 
-OpenMPIRBuilder::InsertPointTy
+OpenMPIRBuilder::InsertPointOrErrorTy
 OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
-                                   AtomicOpValue &X, Value *Expr,
-                                   AtomicOrdering AO) {
+                                   InsertPointTy AllocaIP, AtomicOpValue &X,
+                                   Value *Expr, AtomicOrdering AO) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
+  assert(!isConflictIP(Loc.IP, AllocaIP) && "IPs must not be ambiguous");
   assert(X.Var->getType()->isPointerTy() &&
          "OMP Atomic expects a pointer to target memory");
   Type *XElemTy = X.ElemTy;
-  assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-          XElemTy->isPointerTy()) &&
-         "OMP atomic write expected a scalar type");
 
-  if (XElemTy->isIntegerTy()) {
-    StoreInst *XSt = Builder.CreateStore(Expr, X.Var, X.IsVolatile);
-    XSt->setAtomic(AO);
-  } else {
-    // We need to bitcast and perform atomic op as integers
-    IntegerType *IntCastTy =
-        IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    Value *ExprCast =
-        Builder.CreateBitCast(Expr, IntCastTy, "atomic.src.int.cast");
-    StoreInst *XSt = Builder.CreateStore(ExprCast, X.Var, X.IsVolatile);
-    XSt->setAtomic(AO);
-  }
+  // TODO: Get TLI and TL from frontend
+  Triple T(Builder.GetInsertBlock()->getModule()->getTargetTriple());
+  TargetLibraryInfoImpl TLII(T);
+  TargetLibraryInfo TLI(TLII);
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Twine Name = X.Var->getName();
+
+  // Reserve some stack space.
+  InsertPointTy ContIP = Builder.saveIP();
+  Builder.restoreIP(AllocaIP);
+  Value *ValPtr = Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.val");
+  Builder.restoreIP(ContIP);
+
+  Builder.CreateStore(Expr, ValPtr);
+  Error ASResult = emitAtomicStoreBuiltin(
+      /*AtomicPtr=*/X.Var,
+      /*ValPtr=*/ValPtr,
+      /*DataOrSize=*/XElemTy,
+      /*IsVolatile=*/X.IsVolatile,
+      /*Memorder=*/AO,
+      /*SyncScope=*/static_cast<SyncScope::ID>(SyncScope::System),
+      /*Align=*/{},
+      /*Builder=*/Builder,
+      /*EmitOptions=*/AtomicEmitOptions(DL, &TLI),
+      /*Name=*/Name + ".atomic.write");
+  if (ASResult)
+    return ASResult;
 
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Write);
   return Builder.saveIP();
@@ -8660,10 +8658,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     Type *XTy = X.Var->getType();
     assert(XTy->isPointerTy() &&
            "OMP Atomic expects a pointer to target memory");
-    Type *XElemTy = X.ElemTy;
-    assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-            XElemTy->isPointerTy()) &&
-           "OMP atomic update expected a scalar type");
     assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
            (RMWOp != AtomicRMWInst::UMax) && (RMWOp != AtomicRMWInst::UMin) &&
            "OpenMP atomic does not support LT or GT operations");
@@ -8717,8 +8711,8 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
     AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr) {
-  // TODO: handle the case where XElemTy is not byte-sized or not a power of 2
-  // or a complex datatype.
+  assert(XElemTy && "Argument must not be NULL");
+
   bool emitRMWOp = false;
   switch (RMWOp) {
   case AtomicRMWInst::Add:
@@ -8730,7 +8724,7 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     emitRMWOp = XElemTy;
     break;
   case AtomicRMWInst::Sub:
-    emitRMWOp = (IsXBinopExpr && XElemTy);
+    emitRMWOp = IsXBinopExpr;
     break;
   default:
     emitRMWOp = false;
@@ -8747,124 +8741,85 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
       Res.second = Res.first;
     else
       Res.second = emitRMWOpAsInstruction(Res.first, Expr, RMWOp);
-  } else if (RMWOp == llvm::AtomicRMWInst::BinOp::BAD_BINOP &&
-             XElemTy->isStructTy()) {
-    LoadInst *OldVal =
-        Builder.CreateLoad(XElemTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
-    const DataLayout &LoadDL = OldVal->getModule()->getDataLayout();
-    unsigned LoadSize =
-        LoadDL.getTypeStoreSize(OldVal->getPointerOperand()->getType());
-
-    OpenMPIRBuilder::AtomicInfo atomicInfo(
-        &Builder, XElemTy, LoadSize * 8, LoadSize * 8, OldVal->getAlign(),
-        OldVal->getAlign(), true /* UseLibcall */, X);
-    auto AtomicLoadRes = atomicInfo.EmitAtomicLoadLibcall(AO);
-    BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminator();
-    CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
-    BasicBlock *ExitBB =
-        CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
-    BasicBlock *ContBB = CurBB->splitBasicBlock(CurBB->getTerminator(),
-                                                X->getName() + ".atomic.cont");
-    ContBB->getTerminator()->eraseFromParent();
-    Builder.restoreIP(AllocaIP);
-    AllocaInst *NewAtomicAddr = Builder.CreateAlloca(XElemTy);
-    NewAtomicAddr->setName(X->getName() + "x.new.val");
-    Builder.SetInsertPoint(ContBB);
-    llvm::PHINode *PHI = Builder.CreatePHI(OldVal->getType(), 2);
-    PHI->addIncoming(AtomicLoadRes.first, CurBB);
-    Value *OldExprVal = PHI;
-    Expected<Value *> CBResult = UpdateOp(OldExprVal, Builder);
-    if (!CBResult)
-      return CBResult.takeError();
-    Value *Upd = *CBResult;
-    Builder.CreateStore(Upd, NewAtomicAddr);
-    AtomicOrdering Failure =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
-    auto Result = atomicInfo.EmitAtomicCompareExchangeLibcall(
-        AtomicLoadRes.second, NewAtomicAddr, AO, Failure);
-    LoadInst *PHILoad = Builder.CreateLoad(XElemTy, Result.first);
-    PHI->addIncoming(PHILoad, Builder.GetInsertBlock());
-    Builder.CreateCondBr(Result.second, ExitBB, ContBB);
-    OldVal->eraseFromParent();
-    Res.first = OldExprVal;
-    Res.second = Upd;
-
-    if (UnreachableInst *ExitTI =
-            dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
-      CurBBTI->eraseFromParent();
-      Builder.SetInsertPoint(ExitBB);
-    } else {
-      Builder.SetInsertPoint(ExitTI);
-    }
-  } else {
-    IntegerType *IntCastTy =
-        IntegerType::get(M.getContext(), XElemTy->getScalarSizeInBits());
-    LoadInst *OldVal =
-        Builder.CreateLoad(IntCastTy, X, X->getName() + ".atomic.load");
-    OldVal->setAtomic(AO);
-    // CurBB
-    // |     /---\
-		// ContBB    |
-    // |     \---/
-    // ExitBB
-    BasicBlock *CurBB = Builder.GetInsertBlock();
-    Instruction *CurBBTI = CurBB->getTerminator();
-    CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
-    BasicBlock *ExitBB =
-        CurBB->splitBasicBlock(CurBBTI, X->getName() + ".atomic.exit");
-    BasicBlock *ContBB = CurBB->splitBasicBlock(CurBB->getTerminator(),
-                                                X->getName() + ".atomic.cont");
-    ContBB->getTerminator()->eraseFromParent();
-    Builder.restoreIP(AllocaIP);
-    AllocaInst *NewAtomicAddr = Builder.CreateAlloca(XElemTy);
-    NewAtomicAddr->setName(X->getName() + "x.new.val");
-    Builder.SetInsertPoint(ContBB);
-    llvm::PHINode *PHI = Builder.CreatePHI(OldVal->getType(), 2);
-    PHI->addIncoming(OldVal, CurBB);
-    bool IsIntTy = XElemTy->isIntegerTy();
-    Value *OldExprVal = PHI;
-    if (!IsIntTy) {
-      if (XElemTy->isFloatingPointTy()) {
-        OldExprVal = Builder.CreateBitCast(PHI, XElemTy,
-                                           X->getName() + ".atomic.fltCast");
-      } else {
-        OldExprVal = Builder.CreateIntToPtr(PHI, XElemTy,
-                                            X->getName() + ".atomic.ptrCast");
-      }
-    }
-
-    Expected<Value *> CBResult = UpdateOp(OldExprVal, Builder);
-    if (!CBResult)
-      return CBResult.takeError();
-    Value *Upd = *CBResult;
-    Builder.CreateStore(Upd, NewAtomicAddr);
-    LoadInst *DesiredVal = Builder.CreateLoad(IntCastTy, NewAtomicAddr);
-    AtomicOrdering Failure =
-        llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
-    AtomicCmpXchgInst *Result = Builder.CreateAtomicCmpXchg(
-        X, PHI, DesiredVal, llvm::MaybeAlign(), AO, Failure);
-    Result->setVolatile(VolatileX);
-    Value *PreviousVal = Builder.CreateExtractValue(Result, /*Idxs=*/0);
-    Value *SuccessFailureVal = Builder.CreateExtractValue(Result, /*Idxs=*/1);
-    PHI->addIncoming(PreviousVal, Builder.GetInsertBlock());
-    Builder.CreateCondBr(SuccessFailureVal, ExitBB, ContBB);
-
-    Res.first = OldExprVal;
-    Res.second = Upd;
-
-    // set Insertion point in exit block
-    if (UnreachableInst *ExitTI =
-            dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
-      CurBBTI->eraseFromParent();
-      Builder.SetInsertPoint(ExitBB);
-    } else {
-      Builder.SetInsertPoint(ExitTI);
-    }
+    return Res;
   }
 
-  return Res;
+  // TODO: Get TLI and TL from frontend
+  Triple T(Builder.GetInsertBlock()->getModule()->getTargetTriple());
+  TargetLibraryInfoImpl TLII(T);
+  TargetLibraryInfo TLI(TLII);
+  const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+  Twine Name(X->getName());
+
+  // Reserve some stack space.
+  InsertPointTy InitIP = Builder.saveIP();
+  Builder.restoreIP(AllocaIP);
+  AllocaInst *ExpectedOrActualPtr =
+      Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.expected.ptr");
+  AllocaInst *DesiredPtr =
+      Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.desired.ptr");
+  Builder.restoreIP(InitIP);
+
+  // Old value for first transaction. Every followup-transaction will use the
+  // actual value from cmpxchg.
+  Error ALResult = emitAtomicLoadBuiltin(
+      /*AtomicPtr=*/X,
+      /*RetPtr=*/ExpectedOrActualPtr,
+      /*DataOrSize=*/XElemTy,
+      /*IsVolatile=*/false,
+      /*Memorder=*/AO,
+      /*SyncScope=*/static_cast<SyncScope::ID>(SyncScope::System),
+      /*Align=*/{},
+      /*Builder=*/Builder,
+      /*EmitOptions=*/AtomicEmitOptions(DL, &TLI),
+      /*Name=*/Name);
+  if (ALResult)
+    return std::move(ALResult);
+
+  // Create new CFG.
+  BasicBlock *DoneBB = splitBBWithSuffix(Builder, false, ".atomic.done");
+  BasicBlock *RetryBB = splitBBWithSuffix(Builder, true, ".atomic.retry");
+
+  // Emit the update transaction...
+  Builder.SetInsertPoint(RetryBB);
+
+  // 1. Let the user code compute the new value.
+  Value *OrigVal =
+      Builder.CreateLoad(XElemTy, ExpectedOrActualPtr, Name + ".atomic.orig");
+  Expected<Value *> CBResult = UpdateOp(OrigVal, Builder);
+  if (!CBResult)
+    return CBResult.takeError();
+  Value *UpdVal = *CBResult;
+  Builder.CreateStore(UpdVal, DesiredPtr);
+
+  // 2. AtomicCompareExchange to replace OrigVal with UpdVal.
+  // IsWeak=true because even with a spurious failure, we will just try again.
+  Expected<Value *> ACEResult = emitAtomicCompareExchangeBuiltin(
+      /*AtomicPtr=*/X,
+      /*ExpectedPtr=*/ExpectedOrActualPtr,
+      /*DesiredPtr=*/DesiredPtr,
+      /*DataOrSize=*/XElemTy,
+      /*IsWeak=*/true,
+      /*IsVolatile=*/false,
+      /*SuccessMemorder=*/AO,
+      /*FailureMemorder=*/{},
+      /*SyncScope=*/static_cast<SyncScope::ID>(SyncScope::System),
+      /*ActualPtr=*/ExpectedOrActualPtr,
+      /*Align=*/{},
+      /*Builder=*/Builder,
+      /*EmitOptions=*/AtomicEmitOptions(DL, &TLI),
+      /*Name=*/Name);
+  if (!ACEResult)
+    return ACEResult.takeError();
+  Value *Success = *ACEResult;
+
+  // 3. Repeat transaction until successful.
+  Builder.CreateCondBr(Success, DoneBB, RetryBB);
+
+  // Continue with user code when the update transaction was successful.
+  Builder.SetInsertPoint(DoneBB);
+
+  return std::make_pair(OrigVal, UpdVal);
 }
 
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
@@ -8879,10 +8834,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     Type *XTy = X.Var->getType();
     assert(XTy->isPointerTy() &&
            "OMP Atomic expects a pointer to target memory");
-    Type *XElemTy = X.ElemTy;
-    assert((XElemTy->isFloatingPointTy() || XElemTy->isIntegerTy() ||
-            XElemTy->isPointerTy()) &&
-           "OMP atomic capture expected a scalar type");
     assert((RMWOp != AtomicRMWInst::Max) && (RMWOp != AtomicRMWInst::Min) &&
            "OpenMP atomic does not support LT or GT operations");
   });
@@ -8905,20 +8856,20 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   return Builder.saveIP();
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
-    const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
-    AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCompare(
+    const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
+    AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
     bool IsFailOnly) {
 
   AtomicOrdering Failure = AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
-  return createAtomicCompare(Loc, X, V, R, E, D, AO, Op, IsXBinopExpr,
+  return createAtomicCompare(Loc, AllocaIP, X, V, R, E, D, AO, Op, IsXBinopExpr,
                              IsPostfixUpdate, IsFailOnly, Failure);
 }
 
-OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
-    const LocationDescription &Loc, AtomicOpValue &X, AtomicOpValue &V,
-    AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
+OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCompare(
+    const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
+    AtomicOpValue &V, AtomicOpValue &R, Value *E, Value *D, AtomicOrdering AO,
     omp::OMPAtomicCompareOp Op, bool IsXBinopExpr, bool IsPostfixUpdate,
     bool IsFailOnly, AtomicOrdering Failure) {
 
@@ -8936,79 +8887,79 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
   bool IsInteger = E->getType()->isIntegerTy();
 
   if (Op == OMPAtomicCompareOp::EQ) {
-    AtomicCmpXchgInst *Result = nullptr;
-    if (!IsInteger) {
-      IntegerType *IntCastTy =
-          IntegerType::get(M.getContext(), X.ElemTy->getScalarSizeInBits());
-      Value *EBCast = Builder.CreateBitCast(E, IntCastTy);
-      Value *DBCast = Builder.CreateBitCast(D, IntCastTy);
-      Result = Builder.CreateAtomicCmpXchg(X.Var, EBCast, DBCast, MaybeAlign(),
-                                           AO, Failure);
-    } else {
-      Result =
-          Builder.CreateAtomicCmpXchg(X.Var, E, D, MaybeAlign(), AO, Failure);
-    }
+    // TODO: Get TLI and TL from frontend
+    Triple T(Builder.GetInsertBlock()->getModule()->getTargetTriple());
+    TargetLibraryInfoImpl TLII(T);
+    TargetLibraryInfo TLI(TLII);
+    const DataLayout &DL = Builder.GetInsertBlock()->getDataLayout();
+    Twine Name(X.Var->getName());
+
+    Type *XElemTy = X.ElemTy;
+
+    // Reserve some stack space.
+    InsertPointTy InitIP = Builder.saveIP();
+    Builder.restoreIP(AllocaIP);
+    AllocaInst *ExpectedPtr =
+        Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.expected.ptr");
+    AllocaInst *DesiredPtr =
+        Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.desired.ptr");
+    AllocaInst *ActualPtr =
+        Builder.CreateAlloca(XElemTy, nullptr, Name + ".atomic.expected.ptr");
+    Builder.restoreIP(InitIP);
+
+    Builder.CreateStore(E, ExpectedPtr);
+    Builder.CreateStore(D, DesiredPtr);
+
+    Expected<Value *> ACEResult = emitAtomicCompareExchangeBuiltin(
+        /*AtomicPtr=*/X.Var,
+        /*ExpectedPtr=*/ExpectedPtr,
+        /*DesiredPtr=*/DesiredPtr,
+        /*DataOrSize=*/XElemTy,
+        /*IsWeak=*/false,
+        /*IsVolatile=*/X.IsVolatile,
+        /*SuccessMemorder=*/AO,
+        /*FailureMemorder=*/Failure,
+        /*SyncScope=*/static_cast<SyncScope::ID>(SyncScope::System),
+        /*ActualPtr=*/ActualPtr,
+        /*Align=*/{},
+        /*Builder=*/Builder,
+        /*EmitOptions=*/AtomicEmitOptions(DL, &TLI),
+        /*Name=*/Name);
+    if (!ACEResult)
+      return ACEResult.takeError();
+    Value *SuccessOrFail = *ACEResult;
 
     if (V.Var) {
-      Value *OldValue = Builder.CreateExtractValue(Result, /*Idxs=*/0);
-      if (!IsInteger)
-        OldValue = Builder.CreateBitCast(OldValue, X.ElemTy);
-      assert(OldValue->getType() == V.ElemTy &&
-             "OldValue and V must be of same type");
+      Value *OldValue =
+          Builder.CreateLoad(XElemTy, ActualPtr, Name + ".capture.actual");
       if (IsPostfixUpdate) {
         Builder.CreateStore(OldValue, V.Var, V.IsVolatile);
+      } else if (IsFailOnly) {
+        // Must store only of the cmpxchg was successful
+        BasicBlock *ExitBB = splitBB(Builder, true, Name + ".atomic.exit");
+        BasicBlock *ContBB = splitBB(Builder, false, Name + ".atomic.cont");
+        Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
+
+        Builder.SetInsertPoint(ContBB->getTerminator());
+        Builder.CreateStore(OldValue, V.Var);
+
+        Builder.SetInsertPoint(ExitBB, ExitBB->begin());
       } else {
-        Value *SuccessOrFail = Builder.CreateExtractValue(Result, /*Idxs=*/1);
-        if (IsFailOnly) {
-          // CurBB----
-          //   |     |
-          //   v     |
-          // ContBB  |
-          //   |     |
-          //   v     |
-          // ExitBB <-
-          //
-          // where ContBB only contains the store of old value to 'v'.
-          BasicBlock *CurBB = Builder.GetInsertBlock();
-          Instruction *CurBBTI = CurBB->getTerminator();
-          CurBBTI = CurBBTI ? CurBBTI : Builder.CreateUnreachable();
-          BasicBlock *ExitBB = CurBB->splitBasicBlock(
-              CurBBTI, X.Var->getName() + ".atomic.exit");
-          BasicBlock *ContBB = CurBB->splitBasicBlock(
-              CurBB->getTerminator(), X.Var->getName() + ".atomic.cont");
-          ContBB->getTerminator()->eraseFromParent();
-          CurBB->getTerminator()->eraseFromParent();
-
-          Builder.CreateCondBr(SuccessOrFail, ExitBB, ContBB);
-
-          Builder.SetInsertPoint(ContBB);
-          Builder.CreateStore(OldValue, V.Var);
-          Builder.CreateBr(ExitBB);
-
-          if (UnreachableInst *ExitTI =
-                  dyn_cast<UnreachableInst>(ExitBB->getTerminator())) {
-            CurBBTI->eraseFromParent();
-            Builder.SetInsertPoint(ExitBB);
-          } else {
-            Builder.SetInsertPoint(ExitTI);
-          }
-        } else {
-          Value *CapturedValue =
-              Builder.CreateSelect(SuccessOrFail, E, OldValue);
-          Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
-        }
+        Value *CapturedValue = Builder.CreateSelect(SuccessOrFail, E, OldValue,
+                                                    Name + ".capture.captured");
+        Builder.CreateStore(CapturedValue, V.Var, V.IsVolatile);
       }
     }
+
     // The comparison result has to be stored.
     if (R.Var) {
       assert(R.Var->getType()->isPointerTy() &&
-             "r.var must be of pointer type");
-      assert(R.ElemTy->isIntegerTy() && "r must be of integral type");
+             "R.var must be of pointer type");
+      assert(R.ElemTy->isIntegerTy() && "R must be of integral type");
 
-      Value *SuccessFailureVal = Builder.CreateExtractValue(Result, /*Idxs=*/1);
       Value *ResultCast = R.IsSigned
-                              ? Builder.CreateSExt(SuccessFailureVal, R.ElemTy)
-                              : Builder.CreateZExt(SuccessFailureVal, R.ElemTy);
+                              ? Builder.CreateSExt(SuccessOrFail, R.ElemTy)
+                              : Builder.CreateZExt(SuccessOrFail, R.ElemTy);
       Builder.CreateStore(ResultCast, R.Var, R.IsVolatile);
     }
   } else {
