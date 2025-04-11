@@ -92,6 +92,7 @@ public:
 
     switch (dirKind) {
     case OpenACCDirectiveKind::Init:
+    case OpenACCDirectiveKind::Set:
     case OpenACCDirectiveKind::Shutdown: {
       // Device type has a list that is either a 'star' (emitted as 'star'),
       // or an identifer list, all of which get added for attributes.
@@ -133,6 +134,11 @@ public:
 
         op.setDeviceTypesAttr(
             mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
+      } else if constexpr (isOneOfTypes<Op, SetOp>) {
+        assert(attrData.deviceTypeArchs.size() <= 1 &&
+               "Set can only have a single architecture");
+        if (!attrData.deviceTypeArchs.empty())
+          op.setDeviceType(attrData.deviceTypeArchs[0]);
       } else {
         cgm.errorNYI(dirLoc, "OpenACC 'device_type' clause lowering for ",
                      dirKind);
@@ -194,7 +200,7 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCOp(
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   switch (s.getDirectiveKind()) {
@@ -217,7 +223,7 @@ CIRGenFunction::emitOpenACCComputeConstruct(const OpenACCComputeConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   mlir::Location end = getLoc(s.getSourceRange().getEnd());
 
   return emitOpenACCOpAssociatedStmt<DataOp, mlir::acc::TerminatorOp>(
@@ -227,14 +233,21 @@ CIRGenFunction::emitOpenACCDataConstruct(const OpenACCDataConstruct &s) {
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCInitConstruct(const OpenACCInitConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   return emitOpenACCOp<InitOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
                                s.clauses());
 }
 
+mlir::LogicalResult
+CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
+  return emitOpenACCOp<SetOp>(start, s.getDirectiveKind(), s.getDirectiveLoc(),
+                              s.clauses());
+}
+
 mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
     const OpenACCShutdownConstruct &s) {
-  mlir::Location start = getLoc(s.getSourceRange().getEnd());
+  mlir::Location start = getLoc(s.getSourceRange().getBegin());
   return emitOpenACCOp<ShutdownOp>(start, s.getDirectiveKind(),
                                    s.getDirectiveLoc(), s.clauses());
 }
@@ -267,11 +280,6 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
-  return mlir::failure();
-}
-mlir::LogicalResult
-CIRGenFunction::emitOpenACCSetConstruct(const OpenACCSetConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Set Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
