@@ -1268,9 +1268,10 @@ TargetTransformInfo::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   return TTIImpl->getCostOfKeepingLiveOverCall(Tys);
 }
 
-bool TargetTransformInfo::getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                             MemIntrinsicInfo &Info) const {
-  return TTIImpl->getTgtMemIntrinsic(Inst, Info);
+bool TargetTransformInfo::getTgtMemIntrinsic(
+    IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+    SmallVectorImpl<InterestingMemoryOperand> *Interesting) const {
+  return TTIImpl->getTgtMemIntrinsic(Inst, Info, Interesting);
 }
 
 unsigned TargetTransformInfo::getAtomicMemIntrinsicMaxElementSize() const {

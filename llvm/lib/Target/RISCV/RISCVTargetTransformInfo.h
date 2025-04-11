@@ -150,6 +150,10 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
+  bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting) const;
+
   unsigned getMinVectorRegisterBitWidth() const {
     return ST->useRVVForFixedLengthVectors() ? 16 : 0;
   }

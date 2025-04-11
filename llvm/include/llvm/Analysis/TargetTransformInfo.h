@@ -31,6 +31,7 @@
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Transforms/Instrumentation/AddressSanitizerCommon.h"
 #include <functional>
 #include <optional>
 #include <utility>
@@ -1665,7 +1666,9 @@ public:
   /// will contain additional information - whether the intrinsic may write
   /// or read to memory, volatility and the pointer.  Info is undefined
   /// if false is returned.
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info) const;
+  bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting = nullptr) const;
 
   /// \returns The maximum element size, in bytes, for an element
   /// unordered-atomic memory intrinsic.
@@ -2289,8 +2292,9 @@ public:
   getAddressComputationCost(Type *Ty, ScalarEvolution *SE, const SCEV *Ptr) = 0;
   virtual InstructionCost
   getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) = 0;
-  virtual bool getTgtMemIntrinsic(IntrinsicInst *Inst,
-                                  MemIntrinsicInfo &Info) = 0;
+  virtual bool getTgtMemIntrinsic(
+      IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+      SmallVectorImpl<InterestingMemoryOperand> *Interesting = nullptr) = 0;
   virtual unsigned getAtomicMemIntrinsicMaxElementSize() const = 0;
   virtual Value *getOrCreateResultFromMemIntrinsic(IntrinsicInst *Inst,
                                                    Type *ExpectedType) = 0;
@@ -3060,9 +3064,10 @@ public:
   InstructionCost getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) override {
     return Impl.getCostOfKeepingLiveOverCall(Tys);
   }
-  bool getTgtMemIntrinsic(IntrinsicInst *Inst,
-                          MemIntrinsicInfo &Info) override {
-    return Impl.getTgtMemIntrinsic(Inst, Info);
+  bool getTgtMemIntrinsic(IntrinsicInst *Inst, MemIntrinsicInfo &Info,
+                          SmallVectorImpl<InterestingMemoryOperand>
+                              *Interesting = nullptr) override {
+    return Impl.getTgtMemIntrinsic(Inst, Info, Interesting);
   }
   unsigned getAtomicMemIntrinsicMaxElementSize() const override {
     return Impl.getAtomicMemIntrinsicMaxElementSize();
