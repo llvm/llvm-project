@@ -826,7 +826,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
   }
 
   // An LLVM dialect vector can only contain scalars.
-  Type elementType = LLVM::getVectorElementType(type);
+  Type elementType = cast<VectorType>(type).getElementType();
   if (!elementType.isIntOrFloat())
     return {};
 

@@ -242,10 +242,21 @@ public:
   /// been signed, and the returned Address will have the pointer authentication
   /// information needed to authenticate the signed pointer.
   Address makeNaturalAddressForPointer(mlir::Value ptr, QualType t,
-                                       CharUnits alignment) {
+                                       CharUnits alignment,
+                                       bool forPointeeType = false,
+                                       LValueBaseInfo *baseInfo = nullptr) {
     if (alignment.isZero())
-      alignment = cgm.getNaturalTypeAlignment(t);
+      alignment = cgm.getNaturalTypeAlignment(t, baseInfo);
     return Address(ptr, convertTypeForMem(t), alignment);
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty,
+                        AlignmentSource source = AlignmentSource::Type) {
+    return makeAddrLValue(addr, ty, LValueBaseInfo(source));
+  }
+
+  LValue makeAddrLValue(Address addr, QualType ty, LValueBaseInfo baseInfo) {
+    return LValue::makeAddr(addr, ty, baseInfo);
   }
 
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
@@ -523,7 +534,8 @@ public:
   /// into the address of a local variable.  In such a case, it's quite
   /// reasonable to just ignore the returned alignment when it isn't from an
   /// explicit source.
-  Address emitPointerWithAlignment(const clang::Expr *expr);
+  Address emitPointerWithAlignment(const clang::Expr *expr,
+                                   LValueBaseInfo *baseInfo);
 
   mlir::LogicalResult emitReturnStmt(const clang::ReturnStmt &s);
 
@@ -571,14 +583,17 @@ public:
   //                         OpenACC Emission
   //===--------------------------------------------------------------------===//
 private:
-  // Function to do the basic implementation of a 'compute' operation, including
-  // the clauses/etc. This might be generalizable in the future to work for
-  // other constructs, or at least be the base for construct emission.
+  template <typename Op>
+  mlir::LogicalResult
+  emitOpenACCOp(mlir::Location start,
+                llvm::ArrayRef<const OpenACCClause *> clauses);
+  // Function to do the basic implementation of an operation with an Associated
+  // Statement.  Models AssociatedStmtConstruct.
   template <typename Op, typename TermOp>
   mlir::LogicalResult
-  emitOpenACCComputeOp(mlir::Location start, mlir::Location end,
-                       llvm::ArrayRef<const OpenACCClause *> clauses,
-                       const Stmt *structuredBlock);
+  emitOpenACCOpAssociatedStmt(mlir::Location start, mlir::Location end,
+                              llvm::ArrayRef<const OpenACCClause *> clauses,
+                              const Stmt *associatedStmt);
 
 public:
   mlir::LogicalResult

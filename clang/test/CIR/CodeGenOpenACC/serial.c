@@ -6,8 +6,20 @@ void acc_serial(void) {
   {}
 
   // CHECK-NEXT: acc.serial {
-  // CHECK-NEXT:acc.yield
+  // CHECK-NEXT: acc.yield
   // CHECK-NEXT:}
+
+#pragma acc serial default(none)
+  {}
+  // CHECK-NEXT: acc.serial {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue none>}
+
+#pragma acc serial default(present)
+  {}
+  // CHECK-NEXT: acc.serial {
+  // CHECK-NEXT: acc.yield
+  // CHECK-NEXT: } attributes {defaultAttr = #acc<defaultvalue present>}
 
 #pragma acc serial
   while(1){}
@@ -23,7 +35,7 @@ void acc_serial(void) {
   // CHECK-NEXT: }
   // cir.scope end:
   // CHECK-NEXT: }
-  // CHECK-NEXT:acc.yield
+  // CHECK-NEXT: acc.yield
   // CHECK-NEXT:}
 
   // CHECK-NEXT: cir.return

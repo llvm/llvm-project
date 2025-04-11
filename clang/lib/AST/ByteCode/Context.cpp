@@ -189,7 +189,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
 
   if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
       T->isFunctionType() || T->isBlockPointerType())
-    return PT_FnPtr;
+    return PT_Ptr;
 
   if (T->isPointerOrReferenceType() || T->isObjCObjectPointerType())
     return PT_Ptr;

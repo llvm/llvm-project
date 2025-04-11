@@ -9,6 +9,7 @@
 #include "flang/Runtime/CUDA/allocator.h"
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/derived.h"
+#include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
@@ -43,14 +44,18 @@ void *CUFAllocPinned(
 
 void CUFFreePinned(void *p) { CUDA_REPORT_IF_ERROR(cudaFreeHost(p)); }
 
-void *CUFAllocDevice(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t asyncId) {
+void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t asyncId) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
     CUDA_REPORT_IF_ERROR(
         cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
   } else {
-    CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
+    if (asyncId == kNoAsyncId) {
+      CUDA_REPORT_IF_ERROR(cudaMalloc(&p, sizeInBytes));
+    } else {
+      CUDA_REPORT_IF_ERROR(
+          cudaMallocAsync(&p, sizeInBytes, (cudaStream_t)asyncId));
+    }
   }
   return p;
 }

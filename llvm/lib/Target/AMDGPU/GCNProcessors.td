@@ -319,6 +319,11 @@ def : ProcessorModel<"gfx115F", GFX11SpeedModel,
   FeatureISAVersion11_5_0.Features
 >;
 
+// Internal only (A0)
+def : ProcessorModel<"gfx115E", GFX11SpeedModel,
+  FeatureISAVersion11_5_0.Features
+>;
+
 //===----------------------------------------------------------------------===//
 // GCN GFX12.
 //===----------------------------------------------------------------------===//
