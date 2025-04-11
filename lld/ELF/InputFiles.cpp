@@ -910,8 +910,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         InputSection isec(*this, sec, name);
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
           Warn(ctx) << &isec << ": " << std::move(e);
-          // uint32_t andFeatures = 0;
-          // std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
         } else {
           aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
           hasAArch64BuildAttributes = true;
