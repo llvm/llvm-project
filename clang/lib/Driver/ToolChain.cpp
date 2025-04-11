@@ -861,8 +861,7 @@ void ToolChain::addFlangRTLibPath(const ArgList &Args,
     CmdArgs.push_back(
         getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
   else {
-    CmdArgs.push_back(
-        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Shared, true));
+    CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(*this, Args, CmdArgs);
   }
 }
