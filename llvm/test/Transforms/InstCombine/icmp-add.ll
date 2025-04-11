@@ -3302,3 +3302,27 @@ entry:
   %cmp = icmp ult i32 %add, 253
   ret i1 %cmp
 }
+
+define i1 @icmp_partial_negative_samesign_ult_folded_to_slt(i8 range(i8 -1, 5) %x) {
+; CHECK-LABEL: @icmp_partial_negative_samesign_ult_folded_to_slt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add nsw i8 %x, -5
+  %cmp = icmp samesign ult i8 %add, -3
+  ret i1 %cmp
+}
+
+define i1 @icmp_positive_samesign_ult_folded_to_ult(i8 range(i8 1, 5) %x) {
+; CHECK-LABEL: @icmp_positive_samesign_ult_folded_to_ult(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i8 [[X:%.*]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %add = add nsw i8 %x, 1
+  %cmp = icmp samesign slt i8 %add, 3
+  ret i1 %cmp
+}
