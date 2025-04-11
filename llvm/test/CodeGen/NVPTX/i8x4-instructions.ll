@@ -913,7 +913,7 @@ define <4 x i8> @test_select(<4 x i8> %a, <4 x i8> %b, i1 zeroext %c) #0 {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test_select_param_2];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.u32 %r2, [test_select_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r1, [test_select_param_0];
 ; CHECK-NEXT:    selp.b32 %r3, %r1, %r2, %p1;
