@@ -22141,8 +22141,8 @@ public:
         if (isa<FixedVectorType>(ScalarTy)) {
           assert(SLPReVec && "FixedVectorType is not expected.");
           unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-          Value *ReducedSubTree = PoisonValue::get(getWidenedType(
-              VectorizedRoot->getType()->getScalarType(), ScalarTyNumElements));
+          Value *ReducedSubTree = PoisonValue::get(
+              getWidenedType(ScalarTy->getScalarType(), ScalarTyNumElements));
           for (unsigned I : seq<unsigned>(ScalarTyNumElements)) {
             // Do reduction for each lane.
             // e.g., do reduce add for
@@ -22359,7 +22359,7 @@ private:
                         Type *DestTy) {
     Value *Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
     if (Rdx->getType() != DestTy->getScalarType())
-      Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
+      Rdx = Builder.CreateIntCast(Rdx, DestTy->getScalarType(), IsSigned);
     // Improved analysis for add/fadd/xor reductions with same scale
     // factor for all operands of reductions. We can emit scalar ops for
     // them instead.
