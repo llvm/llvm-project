@@ -1112,8 +1112,7 @@ define <vscale x 16 x i1> @predicated_icmp_eq_imm(<vscale x 16 x i1> %a, <vscale
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpeq p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 0, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
-  %icmp = icmp eq <vscale x 16 x i8> %b, %imm
+  %icmp = icmp eq <vscale x 16 x i8> %b, zeroinitializer
   %and = and <vscale x 16 x i1> %a, %icmp
   ret <vscale x 16 x i1> %and
 }
@@ -1123,8 +1122,7 @@ define <vscale x 8 x i1> @predicated_icmp_ne_imm(<vscale x 8 x i1> %a, <vscale x
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #-16
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -16, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-  %icmp = icmp ne <vscale x 8 x i16> %b, %imm
+  %icmp = icmp ne <vscale x 8 x i16> %b, splat (i16 -16)
   %and = and <vscale x 8 x i1> %a, %icmp
   ret <vscale x 8 x i1> %and
 }
@@ -1134,8 +1132,7 @@ define <vscale x 4 x i1> @predicated_icmp_sge_imm(<vscale x 4 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpge p0.s, p0/z, z0.s, #1
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %icmp = icmp sge <vscale x 4 x i32> %b, %imm
+  %icmp = icmp sge <vscale x 4 x i32> %b, splat (i32 1)
   %and = and <vscale x 4 x i1> %a, %icmp
   ret <vscale x 4 x i1> %and
 }
@@ -1145,8 +1142,7 @@ define <vscale x 2 x i1> @predicated_icmp_sgt_imm(<vscale x 2 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpgt p0.d, p0/z, z0.d, #2
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 2, i64 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  %icmp = icmp sgt <vscale x 2 x i64> %b, %imm
+  %icmp = icmp sgt <vscale x 2 x i64> %b, splat (i64 2)
   %and = and <vscale x 2 x i1> %a, %icmp
   ret <vscale x 2 x i1> %and
 }
@@ -1156,8 +1152,7 @@ define <vscale x 16 x i1> @predicated_icmp_sle_imm(<vscale x 16 x i1> %a, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmple p0.b, p0/z, z0.b, #-1
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 -1, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
-  %icmp = icmp sle <vscale x 16 x i8> %b, %imm
+  %icmp = icmp sle <vscale x 16 x i8> %b, splat (i8 -1)
   %and = and <vscale x 16 x i1> %a, %icmp
   ret <vscale x 16 x i1> %and
 }
@@ -1167,8 +1162,7 @@ define <vscale x 8 x i1> @predicated_icmp_slt_imm(<vscale x 8 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmplt p0.h, p0/z, z0.h, #-2
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 -2, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-  %icmp = icmp slt <vscale x 8 x i16> %b, %imm
+  %icmp = icmp slt <vscale x 8 x i16> %b, splat (i16 -2)
   %and = and <vscale x 8 x i1> %a, %icmp
   ret <vscale x 8 x i1> %and
 }
@@ -1178,8 +1172,7 @@ define <vscale x 4 x i1> @predicated_icmp_uge_imm(<vscale x 4 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmphs p0.s, p0/z, z0.s, #1
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %icmp = icmp uge <vscale x 4 x i32> %b, %imm
+  %icmp = icmp uge <vscale x 4 x i32> %b, splat (i32 1)
   %and = and <vscale x 4 x i1> %a, %icmp
   ret <vscale x 4 x i1> %and
 }
@@ -1189,8 +1182,7 @@ define <vscale x 2 x i1> @predicated_icmp_ugt_imm(<vscale x 2 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z0.d, #2
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 2, i64 0), <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
-  %icmp = icmp ugt <vscale x 2 x i64> %b, %imm
+  %icmp = icmp ugt <vscale x 2 x i64> %b, splat (i64 2)
   %and = and <vscale x 2 x i1> %a, %icmp
   ret <vscale x 2 x i1> %and
 }
@@ -1200,8 +1192,7 @@ define <vscale x 16 x i1> @predicated_icmp_ule_imm(<vscale x 16 x i1> %a, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmpls p0.b, p0/z, z0.b, #3
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 16 x i8> insertelement (<vscale x 16 x i8> undef, i8 3, i64 0), <vscale x 16 x i8> undef, <vscale x 16 x i32> zeroinitializer
-  %icmp = icmp ule <vscale x 16 x i8> %b, %imm
+  %icmp = icmp ule <vscale x 16 x i8> %b, splat (i8 3)
   %and = and <vscale x 16 x i1> %a, %icmp
   ret <vscale x 16 x i1> %and
 }
@@ -1211,8 +1202,7 @@ define <vscale x 8 x i1> @predicated_icmp_ult_imm(<vscale x 8 x i1> %a, <vscale 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmplo p0.h, p0/z, z0.h, #127
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 127, i64 0), <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
-  %icmp = icmp ult <vscale x 8 x i16> %b, %imm
+  %icmp = icmp ult <vscale x 8 x i16> %b, splat (i16 127)
   %and = and <vscale x 8 x i1> %a, %icmp
   ret <vscale x 8 x i1> %and
 }
@@ -1240,8 +1230,7 @@ define %svboolx2 @and_of_multiuse_icmp_sle_imm(<vscale x 4 x i1> %a, <vscale x 4
 ; CHECK-NEXT:    cmple p1.s, p1/z, z0.s, #1
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %cmp = icmp sle <vscale x 4 x i32> %b, %imm
+  %cmp = icmp sle <vscale x 4 x i32> %b, splat (i32 1)
   %and = and <vscale x 4 x i1> %a, %cmp
   %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
   %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
@@ -1269,8 +1258,7 @@ define %svboolx2 @and_of_multiuse_icmp_ugt_imm(<vscale x 4 x i1> %a, <vscale x 4
 ; CHECK-NEXT:    cmphi p1.s, p1/z, z0.s, #1
 ; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
 ; CHECK-NEXT:    ret
-  %imm = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 1, i64 0), <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
-  %cmp = icmp ugt <vscale x 4 x i32> %b, %imm
+  %cmp = icmp ugt <vscale x 4 x i32> %b, splat (i32 1)
   %and = and <vscale x 4 x i1> %a, %cmp
   %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
   %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1

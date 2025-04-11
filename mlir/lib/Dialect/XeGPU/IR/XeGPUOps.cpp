@@ -73,36 +73,63 @@ static bool isWriteHintOrNone(const CachePolicyAttr &attr) {
          kind == CachePolicy::WRITE_BACK || kind == CachePolicy::WRITE_THROUGH;
 }
 
-// Validations for nd instruction arguments is successful if any of these are
-// true:
-// - tensor descriptor and the output vector shapes exactly match.
-// - tensor descriptor has a sg_map attribute and the distributed vector shape
-//   matches the tensor descriptor shape when scaled using sg_map factors on
-//   each dimension.
-static bool isArgShapesValid(ArrayRef<int64_t> descShape,
-                             ArrayRef<int64_t> valShape, SGMapAttr sgMap) {
-  if (descShape == valShape) {
-    if (!sgMap)
-      return true;
+// Helper to validate value shape of LoadNd and StoreNd ops.
+static LogicalResult
+isArgShapesValid(TensorDescType tdescTy, VectorType valueTy,
+                 ArrayRef<int64_t> adjustedTdescShape,
+                 function_ref<InFlightDiagnostic()> emitError) {
+  auto layout = tdescTy.getLayoutAttr();
+  auto valueShape = valueTy.getShape();
+  // layout not present means IR is in SIMD mode. In this case value shape must
+  // match adjusted tensor descriptor shape.
+  if (!layout)
+    return valueShape == adjustedTdescShape
+               ? success()
+               : emitError()
+                     << "Value shape " << makeString(valueShape)
+                     << " is not consistent with tensor descriptor " << tdescTy;
 
-    // this can be relaxed if necessary by supporting non-2d shapes distribution
-    // until the constraints are defined this lives here instead of the tensor
-    // descriptor type.
-    return valShape.size() == sgMap.getWiLayout().size();
+  // layout present means IR is in SIMT mode. In this case layout determines the
+  // value shape.
+  auto expectedValueShapeOrFailure = tdescTy.getDistributedVectorType();
+  assert(succeeded(expectedValueShapeOrFailure) &&
+         "Failed to compute distributed vector shape for "
+         "tensor descriptor ");
+
+  return valueTy == expectedValueShapeOrFailure.value()
+             ? success()
+             : emitError()
+                   << "Result shape " << makeString(valueShape)
+                   << " is not consistent with distributed vector shape "
+                   << makeString(expectedValueShapeOrFailure.value().getShape())
+                   << " for tensor descriptor " << tdescTy;
+}
+
+// Checks if the given shape is evenly distributed based on the layout
+// and data factors provided by the LayoutAttr. The function ensures that
+// each dimension of the shape can be evenly divided by the corresponding
+// data factor, and the resulting quotient can be evenly divided by the
+// layout factor. Returns `true` if the shape is evenly distributed,
+// otherwise `false`.
+static bool isEvenDistributed(llvm::ArrayRef<int64_t> shape,
+                              xegpu::LayoutAttr attr) {
+  assert(attr && "Layout attribute is missing.");
+  llvm::SmallVector<int32_t> defaults(shape.size(), 1);
+  llvm::ArrayRef<int32_t> layout, data;
+  if (auto sg_layout = attr.getSgLayout()) {
+    layout = sg_layout.asArrayRef();
+    auto sg_data = attr.getSgData();
+    data = sg_data ? sg_data.asArrayRef() : defaults;
+  } else {
+    layout = attr.getLaneLayout().asArrayRef();
+    auto lane_data = attr.getLaneData();
+    data = lane_data ? lane_data.asArrayRef() : defaults;
   }
-
-  if (!sgMap)
-    return false;
-
-  if (valShape.size() != descShape.size())
-    return false;
-
-  for (const auto &[factor, dim, expected] :
-       llvm::zip_equal(sgMap.getWiLayout(), valShape, descShape)) {
-    if (factor * dim != expected)
+  for (auto [dimSize, dataFactor, layoutFactor] :
+       llvm::zip_equal(shape, data, layout)) {
+    if (dimSize % dataFactor != 0 || (dimSize / dataFactor) % layoutFactor != 0)
       return false;
   }
-
   return true;
 }
 
@@ -227,10 +254,6 @@ LogicalResult CreateNdDescOp::verify() {
   if (getType().isScattered())
     return emitOpError("Expects a non-scattered TensorDesc.\n");
 
-  if (getType().getRank() == 2 &&
-      tdescMemorySpace == static_cast<unsigned>(MemorySpace::SLM))
-    return emitOpError("SLM is not supported for 2D Block TensorDesc.\n");
-
   return success();
 }
 
@@ -280,7 +303,8 @@ LogicalResult LoadNdOp::verify() {
     return emitOpError("invalid l3_hint: ") << getL3HintAttr();
 
   auto array_len = tdescTy.getArrayLength();
-  auto tdescShape = getShapeOf(tdescTy);
+  // adjusted tensor descriptor shape tracks the expected shape of the result.
+  auto adjustedTdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
 
   if (getTranspose()) {
@@ -292,7 +316,7 @@ LogicalResult LoadNdOp::verify() {
     });
 
     if (valid)
-      transpose(trans, tdescShape);
+      transpose(trans, adjustedTdescShape);
     else
       mlir::emitWarning(getLoc()) << "Invalid transpose attr. It is ignored.";
   }
@@ -301,8 +325,8 @@ LogicalResult LoadNdOp::verify() {
     if (tdescTy.getRank() == 2) {
       const int axis = 0;
       auto vnni_factor = valueShape.back();
-      tdescShape[axis] /= vnni_factor;
-      tdescShape.push_back(vnni_factor);
+      adjustedTdescShape[axis] /= vnni_factor;
+      adjustedTdescShape.push_back(vnni_factor);
     } else {
       mlir::emitWarning(getLoc())
           << "Invalid Packed Attr. It is ignored (available for 2D "
@@ -311,17 +335,12 @@ LogicalResult LoadNdOp::verify() {
   }
 
   if (array_len > 1) {
-    auto it = tdescShape.begin();
-    tdescShape.insert(it, array_len);
+    auto it = adjustedTdescShape.begin();
+    adjustedTdescShape.insert(it, array_len);
   }
-  auto sgMap = tdescTy.getSGMapAttr();
 
-  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, adjustedTdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -351,14 +370,9 @@ LogicalResult StoreNdOp::verify() {
 
   auto tdescShape = getShapeOf(dstTy);
   auto valueShape = getShapeOf(valTy);
-  auto sgMap = dstTy.getSGMapAttr();
 
-  if (!isArgShapesValid(tdescShape, valueShape, sgMap))
-    return emitOpError() << "Result shape doesn't match TensorDesc shape."
-                         << "The expected shape is " << makeString(tdescShape)
-                         << ". But the given shape is "
-                         << makeString(valueShape) << ".\n";
-  return success();
+  return isArgShapesValid(dstTy, valTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -419,16 +433,8 @@ LogicalResult CreateDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  auto chunkSize = tdescTy.getChunkSize();
-
-  // check chunk_size
-  llvm::SmallVector<int64_t> supportedChunkSizes = {1,  2,  3,  4,   8,
-                                                    16, 32, 64, 128, 256};
-  if (!llvm::is_contained(supportedChunkSizes, chunkSize))
-    return emitOpError("Invalid chunk_size. Supported values are 1, 2, 3, 4, "
-                       "8, 16, 32, 64, 128, or 256.");
-
   // check total size
+  auto chunkSize = tdescTy.getChunkSize();
   auto elemBits = tdescTy.getElementType().getIntOrFloatBitWidth();
   auto bitsPerLane = elemBits * chunkSize;
   if (chunkSize > 1 && bitsPerLane % 32) {
@@ -486,6 +492,9 @@ LogicalResult LoadGatherOp::verify() {
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
 
+  if (!valueTy)
+    return emitOpError("Expecting a vector type result.\n");
+
   if (!tdescTy.isScattered())
     return emitOpError("Expects a scattered TensorDesc.\n");
 
@@ -513,16 +522,12 @@ LogicalResult LoadGatherOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("load of rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
   }
 
-  if (valueShape != tdescShape)
-    return emitOpError("Unexpected result shape")
-           << "(Expected shape: " << makeString(tdescShape)
-           << ", Given shape: " << makeString(valueShape) << ").\n";
-
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -544,6 +549,10 @@ LogicalResult StoreScatterOp::verify() {
 
   auto maskTy = getMaskType();
   auto valueTy = getValueType();
+
+  if (!valueTy)
+    return emitOpError("Expecting a vector type for the value.\n");
+
   auto maskShape = getShapeOf(maskTy);
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
@@ -552,16 +561,12 @@ LogicalResult StoreScatterOp::verify() {
 
   if (tdescTy.getRank() == 2) {
     if (!getTransposeAttr())
-      return emitOpError("load_gather has to be transposed.");
+      return emitOpError("Store of a rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
   }
 
-  if (valueShape != tdescShape)
-    return emitOpError("Unexpected value shape")
-           << "(Expected shape: " << makeString(tdescShape)
-           << ", Given shape: " << makeString(valueShape) << ").\n";
-
-  return success();
+  return isArgShapesValid(tdescTy, valueTy, tdescShape,
+                          [&]() { return emitOpError(); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -592,18 +597,99 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 LogicalResult DpasOp::verify() {
   int64_t lhsRank = getLhsType().getRank();
   int64_t rhsRank = getRhsType().getRank();
-
-  if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3))
-    return emitOpError("expecting lhs to be a 2D vector, and rhs to be either "
-                       "2D or 3D (packed) vector.");
-
+  int64_t resRank = getResultType().getRank();
   auto lhsShape = getLhsType().getShape();
   auto rhsShape = getRhsType().getShape();
-  auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-  if (bK != lhsShape[1])
-    return emitOpError("K-dimension mismatch.");
+  auto resShape = getResultType().getShape();
 
+  auto aLayout = getALayoutAttr();
+  auto bLayout = getBLayoutAttr();
+  auto cLayout = getCLayoutAttr();
+
+  // make sure the layout attribute is either set for every available
+  // operand or simply not set at all. C is special, since ACC is optional.
+  auto hasValidLayoutAttrs = [&]() {
+    bool result = (aLayout != nullptr) ^ (bLayout != nullptr);
+    if (hasAcc()) {
+      result |= (aLayout != nullptr) ^ (cLayout != nullptr);
+    }
+    return !result;
+  };
+
+  if (!hasValidLayoutAttrs())
+    return emitOpError(
+        "layout attributes should be either set for all operands (for SIMT "
+        "code) or not set at all (for SIMD code).");
+
+  // query the scope from aLayout (a valid setting).
+  if (aLayout) {
+    // In SIMT mode, All data fragments must be 2D
+    if (lhsRank != 2 || rhsRank != 2 || resRank != 2)
+      return emitOpError("expecting lhs, rhs, and result to be a 2D vector.");
+
+    auto laneLayoutA = aLayout.getLaneLayout();
+    auto laneLayoutB = bLayout.getLaneLayout();
+    auto laneLayoutC = cLayout.getLaneLayout();
+    // Obtain the expanded shapes of the operands and result using lane_layout.
+    // NOTE: For B, get rid of the packed dimension for the expanded shape.
+    SmallVector<int64_t> expandedShapeA = {lhsShape[0] * laneLayoutA[0],
+                                           lhsShape[1] * laneLayoutA[1]};
+    SmallVector<int64_t> expandedShapeB = {
+        rhsShape[0] * rhsShape[1] * laneLayoutB[0], 1 * laneLayoutB[1]};
+    SmallVector<int64_t> expandedShapeC = {resShape[0] * laneLayoutC[0],
+                                           resShape[1] * laneLayoutC[1]};
+    auto bK = expandedShapeB[0];
+    if (bK != expandedShapeA[1])
+      return emitOpError("K-dimension mismatch.");
+    if (expandedShapeA[0] != expandedShapeC[0])
+      return emitOpError("M-dimension mismatch.");
+    if (expandedShapeB[1] != expandedShapeC[1])
+      return emitOpError("N-dimension mismatch.");
+  } else { // For other scopes, operands' shape should match the mxkxn
+           // semantics.
+    if (lhsRank != 2 || (rhsRank != 2 && rhsRank != 3) || resRank != 2)
+      return emitOpError(
+          "expecting lhs and result to be a 2D vector, and rhs to be either "
+          "2D or 3D (packed) vector.");
+    auto bK = rhsRank == 3 ? rhsShape[0] * rhsShape[2] : rhsShape[0];
+    if (bK != lhsShape[1])
+      return emitOpError("K-dimension mismatch.");
+    if (lhsShape[0] != resShape[0])
+      return emitOpError("M-dimension mismatch.");
+    if (rhsShape[1] != resShape[1])
+      return emitOpError("N-dimension mismatch.");
+  }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// XeGPU_ConvertLayoutOp
+//===----------------------------------------------------------------------===//
+LogicalResult ConvertLayoutOp::verify() {
+  auto srcMap = getSrcMapAttr();
+  auto resMap = getResMapAttr();
+  if (!srcMap)
+    return emitOpError("expected srcMap.");
+  if (!resMap)
+    return emitOpError("expected resMap.");
+
+  if (srcMap == resMap)
+    return emitOpError("expected different srcMap and resMap.");
+
+  // both srcMap and resMap should be WgLayout or SgLayout at the same time.
+  if ((!srcMap.isWgLayout() || !resMap.isWgLayout()) &&
+      (!srcMap.isSgLayout() || !resMap.isSgLayout()))
+    return emitOpError(
+        "expected srcMap and resMap be WgLayout or SgLayout at the same time.");
+
+  auto shape = getSource().getType().getShape();
+  if (!isEvenDistributed(shape, srcMap))
+    return emitOpError("invalid srcMap, data cannot be evenly distributed.");
+
+  if (!isEvenDistributed(shape, resMap))
+    return emitOpError("invalid resMap, data cannot be evenly distributed.");
+
+  return mlir::success();
 }
 
 } // namespace xegpu

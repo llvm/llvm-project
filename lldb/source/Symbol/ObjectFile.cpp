@@ -775,6 +775,15 @@ uint32_t ObjectFile::GetCacheHash() {
   return *m_cache_hash;
 }
 
+std::string ObjectFile::GetObjectName() const {
+  if (ModuleSP module_sp = GetModule())
+    if (ConstString object_name = module_sp->GetObjectName())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
+                           object_name.GetString())
+          .str();
+  return GetFileSpec().GetFilename().GetString();
+}
+
 namespace llvm {
 namespace json {
 

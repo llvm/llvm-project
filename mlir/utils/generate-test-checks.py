@@ -145,10 +145,9 @@ class AttributeNamer:
         return attribute_name
 
     # Get the saved substitution name for the given attribute name. If no name
-    # has been generated for the given attribute yet, the source attribute name
-    # itself is returned.
+    # has been generated for the given attribute yet, None is returned.
     def get_name(self, source_attribute_name):
-        return self.map[source_attribute_name] if source_attribute_name in self.map else '?'
+        return self.map.get(source_attribute_name)
 
 # Return the number of SSA results in a line of type
 #   %0, %1, ... = ...
@@ -159,7 +158,7 @@ def get_num_ssa_results(input_line):
 
 
 # Process a line of input that has been split at each SSA identifier '%'.
-def process_line(line_chunks, variable_namer):
+def process_line(line_chunks, variable_namer, strict_name_re=False):
     output_line = ""
 
     # Process the rest that contained an SSA value name.
@@ -180,7 +179,14 @@ def process_line(line_chunks, variable_namer):
         else:
             # Otherwise, generate a new variable.
             variable = variable_namer.generate_name(ssa_name)
-            output_line += "%[[" + variable + ":.*]]"
+            if strict_name_re:
+                # Use stricter regexp for the variable name, if requested.
+                # Greedy matching may cause issues with the generic '.*'
+                # regexp when the checks are split across several
+                # lines (e.g. for CHECK-SAME).
+                output_line += "%[[" + variable + ":" + SSA_RE_STR + "]]"
+            else:
+                output_line += "%[[" + variable + ":.*]]"
 
         # Append the non named group.
         output_line += chunk[len(ssa_name) :]
@@ -220,9 +226,9 @@ def process_attribute_references(line, attribute_namer):
     components = ATTR_RE.split(line)
     for component in components:
         m = ATTR_RE.match(component)
-        if m:
-            output_line += '#[[' + attribute_namer.get_name(m.group(1)) + ']]'
-            output_line += component[len(m.group()):]
+        attribute_name = attribute_namer.get_name(m.group(1)) if m else None
+        if attribute_name:
+            output_line += f"#[[{attribute_name}]]{component[len(m.group()):]}"
         else:
             output_line += component
     return output_line
@@ -390,7 +396,9 @@ def main():
                 output_line += " " * len(ssa_split[0])
 
                 # Process the rest of the line.
-                output_line += process_line([argument], variable_namer)
+                output_line += process_line(
+                    [argument], variable_namer, strict_name_re=True
+                )
 
         # Append the output line.
         output_segments[-1].append(output_line)

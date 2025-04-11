@@ -593,6 +593,81 @@ public:
   }
 };
 
+class OpenACCCacheConstruct final
+    : public OpenACCConstructStmt,
+      private llvm::TrailingObjects<OpenACCCacheConstruct, Expr *> {
+  friend TrailingObjects;
+  friend class ASTStmtWriter;
+  friend class ASTStmtReader;
+  // Locations of the left and right parens of the 'var-list'
+  // expression-list.
+  SourceRange ParensLoc;
+  SourceLocation ReadOnlyLoc;
+
+  unsigned NumVars = 0;
+
+  OpenACCCacheConstruct(unsigned NumVars)
+      : OpenACCConstructStmt(OpenACCCacheConstructClass,
+                             OpenACCDirectiveKind::Cache, SourceLocation{},
+                             SourceLocation{}, SourceLocation{}),
+        NumVars(NumVars) {
+    std::uninitialized_value_construct(getVarListPtr(),
+                                       getVarListPtr() + NumVars);
+  }
+  OpenACCCacheConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                        SourceLocation LParenLoc, SourceLocation ReadOnlyLoc,
+                        ArrayRef<Expr *> VarList, SourceLocation RParenLoc,
+                        SourceLocation End)
+      : OpenACCConstructStmt(OpenACCCacheConstructClass,
+                             OpenACCDirectiveKind::Cache, Start, DirectiveLoc,
+                             End),
+        ParensLoc(LParenLoc, RParenLoc), ReadOnlyLoc(ReadOnlyLoc),
+        NumVars(VarList.size()) {
+
+    std::uninitialized_copy(VarList.begin(), VarList.end(), getVarListPtr());
+  }
+
+  Expr **getVarListPtr() const {
+    return const_cast<Expr **>(getTrailingObjects<Expr *>());
+  }
+
+public:
+  llvm::ArrayRef<Expr *> getVarList() const {
+    return llvm::ArrayRef<Expr *>(getVarListPtr(), NumVars);
+  }
+
+  llvm::ArrayRef<Expr *> getVarList() {
+    return llvm::ArrayRef<Expr *>(getVarListPtr(), NumVars);
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCCacheConstructClass;
+  }
+
+  static OpenACCCacheConstruct *CreateEmpty(const ASTContext &C,
+                                            unsigned NumVars);
+  static OpenACCCacheConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         SourceLocation LParenLoc, SourceLocation ReadOnlyLoc,
+         ArrayRef<Expr *> VarList, SourceLocation RParenLoc,
+         SourceLocation End);
+
+  SourceLocation getLParenLoc() const { return ParensLoc.getBegin(); }
+  SourceLocation getRParenLoc() const { return ParensLoc.getEnd(); }
+  bool hasReadOnly() const { return !ReadOnlyLoc.isInvalid(); }
+  SourceLocation getReadOnlyLoc() const { return ReadOnlyLoc; }
+
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(getVarListPtr());
+    return child_range(Begin, Begin + NumVars);
+  }
+
+  const_child_range children() const {
+    Stmt *const *Begin = reinterpret_cast<Stmt *const *>(getVarListPtr());
+    return const_child_range(Begin, Begin + NumVars);
+  }
+};
+
 // This class represents an 'init' construct, which has just a clause list.
 class OpenACCInitConstruct final
     : public OpenACCConstructStmt,
@@ -751,5 +826,70 @@ public:
   Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
          SourceLocation End, ArrayRef<const OpenACCClause *> Clauses);
 };
+
+// This class represents the 'atomic' construct, which has an associated
+// statement, but no clauses.
+class OpenACCAtomicConstruct final
+    : public OpenACCAssociatedStmtConstruct,
+      private llvm::TrailingObjects<OpenACCAtomicConstruct,
+                                    const OpenACCClause *> {
+
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+  OpenACCAtomicKind AtomicKind = OpenACCAtomicKind::None;
+
+  OpenACCAtomicConstruct(unsigned NumClauses)
+      : OpenACCAssociatedStmtConstruct(
+            OpenACCAtomicConstructClass, OpenACCDirectiveKind::Atomic,
+            SourceLocation{}, SourceLocation{}, SourceLocation{},
+            /*AssociatedStmt=*/nullptr) {
+    std::uninitialized_value_construct(
+        getTrailingObjects<const OpenACCClause *>(),
+        getTrailingObjects<const OpenACCClause *>() + NumClauses);
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  NumClauses));
+  }
+
+  OpenACCAtomicConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
+                         OpenACCAtomicKind AtKind, SourceLocation End,
+                         ArrayRef<const OpenACCClause *> Clauses,
+                         Stmt *AssociatedStmt)
+      : OpenACCAssociatedStmtConstruct(OpenACCAtomicConstructClass,
+                                       OpenACCDirectiveKind::Atomic, Start,
+                                       DirectiveLoc, End, AssociatedStmt),
+        AtomicKind(AtKind) {
+    // Initialize the trailing storage.
+    std::uninitialized_copy(Clauses.begin(), Clauses.end(),
+                            getTrailingObjects<const OpenACCClause *>());
+
+    setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
+                                  Clauses.size()));
+  }
+
+  void setAssociatedStmt(Stmt *S) {
+    OpenACCAssociatedStmtConstruct::setAssociatedStmt(S);
+  }
+
+public:
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OpenACCAtomicConstructClass;
+  }
+
+  static OpenACCAtomicConstruct *CreateEmpty(const ASTContext &C,
+                                             unsigned NumClauses);
+  static OpenACCAtomicConstruct *
+  Create(const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+         OpenACCAtomicKind AtKind, SourceLocation End,
+         ArrayRef<const OpenACCClause *> Clauses, Stmt *AssociatedStmt);
+
+  OpenACCAtomicKind getAtomicKind() const { return AtomicKind; }
+  const Stmt *getAssociatedStmt() const {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+  Stmt *getAssociatedStmt() {
+    return OpenACCAssociatedStmtConstruct::getAssociatedStmt();
+  }
+};
+
 } // namespace clang
 #endif // LLVM_CLANG_AST_STMTOPENACC_H

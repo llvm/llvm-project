@@ -1,3 +1,5 @@
+// RUN: %clang -### --target=x86_64-unknown-uefi -g -- %s 2>&1 \
+// RUN:     | FileCheck -check-prefixes=CHECK %s
 // RUN: %clang_cl -### --target=x86_64-unknown-uefi -g -- %s 2>&1 \
 // RUN:     | FileCheck -check-prefixes=CHECK %s
 // CHECK: "-cc1"

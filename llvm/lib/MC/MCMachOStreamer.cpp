@@ -99,7 +99,6 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -182,10 +181,10 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
   MCValue Res;
 
-  if (Value->evaluateAsRelocatable(Res, nullptr, nullptr)) {
-    if (const MCSymbolRefExpr *SymAExpr = Res.getSymA()) {
-      const MCSymbol &SymA = SymAExpr->getSymbol();
-      if (!Res.getSymB() && (SymA.getName() == "" || Res.getConstant() != 0))
+  if (Value->evaluateAsRelocatable(Res, nullptr)) {
+    if (const auto *SymA = Res.getAddSym()) {
+      if (!Res.getSubSym() &&
+          (SymA->getName().empty() || Res.getConstant() != 0))
         cast<MCSymbolMachO>(Symbol)->setAltEntry();
     }
   }
@@ -267,13 +266,6 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     VersionTuple SDKVersion) {
   getWriter().setTargetVariantBuildVersion((MachO::PlatformType)Platform, Major,
                                            Minor, Update, SDKVersion);
-}
-
-void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {
-  // Remember that the function is a thumb function. Fixup and relocation
-  // values will need adjusted.
-  getAssembler().setIsThumbFunc(Symbol);
-  cast<MCSymbolMachO>(Symbol)->setThumbFunc();
 }
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,

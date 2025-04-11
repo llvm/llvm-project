@@ -255,10 +255,15 @@ private:
   /// operation `branch`, which can either be the entry block of one of the
   /// regions or the parent operation itself, and set either the argument or
   /// parent result lattices.
-  void visitRegionSuccessors(ProgramPoint *point,
-                             RegionBranchOpInterface branch,
-                             RegionBranchPoint successor,
-                             ArrayRef<AbstractSparseLattice *> lattices);
+  /// This method can be overridden to control precisely how the region
+  /// successors of `branch` are visited. For example in order to precisely
+  /// control the order in which predecessor operand lattices are propagated
+  /// from. An override is responsible for visiting all the known predecessors
+  /// and propagating therefrom.
+  virtual void
+  visitRegionSuccessors(ProgramPoint *point, RegionBranchOpInterface branch,
+                        RegionBranchPoint successor,
+                        ArrayRef<AbstractSparseLattice *> lattices);
 };
 
 //===----------------------------------------------------------------------===//
@@ -408,10 +413,12 @@ protected:
   // Visit operands on call instructions that are not forwarded.
   virtual void visitCallOperand(OpOperand &operand) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   virtual void setToExitState(AbstractSparseLattice *lattice) = 0;
 
-  /// Set the given lattice element(s) at control flow exit point(s).
+  /// Set the given lattice element(s) at control flow exit point(s) and
+  /// propagate the update if it chaned.
   void setAllToExitStates(ArrayRef<AbstractSparseLattice *> lattices);
 
   /// Get the lattice element for a value.

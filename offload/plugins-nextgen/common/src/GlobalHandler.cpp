@@ -16,6 +16,7 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Error.h"
 
 #include <cstring>
@@ -67,7 +68,7 @@ Error GenericGlobalHandlerTy::moveGlobalBetweenDeviceAndHost(
       return Err;
   }
 
-  DP("Succesfully %s %u bytes associated with global symbol '%s' %s the "
+  DP("Successfully %s %u bytes associated with global symbol '%s' %s the "
      "device "
      "(%p -> %p).\n",
      Device2Host ? "read" : "write", HostGlobal.getSize(),
@@ -206,7 +207,7 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
       GlobalTy CountGlobal(NameOrErr->str(), Sym.getSize(), Counts.data());
       if (auto Err = readGlobalFromDevice(Device, Image, CountGlobal))
         return Err;
-      DeviceProfileData.Counts.push_back(std::move(Counts));
+      DeviceProfileData.Counts.append(std::move(Counts));
     } else if (NameOrErr->starts_with(getInstrProfDataVarPrefix())) {
       // Read profiling data for this global variable
       __llvm_profile_data Data{};
@@ -214,6 +215,13 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
       if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
         return Err;
       DeviceProfileData.Data.push_back(std::move(Data));
+    } else if (*NameOrErr == INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)) {
+      uint64_t RawVersionData;
+      GlobalTy RawVersionGlobal(NameOrErr->str(), Sym.getSize(),
+                                &RawVersionData);
+      if (auto Err = readGlobalFromDevice(Device, Image, RawVersionGlobal))
+        return Err;
+      DeviceProfileData.Version = RawVersionData;
     }
   }
   return DeviceProfileData;
@@ -224,15 +232,14 @@ void GPUProfGlobals::dump() const {
          << "\n";
 
   outs() << "======== Counters =========\n";
-  for (const auto &Count : Counts) {
-    outs() << "[";
-    for (size_t i = 0; i < Count.size(); i++) {
-      if (i == 0)
-        outs() << " ";
-      outs() << Count[i] << " ";
-    }
-    outs() << "]\n";
+  for (size_t i = 0; i < Counts.size(); i++) {
+    if (i > 0 && i % 10 == 0)
+      outs() << "\n";
+    else if (i != 0)
+      outs() << " ";
+    outs() << Counts[i];
   }
+  outs() << "\n";
 
   outs() << "========== Data ===========\n";
   for (const auto &ProfData : Data) {
@@ -263,4 +270,44 @@ void GPUProfGlobals::dump() const {
   }
   Symtab.dumpNames(outs());
   outs() << "===========================\n";
+}
+
+Error GPUProfGlobals::write() const {
+  if (!__llvm_write_custom_profile)
+    return Plugin::error("Could not find symbol __llvm_write_custom_profile. "
+                         "The compiler-rt profiling library must be linked for "
+                         "GPU PGO to work.");
+
+  size_t DataSize = Data.size() * sizeof(__llvm_profile_data),
+         CountsSize = Counts.size() * sizeof(int64_t);
+  __llvm_profile_data *DataBegin, *DataEnd;
+  char *CountersBegin, *CountersEnd, *NamesBegin, *NamesEnd;
+
+  // Initialize array of contiguous data. We need to make sure each section is
+  // contiguous so that the PGO library can compute deltas properly
+  SmallVector<uint8_t> ContiguousData(NamesData.size() + DataSize + CountsSize);
+
+  // Compute region pointers
+  DataBegin = (__llvm_profile_data *)(ContiguousData.data() + CountsSize);
+  DataEnd =
+      (__llvm_profile_data *)(ContiguousData.data() + CountsSize + DataSize);
+  CountersBegin = (char *)ContiguousData.data();
+  CountersEnd = (char *)(ContiguousData.data() + CountsSize);
+  NamesBegin = (char *)(ContiguousData.data() + CountsSize + DataSize);
+  NamesEnd = (char *)(ContiguousData.data() + CountsSize + DataSize +
+                      NamesData.size());
+
+  // Copy data to contiguous buffer
+  memcpy(DataBegin, Data.data(), DataSize);
+  memcpy(CountersBegin, Counts.data(), CountsSize);
+  memcpy(NamesBegin, NamesData.data(), NamesData.size());
+
+  // Invoke compiler-rt entrypoint
+  int result = __llvm_write_custom_profile(
+      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
+      CountersEnd, NamesBegin, NamesEnd, &Version);
+  if (result != 0)
+    return Plugin::error("Error writing GPU PGO data to file");
+
+  return Plugin::success();
 }

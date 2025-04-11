@@ -15,7 +15,6 @@
 define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_signbit_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0x80
 ; CHECK-NEXT:    cset w0, eq
@@ -29,7 +28,6 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_lowestbit_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    cset w0, eq
@@ -43,7 +41,6 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_bitsinmiddle_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0x18
 ; CHECK-NEXT:    cset w0, eq
@@ -59,7 +56,6 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: scalar_i16_signbit_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0x8000
 ; CHECK-NEXT:    cset w0, eq
@@ -73,7 +69,6 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: scalar_i16_lowestbit_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0x1
 ; CHECK-NEXT:    cset w0, eq
@@ -87,7 +82,6 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: scalar_i16_bitsinmiddle_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    tst w8, #0xff0
 ; CHECK-NEXT:    cset w0, eq
@@ -268,7 +262,6 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_signbit_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsl w8, w0, w1
 ; CHECK-NEXT:    ubfx w0, w8, #7, #1
 ; CHECK-NEXT:    ret
@@ -325,7 +318,6 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #128 // =0x80
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    lsr w8, w8, w1
 ; CHECK-NEXT:    and w8, w8, w0
 ; CHECK-NEXT:    cmp w8, #1

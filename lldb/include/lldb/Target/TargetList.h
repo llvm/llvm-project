@@ -44,8 +44,7 @@ public:
   }
 
   typedef std::vector<lldb::TargetSP> collection;
-  typedef LockingAdaptedIterable<collection, lldb::TargetSP, vector_adapter,
-                                 std::recursive_mutex>
+  typedef LockingAdaptedIterable<std::recursive_mutex, collection>
       TargetIterable;
 
   /// Create a new Target.

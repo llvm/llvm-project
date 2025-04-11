@@ -36,6 +36,54 @@ class CIRUnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 }
 
 //===----------------------------------------------------------------------===//
+// BoolAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_BoolAttr : CIR_Attr<"Bool", "bool", [TypedAttrInterface]> {
+  let summary = "Represent true/false for !cir.bool types";
+  let description = [{
+    The BoolAttr represents a 'true' or 'false' value.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                        "", "cir::BoolType">:$type,
+                    "bool":$value);
+
+  let assemblyFormat = [{
+    `<` $value `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ZeroAttr
+//===----------------------------------------------------------------------===//
+
+def ZeroAttr : CIR_Attr<"Zero", "zero", [TypedAttrInterface]> {
+  let summary = "Attribute to represent zero initialization";
+  let description = [{
+    The ZeroAttr is used to indicate zero initialization on structs.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let assemblyFormat = [{}];
+}
+
+//===----------------------------------------------------------------------===//
+// UndefAttr
+//===----------------------------------------------------------------------===//
+
+def UndefAttr : CIR_Attr<"Undef", "undef", [TypedAttrInterface]> {
+  let summary = "Represent an undef constant";
+  let description = [{
+    The UndefAttr represents an undef constant, corresponding to LLVM's notion
+    of undef.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let assemblyFormat = [{}];
+}
+
+//===----------------------------------------------------------------------===//
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
@@ -103,6 +151,48 @@ def FPAttr : CIR_Attr<"FP", "fp", [TypedAttrInterface]> {
 
   let assemblyFormat = [{
     `<` custom<FloatLiteral>($value, ref($type)) `>`
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
+// ConstArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ConstArrayAttr : CIR_Attr<"ConstArray", "const_array", [TypedAttrInterface]> {
+  let summary = "A constant array from ArrayAttr or StringRefAttr";
+  let description = [{
+    An CIR array attribute is an array of literals of the specified attr types.
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type,
+                        "mlir::Attribute":$elts,
+                        "int":$trailingZerosNum);
+
+  // Define a custom builder for the type; that removes the need to pass
+  // in an MLIRContext instance, as it can be infered from the `type`.
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::ArrayType":$type,
+                                        "mlir::Attribute":$elts), [{
+      int zeros = 0;
+      auto typeSize = mlir::cast<cir::ArrayType>(type).getSize();
+      if (auto str = mlir::dyn_cast<mlir::StringAttr>(elts))
+        zeros = typeSize - str.size();
+      else
+        zeros = typeSize - mlir::cast<mlir::ArrayAttr>(elts).size();
+
+      return $_get(type.getContext(), type, elts, zeros);
+    }]>
+  ];
+
+  // Printing and parsing available in CIRDialect.cpp
+  let hasCustomAssemblyFormat = 1;
+
+  // Enable verifier.
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool hasTrailingZeros() const { return getTrailingZerosNum() != 0; };
   }];
 }
 

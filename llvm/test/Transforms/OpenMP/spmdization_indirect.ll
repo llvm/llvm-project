@@ -252,7 +252,7 @@ define internal void @__omp_outlined_spmd_amenable2(ptr noalias %.global_tid., p
 ; AMDGPU-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
 ; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
 ; AMDGPU-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[X_H2S]] to ptr
-; AMDGPU-NEXT:    call void @use(ptr nocapture [[MALLOC_CAST]]) #[[ATTR6]]
+; AMDGPU-NEXT:    call void @use(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR6]]
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
 ; AMDGPU:       for.cond:
 ; AMDGPU-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -272,7 +272,7 @@ define internal void @__omp_outlined_spmd_amenable2(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:  entry:
 ; NVPTX-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4
 ; NVPTX-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; NVPTX-NEXT:    call void @use(ptr nocapture [[X_H2S]]) #[[ATTR6]]
+; NVPTX-NEXT:    call void @use(ptr captures(none) [[X_H2S]]) #[[ATTR6]]
 ; NVPTX-NEXT:    br label [[FOR_COND:%.*]]
 ; NVPTX:       for.cond:
 ; NVPTX-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]

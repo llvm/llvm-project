@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "XtensaInstPrinter.h"
+#include "MCTargetDesc/XtensaMCExpr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -34,10 +35,9 @@ static void printExpr(const MCExpr *Expr, raw_ostream &OS) {
   if (!(SRE = cast<MCSymbolRefExpr>(Expr)))
     assert(false && "Unexpected MCExpr type.");
 
-  MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
-
-  switch (Kind) {
-  case MCSymbolRefExpr::VK_None:
+  auto Spec = XtensaMCExpr::Specifier(SRE->getKind());
+  switch (Spec) {
+  case XtensaMCExpr::VK_None:
     break;
   // TODO
   default:
@@ -52,7 +52,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &OS) {
     OS << Offset;
   }
 
-  if (Kind != MCSymbolRefExpr::VK_None)
+  if (Spec != XtensaMCExpr::VK_None)
     OS << ')';
 }
 
@@ -100,7 +100,7 @@ void XtensaInstPrinter::printBranchTarget(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }
@@ -115,7 +115,7 @@ void XtensaInstPrinter::printJumpTarget(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
   ;
@@ -131,7 +131,7 @@ void XtensaInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
       OS << '+';
     OS << Val;
   } else if (MC.isExpr())
-    MC.getExpr()->print(OS, &MAI, true);
+    MC.getExpr()->print(OS, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }
@@ -149,7 +149,7 @@ void XtensaInstPrinter::printL32RTarget(const MCInst *MI, int OpNum,
     O << ". ";
     O << Value;
   } else if (MC.isExpr())
-    MC.getExpr()->print(O, &MAI, true);
+    MC.getExpr()->print(O, &MAI);
   else
     llvm_unreachable("Invalid operand");
 }
@@ -264,6 +264,28 @@ void XtensaInstPrinter::printImm32n_95_AsmOperand(const MCInst *MI, int OpNum,
     printOperand(MI, OpNum, O);
 }
 
+void XtensaInstPrinter::printImm8n_7_AsmOperand(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -8 && Value <= 7) &&
+           "Invalid argument, value must be in ranges <-8,7>");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printImm64n_4n_AsmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= -64 && Value <= -4) & ((Value & 0x3) == 0) &&
+           "Invalid argument, value must be in ranges <-64,-4>");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
 void XtensaInstPrinter::printOffset8m8_AsmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
@@ -304,6 +326,18 @@ void XtensaInstPrinter::printOffset4m32_AsmOperand(const MCInst *MI, int OpNum,
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 60 && ((Value & 0x3) == 0)) &&
            "Invalid argument, value must be multiples of four in range [0,60]");
+    O << Value;
+  } else
+    printOperand(MI, OpNum, O);
+}
+
+void XtensaInstPrinter::printEntry_Imm12_AsmOperand(const MCInst *MI, int OpNum,
+                                                    raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm()) {
+    int64_t Value = MI->getOperand(OpNum).getImm();
+    assert((Value >= 0 && Value <= 32760) &&
+           "Invalid argument, value must be multiples of eight in range "
+           "<0,32760>");
     O << Value;
   } else
     printOperand(MI, OpNum, O);

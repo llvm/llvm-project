@@ -20,15 +20,7 @@
 // CHECK: ar2#0 <-> ar1#1: NoAlias
 // CHECK: ar2#1 <-> ar1#1: NoAlias
 
-omp.private {type = private} @_QFmysubEar1_private_ref_box_heap_Uxf64 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> alloc {
-^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>):
-  %0 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "ar1", pinned, uniq_name = "_QFmysubEar1"}
-  %5:2 = hlfir.declare %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFmysubEar1"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-  omp.yield(%5#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>)
-} dealloc {
-^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>):
-  omp.yield
-}
+omp.private {type = private} @_QFmysubEar1_private_ref_box_heap_Uxf64 : !fir.box<!fir.heap<!fir.array<?xf64>>>
 func.func @testPrivateAllocatable(%arg0: !fir.ref<i32> {fir.bindc_name = "ns"}, %arg1: !fir.ref<i32> {fir.bindc_name = "ne"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>> {bindc_name = "ar1", uniq_name = "_QFmysubEar1"}

@@ -49,6 +49,7 @@ static bool isIntrinsicExpansion(Function &F) {
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::pow:
+  case Intrinsic::powi:
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:
   case Intrinsic::dx_cross:
@@ -147,7 +148,7 @@ static Value *expandCrossIntrinsic(CallInst *Orig) {
   Value *zx_xz = MulSub(op0_z, op0_x, op1_z, op1_x);
   Value *xy_yx = MulSub(op0_x, op0_y, op1_x, op1_y);
 
-  Value *cross = UndefValue::get(VT);
+  Value *cross = PoisonValue::get(VT);
   cross = Builder.CreateInsertElement(cross, yz_zy, (uint64_t)0);
   cross = Builder.CreateInsertElement(cross, zx_xz, 1);
   cross = Builder.CreateInsertElement(cross, xy_yx, 2);
@@ -251,7 +252,7 @@ static Value *expandExpIntrinsic(CallInst *Orig) {
 }
 
 static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
-                                      Intrinsic::ID intrinsicId) {
+                                      Intrinsic::ID IntrinsicId) {
   Value *X = Orig->getOperand(0);
   IRBuilder<> Builder(Orig);
   Type *Ty = X->getType();
@@ -285,7 +286,7 @@ static Value *expandAnyOrAllIntrinsic(CallInst *Orig,
     Result = Builder.CreateExtractElement(Cond, (uint64_t)0);
     for (unsigned I = 1; I < XVec->getNumElements(); I++) {
       Value *Elt = Builder.CreateExtractElement(Cond, I);
-      Result = ApplyOp(intrinsicId, Result, Elt);
+      Result = ApplyOp(IntrinsicId, Result, Elt);
     }
   }
   return Result;
@@ -410,12 +411,15 @@ static Value *expandAtan2Intrinsic(CallInst *Orig) {
   return Result;
 }
 
-static Value *expandPowIntrinsic(CallInst *Orig) {
+static Value *expandPowIntrinsic(CallInst *Orig, Intrinsic::ID IntrinsicId) {
 
   Value *X = Orig->getOperand(0);
   Value *Y = Orig->getOperand(1);
   Type *Ty = X->getType();
   IRBuilder<> Builder(Orig);
+
+  if (IntrinsicId == Intrinsic::powi)
+    Y = Builder.CreateSIToFP(Y, Ty);
 
   auto *Log2Call =
       Builder.CreateIntrinsic(Ty, Intrinsic::log2, {X}, nullptr, "elt.log2");
@@ -542,7 +546,8 @@ static bool expandIntrinsic(Function &F, CallInst *Orig) {
     Result = expandLog10Intrinsic(Orig);
     break;
   case Intrinsic::pow:
-    Result = expandPowIntrinsic(Orig);
+  case Intrinsic::powi:
+    Result = expandPowIntrinsic(Orig, IntrinsicId);
     break;
   case Intrinsic::dx_all:
   case Intrinsic::dx_any:

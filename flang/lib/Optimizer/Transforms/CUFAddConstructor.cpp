@@ -23,6 +23,7 @@
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
@@ -57,7 +58,7 @@ struct CUFAddConstructor
     auto funcTy =
         mlir::LLVM::LLVMFunctionType::get(voidTy, {}, /*isVarArg=*/false);
     std::optional<mlir::DataLayout> dl =
-        fir::support::getOrSetDataLayout(mod, /*allowDefaultLayout=*/false);
+        fir::support::getOrSetMLIRDataLayout(mod, /*allowDefaultLayout=*/false);
     if (!dl) {
       mlir::emitError(mod.getLoc(),
                       "data layout attribute is required to perform " +
@@ -104,10 +105,15 @@ struct CUFAddConstructor
         if (!attr)
           continue;
 
+        if (attr.getValue() == cuf::DataAttribute::Managed &&
+            !mlir::isa<fir::BaseBoxType>(globalOp.getType()))
+          TODO(loc, "registration of non-allocatable managed variables");
+
         mlir::func::FuncOp func;
         switch (attr.getValue()) {
         case cuf::DataAttribute::Device:
-        case cuf::DataAttribute::Constant: {
+        case cuf::DataAttribute::Constant:
+        case cuf::DataAttribute::Managed: {
           func = fir::runtime::getRuntimeFunc<mkRTKey(CUFRegisterVariable)>(
               loc, builder);
           auto fTy = func.getFunctionType();
@@ -140,8 +146,6 @@ struct CUFAddConstructor
               builder, loc, fTy, registeredMod, addr, gblName, sizeVal)};
           builder.create<fir::CallOp>(loc, func, args);
         } break;
-        case cuf::DataAttribute::Managed:
-          TODO(loc, "registration of managed variables");
         default:
           break;
         }
@@ -157,10 +161,12 @@ struct CUFAddConstructor
     funcs.push_back(
         mlir::FlatSymbolRefAttr::get(mod.getContext(), func.getSymName()));
     llvm::SmallVector<int> priorities;
+    llvm::SmallVector<mlir::Attribute> data;
     priorities.push_back(0);
+    data.push_back(mlir::LLVM::ZeroAttr::get(mod.getContext()));
     builder.create<mlir::LLVM::GlobalCtorsOp>(
         mod.getLoc(), builder.getArrayAttr(funcs),
-        builder.getI32ArrayAttr(priorities));
+        builder.getI32ArrayAttr(priorities), builder.getArrayAttr(data));
   }
 };
 

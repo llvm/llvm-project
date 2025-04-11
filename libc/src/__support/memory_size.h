@@ -77,7 +77,8 @@ public:
     if (!cpp::has_single_bit(alignment) || alignment > MAX_MEM_SIZE || !valid())
       return SafeMemSize{type{-1}};
 
-    type offset = offset_to(value, alignment);
+    type offset =
+        static_cast<type>(offset_to(static_cast<size_t>(value), alignment));
 
     if (LIBC_UNLIKELY(offset > static_cast<type>(MAX_MEM_SIZE) - value))
       return SafeMemSize{type{-1}};

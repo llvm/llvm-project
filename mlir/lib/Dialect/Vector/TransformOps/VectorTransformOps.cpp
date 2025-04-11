@@ -67,6 +67,9 @@ void transform::ApplyFoldElementwiseToVectorPatternsOp::populatePatterns(
 void transform::ApplyVectorReductionToContractPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorReductionToContractPatterns(patterns);
+
+  // TODO: As we now have a dedicated transform for
+  // `populateSinkVectorOpsPatterns` we can remove it from here.
   vector::populateSinkVectorOpsPatterns(patterns);
 }
 
@@ -102,9 +105,7 @@ void transform::ApplyLowerBroadcastPatternsOp::populatePatterns(
 
 void transform::ApplyLowerContractionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::VectorTransformsOptions vectorTransformOptions;
-  vectorTransformOptions.setVectorTransformsOptions(getLoweringStrategy());
-  populateVectorContractLoweringPatterns(patterns, vectorTransformOptions,
+  populateVectorContractLoweringPatterns(patterns, getLoweringStrategy(),
                                          /*benefit=*/1,
                                          /*disableOuterProductLowering=*/true);
 }
@@ -161,9 +162,8 @@ void transform::ApplyLowerTransferPatternsOp::populatePatterns(
 
 void transform::ApplyLowerTransposePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  vector::populateVectorTransposeLoweringPatterns(
-      patterns, vector::VectorTransformsOptions().setVectorTransposeLowering(
-                    getLoweringStrategy()));
+  vector::populateVectorTransposeLoweringPatterns(patterns,
+                                                  getLoweringStrategy());
   if (getAvx2LoweringStrategy()) {
     auto avx2LoweringOptions =
         x86vector::avx2::LoweringOptions().setTransposeOptions(
@@ -205,6 +205,11 @@ void transform::ApplyTransferToScfPatternsOp::populatePatterns(
           .enableFullUnroll(getFullUnroll())
           .setTargetRank(getMaxTransferRank());
   populateVectorToSCFConversionPatterns(patterns, vectorTransferToSCFOptions);
+}
+
+void transform::ApplySinkVectorPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateSinkVectorOpsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

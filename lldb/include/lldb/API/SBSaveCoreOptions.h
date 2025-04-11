@@ -54,7 +54,7 @@ public:
   /// Set the output file path
   ///
   /// \param
-  ///   output_file a \class SBFileSpec object that describes the output file.
+  ///   output_file a \ref SBFileSpec object that describes the output file.
   void SetOutputFile(SBFileSpec output_file);
 
   /// Get the output file spec

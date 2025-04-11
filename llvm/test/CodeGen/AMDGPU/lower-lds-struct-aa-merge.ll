@@ -2,8 +2,8 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds --amdgpu-lower-module-lds-strategy=module < %s | FileCheck %s
 
-@a = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
-@b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
+@a = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
+@b = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
 
 define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrspace(1) %arg, i32 %i) {
 ; CHECK-LABEL: define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(

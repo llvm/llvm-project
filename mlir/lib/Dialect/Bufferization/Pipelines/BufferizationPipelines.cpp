@@ -22,7 +22,10 @@ void mlir::bufferization::buildBufferDeallocationPipeline(
     OpPassManager &pm, const BufferDeallocationPipelineOptions &options) {
   pm.addPass(memref::createExpandReallocPass(/*emitDeallocs=*/false));
   pm.addPass(createCanonicalizerPass());
-  pm.addPass(createOwnershipBasedBufferDeallocationPass(options));
+
+  OwnershipBasedBufferDeallocationPassOptions deallocationOptions{
+      options.privateFunctionDynamicOwnership};
+  pm.addPass(createOwnershipBasedBufferDeallocationPass(deallocationOptions));
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createBufferDeallocationSimplificationPass());
   pm.addPass(createLowerDeallocationsPass());
