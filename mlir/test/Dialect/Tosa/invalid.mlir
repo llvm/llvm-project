@@ -2084,3 +2084,39 @@ func.func @test_mul_out_i16(%arg0: tensor<13x21x3xi8>, %arg1: tensor<13x1x3xi8>,
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<13x21x3xi8>, tensor<13x1x3xi8>, tensor<1xi8>) -> tensor<13x21x3xi16>
   return %0 : tensor<13x21x3xi16>
 }
+
+// -----
+
+// CHECK-LABEL: test_clamp_nan_min_val
+func.func @test_clamp_nan_min_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=0xFFFFFFFF : f32, max_val=1.000000e+00 : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 0xFFFFFFFF : f32, max_val = 1.0: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_nan_max_val
+func.func @test_clamp_nan_max_val(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op min/max attributes should not be 'NaN', got min_val=2.300000e+00 : f32, max_val=0x7FFFFFFF : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 2.3 : f32, max_val = 0x7FFFFFFF: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_min_larger_than_max_int8
+func.func @test_clamp_min_larger_than_max_int8(%arg0: tensor<13x21x3xi8>) -> tensor<13x21x3xi8> {
+  // expected-error@+1 {{'tosa.clamp' op expected min_val <= max_val, got min_val=127 : i8, max_val=-128 : i8}}
+  %0 = tosa.clamp %arg0 {min_val = 127 : i8, max_val = -128: i8} : (tensor<13x21x3xi8>) -> tensor<13x21x3xi8>
+  return %0 : tensor<13x21x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: test_clamp_min_larger_than_max_fp32
+func.func @test_clamp_min_larger_than_max_fp32(%arg0: tensor<13x21x3xf32>) -> tensor<13x21x3xf32> {
+  // expected-error@+1 {{'tosa.clamp' op expected min_val <= max_val, got min_val=2.000000e+00 : f32, max_val=-1.100000e+00 : f32}}
+  %0 = tosa.clamp %arg0 {min_val = 2.0 : f32, max_val = -1.1: f32} : (tensor<13x21x3xf32>) -> tensor<13x21x3xf32>
+  return %0 : tensor<13x21x3xf32>
+}
