@@ -28,6 +28,15 @@ using namespace mlir::dataflow;
 // AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
+void AbstractDenseForwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
+
 LogicalResult AbstractDenseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Visit every operation and block.
   if (failed(processOperation(top)))
@@ -251,6 +260,15 @@ AbstractDenseForwardDataFlowAnalysis::getLatticeFor(ProgramPoint *dependent,
 //===----------------------------------------------------------------------===//
 // AbstractDenseBackwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
+
+void AbstractDenseBackwardDataFlowAnalysis::initializeEquivalentLatticeAnchor(
+    Operation *top) {
+  top->walk([&](Operation *op) {
+    if (isa<RegionBranchOpInterface, CallOpInterface>(op))
+      return;
+    buildOperationEquivalentLatticeAnchor(op);
+  });
+}
 
 LogicalResult
 AbstractDenseBackwardDataFlowAnalysis::initialize(Operation *top) {
