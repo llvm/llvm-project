@@ -262,6 +262,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   errorNYI(d->getSourceRange(), "reference of undeclared global");
+  return {};
 }
 
 cir::GlobalOp
