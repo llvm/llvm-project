@@ -558,7 +558,7 @@ define double @flat_system_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_add_f64_e32 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB34_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -598,7 +598,7 @@ define double @flat_one_as_atomic_fadd_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_add_f64_e32 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB35_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -671,7 +671,7 @@ define double @flat_system_atomic_fmin_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[4:5], v[0:1], v[0:1]
 ; GFX1250-NEXT:    v_min_num_f64_e32 v[2:3], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -717,7 +717,7 @@ define double @flat_one_as_atomic_fmin_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[4:5], v[0:1], v[0:1]
 ; GFX1250-NEXT:    v_min_num_f64_e32 v[2:3], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -787,7 +787,7 @@ define double @flat_system_atomic_fmax_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[4:5], v[0:1], v[0:1]
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -833,7 +833,7 @@ define double @flat_one_as_atomic_fmax_f64(ptr %ptr, double %val) {
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[4:5], v[0:1], v[0:1]
 ; GFX1250-NEXT:    v_max_num_f64_e32 v[2:3], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[2:3], off scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
@@ -966,7 +966,7 @@ define i64 @flat_one_as_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_min_i64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB52_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1006,7 +1006,7 @@ define i64 @flat_system_atomic_min_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_min_i64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB53_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1046,7 +1046,7 @@ define i64 @flat_one_as_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_i64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB54_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1086,7 +1086,7 @@ define i64 @flat_system_atomic_max_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_i64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB55_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1126,7 +1126,7 @@ define i64 @flat_one_as_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_min_u64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB56_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1166,7 +1166,7 @@ define i64 @flat_system_atomic_umin_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_min_u64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB57_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1206,7 +1206,7 @@ define i64 @flat_one_as_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_u64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB58_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1246,7 +1246,7 @@ define i64 @flat_system_atomic_umax_i64(ptr %ptr, i64 %val) {
 ; GFX1250-NEXT:    scratch_load_b64 v[4:5], v6, off
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    v_max_u64 v[0:1], v[4:5], v[2:3]
-; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off
+; GFX1250-NEXT:    scratch_store_b64 v6, v[0:1], off scope:SCOPE_SE
 ; GFX1250-NEXT:  .LBB59_4: ; %atomicrmw.phi
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_or_b32 exec_lo, exec_lo, s0
