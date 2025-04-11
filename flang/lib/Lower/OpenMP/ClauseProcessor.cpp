@@ -856,6 +856,26 @@ static bool isVectorSubscript(const evaluate::Expr<T> &expr) {
   return false;
 }
 
+bool ClauseProcessor::processDefaultMap(
+    DefaultMapsTy &result, lower::StatementContext &stmtCtx) const {
+  auto process = [&](const omp::clause::Defaultmap &clause,
+                     const parser::CharBlock &) {
+    using Defmap = omp::clause::Defaultmap;
+    clause::Defaultmap::VariableCategory variableCategory =
+        Defmap::VariableCategory::All;
+    // Variable Category is optional, if not specified defaults to all.
+    // Multiples of the same category are illegal as are any other
+    // defaultmaps being specified when a user specified all is in place,
+    // however, this should be handled earlier during semantics.
+    if (auto varCat =
+            std::get<std::optional<Defmap::VariableCategory>>(clause.t))
+      variableCategory = varCat.value_or(Defmap::VariableCategory::All);
+    auto behaviour = std::get<Defmap::ImplicitBehavior>(clause.t);
+    result.insert({variableCategory, behaviour});
+  };
+  return findRepeatableClause<omp::clause::Defaultmap>(process);
+}
+
 bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     lower::StatementContext &stmtCtx,
                                     mlir::omp::DependClauseOps &result) const {
