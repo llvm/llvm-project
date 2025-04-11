@@ -200,8 +200,14 @@ LoopInfo::createLoopVectorizeMetadata(const LoopAttributes &Attrs,
   LLVMContext &Ctx = Header->getContext();
 
   std::optional<bool> Enabled;
+
+  // Vectorization is disabled if:
+  // 1) it is disabled explicitly, or
+  // 2) it is implied when vectorize.width is set to 1 and scalable
+  // vectorization is not specified explicitly.
   if (Attrs.VectorizeEnable == LoopAttributes::Disable ||
-      Attrs.VectorizeWidth == 1)
+      (Attrs.VectorizeWidth == 1 &&
+       Attrs.VectorizeScalable != LoopAttributes::Enable))
     Enabled = false;
   else if (Attrs.VectorizeEnable != LoopAttributes::Unspecified ||
            Attrs.VectorizePredicateEnable != LoopAttributes::Unspecified ||
