@@ -269,6 +269,9 @@ COMMON_FLAG(bool, detect_write_exec, false,
 COMMON_FLAG(bool, test_only_emulate_no_memorymap, false,
             "TEST ONLY fail to read memory mappings to emulate sanitized "
             "\"init\"")
+COMMON_FLAG(bool, enable_unmalloced_free_check, !SANITIZER_AIX,
+            "if true, FreeNotMalloced error will be reported. Only disable "
+            "this error detecting on AIX by default for now.")
 // With static linking, dladdr((void*)pthread_join) or similar will return the
 // path to the main program. This flag will replace dlopen(<main program,...>
 // with dlopen(NULL,...), which is the correct way to get a handle to the main
