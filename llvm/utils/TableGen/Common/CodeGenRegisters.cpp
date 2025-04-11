@@ -16,6 +16,8 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntEqClasses.h"
+#include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -765,7 +767,8 @@ static void sortAndUniqueRegisters(CodeGenRegister::Vec &M) {
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            const Record *R)
     : TheDef(R), Name(std::string(R->getName())),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), TSFlags(0) {
+      RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
+      TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
   std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
   if (TypeList.empty())
@@ -791,7 +794,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
     const CodeGenRegister *Reg = RegBank.getReg((*Elements)[i]);
     Members.push_back(Reg);
     Artificial &= Reg->Artificial;
-    TopoSigs.set(Reg->getTopoSig());
+    if (!Reg->getSuperRegs().empty())
+      RegsWithSuperRegsTopoSigs.set(Reg->getTopoSig());
   }
   sortAndUniqueRegisters(Members);
 
@@ -849,13 +853,14 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
 CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
                                            StringRef Name, Key Props)
     : Members(*Props.Members), TheDef(nullptr), Name(std::string(Name)),
-      TopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1), RSI(Props.RSI),
-      CopyCost(0), Allocatable(true), AllocationPriority(0),
+      RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
+      RSI(Props.RSI), CopyCost(0), Allocatable(true), AllocationPriority(0),
       GlobalPriority(false), TSFlags(0) {
   Artificial = true;
   GeneratePressureSet = false;
   for (const auto R : Members) {
-    TopoSigs.set(R->getTopoSig());
+    if (!R->getSuperRegs().empty())
+      RegsWithSuperRegsTopoSigs.set(R->getTopoSig());
     Artificial &= R->Artificial;
   }
 }
@@ -1173,6 +1178,28 @@ void CodeGenRegisterClass::buildRegUnitSet(
                    std::back_inserter(RegUnits));
 }
 
+// Combine our super classes of the given sub-register index with all of their
+// super classes in turn.
+void CodeGenRegisterClass::extendSuperRegClasses(CodeGenSubRegIndex *SubIdx) {
+  auto It = SuperRegClasses.find(SubIdx);
+  if (It == SuperRegClasses.end())
+    return;
+
+  SmallVector<CodeGenRegisterClass *> MidRCs;
+  MidRCs.insert(MidRCs.end(), It->second.begin(), It->second.end());
+
+  for (CodeGenRegisterClass *MidRC : MidRCs) {
+    for (auto &Pair : MidRC->SuperRegClasses) {
+      CodeGenSubRegIndex *ComposedSubIdx = Pair.first->compose(SubIdx);
+      if (!ComposedSubIdx)
+        continue;
+
+      for (CodeGenRegisterClass *SuperRC : Pair.second)
+        addSuperRegClass(ComposedSubIdx, SuperRC);
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //                           CodeGenRegisterCategory
 //===----------------------------------------------------------------------===//
@@ -1290,6 +1317,8 @@ CodeGenRegBank::CodeGenRegBank(const RecordKeeper &Records,
     }
   }
 
+  computeSubRegIndicesRPOT();
+
   // Native register units are associated with a leaf register. They've all been
   // discovered now.
   NumNativeRegUnits = RegUnits.size();
@@ -1364,7 +1393,7 @@ void CodeGenRegBank::addToMaps(CodeGenRegisterClass *RC) {
 }
 
 // Create a synthetic sub-class if it is missing.
-CodeGenRegisterClass *
+std::pair<CodeGenRegisterClass *, bool>
 CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
                                     const CodeGenRegister::Vec *Members,
                                     StringRef Name) {
@@ -1372,12 +1401,12 @@ CodeGenRegBank::getOrCreateSubClass(const CodeGenRegisterClass *RC,
   CodeGenRegisterClass::Key K(Members, RC->RSI);
   RCKeyMap::const_iterator FoundI = Key2RC.find(K);
   if (FoundI != Key2RC.end())
-    return FoundI->second;
+    return {FoundI->second, false};
 
   // Sub-class doesn't exist, create a new one.
   RegClasses.emplace_back(*this, Name, K);
   addToMaps(&RegClasses.back());
-  return &RegClasses.back();
+  return {&RegClasses.back(), true};
 }
 
 CodeGenRegisterClass *CodeGenRegBank::getRegClass(const Record *Def) const {
@@ -1689,6 +1718,81 @@ void CodeGenRegBank::computeSubRegLaneMasks() {
       LaneMask = LaneBitmask::getLane(0);
 
     RegClass.LaneMask = LaneMask;
+  }
+}
+
+namespace {
+
+// A directed graph on sub-register indices with a virtual source node that
+// has an arc to all other nodes, and an arc from A to B if sub-register index
+// B can be obtained by composing A with some other sub-register index.
+struct SubRegIndexCompositionGraph {
+  std::deque<CodeGenSubRegIndex> &SubRegIndices;
+  CodeGenSubRegIndex::CompMap EntryNode;
+
+  SubRegIndexCompositionGraph(std::deque<CodeGenSubRegIndex> &SubRegIndices)
+      : SubRegIndices(SubRegIndices) {
+    for (CodeGenSubRegIndex &Idx : SubRegIndices) {
+      EntryNode.try_emplace(&Idx, &Idx);
+    }
+  }
+};
+
+} // namespace
+
+template <> struct llvm::GraphTraits<SubRegIndexCompositionGraph> {
+  using NodeRef =
+      PointerUnion<CodeGenSubRegIndex *, const CodeGenSubRegIndex::CompMap *>;
+
+  // Using a reverse iterator causes sub-register indices to appear in their
+  // more natural order in RPOT.
+  using CompMapIt = CodeGenSubRegIndex::CompMap::const_reverse_iterator;
+  struct ChildIteratorType
+      : public iterator_adaptor_base<
+            ChildIteratorType, CompMapIt,
+            typename std::iterator_traits<CompMapIt>::iterator_category,
+            NodeRef> {
+    ChildIteratorType(CompMapIt I)
+        : ChildIteratorType::iterator_adaptor_base(I) {}
+
+    NodeRef operator*() const { return wrapped()->second; }
+  };
+
+  static NodeRef getEntryNode(const SubRegIndexCompositionGraph &G) {
+    return &G.EntryNode;
+  }
+
+  static const CodeGenSubRegIndex::CompMap *children(NodeRef N) {
+    if (auto *Idx = dyn_cast<CodeGenSubRegIndex *>(N))
+      return &Idx->getComposites();
+    return cast<const CodeGenSubRegIndex::CompMap *>(N);
+  }
+
+  static ChildIteratorType child_begin(NodeRef N) {
+    return ChildIteratorType(children(N)->rbegin());
+  }
+  static ChildIteratorType child_end(NodeRef N) {
+    return ChildIteratorType(children(N)->rend());
+  }
+
+  static auto nodes_begin(SubRegIndexCompositionGraph *G) {
+    return G->SubRegIndices.begin();
+  }
+  static auto nodes_end(SubRegIndexCompositionGraph *G) {
+    return G->SubRegIndices.end();
+  }
+
+  static unsigned size(SubRegIndexCompositionGraph *G) {
+    return G->SubRegIndices.size();
+  }
+};
+
+void CodeGenRegBank::computeSubRegIndicesRPOT() {
+  SubRegIndexCompositionGraph G(SubRegIndices);
+  ReversePostOrderTraversal<SubRegIndexCompositionGraph> RPOT(G);
+  for (const auto N : RPOT) {
+    if (auto *Idx = dyn_cast<CodeGenSubRegIndex *>(N))
+      SubRegIndicesRPOT.push_back(Idx);
   }
 }
 
@@ -2323,8 +2427,10 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
     if (SubIdx.Artificial)
       continue;
     // This is a real subset.  See if we have a matching class.
-    CodeGenRegisterClass *SubRC = getOrCreateSubClass(
-        RC, &I->second, RC->getName() + "_with_" + I->first->getName());
+    CodeGenRegisterClass *SubRC =
+        getOrCreateSubClass(RC, &I->second,
+                            RC->getName() + "_with_" + I->first->getName())
+            .first;
     RC->setSubClassWithSubReg(&SubIdx, SubRC);
   }
 }
@@ -2339,16 +2445,22 @@ void CodeGenRegBank::inferSubClassWithSubReg(CodeGenRegisterClass *RC) {
 void CodeGenRegBank::inferMatchingSuperRegClass(
     CodeGenRegisterClass *RC,
     std::list<CodeGenRegisterClass>::iterator FirstSubRegRC) {
+  DenseSet<const CodeGenSubRegIndex *> ImpliedSubRegIndices;
   std::vector<std::pair<const CodeGenRegister *, const CodeGenRegister *>>
       SubToSuperRegs;
   BitVector TopoSigs(getNumTopoSigs());
 
-  // Iterate in SubRegIndex numerical order to visit synthetic indices last.
-  for (auto &SubIdx : SubRegIndices) {
+  // Iterate subregister indices in topological order to visit larger indices
+  // first. This allows us to skip the smaller indices in many cases because
+  // their inferred super-register classes are implied.
+  for (auto *SubIdx : SubRegIndicesRPOT) {
     // Skip indexes that aren't fully supported by RC's registers. This was
     // computed by inferSubClassWithSubReg() above which should have been
     // called first.
-    if (RC->getSubClassWithSubReg(&SubIdx) != RC)
+    if (RC->getSubClassWithSubReg(SubIdx) != RC)
+      continue;
+
+    if (ImpliedSubRegIndices.count(SubIdx))
       continue;
 
     // Build list of (Sub, Super) pairs for this SubIdx, sorted by Sub. Note
@@ -2356,7 +2468,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
     SubToSuperRegs.clear();
     TopoSigs.reset();
     for (const auto Super : RC->getMembers()) {
-      const CodeGenRegister *Sub = Super->getSubRegs().find(&SubIdx)->second;
+      const CodeGenRegister *Sub = Super->getSubRegs().find(SubIdx)->second;
       assert(Sub && "Missing sub-register");
       SubToSuperRegs.emplace_back(Sub, Super);
       TopoSigs.set(Sub->getTopoSig());
@@ -2374,7 +2486,7 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       if (SubRC.Artificial)
         continue;
       // Topological shortcut: SubRC members have the wrong shape.
-      if (!TopoSigs.anyCommon(SubRC.getTopoSigs()))
+      if (!TopoSigs.anyCommon(SubRC.getRegsWithSuperRegsTopoSigs()))
         continue;
       // Compute the subset of RC that maps into SubRC with a single linear scan
       // through SubToSuperRegs and the members of SubRC.
@@ -2395,15 +2507,54 @@ void CodeGenRegBank::inferMatchingSuperRegClass(
       // RC injects completely into SubRC.
       sortAndUniqueRegisters(SubSetVec);
       if (SubSetVec.size() == RC->getMembers().size()) {
-        SubRC.addSuperRegClass(&SubIdx, RC);
+        SubRC.addSuperRegClass(SubIdx, RC);
+
+        // We can skip checking subregister indices that can be composed from
+        // the current SubIdx.
+        //
+        // Proof sketch: Let SubRC' be another register class and SubSubIdx
+        // a subregister index that can be composed from SubIdx.
+        //
+        // Calling this function with SubRC in place of RC ensures the existence
+        // of a subclass X of SubRC with the registers that have subregisters in
+        // SubRC'.
+        //
+        // The set of registers in RC with SubSubIdx in SubRC' is equal to the
+        // set of registers in RC with SubIdx in X (because every register in
+        // RC has a corresponding subregister in SubRC), and so checking the
+        // pair (SubSubIdx, SubRC') is redundant with checking (SubIdx, X).
+        for (const auto &SubSubIdx : SubIdx->getComposites())
+          ImpliedSubRegIndices.insert(SubSubIdx.second);
+
         continue;
       }
 
       // Only a subset of RC maps into SubRC. Make sure it is represented by a
       // class.
-      getOrCreateSubClass(RC, &SubSetVec,
-                          RC->getName() + "_with_" + SubIdx.getName() + "_in_" +
-                              SubRC.getName());
+      //
+      // The name of the inferred register class follows the template
+      // "<RC>_with_<SubIdx>_in_<SubRC>".
+      //
+      // When SubRC is already an inferred class, prefer a name of the form
+      // "<RC>_with_<CompositeSubIdx>_in_<SubSubRC>" over a chain of the form
+      // "<RC>_with_<SubIdx>_in_<OtherRc>_with_<SubSubIdx>_in_<SubSubRC>".
+      CodeGenSubRegIndex *CompositeSubIdx = SubIdx;
+      CodeGenRegisterClass *CompositeSubRC = &SubRC;
+      if (CodeGenSubRegIndex *SubSubIdx = SubRC.getInferredFromSubRegIdx()) {
+        auto It = SubIdx->getComposites().find(SubSubIdx);
+        if (It != SubIdx->getComposites().end()) {
+          CompositeSubIdx = It->second;
+          CompositeSubRC = SubRC.getInferredFromRC();
+        }
+      }
+
+      auto [SubSetRC, Inserted] = getOrCreateSubClass(
+          RC, &SubSetVec,
+          RC->getName() + "_with_" + CompositeSubIdx->getName() + "_in_" +
+              CompositeSubRC->getName());
+
+      if (Inserted)
+        SubSetRC->setInferredFrom(CompositeSubIdx, CompositeSubRC);
     }
   }
 }
@@ -2438,7 +2589,7 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
     inferMatchingSuperRegClass(RC);
 
     // New register classes are created while this loop is running, and we need
-    // to visit all of them.  I  particular, inferMatchingSuperRegClass needs
+    // to visit all of them.  In particular, inferMatchingSuperRegClass needs
     // to match old super-register classes with sub-register classes created
     // after inferMatchingSuperRegClass was called.  At this point,
     // inferMatchingSuperRegClass has checked SuperRC = [0..rci] with SubRC =
@@ -2450,6 +2601,17 @@ void CodeGenRegBank::computeInferredRegisterClasses() {
         inferMatchingSuperRegClass(&*I2, E2);
       FirstNewRC = NextNewRC;
     }
+  }
+
+  // Compute the transitive closure for super-register classes.
+  //
+  // By iterating over sub-register indices in topological order, we only ever
+  // add super-register classes for sub-register indices that have not already
+  // been visited. That allows computing the transitive closure in a single
+  // pass.
+  for (CodeGenSubRegIndex *SubIdx : SubRegIndicesRPOT) {
+    for (CodeGenRegisterClass &SubRC : RegClasses)
+      SubRC.extendSuperRegClasses(SubIdx);
   }
 }
 

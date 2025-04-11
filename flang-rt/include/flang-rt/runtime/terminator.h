@@ -115,6 +115,21 @@ private:
 RT_API_ATTRS void NotifyOtherImagesOfNormalEnd();
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
 RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();
+
+#if defined(RT_DEVICE_COMPILATION)
+/// Trap the execution on the device.
+[[noreturn]] void RT_API_ATTRS DeviceTrap() {
+#if defined(__CUDACC__)
+  // NVCC supports __trap().
+  __trap();
+#elif defined(__clang__)
+  // Clang supports __builtin_trap().
+  __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
+}
+#endif
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {
