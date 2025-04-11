@@ -179,6 +179,11 @@ struct ClassInfo {
   /// operands include all superclasses.
   std::vector<ClassInfo *> SuperClasses;
 
+  /// TreeDepth - The maximum depth of this class in the poset of classes. This
+  /// field is only computed and set for tokens and user-defined classes to
+  /// speed up class sorting.
+  std::optional<int> TreeDepth;
+
   /// Name - The full class name, suitable for use in an enum.
   std::string Name;
 
@@ -290,13 +295,9 @@ public:
   }
 
   int getTreeDepth() const {
-    int Depth = 0;
-    const ClassInfo *Root = this;
-    while (!Root->SuperClasses.empty()) {
-      Depth++;
-      Root = Root->SuperClasses.front();
-    }
-    return Depth;
+    assert(TreeDepth.has_value() &&
+           "Attempting to get the TreeDepth of a class that doesn't have one!");
+    return *TreeDepth;
   }
 
   const ClassInfo *findRoot() const {
@@ -304,6 +305,17 @@ public:
     while (!Root->SuperClasses.empty())
       Root = Root->SuperClasses.front();
     return Root;
+  }
+
+  int computeTreeDepth() {
+    if (TreeDepth.has_value())
+      return *TreeDepth;
+
+    int Depth = 0;
+    for (ClassInfo *Parent : SuperClasses)
+      Depth = std::max(Depth, 1 + Parent->computeTreeDepth());
+    TreeDepth = Depth;
+    return Depth;
   }
 
   /// Compare two classes. This does not produce a total ordering, but does
@@ -1685,6 +1697,11 @@ void AsmMatcherInfo::buildInfo() {
                       "error: Destination value identical to source value.");
     FromClass->SuperClasses.push_back(ToClass);
   }
+
+  // Precompute tree depths for classes which use them for comparisons
+  for (ClassInfo &CI : Classes)
+    if (CI.Kind == ClassInfo::Token || CI.isUserClass())
+      CI.computeTreeDepth();
 
   // Reorder classes so that classes precede super classes.
   Classes.sort();
