@@ -726,7 +726,8 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
   if (hasBA && !hasGP) {
     // Write missing data
     // We can only know when Pauth is missing.
-    // Unlike AArch64 Build Attributes, GNU properties does not give a way to distinguish between no-value given to value of '0' given.
+    // Unlike AArch64 Build Attributes, GNU properties does not give a way to
+    // distinguish between no-value given to value of '0' given.
     if (baInfo.pauth.tagPlatform || baInfo.pauth.tagSchema) {
       tPointer->aarch64PauthAbiCoreInfoStorage = serializeUnsigned(
           baInfo.pauth.tagPlatform, baInfo.pauth.tagSchema, isBE);
