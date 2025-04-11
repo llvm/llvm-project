@@ -44,7 +44,6 @@
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticError.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -1552,30 +1551,27 @@ void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
   Diag(DiagID) << Arg1 << Arg2 << Arg3;
 }
 
-void ASTReader::Error(llvm::Error &&Err) const {
-  llvm::Error RemainingErr =
-      handleErrors(std::move(Err), [this](const DiagnosticError &E) {
-        auto Diag = E.getDiagnostic().second;
+namespace {
+struct AlreadyReportedDiagnosticError
+    : llvm::ErrorInfo<AlreadyReportedDiagnosticError> {
+  static char ID;
 
-        // Ideally we'd just emit it, but have to handle a possible in-flight
-        // diagnostic. Note that the location is currently ignored as well.
-        auto NumArgs = Diag.getStorage()->NumDiagArgs;
-        assert(NumArgs <= 3 && "Can only have up to 3 arguments");
-        StringRef Arg1, Arg2, Arg3;
-        switch (NumArgs) {
-        case 3:
-          Arg3 = Diag.getStringArg(2);
-          [[fallthrough]];
-        case 2:
-          Arg2 = Diag.getStringArg(1);
-          [[fallthrough]];
-        case 1:
-          Arg1 = Diag.getStringArg(0);
-        }
-        Error(Diag.getDiagID(), Arg1, Arg2, Arg3);
-      });
-  if (RemainingErr)
-    Error(toString(std::move(RemainingErr)));
+  void log(raw_ostream &OS) const override {
+    llvm_unreachable("reporting an already-reported diagnostic error");
+  }
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+};
+
+char AlreadyReportedDiagnosticError::ID = 0;
+} // namespace
+
+void ASTReader::Error(llvm::Error &&Err) const {
+  handleAllErrors(
+      std::move(Err), [](AlreadyReportedDiagnosticError &) {},
+      [&](llvm::ErrorInfoBase &E) { return Error(E.message()); });
 }
 
 //===----------------------------------------------------------------------===//
@@ -3349,8 +3345,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
-      if (recompilingFinalized)
-        Diag(diag::note_module_file_conflict);
 
       switch (Result) {
       case Failure: return Failure;
@@ -4440,6 +4434,7 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
           // This module was defined by an imported (explicit) module.
           Diag(diag::err_module_file_conflict) << F.ModuleName << F.FileName
                                                << ASTFE->getName();
+          // TODO: Add a note with the module map paths if they differ.
         } else {
           // This module was built with a different module map.
           Diag(diag::err_imported_module_not_found)
@@ -6105,14 +6100,21 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
         if (OptionalFileEntryRef CurFile = CurrentModule->getASTFile()) {
           // Don't emit module relocation error if we have -fno-validate-pch
           if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
-                    DisableValidationForModuleKind::Module) &&
-              CurFile != F.File) {
-            auto ConflictError =
-                PartialDiagnostic(diag::err_module_file_conflict,
-                                  ContextObj->DiagAllocator)
+                    DisableValidationForModuleKind::Module)) {
+            assert(CurFile != F.File && "ModuleManager did not de-duplicate");
+
+            Diag(diag::err_module_file_conflict)
                 << CurrentModule->getTopLevelModuleName() << CurFile->getName()
                 << F.File.getName();
-            return DiagnosticError::create(CurrentImportLoc, ConflictError);
+
+            auto CurModMapFile =
+                ModMap.getContainingModuleMapFile(CurrentModule);
+            auto ModMapFile = FileMgr.getOptionalFileRef(F.ModuleMapPath);
+            if (CurModMapFile && ModMapFile && CurModMapFile != ModMapFile)
+              Diag(diag::note_module_file_conflict)
+                  << CurModMapFile->getName() << ModMapFile->getName();
+
+            return llvm::make_error<AlreadyReportedDiagnosticError>();
           }
         }
 
