@@ -2910,11 +2910,6 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                           SQ.getWithInstruction(&GEP)))
     return replaceInstUsesWith(GEP, V);
 
-  // // getelementptr inbounds null, idx -> null
-  // if (auto *BaseC = dyn_cast<Constant>(PtrOp))
-  //   if (GEP.isInBounds() && BaseC->isNullValue() && !NullPointerIsDefined(GEP.getFunction(), GEPType->getPointerAddressSpace()))
-  //     return replaceInstUsesWith(GEP, PtrOp);
-
   // For vector geps, use the generic demanded vector support.
   // Skip if GEP return type is scalable. The number of elements is unknown at
   // compile-time.
