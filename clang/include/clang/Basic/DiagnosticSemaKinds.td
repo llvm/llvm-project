@@ -12909,4 +12909,14 @@ def err_acc_update_as_body
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
+def err_amdgcn_processor_is_arg_not_literal
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a string "
+            "literal">;
+def err_amdgcn_processor_is_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_processor_is must be a valid "
+            "AMDGCN processor identifier; '%0' is not valid">;
+def err_amdgcn_is_invocable_arg_invalid_value
+    : Error<"the argument to __builtin_amdgcn_is_invocable must be either a "
+            "target agnostic builtin or an AMDGCN target specific builtin; `%0`"
+            " is not valid">;
 } // end of sema component.

@@ -142,3 +142,7 @@ void SPIRV64AMDGCNTargetInfo::setAuxTarget(const TargetInfo *Aux) {
     Float128Format = DoubleFormat;
   }
 }
+
+bool SPIRV64AMDGCNTargetInfo::isValidCPUName(StringRef CPU) const {
+  return AMDGPUTI.isValidCPUName(CPU);
+}
