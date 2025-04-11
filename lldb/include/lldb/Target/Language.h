@@ -15,6 +15,7 @@
 #include <set>
 #include <vector>
 
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
@@ -370,6 +371,13 @@ public:
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s);
+
+  virtual bool HandleFrameFormatVariable(const SymbolContext &sc,
+                                         const ExecutionContext *exe_ctx,
+                                         FormatEntity::Entry::Type type,
+                                         Stream &s) {
+    return false;
+  }
 
   virtual ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
