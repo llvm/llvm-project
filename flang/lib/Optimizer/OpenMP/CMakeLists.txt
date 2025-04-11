@@ -8,6 +8,7 @@ add_flang_library(FlangOpenMPTransforms
   MapInfoFinalization.cpp
   MarkDeclareTarget.cpp
   LowerWorkshare.cpp
+  LowerNontemporal.cpp
 
   DEPENDS
   FIRDialect
