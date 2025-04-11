@@ -3116,11 +3116,11 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     return &GEP;
   }
 
-  // These rewrites is trying to preserve inbounds/nuw attributes. So we want to
+  // These rewrites are trying to preserve inbounds/nuw attributes. So we want to
   // do this after having tried to derive "nuw" above.
   if (GEP.getNumIndices() == 1) {
     // Given (gep p, x+y) we want to determine the common nowrap flags for both
-    // gep if transforming into (gep (gep p, x), y).
+    // geps if transforming into (gep (gep p, x), y).
     auto GetPreservedNoWrapFlags = [&](bool AddIsNUW) {
       // We can preserve both "inbounds nuw", "nusw nuw" and "nuw" if we know
       // that x + y does not have unsigned wrap.
