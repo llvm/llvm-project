@@ -31,6 +31,9 @@ cbuffer C : register(b 2) {}
 // expected-error@+1 {{wrong argument format for hlsl attribute, use b2 instead}}
 cbuffer D : register(b 2, space3) {}
 
+// expected-error@+1 {{expected <numeric_constant>}}
+cbuffer E : register(u-1) {};
+
 // expected-error@+1 {{'register' attribute only applies to cbuffer/tbuffer and external global variables}}
 static MyTemplatedSRV<float> U : register(u5);
 
