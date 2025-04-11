@@ -125,11 +125,11 @@ public:
     return isAdoptFnName(safeGetName(FnDecl));
   }
 
-  bool isAdoptFnName(const std::string& Name) const {
+  bool isAdoptFnName(const std::string &Name) const {
     return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc";
   }
 
-  bool isAdoptNS(const std::string& Name) const {
+  bool isAdoptNS(const std::string &Name) const {
     return Name == "adoptNS" || Name == "adoptNSArc";
   }
 
@@ -165,7 +165,7 @@ public:
     checkCreateOrCopyFunction(CE, DeclWithIssue);
   }
 
-  void checkAdoptCall(const CallExpr *CE, const std::string& FnName,
+  void checkAdoptCall(const CallExpr *CE, const std::string &FnName,
                       const Decl *DeclWithIssue) const {
     if (!CE->getNumArgs())
       return;
@@ -259,20 +259,21 @@ public:
         if (ParamDecl->hasAttr<CFReturnsRetainedAttr>())
           CreateOrCopyOutArguments.insert(Decl);
       } else {
-        // No callee or a variadic argument. Conservatively assume it's an out argument.
+        // No callee or a variadic argument.
+        // Conservatively assume it's an out argument.
         if (RTC.isUnretained(Decl->getType()))
           CreateOrCopyOutArguments.insert(Decl);
       }
     }
     auto Summary = Summaries->getSummary(AnyCall(CE));
     switch (Summary->getRetEffect().getKind()) {
-      case RetEffect::OwnedSymbol:
-      case RetEffect::OwnedWhenTrackedReceiver:
-        if (!CreateOrCopyFnCall.contains(CE))
-          reportLeak(CE, DeclWithIssue);
-        break;
-      default:
-        break;
+    case RetEffect::OwnedSymbol:
+    case RetEffect::OwnedWhenTrackedReceiver:
+      if (!CreateOrCopyFnCall.contains(CE))
+        reportLeak(CE, DeclWithIssue);
+      break;
+    default:
+      break;
     }
   }
 
@@ -340,7 +341,7 @@ public:
     else if (isCreateOrCopy(Arg))
       reportLeak(Name, CE, DeclWithIssue);
   }
-  
+
   void visitVarDecl(const VarDecl *VD) const {
     auto *Init = VD->getInit();
     if (!Init || !RTC.isARCEnabled())
@@ -446,7 +447,7 @@ public:
     auto *Receiver = ObjCMsgExpr->getInstanceReceiver()->IgnoreParenCasts();
     if (!Receiver)
       return false;
-  if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
+    if (auto *Inner = dyn_cast<ObjCMessageExpr>(Receiver)) {
       if (InnerExpr)
         *InnerExpr = Inner;
       auto InnerSelector = Inner->getSelector();
