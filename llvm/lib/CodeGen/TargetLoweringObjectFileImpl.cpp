@@ -2794,9 +2794,9 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
-  TextLD->setLDAttributes(GOFF::LDAttr{
-      false, GOFF::ESD_EXE_CODE, GOFF::ESD_NS_NormalName, GOFF::ESD_BST_Strong,
-      GOFF::LINKAGE, GOFF::AMODE, GOFF::ESD_BSC_Section});
+  TextLD->setLDAttributes(GOFF::LDAttr{false, GOFF::ESD_EXE_CODE,
+                                       GOFF::ESD_BST_Strong, GOFF::LINKAGE,
+                                       GOFF::AMODE, GOFF::ESD_BSC_Section});
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
 }
@@ -2819,9 +2819,9 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
   return getContext().getGOFFSection(
       SectionKind::getData(), Name,
-      GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
-                   GOFF::LINKAGE, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Fullword, 0},
+      GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::LINKAGE,
+                   GOFF::AMODE, GOFF::ESD_BSC_Section, GOFF::ESD_DSS_NoWarning,
+                   GOFF::ESD_ALIGN_Fullword, 0},
       WSA);
 }
 
@@ -2850,9 +2850,8 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         SD);
     return getContext().getGOFFSection(
         Kind, Symbol->getName(),
-        GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
-                     GOFF::LINKAGE, GOFF::AMODE, PRBindingScope,
-                     GOFF::ESD_DSS_NoWarning,
+        GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::LINKAGE,
+                     GOFF::AMODE, PRBindingScope, GOFF::ESD_DSS_NoWarning,
                      static_cast<GOFF::ESDAlignment>(GO->getAlignment()), 0},
         ED);
   }

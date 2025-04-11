@@ -66,7 +66,6 @@ struct EDAttr {
 struct LDAttr {
   bool IsRenamable = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
-  GOFF::ESDNameSpaceId NameSpace = GOFF::ESD_NS_NormalName;
   GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDAmode Amode;
@@ -78,7 +77,6 @@ struct PRAttr {
   bool IsRenamable = false;
   bool IsReadOnly = false; // ???? Not documented.
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
-  GOFF::ESDNameSpaceId NameSpace = GOFF::ESD_NS_NormalName;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDAmode Amode;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;

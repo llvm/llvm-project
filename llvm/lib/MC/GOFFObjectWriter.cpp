@@ -246,10 +246,9 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::LDAttr &Attr)
+             GOFF::ESDNameSpaceId NameSpace, const GOFF::LDAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
-        SymbolType(GOFF::ESD_ST_LabelDefinition) {
-    this->NameSpace = Attr.NameSpace;
+        SymbolType(GOFF::ESD_ST_LabelDefinition), NameSpace(NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
@@ -259,10 +258,9 @@ public:
   }
 
   GOFFSymbol(StringRef Name, uint32_t EsdID, uint32_t ParentEsdID,
-             const GOFF::PRAttr &Attr)
+             GOFF::ESDNameSpaceId NameSpace, const GOFF::PRAttr &Attr)
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
-        SymbolType(GOFF::ESD_ST_PartReference) {
-    this->NameSpace = Attr.NameSpace;
+        SymbolType(GOFF::ESD_ST_PartReference), NameSpace(NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setAlignment(Attr.Alignment);
@@ -309,8 +307,10 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
   }
 
   if (Section.isPR()) {
-    GOFFSymbol PR(Section.getName(), Section.getOrdinal(),
-                  Section.getParent()->getOrdinal(), Section.getPRAttributes());
+    MCSectionGOFF *Parent = Section.getParent();
+    GOFFSymbol PR(Section.getName(), Section.getOrdinal(), Parent->getOrdinal(),
+                  Parent->getEDAttributes().NameSpace,
+                  Section.getPRAttributes());
     PR.SectionLength = Asm.getSectionAddressSize(Section);
     if (Section.requiresNonZeroLength()) {
       // We cannot have a zero-length section for data.  If we do,
@@ -326,9 +326,9 @@ void GOFFWriter::defineSectionSymbols(const MCSectionGOFF &Section) {
 }
 
 void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(),
-                static_cast<MCSectionGOFF &>(Symbol.getSection()).getOrdinal(),
-                Symbol.getLDAttributes());
+  MCSectionGOFF &Section = static_cast<MCSectionGOFF &>(Symbol.getSection());
+  GOFFSymbol LD(Symbol.getName(), Symbol.getIndex(), Section.getOrdinal(),
+                Section.getEDAttributes().NameSpace, Symbol.getLDAttributes());
   if (Symbol.getADA())
     LD.ADAEsdId = Symbol.getADA()->getOrdinal();
   writeSymbol(LD);

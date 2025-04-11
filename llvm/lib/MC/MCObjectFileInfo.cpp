@@ -560,9 +560,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       RootSDSection);
   ADASection = Ctx->getGOFFSection(
       SectionKind::getData(), "#S",
-      GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_LT_XPLink, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Quadword, 0},
+      GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                   GOFF::AMODE, GOFF::ESD_BSC_Section, GOFF::ESD_DSS_NoWarning,
+                   GOFF::ESD_ALIGN_Quadword, 0},
       ADAEDSection);
 
   TextSection = Ctx->getGOFFSection(
@@ -582,9 +582,9 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       RootSDSection);
   PPA2ListSection = Ctx->getGOFFSection(
       SectionKind::getData(), ".&ppa2",
-      GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_NS_Parts,
-                   GOFF::ESD_LT_OS, GOFF::AMODE, GOFF::ESD_BSC_Section,
-                   GOFF::ESD_DSS_NoWarning, GOFF::ESD_ALIGN_Doubleword, 0},
+      GOFF::PRAttr{true, false, GOFF::ESD_EXE_Unspecified, GOFF::ESD_LT_OS,
+                   GOFF::AMODE, GOFF::ESD_BSC_Section, GOFF::ESD_DSS_NoWarning,
+                   GOFF::ESD_ALIGN_Doubleword, 0},
       PPA2ListEDSection);
 
   IDRLSection = Ctx->getGOFFSection(
