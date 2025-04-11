@@ -6406,6 +6406,18 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
       PARSE_BITS_ENTRY(KD.kernel_code_properties,
                        KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP, ExprVal,
                        ValRange);
+    } else if (ID == ".amdhsa_enable_spatial_cluster") {
+      if (IVersion.Major < 13)
+        return Error(IDRange.Start, "directive requires gfx13+", IDRange);
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER, ExprVal,
+                       ValRange);
+    } else if (ID == ".amdhsa_enable_asymmetric_cluster_clamp") {
+      if (IVersion.Major < 13)
+        return Error(IDRange.Start, "directive requires gfx13+", IDRange);
+      PARSE_BITS_ENTRY(KD.kernel_code_properties,
+                       KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP, ExprVal,
+                       ValRange);
     } else if (ID == ".amdhsa_laneshared_segment_fixed_size") {
       if (IVersion.Major < 13)
         return Error(IDRange.Start, "directive requires gfx13+", IDRange);
