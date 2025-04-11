@@ -263,6 +263,9 @@ public:
   /// `InlinedCalls` above is used.
   SmallVector<CallBase *, 8> InlinedCallSites;
 
+  Value *ConvergenceControlToken = nullptr;
+  Instruction *CallSiteEHPad = nullptr;
+
   /// Update profile for callee as well as cloned version. We need to do this
   /// for regular inlining, but not for inlining from sample profile loader.
   bool UpdateProfile;
@@ -271,8 +274,33 @@ public:
     StaticAllocas.clear();
     InlinedCalls.clear();
     InlinedCallSites.clear();
+    ConvergenceControlToken = nullptr;
+    CallSiteEHPad = nullptr;
   }
 };
+
+/// Check if it is legal to perform inlining of the function called by \p CB
+/// into the caller at this particular use, and sets fields in \p IFI.
+///
+/// This does not consider whether it is possible for the function callee itself
+/// to be inlined; for that see isInlineViable.
+InlineResult CanInlineCallSite(const CallBase &CB, InlineFunctionInfo &IFI);
+
+/// This should generally not be used, use InlineFunction instead.
+///
+/// Perform mechanical inlining of \p CB into the caller.
+///
+/// This does not perform any legality or profitability checks for the
+/// inlining. This assumes that CanInlineCallSite was already called, populated
+/// \p IFI, and returned InlineResult::success.
+///
+/// Also assumes that isInlineViable returned InlineResult::success for the
+/// called function.
+void InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
+                        bool MergeAttributes = false,
+                        AAResults *CalleeAAR = nullptr,
+                        bool InsertLifetime = true,
+                        Function *ForwardVarArgsTo = nullptr);
 
 /// This function inlines the called function into the basic
 /// block of the caller.  This returns false if it is not possible to inline
