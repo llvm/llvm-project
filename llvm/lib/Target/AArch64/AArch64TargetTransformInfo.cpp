@@ -4236,9 +4236,11 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   if (isa<FixedVectorType>(ValTy) && ISD == ISD::SETCC) {
     auto LT = getTypeLegalizationCost(ValTy);
-    // Cost v4f16 FCmp without FP16 support via converting to v4f32 and back.
+    // Cost v#f16 FCmp without FP16 support via converting to v#f32 and back.
     if (LT.second == MVT::v4f16 && !ST->hasFullFP16())
       return LT.first * 4; // fcvtl + fcvtl + fcmp + xtn
+    if (LT.second == MVT::v8f16 && !ST->hasFullFP16())
+      return LT.first * 8; // 2*(fcvtl + fcvtl2 + fcmp) + uzp1 + xtn
   }
 
   // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.

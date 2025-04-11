@@ -119,7 +119,7 @@ define <4 x half> @v4f16_select_ogt(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_ogt(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_ogt'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp ogt <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp ogt <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -184,7 +184,7 @@ define <4 x half> @v4f16_select_oge(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_oge(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_oge'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp oge <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp oge <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -249,7 +249,7 @@ define <4 x half> @v4f16_select_olt(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_olt(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_olt'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp olt <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp olt <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -314,7 +314,7 @@ define <4 x half> @v4f16_select_ole(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_ole(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_ole'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp ole <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp ole <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -379,7 +379,7 @@ define <4 x half> @v4f16_select_oeq(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_oeq(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_oeq'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp oeq <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp oeq <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -444,7 +444,7 @@ define <4 x half> @v4f16_select_one(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_one(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_one'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp one <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp one <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
@@ -513,7 +513,7 @@ define <4 x half> @v4f16_select_une(<4 x half> %a, <4 x half> %b, <4 x half> %c)
 
 define <8 x half> @v8f16_select_une(<8 x half> %a, <8 x half> %b, <8 x half> %c) {
 ; COST-NOFP16-LABEL: 'v8f16_select_une'
-; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp une <8 x half> %a, %b
+; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %cmp.1 = fcmp une <8 x half> %a, %b
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %s.1 = select <8 x i1> %cmp.1, <8 x half> %a, <8 x half> %c
 ; COST-NOFP16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x half> %s.1
 ;
