@@ -310,7 +310,8 @@ bool SemaOpenACC::DiagnoseExclusiveClauses(
     return false;
 
   for (const OpenACCClause *C : Clauses) {
-    llvm::acc::Clause ExistingLLVMClause = getLLVMClauseFromClangClause(CK);
+    llvm::acc::Clause ExistingLLVMClause =
+        getLLVMClauseFromClangClause(C->getClauseKind());
     if (Lists.AllowedExclusive.isSet(ExistingLLVMClause)) {
       Diag(ClauseLoc, diag::err_acc_clause_cannot_combine)
           << CK << C->getClauseKind() << DK;
