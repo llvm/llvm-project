@@ -570,9 +570,17 @@ CIRGenFunction::emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e) {
   }
 
   // The base must be a pointer; emit it with an estimate of its alignment.
-  cgm.errorNYI(e->getSourceRange(),
-               "emitArraySubscriptExpr: The base must be a pointer");
-  return {};
+  assert(e->getBase()->getType()->isPointerType() &&
+         "The base must be a pointer");
+
+  LValueBaseInfo eltBaseInfo;
+  const Address ptrAddr = emitPointerWithAlignment(e->getBase(), &eltBaseInfo);
+  // Propagate the alignment from the array itself to the result.
+  const Address addxr = emitArraySubscriptPtr(
+      *this, cgm.getLoc(e->getBeginLoc()), cgm.getLoc(e->getEndLoc()), ptrAddr,
+      e->getType(), idx, cgm.getLoc(e->getExprLoc()),
+      /*shouldDecay=*/false);
+  return LValue::makeAddr(addxr, e->getType(), eltBaseInfo);
 }
 
 LValue CIRGenFunction::emitBinaryOperatorLValue(const BinaryOperator *e) {
