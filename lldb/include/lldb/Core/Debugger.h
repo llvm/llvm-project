@@ -67,10 +67,6 @@ class Stream;
 class SymbolContext;
 class Target;
 
-namespace repro {
-class DataRecorder;
-}
-
 /// \class Debugger Debugger.h "lldb/Core/Debugger.h"
 /// A class to manage flag bits.
 ///
@@ -142,8 +138,6 @@ public:
   lldb::FileSP GetErrorFileSP() {
     return m_error_stream_sp->GetUnlockedFileSP();
   }
-
-  repro::DataRecorder *GetInputRecorder();
 
   Status SetInputString(const char *data);
 
@@ -719,9 +713,6 @@ protected:
   lldb::LockableStreamFileSP m_output_stream_sp;
   lldb::LockableStreamFileSP m_error_stream_sp;
   LockableStreamFile::Mutex m_output_mutex;
-
-  /// Used for shadowing the input file when capturing a reproducer.
-  repro::DataRecorder *m_input_recorder;
 
   lldb::BroadcasterManagerSP m_broadcaster_manager_sp; // The debugger acts as a
                                                        // broadcaster manager of

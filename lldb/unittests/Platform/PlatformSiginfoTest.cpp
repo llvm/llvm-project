@@ -25,7 +25,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 namespace {
 class PlatformSiginfoTest : public ::testing::Test {
