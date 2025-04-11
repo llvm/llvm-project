@@ -425,7 +425,7 @@ def CvtPackedEvenIndexedBF16ToF32Op : AVX_Op<"cvt.packed.even.indexed.bf16_to_f3
 
     Example:
     ```mlir
-    %dst = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xbf16>
+    %dst = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
   let arguments = (ins LLVM_AnyPointer:$a);
@@ -457,7 +457,7 @@ def CvtPackedOddIndexedBF16ToF32Op : AVX_Op<"cvt.packed.odd.indexed.bf16_to_f32"
 
     Example:
     ```mlir
-    %dst = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xbf16>
+    %dst = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
   let arguments = (ins LLVM_AnyPointer:$a);
@@ -494,7 +494,7 @@ def BcstBF16ToPackedF32Op : AVX_Op<"bcst.bf16_to_f32.packed", [Pure,
 
     Example:
     ```mlir
-    %dst = x86vector.avx.bcst.bf16_to_f32.packed %a : !llvm.ptr -> vector<8xbf16>
+    %dst = x86vector.avx.bcst.bf16_to_f32.packed %a : !llvm.ptr -> vector<8xf32>
     ```
   }];
   let arguments = (ins LLVM_AnyPointer:$a);
