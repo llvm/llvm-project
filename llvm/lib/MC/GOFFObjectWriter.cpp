@@ -232,9 +232,11 @@ public:
       : Name(Name.data(), Name.size()), EsdId(EsdID), ParentEsdId(ParentEsdID),
         SymbolType(GOFF::ESD_ST_ElementDefinition) {
     this->NameSpace = Attr.NameSpace;
-    // TODO Do we need/should set the "mangled" flag?
+    // We default to 0 as fill byte value.
+    this->FillByteValue = 0;
     SymbolFlags.setFillBytePresence(1);
     SymbolFlags.setReservedQwords(Attr.ReservedQwords);
+    // TODO Do we need/should set the "mangled" flag?
     BehavAttrs.setReadOnly(Attr.IsReadOnly);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setAmode(Attr.Amode);
