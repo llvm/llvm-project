@@ -31,12 +31,24 @@ int f[5] = {1, 2};
 
 void func() {
   int arr[10];
+  int e = arr[0];
+  int e2 = arr[1];
 }
 // CHECK: define void @func()
-// CHECK-NEXT: alloca [10 x i32], i64 1, align 16
+// CHECK-NEXT: %[[ARR_ALLOCA:.*]] = alloca [10 x i32], i64 1, align 16
+// CHECK-NEXT: %[[INIT:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT: %[[INIT_2:.*]] = alloca i32, i64 1, align 4
+// CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
+// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 0
+// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT]], align 4
+// CHECK-NEXT: %[[ARR_PTR:.*]] = getelementptr i32, ptr %[[ARR_ALLOCA]], i32 0
+// CHECK-NEXT: %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i64 1
+// CHECK-NEXT: %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK-NEXT: store i32 %[[TMP]], ptr %[[INIT_2]], align 4
 
 void func2() {
-  int arr2[2] = {5};
+  int arr[2] = {5};
 }
 // CHECK: define void @func2()
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x i32], i64 1, align 4
@@ -61,19 +73,27 @@ void func3() {
 // CHECK:  store i32 6, ptr %[[ELE_1_PTR]], align 4
 
 void func4() {
-  int arr4[2][1] = {{5}, {6}};
+  int arr[2][1] = {{5}, {6}};
+  int e = arr[1][0];
 }
 // CHECK: define void @func4()
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
-// CHECK:  %[[ARR_0:.*]] = getelementptr [1 x i32], ptr %[[ARR_ALLOCA]], i32 0
-// CHECK:  %[[ARR_0_ELE_0:.*]] = getelementptr i32, ptr %[[ARR_0]], i32 0
-// CHECK:  store i32 5, ptr %[[ARR_0_ELE_0]], align 4
-// CHECK:  %[[ARR_1:.*]] = getelementptr [1 x i32], ptr %2, i64 1
-// CHECK:  %[[ARR_0_ELE_0:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
-// CHECK:  store i32 6, ptr %[[ARR_0_ELE_0]], align 4
+// CHECK:  %[[INIT:.*]] = alloca i32, i64 1, align 4
+// CHECK:  %[[ARR_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_ALLOCA]], i32 0
+// CHECK:  %[[ARR_0_0:.*]] = getelementptr i32, ptr %[[ARR_PTR]], i32 0
+// CHECK:  store i32 5, ptr %[[ARR_0_0]], align 4
+// CHECK:  %[[ARR_1:.*]] = getelementptr [1 x i32], ptr %[[ARR_PTR]], i64 1
+// CHECK:  %[[ARR_1_0:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
+// CHECK:  store i32 6, ptr %[[ARR_1_0]], align 4
+// CHECK:  %[[ARR_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_ALLOCA]], i32 0
+// CHECK:  %[[ARR_1:.*]] = getelementptr [1 x i32], ptr %[[ARR_PTR]], i64 1
+// CHECK:  %[[ARR_1_0:.*]] = getelementptr i32, ptr %[[ARR_1]], i32 0
+// CHECK:  %[[ELE_PTR:.*]] = getelementptr i32, ptr %[[ARR_1_0]], i64 0
+// CHECK:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
+// CHECK:  store i32 %[[TMP]], ptr %[[INIT]], align 4
 
 void func5() {
-  int arr5[2][1] = {{5}};
+  int arr[2][1] = {{5}};
 }
 // CHECK: define void @func5()
 // CHECK:  %[[ARR_ALLOCA:.*]] = alloca [2 x [1 x i32]], i64 1, align 4
