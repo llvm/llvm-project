@@ -1626,7 +1626,7 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value input,
 ///
 /// If the (3) input vector sizes are not provided, the vector sizes are
 /// determined by the result tensor shape and the `in_bounds`
-/// attribute is used instead of masking to mark
+/// attribute is used instead of masking to mark out-of-bounds accesses.
 ///
 /// NOTE: The input vector sizes specify the dimensions corresponding to the
 /// outer dimensions of the output tensor. The remaining dimensions are
