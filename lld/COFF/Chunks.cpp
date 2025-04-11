@@ -61,6 +61,16 @@ SectionChunk::SectionChunk(ObjFile *f, const coff_section *h, Kind k)
     live = true;
 }
 
+MachineTypes SectionChunk::getMachine() const {
+  MachineTypes machine = file->getMachineType();
+  // On ARM64EC, the IMAGE_SCN_GPREL flag is repurposed to indicate that section
+  // code is x86_64. This enables embedding x86_64 code within ARM64EC object
+  // files. MSVC uses this for export thunks in .exp files.
+  if (isArm64EC(machine) && (header->Characteristics & IMAGE_SCN_GPREL))
+    machine = AMD64;
+  return machine;
+}
+
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
