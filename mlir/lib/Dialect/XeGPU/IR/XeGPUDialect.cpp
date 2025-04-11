@@ -8,7 +8,9 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
@@ -375,6 +377,10 @@ FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   }
   // tensorSize must be adjusted for array_length.
   tensorSize *= getArrayLength();
+
+  if (layout.getRank() == 1) {
+    return VectorType::get({tensorSize / sgSize}, getElementType());
+  }
 
   return VectorType::get({tensorSize / (sgSize * laneDataSize), laneDataSize},
                          getElementType());
