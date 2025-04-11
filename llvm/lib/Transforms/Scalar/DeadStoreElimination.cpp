@@ -75,6 +75,7 @@
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Coroutines/CoroInstr.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -986,6 +987,8 @@ struct DSEState {
   // function due to removing a store causing a previously captured pointer to
   // no longer be captured.
   bool ShouldIterateEndOfFunctionDSE;
+  // Pre-split coroutine promise is specially handled
+  AllocaInst *PresplitCoroPromise = nullptr;
 
   /// Dead instructions to be removed at the end of DSE.
   SmallVector<Instruction *> ToRemove;
@@ -1002,9 +1005,17 @@ struct DSEState {
     // Collect blocks with throwing instructions not modeled in MemorySSA and
     // alloc-like objects.
     unsigned PO = 0;
+    const bool IsPresplitCoroutine = F.isPresplitCoroutine();
     for (BasicBlock *BB : post_order(&F)) {
       PostOrderNumbers[BB] = PO++;
       for (Instruction &I : *BB) {
+        auto *II = dyn_cast<IntrinsicInst>(&I);
+        if (IsPresplitCoroutine && PresplitCoroPromise == nullptr &&
+            II != nullptr) {
+          if (auto *CoroId = getPresplitCoroId(II))
+            PresplitCoroPromise = CoroId->getPromise();
+        }
+
         MemoryAccess *MA = MSSA.getMemoryAccess(&I);
         if (I.mayThrow() && !MA)
           ThrowingBlocks.insert(I.getParent());
@@ -1209,7 +1220,8 @@ struct DSEState {
 
   bool isInvisibleToCallerAfterRet(const Value *V) {
     if (isa<AllocaInst>(V))
-      return true;
+      return V != PresplitCoroPromise;
+
     auto I = InvisibleToCallerAfterRet.insert({V, false});
     if (I.second) {
       if (!isInvisibleToCallerOnUnwind(V)) {
@@ -1236,6 +1248,18 @@ struct DSEState {
       // of stores removed on a large test set in practice.
       I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
     return !I.first->second;
+  }
+
+  CoroIdInst *getPresplitCoroId(IntrinsicInst *II) {
+    const auto ID = II->getIntrinsicID();
+    if (ID != Intrinsic::coro_begin && ID != Intrinsic::coro_begin_custom_abi)
+      return nullptr;
+
+    auto *AnyCoroId = cast<CoroBeginInst>(II)->getId();
+    auto *CoroId = dyn_cast_if_present<CoroIdInst>(AnyCoroId);
+    if (CoroId && isa<ConstantPointerNull>(CoroId->getRawInfo()))
+      return CoroId;
+    return nullptr;
   }
 
   std::optional<MemoryLocation> getLocForWrite(Instruction *I) const {
