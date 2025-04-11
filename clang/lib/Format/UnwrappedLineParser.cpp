@@ -1102,11 +1102,18 @@ void UnwrappedLineParser::parsePPIf(bool IfDef) {
   conditionalCompilationStart(Unreachable);
   FormatToken *IfCondition = FormatTok;
   // If there's a #ifndef on the first line, and the only lines before it are
-  // comments, it could be an include guard.
+  // comments or #pragma once, it could be an include guard.
   bool MaybeIncludeGuard = IfNDef;
   if (IncludeGuard == IG_Inited && MaybeIncludeGuard) {
     for (auto &Line : Lines) {
-      if (Line.Tokens.front().Tok->isNot(tok::comment)) {
+      bool LineIsComment = Line.Tokens.front().Tok->is(tok::comment);
+      auto TokenIterator = Line.Tokens.begin();
+      bool LineIsPragmaOnce = Line.Tokens.size() >= 3 &&
+                              TokenIterator->Tok->is(tok::hash) &&
+                              (++TokenIterator)->Tok->is(tok::pp_pragma) &&
+                              (++TokenIterator)->Tok->TokenText == "once";
+
+      if (!LineIsComment && !LineIsPragmaOnce) {
         MaybeIncludeGuard = false;
         IncludeGuard = IG_Rejected;
         break;
