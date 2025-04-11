@@ -962,8 +962,26 @@ void SwingSchedulerDAG::updatePhiDependences() {
               HasPhiDef = Reg;
               // Add a chain edge to a dependent Phi that isn't an existing
               // predecessor.
+
+              // %3:intregs = PHI %21:intregs, %bb.6, %7:intregs, %bb.1 - SU0
+              // %7:intregs = PHI %21:intregs, %bb.6, %13:intregs, %bb.1 - SU1
+              // %27:intregs = A2_zxtb %3:intregs - SU2
+              // %13:intregs = C2_muxri %45:predregs, 0, %46:intreg
+              // If we have dependent phis, SU0 should be the successor of SU1
+              // not the other way around. (it used to be SU1 is the successor
+              // of SU0). In some cases, SU0 is scheduled earlier than SU1
+              // resulting in bad IR as we do not have a value that can be used
+              // by SU2.
+
+              // Reachability check is to ensure that we do not violate DAG.
+              // %1:intregs = PHI %10:intregs, %bb.0, %3:intregs, %bb.1 - SU0
+              // %2:intregs = PHI %10:intregs, %bb.0, %1:intregs, %bb.1 - SU1
+              // %3:intregs = PHI %11:intregs, %bb.0, %2:intregs, %bb.1 - SU2
+              // S2_storerb_io %0:intregs, 0, %2:intregs
+              // Make sure we do not create an edge between SU2 and SU0.
+
               if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
-                I.addPred(SDep(SU, SDep::Barrier));
+                SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
         }
