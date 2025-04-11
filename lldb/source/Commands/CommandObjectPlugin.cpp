@@ -201,7 +201,7 @@ public:
     AddSimpleArgumentList(eArgTypePlugin);
     SetHelpLong(R"(
 Display information about registered plugins.
-The plugin information is formatted as shown below
+The plugin information is formatted as shown below:
 
     <plugin-namespace>
       [+] <plugin-name>                  Plugin #1 description

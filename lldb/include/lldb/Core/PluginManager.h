@@ -62,8 +62,8 @@ struct RegisteredPluginInfo {
 // and ObjectFile plugins.
 //
 // The namespace name is used a prefix when matching plugin names. For example,
-// if we have an "elf" plugin in the "object-file" namespace then we will
-// match a plugin name pattern against the "object-file.elf" name.
+// if we have an "macosx" plugin in the "system-runtime" namespace then we will
+// match a plugin name pattern against the "system-runtime.macosx" name.
 //
 // The plugin namespace here is used so we can operate on all the plugins
 // of a given type so it is easy to enable or disable them as a group.
