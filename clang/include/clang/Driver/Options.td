@@ -1341,8 +1341,8 @@ def hipstdpar_prim_path_EQ : Joined<["--"], "hipstdpar-prim-path=">,
   HelpText<
     "rocPrim path, required by the HIP Standard Parallel Algorithm "
     "Acceleration library, used to implicitly include the rocPrim library">;
-def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
-  HelpText<"ROCm device library path. Alternative to rocm-path.">;
+def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Visibility<[FlangOption]>,
+  Group<hip_Group>, HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
 def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
