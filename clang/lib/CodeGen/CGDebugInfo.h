@@ -643,6 +643,9 @@ public:
   llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
                                             StringRef FuncName);
 
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
 private:
   /// Emit call to llvm.dbg.declare for a variable declaration.
   /// Returns a pointer to the DILocalVariable associated with the
