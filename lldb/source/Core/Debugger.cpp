@@ -486,7 +486,9 @@ const FormatEntity::Entry *Debugger::GetStatuslineFormat() const {
 
 bool Debugger::SetStatuslineFormat(const FormatEntity::Entry &format) {
   constexpr uint32_t idx = ePropertyStatuslineFormat;
-  return SetPropertyAtIndex(idx, format);
+  bool ret = SetPropertyAtIndex(idx, format);
+  RedrawStatusline();
+  return ret;
 }
 
 bool Debugger::GetUseAutosuggestion() const {
