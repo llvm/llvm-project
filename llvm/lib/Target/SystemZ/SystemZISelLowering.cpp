@@ -254,7 +254,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR,      MVT::i128, Expand);
     setOperationAction(ISD::ROTL,      MVT::i128, Expand);
 
-    // No special instructions for these before arch15.
+    // No special instructions for these before z17.
     if (!Subtarget.hasVectorEnhancements3()) {
       setOperationAction(ISD::MUL,   MVT::i128, Expand);
       setOperationAction(ISD::MULHS, MVT::i128, Expand);
@@ -281,7 +281,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     // Use VPOPCT and add up partial results.
     setOperationAction(ISD::CTPOP, MVT::i128, Custom);
 
-    // Additional instructions available with arch15.
+    // Additional instructions available with z17.
     if (Subtarget.hasVectorEnhancements3()) {
       setOperationAction(ISD::ABS, MVT::i128, Legal);
     }
@@ -353,7 +353,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
-  // On arch15 we have native support for a 64-bit CTTZ.
+  // On z17 we have native support for a 64-bit CTTZ.
   if (Subtarget.hasMiscellaneousExtensions4()) {
     setOperationAction(ISD::CTTZ, MVT::i32, Promote);
     setOperationAction(ISD::CTTZ_ZERO_UNDEF, MVT::i32, Promote);
@@ -4466,7 +4466,7 @@ SDValue SystemZTargetLowering::lowerMULH(SDValue Op,
   SDLoc DL(Op);
   SDValue Even, Odd;
 
-  // This custom expander is only used on arch15 and later for 64-bit types.
+  // This custom expander is only used on z17 and later for 64-bit types.
   assert(!is32Bit(VT));
   assert(Subtarget.hasMiscellaneousExtensions2());
 

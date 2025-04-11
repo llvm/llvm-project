@@ -1,5 +1,5 @@
-# Test arch15 instructions that don't have PC-relative operands.
-# RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu -mcpu=arch15 \
+# Test z17 instructions that don't have PC-relative operands.
+# RUN: llvm-mc --disassemble %s -triple=s390x-linux-gnu -mcpu=z17 \
 # RUN:   | FileCheck %s
 
 # CHECK: bdepg %r0, %r0, %r0

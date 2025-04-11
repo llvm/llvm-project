@@ -105,7 +105,7 @@ static constexpr ISANameRevision ISARevisions[] = {
   {{"arch12"}, 12}, {{"z14"}, 12},
   {{"arch13"}, 13}, {{"z15"}, 13},
   {{"arch14"}, 14}, {{"z16"}, 14},
-  {{"arch15"}, 15},
+  {{"arch15"}, 15}, {{"z17"}, 15},
 };
 
 int SystemZTargetInfo::getISARevision(StringRef Name) const {
