@@ -1100,18 +1100,38 @@ inline _LIBCPP_HIDE_FROM_ABI complex<_Tp> pow(const complex<_Tp>& __x, const com
   return std::exp(__y * std::log(__x));
 }
 
+#  if _LIBCPP_STD_VER >= 26
+template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_floating_point<_Up>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, conditional_t<is_integral_v<_Up>, double, _Up>>::type>
+pow(const complex<_Tp>& __x, const complex<_Up>& __y) {
+  using _Yp = conditional_t<is_integral_v<_Up>, double, _Up>;
+  typedef complex<typename __promote<_Tp, _Yp>::type> result_type;
+  return std::pow(result_type(__x), result_type(__y));
+}
+#  else
 template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_floating_point<_Up>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type>
 pow(const complex<_Tp>& __x, const complex<_Up>& __y) {
   typedef complex<typename __promote<_Tp, _Up>::type> result_type;
   return std::pow(result_type(__x), result_type(__y));
 }
+#  endif
 
+#  if _LIBCPP_STD_VER >= 26
+template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_arithmetic<_Up>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, conditional_t<is_integral_v<_Up>, double, _Up>>::type>
+pow(const complex<_Tp>& __x, const _Up& __y) {
+  using _Yp = conditional_t<is_integral_v<_Up>, double, _Up>;
+  typedef complex<typename __promote<_Tp, _Yp>::type> result_type;
+  return std::pow(result_type(__x), result_type(__y));
+}
+#  else
 template <class _Tp, class _Up, __enable_if_t<is_floating_point<_Tp>::value && is_arithmetic<_Up>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type> pow(const complex<_Tp>& __x, const _Up& __y) {
   typedef complex<typename __promote<_Tp, _Up>::type> result_type;
   return std::pow(result_type(__x), result_type(__y));
 }
+#  endif
 
 template <class _Tp, class _Up, __enable_if_t<is_arithmetic<_Tp>::value && is_floating_point<_Up>::value, int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI complex<typename __promote<_Tp, _Up>::type> pow(const _Tp& __x, const complex<_Up>& __y) {
