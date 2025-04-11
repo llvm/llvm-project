@@ -1419,11 +1419,11 @@ define <8 x i32> @shuffle_v8i32_locally_repeating_neg(<8 x i32> %a) {
 define <8 x i8> @identity_splat0(<8 x i8> %v) {
 ; CHECK-LABEL: identity_splat0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI88_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI88_0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v10, (a0)
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    li a0, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 0, i32 0, i32 5, i32 6, i32 7>
@@ -1433,11 +1433,11 @@ define <8 x i8> @identity_splat0(<8 x i8> %v) {
 define <8 x i8> @identity_splat2(<8 x i8> %v) {
 ; CHECK-LABEL: identity_splat2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI89_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI89_0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v10, (a0)
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    li a0, 28
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vrgather.vi v9, v8, 2, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %shuf = shufflevector <8 x i8> %v, <8 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 2, i32 5, i32 6, i32 7>
@@ -1448,14 +1448,13 @@ define <8 x i8> @identity_splat2(<8 x i8> %v) {
 define <8 x i8> @vmerge_vxm(<8 x i8> %v, i8 %s) {
 ; CHECK-LABEL: vmerge_vxm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI90_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI90_0)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v10, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
+; CHECK-NEXT:    li a1, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, m1, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vrgather.vv v9, v8, v10
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vrgather.vi v9, v8, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %ins = insertelement <8 x i8> %v, i8 %s, i32 0
