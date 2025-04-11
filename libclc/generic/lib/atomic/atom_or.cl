@@ -33,4 +33,4 @@ IMPL(local, long)
 IMPL(local, unsigned long)
 #undef IMPL
 
-#endif
+#endif // cl_khr_int64_extended_atomics
