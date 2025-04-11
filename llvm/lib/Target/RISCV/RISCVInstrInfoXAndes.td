@@ -125,7 +125,6 @@ class NDSRVInstBFO<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class NDSRVInstRR<bits<7> funct7, string opcodestr>
     : RVInstR<funct7, 0b000, OPC_CUSTOM_2,
               (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
