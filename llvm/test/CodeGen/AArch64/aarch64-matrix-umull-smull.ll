@@ -196,23 +196,21 @@ define void @matrix_mul_double_shuffle(i32 %N, ptr nocapture %C, ptr nocapture r
 ;
 ; CHECK-GI-LABEL: matrix_mul_double_shuffle:
 ; CHECK-GI:       // %bb.0: // %vector.header
-; CHECK-GI-NEXT:    and w9, w3, #0xffff
-; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
-; CHECK-GI-NEXT:    dup v0.4s, w9
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-GI-NEXT:    and x8, x9, #0xfffffff8
+; CHECK-GI-NEXT:    and w8, w3, #0xffff
+; CHECK-GI-NEXT:    dup v0.4s, w8
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    and x8, x8, #0xfffffff8
 ; CHECK-GI-NEXT:  .LBB2_1: // %vector.body
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    ldrh w9, [x2], #16
 ; CHECK-GI-NEXT:    subs x8, x8, #8
-; CHECK-GI-NEXT:    mov v2.s[0], w9
+; CHECK-GI-NEXT:    mov v1.s[0], w9
 ; CHECK-GI-NEXT:    mov w9, w0
 ; CHECK-GI-NEXT:    add w0, w0, #8
 ; CHECK-GI-NEXT:    lsl x9, x9, #2
-; CHECK-GI-NEXT:    tbl v2.16b, { v2.16b, v3.16b }, v1.16b
-; CHECK-GI-NEXT:    mul v2.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    str q2, [x1, x9]
+; CHECK-GI-NEXT:    mov v1.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mul v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    str q1, [x1, x9]
 ; CHECK-GI-NEXT:    b.ne .LBB2_1
 ; CHECK-GI-NEXT:  // %bb.2: // %for.end12
 ; CHECK-GI-NEXT:    ret

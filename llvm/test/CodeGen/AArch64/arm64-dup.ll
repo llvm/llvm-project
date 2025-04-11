@@ -442,85 +442,45 @@ entry:
 ; Also test the DUP path in the PerfectShuffle generator.
 
 define <4 x i16> @test_perfectshuffle_dupext_v4i16(<4 x i16> %a, <4 x i16> %b) nounwind {
-; CHECK-SD-LABEL: test_perfectshuffle_dupext_v4i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1.4h v0, v0, v0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov.s v0[1], v1[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
-; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI34_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_perfectshuffle_dupext_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1.4h v0, v0, v0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %r = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i16> %r
 }
 
 define <4 x half> @test_perfectshuffle_dupext_v4f16(<4 x half> %a, <4 x half> %b) nounwind {
-; CHECK-SD-LABEL: test_perfectshuffle_dupext_v4f16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1.4h v0, v0, v0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov.s v0[1], v1[0]
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4f16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    mov.d v0[1], v1[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI35_0]
-; CHECK-GI-NEXT:    tbl.16b v0, { v0 }, v1
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_perfectshuffle_dupext_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1.4h v0, v0, v0
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    mov.s v0[1], v1[0]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %r = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x half> %r
 }
 
 define <4 x i32> @test_perfectshuffle_dupext_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
-; CHECK-SD-LABEL: test_perfectshuffle_dupext_v4i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1.4s v0, v0, v0
-; CHECK-SD-NEXT:    mov.d v0[1], v1[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI36_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI36_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_perfectshuffle_dupext_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1.4s v0, v0, v0
+; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ret
   %r = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x i32> %r
 }
 
 define <4 x float> @test_perfectshuffle_dupext_v4f32(<4 x float> %a, <4 x float> %b) nounwind {
-; CHECK-SD-LABEL: test_perfectshuffle_dupext_v4f32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    trn1.4s v0, v0, v0
-; CHECK-SD-NEXT:    mov.d v0[1], v1[0]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test_perfectshuffle_dupext_v4f32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI37_0
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI37_0]
-; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test_perfectshuffle_dupext_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    trn1.4s v0, v0, v0
+; CHECK-NEXT:    mov.d v0[1], v1[0]
+; CHECK-NEXT:    ret
   %r = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 0, i32 4, i32 5>
   ret <4 x float> %r
 }
@@ -537,15 +497,12 @@ define void @disguised_dup(<4 x float> %x, ptr %p1, ptr %p2) {
 ;
 ; CHECK-GI-LABEL: disguised_dup:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI38_1
-; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 def $q0_q1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI38_0
-; CHECK-GI-NEXT:    tbl.16b v0, { v0, v1 }, v2
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI38_0]
-; CHECK-GI-NEXT:    tbl.16b v2, { v0, v1 }, v2
-; CHECK-GI-NEXT:    str q0, [x0]
-; CHECK-GI-NEXT:    str q2, [x1]
+; CHECK-GI-NEXT:    ext.16b v1, v0, v0, #4
+; CHECK-GI-NEXT:    mov.s v1[2], v0[0]
+; CHECK-GI-NEXT:    zip2.4s v0, v1, v1
+; CHECK-GI-NEXT:    str q1, [x0]
+; CHECK-GI-NEXT:    ext.16b v0, v1, v0, #12
+; CHECK-GI-NEXT:    str q0, [x1]
 ; CHECK-GI-NEXT:    ret
   %shuf = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 0>
   %dup = shufflevector <4 x float> %shuf, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 2, i32 3>
