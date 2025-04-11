@@ -14,10 +14,16 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETIONSTRINGS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_CODECOMPLETIONSTRINGS_H
 
+#include "SymbolDocumentation.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 
 namespace clang {
 class ASTContext;
+
+namespace comments {
+class CommandTraits;
+class FullComment;
+} // namespace comments
 
 namespace clangd {
 
@@ -66,6 +72,23 @@ std::string formatDocumentation(const CodeCompletionString &CCS,
 /// Gets detail to be used as the detail field in an LSP completion item. This
 /// is usually the return type of a function.
 std::string getReturnType(const CodeCompletionString &CCS);
+
+/// \brief Parse the \p Comment as doxygen comment and save the result in the
+/// given markup Document \p Doc.
+///
+/// It is assumed that comment markers have already been stripped (e.g. via
+/// getDocComment()).
+///
+/// This uses the Clang doxygen comment parser to parse the comment, and then
+/// converts the parsed comment to a markup::Document. The resulting document is
+/// a combination of the symbol information \p SymbolType, \p SymbolReturnType,
+/// and \p SymbolParameters and the parsed doxygen comment.
+void docCommentToMarkup(
+    markup::Document &Doc, llvm::StringRef Comment,
+    llvm::BumpPtrAllocator &Allocator, comments::CommandTraits &Traits,
+    std::optional<SymbolPrintedType> SymbolType,
+    std::optional<SymbolPrintedType> SymbolReturnType,
+    const std::optional<std::vector<SymbolParam>> &SymbolParameters);
 
 } // namespace clangd
 } // namespace clang
