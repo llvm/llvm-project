@@ -2382,7 +2382,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
     BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
-    VFRange &Range) {
+    const VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());

@@ -176,7 +176,7 @@ struct VPlanTransforms {
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
                                          VPRecipeBuilder &RecipeBuilder,
-                                         VFRange &Range);
+                                         const VFRange &Range);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
