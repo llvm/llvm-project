@@ -24036,13 +24036,12 @@ static SDValue performSTORECombine(SDNode *N,
     if ((!ExtCst || !ExtCst->isZero()) && !Value.hasOneUse())
       return SDValue();
 
+    // These can lower to st1, which is preferable if we're unlikely to fold the
+    // addressing into the store.
     if (Subtarget->isNeonAvailable() && ElemVT == MemVT &&
         (VectorVT.is64BitVector() || VectorVT.is128BitVector()) && ExtCst &&
-        !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD) {
-      // These can lower to st1, which is preferable if we're unlikely to fold
-      // the addressing into the store.
+        !ExtCst->isZero() && ST->getBasePtr().getOpcode() != ISD::ADD)
       return SDValue();
-    }
 
     if (MemVT == MVT::i64 || MemVT == MVT::i32) {
       // Heuristic: If there are other users of w/x integer scalars extracted
@@ -24066,10 +24065,11 @@ static SDValue performSTORECombine(SDNode *N,
                                 Value.getValueType(), Vector, ExtIdx);
       // FIXME: Using a fixed-size vector for the insertion should not be
       // necessary, but SVE ISEL is missing some folds to avoid fmovs.
-      SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+      SDValue Zero = DAG.getVectorIdxConstant(0, DL);
       EVT InsertVectorVT = EVT::getVectorVT(
           *DAG.getContext(), ElemVT,
-          VectorVT.getVectorElementCount().getKnownMinValue(), false);
+          ElementCount::getFixed(
+              VectorVT.getVectorElementCount().getKnownMinValue()));
       ExtVector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, InsertVectorVT,
                               DAG.getUNDEF(InsertVectorVT), Ext, Zero);
     }
