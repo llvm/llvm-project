@@ -1588,16 +1588,14 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   }
 
   // Validate space
-  if (!Space.empty()) {
-    if (!Space.starts_with("space")) {
-      Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
-      return;
-    }
-    StringRef SpaceNumStr = Space.substr(5);
-    if (SpaceNumStr.getAsInteger(10, SpaceNum)) {
-      Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
-      return;
-    }
+  if (!Space.starts_with("space")) {
+    Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
+    return;
+  }
+  StringRef SpaceNumStr = Space.substr(5);
+  if (SpaceNumStr.getAsInteger(10, SpaceNum)) {
+    Diag(SpaceLoc, diag::err_hlsl_expected_space) << Space;
+    return;
   }
 
   // If we have slot, diagnose it is the right register type for the decl
