@@ -68,7 +68,6 @@ define <4 x i32> @sub_poison_lhs_vec(<4 x i32> %x) {
 define i32 @mul_poison_rhs(i32 %x) {
 ; CHECK-LABEL: mul_poison_rhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = mul i32 %x, poison
   ret i32 %r
@@ -77,7 +76,6 @@ define i32 @mul_poison_rhs(i32 %x) {
 define <4 x i32> @mul_poison_rhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: mul_poison_rhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = mul <4 x i32> %x, poison
   ret <4 x i32> %r
@@ -86,7 +84,6 @@ define <4 x i32> @mul_poison_rhs_vec(<4 x i32> %x) {
 define i32 @mul_poison_lhs(i32 %x) {
 ; CHECK-LABEL: mul_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = mul i32 poison, %x
   ret i32 %r
@@ -95,7 +92,6 @@ define i32 @mul_poison_lhs(i32 %x) {
 define <4 x i32> @mul_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: mul_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = mul <4 x i32> poison, %x
   ret <4 x i32> %r
@@ -342,7 +338,6 @@ define <4 x i32> @shl_poison_lhs_vec(<4 x i32> %x) {
 define i32 @and_poison_rhs(i32 %x) {
 ; CHECK-LABEL: and_poison_rhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = and i32 %x, poison
   ret i32 %r
@@ -351,7 +346,6 @@ define i32 @and_poison_rhs(i32 %x) {
 define <4 x i32> @and_poison_rhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: and_poison_rhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = and <4 x i32> %x, poison
   ret <4 x i32> %r
@@ -360,7 +354,6 @@ define <4 x i32> @and_poison_rhs_vec(<4 x i32> %x) {
 define i32 @and_poison_lhs(i32 %x) {
 ; CHECK-LABEL: and_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %r = and i32 poison, %x
   ret i32 %r
@@ -369,7 +362,6 @@ define i32 @and_poison_lhs(i32 %x) {
 define <4 x i32> @and_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: and_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = and <4 x i32> poison, %x
   ret <4 x i32> %r
@@ -378,7 +370,6 @@ define <4 x i32> @and_poison_lhs_vec(<4 x i32> %x) {
 define i32 @or_poison_rhs(i32 %x) {
 ; CHECK-LABEL: or_poison_rhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
   %r = or i32 %x, poison
   ret i32 %r
@@ -387,7 +378,6 @@ define i32 @or_poison_rhs(i32 %x) {
 define <4 x i32> @or_poison_rhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: or_poison_rhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = or <4 x i32> %x, poison
   ret <4 x i32> %r
@@ -396,7 +386,6 @@ define <4 x i32> @or_poison_rhs_vec(<4 x i32> %x) {
 define i32 @or_poison_lhs(i32 %x) {
 ; CHECK-LABEL: or_poison_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
   %r = or i32 poison, %x
   ret i32 %r
@@ -405,7 +394,6 @@ define i32 @or_poison_lhs(i32 %x) {
 define <4 x i32> @or_poison_lhs_vec(<4 x i32> %x) {
 ; CHECK-LABEL: or_poison_lhs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = or <4 x i32> poison, %x
   ret <4 x i32> %r
