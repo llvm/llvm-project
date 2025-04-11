@@ -378,6 +378,7 @@ void PlainCFGBuilder::buildPlainCFG(
     VPBasicBlock *VPBB = getOrCreateVPBB(BB);
     VPRegionBlock *Region = VPBB->getParent();
     Loop *LoopForBB = LI->getLoopFor(BB);
+    assert(LoopForBB && "Expected block to be inside a loop");
     // Set VPBB predecessors in the same order as they are in the incoming BB.
     if (!isHeaderBB(BB, LoopForBB)) {
       setVPBBPredsFromBB(VPBB, BB);
@@ -423,7 +424,7 @@ void PlainCFGBuilder::buildPlainCFG(
     BasicBlock *IRSucc1 = BI->getSuccessor(1);
     VPBasicBlock *Successor0 = getOrCreateVPBB(IRSucc0);
     VPBasicBlock *Successor1 = getOrCreateVPBB(IRSucc1);
-    if (BB == LoopForBB->getLoopLatch()) {
+    if (BB == LoopForBB->getLoopLatch() && Region) {
       // For a latch we need to set the successor of the region rather than that
       // of VPBB and it should be set to the exit, i.e., non-header successor,
       // except for the top region, which is handled elsewhere.
@@ -437,15 +438,13 @@ void PlainCFGBuilder::buildPlainCFG(
 
     // Don't connect any blocks outside the current loop except the latch for
     // now. The latch is handled above.
-    if (LoopForBB) {
-      if (!LoopForBB->contains(IRSucc0)) {
-        VPBB->setOneSuccessor(Successor1);
-        continue;
-      }
-      if (!LoopForBB->contains(IRSucc1)) {
-        VPBB->setOneSuccessor(Successor0);
-        continue;
-      }
+    if (!LoopForBB->contains(IRSucc0)) {
+      VPBB->setOneSuccessor(Successor1);
+      continue;
+    }
+    if (!LoopForBB->contains(IRSucc1)) {
+      VPBB->setOneSuccessor(Successor0);
+      continue;
     }
 
     VPBB->setTwoSuccessors(Successor0, Successor1);
