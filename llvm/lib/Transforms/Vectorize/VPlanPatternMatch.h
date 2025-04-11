@@ -143,10 +143,7 @@ template <typename LTy, typename RTy> struct match_combine_and {
   match_combine_and(const LTy &Left, const RTy &Right) : L(Left), R(Right) {}
 
   template <typename ITy> bool match(ITy *V) const {
-    if (L.match(V))
-      if (R.match(V))
-        return true;
-    return false;
+    return L.match(V) && R.match(V);
   }
 };
 
@@ -469,6 +466,8 @@ template <typename Opnd_t> struct Argument_match {
   template <typename OpTy> bool match(OpTy *V) const {
     if (const auto *R = dyn_cast<VPWidenIntrinsicRecipe>(V))
       return Val.match(R->getOperand(OpI));
+    if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
+      return Val.match(R->getOperand(OpI));
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
       if (isa<CallInst>(R->getUnderlyingInstr()))
         return Val.match(R->getOperand(OpI + 1));
@@ -491,6 +490,8 @@ struct IntrinsicID_match {
   template <typename OpTy> bool match(OpTy *V) const {
     if (const auto *R = dyn_cast<VPWidenIntrinsicRecipe>(V))
       return R->getVectorIntrinsicID() == ID;
+    if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
+      return R->getCalledScalarFunction()->getIntrinsicID() == ID;
     if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
       if (const auto *CI = dyn_cast<CallInst>(R->getUnderlyingInstr()))
         if (const auto *F = CI->getCalledFunction())
@@ -504,9 +505,7 @@ struct IntrinsicID_match {
 /// them with lower arity matchers. Here's some convenient typedefs for up to
 /// several arguments, and more can be added as needed
 template <typename T0 = void, typename T1 = void, typename T2 = void,
-          typename T3 = void, typename T4 = void, typename T5 = void,
-          typename T6 = void, typename T7 = void, typename T8 = void,
-          typename T9 = void, typename T10 = void>
+          typename T3 = void>
 struct m_Intrinsic_Ty;
 template <typename T0> struct m_Intrinsic_Ty<T0> {
   using Ty = match_combine_and<IntrinsicID_match, Argument_match<T0>>;
@@ -521,7 +520,7 @@ struct m_Intrinsic_Ty<T0, T1, T2> {
                                Argument_match<T2>>;
 };
 template <typename T0, typename T1, typename T2, typename T3>
-struct m_Intrinsic_Ty<T0, T1, T2, T3> {
+struct m_Intrinsic_Ty {
   using Ty = match_combine_and<typename m_Intrinsic_Ty<T0, T1, T2>::Ty,
                                Argument_match<T3>>;
 };
