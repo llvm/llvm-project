@@ -61,6 +61,13 @@ class Scalable1DVectorOfLength<int length, list<Type> elementTypes> : ShapedCont
   "a 1-D scalable vector with length " # length,
   "::mlir::VectorType">;
 
+def SVEVector : AnyTypeOf<[
+  Scalable1DVectorOfLength<2, [I64, F64]>,
+  Scalable1DVectorOfLength<4, [I32, F32]>,
+  Scalable1DVectorOfLength<8, [I16, F16, BF16]>,
+  Scalable1DVectorOfLength<16, [I8]>],
+  "an SVE vector with element size <= 64-bit">;
+
 //===----------------------------------------------------------------------===//
 // ArmSVE op definitions
 //===----------------------------------------------------------------------===//
@@ -72,14 +79,22 @@ class ArmSVE_IntrOp<string mnemonic,
                     list<Trait> traits = [],
                     list<int> overloadedOperands = [],
                     list<int> overloadedResults = [],
-                    int numResults = 1> :
+                    int numResults = 1,
+                    list<int> immArgPositions = [],
+                    list<string> immArgAttrNames = []> :
   LLVM_IntrOpBase</*Dialect dialect=*/ArmSVE_Dialect,
                   /*string opName=*/"intr." # mnemonic,
                   /*string enumName=*/"aarch64_sve_" # !subst(".", "_", mnemonic),
                   /*list<int> overloadedResults=*/overloadedResults,
                   /*list<int> overloadedOperands=*/overloadedOperands,
                   /*list<Trait> traits=*/traits,
-                  /*int numResults=*/numResults>;
+                  /*int numResults=*/numResults,
+                  /*bit requiresAccessGroup=*/0,
+                  /*bit requiresAliasAnalysis=*/0,
+                  /*bit requiresFastmath=*/0,
+                  /*bit requiresOpBundles=*/0,
+                  /*list<int> immArgPositions=*/immArgPositions,
+                  /*list<string> immArgAttrNames=*/immArgAttrNames>;
 
 class ArmSVE_IntrBinaryOverloadedOp<string mnemonic,
                                     list<Trait> traits = []>:
@@ -243,6 +258,34 @@ def UmmlaOp : ArmSVE_Op<"ummla",
     8×2 matrix of 8-bit integers. For each quadword, they multiply the second
     input matrix by the third input matrix using natural arithmetic and then add
     the result to the first input using modular arithmetic.
+
+    Source:
+    https://developer.arm.com/documentation/100987/0000
+  }];
+  // Supports (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
+  let arguments = (ins
+          ScalableVectorOfLengthAndType<[4], [I32]>:$acc,
+          ScalableVectorOfLengthAndType<[16], [I8]>:$src1,
+          ScalableVectorOfLengthAndType<[16], [I8]>:$src2
+  );
+  let results = (outs ScalableVectorOfLengthAndType<[4], [I32]>:$dst);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
+}
+
+def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
+                                    AllTypesMatch<["src1", "src2"]>,
+                                    AllTypesMatch<["acc", "dst"]>]> {
+  let summary = "Matrix-matrix multiply and accumulate op";
+  let description = [{
+    USMMLA: Unsigned by signed integer matrix multiply-accumulate.
+
+    The unsigned by signed integer matrix multiply-accumulate operation
+    multiplies the 2×8 matrix of unsigned 8-bit integer values held
+    the first source vector by the 8×2 matrix of signed 8-bit integer
+    values in the second source vector. The resulting 2×2 widened 32-bit
+    integer matrix product is then added to the 32-bit integer matrix
+    accumulator.
 
     Source:
     https://developer.arm.com/documentation/100987/0000
@@ -509,12 +552,51 @@ def ScalableMaskedUDivIOp : ScalableMaskedIOp<"masked.divi_unsigned",
 
 def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
 
+def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
+  let summary = "Broadcast indexed 128-bit segment to vector";
+
+  let description = [{
+    This operation fills each 128-bit segment of a vector with the elements
+    from the indexed 128-bit sgement of the source vector. If the VL is
+    128 bits the operation is a NOP.
+
+    Example:
+    ```mlir
+    // VL == 256
+    // %X = [A B C D x x x x]
+    %Y = arm_sve.dupq_lane %X[0] : vector<[4]xi32>
+    // Y = [A B C D A B C D]
+
+    // %U = [x x x x x x x x A B C D E F G H]
+    %V = arm_sve.dupq_lane %U[1] : vector<[8]xf16>
+    // %V = [A B C D E F H A B C D E F H]
+    ```
+  }];
+
+  let arguments = (ins SVEVector:$src,
+                       I64Attr:$lane);
+  let results = (outs SVEVector:$dst);
+
+  let builders = [
+    OpBuilder<(ins "Value":$src, "int64_t":$lane), [{
+      build($_builder, $_state, src.getType(), src, lane);
+    }]>];
+
+  let assemblyFormat = [{
+    $src `[` $lane `]` attr-dict `:` type($dst)
+  }];
+}
+
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,
   Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
 
 def SmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"smmla">,
+  Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
+
+def UsmmlaIntrOp :
+  ArmSVE_IntrBinaryOverloadedOp<"usmmla">,
   Arguments<(ins AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank, AnyScalableVectorOfAnyRank)>;
 
 def SdotIntrOp :
@@ -609,5 +691,15 @@ def WhileLTIntrOp :
     /*overloadedOperands=*/[0],
     /*overloadedResults=*/[0]>,
   Arguments<(ins I64:$base, I64:$n)>;
+
+def DupQLaneIntrOp : ArmSVE_IntrOp<"dupq_lane",
+    /*traits=*/[],
+    /*overloadedOperands=*/[0],
+    /*overloadedResults=*/[],
+    /*numResults=*/1,
+    /*immArgPositions*/[1],
+    /*immArgAttrNames*/["lane"]>,
+    Arguments<(ins Arg<ScalableVectorOfRank<[1]>, "v">:$v,
+                   Arg<I64Attr, "lane">:$lane)>;
 
 #endif // ARMSVE_OPS
