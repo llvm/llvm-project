@@ -14,9 +14,7 @@ _CLC_OVERLOAD _CLC_DEF char __clc_clz(char x) {
   return __clc_clz(__clc_as_uchar(x));
 }
 
-_CLC_OVERLOAD _CLC_DEF uchar __clc_clz(uchar x) {
-  return __builtin_clzg(x, 8);
-}
+_CLC_OVERLOAD _CLC_DEF uchar __clc_clz(uchar x) { return __builtin_clzg(x, 8); }
 
 _CLC_OVERLOAD _CLC_DEF short __clc_clz(short x) {
   return __clc_clz(__clc_as_ushort(x));
@@ -30,9 +28,7 @@ _CLC_OVERLOAD _CLC_DEF int __clc_clz(int x) {
   return __clc_clz(__clc_as_uint(x));
 }
 
-_CLC_OVERLOAD _CLC_DEF uint __clc_clz(uint x) {
-  return __builtin_clzg(x, 32);
-}
+_CLC_OVERLOAD _CLC_DEF uint __clc_clz(uint x) { return __builtin_clzg(x, 32); }
 
 _CLC_OVERLOAD _CLC_DEF long __clc_clz(long x) {
   return __clc_clz(__clc_as_ulong(x));
