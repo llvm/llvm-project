@@ -9,6 +9,8 @@
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/PatternMatch.h"
@@ -108,6 +110,8 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
+    if (readOp->hasAttr("amdgpu.transformed"))
+      return failure();
 
     bool requiresBroadcasting = false;
     VectorType unbroadcastedVectorType;
@@ -117,20 +121,85 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     }
 
     Location loc = readOp.getLoc();
-    Value fill = rewriter.create<vector::SplatOp>(loc, unbroadcastedVectorType,
-                                                  readOp.getPadding());
-    Value load = rewriter.create<vector::LoadOp>(
-        loc, unbroadcastedVectorType, readOp.getSource(), readOp.getIndices());
-    Value res = rewriter.create<arith::SelectOp>(loc, unbroadcastedVectorType,
-                                                 readOp.getMask(), load, fill);
+    Value src = readOp.getSource();
+    MemRefType memRefType = cast<MemRefType>(src.getType());
+    ArrayRef<int64_t> shape = memRefType.getShape();
 
-    // Insert a broadcasting op if required.
-    if (requiresBroadcasting) {
-      res = rewriter.create<vector::BroadcastOp>(loc, readOp.getVectorType(),
-                                                 res);
+    Value linearIndex = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    Value one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value stride = one;
+
+    // Compute the linear index by linearIndex += indices[i] * stride
+    for (int i = shape.size() - 1; i >= 0; --i) {
+      Value currentIndex = readOp.getIndices()[i];
+      Value strideIndexed =
+          rewriter.create<arith::MulIOp>(loc, currentIndex, stride);
+      linearIndex =
+          rewriter.create<arith::AddIOp>(loc, linearIndex, strideIndexed);
+
+      if (i == 0)
+        break;
+
+      // Update stride for the next dimension
+      Value nextStride;
+      if (shape[i] != ShapedType::kDynamic) {
+        nextStride = rewriter.create<arith::ConstantIndexOp>(loc, shape[i]);
+      } else {
+        nextStride = rewriter.create<memref::DimOp>(loc, src, i);
+      }
+      stride = rewriter.create<arith::MulIOp>(loc, stride, nextStride);
     }
 
-    rewriter.replaceOp(readOp, res);
+    // Add vector size offset to linear index
+    VectorType vectorType = readOp.getVectorType();
+    int64_t vectorSize = vectorType.getNumElements();
+    Value vectorSizeOffset =
+        rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
+    Value upperBoundIndex =
+        rewriter.create<arith::AddIOp>(loc, linearIndex, vectorSizeOffset);
+
+    Value totalSize = one;
+    for (size_t i = 0; i < shape.size(); ++i) {
+      Value dimensionSize;
+      if (shape[i] != ShapedType::kDynamic) {
+        dimensionSize = rewriter.create<arith::ConstantIndexOp>(loc, shape[i]);
+      } else {
+        dimensionSize = rewriter.create<memref::DimOp>(loc, src, i);
+      }
+      totalSize = rewriter.create<arith::MulIOp>(loc, totalSize, dimensionSize);
+    }
+
+    Value isInBounds = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::ule, upperBoundIndex, totalSize);
+
+    auto thenBuilder = [&](OpBuilder &builder, Location loc) {
+      Value fill = builder.create<vector::SplatOp>(loc, unbroadcastedVectorType,
+                                                   readOp.getPadding());
+      Value load = builder.create<vector::LoadOp>(loc, unbroadcastedVectorType,
+                                                  readOp.getSource(),
+                                                  readOp.getIndices());
+      Value res = builder.create<arith::SelectOp>(loc, unbroadcastedVectorType,
+                                                  readOp.getMask(), load, fill);
+
+      // Insert a broadcasting op if required.
+      if (requiresBroadcasting) {
+        res = builder.create<vector::BroadcastOp>(loc, readOp.getVectorType(),
+                                                  res);
+      }
+      rewriter.create<scf::YieldOp>(loc, res);
+    };
+
+    auto elseBuilder = [&](OpBuilder &builder, Location loc) {
+      Operation *read = builder.clone(*readOp.getOperation());
+      read->setAttr("amdgpu.transformed", builder.getUnitAttr());
+      Value readResult = read->getResult(0);
+      builder.create<scf::YieldOp>(loc, readResult);
+    };
+
+    auto ifOp =
+        rewriter.create<scf::IfOp>(loc, isInBounds, thenBuilder, elseBuilder);
+
+    rewriter.replaceOp(readOp, ifOp);
 
     return success();
   }
