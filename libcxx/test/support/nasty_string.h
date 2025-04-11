@@ -148,6 +148,9 @@ struct ToNastyChar {
   nasty_char text[N];
 };
 
+template <std::size_t N>
+ToNastyChar(const char (&)[N]) -> ToNastyChar<N>;
+
 template <ToNastyChar Str>
 inline constexpr auto static_nasty_text = Str;
 
