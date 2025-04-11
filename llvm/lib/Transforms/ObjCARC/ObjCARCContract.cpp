@@ -661,30 +661,16 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
 
-    // TODO: Change this to a do-while.
-    for (;;) {
-      ReplaceArgUses(Arg);
+    ReplaceArgUses(Arg);
 
-      // If Arg is a no-op casted pointer, strip one level of casts and iterate.
-      if (const BitCastInst *BI = dyn_cast<BitCastInst>(Arg))
-        Arg = BI->getOperand(0);
-      else if (isa<GEPOperator>(Arg) &&
-               cast<GEPOperator>(Arg)->hasAllZeroIndices())
-        Arg = cast<GEPOperator>(Arg)->getPointerOperand();
-      else if (isa<GlobalAlias>(Arg) &&
-               !cast<GlobalAlias>(Arg)->isInterposable())
-        Arg = cast<GlobalAlias>(Arg)->getAliasee();
-      else {
-        // If Arg is a PHI node, get PHIs that are equivalent to it and replace
-        // their uses.
-        if (PHINode *PN = dyn_cast<PHINode>(Arg)) {
-          SmallVector<Value *, 1> PHIList;
-          getEquivalentPHIs(*PN, PHIList);
-          for (Value *PHI : PHIList)
-            ReplaceArgUses(PHI);
-        }
-        break;
-      }
+    Arg = Arg->stripPointerCastsAndAliases();
+    // If Arg is a PHI node, get PHIs that are equivalent to it and replace
+    // their uses.
+    if (PHINode *PN = dyn_cast<PHINode>(Arg)) {
+      SmallVector<Value *, 1> PHIList;
+      getEquivalentPHIs(*PN, PHIList);
+      for (Value *PHI : PHIList)
+        ReplaceArgUses(PHI);
     }
   }
 
