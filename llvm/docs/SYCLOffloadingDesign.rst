@@ -136,9 +136,9 @@ components - Device code outlining, SYCL kernel function object lowering,
 Generation of device code diagnostics, and Integration header generation. These
 components are explained :ref:`in this document<sycl_frontend_device_compilation>`.
 
-****************************
+*********************
 Device code packaging
-****************************
+*********************
 When dealing with multiple device binaries, an additional step is performed to
 package the multiple device binaries before being added to the host object. This
 additional step is performed with the clang-offload-packager taking image inputs
@@ -157,7 +157,7 @@ Example usage of clang-offload-packager:
   .. code-block:: console
 
     $ clang-offload-packager --image=file=<name>,triple=<triple>,kind=<kind>
-    $ clang-offload-packager --image=file=test.bc,triple=spirv64,kind=sycl
+    $ clang-offload-packager --image=file=test.bc,triple=spirv64,kind=sycl -o device.out
 
 **************************
 Front-end host compilation
@@ -167,27 +167,36 @@ compilation takes an additional argument which helps to embed the packaged
 device binary into the host code. This step generates a fat object that will be
 consumed during link stage.
 
+An example of front-end host compilation command is shown below:
+
+  .. code-block:: console
+
+    $ clang -cc1 -triple x86_64 -fsycl-is-host -fembed-offload-object=device.out test.cpp -o test.o
+
 *************
 Linking stage
 *************
-Pass the fat object file(s) to the linker wrapper tool. The tool extracts the
-device objects and runs the device linking action on the extracted objects.
-Fully formed device images are then wrapped into host objects and then linked
-with host image in the original fat object using the host linker tool.
+In this step, fat object file(s)  are passed to linker wrapper tool. The tool
+extracts the device objects and runs the device linking action on the extracted
+objects. Fully formed device images are then wrapped into host objects and then
+linked with host image in the original fat object using the host linker tool.
 
 .. figure:: figures/linker_wrapper.png
   :scale: 50%
   :align: center
   
-  Device linking flow for SYCL offloading inside the linker-wrapper tool.
+  Figure 2: Device linking flow for SYCL offloading inside the linker-wrapper tool.
 
 Figure 2 shows the compilation flow inside the linker-wrapper tool. First, all
 device objects are extracted from the fat objects and grouped according to the
 target device. For each target device group, we invoke clang to link the device
 objects and generate a list of device objects. All the device objects are then
-wrapped together and embedded into a wrapped host object. This wrapper object is
+wrapped together and embedded into a wrapped host object. This wrapped object is
 linked normally with the rest of host objects and/or libraries using the usual
 linker - e.g. `ld` on Linux and `link.exe` on Windows.
+
+Remainder of this chapter provides a detailed explanation of different steps of
+SYCL compilation flow inside the linker-wrapper tool.
 
 Linking of device objects
 =========================
@@ -208,23 +217,23 @@ Linking of device objects
     :scale: 50%
     :align: center
   
-    SYCL-specific device code linking for JIT compilation flow.
+    Figure 3: SYCL-specific device code linking for JIT compilation flow.
 
   Figure 3 shows the device code linking process performed inside the SYCL linker
   tool for JIT compilation. Following are the key steps performed:
 
   1. All the inputs of LLVM IR bitcode type are gathered and linked together using
-  the llvm-link tool.
+  the linkInModule API calls.
 
-  1. If the user provides device library files, the ouput of the previous step is
+  2. If the user provides device library files, the output of the previous step is
   linked with such files to get the final fully linked LLVM IR device bitcode
   image.
 
-  1. The fully linked LLVM IR device bitcode image undergoes several post-link
+  3. The fully linked LLVM IR device bitcode image undergoes several post-link
   steps. This include device code splitting, specialization constant lowering,
   symbol table generation, and property sets generation.
 
-  1. Each of the split device images in the LLVM IR format will be translated to
+  4. Each of the split device images in the LLVM IR format will be translated to
   SPIR-V IR.using an external tool 'llvm-spirv'.
 
   Remainder of this section discusses the various post-link steps and the
@@ -266,7 +275,7 @@ Device code splitting
     :scale: 50%
     :align: center
    
-    An example of device code splitting for SYCL offloading.
+    Figure 4: An example of device code splitting for SYCL offloading.
 
 Specialization constant lowering
 --------------------------------
