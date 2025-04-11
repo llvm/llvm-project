@@ -1209,11 +1209,11 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
+                                       Value *Start,
                                        const RecurrenceDescriptor &Desc) {
   assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
              Desc.getRecurrenceKind()) &&
          "Unexpected reduction kind");
-  Value *StartVal = Desc.getRecurrenceStartValue();
   Value *Sentinel = Desc.getSentinelValue();
   Value *MaxRdx = Src->getType()->isVectorTy()
                       ? Builder.CreateIntMaxReduce(Src, true)
@@ -1222,7 +1222,7 @@ Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
   // reduction is sentinel value.
   Value *Cmp =
       Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, StartVal, "rdx.select");
+  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
 }
 
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
@@ -1308,41 +1308,21 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 }
 
 Value *llvm::createSimpleReduction(VectorBuilder &VBuilder, Value *Src,
-                                   const RecurrenceDescriptor &Desc) {
-  RecurKind Kind = Desc.getRecurrenceKind();
+                                   RecurKind Kind, FastMathFlags FMFs) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         "AnyOf reduction is not supported.");
+         !RecurrenceDescriptor::isFindLastIVRecurrenceKind(Kind) &&
+         "AnyOf or FindLastIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto *SrcTy = cast<VectorType>(Src->getType());
   Type *SrcEltTy = SrcTy->getElementType();
-  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, Desc.getFastMathFlags());
+  Value *Iden = getRecurrenceIdentity(Kind, SrcEltTy, FMFs);
   Value *Ops[] = {Iden, Src};
   return VBuilder.createSimpleReduction(Id, SrcTy, Ops);
 }
 
-Value *llvm::createReduction(IRBuilderBase &B,
-                             const RecurrenceDescriptor &Desc, Value *Src,
-                             PHINode *OrigPhi) {
-  // TODO: Support in-order reductions based on the recurrence descriptor.
-  // All ops in the reduction inherit fast-math-flags from the recurrence
-  // descriptor.
-  IRBuilderBase::FastMathFlagGuard FMFGuard(B);
-  B.setFastMathFlags(Desc.getFastMathFlags());
-
-  RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
-    return createAnyOfReduction(B, Src, Desc, OrigPhi);
-  if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-    return createFindLastIVReduction(B, Src, Desc);
-
-  return createSimpleReduction(B, Src, RK);
-}
-
-Value *llvm::createOrderedReduction(IRBuilderBase &B,
-                                    const RecurrenceDescriptor &Desc,
+Value *llvm::createOrderedReduction(IRBuilderBase &B, RecurKind Kind,
                                     Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
@@ -1350,11 +1330,9 @@ Value *llvm::createOrderedReduction(IRBuilderBase &B,
   return B.CreateFAddReduce(Start, Src);
 }
 
-Value *llvm::createOrderedReduction(VectorBuilder &VBuilder,
-                                    const RecurrenceDescriptor &Desc,
+Value *llvm::createOrderedReduction(VectorBuilder &VBuilder, RecurKind Kind,
                                     Value *Src, Value *Start) {
-  assert((Desc.getRecurrenceKind() == RecurKind::FAdd ||
-          Desc.getRecurrenceKind() == RecurKind::FMulAdd) &&
+  assert((Kind == RecurKind::FAdd || Kind == RecurKind::FMulAdd) &&
          "Unexpected reduction kind");
   assert(Src->getType()->isVectorTy() && "Expected a vector type");
   assert(!Start->getType()->isVectorTy() && "Expected a scalar type");
