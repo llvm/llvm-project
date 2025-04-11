@@ -47,8 +47,10 @@
 
 using namespace mlir;
 
-llvm::SmallDenseMap<llvm::Value *, llvm::Type *> ReductionVarToType; 
-llvm::OpenMPIRBuilder::InsertPointTy parallelAllocaIP;// TODO: change this alloca IP to point to originalvar allocaIP. ReductionDecl need to be linked to scan var.
+llvm::SmallDenseMap<llvm::Value *, llvm::Type *> ReductionVarToType;
+llvm::OpenMPIRBuilder::InsertPointTy
+    parallelAllocaIP; // TODO: change this alloca IP to point to originalvar
+                      // allocaIP. ReductionDecl need to be linked to scan var.
 namespace {
 static llvm::omp::ScheduleKind
 convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {

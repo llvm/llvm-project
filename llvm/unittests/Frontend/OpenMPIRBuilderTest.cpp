@@ -5376,7 +5376,7 @@ TEST_F(OpenMPIRBuilderTest, ScanReduction) {
   Loops = loopsVec;
   EXPECT_EQ(Loops.size(), 2U);
   CanonicalLoopInfo *InputLoop = Loops.front();
-  CanonicalLoopInfo  *ScanLoop = Loops.back();
+  CanonicalLoopInfo *ScanLoop = Loops.back();
   Builder.restoreIP(ScanLoop->getAfterIP());
   InputLoop->assertOK();
   ScanLoop->assertOK();
