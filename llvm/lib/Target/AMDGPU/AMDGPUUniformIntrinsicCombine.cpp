@@ -35,7 +35,7 @@ using namespace llvm::PatternMatch;
 
 /// Optimizes uniform intrinsics.
 static bool optimizeUniformIntrinsic(IntrinsicInst &II,
-                                     const UniformityInfo *UI) {
+                                     const UniformityInfo &UI) {
   llvm::Intrinsic::ID IID = II.getIntrinsicID();
 
   switch (IID) {
@@ -44,7 +44,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   case Intrinsic::amdgcn_readlane: {
     Value *Src = II.getArgOperand(0);
     // Check if the argument use is divergent
-    if (UI->isDivergentUse(II.getOperandUse(0)))
+    if (UI.isDivergentUse(II.getOperandUse(0)))
       return false;
     LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
     II.replaceAllUsesWith(Src);
@@ -53,7 +53,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   }
   case Intrinsic::amdgcn_ballot: {
     Value *Src = II.getArgOperand(0);
-    if (UI->isDivergentUse(II.getOperandUse(0)))
+    if (UI.isDivergentUse(II.getOperandUse(0)))
       return false;
     LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
 
@@ -101,7 +101,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 }
 
 /// Iterates over the Intrinsics use in the function to optimise.
-static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo *UI) {
+static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
   Module *M = F.getParent();
   // List of AMDGPU intrinsics to optimize if their arguments are uniform.
   constexpr Intrinsic::ID Intrinsics[] = {
@@ -147,15 +147,15 @@ bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {
   if (skipFunction(F)) {
     return false;
   }
-  const UniformityInfo *UI =
-      &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  const UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
   return runUniformIntrinsicCombine(F, UI);
 }
 
 PreservedAnalyses
 AMDGPUUniformIntrinsicCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
-  const auto *UI = &AM.getResult<UniformityInfoAnalysis>(F);
+  const auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
   bool IsChanged = runUniformIntrinsicCombine(F, UI);
 
   if (!IsChanged) {
