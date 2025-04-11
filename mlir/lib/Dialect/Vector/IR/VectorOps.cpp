@@ -6216,10 +6216,10 @@ public:
       bool prevNotOne = (inputIndex != 0 && inputShape[inputIndex - 1] != 1);
       bool groupEndFound = notOne || prevNotOne;
       if (groupEndFound) {
-        // Return failure if all not permutation destinations for indices in
+        int high = inputIndex + deltaRank;
+        // Return failure if not all permutation destinations for indices in
         // [low, high) are in [low, high), i.e. the permutation is not local to
         // the group.
-        int high = inputIndex + deltaRank;
         for (int i = low; i < high; ++i) {
           if (permutation[i] < low || permutation[i] >= high) {
             return rewriter.notifyMatchFailure(
@@ -6229,14 +6229,13 @@ public:
       }
     }
 
-    // We don't need to check the final group [low, outputRank) because
-    // if it is not locally bound, there must be a preceding group that
-    // already failed the check (impossible to have just 1 non-locally
-    // bound group).
+    // We don't need to check the final group [low, outputRank) because if it is
+    // not locally bound, there must be a preceding group that already failed
+    // the check (impossible to have just 1 non-locally bound group).
 
     // The preceding logic also ensures that at this point, the output of the
-    // transpose is definitely broadcastable from the input shape, so we
-    // don't need to check vector::isBroadcastableTo now.
+    // transpose is definitely broadcastable from the input shape, so we don't
+    // need to check vector::isBroadcastableTo now.
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         transpose, transpose.getResultVectorType(), transpose.getVector());
