@@ -4992,19 +4992,19 @@ define signext i32 @atomicrmw_max_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a1, 1
 ; RV32IA-NEXT:    mv a1, a0
-; RV32IA-NEXT:    beqz a2, .LBB60_2
-; RV32IA-NEXT:  # %bb.1: # %then
-; RV32IA-NEXT:    li a0, 1
-; RV32IA-NEXT:    amomax.w a0, a0, (a1)
-; RV32IA-NEXT:    ret
-; RV32IA-NEXT:  .LBB60_2: # %else
+; RV32IA-NEXT:    bnez a2, .LBB60_4
+; RV32IA-NEXT:  # %bb.1: # %else
 ; RV32IA-NEXT:    lw a0, 0(a1)
 ; RV32IA-NEXT:    mv a2, a0
-; RV32IA-NEXT:    bgtz a0, .LBB60_4
-; RV32IA-NEXT:  # %bb.3: # %else
+; RV32IA-NEXT:    bgtz a0, .LBB60_3
+; RV32IA-NEXT:  # %bb.2: # %else
 ; RV32IA-NEXT:    li a2, 1
-; RV32IA-NEXT:  .LBB60_4: # %else
+; RV32IA-NEXT:  .LBB60_3: # %else
 ; RV32IA-NEXT:    sw a2, 0(a1)
+; RV32IA-NEXT:    ret
+; RV32IA-NEXT:  .LBB60_4: # %then
+; RV32IA-NEXT:    li a0, 1
+; RV32IA-NEXT:    amomax.w a0, a0, (a1)
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_max_i32_monotonic_crossbb:
@@ -5056,19 +5056,19 @@ define signext i32 @atomicrmw_max_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a1, 1
 ; RV64IA-NEXT:    mv a1, a0
-; RV64IA-NEXT:    beqz a2, .LBB60_2
-; RV64IA-NEXT:  # %bb.1: # %then
-; RV64IA-NEXT:    li a0, 1
-; RV64IA-NEXT:    amomax.w a0, a0, (a1)
-; RV64IA-NEXT:    ret
-; RV64IA-NEXT:  .LBB60_2: # %else
+; RV64IA-NEXT:    bnez a2, .LBB60_4
+; RV64IA-NEXT:  # %bb.1: # %else
 ; RV64IA-NEXT:    lw a0, 0(a1)
 ; RV64IA-NEXT:    mv a2, a0
-; RV64IA-NEXT:    bgtz a0, .LBB60_4
-; RV64IA-NEXT:  # %bb.3: # %else
+; RV64IA-NEXT:    bgtz a0, .LBB60_3
+; RV64IA-NEXT:  # %bb.2: # %else
 ; RV64IA-NEXT:    li a2, 1
-; RV64IA-NEXT:  .LBB60_4: # %else
+; RV64IA-NEXT:  .LBB60_3: # %else
 ; RV64IA-NEXT:    sw a2, 0(a1)
+; RV64IA-NEXT:    ret
+; RV64IA-NEXT:  .LBB60_4: # %then
+; RV64IA-NEXT:    li a0, 1
+; RV64IA-NEXT:    amomax.w a0, a0, (a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -5140,19 +5140,19 @@ define signext i32 @atomicrmw_min_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a1, 1
 ; RV32IA-NEXT:    mv a1, a0
-; RV32IA-NEXT:    beqz a2, .LBB61_2
-; RV32IA-NEXT:  # %bb.1: # %then
-; RV32IA-NEXT:    li a0, 1
-; RV32IA-NEXT:    amomin.w a0, a0, (a1)
-; RV32IA-NEXT:    ret
-; RV32IA-NEXT:  .LBB61_2: # %else
+; RV32IA-NEXT:    bnez a2, .LBB61_4
+; RV32IA-NEXT:  # %bb.1: # %else
 ; RV32IA-NEXT:    lw a0, 0(a1)
 ; RV32IA-NEXT:    mv a2, a0
-; RV32IA-NEXT:    blez a0, .LBB61_4
-; RV32IA-NEXT:  # %bb.3: # %else
+; RV32IA-NEXT:    blez a0, .LBB61_3
+; RV32IA-NEXT:  # %bb.2: # %else
 ; RV32IA-NEXT:    li a2, 1
-; RV32IA-NEXT:  .LBB61_4: # %else
+; RV32IA-NEXT:  .LBB61_3: # %else
 ; RV32IA-NEXT:    sw a2, 0(a1)
+; RV32IA-NEXT:    ret
+; RV32IA-NEXT:  .LBB61_4: # %then
+; RV32IA-NEXT:    li a0, 1
+; RV32IA-NEXT:    amomin.w a0, a0, (a1)
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_min_i32_monotonic_crossbb:
@@ -5206,19 +5206,19 @@ define signext i32 @atomicrmw_min_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind 
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a1, 1
 ; RV64IA-NEXT:    mv a1, a0
-; RV64IA-NEXT:    beqz a2, .LBB61_2
-; RV64IA-NEXT:  # %bb.1: # %then
-; RV64IA-NEXT:    li a0, 1
-; RV64IA-NEXT:    amomin.w a0, a0, (a1)
-; RV64IA-NEXT:    ret
-; RV64IA-NEXT:  .LBB61_2: # %else
+; RV64IA-NEXT:    bnez a2, .LBB61_4
+; RV64IA-NEXT:  # %bb.1: # %else
 ; RV64IA-NEXT:    lw a0, 0(a1)
 ; RV64IA-NEXT:    mv a2, a0
-; RV64IA-NEXT:    blez a0, .LBB61_4
-; RV64IA-NEXT:  # %bb.3: # %else
+; RV64IA-NEXT:    blez a0, .LBB61_3
+; RV64IA-NEXT:  # %bb.2: # %else
 ; RV64IA-NEXT:    li a2, 1
-; RV64IA-NEXT:  .LBB61_4: # %else
+; RV64IA-NEXT:  .LBB61_3: # %else
 ; RV64IA-NEXT:    sw a2, 0(a1)
+; RV64IA-NEXT:    ret
+; RV64IA-NEXT:  .LBB61_4: # %then
+; RV64IA-NEXT:    li a0, 1
+; RV64IA-NEXT:    amomin.w a0, a0, (a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 
@@ -5418,20 +5418,20 @@ define signext i32 @atomicrmw_umin_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV32IA:       # %bb.0:
 ; RV32IA-NEXT:    andi a2, a1, 1
 ; RV32IA-NEXT:    mv a1, a0
-; RV32IA-NEXT:    beqz a2, .LBB63_2
-; RV32IA-NEXT:  # %bb.1: # %then
-; RV32IA-NEXT:    li a0, 1
-; RV32IA-NEXT:    amominu.w a0, a0, (a1)
-; RV32IA-NEXT:    ret
-; RV32IA-NEXT:  .LBB63_2: # %else
+; RV32IA-NEXT:    bnez a2, .LBB63_4
+; RV32IA-NEXT:  # %bb.1: # %else
 ; RV32IA-NEXT:    lw a0, 0(a1)
 ; RV32IA-NEXT:    li a3, 1
 ; RV32IA-NEXT:    mv a2, a0
-; RV32IA-NEXT:    bltu a0, a3, .LBB63_4
-; RV32IA-NEXT:  # %bb.3: # %else
+; RV32IA-NEXT:    bltu a0, a3, .LBB63_3
+; RV32IA-NEXT:  # %bb.2: # %else
 ; RV32IA-NEXT:    li a2, 1
-; RV32IA-NEXT:  .LBB63_4: # %else
+; RV32IA-NEXT:  .LBB63_3: # %else
 ; RV32IA-NEXT:    sw a2, 0(a1)
+; RV32IA-NEXT:    ret
+; RV32IA-NEXT:  .LBB63_4: # %then
+; RV32IA-NEXT:    li a0, 1
+; RV32IA-NEXT:    amominu.w a0, a0, (a1)
 ; RV32IA-NEXT:    ret
 ;
 ; RV64I-LABEL: atomicrmw_umin_i32_monotonic_crossbb:
@@ -5486,20 +5486,20 @@ define signext i32 @atomicrmw_umin_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind
 ; RV64IA:       # %bb.0:
 ; RV64IA-NEXT:    andi a2, a1, 1
 ; RV64IA-NEXT:    mv a1, a0
-; RV64IA-NEXT:    beqz a2, .LBB63_2
-; RV64IA-NEXT:  # %bb.1: # %then
-; RV64IA-NEXT:    li a0, 1
-; RV64IA-NEXT:    amominu.w a0, a0, (a1)
-; RV64IA-NEXT:    ret
-; RV64IA-NEXT:  .LBB63_2: # %else
+; RV64IA-NEXT:    bnez a2, .LBB63_4
+; RV64IA-NEXT:  # %bb.1: # %else
 ; RV64IA-NEXT:    lw a0, 0(a1)
 ; RV64IA-NEXT:    li a3, 1
 ; RV64IA-NEXT:    mv a2, a0
-; RV64IA-NEXT:    bltu a0, a3, .LBB63_4
-; RV64IA-NEXT:  # %bb.3: # %else
+; RV64IA-NEXT:    bltu a0, a3, .LBB63_3
+; RV64IA-NEXT:  # %bb.2: # %else
 ; RV64IA-NEXT:    li a2, 1
-; RV64IA-NEXT:  .LBB63_4: # %else
+; RV64IA-NEXT:  .LBB63_3: # %else
 ; RV64IA-NEXT:    sw a2, 0(a1)
+; RV64IA-NEXT:    ret
+; RV64IA-NEXT:  .LBB63_4: # %then
+; RV64IA-NEXT:    li a0, 1
+; RV64IA-NEXT:    amominu.w a0, a0, (a1)
 ; RV64IA-NEXT:    ret
   br i1 %c, label %then, label %else
 

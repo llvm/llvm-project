@@ -8,8 +8,7 @@ define i32 @beqimm(i32 %a) {
 ; CHECK_NOPT-LABEL: beqimm:
 ; CHECK_NOPT:       # %bb.0:
 ; CHECK_NOPT-NEXT:    cv.beqimm a0, 5, .LBB0_2
-; CHECK_NOPT-NEXT:    j .LBB0_1
-; CHECK_NOPT-NEXT:  .LBB0_1: # %f
+; CHECK_NOPT-NEXT:  # %bb.1: # %f
 ; CHECK_NOPT-NEXT:    li a0, 0
 ; CHECK_NOPT-NEXT:    ret
 ; CHECK_NOPT-NEXT:  .LBB0_2: # %t
@@ -37,8 +36,7 @@ define i32 @bneimm(i32 %a) {
 ; CHECK_NOPT-LABEL: bneimm:
 ; CHECK_NOPT:       # %bb.0:
 ; CHECK_NOPT-NEXT:    cv.bneimm a0, 5, .LBB1_2
-; CHECK_NOPT-NEXT:    j .LBB1_1
-; CHECK_NOPT-NEXT:  .LBB1_1: # %f
+; CHECK_NOPT-NEXT:  # %bb.1: # %f
 ; CHECK_NOPT-NEXT:    li a0, 0
 ; CHECK_NOPT-NEXT:    ret
 ; CHECK_NOPT-NEXT:  .LBB1_2: # %t

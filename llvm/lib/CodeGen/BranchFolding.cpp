@@ -90,10 +90,13 @@ namespace {
 
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
 class BranchFolderLegacy : public MachineFunctionPass {
+  bool EnableTailMerge;
+
 public:
   static char ID;
 
-  explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
+  explicit BranchFolderLegacy(bool EnableTailMerge = true)
+      : MachineFunctionPass(ID), EnableTailMerge(EnableTailMerge) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -152,7 +155,8 @@ bool BranchFolderLegacy::runOnMachineFunction(MachineFunction &MF) {
   // TailMerge can create jump into if branches that make CFG irreducible for
   // HW that requires structurized CFG.
   bool EnableTailMerge = !MF.getTarget().requiresStructuredCFG() &&
-                         PassConfig->getEnableTailMerge();
+                         PassConfig->getEnableTailMerge() &&
+                         this->EnableTailMerge;
   MBFIWrapper MBBFreqInfo(
       getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI());
   BranchFolder Folder(
@@ -2079,4 +2083,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
 
   ++NumHoist;
   return true;
+}
+
+MachineFunctionPass *llvm::createBranchFolderPass(bool EnableTailMerge = true) {
+  return new BranchFolderLegacy(EnableTailMerge);
 }

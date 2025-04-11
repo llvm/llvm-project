@@ -13,71 +13,11 @@ define i1 @sink_li(ptr %text, ptr %text.addr.0) nounwind {
 ; CHECK-NEXT:    mv s0, a0
 ; CHECK-NEXT:    call toupper
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    beqz s0, .LBB0_25
-; CHECK-NEXT:  .LBB0_1: # %while.body
+; CHECK-NEXT:    beqz s0, .LBB0_2
+; CHECK-NEXT:  .LBB0_1: # %while.body.6
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    j .LBB0_3
-; CHECK-NEXT:  # %bb.2: # %while.body
-; CHECK-NEXT:    j .LBB0_15
-; CHECK-NEXT:  .LBB0_3: # %while.body.1
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    j .LBB0_5
-; CHECK-NEXT:  # %bb.4: # %while.body.1
-; CHECK-NEXT:    j .LBB0_16
-; CHECK-NEXT:  .LBB0_5: # %while.body.3
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    j .LBB0_7
-; CHECK-NEXT:  # %bb.6: # %while.body.3
-; CHECK-NEXT:    j .LBB0_18
-; CHECK-NEXT:  .LBB0_7: # %while.body.4
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    j .LBB0_9
-; CHECK-NEXT:  # %bb.8: # %while.body.4
-; CHECK-NEXT:    j .LBB0_20
-; CHECK-NEXT:  .LBB0_9: # %while.body.5
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    j .LBB0_11
-; CHECK-NEXT:  # %bb.10: # %while.body.5
-; CHECK-NEXT:    j .LBB0_22
-; CHECK-NEXT:  .LBB0_11: # %while.body.6
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    j .LBB0_1
-; CHECK-NEXT:  # %bb.12: # %while.body.6
-; CHECK-NEXT:  # %bb.13: # %while.body.6
-; CHECK-NEXT:  # %bb.14: # %strdup.exit.split.loop.exit126
-; CHECK-NEXT:    addi s0, s1, 7
-; CHECK-NEXT:    j .LBB0_24
-; CHECK-NEXT:  .LBB0_15: # %while.body
-; CHECK-NEXT:    j .LBB0_17
-; CHECK-NEXT:  .LBB0_16: # %while.body.1
-; CHECK-NEXT:  .LBB0_17: # %strdup.exit.loopexit
-; CHECK-NEXT:    li s0, 0
-; CHECK-NEXT:    j .LBB0_24
-; CHECK-NEXT:  .LBB0_18: # %while.body.3
-; CHECK-NEXT:  # %bb.19: # %strdup.exit.split.loop.exit120
-; CHECK-NEXT:    addi s0, s1, 4
-; CHECK-NEXT:    j .LBB0_24
-; CHECK-NEXT:  .LBB0_20: # %while.body.4
-; CHECK-NEXT:  # %bb.21: # %strdup.exit.split.loop.exit122
-; CHECK-NEXT:    addi s0, s1, 5
-; CHECK-NEXT:    j .LBB0_24
-; CHECK-NEXT:  .LBB0_22: # %while.body.5
-; CHECK-NEXT:    j .LBB0_24
-; CHECK-NEXT:  # %bb.23:
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    j .LBB0_25
-; CHECK-NEXT:  .LBB0_24: # %strdup.exit
-; CHECK-NEXT:    li s1, 0
-; CHECK-NEXT:    mv s2, a0
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    mv a1, s0
-; CHECK-NEXT:    jalr s1
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    mv a1, s2
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    jalr s1
-; CHECK-NEXT:    li a1, 1
-; CHECK-NEXT:  .LBB0_25: # %return
+; CHECK-NEXT:  .LBB0_2: # %return
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload

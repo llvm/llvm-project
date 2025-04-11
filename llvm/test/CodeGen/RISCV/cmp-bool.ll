@@ -33,19 +33,19 @@ if.end:
 define void @bool_ne(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; RV32-LABEL: bool_ne:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    beq a0, a1, .LBB1_2
-; RV32-NEXT:  # %bb.1: # %if.then
-; RV32-NEXT:    jr a2
-; RV32-NEXT:  .LBB1_2: # %if.end
+; RV32-NEXT:    bne a0, a1, .LBB1_2
+; RV32-NEXT:  # %bb.1: # %if.end
 ; RV32-NEXT:    ret
+; RV32-NEXT:  .LBB1_2: # %if.then
+; RV32-NEXT:    jr a2
 ;
 ; RV64-LABEL: bool_ne:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    beq a0, a1, .LBB1_2
-; RV64-NEXT:  # %bb.1: # %if.then
-; RV64-NEXT:    jr a2
-; RV64-NEXT:  .LBB1_2: # %if.end
+; RV64-NEXT:    bne a0, a1, .LBB1_2
+; RV64-NEXT:  # %bb.1: # %if.end
 ; RV64-NEXT:    ret
+; RV64-NEXT:  .LBB1_2: # %if.then
+; RV64-NEXT:    jr a2
 entry:
   %cmp = xor i1 %a, %b
   br i1 %cmp, label %if.then, label %if.end

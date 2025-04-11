@@ -26,7 +26,7 @@
 ; CHECK-NEXT:       Expand large div/rem
 ; CHECK-NEXT:       Expand fp
 ; CHECK-NEXT:       Expand Atomic instructions
-; CHECK-NEXT:       RISC-V Zacas ABI fix 
+; CHECK-NEXT:       RISC-V Zacas ABI fix
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Natural Loop Information
 ; CHECK-NEXT:       Canonicalize natural loops
@@ -195,6 +195,10 @@
 ; CHECK-NEXT:       Implement the 'patchable-function' attribute
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       RISC-V Late Branch Optimisation Pass
+; CHECK-NEXT:       MachineDominator Tree Construction
+; CHECK-NEXT:       Machine Natural Loop Construction
+; CHECK-NEXT:       Machine Block Frequency Analysis
+; CHECK-NEXT:       Control Flow Optimizer
 ; CHECK-NEXT:       Branch relaxation pass
 ; CHECK-NEXT:       RISC-V Make Compressible
 ; CHECK-NEXT:       Contiguously Lay Out Funclets

@@ -257,6 +257,8 @@ namespace llvm {
   /// branches.
   extern char &BranchFolderPassID;
 
+  MachineFunctionPass *createBranchFolderPass(bool EnableTailMerge);
+
   /// BranchRelaxation - This pass replaces branches that need to jump further
   /// than is supported by a branch instruction.
   extern char &BranchRelaxationPassID;

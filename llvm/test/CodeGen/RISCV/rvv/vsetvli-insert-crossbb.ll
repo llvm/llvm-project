@@ -1060,18 +1060,18 @@ define void @cross_block_avl_extend_backwards(i1 %cond, <vscale x 8 x i8> %v, pt
 ; CHECK-LABEL: cross_block_avl_extend_backwards:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    beqz a0, .LBB25_2
-; CHECK-NEXT:  # %bb.1: # %exit
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB25_2: # %bar
+; CHECK-NEXT:    bnez a0, .LBB25_3
+; CHECK-NEXT:  # %bb.1: # %bar
 ; CHECK-NEXT:    addi a2, a2, 1
-; CHECK-NEXT:  .LBB25_3: # %foo
+; CHECK-NEXT:  .LBB25_2: # %foo
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    vsetvli zero, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    vse8.v v8, (a1)
-; CHECK-NEXT:    j .LBB25_3
+; CHECK-NEXT:    j .LBB25_2
+; CHECK-NEXT:  .LBB25_3: # %exit
+; CHECK-NEXT:    ret
 entry:
   br i1 %cond, label %exit, label %bar
 foo:

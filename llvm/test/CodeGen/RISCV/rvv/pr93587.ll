@@ -9,21 +9,11 @@ define i16 @f() {
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    j .LBB0_1
 ; CHECK-NEXT:  .LBB0_1: # %BB1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    sd a0, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    j .LBB0_1
-; CHECK-NEXT:  # %bb.2: # %BB1
-; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    bnez a0, .LBB0_1
-; CHECK-NEXT:    j .LBB0_3
-; CHECK-NEXT:  .LBB0_3: # %BB2
-; CHECK-NEXT:    ld a0, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    .cfi_def_cfa_offset 0
-; CHECK-NEXT:    ret
 BB:
   br label %BB1
 
