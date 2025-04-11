@@ -34,7 +34,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_fundamental_v = __is_fundame
 
 template <class _Tp>
 struct is_fundamental
-    : public integral_constant<bool, is_void<_Tp>::value || __is_null_pointer_v<_Tp> || is_arithmetic<_Tp>::value> {};
+    : integral_constant<bool, is_void<_Tp>::value || __is_null_pointer_v<_Tp> || is_arithmetic<_Tp>::value> {};
 
 #  if _LIBCPP_STD_VER >= 17
 template <class _Tp>

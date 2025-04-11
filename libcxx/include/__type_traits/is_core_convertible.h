@@ -24,11 +24,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // and __is_core_convertible<immovable-type,immovable-type> is true in C++17 and later.
 
 template <class _Tp, class _Up, class = void>
-struct __is_core_convertible : public false_type {};
+struct __is_core_convertible : false_type {};
 
 template <class _Tp, class _Up>
 struct __is_core_convertible<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))>
-    : public true_type {};
+    : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
