@@ -486,6 +486,18 @@ getPushOrLibCallsSavedInfo(const MachineFunction &MF,
     return PushOrLibCallsCSI;
 
   for (const auto &CS : CSI) {
+    if (RVFI->useQCIInterrupt(MF)) {
+      // Some registers are saved by both `QC.C.MIENTER(.NEST)` and
+      // `QC.CM.PUSH(FP)`. In these cases, prioritise the CFI info that points
+      // to the versions saved by `QC.C.MIENTER(.NEST)` which is what FP
+      // unwinding would use.
+      const auto *FII = llvm::find_if(FixedCSRFIQCIInterruptMap, [&](auto P) {
+        return P.first == CS.getReg();
+      });
+      if (FII != std::end(FixedCSRFIQCIInterruptMap))
+        continue;
+    }
+
     const auto *FII = llvm::find_if(
         FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
     if (FII != std::end(FixedCSRFIMap))
@@ -826,12 +838,12 @@ static bool isPop(unsigned Opcode) {
 }
 
 static unsigned getPushOpcode(RISCVMachineFunctionInfo::PushPopKind Kind,
-                              bool HasFP) {
+                              bool UpdateFP) {
   switch (Kind) {
   case RISCVMachineFunctionInfo::PushPopKind::StdExtZcmp:
     return RISCV::CM_PUSH;
   case RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp:
-    return HasFP ? RISCV::QC_CM_PUSHFP : RISCV::QC_CM_PUSH;
+    return UpdateFP ? RISCV::QC_CM_PUSHFP : RISCV::QC_CM_PUSH;
   default:
     llvm_unreachable("Unhandled PushPopKind");
   }
@@ -872,7 +884,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
 
-  auto FirstFrameSetup = MBBI;
+  // We keep track of the first instruction because it might be a
+  // `(QC.)CM.PUSH(FP)`, and we may need to adjust the immediate rather than
+  // inserting an `addi sp, sp, -N*16`
+  auto PossiblePush = MBBI;
 
   // Skip past all callee-saved register spill instructions.
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup))
@@ -949,22 +964,32 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   if (RVFI->useQCIInterrupt(MF)) {
+    // The function starts with `QC.C.MIENTER(.NEST)`, so the `(QC.)CM.PUSH(FP)`
+    // could only be the next instruction.
+    ++PossiblePush;
+
+    // Insert the CFI metadata before where we think the `(QC.)CM.PUSH(FP)`
+    // could be. The PUSH will also get its own CFI metadata for its own
+    // modifications, which should come after the PUSH.
     unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::cfiDefCfaOffset(nullptr, QCIInterruptPushAmount));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+    BuildMI(MBB, PossiblePush, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
         .addCFIIndex(CFIIndex)
         .setMIFlag(MachineInstr::FrameSetup);
 
-    emitCFIForCSI<CFISaveRegisterEmitter>(MBB, MBBI, getQCISavedInfo(MF, CSI));
-  } else if (RVFI->isPushable(MF) && FirstFrameSetup != MBB.end() &&
-             isPush(FirstFrameSetup->getOpcode())) {
+    emitCFIForCSI<CFISaveRegisterEmitter>(MBB, PossiblePush,
+                                          getQCISavedInfo(MF, CSI));
+  }
+
+  if (RVFI->isPushable(MF) && PossiblePush != MBB.end() &&
+      isPush(PossiblePush->getOpcode())) {
     // Use available stack adjustment in push instruction to allocate additional
     // stack space. Align the stack size down to a multiple of 16. This is
     // needed for RVE.
     // FIXME: Can we increase the stack size to a multiple of 16 instead?
     uint64_t StackAdj =
         std::min(alignDown(StackSize, 16), static_cast<uint64_t>(48));
-    FirstFrameSetup->getOperand(1).setImm(StackAdj);
+    PossiblePush->getOperand(1).setImm(StackAdj);
     StackSize -= StackAdj;
 
     unsigned CFIIndex = MF.addFrameInst(
@@ -1294,19 +1319,23 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       emitCFIForCSI<CFIRestoreRegisterEmitter>(
           MBB, MBBI, getPushOrLibCallsSavedInfo(MF, CSI));
 
-      // Update CFA offset. After CM_POP SP should be equal to CFA, so CFA
-      // offset should be a zero.
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, 0));
+      // Update CFA Offset. If this is a QCI interrupt function, there will be a
+      // leftover offset which is deallocated by `QC.C.MILEAVERET`, otherwise
+      // getQCIInterruptStackSize() will be 0.
+      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(
+          nullptr, RVFI->getQCIInterruptStackSize()));
       BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex)
           .setMIFlag(MachineInstr::FrameDestroy);
     }
   }
 
-  // Deallocate stack if StackSize isn't a zero yet
+  // Deallocate stack if StackSize isn't a zero yet. If this is a QCI interrupt
+  // function, there will be a leftover offset which is deallocated by
+  // `QC.C.MILEAVERET`, otherwise getQCIInterruptStackSize() will be 0.
   if (StackSize != 0)
-    deallocateStack(MF, MBB, MBBI, DL, StackSize, RealStackSize - StackSize);
+    deallocateStack(MF, MBB, MBBI, DL, StackSize,
+                    RVFI->getQCIInterruptStackSize());
 
   // Emit epilogue for shadow call stack.
   emitSCSEpilogue(MF, MBB, MBBI, DL);
@@ -1868,10 +1897,17 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->useQCIInterrupt(MF)) {
     RVFI->setQCIInterruptStackSize(QCIInterruptPushAmount);
-  } else if (RVFI->isPushable(MF)) {
+  }
+
+  if (RVFI->isPushable(MF)) {
     // Determine how many GPRs we need to push and save it to RVFI.
     unsigned PushedRegNum = getNumPushPopRegs(CSI);
-    if (PushedRegNum) {
+
+    // `QC.C.MIENTER(.NEST)` will save `ra` and `s0`, so we should only push if
+    // we want to push more than 2 registers. Otherwise, we should push if we
+    // want to push more than 0 registers.
+    unsigned OnlyPushIfMoreThan = RVFI->useQCIInterrupt(MF) ? 2 : 0;
+    if (PushedRegNum > OnlyPushIfMoreThan) {
       RVFI->setRVPushRegs(PushedRegNum);
       RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
     }
@@ -1897,8 +1933,9 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
         CS.setFrameIdx(FrameIdx);
         continue;
       }
-      // TODO: QCI Interrupt + Push/Pop
-    } else if (RVFI->useSaveRestoreLibCalls(MF) || RVFI->isPushable(MF)) {
+    }
+
+    if (RVFI->useSaveRestoreLibCalls(MF) || RVFI->isPushable(MF)) {
       const auto *FII = llvm::find_if(
           FixedCSRFIMap, [&](MCPhysReg P) { return P == CS.getReg(); });
       unsigned RegNum = std::distance(std::begin(FixedCSRFIMap), FII);
@@ -1910,6 +1947,9 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
           Offset = -int64_t(RVFI->getRVPushRegs() - RegNum) * Size;
         else
           Offset = -int64_t(RegNum + 1) * Size;
+
+        if (RVFI->useQCIInterrupt(MF))
+          Offset -= QCIInterruptPushAmount;
 
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
         assert(FrameIdx < 0);
@@ -1939,12 +1979,17 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
     // because there are gaps which are reserved for future use.
     MFI.CreateFixedSpillStackObject(
         QCIInterruptPushAmount, -static_cast<int64_t>(QCIInterruptPushAmount));
-  } else if (RVFI->isPushable(MF)) {
+  }
+
+  if (RVFI->isPushable(MF)) {
     // Allocate a fixed object that covers all the registers that are pushed.
     if (unsigned PushedRegs = RVFI->getRVPushRegs()) {
       int64_t PushedRegsBytes =
           static_cast<int64_t>(PushedRegs) * (STI.getXLen() / 8);
-      MFI.CreateFixedSpillStackObject(PushedRegsBytes, -PushedRegsBytes);
+      int64_t QCIOffset =
+          RVFI->useQCIInterrupt(MF) ? QCIInterruptPushAmount : 0;
+      MFI.CreateFixedSpillStackObject(PushedRegsBytes,
+                                      -PushedRegsBytes - QCIOffset);
     }
   } else if (int LibCallRegs = getLibCallID(MF, CSI) + 1) {
     // Allocate a fixed object that covers all of the stack allocated by the
@@ -1982,13 +2027,15 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
 
     for (auto [Reg, _Offset] : FixedCSRFIQCIInterruptMap)
       MBB.addLiveIn(Reg);
-    // TODO: Handle QCI Interrupt + Push/Pop
-  } else if (RVFI->isPushable(*MF)) {
+  }
+
+  if (RVFI->isPushable(*MF)) {
     // Emit CM.PUSH with base StackAdj & evaluate Push stack
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
+      unsigned Opcode = getPushOpcode(
+          RVFI->getPushPopKind(*MF), hasFP(*MF) && !RVFI->useQCIInterrupt(*MF));
       // Use encoded number to represent registers to spill.
-      unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF));
       unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
@@ -2146,8 +2193,9 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     // QC.C.MILEAVERET which we already inserted to return.
     assert(MI->getOpcode() == RISCV::QC_C_MILEAVERET &&
            "Unexpected QCI Interrupt Return Instruction");
-    // TODO: Handle QCI + Push/Pop
-  } else if (RVFI->isPushable(*MF)) {
+  }
+
+  if (RVFI->isPushable(*MF)) {
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
