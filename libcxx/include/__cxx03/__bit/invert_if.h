@@ -9,7 +9,6 @@
 #ifndef _LIBCPP___CXX03___BIT_INVERT_IF_H
 #define _LIBCPP___CXX03___BIT_INVERT_IF_H
 
-#include <__cxx03/__concepts/arithmetic.h>
 #include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

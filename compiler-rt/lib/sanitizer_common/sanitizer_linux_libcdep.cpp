@@ -29,7 +29,13 @@
 #  include "sanitizer_solaris.h"
 
 #  if SANITIZER_NETBSD
-#    define _RTLD_SOURCE  // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    // for __lwp_gettcb_fast() / __lwp_getprivate_fast()
+#    include <sys/param.h>
+#    if defined(__NetBSD_Version__) && (__NetBSD_Version__ >= 1099001200)
+#      include <machine/lwp_private.h>
+#    else
+#      define _RTLD_SOURCE
+#    endif
 #  endif
 
 #  include <dlfcn.h>  // for dlsym()
@@ -605,21 +611,22 @@ static void GetTls(uptr *addr, uptr *size) {
   *addr = tp - RoundUpTo(*size, align);
   *size = tp - *addr + ThreadDescriptorSize();
 #      else
-  if (SANITIZER_GLIBC)
-    *size += 1664;
-  else if (SANITIZER_FREEBSD)
-    *size += 128;  // RTLD_STATIC_TLS_EXTRA
-#        if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
+#        if SANITIZER_GLIBC
+  *size += 1664;
+#        elif SANITIZER_FREEBSD
+  *size += 128;  // RTLD_STATIC_TLS_EXTRA
+#          if defined(__mips__) || defined(__powerpc64__) || SANITIZER_RISCV64
   const uptr pre_tcb_size = TlsPreTcbSize();
   *addr -= pre_tcb_size;
   *size += pre_tcb_size;
-#        else
+#          else
   // arm and aarch64 reserve two words at TP, so this underestimates the range.
   // However, this is sufficient for the purpose of finding the pointers to
   // thread-specific data keys.
   const uptr tcb_size = ThreadDescriptorSize();
   *addr -= tcb_size;
   *size += tcb_size;
+#          endif
 #        endif
 #      endif
 #    elif SANITIZER_NETBSD
@@ -840,7 +847,11 @@ u32 GetNumberOfCPUs() {
   int req[2];
   uptr len = sizeof(ncpu);
   req[0] = CTL_HW;
+#    ifdef HW_NCPUONLINE
+  req[1] = HW_NCPUONLINE;
+#    else
   req[1] = HW_NCPU;
+#    endif
   CHECK_EQ(internal_sysctl(req, 2, &ncpu, &len, NULL, 0), 0);
   return ncpu;
 #  elif SANITIZER_SOLARIS

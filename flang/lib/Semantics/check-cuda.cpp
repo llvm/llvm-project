@@ -261,6 +261,9 @@ public:
           subp->cudaSubprogramAttrs().value_or(
               common::CUDASubprogramAttrs::Host) !=
               common::CUDASubprogramAttrs::Host) {
+        isHostDevice = subp->cudaSubprogramAttrs() &&
+            subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::HostDevice;
         Check(body);
       }
     }
@@ -357,6 +360,8 @@ private:
   }
   template <typename A>
   void ErrorIfHostSymbol(const A &expr, parser::CharBlock source) {
+    if (isHostDevice)
+      return;
     if (const Symbol * hostArray{FindHostArray{}(expr)}) {
       context_.Say(source,
           "Host array '%s' cannot be present in device context"_err_en_US,
@@ -502,6 +507,7 @@ private:
   }
 
   SemanticsContext &context_;
+  bool isHostDevice{false};
 };
 
 void CUDAChecker::Enter(const parser::SubroutineSubprogram &x) {

@@ -731,8 +731,10 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   }
 
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
-    // The inliner cannot handle variadic function arguments.
-    return !isa<LLVM::VaStartOp>(op);
+    // The inliner cannot handle variadic function arguments and blocktag
+    // operations prevent inlining since they the blockaddress operations
+    // reference them via the callee symbol.
+    return !(isa<LLVM::VaStartOp>(op) || isa<LLVM::BlockTagOp>(op));
   }
 
   /// Handle the given inlined return by replacing it with a branch. This
