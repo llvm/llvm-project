@@ -192,7 +192,7 @@ public:
   virtual llvm::Value *
   EmitMemberDataPointerAddress(CodeGenFunction &CGF, const Expr *E,
                                Address Base, llvm::Value *MemPtr,
-                               const MemberPointerType *MPT);
+                               const MemberPointerType *MPT, bool IsInBounds);
 
   /// Perform a derived-to-base, base-to-derived, or bitcast member
   /// pointer conversion.
