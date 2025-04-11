@@ -8,6 +8,7 @@
 
 #include "check-omp-structure.h"
 #include "definable.h"
+#include "resolve-names-utils.h"
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/type.h"
@@ -3403,8 +3404,7 @@ bool OmpStructureChecker::CheckReductionOperator(
       valid =
           llvm::is_contained({"max", "min", "iand", "ior", "ieor"}, realName);
       if (!valid) {
-        auto *misc{name->symbol->detailsIf<MiscDetails>()};
-        valid = misc && misc->kind() == MiscDetails::Kind::ConstructName;
+        valid = name->symbol->detailsIf<UserReductionDetails>();
       }
     }
     if (!valid) {
@@ -3486,7 +3486,8 @@ void OmpStructureChecker::CheckReductionObjects(
 }
 
 static bool IsReductionAllowedForType(
-    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type) {
+    const parser::OmpReductionIdentifier &ident, const DeclTypeSpec &type,
+    const Scope &scope, SemanticsContext &context) {
   auto isLogical{[](const DeclTypeSpec &type) -> bool {
     return type.category() == DeclTypeSpec::Logical;
   }};
@@ -3506,27 +3507,42 @@ static bool IsReductionAllowedForType(
       case parser::DefinedOperator::IntrinsicOperator::Multiply:
       case parser::DefinedOperator::IntrinsicOperator::Add:
       case parser::DefinedOperator::IntrinsicOperator::Subtract:
-        return type.IsNumeric(TypeCategory::Integer) ||
+        if (type.IsNumeric(TypeCategory::Integer) ||
             type.IsNumeric(TypeCategory::Real) ||
-            type.IsNumeric(TypeCategory::Complex);
+            type.IsNumeric(TypeCategory::Complex))
+          return true;
+        break;
 
       case parser::DefinedOperator::IntrinsicOperator::AND:
       case parser::DefinedOperator::IntrinsicOperator::OR:
       case parser::DefinedOperator::IntrinsicOperator::EQV:
       case parser::DefinedOperator::IntrinsicOperator::NEQV:
-        return isLogical(type);
+        if (isLogical(type)) {
+          return true;
+        }
+        break;
 
       // Reduction identifier is not in OMP5.2 Table 5.2
       default:
         DIE("This should have been caught in CheckIntrinsicOperator");
         return false;
       }
+      parser::CharBlock name{MakeNameFromOperator(*intrinsicOp, context)};
+      Symbol *symbol{scope.FindSymbol(name)};
+      if (symbol) {
+        const auto *reductionDetails{symbol->detailsIf<UserReductionDetails>()};
+        assert(reductionDetails && "Expected to find reductiondetails");
+
+        return reductionDetails->SupportsType(type);
+      }
+      return false;
     }
-    return true;
+    DIE("Intrinsic Operator not found - parsing gone wrong?");
   }};
 
   auto checkDesignator{[&](const parser::ProcedureDesignator &procD) {
     const parser::Name *name{std::get_if<parser::Name>(&procD.u)};
+    CHECK(name && name->symbol);
     if (name && name->symbol) {
       const SourceName &realName{name->symbol->GetUltimate().name()};
       // OMP5.2: The type [...] of a list item that appears in a
@@ -3535,18 +3551,40 @@ static bool IsReductionAllowedForType(
         // IAND: arguments must be integers: F2023 16.9.100
         // IEOR: arguments must be integers: F2023 16.9.106
         // IOR: arguments must be integers: F2023 16.9.111
-        return type.IsNumeric(TypeCategory::Integer);
+        if (type.IsNumeric(TypeCategory::Integer)) {
+          return true;
+        }
       } else if (realName == "max" || realName == "min") {
         // MAX: arguments must be integer, real, or character:
         // F2023 16.9.135
         // MIN: arguments must be integer, real, or character:
         // F2023 16.9.141
-        return type.IsNumeric(TypeCategory::Integer) ||
-            type.IsNumeric(TypeCategory::Real) || isCharacter(type);
+        if (type.IsNumeric(TypeCategory::Integer) ||
+            type.IsNumeric(TypeCategory::Real) || isCharacter(type)) {
+          return true;
+        }
+      }
+
+      // If we get here, it may be a user declared reduction, so check
+      // if the symbol has UserReductionDetails, and if so, the type is
+      // supported.
+      if (const auto *reductionDetails{
+              name->symbol->detailsIf<UserReductionDetails>()}) {
+        return reductionDetails->SupportsType(type);
+      }
+
+      // We also need to check for mangled names (max, min, iand, ieor and ior)
+      // and then check if the type is there.
+      parser::CharBlock mangledName{MangleSpecialFunctions(name->source)};
+      if (const auto &symbol{scope.FindSymbol(mangledName)}) {
+        if (const auto *reductionDetails{
+                symbol->detailsIf<UserReductionDetails>()}) {
+          return reductionDetails->SupportsType(type);
+        }
       }
     }
-    // TODO: user defined reduction operators. Just allow everything for now.
-    return true;
+    // Everything else is "not matching type".
+    return false;
   }};
 
   return common::visit(
@@ -3561,7 +3599,8 @@ void OmpStructureChecker::CheckReductionObjectTypes(
 
   for (auto &[symbol, source] : symbols) {
     if (auto *type{symbol->GetType()}) {
-      if (!IsReductionAllowedForType(ident, *type)) {
+      const auto &scope{context_.FindScope(symbol->name())};
+      if (!IsReductionAllowedForType(ident, *type, scope, context_)) {
         context_.Say(source,
             "The type of '%s' is incompatible with the reduction operator."_err_en_US,
             symbol->name());

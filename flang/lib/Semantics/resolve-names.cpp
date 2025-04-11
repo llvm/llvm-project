@@ -38,6 +38,7 @@
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "flang/Support/default-kinds.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
 #include <map>
@@ -1441,11 +1442,15 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OmpMetadirectiveDirective &) {
+  bool Pre(const parser::OmpMetadirectiveDirective &x) { //
+    metaDirective_ = &x;
     ++metaLevel_;
     return true;
   }
-  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+  void Post(const parser::OmpMetadirectiveDirective &) { //
+    metaDirective_ = nullptr;
+    --metaLevel_;
+  }
 
   bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
@@ -1491,7 +1496,7 @@ public:
     auto *symbol{FindSymbol(NonDerivedTypeScope(), name)};
     if (!symbol) {
       context().Say(name.source,
-          "Implicit subroutine declaration '%s' in !$OMP DECLARE REDUCTION"_err_en_US,
+          "Implicit subroutine declaration '%s' in DECLARE REDUCTION"_err_en_US,
           name.source);
     }
     return true;
@@ -1501,7 +1506,7 @@ public:
     AddOmpSourceRange(x.source);
     ProcessReductionSpecifier(
         std::get<Indirection<parser::OmpReductionSpecifier>>(x.t).value(),
-        std::get<std::optional<parser::OmpClauseList>>(x.t));
+        std::get<std::optional<parser::OmpClauseList>>(x.t), x);
     return false;
   }
   bool Pre(const parser::OmpMapClause &);
@@ -1657,9 +1662,15 @@ public:
 private:
   void ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
       const parser::OmpClauseList &clauses);
+  template <typename T>
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
-      const std::optional<parser::OmpClauseList> &clauses);
+      const std::optional<parser::OmpClauseList> &clauses,
+      const T &wholeConstruct);
+
+  parser::CharBlock MangleDefinedOperator(const parser::CharBlock &name);
+
   int metaLevel_{0};
+  const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1752,14 +1763,95 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
   PopScope();
 }
 
+parser::CharBlock MakeNameFromOperator(
+    const parser::DefinedOperator::IntrinsicOperator &op,
+    SemanticsContext &context) {
+  switch (op) {
+  case parser::DefinedOperator::IntrinsicOperator::Multiply:
+    return parser::CharBlock{"op.*", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Add:
+    return parser::CharBlock{"op.+", 4};
+  case parser::DefinedOperator::IntrinsicOperator::Subtract:
+    return parser::CharBlock{"op.-", 4};
+
+  case parser::DefinedOperator::IntrinsicOperator::AND:
+    return parser::CharBlock{"op.AND", 6};
+  case parser::DefinedOperator::IntrinsicOperator::OR:
+    return parser::CharBlock{"op.OR", 6};
+  case parser::DefinedOperator::IntrinsicOperator::EQV:
+    return parser::CharBlock{"op.EQV", 7};
+  case parser::DefinedOperator::IntrinsicOperator::NEQV:
+    return parser::CharBlock{"op.NEQV", 8};
+
+  default:
+    context.Say("Unsupported operator in DECLARE REDUCTION"_err_en_US);
+    return parser::CharBlock{"op.?", 4};
+  }
+}
+
+parser::CharBlock MangleSpecialFunctions(const parser::CharBlock &name) {
+  return llvm::StringSwitch<parser::CharBlock>(name.ToString())
+      .Case("max", {"op.max", 6})
+      .Case("min", {"op.min", 6})
+      .Case("iand", {"op.iand", 7})
+      .Case("ior", {"op.ior", 6})
+      .Case("ieor", {"op.ieor", 7})
+      .Default(name);
+}
+
+parser::CharBlock OmpVisitor::MangleDefinedOperator(
+    const parser::CharBlock &name) {
+  // This function should only be used with user defined operators, that have
+  // the pattern
+  // .<leters>.
+  CHECK(name[0] == '.' && name[name.size() - 1] == '.');
+  return parser::CharBlock{
+      context().StoreUserReductionName("op" + name.ToString())};
+}
+
+template <typename T>
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
-    const std::optional<parser::OmpClauseList> &clauses) {
+    const std::optional<parser::OmpClauseList> &clauses,
+    const T &wholeOmpConstruct) {
+  const parser::Name *name{nullptr};
+  parser::Name mangledName;
+  UserReductionDetails reductionDetailsTemp;
   const auto &id{std::get<parser::OmpReductionIdentifier>(spec.t)};
   if (auto procDes{std::get_if<parser::ProcedureDesignator>(&id.u)}) {
-    if (auto *name{std::get_if<parser::Name>(&procDes->u)}) {
-      name->symbol =
-          &MakeSymbol(*name, MiscDetails{MiscDetails::Kind::ConstructName});
+    name = std::get_if<parser::Name>(&procDes->u);
+    if (name) {
+      mangledName.source = MangleSpecialFunctions(name->source);
+    }
+
+  } else {
+    const auto &defOp{std::get<parser::DefinedOperator>(id.u)};
+    if (const auto definedOp{std::get_if<parser::DefinedOpName>(&defOp.u)}) {
+      name = &definedOp->v;
+      mangledName.source = MangleDefinedOperator(definedOp->v.source);
+    } else {
+      mangledName.source = MakeNameFromOperator(
+          std::get<parser::DefinedOperator::IntrinsicOperator>(defOp.u),
+          context());
+      name = &mangledName;
+    }
+  }
+
+  // Use reductionDetailsTemp if we can't find the symbol (this is
+  // the first, or only, instance with this name). The details then
+  // gets stored in the symbol when it's created.
+  UserReductionDetails *reductionDetails{&reductionDetailsTemp};
+  Symbol *symbol{FindSymbol(mangledName)};
+  if (symbol) {
+    // If we found a symbol, we append the type info to the
+    // existing reductionDetails.
+    reductionDetails = symbol->detailsIf<UserReductionDetails>();
+
+    if (!reductionDetails) {
+      context().Say(name->source,
+          "Duplicate definition of '%s' in DECLARE REDUCTION"_err_en_US,
+          name->source);
+      return;
     }
   }
 
@@ -1789,18 +1881,30 @@ void OmpVisitor::ProcessReductionSpecifier(
     // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
     Walk(t.u);
 
-    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
-    assert(typeSpec && "We should have a type here");
+    // Only process types we can find. There will be an error later on when
+    // a type isn't found.
+    if (const DeclTypeSpec * typeSpec{GetDeclTypeSpec()}) {
+      reductionDetails->AddType(*typeSpec);
 
-    for (auto &nm : ompVarNames) {
-      ObjectEntityDetails details{};
-      details.set_type(*typeSpec);
-      MakeSymbol(nm, Attrs{}, std::move(details));
+      for (auto &nm : ompVarNames) {
+        ObjectEntityDetails details{};
+        details.set_type(*typeSpec);
+        MakeSymbol(nm, Attrs{}, std::move(details));
+      }
     }
     EndDeclTypeSpec();
     Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
     Walk(clauses);
     PopScope();
+  }
+
+  reductionDetails->AddDecl(&wholeOmpConstruct);
+
+  if (name) {
+    if (!symbol) {
+      symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+    }
+    name->symbol = symbol;
   }
 }
 
@@ -1831,7 +1935,8 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
     if (maybeArgs && maybeClauses) {
       const parser::OmpArgument &first{maybeArgs->v.front()};
       if (auto *spec{std::get_if<parser::OmpReductionSpecifier>(&first.u)}) {
-        ProcessReductionSpecifier(*spec, maybeClauses);
+        CHECK(metaDirective_);
+        ProcessReductionSpecifier(*spec, maybeClauses, *metaDirective_);
       }
     }
     break;
