@@ -737,19 +737,39 @@ let Class = DependentAddressSpaceType in {
 }
 
 let Class = TemplateSpecializationType in {
+  def : Property<"dependent", Bool> {
+    let Read = [{ node->isDependentType() }];
+  }
   def : Property<"templateName", TemplateName> {
     let Read = [{ node->getTemplateName() }];
   }
-  def : Property<"args", Array<TemplateArgument>> {
+  def : Property<"templateArguments", Array<TemplateArgument>> {
     let Read = [{ node->template_arguments() }];
   }
-  def : Property<"UnderlyingType", QualType> {
-    let Read = [{ node->isCanonicalUnqualified() ? QualType() :
-                                                   node->desugar() }];
+  def : Property<"underlyingType", Optional<QualType>> {
+    let Read = [{
+      node->isTypeAlias()
+        ? std::optional<QualType>(node->getAliasedType())
+        : node->isCanonicalUnqualified()
+            ? std::nullopt
+            : std::optional<QualType>(node->getCanonicalTypeInternal())
+    }];
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
+    QualType result;
+    if (!underlyingType) {
+      result = ctx.getCanonicalTemplateSpecializationType(templateName,
+                                                          templateArguments);
+    } else {
+      result = ctx.getTemplateSpecializationType(templateName,
+                                                 templateArguments,
+                                                 *underlyingType);
+    }
+    if (dependent)
+      const_cast<Type *>(result.getTypePtr())
+          ->addDependence(TypeDependence::DependentInstantiation);
+    return result;
   }]>;
 }
 

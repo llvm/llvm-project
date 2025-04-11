@@ -3713,8 +3713,7 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         if (StringLit) {
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
-          TemplateArgumentLoc Arg(
-              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
+          TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
                   /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||

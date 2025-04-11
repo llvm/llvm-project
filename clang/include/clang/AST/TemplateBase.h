@@ -167,8 +167,6 @@ private:
     unsigned Kind : 31;
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsDefaulted : 1;
-    LLVM_PREFERRED_TYPE(bool)
-    unsigned IsCanonicalExpr : 1;
     uintptr_t V;
   };
   union {
@@ -189,8 +187,7 @@ private:
 
 public:
   /// Construct an empty, invalid template argument.
-  constexpr TemplateArgument()
-      : TypeOrValue{Null, /*IsDefaulted=*/0, /*IsCanonicalExpr=*/0, /*V=*/0} {}
+  constexpr TemplateArgument() : TypeOrValue({Null, 0, /* IsDefaulted */ 0}) {}
 
   /// Construct a template type argument.
   TemplateArgument(QualType T, bool isNullPtr = false,
@@ -265,10 +262,9 @@ public:
   /// This form of template argument only occurs in template argument
   /// lists used for dependent types and for expression; it will not
   /// occur in a non-dependent, canonical template argument list.
-  TemplateArgument(Expr *E, bool IsCanonical, bool IsDefaulted = false) {
+  explicit TemplateArgument(Expr *E, bool IsDefaulted = false) {
     TypeOrValue.Kind = Expression;
     TypeOrValue.IsDefaulted = IsDefaulted;
-    TypeOrValue.IsCanonicalExpr = IsCanonical;
     TypeOrValue.V = reinterpret_cast<uintptr_t>(E);
   }
 
@@ -409,11 +405,6 @@ public:
   Expr *getAsExpr() const {
     assert(getKind() == Expression && "Unexpected kind");
     return reinterpret_cast<Expr *>(TypeOrValue.V);
-  }
-
-  bool isCanonicalExpr() const {
-    assert(getKind() == Expression && "Unexpected kind");
-    return TypeOrValue.IsCanonicalExpr;
   }
 
   /// Iterator that traverses the elements of a template argument pack.

@@ -301,8 +301,6 @@ Improvements to Clang's diagnostics
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
   prefixes.
-- Clang now in more cases avoids printing 'type-parameter-X-X' instead of the name of
-  the template parameter.
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
