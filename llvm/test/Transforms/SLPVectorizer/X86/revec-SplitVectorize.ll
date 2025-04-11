@@ -2,6 +2,31 @@
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -mattr=+avx -passes=slp-vectorizer -S -slp-revec < %s | FileCheck %s
 
 define void @test() {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> poison, <4 x i32> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP1:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP0]], <4 x i32> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP1]], <4 x i32> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP2]], <4 x i32> zeroinitializer, i64 12)
+; CHECK-NEXT:    [[TMP4:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP3]], <4 x i32> zeroinitializer, i64 16)
+; CHECK-NEXT:    [[TMP5:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP4]], <4 x i32> zeroinitializer, i64 20)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP5]], <4 x i32> zeroinitializer, i64 24)
+; CHECK-NEXT:    [[TMP7:%.*]] = call <32 x i32> @llvm.vector.insert.v32i32.v4i32(<32 x i32> [[TMP6]], <4 x i32> zeroinitializer, i64 28)
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc <32 x i32> [[TMP7]] to <32 x i1>
+; CHECK-NEXT:    [[TMP9:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v4i1(<16 x i1> poison, <4 x i1> zeroinitializer, i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v4i1(<16 x i1> [[TMP9]], <4 x i1> zeroinitializer, i64 4)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v4i1(<16 x i1> [[TMP10]], <4 x i1> zeroinitializer, i64 8)
+; CHECK-NEXT:    [[TMP12:%.*]] = call <16 x i1> @llvm.vector.insert.v16i1.v4i1(<16 x i1> [[TMP11]], <4 x i1> zeroinitializer, i64 12)
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi <32 x i1> [ [[TMP8]], [[ENTRY:%.*]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = select <16 x i1> [[TMP12]], <16 x i1> [[TMP12]], <16 x i1> [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = xor <16 x i1> [[TMP12]], [[TMP12]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <16 x i1> [[TMP14]], <16 x i1> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = call <32 x i1> @llvm.vector.insert.v32i1.v16i1(<32 x i1> [[TMP16]], <16 x i1> [[TMP15]], i64 16)
+; CHECK-NEXT:    [[TMP18]] = or <32 x i1> [[TMP13]], [[TMP17]]
+; CHECK-NEXT:    br label [[VECTOR_BODY]]
+;
 entry:
   br label %vector.body
 
