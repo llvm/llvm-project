@@ -367,6 +367,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
                                      const ASTContext&>
     CanonTemplateTemplateParms;
 
+  TemplateTemplateParmDecl *
+    getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
+
   /// The typedef for the __int128_t type.
   mutable TypedefDecl *Int128Decl = nullptr;
 
@@ -1808,26 +1811,22 @@ public:
                           bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
-  QualType getCanonicalTemplateSpecializationType(
-      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
+  QualType getTemplateSpecializationType(TemplateName T,
+                                         ArrayRef<TemplateArgument> Args,
+                                         QualType Canon = QualType()) const;
 
   QualType
-  getTemplateSpecializationType(TemplateName T,
-                                ArrayRef<TemplateArgument> SpecifiedArgs,
-                                ArrayRef<TemplateArgument> CanonicalArgs,
-                                QualType Underlying = QualType()) const;
+  getCanonicalTemplateSpecializationType(TemplateName T,
+                                         ArrayRef<TemplateArgument> Args) const;
 
-  QualType
-  getTemplateSpecializationType(TemplateName T,
-                                ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
-                                ArrayRef<TemplateArgument> CanonicalArgs,
-                                QualType Canon = QualType()) const;
+  QualType getTemplateSpecializationType(TemplateName T,
+                                         ArrayRef<TemplateArgumentLoc> Args,
+                                         QualType Canon = QualType()) const;
 
-  TypeSourceInfo *getTemplateSpecializationTypeInfo(
-      TemplateName T, SourceLocation TLoc,
-      const TemplateArgumentListInfo &SpecifiedArgs,
-      ArrayRef<TemplateArgument> CanonicalArgs,
-      QualType Canon = QualType()) const;
+  TypeSourceInfo *
+  getTemplateSpecializationTypeInfo(TemplateName T, SourceLocation TLoc,
+                                    const TemplateArgumentListInfo &Args,
+                                    QualType Canon = QualType()) const;
 
   QualType getParenType(QualType NamedType) const;
 
@@ -2942,21 +2941,6 @@ public:
   /// expresses the value of the argument.
   TemplateArgument getCanonicalTemplateArgument(const TemplateArgument &Arg)
     const;
-
-  /// Canonicalize the given template argument list.
-  ///
-  /// Returns true if any arguments were non-canonical, false otherwise.
-  bool
-  canonicalizeTemplateArguments(MutableArrayRef<TemplateArgument> Args) const;
-
-  /// Canonicalize the given TemplateTemplateParmDecl.
-  TemplateTemplateParmDecl *
-  getCanonicalTemplateTemplateParmDecl(TemplateTemplateParmDecl *TTP) const;
-
-  TemplateTemplateParmDecl *findCanonicalTemplateTemplateParmDeclInternal(
-      TemplateTemplateParmDecl *TTP) const;
-  TemplateTemplateParmDecl *insertCanonicalTemplateTemplateParmDeclInternal(
-      TemplateTemplateParmDecl *CanonTTP) const;
 
   /// Type Query functions.  If the type is an instance of the specified class,
   /// return the Type pointer for the underlying maximally pretty type.  This
