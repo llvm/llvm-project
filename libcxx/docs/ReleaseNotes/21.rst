@@ -61,12 +61,20 @@ Improvements and New Features
 
 - Updated formatting library to Unicode 16.0.0.
 
+- The ``num_put::do_put`` integral overloads have been optimized, resulting in a performance improvement of up to 2.4x.
+
 Deprecations and Removals
 -------------------------
 
 - ``std::is_pod`` and ``std::is_pod_v`` are deprecated in C++20 and later.
 
 - ``std::is_trivial`` and ``std::is_trivial_v`` are deprecated in C++26 and later.
+
+Potentially breaking changes
+----------------------------
+
+- The implementation of ``num_put::do_put`` has been replaced to improve the performance, which can lead to different
+  output when printing pointers.
 
 Upcoming Deprecations and Removals
 ----------------------------------
