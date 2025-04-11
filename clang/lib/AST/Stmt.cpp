@@ -1049,6 +1049,13 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
+bool IfStmt::isObjCAvailabilityCheckWithDomainName() const {
+  if (auto *ACE = dyn_cast<ObjCAvailabilityCheckExpr>(getCond());
+      ACE && ACE->hasDomainName())
+    return true;
+  return false;
+}
+
 std::optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
     return std::nullopt;

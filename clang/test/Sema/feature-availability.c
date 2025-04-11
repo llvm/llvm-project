@@ -175,12 +175,22 @@ void test4(struct S0 *s0) { // expected-error {{use of 'S0' requires feature 'fe
   g11.i0 = 0; // expected-error {{use of 'g11' requires feature 'feature1' to be available}} expected-error {{use of 'i0' requires feature 'feature1' to be available}}
 }
 
-void test5(void) {
-  if (__builtin_available(domain:feature1))
-    label0: // expected-error {{labels cannot appear in regions conditionally guarded by features}}
-      ;
-  label1:
+void test5(int c) {
+  if (c > 100)
+    goto label0; // expected-error {{cannot jump from this goto statement to its label}}
+  else if (c > 50)
+    goto label1; // expected-error {{cannot jump from this goto statement to its label}}
+  if (__builtin_available(domain:feature1)) { // expected-note 2 {{jump enters controlled statement of if available}}
+    label0:
     ;
+  } else {
+    if (c > 80)
+      goto label2;
+    label1:
+    ;
+    label2:
+    ;
+  }
 }
 
 void test6(void) {

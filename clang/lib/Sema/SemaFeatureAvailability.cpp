@@ -83,13 +83,6 @@ public:
     return true;
   }
 
-  bool VisitLabelStmt(LabelStmt *LS) {
-    if (isConditionallyGuardedByFeature())
-      SemaRef.Diag(LS->getBeginLoc(),
-                   diag::err_label_in_conditionally_guarded_feature);
-    return true;
-  }
-
   bool VisitTypeLoc(TypeLoc Ty);
 
   void IssueDiagnostics() {
