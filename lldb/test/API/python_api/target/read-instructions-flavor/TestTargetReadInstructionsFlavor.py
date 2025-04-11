@@ -7,7 +7,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class TargetReadInstructionsFlavor(TestBase):
-    @skipIf(archs=no_match(["x86_64", "x86", "i386"]), oslist=["windows"])
+    @skipIfWindows
+    @skipIf(archs=no_match(["x86_64", "x86", "i386"]))
     def test_read_instructions_with_flavor(self):
         self.build()
         executable = self.getBuildArtifact("a.out")
