@@ -1,4 +1,8 @@
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tahiti -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu bonaire -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu carrizo -S -verify -o - %s
 // RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -S -verify -o - %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1200 -S -verify -o - %s
 // REQUIRES: amdgpu-registered-target
 
 void test_amdgcn_raw_ptr_buffer_load_lds(__amdgpu_buffer_rsrc_t rsrc, __local void* lds, int offset, int soffset, int x) {
