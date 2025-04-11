@@ -922,7 +922,7 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
   return ShouldSwap;
 }
 
-void swapCndOperands(MachineInstr &MI) {
+static void swapCndOperands(MachineInstr &MI) {
   MachineOperand Op2 = MI.getOperand(2);
   MachineOperand Op4 = MI.getOperand(4);
 
