@@ -75,8 +75,8 @@ private:
   void recoverIdx0ForPrivateUse(SmallVector<BundleItem, 4> &Worklist,
                                 std::unordered_set<unsigned> &IdxList,
                                 unsigned &SrcStagingRegIdx);
-  bool hasStoreBetween(MachineBasicBlock *From, MachineBasicBlock *To,
-                       MachineInstr &MI);
+  bool hasConflictBetween(MachineBasicBlock *From, MachineBasicBlock *To,
+                          MachineInstr &MI);
   bool blockPrologueInterferes(const MachineBasicBlock *BB,
                                MachineBasicBlock::const_iterator End,
                                const MachineInstr &MI);
@@ -91,10 +91,10 @@ private:
 
   DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
            SmallVector<MachineInstr *>>
-      StoreInstrCache;
+      ConflictInstrCache;
 
   DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>, bool>
-      HasStoreCache;
+      HasConflictCache;
 
   DenseMap<std::pair<MachineBasicBlock *, MachineBasicBlock *>,
            SmallVector<SmallVector<MachineBasicBlock *, 8>, 8>>
@@ -109,6 +109,10 @@ private:
 
   bool NeedsAlignedVGPRs;
 };
+
+bool sideEffectConflict(MachineInstr &MIa, MachineInstr &MIb) {
+  return MIa.hasUnmodeledSideEffects() && MIb.hasUnmodeledSideEffects();
+}
 
 // Sink an instruction MI to it's position InsertPos in SuccToSinkTo.
 void performSink(MachineInstr &MI, MachineBasicBlock &SuccToSinkTo,
@@ -318,9 +322,9 @@ AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
         return {};
 
       // Check safety of sinking MI to U.
-      bool Store =
-          MI.mayLoad() ? hasStoreBetween(MI.getParent(), UseMBB, MI) : false;
-      if (!MI.isSafeToMove(Store))
+      bool Conflict =
+          MI.mayLoad() ? hasConflictBetween(MI.getParent(), UseMBB, MI) : false;
+      if (!MI.isSafeToMove(Conflict))
         return {};
       if (!TII->isSafeToSink(MI, UseMBB, CI))
         return {};
@@ -366,51 +370,40 @@ AMDGPUBundleIdxLdSt::findSuccsToSinkTo(MachineInstr &MI,
   return Candidates;
 }
 
-// When sinking MIa, check if moving it past MIb creates a laneshared conflict.
-bool isLanesharedConflict(MachineInstr &MIa, MachineInstr &MIb) {
-  if (MIa.getOpcode() != AMDGPU::V_LOAD_IDX)
-    return false;
-  bool Laneshared = false;
-  for (const auto &MMO : MIb.memoperands()) {
-    if (MMO->getPointerInfo().getAddrSpace() == LANESHARED)
-      Laneshared = true;
-  }
-  if (!Laneshared)
-    return false;
-  auto Opcode = MIb.getOpcode();
-  if ((MIb.isBarrier() || Opcode == AMDGPU::ARITH_FENCE ||
-       Opcode == AMDGPU::ATOMIC_FENCE || Opcode == AMDGPU::G_FENCE))
-    return true;
-  return false;
-}
-
-// Check if any instruction aliases with MI between From and To. Two caches are
-// used. HasStoreCache is a coarse cache which returns true if the pair contains
-// some case we want to treat conservatively for all MI (eg. a function call),
-// and returns false if there are no stores at all. StoreInstrCache is used to
-// cache and check the store instructions against MI.
-bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
-                                          MachineBasicBlock *To,
-                                          MachineInstr &MI) {
+// Check if any instruction conflicts with MI between From and To, where a
+// conflict is defined as either an alias conflict or both having unmodeled side
+// effects. Two caches are used. HasConflictCache is a coarse cache which
+// returns true if the pair contains some case we want to treat conservatively
+// for all MI (eg. a function call), and returns false if there are no stores at
+// all. ConflictInstrCache is used to cache and check the potentially
+// conflicting instructions against MI.
+bool AMDGPUBundleIdxLdSt::hasConflictBetween(MachineBasicBlock *From,
+                                             MachineBasicBlock *To,
+                                             MachineInstr &MI) {
 
   auto BlockPair = std::make_pair(From, To);
 
-  if (auto It = HasStoreCache.find(BlockPair); It != HasStoreCache.end())
+  if (auto It = HasConflictCache.find(BlockPair); It != HasConflictCache.end())
     return It->second;
 
-  if (auto It = StoreInstrCache.find(BlockPair); It != StoreInstrCache.end())
+  if (auto It = ConflictInstrCache.find(BlockPair);
+      It != ConflictInstrCache.end())
     return llvm::any_of(It->second, [&](MachineInstr *I) {
       bool MayAlias = I->mayAlias(AA, MI, false);
       LLVM_DEBUG(if (MayAlias) dbgs() << " *** Alias conflict with ";
                  I->print(dbgs(), true, false, false, false));
-      return MayAlias;
+      bool SideEffectHazard =
+          MI.hasUnmodeledSideEffects() && I->hasUnmodeledSideEffects();
+      LLVM_DEBUG(if (MayAlias) dbgs() << " *** Side effect hazard with ";
+                 I->print(dbgs(), true, false, false, false));
+      return SideEffectHazard || MayAlias;
     });
 
   unsigned int MaxBasicBlockSize = 2000;
   unsigned int MaxPaths = 20;
   unsigned int MaxPathLength = 20;
-  bool SawStore = false;
-  bool HasAliasedStore = false;
+  bool SawPotentialConflict = false;
+  bool HasConflict = false;
   DenseSet<MachineBasicBlock *> HandledBlocks;
 
   SmallVector<SmallVector<MachineBasicBlock *, 8>, 8> AllPaths =
@@ -418,7 +411,7 @@ bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
 
   // If there are too many paths, treat conservatively to save compile time.
   if (AllPaths.size() > MaxPaths) {
-    HasStoreCache[BlockPair] = true;
+    HasConflictCache[BlockPair] = true;
     return true;
   }
 
@@ -426,13 +419,13 @@ bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
   for (auto Path : AllPaths) {
     // If any given path is too long, save compiling time.
     if (Path.size() > MaxPathLength) {
-      HasStoreCache[BlockPair] = true;
+      HasConflictCache[BlockPair] = true;
       return true;
     }
     for (auto BB : Path) {
       // We insert the instruction at the start of block To, so no need to
-      // worry about stores inside To. Store in block From should be already
-      // considered when just enter function sinkInstruction.
+      // worry about conflicts inside To. Conflicts in block From should be
+      // already considered when just enter function sinkInstruction.
       if (BB == To || BB == From)
         continue;
 
@@ -444,37 +437,36 @@ bool AMDGPUBundleIdxLdSt::hasStoreBetween(MachineBasicBlock *From,
 
       // If this BB is too big stop searching to save compiling time.
       if (BB->sizeWithoutDebugLargerThan(MaxBasicBlockSize)) {
-        HasStoreCache[BlockPair] = true;
+        HasConflictCache[BlockPair] = true;
         return true;
       }
 
       for (MachineInstr &I : *BB) {
-        if (I.isCall() || I.hasOrderedMemoryRef() ||
-            isLanesharedConflict(MI, I)) {
-          HasStoreCache[BlockPair] = true;
+        if (I.isCall() || I.hasOrderedMemoryRef()) {
+          HasConflictCache[BlockPair] = true;
           return true;
         }
 
-        if (I.mayStore()) {
-          SawStore = true;
+        if (I.mayStore() || I.hasUnmodeledSideEffects()) {
+          SawPotentialConflict = true;
           // We still have chance to sink MI if all stores between are not
-          // aliased to MI.
-          // Cache all store instructions, so that we don't need to go through
+          // aliased to MI, and neither have side effects.
+          // Cache all conflicts, so that we don't need to go through
           // all From reachable blocks for next load instruction.
-          if (I.mayAlias(AA, MI, false)) {
-            LLVM_DEBUG(dbgs() << " *** Alias conflict with ";
+          if (sideEffectConflict(MI, I) || I.mayAlias(AA, MI, false)) {
+            LLVM_DEBUG(dbgs() << " *** Conflict with ";
                        I.print(dbgs(), true, false, false, false));
-            HasAliasedStore = true;
+            HasConflict = true;
           }
-          StoreInstrCache[BlockPair].push_back(&I);
+          ConflictInstrCache[BlockPair].push_back(&I);
         }
       }
     }
   }
-  // If there is no store at all, cache the result.
-  if (!SawStore)
-    HasStoreCache[BlockPair] = false;
-  return HasAliasedStore;
+  // If there is no conflict at all, cache the result.
+  if (!SawPotentialConflict)
+    HasConflictCache[BlockPair] = false;
+  return HasConflict;
 }
 
 bool AMDGPUBundleIdxLdSt::sinkInstruction(MachineInstr &MI, bool &SawStore) {
@@ -549,31 +541,29 @@ bool AMDGPUBundleIdxLdSt::sinkInstruction(MachineInstr &MI, bool &SawStore) {
 
 bool AMDGPUBundleIdxLdSt::sinkLoadsAndCoreMIs(MachineFunction &MF) {
   bool MadeChange = false;
-  bool SawStore = false;
+  bool IsConflict = false;
   for (auto &MBB : ReversePostOrderTraversal<MachineFunction *>(&MF)) {
 
     // Walk the basic block bottom-up.
-    MachineBasicBlock::iterator I = MBB->end();
-    --I;
     bool ProcessedBegin = false;
-    SmallVector<MachineInstr *, 8> Stores;
+    SmallVector<MachineInstr *, 8> Conflicts;
     for (auto &I : make_early_inc_range(llvm::reverse(*MBB))) {
-      MachineInstr &MI = I; // The instruction to sink.
+      MachineInstr &MI = I; // MI is the instruction to sink.
 
-      // Check if MI aliases with any of the previously seen stores in
+      // Check if MI conflicts with any of the previously seen instructions in
       // this block
-      SawStore = false;
-      for (auto Store : Stores)
-        if (MI.mayAlias(AA, *Store, false))
-          SawStore = true;
+      IsConflict = false;
+      for (auto C : Conflicts)
+        if (MI.mayAlias(AA, *C, false) || sideEffectConflict(MI, I))
+          IsConflict = true;
 
-      if (MI.mayStore())
-        Stores.push_back(&MI);
+      if (MI.mayStore() || sideEffectConflict(MI, I))
+        Conflicts.push_back(&MI);
 
       LLVM_DEBUG(dbgs() << "BB." << MBB->getNumber() << " :: ";
                  MI.print(dbgs()));
 
-      if (sinkInstruction(MI, SawStore))
+      if (sinkInstruction(MI, IsConflict))
         MadeChange = true;
     }
   }
