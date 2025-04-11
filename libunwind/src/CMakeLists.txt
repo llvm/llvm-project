@@ -160,9 +160,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_shared_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_shared_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_shared_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_shared_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -175,7 +176,7 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
 endif()
 
 add_library(unwind_shared SHARED)
-target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+target_link_libraries(unwind_shared PUBLIC unwind_shared_objects runtimes-libc-shared)
 set_target_properties(unwind_shared
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
@@ -201,9 +202,10 @@ if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
 else()
   target_compile_options(unwind_static_objects PRIVATE -fno-rtti)
 endif()
-target_link_libraries(unwind_static_objects PRIVATE unwind-headers ${LIBUNWIND_LIBRARIES})
 target_compile_options(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_COMPILE_FLAGS}")
-target_link_libraries(unwind_static_objects PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}")
+target_link_libraries(unwind_static_objects
+  PUBLIC "${LIBUNWIND_ADDITIONAL_LIBRARIES}"
+  PRIVATE unwind-headers runtimes-libc-headers ${LIBUNWIND_LIBRARIES})
 set_target_properties(unwind_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -222,7 +224,7 @@ if(LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
 add_library(unwind_static STATIC)
-target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+target_link_libraries(unwind_static PUBLIC unwind_static_objects runtimes-libc-static)
 set_target_properties(unwind_static
   PROPERTIES
     EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
