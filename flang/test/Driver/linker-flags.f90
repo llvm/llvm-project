@@ -44,7 +44,7 @@
 ! SOLARIS-F128NONE-NOT: flang_rt.quadmath
 ! UNIX-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
 ! SOLARIS-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "-z" "ignore" "-lquadmath" "-z" "record"
-! UNIX-SAME: "-lflang_rt.runtime" "-lm" 
+! UNIX-SAME: "-lflang_rt.runtime" "-lm"
 ! COMPILER-RT: "{{.*}}{{\\|/}}libclang_rt.builtins.a"
 ! UNIX-STATIC-FLANGRT:   "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
@@ -53,7 +53,7 @@
 ! BSD-F128NONE-NOT: flang_rt.quadmath
 ! BSD-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
 ! BSD-SAME: -lflang_rt.runtime
-! BSD-SAME: "-lexecinfo"
+! BSD-SAME: -lexecinfo
 ! BSD-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
@@ -67,7 +67,7 @@
 ! HAIKU-SAME: "[[object_file]]"
 ! HAIKU-F128NONE-NOT: libflang_rt.quadmath
 ! HAIKU-F128LIBQUADMATH-SAME: "-lflang_rt.quadmath" "--as-needed" "-lquadmath" "--no-as-needed"
-! HAIKU-SAME: -lflang_rt.runtime
+! HAIKU-SAME: "-lflang_rt.runtime"
 ! HAIKU-STATIC-FLANGRT: "{{.*}}{{\\|/}}libflang_rt.runtime.a"
 
 ! MINGW-LABEL:  "{{.*}}ld{{(\.exe)?}}"
