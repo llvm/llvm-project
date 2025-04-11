@@ -9562,49 +9562,50 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
   if (NumUniqueScalarValues == VL.size() &&
       (VectorizeNonPowerOf2 || IsFullVectors)) {
     ReuseShuffleIndices.clear();
-  } else {
-    // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
-    if ((UserTreeIdx.UserTE &&
-         UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(TTI)) ||
-        !hasFullVectorsOrPowerOf2(TTI, getValueType(VL.front()), VL.size())) {
-      LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
-                           "for nodes with padding.\n");
-      return false;
-    }
-    LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
-    if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
-        (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
-           return isa<UndefValue>(V) || !isConstant(V);
-         }))) {
-      if (DoNotFail && UniquePositions.size() > 1 &&
-          NumUniqueScalarValues > 1 && S.getMainOp()->isSafeToRemove() &&
-          all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
-        // Find the number of elements, which forms full vectors.
-        unsigned PWSz = getFullVectorNumberOfElements(
-            TTI, UniqueValues.front()->getType(), UniqueValues.size());
-        PWSz = std::min<unsigned>(PWSz, VL.size());
-        if (PWSz == VL.size()) {
-          ReuseShuffleIndices.clear();
-        } else {
-          NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
-          NonUniqueValueVL.append(
-              PWSz - UniqueValues.size(),
-              PoisonValue::get(UniqueValues.front()->getType()));
-          // Check that extended with poisons operations are still valid for
-          // vectorization (div/rem are not allowed).
-          if (!getSameOpcode(NonUniqueValueVL, TLI).valid()) {
-            LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-            return false;
-          }
-          VL = NonUniqueValueVL;
-        }
-        return true;
-      }
-      LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
-      return false;
-    }
-    VL = UniqueValues;
+    return true;
   }
+
+  // FIXME: Reshuffing scalars is not supported yet for non-power-of-2 ops.
+  if ((UserTreeIdx.UserTE &&
+       UserTreeIdx.UserTE->hasNonWholeRegisterOrNonPowerOf2Vec(TTI)) ||
+      !hasFullVectorsOrPowerOf2(TTI, getValueType(VL.front()), VL.size())) {
+    LLVM_DEBUG(dbgs() << "SLP: Reshuffling scalars not yet supported "
+                         "for nodes with padding.\n");
+    return false;
+  }
+  LLVM_DEBUG(dbgs() << "SLP: Shuffle for reused scalars.\n");
+  if (NumUniqueScalarValues <= 1 || !IsFullVectors ||
+      (UniquePositions.size() == 1 && all_of(UniqueValues, [](Value *V) {
+         return isa<UndefValue>(V) || !isConstant(V);
+       }))) {
+    if (DoNotFail && UniquePositions.size() > 1 && NumUniqueScalarValues > 1 &&
+        S.getMainOp()->isSafeToRemove() &&
+        all_of(UniqueValues, IsaPred<Instruction, PoisonValue>)) {
+      // Find the number of elements, which forms full vectors.
+      unsigned PWSz = getFullVectorNumberOfElements(
+          TTI, UniqueValues.front()->getType(), UniqueValues.size());
+      PWSz = std::min<unsigned>(PWSz, VL.size());
+      if (PWSz == VL.size()) {
+        ReuseShuffleIndices.clear();
+      } else {
+        NonUniqueValueVL.assign(UniqueValues.begin(), UniqueValues.end());
+        NonUniqueValueVL.append(
+            PWSz - UniqueValues.size(),
+            PoisonValue::get(UniqueValues.front()->getType()));
+        // Check that extended with poisons operations are still valid for
+        // vectorization (div/rem are not allowed).
+        if (!getSameOpcode(NonUniqueValueVL, TLI).valid()) {
+          LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+          return false;
+        }
+        VL = NonUniqueValueVL;
+      }
+      return true;
+    }
+    LLVM_DEBUG(dbgs() << "SLP: Scalar used twice in bundle.\n");
+    return false;
+  }
+  VL = UniqueValues;
   return true;
 }
 
