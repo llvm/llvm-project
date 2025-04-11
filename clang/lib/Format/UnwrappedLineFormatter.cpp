@@ -468,13 +468,10 @@ private:
       switch (PreviousLine->First->Tok.getKind()) {
       case tok::at:
         // Don't merge block with left brace wrapped after ObjC special blocks.
-        if (PreviousLine->First->Next) {
-          tok::ObjCKeywordKind kwId =
-              PreviousLine->First->Next->Tok.getObjCKeywordID();
-          if (kwId == tok::objc_autoreleasepool ||
-              kwId == tok::objc_synchronized) {
-            return 0;
-          }
+        if (PreviousLine->First->Next &&
+            PreviousLine->First->Next->isOneOf(tok::objc_autoreleasepool,
+                                               tok::objc_synchronized)) {
+          return 0;
         }
         break;
 

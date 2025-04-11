@@ -38,11 +38,22 @@ struct MlirTransformOptCLOptions {
       cl::desc("Allow operations coming from an unregistered dialect"),
       cl::init(false)};
 
-  cl::opt<bool> verifyDiagnostics{
-      "verify-diagnostics",
-      cl::desc("Check that emitted diagnostics match expected-* lines "
-               "on the corresponding line"),
-      cl::init(false)};
+  cl::opt<mlir::SourceMgrDiagnosticVerifierHandler::Level> verifyDiagnostics{
+      "verify-diagnostics", llvm::cl::ValueOptional,
+      cl::desc("Check that emitted diagnostics match expected-* lines on the "
+               "corresponding line"),
+      cl::values(
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "all",
+              "Check all diagnostics (expected, unexpected, near-misses)"),
+          // Implicit value: when passed with no arguments, e.g.
+          // `--verify-diagnostics` or `--verify-diagnostics=`.
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::All, "",
+              "Check all diagnostics (expected, unexpected, near-misses)"),
+          clEnumValN(
+              mlir::SourceMgrDiagnosticVerifierHandler::Level::OnlyExpected,
+              "only-expected", "Check only expected diagnostics"))};
 
   cl::opt<std::string> payloadFilename{cl::Positional, cl::desc("<input file>"),
                                        cl::init("-")};
@@ -102,12 +113,17 @@ public:
 
   /// Constructs the diagnostic handler of the specified kind of the given
   /// source manager and context.
-  DiagnosticHandlerWrapper(Kind kind, llvm::SourceMgr &mgr,
-                           mlir::MLIRContext *context) {
-    if (kind == Kind::EmitDiagnostics)
+  DiagnosticHandlerWrapper(
+      Kind kind, llvm::SourceMgr &mgr, mlir::MLIRContext *context,
+      std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level> level =
+          {}) {
+    if (kind == Kind::EmitDiagnostics) {
       handler = new mlir::SourceMgrDiagnosticHandler(mgr, context);
-    else
-      handler = new mlir::SourceMgrDiagnosticVerifierHandler(mgr, context);
+    } else {
+      assert(level.has_value() && "expected level");
+      handler =
+          new mlir::SourceMgrDiagnosticVerifierHandler(mgr, context, *level);
+    }
   }
 
   /// This object is non-copyable but movable.
@@ -150,7 +166,9 @@ class TransformSourceMgr {
 public:
   /// Constructs the source manager indicating whether diagnostic messages will
   /// be verified later on.
-  explicit TransformSourceMgr(bool verifyDiagnostics)
+  explicit TransformSourceMgr(
+      std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level>
+          verifyDiagnostics)
       : verifyDiagnostics(verifyDiagnostics) {}
 
   /// Deconstructs the source manager. Note that `checkResults` must have been
@@ -179,7 +197,8 @@ public:
     // verification needs to happen and store it.
     if (verifyDiagnostics) {
       diagHandlers.emplace_back(
-          DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context);
+          DiagnosticHandlerWrapper::Kind::VerifyDiagnostics, mgr, &context,
+          verifyDiagnostics);
     } else {
       diagHandlers.emplace_back(DiagnosticHandlerWrapper::Kind::EmitDiagnostics,
                                 mgr, &context);
@@ -204,7 +223,8 @@ public:
 
 private:
   /// Indicates whether diagnostic message verification is requested.
-  const bool verifyDiagnostics;
+  const std::optional<mlir::SourceMgrDiagnosticVerifierHandler::Level>
+      verifyDiagnostics;
 
   /// Indicates that diagnostic message verification has taken place, and the
   /// deconstruction is therefore safe.
@@ -248,7 +268,9 @@ static llvm::LogicalResult processPayloadBuffer(
   context.allowUnregisteredDialects(clOptions->allowUnregisteredDialects);
   mlir::ParserConfig config(&context);
   TransformSourceMgr sourceMgr(
-      /*verifyDiagnostics=*/clOptions->verifyDiagnostics);
+      /*verifyDiagnostics=*/clOptions->verifyDiagnostics.getNumOccurrences()
+          ? std::optional{clOptions->verifyDiagnostics.getValue()}
+          : std::nullopt);
 
   // Parse the input buffer that will be used as transform payload.
   mlir::OwningOpRef<mlir::Operation *> payloadRoot =
