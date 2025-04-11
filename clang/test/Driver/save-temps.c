@@ -90,3 +90,19 @@
 // CHECK-SAVE-TEMPS-CMSE: -cc1as
 // CHECK-SAVE-TEMPS-CMSE: +8msecext
 // CHECK-SAVE-TEMPS-CMSE-NOT: '+cmse' is not a recognized feature for this target (ignoring feature)
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -Werror -pedantic -save-temps %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-GLM-000
+// CHECK-SAVE-TEMPS-GLM-000: "-o" "save-temps.i"
+// CHECK-SAVE-TEMPS-GLM-000: "-pedantic" "-Wno-gnu-line-marker"{{.*}} "-x" "cpp-output" "save-temps.i"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -Werror -Weverything -save-temps %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-GLM-001
+// CHECK-SAVE-TEMPS-GLM-001: "-o" "save-temps.i"
+// CHECK-SAVE-TEMPS-GLM-001: "-Weverything" "-Wno-gnu-line-marker"{{.*}} "-x" "cpp-output" "save-temps.i"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -Werror -Weverything -Wgnu-line-marker -save-temps %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-GLM-002
+// RUN: %clang -target x86_64-unknown-linux-gnu -Werror -Weverything -save-temps -x cpp-output %s -### 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=CHECK-SAVE-TEMPS-GLM-002
+// CHECK-SAVE-TEMPS-GLM-002-NOT: "-Wno-gnu-line-marker"
