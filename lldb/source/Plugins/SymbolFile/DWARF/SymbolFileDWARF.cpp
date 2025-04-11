@@ -32,6 +32,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/SymbolLocator/Debuginfod/SymbolLocatorDebuginfod.h"
 
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -4250,13 +4251,18 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_objfile_sp->GetFileSpec();
     FileSpec dwp_filespec;
+    StatsDuration duration;
+    std::string locator_name;
     for (const auto &symfile : symfiles.files()) {
       module_spec.GetSymbolFileSpec() =
           FileSpec(symfile.GetPath() + ".dwp", symfile.GetPathStyle());
       LLDB_LOG(log, "Searching for DWP using: \"{0}\"",
                module_spec.GetSymbolFileSpec());
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      {
+        ElapsedTime elapsed(duration);
+        dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+            module_spec, search_paths, &locator_name);
+      }
       if (FileSystem::Instance().Exists(dwp_filespec)) {
         break;
       }
@@ -4267,8 +4273,12 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
       // find the correct DWP file, as the Debuginfod plugin uses *only* this
       // data to correctly match the DWP file with the binary.
       module_spec.GetUUID() = m_objfile_sp->GetUUID();
-      dwp_filespec =
-          PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+      duration.reset();
+      {
+        ElapsedTime elapsed(duration);
+        dwp_filespec = PluginManager::LocateExecutableSymbolFile(
+            module_spec, search_paths, &locator_name);
+      }
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
@@ -4279,6 +4289,8 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
           FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
           dwp_file_data_offset);
       if (dwp_obj_file) {
+        if (locator_name == SymbolLocatorDebuginfod::GetPluginNameStatic())
+          dwp_obj_file->GetDownloadTime() += duration;
         m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
             *this, dwp_obj_file, DIERef::k_file_index_mask);
       }
@@ -4347,6 +4359,14 @@ LanguageType SymbolFileDWARF::GetLanguageFamily(DWARFUnit &unit) {
   if (llvm::dwarf::isCPlusPlus(lang))
     lang = DW_LANG_C_plus_plus;
   return LanguageTypeFromDWARF(lang);
+}
+
+StatsDuration::Duration SymbolFileDWARF::GetSymbolDownloadTime() {
+  StatsDuration total_time;
+  total_time += GetObjectFile()->GetDownloadTime();
+  if (m_dwp_symfile)
+    total_time += m_dwp_symfile->GetObjectFile()->GetDownloadTime();
+  return total_time;
 }
 
 StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {

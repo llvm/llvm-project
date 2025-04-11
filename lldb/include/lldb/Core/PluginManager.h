@@ -377,11 +377,14 @@ public:
   static SymbolLocatorCreateInstance
   GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
 
-  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+  static ModuleSpec
+  LocateExecutableObjectFile(const ModuleSpec &module_spec,
+                             std::string *locator_name = nullptr);
 
   static FileSpec
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
+                             const FileSpecList &default_search_paths,
+                             std::string *locator_name = nullptr);
 
   static bool DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error,

@@ -13,6 +13,7 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/Symtab.h"
 #include "lldb/Symbol/UnwindTable.h"
+#include "lldb/Target/Statistics.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -589,6 +590,8 @@ public:
   /// this routine to set eTypeDebugInfo when loading debug link files.
   virtual void SetType(Type type) { m_type = type; }
 
+  virtual StatsDuration &GetDownloadTime() { return m_download_time; }
+
   /// The object file should be able to calculate the strata of the object
   /// file.
   ///
@@ -752,6 +755,7 @@ public:
 
 protected:
   // Member variables.
+  StatsDuration m_download_time; ///< Time to download the object file
   FileSpec m_file;
   Type m_type;
   Strata m_strata;

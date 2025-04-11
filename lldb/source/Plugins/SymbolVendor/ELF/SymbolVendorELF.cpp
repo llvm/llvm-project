@@ -21,6 +21,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
+#include "Plugins/SymbolLocator/Debuginfod/SymbolLocatorDebuginfod.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -103,14 +105,25 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   module_spec.GetSymbolFileSpec() = fspec;
   module_spec.GetUUID() = uuid;
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
-  FileSpec dsym_fspec =
-      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
+  StatsDuration duration;
+  FileSpec dsym_fspec;
+  std::string locator_name;
+  {
+    ElapsedTime elapsed(duration);
+    dsym_fspec = PluginManager::LocateExecutableSymbolFile(
+        module_spec, search_paths, &locator_name);
+  }
   if (!dsym_fspec || IsDwpSymbolFile(module_sp, dsym_fspec)) {
     // If we have a stripped binary or if we have a DWP file, SymbolLocator
     // plugins may be able to give us an unstripped binary or an
     // 'only-keep-debug' stripped file.
-    ModuleSpec unstripped_spec =
-        PluginManager::LocateExecutableObjectFile(module_spec);
+    ModuleSpec unstripped_spec;
+    duration.reset();
+    {
+      ElapsedTime elapsed(duration);
+      unstripped_spec =
+          PluginManager::LocateExecutableObjectFile(module_spec, &locator_name);
+    }
     if (!unstripped_spec)
       return nullptr;
     // The default SymbolLocator plugin returns the original binary if no other
@@ -127,7 +140,8 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
       dsym_file_data_sp, dsym_file_data_offset);
   if (!dsym_objfile_sp)
     return nullptr;
-
+  if (locator_name == SymbolLocatorDebuginfod::GetPluginNameStatic())
+    dsym_objfile_sp->GetDownloadTime() += duration;
   // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
   // be able to figure this out consistently as the symbol file may not
   // have stripped the code sections, etc.

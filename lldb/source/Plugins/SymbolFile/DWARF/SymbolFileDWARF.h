@@ -309,6 +309,9 @@ public:
   StatsDuration::Duration GetDebugInfoParseTime() override {
     return m_parse_time;
   }
+
+  StatsDuration::Duration GetSymbolDownloadTime() override;
+
   StatsDuration::Duration GetDebugInfoIndexTime() override;
 
   StatsDuration &GetDebugInfoParseTimeRef() { return m_parse_time; }
