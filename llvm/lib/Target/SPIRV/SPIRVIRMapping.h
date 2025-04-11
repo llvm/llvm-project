@@ -66,6 +66,19 @@ enum SpecialTypeKind {
   STK_Value,
   STK_MachineInstr,
   STK_VkBuffer,
+  STK_AvcVmeImage,
+  STK_AvcMcePayload,
+  STK_AvcImePayload,
+  STK_AvcRefPayload,
+  STK_AvcSicPayload,
+  STK_AvcMceResult,
+  STK_AvcImeResult,
+  STK_AvcImeResultSingleReferenceStreamout,
+  STK_AvcImeResultDualReferenceStreamout,
+  STK_AvcImeSingleReferenceStreamin,
+  STK_AvcImeDualReferenceStreamin,
+  STK_AvcRefResult,
+  STK_AvcSicResult,
   STK_Last = -1
 };
 
@@ -148,6 +161,10 @@ inline IRHandle irhandle_vkbuffer(const Type *ElementType,
                                   bool IsWriteable) {
   return std::make_tuple(ElementType, (SC << 1) | IsWriteable,
                          SpecialTypeKind::STK_VkBuffer);
+}
+
+inline IRHandle irhandle_avc(SpecialTypeKind STK) {
+  return std::make_tuple(nullptr, 0U, STK);
 }
 
 inline IRHandle handle(const Type *Ty) {

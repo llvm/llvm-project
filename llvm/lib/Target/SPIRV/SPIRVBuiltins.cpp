@@ -97,6 +97,25 @@ struct IntelSubgroupsBuiltin {
 #define GET_IntelSubgroupsBuiltins_DECL
 #define GET_IntelSubgroupsBuiltins_IMPL
 
+struct IntelSubgroupAvcBuiltin {
+  StringRef Name;
+  uint32_t Opcode;
+  bool IsRef;
+  bool IsSic;
+  bool IsEvaluate;
+};
+
+#define GET_IntelSubgroupAvcBuiltins_DECL
+#define GET_IntelSubgroupAvcBuiltins_IMPL
+
+struct IntelSubgroupAvcWrapperBuiltin {
+  StringRef Name;
+  uint32_t Opcode;
+};
+
+#define GET_IntelSubgroupAvcWrapperBuiltins_DECL
+#define GET_IntelSubgroupAvcWrapperBuiltins_IMPL
+
 struct AtomicFloatingBuiltin {
   StringRef Name;
   uint32_t Opcode;
@@ -697,7 +716,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2205,6 +2225,293 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
                             IsSet ? TypeReg : Register(0), ImmArgs);
 }
 
+static unsigned selectAvcMceResultConvertInst(SPIRV::AvcOpKind OpKind) {
+
+  if (OpKind == SPIRV::AvcOpKind::IME) {
+    return SPIRV::OpSubgroupAvcImeConvertToMceResultINTEL;
+  }
+  if (OpKind == SPIRV::AvcOpKind::REF) {
+    return SPIRV::OpSubgroupAvcRefConvertToMceResultINTEL;
+  }
+  return SPIRV::OpSubgroupAvcSicConvertToMceResultINTEL;
+}
+
+static std::pair<unsigned, unsigned>
+getMceConversionInstructions(SPIRV::AvcOpKind OpKind) {
+  using namespace SPIRV;
+
+  switch (OpKind) {
+  case AvcOpKind::IME:
+    return {SPIRV::OpSubgroupAvcImeConvertToMcePayloadINTEL,
+            SPIRV::OpSubgroupAvcMceConvertToImePayloadINTEL};
+  case AvcOpKind::REF:
+    return {SPIRV::OpSubgroupAvcRefConvertToMcePayloadINTEL,
+            SPIRV::OpSubgroupAvcMceConvertToRefPayloadINTEL};
+  default:
+    return {SPIRV::OpSubgroupAvcSicConvertToMcePayloadINTEL,
+            SPIRV::OpSubgroupAvcMceConvertToSicPayloadINTEL};
+  }
+}
+
+static bool generateAvcImeGetStreamout(const SPIRV::IncomingCall *Call,
+                                       StringRef &DemangledName,
+                                       unsigned FirstArgTy,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  MachineInstrBuilder MIB;
+  if (DemangledName.contains_insensitive("major_shape_motion_vectors")) {
+    MIB = MIRBuilder.buildInstr(
+        FirstArgTy == SPIRV::OpTypeAvcImeResultSingleReferenceStreamoutINTEL
+            ? SPIRV::
+                  OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeMotionVectorsINTEL
+            : SPIRV::
+                  OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeMotionVectorsINTEL);
+  } else if (DemangledName.contains_insensitive("major_shape_distortion")) {
+    MIB = MIRBuilder.buildInstr(
+        FirstArgTy == SPIRV::OpTypeAvcImeResultSingleReferenceStreamoutINTEL
+            ? SPIRV::
+                  OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeDistortionsINTEL
+            : SPIRV::
+                  OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeDistortionsINTEL);
+  } else if (DemangledName.contains_insensitive("major_shape_reference_ids")) {
+    MIB = MIRBuilder.buildInstr(
+        FirstArgTy == SPIRV::OpTypeAvcImeResultSingleReferenceStreamoutINTEL
+            ? SPIRV::
+                  OpSubgroupAvcImeGetStreamoutSingleReferenceMajorShapeReferenceIdsINTEL
+            : SPIRV::
+                  OpSubgroupAvcImeGetStreamoutDualReferenceMajorShapeReferenceIdsINTEL);
+  }
+  MIB.addDef(Call->ReturnRegister).addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (auto Reg : Call->Arguments)
+    MIB.addUse(Reg);
+
+  return MIB;
+}
+
+// generate instruction for the evaluate type operation for the extension
+// SPV_INTEL_device_side_avc_motion_estimation
+static bool generateAvcEvaluateInstr(MachineIRBuilder &MIRBuilder,
+                                     unsigned Opcode,
+                                     const SPIRV::IncomingCall *Call,
+                                     SPIRVGlobalRegistry *GR) {
+  // evaluate opertations are handled separately
+  auto *MRI = MIRBuilder.getMRI();
+  SPIRVType *Type = GR->getOrCreateOpTypeVmeImageINTEL(
+      MIRBuilder); // there may be a need to reset the insertion point
+  Register SamplerReg;
+  SmallVector<Register, 7> ArgumentsVec;
+  Register Temp = MRI->createIncompleteVirtualRegister();
+
+  for (auto Arg : Call->Arguments) {
+    if (GR->getSPIRVTypeForVReg(Arg)->getOpcode() == SPIRV::OpTypeImage) {
+      Register VmeReg = createVirtualRegister(Type, GR, MRI, MRI->getMF());
+      GR->assignSPIRVTypeToVReg(Type, VmeReg, MRI->getMF());
+      // create OpVmeImageIntel with a temporary reg for the sampler which will
+      // then be replaced by the actual sampler
+      MIRBuilder.buildInstr(SPIRV::OpVmeImageINTEL)
+          .addDef(VmeReg)
+          .addUse(GR->getSPIRVTypeID(Type))
+          .addUse(Arg)
+          .addUse(Temp);
+      //      MIB.addUse(VmeReg);
+      ArgumentsVec.push_back(VmeReg);
+    } else if (GR->getSPIRVTypeForVReg(Arg)->getOpcode() ==
+               SPIRV::OpTypeSampler) {
+      // sampler will not be added as the argument to the operation
+      SamplerReg = Arg;
+
+    } else {
+      ArgumentsVec.push_back(Arg);
+      //      MIB.addUse(Arg);
+    }
+  }
+  MRI->replaceRegWith(Temp, SamplerReg);
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+
+  for (Register Arg : ArgumentsVec) {
+    MIB.addUse(Arg);
+  }
+
+  return MIB;
+}
+
+static bool generateAvcSicConfigureIpeInstr(const SPIRV::IncomingCall *Call,
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+
+  unsigned NumArgs = Call->Arguments.size();
+  auto MIB = MIRBuilder.buildInstr(
+      NumArgs == 8 ? SPIRV::OpSubgroupAvcSicConfigureIpeLumaINTEL
+                   : SPIRV::OpSubgroupAvcSicConfigureIpeLumaChromaINTEL);
+  MIB.addDef(Call->ReturnRegister).addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (auto Reg : Call->Arguments)
+    MIB.addUse(Reg);
+  return MIB;
+}
+
+static inline SPIRV::AvcOpKind getAvcOpKind(const StringRef &DemangledName) {
+  if (DemangledName.contains_insensitive("_ime_"))
+    return SPIRV::AvcOpKind::IME;
+  if (DemangledName.contains_insensitive("_ref_"))
+    return SPIRV::AvcOpKind::REF;
+  if (DemangledName.contains_insensitive("_sic_"))
+    return SPIRV::AvcOpKind::SIC;
+  return SPIRV::AvcOpKind::UNKNOWN;
+}
+
+static SPIRVType *getSubgroupAVCIntelTyKind(SPIRVType *SpvTy,
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+  unsigned Opc = SpvTy->getOpcode();
+  if (Opc == SPIRV::OpTypeAvcImePayloadINTEL ||
+      Opc == SPIRV::OpTypeAvcRefPayloadINTEL ||
+      Opc == SPIRV::OpTypeAvcSicPayloadINTEL)
+    return GR->getOrCreateOpTypeAvcMcePayloadINTEL(MIRBuilder);
+  return GR->getOrCreateOpTypeAvcMceResultINTEL(MIRBuilder);
+}
+
+// generates instruction for builtin where the last argument is payload
+static bool generateAvcPayloadWrapperInst(const SPIRV::IncomingCall *Call,
+                                          SPIRVGlobalRegistry *GR,
+                                          MachineIRBuilder &MIRBuilder,
+                                          SPIRV::AvcOpKind OpKind,
+                                          unsigned AvcOpcode) {
+  MachineInstrBuilder MIB;
+  auto *MRI = MIRBuilder.getMRI();
+  const SPIRVType *MceTyKind =
+      GR->getOrCreateOpTypeAvcMcePayloadINTEL(MIRBuilder);
+  Register AvcPayload = createVirtualRegister(MceTyKind, GR, MRI, MRI->getMF());
+  Register LastArg = Call->Arguments[Call->Arguments.size() - 1];
+
+  auto [ToMceConvertInst, FromMceConvertInst] =
+      getMceConversionInstructions(OpKind);
+
+  MIRBuilder.buildInstr(ToMceConvertInst)
+      .addDef(AvcPayload)
+      .addUse(GR->getSPIRVTypeID(MceTyKind))
+      .addUse(LastArg);
+
+  auto TempReg = createVirtualRegister(MceTyKind, GR, MRI, MRI->getMF());
+
+  MIB = MIRBuilder.buildInstr(AvcOpcode).addDef(TempReg).addUse(
+      GR->getSPIRVTypeID(MceTyKind));
+
+  for (unsigned Idx = 0; Idx < Call->Arguments.size() - 1; Idx++)
+    MIB.addUse(Call->Arguments[Idx]);
+
+  MIB.addUse(AvcPayload);
+
+  MIRBuilder.buildInstr(FromMceConvertInst)
+      .addDef(Call->ReturnRegister)
+      .addUse(GR->getSPIRVTypeID(Call->ReturnType))
+      .addUse(TempReg);
+
+  return MIB;
+}
+
+// generates instruction for Avc Wrapper instructions where last argument is
+// not payload
+static bool generateAvcResultWrapperInst(const SPIRV::IncomingCall *Call,
+                                         SPIRV::AvcOpKind OpKind,
+                                         MachineIRBuilder &MIRBuilder,
+                                         SPIRVGlobalRegistry *GR,
+                                         unsigned MceOpcode) {
+  MachineInstrBuilder MIB;
+  Register LastArg = Call->Arguments[Call->Arguments.size() - 1];
+  SPIRVType *MceTyKind = GR->getOrCreateOpTypeAvcMceResultINTEL(MIRBuilder);
+  auto *MRI = MIRBuilder.getMRI();
+
+  unsigned ToMceConvertInst;
+  ToMceConvertInst = selectAvcMceResultConvertInst(OpKind);
+
+  auto AvcConvertReg = createVirtualRegister(MceTyKind, GR, MRI, MRI->getMF());
+  MIRBuilder.buildInstr(ToMceConvertInst)
+      .addDef(AvcConvertReg)
+      .addUse(GR->getSPIRVTypeID(MceTyKind))
+      .addUse(LastArg);
+  MIB = MIRBuilder.buildInstr(MceOpcode)
+            .addDef(Call->ReturnRegister)
+            .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+  for (unsigned Idx = 0; Idx < Call->Arguments.size() - 1; Idx++)
+    MIB.addUse(Call->Arguments[Idx]);
+
+  MIB.addUse(AvcConvertReg);
+  ;
+  return MIB;
+}
+
+static bool generateIntelSubgroupAvcWrapper(const SPIRV::IncomingCall *Call,
+                                            MachineIRBuilder &MIRBuilder,
+                                            SPIRVGlobalRegistry *GR) {
+
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  StringRef DemangledName = Builtin->Name;
+  const SPIRV::IntelSubgroupAvcWrapperBuiltin AvcSubgroupWrapper =
+      *SPIRV::lookupIntelSubgroupAvcWrapperBuiltin(Builtin->Name);
+  unsigned Opcode = AvcSubgroupWrapper.Opcode;
+
+  const SPIRV::AvcOpKind OpKind = getAvcOpKind(DemangledName);
+  Register LastArg = Call->Arguments[Call->Arguments.size() - 1];
+  const SPIRVType *MceTyKind = getSubgroupAVCIntelTyKind(
+      GR->getSPIRVTypeForVReg(LastArg), MIRBuilder, GR);
+
+  if (MceTyKind->getOpcode() == SPIRV::OpTypeAvcMcePayloadINTEL) {
+    return generateAvcPayloadWrapperInst(Call, GR, MIRBuilder, OpKind, Opcode);
+  }
+  return generateAvcResultWrapperInst(Call, OpKind, MIRBuilder, GR, Opcode);
+}
+
+static bool generateIntelSubgroupAvc(const SPIRV::IncomingCall *Call,
+                                     MachineIRBuilder &MIRBuilder,
+                                     SPIRVGlobalRegistry *GR) {
+
+  const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
+  StringRef DemangledName = Builtin->Name;
+  const SPIRV::IntelSubgroupAvcBuiltin AvcSubgroup =
+      *SPIRV::lookupIntelSubgroupAvcBuiltin(Builtin->Name);
+  unsigned Opcode = AvcSubgroup.Opcode;
+
+  // sic configure ipe instruction has same demangled name for multiple
+  // instructions
+  if (DemangledName.contains_insensitive("sic_configure_ipe")) {
+    return generateAvcSicConfigureIpeInstr(Call, MIRBuilder, GR);
+  }
+
+  // instructions with ime_get_streamout have the same demangled name for
+  // multiple instructions, which are differentiated based on the arguments
+  if (DemangledName.contains_insensitive("ime_get_streamout")) {
+
+    unsigned FirstArgTy =
+        GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode();
+    return generateAvcImeGetStreamout(Call, DemangledName, FirstArgTy,
+                                      MIRBuilder, GR);
+  }
+
+  if (AvcSubgroup.IsEvaluate) {
+    if (DemangledName.contains_insensitive("multi_reference")) {
+      if (AvcSubgroup.IsSic && Call->Arguments.size() == 5)
+        Opcode =
+            SPIRV::OpSubgroupAvcSicEvaluateWithMultiReferenceInterlacedINTEL;
+      else if (AvcSubgroup.IsRef && Call->Arguments.size() == 5)
+        Opcode =
+            SPIRV::OpSubgroupAvcRefEvaluateWithMultiReferenceInterlacedINTEL;
+    }
+    return generateAvcEvaluateInstr(MIRBuilder, Opcode, Call, GR);
+  }
+
+  auto MIB = MIRBuilder.buildInstr(Opcode)
+                 .addDef(Call->ReturnRegister)
+                 .addUse(GR->getSPIRVTypeID(Call->ReturnType));
+
+  for (auto Reg : Call->Arguments)
+    MIB.addUse(Reg);
+
+  return MIB;
+}
+
 static bool generateSpecConstantInst(const SPIRV::IncomingCall *Call,
                                      MachineIRBuilder &MIRBuilder,
                                      SPIRVGlobalRegistry *GR) {
@@ -2877,6 +3184,10 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
     return generateBindlessImageINTELInst(Call.get(), MIRBuilder, GR);
   case SPIRV::TernaryBitwiseINTEL:
     return generateTernaryBitwiseFunctionINTELInst(Call.get(), MIRBuilder, GR);
+  case SPIRV::IntelSubgroupsAvc:
+    return generateIntelSubgroupAvc(Call.get(), MIRBuilder, GR);
+  case SPIRV::IntelSubgroupsAvcWrapper:
+    return generateIntelSubgroupAvcWrapper(Call.get(), MIRBuilder, GR);
   }
   return false;
 }
@@ -3000,6 +3311,86 @@ static SPIRVType *getSamplerType(MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   // Create or get an existing type from GlobalRegistry.
   return GR->getOrCreateOpTypeSampler(MIRBuilder);
+}
+
+static SPIRVType *getAvcMcePayload(const TargetExtType *ExtensionType,
+                                   MachineIRBuilder &MIRBuilder,
+                                   SPIRVGlobalRegistry *GR) {
+  // Create or get an existing type from GlobalRegistry.
+
+  return GR->getOrCreateOpTypeAvcMcePayloadINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcImePayloadINTEL(const TargetExtType *ExtensionType,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImePayloadINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcRefPayloadINTEL(const TargetExtType *ExtensionType,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcRefPayloadINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcSicPayloadINTEL(const TargetExtType *ExtensionType,
+                                        MachineIRBuilder &MIRBuilder,
+                                        SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcSicPayloadINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcMceResultINTEL(const TargetExtType *ExtensionType,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcMceResultINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcImeResultINTEL(const TargetExtType *ExtensionType,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImeResultINTEL(MIRBuilder);
+}
+
+static SPIRVType *
+getAvcImeResultSingleReferenceStreamoutINTEL(const TargetExtType *ExtensionType,
+                                             MachineIRBuilder &MIRBuilder,
+                                             SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImeResultSingleReferenceStreamoutINTEL(
+      MIRBuilder);
+}
+
+static SPIRVType *
+getAvcImeResultDualReferenceStreamoutINTEL(const TargetExtType *ExtensionType,
+                                           MachineIRBuilder &MIRBuilder,
+                                           SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImeResultDualReferenceStreamoutINTEL(
+      MIRBuilder);
+}
+
+static SPIRVType *
+getAvcImeSingleReferenceStreaminINTEL(const TargetExtType *ExtensionType,
+                                      MachineIRBuilder &MIRBuilder,
+                                      SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImeSingleReferenceStreaminINTEL(MIRBuilder);
+}
+
+static SPIRVType *
+getAvcImeDualReferenceStreaminINTEL(const TargetExtType *ExtensionType,
+                                    MachineIRBuilder &MIRBuilder,
+                                    SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcImeDualReferenceStreaminINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcRefResultINTEL(const TargetExtType *ExtensionType,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcRefResultINTEL(MIRBuilder);
+}
+
+static SPIRVType *getAvcSicResultINTEL(const TargetExtType *ExtensionType,
+                                       MachineIRBuilder &MIRBuilder,
+                                       SPIRVGlobalRegistry *GR) {
+  return GR->getOrCreateOpTypeAvcSicResultINTEL(MIRBuilder);
 }
 
 static SPIRVType *getPipeType(const TargetExtType *ExtensionType,
@@ -3245,6 +3636,46 @@ SPIRVType *lowerBuiltinType(const Type *OpaqueType,
       break;
     case SPIRV::OpTypeCooperativeMatrixKHR:
       TargetType = getCoopMatrType(BuiltinType, MIRBuilder, GR);
+      break;
+    case SPIRV::OpTypeAvcMcePayloadINTEL:
+      TargetType = getAvcMcePayload(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcImePayloadINTEL:
+      TargetType = getAvcImePayloadINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcRefPayloadINTEL:
+      TargetType = getAvcRefPayloadINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcSicPayloadINTEL:
+      TargetType = getAvcSicPayloadINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcMceResultINTEL:
+      TargetType = getAvcMceResultINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcImeResultINTEL:
+      TargetType = getAvcImeResultINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcImeResultSingleReferenceStreamoutINTEL:
+      TargetType = getAvcImeResultSingleReferenceStreamoutINTEL(BuiltinType,
+                                                                MIRBuilder, GR);
+      break;
+    case OpTypeAvcImeResultDualReferenceStreamoutINTEL:
+      TargetType = getAvcImeResultDualReferenceStreamoutINTEL(BuiltinType,
+                                                              MIRBuilder, GR);
+      break;
+    case OpTypeAvcImeSingleReferenceStreaminINTEL:
+      TargetType =
+          getAvcImeSingleReferenceStreaminINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcImeDualReferenceStreaminINTEL:
+      TargetType =
+          getAvcImeDualReferenceStreaminINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcRefResultINTEL:
+      TargetType = getAvcRefResultINTEL(BuiltinType, MIRBuilder, GR);
+      break;
+    case OpTypeAvcSicResultINTEL:
+      TargetType = getAvcSicResultINTEL(BuiltinType, MIRBuilder, GR);
       break;
     default:
       TargetType =

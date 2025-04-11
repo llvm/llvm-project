@@ -94,7 +94,6 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic) {
   if (auto *MSI = dyn_cast<MemSetInst>(Intrinsic))
     if (isa<Constant>(MSI->getValue()) && isa<ConstantInt>(MSI->getLength()))
       return false; // It is handled later using OpCopyMemorySized.
-
   Module *M = Intrinsic->getModule();
   std::string FuncName = lowerLLVMIntrinsicName(Intrinsic);
   if (Intrinsic->isVolatile())
