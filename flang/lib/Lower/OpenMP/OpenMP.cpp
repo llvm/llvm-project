@@ -219,12 +219,18 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
 
   auto bindSingleMapLike = [&converter,
                             &firOpBuilder](const semantics::Symbol &sym,
+                                           const mlir::Value val,
                                            const mlir::BlockArgument &arg) {
     // Clones the `bounds` placing them inside the entry block and returns
     // them.
     auto cloneBound = [&](mlir::Value bound) {
       if (mlir::isMemoryEffectFree(bound.getDefiningOp())) {
-        mlir::Operation *clonedOp = firOpBuilder.clone(*bound.getDefiningOp());
+        mlir::Operation *definingOp = bound.getDefiningOp();
+        mlir::Operation *clonedOp = firOpBuilder.clone(*definingOp);
+        // Todo: Do we need to check for more operation types?
+        // For now, specializing only for fir::UnboxCharOp
+        if (auto unboxCharOp = mlir::dyn_cast<fir::UnboxCharOp>(definingOp))
+          return clonedOp->getResult(1);
         return clonedOp->getResult(0);
       }
       TODO(converter.getCurrentLocation(),
@@ -268,8 +274,54 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
                                             cloneBounds(v.getLBounds())));
           },
           [&](const fir::CharBoxValue &v) {
-            converter.bindSymbol(
-                sym, fir::CharBoxValue(arg, cloneBound(v.getLen())));
+            // In some cases, v.len could reference the input to the
+            // hlfir.declare which is the corresponding v.addr. While this isn't
+            // a big problem by itself, it is desirable to extract this out of
+            // v.addr itself since it's first result will be of type
+            // fir.boxchar<>. For example, consider the following
+            //
+            // func.func private @_QFPrealtest(%arg0: !fir.boxchar<1>)
+            //  %2 = fir.dummy_scope : !fir.dscope
+            //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
+            //         (!fir.ref<!fir.char<1,?>>, index)
+            //  %4:2 = hlfir.declare (%3#0, %3#1, %2):(!fir.ref<!fir.char<1,?>>,
+            //                        index,!fir.dscope) ->
+            //                       (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+
+            // In the case above,
+            // v.addr is
+            //  %4:2 = hlfir.declare (%3#0, %3#1, %2):(!fir.ref<!fir.char<1,?>>,
+            //                        index,!fir.dscope) ->
+            //                       (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+            // v.len is
+            //  %3:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) ->
+            //         (!fir.ref<!fir.char<1,?>>, index)
+
+            // Mapping this to the target will create a use of %arg0 on the
+            // target. Since omp.target is IsolatedFromAbove, %arg0 will have to
+            // be mapped. Presently, OpenMP lowering of target barfs when it has
+            // to map a value that doesnt have a defining op. This can be fixed.
+            // Or we ensure that v.len is fir.unboxchar %4#0 which will
+            // cause %4#1 to be used on the target and consequently be
+            // mapped to the target. As such then, there wont be any use of the
+            // block argument %arg0 on the target.
+
+            mlir::Value len = v.getLen();
+            if (auto declareOp = val.getDefiningOp<hlfir::DeclareOp>()) {
+              mlir::Value base = declareOp.getBase();
+              if (auto boxCharType =
+                      mlir::dyn_cast<fir::BoxCharType>(base.getType())) {
+                mlir::Type lenType = firOpBuilder.getCharacterLengthType();
+                mlir::Type refType =
+                    firOpBuilder.getRefType(boxCharType.getEleTy());
+                mlir::Location loc = converter.getCurrentLocation();
+                auto unboxed = firOpBuilder.create<fir::UnboxCharOp>(
+                    loc, refType, lenType, base);
+                len = unboxed.getResult(1);
+              }
+            }
+            auto charBoxValue = fir::CharBoxValue(arg, cloneBound(len));
+            converter.bindSymbol(sym, charBoxValue);
           },
           [&](const fir::UnboxedValue &v) { converter.bindSymbol(sym, arg); },
           [&](const auto &) {
@@ -281,6 +333,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
 
   auto bindMapLike =
       [&bindSingleMapLike](llvm::ArrayRef<const semantics::Symbol *> syms,
+                           llvm::ArrayRef<mlir::Value> vars,
                            llvm::ArrayRef<mlir::BlockArgument> args) {
         // Structure component symbols don't have bindings, and can only be
         // explicitly mapped individually. If a member is captured implicitly
@@ -289,8 +342,8 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
         llvm::copy_if(syms, std::back_inserter(processedSyms),
                       [](auto *sym) { return !sym->owner().IsDerivedType(); });
 
-        for (auto [sym, arg] : llvm::zip_equal(processedSyms, args))
-          bindSingleMapLike(*sym, arg);
+        for (auto [sym, var, arg] : llvm::zip_equal(processedSyms, vars, args))
+          bindSingleMapLike(*sym, var, arg);
       };
 
   auto bindPrivateLike = [&converter, &firOpBuilder](
@@ -321,17 +374,20 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   // Process in clause name alphabetical order to match block arguments order.
   // Do not bind host_eval variables because they cannot be used inside of the
   // corresponding region, except for very specific cases handled separately.
-  bindMapLike(args.hasDeviceAddr.syms, op.getHasDeviceAddrBlockArgs());
+  bindMapLike(args.hasDeviceAddr.syms, args.hasDeviceAddr.vars,
+              op.getHasDeviceAddrBlockArgs());
   bindPrivateLike(args.inReduction.syms, args.inReduction.vars,
                   op.getInReductionBlockArgs());
-  bindMapLike(args.map.syms, op.getMapBlockArgs());
+  bindMapLike(args.map.syms, args.map.vars, op.getMapBlockArgs());
   bindPrivateLike(args.priv.syms, args.priv.vars, op.getPrivateBlockArgs());
   bindPrivateLike(args.reduction.syms, args.reduction.vars,
                   op.getReductionBlockArgs());
   bindPrivateLike(args.taskReduction.syms, args.taskReduction.vars,
                   op.getTaskReductionBlockArgs());
-  bindMapLike(args.useDeviceAddr.syms, op.getUseDeviceAddrBlockArgs());
-  bindMapLike(args.useDevicePtr.syms, op.getUseDevicePtrBlockArgs());
+  bindMapLike(args.useDeviceAddr.syms, args.useDeviceAddr.vars,
+              op.getUseDeviceAddrBlockArgs());
+  bindMapLike(args.useDevicePtr.syms, args.useDevicePtr.vars,
+              op.getUseDevicePtrBlockArgs());
 }
 
 /// Get the list of base values that the specified map-like variables point to.
