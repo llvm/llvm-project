@@ -224,7 +224,10 @@ BasicBlock::~BasicBlock() {
   if (hasAddressTaken()) {
     assert(!use_empty() && "There should be at least one blockaddress!");
     BlockAddress *BA = cast<BlockAddress>(user_back());
-    BA->replaceAllUsesWith(PoisonValue::get(BA->getType()));
+
+    Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
+    BA->replaceAllUsesWith(
+        ConstantExpr::getIntToPtr(Replacement, BA->getType()));
     BA->destroyConstant();
   }
 
