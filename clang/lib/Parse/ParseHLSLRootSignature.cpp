@@ -117,16 +117,26 @@ bool RootSignatureParser::parseDescriptorTableClause() {
                            ParamKind))
     return true;
 
-  llvm::SmallDenseMap<TokenKind, ParamType> Params = {
-      {ExpectedRegister, &Clause.Register},
-      {TokenKind::kw_space, &Clause.Space},
-  };
-  llvm::SmallDenseSet<TokenKind> Mandatory = {
+  TokenKind Keywords[2] = {
       ExpectedRegister,
+      TokenKind::kw_space,
   };
-
-  if (parseParams(Params, Mandatory))
+  ParsedParamState Params(Keywords, ParamKind, CurToken.TokLoc);
+  if (parseParams(Params))
     return true;
+
+  // Mandatory parameters:
+  if (!Params.checkAndClearSeen(ExpectedRegister)) {
+    getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
+        << ExpectedRegister;
+    return true;
+  }
+
+  Clause.Register = Params.Register;
+
+  // Optional parameters:
+  if (Params.checkAndClearSeen(TokenKind::kw_space))
+    Clause.Space = Params.Space;
 
   if (consumeExpectedToken(TokenKind::pu_r_paren,
                            diag::err_hlsl_unexpected_end_of_params,
@@ -137,68 +147,71 @@ bool RootSignatureParser::parseDescriptorTableClause() {
   return false;
 }
 
-// Helper struct defined to use the overloaded notation of std::visit.
-template <class... Ts> struct ParseParamTypeMethods : Ts... {
-  using Ts::operator()...;
-};
-template <class... Ts>
-ParseParamTypeMethods(Ts...) -> ParseParamTypeMethods<Ts...>;
-
-bool RootSignatureParser::parseParam(ParamType Ref) {
-  return std::visit(
-      ParseParamTypeMethods{
-          [this](Register *X) -> bool { return parseRegister(X); },
-          [this](uint32_t *X) -> bool {
-            return consumeExpectedToken(TokenKind::pu_equal,
-                                        diag::err_expected_after,
-                                        CurToken.TokKind) ||
-                   parseUIntParam(X);
-          },
-      },
-      Ref);
+size_t RootSignatureParser::ParsedParamState::getKeywordIdx(
+    RootSignatureToken::Kind Keyword) {
+  ArrayRef KeywordRef = Keywords;
+  auto It = llvm::find(KeywordRef, Keyword);
+  assert(It != KeywordRef.end() && "Did not provide a valid param keyword");
+  return std::distance(KeywordRef.begin(), It);
 }
 
-bool RootSignatureParser::parseParams(
-    llvm::SmallDenseMap<TokenKind, ParamType> &Params,
-    llvm::SmallDenseSet<TokenKind> &Mandatory) {
+bool RootSignatureParser::ParsedParamState::checkAndSetSeen(
+    RootSignatureToken::Kind Keyword) {
+  size_t Idx = getKeywordIdx(Keyword);
+  bool WasSeen = Seen & (1 << Idx);
+  Seen |= 1u << Idx;
+  return WasSeen;
+}
 
-  // Initialize a vector of possible keywords
-  SmallVector<TokenKind> Keywords;
-  for (auto Pair : Params)
-    Keywords.push_back(Pair.first);
+bool RootSignatureParser::ParsedParamState::checkAndClearSeen(
+    RootSignatureToken::Kind Keyword) {
+  size_t Idx = getKeywordIdx(Keyword);
+  bool WasSeen = Seen & (1 << Idx);
+  Seen &= ~(1u << Idx);
+  return WasSeen;
+}
 
-  // Keep track of which keywords have been seen to report duplicates
-  llvm::SmallDenseSet<TokenKind> Seen;
+bool RootSignatureParser::parseParam(ParsedParamState &Params) {
+  TokenKind Keyword = CurToken.TokKind;
+  if (Keyword == TokenKind::bReg || Keyword == TokenKind::tReg ||
+      Keyword == TokenKind::uReg || Keyword == TokenKind::sReg) {
+    return parseRegister(Params.Register);
+  }
 
-  while (tryConsumeExpectedToken(Keywords)) {
-    if (Seen.contains(CurToken.TokKind)) {
+  if (consumeExpectedToken(TokenKind::pu_equal, diag::err_expected_after,
+                           Keyword))
+    return true;
+
+  switch (Keyword) {
+  case RootSignatureToken::Kind::kw_space:
+    return parseUIntParam(Params.Space);
+  default:
+    llvm_unreachable("Switch for consumed keyword was not provided");
+  }
+}
+
+bool RootSignatureParser::parseParams(ParsedParamState &Params) {
+  assert(CurToken.TokKind == TokenKind::pu_l_paren &&
+         "Expects to only be invoked starting at given token");
+
+  while (tryConsumeExpectedToken(Params.Keywords)) {
+    if (Params.checkAndSetSeen(CurToken.TokKind)) {
       getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_repeat_param)
           << CurToken.TokKind;
       return true;
     }
-    Seen.insert(CurToken.TokKind);
 
-    if (parseParam(Params[CurToken.TokKind]))
+    if (parseParam(Params))
       return true;
 
     if (!tryConsumeExpectedToken(TokenKind::pu_comma))
       break;
   }
 
-  bool AllMandatoryDefined = true;
-  for (auto Kind : Mandatory) {
-    bool SeenParam = Seen.contains(Kind);
-    if (!SeenParam) {
-      getDiags().Report(CurToken.TokLoc, diag::err_hlsl_rootsig_missing_param)
-          << Kind;
-    }
-    AllMandatoryDefined &= SeenParam;
-  }
-
-  return !AllMandatoryDefined;
+  return false;
 }
 
-bool RootSignatureParser::parseUIntParam(uint32_t *X) {
+bool RootSignatureParser::parseUIntParam(uint32_t &X) {
   assert(CurToken.TokKind == TokenKind::pu_equal &&
          "Expects to only be invoked starting at given keyword");
   tryConsumeExpectedToken(TokenKind::pu_plus);
@@ -207,7 +220,7 @@ bool RootSignatureParser::parseUIntParam(uint32_t *X) {
          handleUIntLiteral(X);
 }
 
-bool RootSignatureParser::parseRegister(Register *Register) {
+bool RootSignatureParser::parseRegister(Register &Register) {
   assert((CurToken.TokKind == TokenKind::bReg ||
           CurToken.TokKind == TokenKind::tReg ||
           CurToken.TokKind == TokenKind::uReg ||
@@ -218,26 +231,26 @@ bool RootSignatureParser::parseRegister(Register *Register) {
   default:
     llvm_unreachable("Switch for consumed token was not provided");
   case TokenKind::bReg:
-    Register->ViewType = RegisterType::BReg;
+    Register.ViewType = RegisterType::BReg;
     break;
   case TokenKind::tReg:
-    Register->ViewType = RegisterType::TReg;
+    Register.ViewType = RegisterType::TReg;
     break;
   case TokenKind::uReg:
-    Register->ViewType = RegisterType::UReg;
+    Register.ViewType = RegisterType::UReg;
     break;
   case TokenKind::sReg:
-    Register->ViewType = RegisterType::SReg;
+    Register.ViewType = RegisterType::SReg;
     break;
   }
 
-  if (handleUIntLiteral(&Register->Number))
+  if (handleUIntLiteral(Register.Number))
     return true; // propogate NumericLiteralParser error
 
   return false;
 }
 
-bool RootSignatureParser::handleUIntLiteral(uint32_t *X) {
+bool RootSignatureParser::handleUIntLiteral(uint32_t &X) {
   // Parse the numeric value and do semantic checks on its specification
   clang::NumericLiteralParser Literal(CurToken.NumSpelling, CurToken.TokLoc,
                                       PP.getSourceManager(), PP.getLangOpts(),
@@ -256,7 +269,7 @@ bool RootSignatureParser::handleUIntLiteral(uint32_t *X) {
     return true;
   }
 
-  *X = Val.getExtValue();
+  X = Val.getExtValue();
   return false;
 }
 
