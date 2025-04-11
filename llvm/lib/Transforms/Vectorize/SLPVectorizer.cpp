@@ -15347,13 +15347,14 @@ BoUpSLP::isGatherShuffledEntry(
 
 InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
                                        Type *ScalarTy) const {
-  auto *VecTy = getWidenedType(ScalarTy, VL.size());
+  const unsigned VF = VL.size();
+  auto *VecTy = getWidenedType(ScalarTy, VF);
   bool DuplicateNonConst = false;
   // Find the cost of inserting/extracting values from the vector.
   // Check if the same elements are inserted several times and count them as
   // shuffle candidates.
-  APInt ShuffledElements = APInt::getZero(VL.size());
-  APInt DemandedElements = APInt::getZero(VL.size());
+  APInt ShuffledElements = APInt::getZero(VF);
+  APInt DemandedElements = APInt::getZero(VF);
   DenseMap<Value *, unsigned> UniqueElements;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
@@ -15363,11 +15364,10 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       Cost += TTI->getCastInstrCost(Instruction::Trunc, ScalarTy, V->getType(),
                                     TTI::CastContextHint::None, CostKind);
   };
-  SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
-  SmallVector<int> ConstantShuffleMask(VL.size(), PoisonMaskElem);
+  SmallVector<int> ShuffleMask(VF, PoisonMaskElem);
+  SmallVector<int> ConstantShuffleMask(VF, PoisonMaskElem);
   std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
-  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
-    Value *V = VL[I];
+  for (auto [I, V] : enumerate(VL)) {
     // No need to shuffle duplicates for constants.
     if ((ForPoisonSrc && isConstant(V)) || isa<UndefValue>(V)) {
       ShuffledElements.setBit(I);
@@ -15376,7 +15376,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     }
 
     if (isConstant(V)) {
-      ConstantShuffleMask[I] = I + E;
+      ConstantShuffleMask[I] = I + VF;
       ShuffleMask[I] = I;
       continue;
     }
@@ -15398,12 +15398,15 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   if (!ForPoisonSrc && IsAnyNonUndefConst) {
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
                              ConstantShuffleMask);
-    for (auto [Idx, I] : enumerate(ShuffleMask)) {
-      if (I == PoisonMaskElem)
-        I = Idx;
-      else
-        I += VL.size();
-    }
+    // Update the shuffle mask for shuffling with incoming source (all elements
+    // are used!) or with constant subvector.
+    for_each(enumerate(ShuffleMask), [&](auto P) {
+      if ((!ForPoisonSrc && P.value() == PoisonMaskElem) ||
+          ConstantShuffleMask[P.index()] != PoisonMaskElem)
+        P.value() = P.index();
+      else if (P.value() != PoisonMaskElem)
+        P.value() += VF;
+    });
   }
 
   // 2. Insert unique non-constants.
@@ -15415,7 +15418,7 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   // 3. Shuffle duplicates.
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
-                             VecTy, ShuffleMask);
+                             VecTy, ShuffleMask, CostKind);
   return Cost;
 }
 
