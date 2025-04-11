@@ -170,6 +170,8 @@ C23 Feature Support
   scope.
 - Fixed a bug where you could not cast a null pointer constant to type
   ``nullptr_t``. Fixes #GH133644.
+- Fixed a failed assertion with an invalid parameter to the ``#embed``
+  directive. Fixes #GH126940.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
