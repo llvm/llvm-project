@@ -20,6 +20,7 @@
 
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "test_consteval_iterators.h"
 #include "MoveOnly.h"
 
 const int LargeN = 128;
