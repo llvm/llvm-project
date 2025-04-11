@@ -462,6 +462,9 @@ template struct ExplicitlyInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyExportInstantiatedTemplate { void func() {} };
 template struct __declspec(dllexport) ExplicitlyExportInstantiatedTemplate<int>;
 template <typename T> struct ExplicitlyExportDeclaredInstantiatedTemplate { void func() {} };
+#ifdef GNU
+// expected-note@+2 {{attribute is missing}}
+#endif
 extern template struct ExplicitlyExportDeclaredInstantiatedTemplate<int>;
 #if not defined(MS) && not defined (WI) && not defined(PS)
 // expected-warning@+2{{'dllexport' attribute ignored on explicit instantiation definition}}
