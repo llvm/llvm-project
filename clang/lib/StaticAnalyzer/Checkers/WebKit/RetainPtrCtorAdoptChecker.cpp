@@ -456,8 +456,10 @@ public:
       if (InnerExpr)
         *InnerExpr = CE;
       if (auto *Callee = CE->getDirectCallee()) {
-        auto CalleeName = Callee->getName();
-        return CalleeName.starts_with("alloc");
+        if (Callee->getDeclName().isIdentifier()) {
+          auto CalleeName = Callee->getName();
+          return CalleeName.starts_with("alloc");
+        }
       }
     }
     return false;
