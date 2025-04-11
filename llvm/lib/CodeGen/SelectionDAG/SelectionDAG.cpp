@@ -7601,16 +7601,23 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      return getUNDEF(VT);       // fold op(arg1, undef) -> undef
+      // fold op(arg1, undef) -> undef, // fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON
+                 ? getPOISON(VT)
+                 : getUNDEF(VT);
     case ISD::MUL:
     case ISD::AND:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
-      return getConstant(0, DL, VT);  // fold op(arg1, undef) -> 0
+       // fold op(arg1, undef) -> 0, fold op(arg1, poison) -> poison.
+      return N2.getOpcode() == ISD::POISON
+                 ? getPOISON(VT)
+                 : getConstant(0, DL, VT);
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
-      return getAllOnesConstant(DL, VT);
+      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
+                                           : getAllOnesConstant(DL, VT);
     }
   }
 
