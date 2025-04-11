@@ -88,4 +88,35 @@ entry:
 ; CHECK: __tsan_write
 ; CHECK: ret void
 
+define void @notcaptured3(i1 %cond) nounwind uwtable sanitize_thread {
+entry:
+  %stkobj = alloca [2 x i32], align 8
+  %derived = getelementptr inbounds i32, ptr %stkobj, i64 1
+  %ptr = select i1 %cond, ptr %derived, ptr %stkobj
+  store i32 42, ptr %ptr, align 4
+  ret void
+}
+; CHECK-LABEL: define void @notcaptured3
+; CHECK-NOT: call void @__tsan_write4(ptr %ptr)
+; CHECK: ret void
 
+define void @notcaptured4() nounwind uwtable sanitize_thread {
+entry:
+  %stkobj = alloca [10 x i8], align 1
+  br label %loop
+
+exit:
+  ret void
+
+loop:
+  %count = phi i32 [ 0, %entry ], [ %addone, %loop ]
+  %derived = phi ptr [ %stkobj, %entry ], [ %ptraddone, %loop ]
+  store i32 %count, ptr %derived, align 4
+  %ptraddone = getelementptr inbounds i32, ptr %derived, i64 1
+  %addone = add nuw nsw i32 %count, 1
+  %eq10 = icmp eq i32 %addone, 10
+  br i1 %eq10, label %exit, label %loop
+}
+; CHECK-LABEL: define void @notcaptured4
+; CHECK: ret void
+; CHECK-NOT: call void @__tsan_write4(ptr %derived)
