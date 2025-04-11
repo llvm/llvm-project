@@ -5741,7 +5741,7 @@ struct FloatData<double>
 template <>
 struct FloatData<long double>
 {
-#if __LDBL_MANT_DIG__ == 113
+#if __LDBL_MANT_DIG__ == 113 || __LDBL_MANT_DIG__ == 106
   static const size_t mangled_size = 32;
 #elif __LDBL_MANT_DIG__ == 53 || defined(_MSC_VER)
   // MSVC doesn't define __LDBL_MANT_DIG__, but it has long double equal to
