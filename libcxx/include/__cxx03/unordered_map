@@ -594,6 +594,7 @@ template <class Key, class T, class Hash, class Pred, class Alloc>
 #include <__cxx03/__memory/addressof.h>
 #include <__cxx03/__memory/allocator.h>
 #include <__cxx03/__type_traits/is_allocator.h>
+#include <__cxx03/__type_traits/is_standard_layout.h>
 #include <__cxx03/__type_traits/type_identity.h>
 #include <__cxx03/__utility/forward.h>
 #include <__cxx03/stdexcept>
@@ -823,30 +824,33 @@ struct _LIBCPP_STANDALONE_DEBUG __hash_value_type {
 private:
   value_type __cc_;
 
+private:
+  static_assert(std::is_standard_layout_v<__hash_value_type<_Key, _Tp>>, "");
+
 public:
-  _LIBCPP_HIDE_FROM_ABI value_type& __get_value() {
+  _LIBCPP_HIDE_FROM_ABI static value_type& __get_value(__hash_value_type& __v) {
 #  if _LIBCPP_STD_VER >= 17
-    return *std::launder(std::addressof(__cc_));
+    return *std::launder(std::addressof(reinterpret_cast<const value_type&>(__v)));
 #  else
-    return __cc_;
+    return reinterpret_cast<const value_type&>(__v);
 #  endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const {
+  _LIBCPP_HIDE_FROM_ABI static const value_type& __get_value(const __hash_value_type& __v) {
 #  if _LIBCPP_STD_VER >= 17
-    return *std::launder(std::addressof(__cc_));
+    return *std::launder(std::addressof(reinterpret_cast<value_type&>(__v)));
 #  else
-    return __cc_;
+    return reinterpret_cast<value_type&>(__v);
 #  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI __nc_ref_pair_type __ref() {
-    value_type& __v = __get_value();
+    value_type& __v = __get_value(*this);
     return __nc_ref_pair_type(const_cast<key_type&>(__v.first), __v.second);
   }
 
   _LIBCPP_HIDE_FROM_ABI __nc_rref_pair_type __move() {
-    value_type& __v = __get_value();
+    value_type& __v = __get_value(*this);
     return __nc_rref_pair_type(std::move(const_cast<key_type&>(__v.first)), std::move(__v.second));
   }
 
@@ -885,9 +889,17 @@ struct __hash_value_type {
 private:
   value_type __cc_;
 
+private:
+  static_assert(is_standard_layout_v<__hash_value_type<_Key, _Tp>>, "");
+
 public:
-  _LIBCPP_HIDE_FROM_ABI value_type& __get_value() { return __cc_; }
-  _LIBCPP_HIDE_FROM_ABI const value_type& __get_value() const { return __cc_; }
+  _LIBCPP_HIDE_FROM_ABI static value_type& __get_value(__hash_value_type& __v) {
+    return reinterpret_cast<value_type&>(__v);
+  }
+
+  _LIBCPP_HIDE_FROM_ABI static const value_type& __get_value(const __hash_value_type& __v) const {
+    return reinterpret_cast<const value_type&>(__v);
+  }
 
   ~__hash_value_type() = delete;
 };

@@ -329,9 +329,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void operator()(pointer __p) {
     if (__second_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().second));
+      __alloc_traits::destroy(__na_, std::addressof(value_type::__get_value(*__p).second));
     if (__first_constructed)
-      __alloc_traits::destroy(__na_, std::addressof(__p->__get_value().first));
+      __alloc_traits::destroy(__na_, std::addressof(value_type::__get_value(*__p).first));
     if (__p)
       __alloc_traits::deallocate(__na_, __p, 1);
   }
@@ -614,9 +614,9 @@ typename hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__node_holder
 hash_map<_Key, _Tp, _Hash, _Pred, _Alloc>::__construct_node(const key_type& __k) {
   __node_allocator& __na = __table_.__node_alloc();
   __node_holder __h(__node_traits::allocate(__na, 1), _Dp(__na));
-  __node_traits::construct(__na, std::addressof(__h->__get_value().first), __k);
+  __node_traits::construct(__na, std::addressof(_Tp::__get_value(*__h).first, __k);
   __h.get_deleter().__first_constructed = true;
-  __node_traits::construct(__na, std::addressof(__h->__get_value().second));
+  __node_traits::construct(__na, std::addressof(_Tp::__get_value(*__h).second));
   __h.get_deleter().__second_constructed = true;
   return __h;
 }
