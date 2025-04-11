@@ -158,7 +158,7 @@ __m128 vectorOverload(__m128 f);
 // CHECK: usrs.cpp c:@NA@foo_alias
 // CHECK-NOT: foo
 // CHECK: usrs.cpp c:@NA@foo_alias2
-// CHECK: usrs.cpp c:@UD@ClsB Extent=[64:1 - 64:16]
+// CHECK: usrs.cpp c:usrs.cpp@UD@N@foo@ClsB Extent=[64:1 - 64:16]
 // CHECK: usrs.cpp c:@NA@foo_alias3
 // CHECK: usrs.cpp c:@aN Extent=[68:1 - 73:2]
 // CHECK: usrs.cpp c:usrs.cpp@aN@S@RDar9371763_Foo Extent=[69:1 - 72:2]
