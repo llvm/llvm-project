@@ -439,152 +439,56 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64:       [[VECTOR_BODY]]:
 ; RV64-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; RV64-NEXT:    [[DEC_IV:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; RV64-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; RV64-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; RV64-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
-; RV64-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], -4
-; RV64-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], -5
-; RV64-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], -6
-; RV64-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -7
-; RV64-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], -8
-; RV64-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], -9
-; RV64-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], -10
-; RV64-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], -11
-; RV64-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], -12
-; RV64-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], -13
-; RV64-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], -14
-; RV64-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], -15
-; RV64-NEXT:    [[TMP16:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-NEXT:    [[TMP17:%.*]] = add nsw i64 [[TMP1]], -1
-; RV64-NEXT:    [[TMP18:%.*]] = add nsw i64 [[TMP2]], -1
-; RV64-NEXT:    [[TMP19:%.*]] = add nsw i64 [[TMP3]], -1
-; RV64-NEXT:    [[TMP20:%.*]] = add nsw i64 [[TMP4]], -1
-; RV64-NEXT:    [[TMP21:%.*]] = add nsw i64 [[TMP5]], -1
-; RV64-NEXT:    [[TMP22:%.*]] = add nsw i64 [[TMP6]], -1
-; RV64-NEXT:    [[TMP23:%.*]] = add nsw i64 [[TMP7]], -1
-; RV64-NEXT:    [[TMP24:%.*]] = add nsw i64 [[TMP8]], -1
-; RV64-NEXT:    [[TMP25:%.*]] = add nsw i64 [[TMP9]], -1
-; RV64-NEXT:    [[TMP26:%.*]] = add nsw i64 [[TMP10]], -1
-; RV64-NEXT:    [[TMP27:%.*]] = add nsw i64 [[TMP11]], -1
-; RV64-NEXT:    [[TMP28:%.*]] = add nsw i64 [[TMP12]], -1
-; RV64-NEXT:    [[TMP29:%.*]] = add nsw i64 [[TMP13]], -1
-; RV64-NEXT:    [[TMP30:%.*]] = add nsw i64 [[TMP14]], -1
-; RV64-NEXT:    [[TMP31:%.*]] = add nsw i64 [[TMP15]], -1
-; RV64-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP16]]
-; RV64-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP17]]
-; RV64-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP18]]
-; RV64-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP19]]
-; RV64-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP20]]
-; RV64-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP21]]
-; RV64-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP22]]
-; RV64-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP23]]
-; RV64-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP24]]
-; RV64-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP25]]
-; RV64-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP26]]
-; RV64-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP27]]
-; RV64-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP28]]
-; RV64-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP29]]
-; RV64-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP30]]
-; RV64-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP31]]
-; RV64-NEXT:    [[TMP48:%.*]] = load i7, ptr [[TMP32]], align 1
-; RV64-NEXT:    [[TMP49:%.*]] = load i7, ptr [[TMP33]], align 1
-; RV64-NEXT:    [[TMP50:%.*]] = load i7, ptr [[TMP34]], align 1
-; RV64-NEXT:    [[TMP51:%.*]] = load i7, ptr [[TMP35]], align 1
-; RV64-NEXT:    [[TMP52:%.*]] = load i7, ptr [[TMP36]], align 1
-; RV64-NEXT:    [[TMP53:%.*]] = load i7, ptr [[TMP37]], align 1
-; RV64-NEXT:    [[TMP54:%.*]] = load i7, ptr [[TMP38]], align 1
-; RV64-NEXT:    [[TMP55:%.*]] = load i7, ptr [[TMP39]], align 1
-; RV64-NEXT:    [[TMP56:%.*]] = load i7, ptr [[TMP40]], align 1
-; RV64-NEXT:    [[TMP57:%.*]] = load i7, ptr [[TMP41]], align 1
-; RV64-NEXT:    [[TMP58:%.*]] = load i7, ptr [[TMP42]], align 1
-; RV64-NEXT:    [[TMP59:%.*]] = load i7, ptr [[TMP43]], align 1
-; RV64-NEXT:    [[TMP60:%.*]] = load i7, ptr [[TMP44]], align 1
-; RV64-NEXT:    [[TMP61:%.*]] = load i7, ptr [[TMP45]], align 1
-; RV64-NEXT:    [[TMP62:%.*]] = load i7, ptr [[TMP46]], align 1
-; RV64-NEXT:    [[TMP63:%.*]] = load i7, ptr [[TMP47]], align 1
-; RV64-NEXT:    [[TMP64:%.*]] = insertelement <16 x i7> poison, i7 [[TMP48]], i32 0
-; RV64-NEXT:    [[TMP65:%.*]] = insertelement <16 x i7> [[TMP64]], i7 [[TMP49]], i32 1
-; RV64-NEXT:    [[TMP66:%.*]] = insertelement <16 x i7> [[TMP65]], i7 [[TMP50]], i32 2
-; RV64-NEXT:    [[TMP67:%.*]] = insertelement <16 x i7> [[TMP66]], i7 [[TMP51]], i32 3
-; RV64-NEXT:    [[TMP68:%.*]] = insertelement <16 x i7> [[TMP67]], i7 [[TMP52]], i32 4
-; RV64-NEXT:    [[TMP69:%.*]] = insertelement <16 x i7> [[TMP68]], i7 [[TMP53]], i32 5
-; RV64-NEXT:    [[TMP70:%.*]] = insertelement <16 x i7> [[TMP69]], i7 [[TMP54]], i32 6
-; RV64-NEXT:    [[TMP71:%.*]] = insertelement <16 x i7> [[TMP70]], i7 [[TMP55]], i32 7
-; RV64-NEXT:    [[TMP72:%.*]] = insertelement <16 x i7> [[TMP71]], i7 [[TMP56]], i32 8
-; RV64-NEXT:    [[TMP73:%.*]] = insertelement <16 x i7> [[TMP72]], i7 [[TMP57]], i32 9
-; RV64-NEXT:    [[TMP74:%.*]] = insertelement <16 x i7> [[TMP73]], i7 [[TMP58]], i32 10
-; RV64-NEXT:    [[TMP75:%.*]] = insertelement <16 x i7> [[TMP74]], i7 [[TMP59]], i32 11
-; RV64-NEXT:    [[TMP76:%.*]] = insertelement <16 x i7> [[TMP75]], i7 [[TMP60]], i32 12
-; RV64-NEXT:    [[TMP77:%.*]] = insertelement <16 x i7> [[TMP76]], i7 [[TMP61]], i32 13
-; RV64-NEXT:    [[TMP78:%.*]] = insertelement <16 x i7> [[TMP77]], i7 [[TMP62]], i32 14
-; RV64-NEXT:    [[TMP79:%.*]] = insertelement <16 x i7> [[TMP78]], i7 [[TMP63]], i32 15
-; RV64-NEXT:    [[TMP80:%.*]] = add <16 x i7> [[TMP79]], splat (i7 1)
-; RV64-NEXT:    [[TMP81:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP16]]
-; RV64-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP17]]
-; RV64-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP18]]
-; RV64-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP19]]
-; RV64-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP20]]
-; RV64-NEXT:    [[TMP86:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP21]]
-; RV64-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP22]]
-; RV64-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP23]]
-; RV64-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP24]]
-; RV64-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP25]]
-; RV64-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP26]]
-; RV64-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP27]]
-; RV64-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP28]]
-; RV64-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP29]]
-; RV64-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP30]]
-; RV64-NEXT:    [[TMP96:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP31]]
-; RV64-NEXT:    [[TMP97:%.*]] = extractelement <16 x i7> [[TMP80]], i32 0
-; RV64-NEXT:    store i7 [[TMP97]], ptr [[TMP81]], align 1
-; RV64-NEXT:    [[TMP98:%.*]] = extractelement <16 x i7> [[TMP80]], i32 1
-; RV64-NEXT:    store i7 [[TMP98]], ptr [[TMP82]], align 1
-; RV64-NEXT:    [[TMP99:%.*]] = extractelement <16 x i7> [[TMP80]], i32 2
-; RV64-NEXT:    store i7 [[TMP99]], ptr [[TMP83]], align 1
-; RV64-NEXT:    [[TMP100:%.*]] = extractelement <16 x i7> [[TMP80]], i32 3
-; RV64-NEXT:    store i7 [[TMP100]], ptr [[TMP84]], align 1
-; RV64-NEXT:    [[TMP101:%.*]] = extractelement <16 x i7> [[TMP80]], i32 4
-; RV64-NEXT:    store i7 [[TMP101]], ptr [[TMP85]], align 1
-; RV64-NEXT:    [[TMP102:%.*]] = extractelement <16 x i7> [[TMP80]], i32 5
-; RV64-NEXT:    store i7 [[TMP102]], ptr [[TMP86]], align 1
-; RV64-NEXT:    [[TMP103:%.*]] = extractelement <16 x i7> [[TMP80]], i32 6
-; RV64-NEXT:    store i7 [[TMP103]], ptr [[TMP87]], align 1
-; RV64-NEXT:    [[TMP104:%.*]] = extractelement <16 x i7> [[TMP80]], i32 7
-; RV64-NEXT:    store i7 [[TMP104]], ptr [[TMP88]], align 1
-; RV64-NEXT:    [[TMP105:%.*]] = extractelement <16 x i7> [[TMP80]], i32 8
-; RV64-NEXT:    store i7 [[TMP105]], ptr [[TMP89]], align 1
-; RV64-NEXT:    [[TMP106:%.*]] = extractelement <16 x i7> [[TMP80]], i32 9
-; RV64-NEXT:    store i7 [[TMP106]], ptr [[TMP90]], align 1
-; RV64-NEXT:    [[TMP107:%.*]] = extractelement <16 x i7> [[TMP80]], i32 10
-; RV64-NEXT:    store i7 [[TMP107]], ptr [[TMP91]], align 1
-; RV64-NEXT:    [[TMP108:%.*]] = extractelement <16 x i7> [[TMP80]], i32 11
-; RV64-NEXT:    store i7 [[TMP108]], ptr [[TMP92]], align 1
-; RV64-NEXT:    [[TMP109:%.*]] = extractelement <16 x i7> [[TMP80]], i32 12
-; RV64-NEXT:    store i7 [[TMP109]], ptr [[TMP93]], align 1
-; RV64-NEXT:    [[TMP110:%.*]] = extractelement <16 x i7> [[TMP80]], i32 13
-; RV64-NEXT:    store i7 [[TMP110]], ptr [[TMP94]], align 1
-; RV64-NEXT:    [[TMP111:%.*]] = extractelement <16 x i7> [[TMP80]], i32 14
-; RV64-NEXT:    store i7 [[TMP111]], ptr [[TMP95]], align 1
-; RV64-NEXT:    [[TMP112:%.*]] = extractelement <16 x i7> [[TMP80]], i32 15
-; RV64-NEXT:    store i7 [[TMP112]], ptr [[TMP96]], align 1
-; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; RV64-NEXT:    [[TMP113:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
-; RV64-NEXT:    br i1 [[TMP113]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; RV64-NEXT:    [[IV_NEXT:%.*]] = add nsw i64 [[DEC_IV]], -1
+; RV64-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
+; RV64-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP2]], -1
+; RV64-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP3]], -1
+; RV64-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT]]
+; RV64-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP5]]
+; RV64-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP6]]
+; RV64-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP7]]
+; RV64-NEXT:    [[TMP0:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
+; RV64-NEXT:    [[TMP13:%.*]] = load i7, ptr [[TMP9]], align 1
+; RV64-NEXT:    [[TMP14:%.*]] = load i7, ptr [[TMP10]], align 1
+; RV64-NEXT:    [[TMP15:%.*]] = load i7, ptr [[TMP11]], align 1
+; RV64-NEXT:    [[TMP16:%.*]] = insertelement <4 x i7> poison, i7 [[TMP0]], i32 0
+; RV64-NEXT:    [[TMP17:%.*]] = insertelement <4 x i7> [[TMP16]], i7 [[TMP13]], i32 1
+; RV64-NEXT:    [[TMP18:%.*]] = insertelement <4 x i7> [[TMP17]], i7 [[TMP14]], i32 2
+; RV64-NEXT:    [[TMP19:%.*]] = insertelement <4 x i7> [[TMP18]], i7 [[TMP15]], i32 3
+; RV64-NEXT:    [[TMP20:%.*]] = add <4 x i7> [[TMP19]], splat (i7 1)
+; RV64-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT]]
+; RV64-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP5]]
+; RV64-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP6]]
+; RV64-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP7]]
+; RV64-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i32 0
+; RV64-NEXT:    store i7 [[TMP25]], ptr [[TMP21]], align 1
+; RV64-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i32 1
+; RV64-NEXT:    store i7 [[TMP26]], ptr [[TMP22]], align 1
+; RV64-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i32 2
+; RV64-NEXT:    store i7 [[TMP27]], ptr [[TMP23]], align 1
+; RV64-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i32 3
+; RV64-NEXT:    store i7 [[TMP28]], ptr [[TMP24]], align 1
+; RV64-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; RV64-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
+; RV64-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; RV64:       [[MIDDLE_BLOCK]]:
 ; RV64-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV64:       [[SCALAR_PH]]:
-; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 15, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
+; RV64-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
 ; RV64-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64:       [[FOR_BODY]]:
-; RV64-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV64-NEXT:    [[IV_NEXT]] = add nsw i64 [[DEC_IV]], -1
-; RV64-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT]]
-; RV64-NEXT:    [[TMP114:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
-; RV64-NEXT:    [[ADD:%.*]] = add i7 [[TMP114]], 1
-; RV64-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT]]
+; RV64-NEXT:    [[DEC_IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[FOR_BODY]] ]
+; RV64-NEXT:    [[IV_NEXT1]] = add nsw i64 [[DEC_IV1]], -1
+; RV64-NEXT:    [[ARRAYIDX_B1:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT1]]
+; RV64-NEXT:    [[TMP30:%.*]] = load i7, ptr [[ARRAYIDX_B1]], align 1
+; RV64-NEXT:    [[ADD:%.*]] = add i7 [[TMP30]], 1
+; RV64-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT1]]
 ; RV64-NEXT:    store i7 [[ADD]], ptr [[ARRAYIDX_A]], align 1
-; RV64-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_IV]], 1
+; RV64-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_IV1]], 1
 ; RV64-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; RV64:       [[EXIT]]:
 ; RV64-NEXT:    ret void
@@ -598,152 +502,56 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV32:       [[VECTOR_BODY]]:
 ; RV32-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV32-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV32-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; RV32-NEXT:    [[DEC_IV:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; RV32-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; RV32-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; RV32-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
-; RV32-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], -4
-; RV32-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], -5
-; RV32-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], -6
-; RV32-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -7
-; RV32-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], -8
-; RV32-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], -9
-; RV32-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], -10
-; RV32-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], -11
-; RV32-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], -12
-; RV32-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], -13
-; RV32-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], -14
-; RV32-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], -15
-; RV32-NEXT:    [[TMP16:%.*]] = add nsw i64 [[TMP0]], -1
-; RV32-NEXT:    [[TMP17:%.*]] = add nsw i64 [[TMP1]], -1
-; RV32-NEXT:    [[TMP18:%.*]] = add nsw i64 [[TMP2]], -1
-; RV32-NEXT:    [[TMP19:%.*]] = add nsw i64 [[TMP3]], -1
-; RV32-NEXT:    [[TMP20:%.*]] = add nsw i64 [[TMP4]], -1
-; RV32-NEXT:    [[TMP21:%.*]] = add nsw i64 [[TMP5]], -1
-; RV32-NEXT:    [[TMP22:%.*]] = add nsw i64 [[TMP6]], -1
-; RV32-NEXT:    [[TMP23:%.*]] = add nsw i64 [[TMP7]], -1
-; RV32-NEXT:    [[TMP24:%.*]] = add nsw i64 [[TMP8]], -1
-; RV32-NEXT:    [[TMP25:%.*]] = add nsw i64 [[TMP9]], -1
-; RV32-NEXT:    [[TMP26:%.*]] = add nsw i64 [[TMP10]], -1
-; RV32-NEXT:    [[TMP27:%.*]] = add nsw i64 [[TMP11]], -1
-; RV32-NEXT:    [[TMP28:%.*]] = add nsw i64 [[TMP12]], -1
-; RV32-NEXT:    [[TMP29:%.*]] = add nsw i64 [[TMP13]], -1
-; RV32-NEXT:    [[TMP30:%.*]] = add nsw i64 [[TMP14]], -1
-; RV32-NEXT:    [[TMP31:%.*]] = add nsw i64 [[TMP15]], -1
-; RV32-NEXT:    [[TMP32:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP16]]
-; RV32-NEXT:    [[TMP33:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP17]]
-; RV32-NEXT:    [[TMP34:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP18]]
-; RV32-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP19]]
-; RV32-NEXT:    [[TMP36:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP20]]
-; RV32-NEXT:    [[TMP37:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP21]]
-; RV32-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP22]]
-; RV32-NEXT:    [[TMP39:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP23]]
-; RV32-NEXT:    [[TMP40:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP24]]
-; RV32-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP25]]
-; RV32-NEXT:    [[TMP42:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP26]]
-; RV32-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP27]]
-; RV32-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP28]]
-; RV32-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP29]]
-; RV32-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP30]]
-; RV32-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP31]]
-; RV32-NEXT:    [[TMP48:%.*]] = load i7, ptr [[TMP32]], align 1
-; RV32-NEXT:    [[TMP49:%.*]] = load i7, ptr [[TMP33]], align 1
-; RV32-NEXT:    [[TMP50:%.*]] = load i7, ptr [[TMP34]], align 1
-; RV32-NEXT:    [[TMP51:%.*]] = load i7, ptr [[TMP35]], align 1
-; RV32-NEXT:    [[TMP52:%.*]] = load i7, ptr [[TMP36]], align 1
-; RV32-NEXT:    [[TMP53:%.*]] = load i7, ptr [[TMP37]], align 1
-; RV32-NEXT:    [[TMP54:%.*]] = load i7, ptr [[TMP38]], align 1
-; RV32-NEXT:    [[TMP55:%.*]] = load i7, ptr [[TMP39]], align 1
-; RV32-NEXT:    [[TMP56:%.*]] = load i7, ptr [[TMP40]], align 1
-; RV32-NEXT:    [[TMP57:%.*]] = load i7, ptr [[TMP41]], align 1
-; RV32-NEXT:    [[TMP58:%.*]] = load i7, ptr [[TMP42]], align 1
-; RV32-NEXT:    [[TMP59:%.*]] = load i7, ptr [[TMP43]], align 1
-; RV32-NEXT:    [[TMP60:%.*]] = load i7, ptr [[TMP44]], align 1
-; RV32-NEXT:    [[TMP61:%.*]] = load i7, ptr [[TMP45]], align 1
-; RV32-NEXT:    [[TMP62:%.*]] = load i7, ptr [[TMP46]], align 1
-; RV32-NEXT:    [[TMP63:%.*]] = load i7, ptr [[TMP47]], align 1
-; RV32-NEXT:    [[TMP64:%.*]] = insertelement <16 x i7> poison, i7 [[TMP48]], i32 0
-; RV32-NEXT:    [[TMP65:%.*]] = insertelement <16 x i7> [[TMP64]], i7 [[TMP49]], i32 1
-; RV32-NEXT:    [[TMP66:%.*]] = insertelement <16 x i7> [[TMP65]], i7 [[TMP50]], i32 2
-; RV32-NEXT:    [[TMP67:%.*]] = insertelement <16 x i7> [[TMP66]], i7 [[TMP51]], i32 3
-; RV32-NEXT:    [[TMP68:%.*]] = insertelement <16 x i7> [[TMP67]], i7 [[TMP52]], i32 4
-; RV32-NEXT:    [[TMP69:%.*]] = insertelement <16 x i7> [[TMP68]], i7 [[TMP53]], i32 5
-; RV32-NEXT:    [[TMP70:%.*]] = insertelement <16 x i7> [[TMP69]], i7 [[TMP54]], i32 6
-; RV32-NEXT:    [[TMP71:%.*]] = insertelement <16 x i7> [[TMP70]], i7 [[TMP55]], i32 7
-; RV32-NEXT:    [[TMP72:%.*]] = insertelement <16 x i7> [[TMP71]], i7 [[TMP56]], i32 8
-; RV32-NEXT:    [[TMP73:%.*]] = insertelement <16 x i7> [[TMP72]], i7 [[TMP57]], i32 9
-; RV32-NEXT:    [[TMP74:%.*]] = insertelement <16 x i7> [[TMP73]], i7 [[TMP58]], i32 10
-; RV32-NEXT:    [[TMP75:%.*]] = insertelement <16 x i7> [[TMP74]], i7 [[TMP59]], i32 11
-; RV32-NEXT:    [[TMP76:%.*]] = insertelement <16 x i7> [[TMP75]], i7 [[TMP60]], i32 12
-; RV32-NEXT:    [[TMP77:%.*]] = insertelement <16 x i7> [[TMP76]], i7 [[TMP61]], i32 13
-; RV32-NEXT:    [[TMP78:%.*]] = insertelement <16 x i7> [[TMP77]], i7 [[TMP62]], i32 14
-; RV32-NEXT:    [[TMP79:%.*]] = insertelement <16 x i7> [[TMP78]], i7 [[TMP63]], i32 15
-; RV32-NEXT:    [[TMP80:%.*]] = add <16 x i7> [[TMP79]], splat (i7 1)
-; RV32-NEXT:    [[TMP81:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP16]]
-; RV32-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP17]]
-; RV32-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP18]]
-; RV32-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP19]]
-; RV32-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP20]]
-; RV32-NEXT:    [[TMP86:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP21]]
-; RV32-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP22]]
-; RV32-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP23]]
-; RV32-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP24]]
-; RV32-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP25]]
-; RV32-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP26]]
-; RV32-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP27]]
-; RV32-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP28]]
-; RV32-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP29]]
-; RV32-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP30]]
-; RV32-NEXT:    [[TMP96:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP31]]
-; RV32-NEXT:    [[TMP97:%.*]] = extractelement <16 x i7> [[TMP80]], i32 0
-; RV32-NEXT:    store i7 [[TMP97]], ptr [[TMP81]], align 1
-; RV32-NEXT:    [[TMP98:%.*]] = extractelement <16 x i7> [[TMP80]], i32 1
-; RV32-NEXT:    store i7 [[TMP98]], ptr [[TMP82]], align 1
-; RV32-NEXT:    [[TMP99:%.*]] = extractelement <16 x i7> [[TMP80]], i32 2
-; RV32-NEXT:    store i7 [[TMP99]], ptr [[TMP83]], align 1
-; RV32-NEXT:    [[TMP100:%.*]] = extractelement <16 x i7> [[TMP80]], i32 3
-; RV32-NEXT:    store i7 [[TMP100]], ptr [[TMP84]], align 1
-; RV32-NEXT:    [[TMP101:%.*]] = extractelement <16 x i7> [[TMP80]], i32 4
-; RV32-NEXT:    store i7 [[TMP101]], ptr [[TMP85]], align 1
-; RV32-NEXT:    [[TMP102:%.*]] = extractelement <16 x i7> [[TMP80]], i32 5
-; RV32-NEXT:    store i7 [[TMP102]], ptr [[TMP86]], align 1
-; RV32-NEXT:    [[TMP103:%.*]] = extractelement <16 x i7> [[TMP80]], i32 6
-; RV32-NEXT:    store i7 [[TMP103]], ptr [[TMP87]], align 1
-; RV32-NEXT:    [[TMP104:%.*]] = extractelement <16 x i7> [[TMP80]], i32 7
-; RV32-NEXT:    store i7 [[TMP104]], ptr [[TMP88]], align 1
-; RV32-NEXT:    [[TMP105:%.*]] = extractelement <16 x i7> [[TMP80]], i32 8
-; RV32-NEXT:    store i7 [[TMP105]], ptr [[TMP89]], align 1
-; RV32-NEXT:    [[TMP106:%.*]] = extractelement <16 x i7> [[TMP80]], i32 9
-; RV32-NEXT:    store i7 [[TMP106]], ptr [[TMP90]], align 1
-; RV32-NEXT:    [[TMP107:%.*]] = extractelement <16 x i7> [[TMP80]], i32 10
-; RV32-NEXT:    store i7 [[TMP107]], ptr [[TMP91]], align 1
-; RV32-NEXT:    [[TMP108:%.*]] = extractelement <16 x i7> [[TMP80]], i32 11
-; RV32-NEXT:    store i7 [[TMP108]], ptr [[TMP92]], align 1
-; RV32-NEXT:    [[TMP109:%.*]] = extractelement <16 x i7> [[TMP80]], i32 12
-; RV32-NEXT:    store i7 [[TMP109]], ptr [[TMP93]], align 1
-; RV32-NEXT:    [[TMP110:%.*]] = extractelement <16 x i7> [[TMP80]], i32 13
-; RV32-NEXT:    store i7 [[TMP110]], ptr [[TMP94]], align 1
-; RV32-NEXT:    [[TMP111:%.*]] = extractelement <16 x i7> [[TMP80]], i32 14
-; RV32-NEXT:    store i7 [[TMP111]], ptr [[TMP95]], align 1
-; RV32-NEXT:    [[TMP112:%.*]] = extractelement <16 x i7> [[TMP80]], i32 15
-; RV32-NEXT:    store i7 [[TMP112]], ptr [[TMP96]], align 1
-; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; RV32-NEXT:    [[TMP113:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1008
-; RV32-NEXT:    br i1 [[TMP113]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; RV32-NEXT:    [[IV_NEXT:%.*]] = add nsw i64 [[DEC_IV]], -1
+; RV32-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP1]], -1
+; RV32-NEXT:    [[TMP6:%.*]] = add nsw i64 [[TMP2]], -1
+; RV32-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP3]], -1
+; RV32-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT]]
+; RV32-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP5]]
+; RV32-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP6]]
+; RV32-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP7]]
+; RV32-NEXT:    [[TMP0:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
+; RV32-NEXT:    [[TMP13:%.*]] = load i7, ptr [[TMP9]], align 1
+; RV32-NEXT:    [[TMP14:%.*]] = load i7, ptr [[TMP10]], align 1
+; RV32-NEXT:    [[TMP15:%.*]] = load i7, ptr [[TMP11]], align 1
+; RV32-NEXT:    [[TMP16:%.*]] = insertelement <4 x i7> poison, i7 [[TMP0]], i32 0
+; RV32-NEXT:    [[TMP17:%.*]] = insertelement <4 x i7> [[TMP16]], i7 [[TMP13]], i32 1
+; RV32-NEXT:    [[TMP18:%.*]] = insertelement <4 x i7> [[TMP17]], i7 [[TMP14]], i32 2
+; RV32-NEXT:    [[TMP19:%.*]] = insertelement <4 x i7> [[TMP18]], i7 [[TMP15]], i32 3
+; RV32-NEXT:    [[TMP20:%.*]] = add <4 x i7> [[TMP19]], splat (i7 1)
+; RV32-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT]]
+; RV32-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP5]]
+; RV32-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP6]]
+; RV32-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP7]]
+; RV32-NEXT:    [[TMP25:%.*]] = extractelement <4 x i7> [[TMP20]], i32 0
+; RV32-NEXT:    store i7 [[TMP25]], ptr [[TMP21]], align 1
+; RV32-NEXT:    [[TMP26:%.*]] = extractelement <4 x i7> [[TMP20]], i32 1
+; RV32-NEXT:    store i7 [[TMP26]], ptr [[TMP22]], align 1
+; RV32-NEXT:    [[TMP27:%.*]] = extractelement <4 x i7> [[TMP20]], i32 2
+; RV32-NEXT:    store i7 [[TMP27]], ptr [[TMP23]], align 1
+; RV32-NEXT:    [[TMP28:%.*]] = extractelement <4 x i7> [[TMP20]], i32 3
+; RV32-NEXT:    store i7 [[TMP28]], ptr [[TMP24]], align 1
+; RV32-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; RV32-NEXT:    [[TMP29:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1020
+; RV32-NEXT:    br i1 [[TMP29]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; RV32:       [[MIDDLE_BLOCK]]:
 ; RV32-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV32:       [[SCALAR_PH]]:
-; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 15, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
+; RV32-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
 ; RV32-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV32:       [[FOR_BODY]]:
-; RV32-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; RV32-NEXT:    [[IV_NEXT]] = add nsw i64 [[DEC_IV]], -1
-; RV32-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT]]
-; RV32-NEXT:    [[TMP114:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
-; RV32-NEXT:    [[ADD:%.*]] = add i7 [[TMP114]], 1
-; RV32-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT]]
+; RV32-NEXT:    [[DEC_IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[FOR_BODY]] ]
+; RV32-NEXT:    [[IV_NEXT1]] = add nsw i64 [[DEC_IV1]], -1
+; RV32-NEXT:    [[ARRAYIDX_B1:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT1]]
+; RV32-NEXT:    [[TMP30:%.*]] = load i7, ptr [[ARRAYIDX_B1]], align 1
+; RV32-NEXT:    [[ADD:%.*]] = add i7 [[TMP30]], 1
+; RV32-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT1]]
 ; RV32-NEXT:    store i7 [[ADD]], ptr [[ARRAYIDX_A]], align 1
-; RV32-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_IV]], 1
+; RV32-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_IV1]], 1
 ; RV32-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[EXIT]], !llvm.loop [[LOOP7:![0-9]+]]
 ; RV32:       [[EXIT]]:
 ; RV32-NEXT:    ret void
@@ -757,278 +565,86 @@ define void @vector_reverse_irregular_type(ptr noalias %A, ptr noalias %B) {
 ; RV64-UF2:       [[VECTOR_BODY]]:
 ; RV64-UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
-; RV64-UF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
-; RV64-UF2-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
-; RV64-UF2-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
-; RV64-UF2-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
-; RV64-UF2-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], -4
-; RV64-UF2-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], -5
-; RV64-UF2-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], -6
-; RV64-UF2-NEXT:    [[TMP7:%.*]] = add i64 [[OFFSET_IDX]], -7
-; RV64-UF2-NEXT:    [[TMP8:%.*]] = add i64 [[OFFSET_IDX]], -8
-; RV64-UF2-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], -9
-; RV64-UF2-NEXT:    [[TMP10:%.*]] = add i64 [[OFFSET_IDX]], -10
-; RV64-UF2-NEXT:    [[TMP11:%.*]] = add i64 [[OFFSET_IDX]], -11
-; RV64-UF2-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX]], -12
-; RV64-UF2-NEXT:    [[TMP13:%.*]] = add i64 [[OFFSET_IDX]], -13
-; RV64-UF2-NEXT:    [[TMP14:%.*]] = add i64 [[OFFSET_IDX]], -14
-; RV64-UF2-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX]], -15
-; RV64-UF2-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], -16
-; RV64-UF2-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], -17
-; RV64-UF2-NEXT:    [[TMP18:%.*]] = add i64 [[OFFSET_IDX]], -18
-; RV64-UF2-NEXT:    [[TMP19:%.*]] = add i64 [[OFFSET_IDX]], -19
-; RV64-UF2-NEXT:    [[TMP20:%.*]] = add i64 [[OFFSET_IDX]], -20
-; RV64-UF2-NEXT:    [[TMP21:%.*]] = add i64 [[OFFSET_IDX]], -21
-; RV64-UF2-NEXT:    [[TMP22:%.*]] = add i64 [[OFFSET_IDX]], -22
-; RV64-UF2-NEXT:    [[TMP23:%.*]] = add i64 [[OFFSET_IDX]], -23
-; RV64-UF2-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], -24
-; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], -25
-; RV64-UF2-NEXT:    [[TMP26:%.*]] = add i64 [[OFFSET_IDX]], -26
-; RV64-UF2-NEXT:    [[TMP27:%.*]] = add i64 [[OFFSET_IDX]], -27
-; RV64-UF2-NEXT:    [[TMP28:%.*]] = add i64 [[OFFSET_IDX]], -28
-; RV64-UF2-NEXT:    [[TMP29:%.*]] = add i64 [[OFFSET_IDX]], -29
-; RV64-UF2-NEXT:    [[TMP30:%.*]] = add i64 [[OFFSET_IDX]], -30
-; RV64-UF2-NEXT:    [[TMP31:%.*]] = add i64 [[OFFSET_IDX]], -31
-; RV64-UF2-NEXT:    [[TMP32:%.*]] = add nsw i64 [[TMP0]], -1
-; RV64-UF2-NEXT:    [[TMP33:%.*]] = add nsw i64 [[TMP1]], -1
-; RV64-UF2-NEXT:    [[TMP34:%.*]] = add nsw i64 [[TMP2]], -1
-; RV64-UF2-NEXT:    [[TMP35:%.*]] = add nsw i64 [[TMP3]], -1
-; RV64-UF2-NEXT:    [[TMP36:%.*]] = add nsw i64 [[TMP4]], -1
-; RV64-UF2-NEXT:    [[TMP37:%.*]] = add nsw i64 [[TMP5]], -1
-; RV64-UF2-NEXT:    [[TMP38:%.*]] = add nsw i64 [[TMP6]], -1
-; RV64-UF2-NEXT:    [[TMP39:%.*]] = add nsw i64 [[TMP7]], -1
-; RV64-UF2-NEXT:    [[TMP40:%.*]] = add nsw i64 [[TMP8]], -1
-; RV64-UF2-NEXT:    [[TMP41:%.*]] = add nsw i64 [[TMP9]], -1
-; RV64-UF2-NEXT:    [[TMP42:%.*]] = add nsw i64 [[TMP10]], -1
-; RV64-UF2-NEXT:    [[TMP43:%.*]] = add nsw i64 [[TMP11]], -1
-; RV64-UF2-NEXT:    [[TMP44:%.*]] = add nsw i64 [[TMP12]], -1
-; RV64-UF2-NEXT:    [[TMP45:%.*]] = add nsw i64 [[TMP13]], -1
-; RV64-UF2-NEXT:    [[TMP46:%.*]] = add nsw i64 [[TMP14]], -1
-; RV64-UF2-NEXT:    [[TMP47:%.*]] = add nsw i64 [[TMP15]], -1
-; RV64-UF2-NEXT:    [[TMP48:%.*]] = add nsw i64 [[TMP16]], -1
-; RV64-UF2-NEXT:    [[TMP49:%.*]] = add nsw i64 [[TMP17]], -1
-; RV64-UF2-NEXT:    [[TMP50:%.*]] = add nsw i64 [[TMP18]], -1
-; RV64-UF2-NEXT:    [[TMP51:%.*]] = add nsw i64 [[TMP19]], -1
-; RV64-UF2-NEXT:    [[TMP52:%.*]] = add nsw i64 [[TMP20]], -1
-; RV64-UF2-NEXT:    [[TMP53:%.*]] = add nsw i64 [[TMP21]], -1
-; RV64-UF2-NEXT:    [[TMP54:%.*]] = add nsw i64 [[TMP22]], -1
-; RV64-UF2-NEXT:    [[TMP55:%.*]] = add nsw i64 [[TMP23]], -1
-; RV64-UF2-NEXT:    [[TMP56:%.*]] = add nsw i64 [[TMP24]], -1
-; RV64-UF2-NEXT:    [[TMP57:%.*]] = add nsw i64 [[TMP25]], -1
-; RV64-UF2-NEXT:    [[TMP58:%.*]] = add nsw i64 [[TMP26]], -1
-; RV64-UF2-NEXT:    [[TMP59:%.*]] = add nsw i64 [[TMP27]], -1
-; RV64-UF2-NEXT:    [[TMP60:%.*]] = add nsw i64 [[TMP28]], -1
-; RV64-UF2-NEXT:    [[TMP61:%.*]] = add nsw i64 [[TMP29]], -1
-; RV64-UF2-NEXT:    [[TMP62:%.*]] = add nsw i64 [[TMP30]], -1
-; RV64-UF2-NEXT:    [[TMP63:%.*]] = add nsw i64 [[TMP31]], -1
-; RV64-UF2-NEXT:    [[TMP64:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP32]]
-; RV64-UF2-NEXT:    [[TMP65:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP33]]
-; RV64-UF2-NEXT:    [[TMP66:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP34]]
-; RV64-UF2-NEXT:    [[TMP67:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP35]]
-; RV64-UF2-NEXT:    [[TMP68:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP36]]
-; RV64-UF2-NEXT:    [[TMP69:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP37]]
-; RV64-UF2-NEXT:    [[TMP70:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP38]]
-; RV64-UF2-NEXT:    [[TMP71:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP39]]
-; RV64-UF2-NEXT:    [[TMP72:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP40]]
-; RV64-UF2-NEXT:    [[TMP73:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP41]]
-; RV64-UF2-NEXT:    [[TMP74:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP42]]
-; RV64-UF2-NEXT:    [[TMP75:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP43]]
-; RV64-UF2-NEXT:    [[TMP76:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP44]]
-; RV64-UF2-NEXT:    [[TMP77:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP45]]
-; RV64-UF2-NEXT:    [[TMP78:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP46]]
-; RV64-UF2-NEXT:    [[TMP79:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP47]]
-; RV64-UF2-NEXT:    [[TMP80:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP48]]
-; RV64-UF2-NEXT:    [[TMP81:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP49]]
-; RV64-UF2-NEXT:    [[TMP82:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP50]]
-; RV64-UF2-NEXT:    [[TMP83:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP51]]
-; RV64-UF2-NEXT:    [[TMP84:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP52]]
-; RV64-UF2-NEXT:    [[TMP85:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP53]]
-; RV64-UF2-NEXT:    [[TMP86:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP54]]
-; RV64-UF2-NEXT:    [[TMP87:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP55]]
-; RV64-UF2-NEXT:    [[TMP88:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP56]]
-; RV64-UF2-NEXT:    [[TMP89:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP57]]
-; RV64-UF2-NEXT:    [[TMP90:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP58]]
-; RV64-UF2-NEXT:    [[TMP91:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP59]]
-; RV64-UF2-NEXT:    [[TMP92:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP60]]
-; RV64-UF2-NEXT:    [[TMP93:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP61]]
-; RV64-UF2-NEXT:    [[TMP94:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP62]]
-; RV64-UF2-NEXT:    [[TMP95:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP63]]
-; RV64-UF2-NEXT:    [[TMP96:%.*]] = load i7, ptr [[TMP64]], align 1
-; RV64-UF2-NEXT:    [[TMP97:%.*]] = load i7, ptr [[TMP65]], align 1
-; RV64-UF2-NEXT:    [[TMP98:%.*]] = load i7, ptr [[TMP66]], align 1
-; RV64-UF2-NEXT:    [[TMP99:%.*]] = load i7, ptr [[TMP67]], align 1
-; RV64-UF2-NEXT:    [[TMP100:%.*]] = load i7, ptr [[TMP68]], align 1
-; RV64-UF2-NEXT:    [[TMP101:%.*]] = load i7, ptr [[TMP69]], align 1
-; RV64-UF2-NEXT:    [[TMP102:%.*]] = load i7, ptr [[TMP70]], align 1
-; RV64-UF2-NEXT:    [[TMP103:%.*]] = load i7, ptr [[TMP71]], align 1
-; RV64-UF2-NEXT:    [[TMP104:%.*]] = load i7, ptr [[TMP72]], align 1
-; RV64-UF2-NEXT:    [[TMP105:%.*]] = load i7, ptr [[TMP73]], align 1
-; RV64-UF2-NEXT:    [[TMP106:%.*]] = load i7, ptr [[TMP74]], align 1
-; RV64-UF2-NEXT:    [[TMP107:%.*]] = load i7, ptr [[TMP75]], align 1
-; RV64-UF2-NEXT:    [[TMP108:%.*]] = load i7, ptr [[TMP76]], align 1
-; RV64-UF2-NEXT:    [[TMP109:%.*]] = load i7, ptr [[TMP77]], align 1
-; RV64-UF2-NEXT:    [[TMP110:%.*]] = load i7, ptr [[TMP78]], align 1
-; RV64-UF2-NEXT:    [[TMP111:%.*]] = load i7, ptr [[TMP79]], align 1
-; RV64-UF2-NEXT:    [[TMP112:%.*]] = insertelement <16 x i7> poison, i7 [[TMP96]], i32 0
-; RV64-UF2-NEXT:    [[TMP113:%.*]] = insertelement <16 x i7> [[TMP112]], i7 [[TMP97]], i32 1
-; RV64-UF2-NEXT:    [[TMP114:%.*]] = insertelement <16 x i7> [[TMP113]], i7 [[TMP98]], i32 2
-; RV64-UF2-NEXT:    [[TMP115:%.*]] = insertelement <16 x i7> [[TMP114]], i7 [[TMP99]], i32 3
-; RV64-UF2-NEXT:    [[TMP116:%.*]] = insertelement <16 x i7> [[TMP115]], i7 [[TMP100]], i32 4
-; RV64-UF2-NEXT:    [[TMP117:%.*]] = insertelement <16 x i7> [[TMP116]], i7 [[TMP101]], i32 5
-; RV64-UF2-NEXT:    [[TMP118:%.*]] = insertelement <16 x i7> [[TMP117]], i7 [[TMP102]], i32 6
-; RV64-UF2-NEXT:    [[TMP119:%.*]] = insertelement <16 x i7> [[TMP118]], i7 [[TMP103]], i32 7
-; RV64-UF2-NEXT:    [[TMP120:%.*]] = insertelement <16 x i7> [[TMP119]], i7 [[TMP104]], i32 8
-; RV64-UF2-NEXT:    [[TMP121:%.*]] = insertelement <16 x i7> [[TMP120]], i7 [[TMP105]], i32 9
-; RV64-UF2-NEXT:    [[TMP122:%.*]] = insertelement <16 x i7> [[TMP121]], i7 [[TMP106]], i32 10
-; RV64-UF2-NEXT:    [[TMP123:%.*]] = insertelement <16 x i7> [[TMP122]], i7 [[TMP107]], i32 11
-; RV64-UF2-NEXT:    [[TMP124:%.*]] = insertelement <16 x i7> [[TMP123]], i7 [[TMP108]], i32 12
-; RV64-UF2-NEXT:    [[TMP125:%.*]] = insertelement <16 x i7> [[TMP124]], i7 [[TMP109]], i32 13
-; RV64-UF2-NEXT:    [[TMP126:%.*]] = insertelement <16 x i7> [[TMP125]], i7 [[TMP110]], i32 14
-; RV64-UF2-NEXT:    [[TMP127:%.*]] = insertelement <16 x i7> [[TMP126]], i7 [[TMP111]], i32 15
-; RV64-UF2-NEXT:    [[TMP128:%.*]] = load i7, ptr [[TMP80]], align 1
-; RV64-UF2-NEXT:    [[TMP129:%.*]] = load i7, ptr [[TMP81]], align 1
-; RV64-UF2-NEXT:    [[TMP130:%.*]] = load i7, ptr [[TMP82]], align 1
-; RV64-UF2-NEXT:    [[TMP131:%.*]] = load i7, ptr [[TMP83]], align 1
-; RV64-UF2-NEXT:    [[TMP132:%.*]] = load i7, ptr [[TMP84]], align 1
-; RV64-UF2-NEXT:    [[TMP133:%.*]] = load i7, ptr [[TMP85]], align 1
-; RV64-UF2-NEXT:    [[TMP134:%.*]] = load i7, ptr [[TMP86]], align 1
-; RV64-UF2-NEXT:    [[TMP135:%.*]] = load i7, ptr [[TMP87]], align 1
-; RV64-UF2-NEXT:    [[TMP136:%.*]] = load i7, ptr [[TMP88]], align 1
-; RV64-UF2-NEXT:    [[TMP137:%.*]] = load i7, ptr [[TMP89]], align 1
-; RV64-UF2-NEXT:    [[TMP138:%.*]] = load i7, ptr [[TMP90]], align 1
-; RV64-UF2-NEXT:    [[TMP139:%.*]] = load i7, ptr [[TMP91]], align 1
-; RV64-UF2-NEXT:    [[TMP140:%.*]] = load i7, ptr [[TMP92]], align 1
-; RV64-UF2-NEXT:    [[TMP141:%.*]] = load i7, ptr [[TMP93]], align 1
-; RV64-UF2-NEXT:    [[TMP142:%.*]] = load i7, ptr [[TMP94]], align 1
-; RV64-UF2-NEXT:    [[TMP143:%.*]] = load i7, ptr [[TMP95]], align 1
-; RV64-UF2-NEXT:    [[TMP144:%.*]] = insertelement <16 x i7> poison, i7 [[TMP128]], i32 0
-; RV64-UF2-NEXT:    [[TMP145:%.*]] = insertelement <16 x i7> [[TMP144]], i7 [[TMP129]], i32 1
-; RV64-UF2-NEXT:    [[TMP146:%.*]] = insertelement <16 x i7> [[TMP145]], i7 [[TMP130]], i32 2
-; RV64-UF2-NEXT:    [[TMP147:%.*]] = insertelement <16 x i7> [[TMP146]], i7 [[TMP131]], i32 3
-; RV64-UF2-NEXT:    [[TMP148:%.*]] = insertelement <16 x i7> [[TMP147]], i7 [[TMP132]], i32 4
-; RV64-UF2-NEXT:    [[TMP149:%.*]] = insertelement <16 x i7> [[TMP148]], i7 [[TMP133]], i32 5
-; RV64-UF2-NEXT:    [[TMP150:%.*]] = insertelement <16 x i7> [[TMP149]], i7 [[TMP134]], i32 6
-; RV64-UF2-NEXT:    [[TMP151:%.*]] = insertelement <16 x i7> [[TMP150]], i7 [[TMP135]], i32 7
-; RV64-UF2-NEXT:    [[TMP152:%.*]] = insertelement <16 x i7> [[TMP151]], i7 [[TMP136]], i32 8
-; RV64-UF2-NEXT:    [[TMP153:%.*]] = insertelement <16 x i7> [[TMP152]], i7 [[TMP137]], i32 9
-; RV64-UF2-NEXT:    [[TMP154:%.*]] = insertelement <16 x i7> [[TMP153]], i7 [[TMP138]], i32 10
-; RV64-UF2-NEXT:    [[TMP155:%.*]] = insertelement <16 x i7> [[TMP154]], i7 [[TMP139]], i32 11
-; RV64-UF2-NEXT:    [[TMP156:%.*]] = insertelement <16 x i7> [[TMP155]], i7 [[TMP140]], i32 12
-; RV64-UF2-NEXT:    [[TMP157:%.*]] = insertelement <16 x i7> [[TMP156]], i7 [[TMP141]], i32 13
-; RV64-UF2-NEXT:    [[TMP158:%.*]] = insertelement <16 x i7> [[TMP157]], i7 [[TMP142]], i32 14
-; RV64-UF2-NEXT:    [[TMP159:%.*]] = insertelement <16 x i7> [[TMP158]], i7 [[TMP143]], i32 15
-; RV64-UF2-NEXT:    [[TMP160:%.*]] = add <16 x i7> [[TMP127]], splat (i7 1)
-; RV64-UF2-NEXT:    [[TMP161:%.*]] = add <16 x i7> [[TMP159]], splat (i7 1)
-; RV64-UF2-NEXT:    [[TMP162:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP32]]
-; RV64-UF2-NEXT:    [[TMP163:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP33]]
-; RV64-UF2-NEXT:    [[TMP164:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP34]]
-; RV64-UF2-NEXT:    [[TMP165:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP35]]
-; RV64-UF2-NEXT:    [[TMP166:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP36]]
-; RV64-UF2-NEXT:    [[TMP167:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP37]]
-; RV64-UF2-NEXT:    [[TMP168:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP38]]
-; RV64-UF2-NEXT:    [[TMP169:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP39]]
-; RV64-UF2-NEXT:    [[TMP170:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP40]]
-; RV64-UF2-NEXT:    [[TMP171:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP41]]
-; RV64-UF2-NEXT:    [[TMP172:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP42]]
-; RV64-UF2-NEXT:    [[TMP173:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP43]]
-; RV64-UF2-NEXT:    [[TMP174:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP44]]
-; RV64-UF2-NEXT:    [[TMP175:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP45]]
-; RV64-UF2-NEXT:    [[TMP176:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP46]]
-; RV64-UF2-NEXT:    [[TMP177:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP47]]
-; RV64-UF2-NEXT:    [[TMP178:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP48]]
-; RV64-UF2-NEXT:    [[TMP179:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP49]]
-; RV64-UF2-NEXT:    [[TMP180:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP50]]
-; RV64-UF2-NEXT:    [[TMP181:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP51]]
-; RV64-UF2-NEXT:    [[TMP182:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP52]]
-; RV64-UF2-NEXT:    [[TMP183:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP53]]
-; RV64-UF2-NEXT:    [[TMP184:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP54]]
-; RV64-UF2-NEXT:    [[TMP185:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP55]]
-; RV64-UF2-NEXT:    [[TMP186:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP56]]
-; RV64-UF2-NEXT:    [[TMP187:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP57]]
-; RV64-UF2-NEXT:    [[TMP188:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP58]]
-; RV64-UF2-NEXT:    [[TMP189:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP59]]
-; RV64-UF2-NEXT:    [[TMP190:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP60]]
-; RV64-UF2-NEXT:    [[TMP191:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP61]]
-; RV64-UF2-NEXT:    [[TMP192:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP62]]
-; RV64-UF2-NEXT:    [[TMP193:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP63]]
-; RV64-UF2-NEXT:    [[TMP194:%.*]] = extractelement <16 x i7> [[TMP160]], i32 0
-; RV64-UF2-NEXT:    store i7 [[TMP194]], ptr [[TMP162]], align 1
-; RV64-UF2-NEXT:    [[TMP195:%.*]] = extractelement <16 x i7> [[TMP160]], i32 1
-; RV64-UF2-NEXT:    store i7 [[TMP195]], ptr [[TMP163]], align 1
-; RV64-UF2-NEXT:    [[TMP196:%.*]] = extractelement <16 x i7> [[TMP160]], i32 2
-; RV64-UF2-NEXT:    store i7 [[TMP196]], ptr [[TMP164]], align 1
-; RV64-UF2-NEXT:    [[TMP197:%.*]] = extractelement <16 x i7> [[TMP160]], i32 3
-; RV64-UF2-NEXT:    store i7 [[TMP197]], ptr [[TMP165]], align 1
-; RV64-UF2-NEXT:    [[TMP198:%.*]] = extractelement <16 x i7> [[TMP160]], i32 4
-; RV64-UF2-NEXT:    store i7 [[TMP198]], ptr [[TMP166]], align 1
-; RV64-UF2-NEXT:    [[TMP199:%.*]] = extractelement <16 x i7> [[TMP160]], i32 5
-; RV64-UF2-NEXT:    store i7 [[TMP199]], ptr [[TMP167]], align 1
-; RV64-UF2-NEXT:    [[TMP200:%.*]] = extractelement <16 x i7> [[TMP160]], i32 6
-; RV64-UF2-NEXT:    store i7 [[TMP200]], ptr [[TMP168]], align 1
-; RV64-UF2-NEXT:    [[TMP201:%.*]] = extractelement <16 x i7> [[TMP160]], i32 7
-; RV64-UF2-NEXT:    store i7 [[TMP201]], ptr [[TMP169]], align 1
-; RV64-UF2-NEXT:    [[TMP202:%.*]] = extractelement <16 x i7> [[TMP160]], i32 8
-; RV64-UF2-NEXT:    store i7 [[TMP202]], ptr [[TMP170]], align 1
-; RV64-UF2-NEXT:    [[TMP203:%.*]] = extractelement <16 x i7> [[TMP160]], i32 9
-; RV64-UF2-NEXT:    store i7 [[TMP203]], ptr [[TMP171]], align 1
-; RV64-UF2-NEXT:    [[TMP204:%.*]] = extractelement <16 x i7> [[TMP160]], i32 10
-; RV64-UF2-NEXT:    store i7 [[TMP204]], ptr [[TMP172]], align 1
-; RV64-UF2-NEXT:    [[TMP205:%.*]] = extractelement <16 x i7> [[TMP160]], i32 11
-; RV64-UF2-NEXT:    store i7 [[TMP205]], ptr [[TMP173]], align 1
-; RV64-UF2-NEXT:    [[TMP206:%.*]] = extractelement <16 x i7> [[TMP160]], i32 12
-; RV64-UF2-NEXT:    store i7 [[TMP206]], ptr [[TMP174]], align 1
-; RV64-UF2-NEXT:    [[TMP207:%.*]] = extractelement <16 x i7> [[TMP160]], i32 13
-; RV64-UF2-NEXT:    store i7 [[TMP207]], ptr [[TMP175]], align 1
-; RV64-UF2-NEXT:    [[TMP208:%.*]] = extractelement <16 x i7> [[TMP160]], i32 14
-; RV64-UF2-NEXT:    store i7 [[TMP208]], ptr [[TMP176]], align 1
-; RV64-UF2-NEXT:    [[TMP209:%.*]] = extractelement <16 x i7> [[TMP160]], i32 15
-; RV64-UF2-NEXT:    store i7 [[TMP209]], ptr [[TMP177]], align 1
-; RV64-UF2-NEXT:    [[TMP210:%.*]] = extractelement <16 x i7> [[TMP161]], i32 0
-; RV64-UF2-NEXT:    store i7 [[TMP210]], ptr [[TMP178]], align 1
-; RV64-UF2-NEXT:    [[TMP211:%.*]] = extractelement <16 x i7> [[TMP161]], i32 1
-; RV64-UF2-NEXT:    store i7 [[TMP211]], ptr [[TMP179]], align 1
-; RV64-UF2-NEXT:    [[TMP212:%.*]] = extractelement <16 x i7> [[TMP161]], i32 2
-; RV64-UF2-NEXT:    store i7 [[TMP212]], ptr [[TMP180]], align 1
-; RV64-UF2-NEXT:    [[TMP213:%.*]] = extractelement <16 x i7> [[TMP161]], i32 3
-; RV64-UF2-NEXT:    store i7 [[TMP213]], ptr [[TMP181]], align 1
-; RV64-UF2-NEXT:    [[TMP214:%.*]] = extractelement <16 x i7> [[TMP161]], i32 4
-; RV64-UF2-NEXT:    store i7 [[TMP214]], ptr [[TMP182]], align 1
-; RV64-UF2-NEXT:    [[TMP215:%.*]] = extractelement <16 x i7> [[TMP161]], i32 5
-; RV64-UF2-NEXT:    store i7 [[TMP215]], ptr [[TMP183]], align 1
-; RV64-UF2-NEXT:    [[TMP216:%.*]] = extractelement <16 x i7> [[TMP161]], i32 6
-; RV64-UF2-NEXT:    store i7 [[TMP216]], ptr [[TMP184]], align 1
-; RV64-UF2-NEXT:    [[TMP217:%.*]] = extractelement <16 x i7> [[TMP161]], i32 7
-; RV64-UF2-NEXT:    store i7 [[TMP217]], ptr [[TMP185]], align 1
-; RV64-UF2-NEXT:    [[TMP218:%.*]] = extractelement <16 x i7> [[TMP161]], i32 8
-; RV64-UF2-NEXT:    store i7 [[TMP218]], ptr [[TMP186]], align 1
-; RV64-UF2-NEXT:    [[TMP219:%.*]] = extractelement <16 x i7> [[TMP161]], i32 9
-; RV64-UF2-NEXT:    store i7 [[TMP219]], ptr [[TMP187]], align 1
-; RV64-UF2-NEXT:    [[TMP220:%.*]] = extractelement <16 x i7> [[TMP161]], i32 10
-; RV64-UF2-NEXT:    store i7 [[TMP220]], ptr [[TMP188]], align 1
-; RV64-UF2-NEXT:    [[TMP221:%.*]] = extractelement <16 x i7> [[TMP161]], i32 11
-; RV64-UF2-NEXT:    store i7 [[TMP221]], ptr [[TMP189]], align 1
-; RV64-UF2-NEXT:    [[TMP222:%.*]] = extractelement <16 x i7> [[TMP161]], i32 12
-; RV64-UF2-NEXT:    store i7 [[TMP222]], ptr [[TMP190]], align 1
-; RV64-UF2-NEXT:    [[TMP223:%.*]] = extractelement <16 x i7> [[TMP161]], i32 13
-; RV64-UF2-NEXT:    store i7 [[TMP223]], ptr [[TMP191]], align 1
-; RV64-UF2-NEXT:    [[TMP224:%.*]] = extractelement <16 x i7> [[TMP161]], i32 14
-; RV64-UF2-NEXT:    store i7 [[TMP224]], ptr [[TMP192]], align 1
-; RV64-UF2-NEXT:    [[TMP225:%.*]] = extractelement <16 x i7> [[TMP161]], i32 15
-; RV64-UF2-NEXT:    store i7 [[TMP225]], ptr [[TMP193]], align 1
-; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
-; RV64-UF2-NEXT:    [[TMP226:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
-; RV64-UF2-NEXT:    br i1 [[TMP226]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; RV64-UF2-NEXT:    [[TMP16:%.*]] = add i64 [[OFFSET_IDX]], 0
+; RV64-UF2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], -1
+; RV64-UF2-NEXT:    [[TMP17:%.*]] = add i64 [[OFFSET_IDX]], -2
+; RV64-UF2-NEXT:    [[TMP24:%.*]] = add i64 [[OFFSET_IDX]], -3
+; RV64-UF2-NEXT:    [[TMP25:%.*]] = add i64 [[OFFSET_IDX]], -4
+; RV64-UF2-NEXT:    [[TMP42:%.*]] = add i64 [[OFFSET_IDX]], -5
+; RV64-UF2-NEXT:    [[TMP43:%.*]] = add i64 [[OFFSET_IDX]], -6
+; RV64-UF2-NEXT:    [[TMP50:%.*]] = add i64 [[OFFSET_IDX]], -7
+; RV64-UF2-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP16]], -1
+; RV64-UF2-NEXT:    [[TMP2:%.*]] = add nsw i64 [[TMP0]], -1
+; RV64-UF2-NEXT:    [[TMP51:%.*]] = add nsw i64 [[TMP17]], -1
+; RV64-UF2-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP24]], -1
+; RV64-UF2-NEXT:    [[TMP59:%.*]] = add nsw i64 [[TMP25]], -1
+; RV64-UF2-NEXT:    [[TMP13:%.*]] = add nsw i64 [[TMP42]], -1
+; RV64-UF2-NEXT:    [[TMP14:%.*]] = add nsw i64 [[TMP43]], -1
+; RV64-UF2-NEXT:    [[TMP15:%.*]] = add nsw i64 [[TMP50]], -1
+; RV64-UF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP1]]
+; RV64-UF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP2]]
+; RV64-UF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP51]]
+; RV64-UF2-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP11]]
+; RV64-UF2-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP59]]
+; RV64-UF2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP13]]
+; RV64-UF2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP14]]
+; RV64-UF2-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[TMP15]]
+; RV64-UF2-NEXT:    [[TMP5:%.*]] = load i7, ptr [[TMP3]], align 1
+; RV64-UF2-NEXT:    [[TMP6:%.*]] = load i7, ptr [[TMP4]], align 1
+; RV64-UF2-NEXT:    [[TMP26:%.*]] = load i7, ptr [[TMP18]], align 1
+; RV64-UF2-NEXT:    [[TMP27:%.*]] = load i7, ptr [[TMP19]], align 1
+; RV64-UF2-NEXT:    [[TMP28:%.*]] = insertelement <4 x i7> poison, i7 [[TMP5]], i32 0
+; RV64-UF2-NEXT:    [[TMP29:%.*]] = insertelement <4 x i7> [[TMP28]], i7 [[TMP6]], i32 1
+; RV64-UF2-NEXT:    [[TMP30:%.*]] = insertelement <4 x i7> [[TMP29]], i7 [[TMP26]], i32 2
+; RV64-UF2-NEXT:    [[TMP31:%.*]] = insertelement <4 x i7> [[TMP30]], i7 [[TMP27]], i32 3
+; RV64-UF2-NEXT:    [[TMP32:%.*]] = load i7, ptr [[TMP20]], align 1
+; RV64-UF2-NEXT:    [[TMP33:%.*]] = load i7, ptr [[TMP21]], align 1
+; RV64-UF2-NEXT:    [[TMP34:%.*]] = load i7, ptr [[TMP22]], align 1
+; RV64-UF2-NEXT:    [[TMP35:%.*]] = load i7, ptr [[TMP23]], align 1
+; RV64-UF2-NEXT:    [[TMP36:%.*]] = insertelement <4 x i7> poison, i7 [[TMP32]], i32 0
+; RV64-UF2-NEXT:    [[TMP37:%.*]] = insertelement <4 x i7> [[TMP36]], i7 [[TMP33]], i32 1
+; RV64-UF2-NEXT:    [[TMP38:%.*]] = insertelement <4 x i7> [[TMP37]], i7 [[TMP34]], i32 2
+; RV64-UF2-NEXT:    [[TMP39:%.*]] = insertelement <4 x i7> [[TMP38]], i7 [[TMP35]], i32 3
+; RV64-UF2-NEXT:    [[TMP40:%.*]] = add <4 x i7> [[TMP31]], splat (i7 1)
+; RV64-UF2-NEXT:    [[TMP41:%.*]] = add <4 x i7> [[TMP39]], splat (i7 1)
+; RV64-UF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP1]]
+; RV64-UF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP2]]
+; RV64-UF2-NEXT:    [[TMP44:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP51]]
+; RV64-UF2-NEXT:    [[TMP45:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP11]]
+; RV64-UF2-NEXT:    [[TMP46:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP59]]
+; RV64-UF2-NEXT:    [[TMP47:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP13]]
+; RV64-UF2-NEXT:    [[TMP48:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP14]]
+; RV64-UF2-NEXT:    [[TMP49:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[TMP15]]
+; RV64-UF2-NEXT:    [[TMP7:%.*]] = extractelement <4 x i7> [[TMP40]], i32 0
+; RV64-UF2-NEXT:    store i7 [[TMP7]], ptr [[TMP9]], align 1
+; RV64-UF2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i7> [[TMP40]], i32 1
+; RV64-UF2-NEXT:    store i7 [[TMP8]], ptr [[TMP10]], align 1
+; RV64-UF2-NEXT:    [[TMP52:%.*]] = extractelement <4 x i7> [[TMP40]], i32 2
+; RV64-UF2-NEXT:    store i7 [[TMP52]], ptr [[TMP44]], align 1
+; RV64-UF2-NEXT:    [[TMP53:%.*]] = extractelement <4 x i7> [[TMP40]], i32 3
+; RV64-UF2-NEXT:    store i7 [[TMP53]], ptr [[TMP45]], align 1
+; RV64-UF2-NEXT:    [[TMP54:%.*]] = extractelement <4 x i7> [[TMP41]], i32 0
+; RV64-UF2-NEXT:    store i7 [[TMP54]], ptr [[TMP46]], align 1
+; RV64-UF2-NEXT:    [[TMP55:%.*]] = extractelement <4 x i7> [[TMP41]], i32 1
+; RV64-UF2-NEXT:    store i7 [[TMP55]], ptr [[TMP47]], align 1
+; RV64-UF2-NEXT:    [[TMP56:%.*]] = extractelement <4 x i7> [[TMP41]], i32 2
+; RV64-UF2-NEXT:    store i7 [[TMP56]], ptr [[TMP48]], align 1
+; RV64-UF2-NEXT:    [[TMP57:%.*]] = extractelement <4 x i7> [[TMP41]], i32 3
+; RV64-UF2-NEXT:    store i7 [[TMP57]], ptr [[TMP49]], align 1
+; RV64-UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; RV64-UF2-NEXT:    [[TMP58:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1016
+; RV64-UF2-NEXT:    br i1 [[TMP58]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; RV64-UF2:       [[MIDDLE_BLOCK]]:
 ; RV64-UF2-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; RV64-UF2:       [[SCALAR_PH]]:
-; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 31, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
+; RV64-UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 7, %[[MIDDLE_BLOCK]] ], [ 1023, %[[ENTRY]] ]
 ; RV64-UF2-NEXT:    br label %[[FOR_BODY:.*]]
 ; RV64-UF2:       [[FOR_BODY]]:
 ; RV64-UF2-NEXT:    [[DEC_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; RV64-UF2-NEXT:    [[IV_NEXT]] = add nsw i64 [[DEC_IV]], -1
 ; RV64-UF2-NEXT:    [[ARRAYIDX_B:%.*]] = getelementptr inbounds i7, ptr [[B]], i64 [[IV_NEXT]]
-; RV64-UF2-NEXT:    [[TMP227:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
-; RV64-UF2-NEXT:    [[ADD:%.*]] = add i7 [[TMP227]], 1
+; RV64-UF2-NEXT:    [[TMP12:%.*]] = load i7, ptr [[ARRAYIDX_B]], align 1
+; RV64-UF2-NEXT:    [[ADD:%.*]] = add i7 [[TMP12]], 1
 ; RV64-UF2-NEXT:    [[ARRAYIDX_A:%.*]] = getelementptr inbounds i7, ptr [[A]], i64 [[IV_NEXT]]
 ; RV64-UF2-NEXT:    store i7 [[ADD]], ptr [[ARRAYIDX_A]], align 1
 ; RV64-UF2-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[DEC_IV]], 1
@@ -1048,7 +664,7 @@ for.body:
   %arrayidx.a = getelementptr inbounds i7, ptr %A, i64 %iv.next
   store i7 %add, ptr %arrayidx.a, align 1
   %cmp = icmp ugt i64 %dec.iv, 1
-  br i1 %cmp, label %for.body, label %exit, !llvm.loop !0
+  br i1 %cmp, label %for.body, label %exit, !llvm.loop !4
 
 exit:
   ret void
@@ -1058,3 +674,4 @@ exit:
 !1 = !{!"llvm.loop.vectorize.width", i32 4}
 !2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = distinct !{!4, !1, !3}
