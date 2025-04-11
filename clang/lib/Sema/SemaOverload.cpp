@@ -7189,6 +7189,7 @@ void Sema::AddOverloadCandidate(
     }
   }
 
+  assert(PO != OverloadCandidateParamOrder::Reversed || Args.size() == 2);
   // Determine the implicit conversion sequences for each of the
   // arguments.
   for (unsigned ArgIdx = 0; ArgIdx < Args.size(); ++ArgIdx) {
