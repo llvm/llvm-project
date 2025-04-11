@@ -10,3 +10,4 @@ tail %hi(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 tail %lo(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 tail %hi(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 tail %lo(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
+tail foo@mlt # CHECK: :[[@LINE]]:10: error: '@plt' is the only valid operand for this instruction

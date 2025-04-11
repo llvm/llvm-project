@@ -2123,14 +2123,18 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
 
   if (getLexer().getKind() != AsmToken::Identifier)
     return ParseStatus::NoMatch;
+
   std::string Identifier(getTok().getIdentifier());
+  SMLoc E = getTok().getEndLoc();
 
   if (getLexer().peekTok().is(AsmToken::At)) {
     Lex();
     Lex();
     StringRef PLT;
+    SMLoc PLTLoc = getLoc();
     if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return ParseStatus::Failure;
+      return Error(PLTLoc,
+                   "'@plt' is the only valid operand for this instruction");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
     return ParseStatus::NoMatch;
@@ -2138,7 +2142,6 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
     Lex();
   }
 
-  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
   RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_CALL_PLT;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
