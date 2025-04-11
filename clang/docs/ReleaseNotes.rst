@@ -589,6 +589,8 @@ libclang
 --------
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
+- Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -643,6 +645,8 @@ Python Binding Changes
   the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
+- Added ``Type.getFullyQualifiedName``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 OpenMP Support
 --------------

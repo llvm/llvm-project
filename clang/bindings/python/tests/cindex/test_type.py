@@ -535,6 +535,28 @@ class A
         pp.set_property(PrintingPolicyProperty.SuppressTagKeyword, False)
         self.assertEqual(f.type.get_canonical().pretty_printed(pp), "struct X")
 
+    def test_fully_qualified_name(self):
+        source = """
+        namespace home {
+          class Bar {
+          };
+          class Foo {
+            public:
+              void setIt(Bar*);
+          };
+        }
+        class A : public home::Foo {
+        };
+        """
+        tu = get_tu(source, lang="cpp")
+        c = get_cursor(tu, "A")
+        pp = PrintingPolicy.create(c)
+        base = list(c.get_children())[0].type.get_declaration()
+        set_it = list(base.get_children())[1]
+        arg = list(set_it.get_arguments())[0]
+        self.assertEqual(arg.type.get_fully_qualified_name(pp), "home::Bar *")
+        self.assertEqual(arg.type.get_fully_qualified_name(pp, True), "::home::Bar *")
+
     def test_base_classes(self):
         source = """
         class A { int a; };
