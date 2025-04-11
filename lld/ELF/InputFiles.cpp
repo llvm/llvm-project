@@ -682,6 +682,89 @@ static gnuPropertiesInfo readGnuProperty(Ctx &ctx, const InputSection &sec,
   return gnuPropertiesInfo{f.andFeatures, f.aarch64PauthAbiCoreInfo};
 }
 
+template <class ELFT>
+static void
+handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
+                                bool hasBA, bool hasGP,
+                                const AArch64BuildAttrSubsections &baInfo,
+                                const gnuPropertiesInfo &gpInfo) {
+  if (hasBA && hasGP) {
+    if (!gpInfo.aarch64PauthAbiCoreInfo.empty()) {
+      // check for a mismatch
+      auto deserializeArray = [&](size_t offset, bool isBE) {
+        unsigned value = 0;
+        for (size_t i = 0; i < 8; ++i) {
+          if (isBE)
+            value = (value << 8) | gpInfo.aarch64PauthAbiCoreInfo[i + offset];
+          else
+            value |= static_cast<uint64_t>(
+                         gpInfo.aarch64PauthAbiCoreInfo[i + offset])
+                     << (8 * i);
+        };
+        return value;
+      };
+      unsigned gnuPropPauthPlatform = deserializeArray(0, isBE);
+      if (baInfo.pauth.tagPlatform != gnuPropPauthPlatform)
+        ErrAlways(ctx)
+            << tPointer
+            << "Pauth Platform mismatch: file contains both GNU properties and "
+               "AArch64 build attributes sections\nGNU properties: "
+            << gnuPropPauthPlatform
+            << "\nAArch64 build attributes: " << baInfo.pauth.tagPlatform;
+      unsigned gnuPropPauthScheme = deserializeArray(8, isBE);
+      if (baInfo.pauth.tagSchema != gnuPropPauthScheme)
+        ErrAlways(ctx)
+            << tPointer
+            << "Pauth Schema mismatch: file contains both GNU properties and "
+               "AArch64 build attributes sections\nGNU properties: "
+            << gnuPropPauthScheme
+            << "\nAArch64 build attributes: " << baInfo.pauth.tagSchema;
+    }
+    if (baInfo.fAndB.tagBTI != (gpInfo.andFeatures & 0x01))
+      ErrAlways(ctx)
+          << tPointer
+          << "Features BTI mismatch: file contains both GNU properties and "
+             "AArch64 build attributes sections\nGNU properties: "
+          << (gpInfo.andFeatures & 0x01)
+          << "\nAArch64 build attributes: " << baInfo.fAndB.tagBTI;
+    if (baInfo.fAndB.tagPAC != ((gpInfo.andFeatures >> 1) & 0x01))
+      ErrAlways(ctx)
+          << tPointer
+          << "Feature PAC mismatch: file contains both GNU properties and "
+             "AArch64 build attributes sections\nGNU properties: "
+          << ((gpInfo.andFeatures >> 1) & 0x01)
+          << "\nAArch64 build attributes: " << baInfo.fAndB.tagPAC;
+    if (baInfo.fAndB.tagGCS != ((gpInfo.andFeatures >> 2) & 0x01))
+      ErrAlways(ctx)
+          << tPointer
+          << "Feature GCS mismatch: file contains both GNU properties and "
+             "AArch64 build attributes sections\nGNU properties: "
+          << ((gpInfo.andFeatures >> 2) & 0x01)
+          << "\nAArch64 build attributes: " << baInfo.fAndB.tagGCS;
+  }
+
+  if (hasBA && !hasGP) {
+    if (baInfo.pauth.tagPlatform || baInfo.pauth.tagSchema) {
+      auto serializeUnsigned = [&](unsigned value, size_t offset, bool isBE) {
+        for (size_t i = 0; i < 8; ++i) {
+          tPointer->aarch64PauthAbiCoreInfoStorage[i + offset] =
+              static_cast<uint8_t>(
+                  (static_cast<uint64_t>(value) >> (8 * (isBE ? (7 - i) : i))) &
+                  0xFF);
+        };
+      };
+      serializeUnsigned(baInfo.pauth.tagPlatform, 0, isBE);
+      serializeUnsigned(baInfo.pauth.tagSchema, 8, isBE);
+      tPointer->aarch64PauthAbiCoreInfo =
+          tPointer->aarch64PauthAbiCoreInfoStorage;
+    }
+    tPointer->andFeatures = 0;
+    tPointer->andFeatures |= (baInfo.fAndB.tagBTI) << 0;
+    tPointer->andFeatures |= (baInfo.fAndB.tagPAC) << 1;
+    tPointer->andFeatures |= (baInfo.fAndB.tagGCS) << 2;
+  }
+}
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -690,7 +773,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     initializeSymbols(obj);
     return;
   }
-
   // Handle dependent libraries and selection of section groups as these are not
   // done in parallel.
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
@@ -698,13 +780,20 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   uint64_t size = objSections.size();
   sections.resize(size);
 
-  // Check whether GNU properties section present and store it's data.
-  // This is done in order to compare the content of GNU properties section with
-  // aarch64 build attributes section.
-  bool hasGnuProperties = false;
+  // For handling AArch64 Build attributes and GNU properties
+  AArch64BuildAttrSubsections aarch64BAsubSections;
   gnuPropertiesInfo gnuPropertiesInformation;
+  bool hasAArch64BuildAttributes = false;
+  bool hasGNUProperties = false;
+
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+
+    // Collect GNU properties data.
+    // GNU properties might be processed in this loop, or only later on (e.g. in
+    // initializeSections) Therefore there is no guarantee that the GNU
+    // properties data will be read after this loop end, so it is being
+    // collected here.
     if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
       if (0 == this->andFeatures && this->aarch64PauthAbiCoreInfo.empty()) {
         gnuPropertiesInformation = readGnuProperty(
@@ -719,13 +808,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         gnuPropertiesInformation.aarch64PauthAbiCoreInfo =
             this->aarch64PauthAbiCoreInfo;
       }
-      hasGnuProperties = true;
-      break;
+      hasGNUProperties = true;
     }
-  }
 
-  for (size_t i = 0; i != size; ++i) {
-    const Elf_Shdr &sec = objSections[i];
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
@@ -809,130 +894,27 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64: {
-      // The specification states that if a file contains both GNU properties
-      // and AArch64 build attributes, they can be assumed to be identical.
-      // Therefore, if a file contains GNU properties, the AArch64 build
-      // attributes are ignored. If a file does not contain GNU properties, we
-      // leverage the existing GNU properties mechanism by populating the
-      // corresponding data structures, which will later be handled by
-      // Driver.cpp::readSecurityNotes. This ensures that AArch64 build
-      // attributes are represented in the linked object file as GNU properties,
-      // which are already supported by the Linux kernel and the dynamic
-      // loader.
+      // At this stage AArch64 Build Attributes does not replace GNU Properties.
+      // When both exists, their values must match.
+      // When both exists and contain different attributes, they complement each
+      // other. Curently attributes are represented in the linked object file as
+      // GNU properties, which are already supported by the Linux kernel and the
+      // dynamic loader. In the future, when relocatable linking (`-r` flag) is
+      // performed, a single merged AArch64 Build Attributes section will be
+      // emitted.
+
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
-        StringRef name = check(obj.getSectionName(sec, shstrtab));
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
         AArch64AttributeParser attributes;
-        // For functions that has to warn/err/report.
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
         InputSection isec(*this, sec, name);
         if (Error e = attributes.parse(contents, ELFT::Endianness)) {
           Warn(ctx) << &isec << ": " << std::move(e);
           // uint32_t andFeatures = 0;
           // std::array<uint8_t, 16> aarch64PauthAbiCoreInfoStorage;
         } else {
-          bool writePauth = false;
-          bool wrtieFeatures = false;
-          AArch64BuildAttrSubsections subSections =
-              extractBuildAttributesSubsections(attributes);
-          if (hasGnuProperties) {
-            if (!gnuPropertiesInformation.aarch64PauthAbiCoreInfo.empty()) {
-              // check for mismatch error
-              auto deserializeArray = [&](size_t offset, bool isBE) {
-                unsigned value = 0;
-                for (size_t i = 0; i < 8; ++i) {
-                  value = isBE ? (value << 8) |
-                                     gnuPropertiesInformation
-                                         .aarch64PauthAbiCoreInfo[i + offset]
-                               : value |=
-                                 static_cast<uint64_t>(
-                                     gnuPropertiesInformation
-                                         .aarch64PauthAbiCoreInfo[i + offset])
-                                 << (8 * i);
-                };
-                return value;
-              };
-              unsigned gnuPropPauthPlatform = deserializeArray(
-                  0, ELFT::Endianness == llvm::endianness::big);
-              if (subSections.pauth.tagPlatform != gnuPropPauthPlatform)
-                ErrAlways(ctx)
-                    << &isec
-                    << "Pauth Platform mismatch: file contains both GNU "
-                       "properties and AArch64 build attributes sections\nGNU "
-                       "properties: "
-                    << gnuPropPauthPlatform << "\nAArch64 build attributes: "
-                    << subSections.pauth.tagPlatform;
-              unsigned gnuPropPauthScheme = deserializeArray(
-                  8, ELFT::Endianness == llvm::endianness::big);
-              if (subSections.pauth.tagSchema != gnuPropPauthScheme)
-                ErrAlways(ctx)
-                    << &isec
-                    << "Pauth Schema mismatch: file contains both GNU "
-                       "properties and AArch64 build attributes sections\nGNU "
-                       "properties: "
-                    << gnuPropPauthScheme << "\nAArch64 build attributes: "
-                    << subSections.pauth.tagSchema;
-            } else {
-              writePauth = true;
-            }
-            if (subSections.fAndB.tagBTI !=
-                (gnuPropertiesInformation.andFeatures & 0x01))
-              ErrAlways(ctx)
-                  << &isec
-                  << "Features BTI mismatch: file contains both GNU "
-                     "properties and AArch64 build attributes sections\nGNU "
-                     "properties: "
-                  << (gnuPropertiesInformation.andFeatures & 0x01)
-                  << "\nAArch64 build attributes: " << subSections.fAndB.tagBTI;
-            if (subSections.fAndB.tagPAC !=
-                ((gnuPropertiesInformation.andFeatures >> 1) & 0x01))
-              ErrAlways(ctx)
-                  << &isec
-                  << "Feature PAC mismatch: file contains both GNU "
-                     "properties and AArch64 build attributes sections\nGNU "
-                     "properties: "
-                  << ((gnuPropertiesInformation.andFeatures >> 1) & 0x01)
-                  << "\nAArch64 build attributes: " << subSections.fAndB.tagBTI;
-            if (subSections.fAndB.tagGCS !=
-                ((gnuPropertiesInformation.andFeatures >> 2) & 0x01))
-              ErrAlways(ctx)
-                  << &isec
-                  << "Feature GCS mismatch: file contains both GNU "
-                     "properties and AArch64 build attributes sections\nGNU "
-                     "properties: "
-                  << ((gnuPropertiesInformation.andFeatures >> 2) & 0x01)
-                  << "\nAArch64 build attributes: " << subSections.fAndB.tagBTI;
-          } else {
-            // no GNU properties
-            writePauth = true;
-            wrtieFeatures = true;
-          }
-          if (writePauth) {
-            // this condition is important in order not to emit section when
-            // data does not exists, same as GNU properties.
-            if (subSections.pauth.tagPlatform || subSections.pauth.tagSchema) {
-              auto serializeUnsigned = [&](unsigned value, size_t offset,
-                                           bool isBE) {
-                for (size_t i = 0; i < 8; ++i) {
-                  this->aarch64PauthAbiCoreInfoStorage[i + offset] =
-                      static_cast<uint8_t>((static_cast<uint64_t>(value) >>
-                                            (8 * (isBE ? (7 - i) : i))) &
-                                           0xFF);
-                };
-              };
-              serializeUnsigned(subSections.pauth.tagPlatform, 0,
-                                ELFT::Endianness == llvm::endianness::big);
-              serializeUnsigned(subSections.pauth.tagSchema, 8,
-                                ELFT::Endianness == llvm::endianness::big);
-              this->aarch64PauthAbiCoreInfo =
-                  this->aarch64PauthAbiCoreInfoStorage;
-            }
-          }
-          if (wrtieFeatures) {
-            this->andFeatures = 0;
-            this->andFeatures |= (subSections.fAndB.tagBTI) << 0;
-            this->andFeatures |= (subSections.fAndB.tagPAC) << 1;
-            this->andFeatures |= (subSections.fAndB.tagGCS) << 2;
-          }
+          aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+          hasAArch64BuildAttributes = true;
         }
         sections[i] = &InputSection::discarded;
       }
@@ -946,6 +928,15 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     } break;
     }
   }
+
+  bool isBE = ELFT::Endianness == llvm::endianness::big;
+  // Handle AArch64 Build Attributes and GNU properties:
+  // - Err on mismatched values.
+  // - Store missing values as GNU properties.
+  handleAArch64BAAndGnuProperties(this, ctx, isBE, hasAArch64BuildAttributes,
+                                  hasGNUProperties, aarch64BAsubSections,
+                                  gnuPropertiesInformation);
+
   // Read a symbol table.
   initializeSymbols(obj);
 }
@@ -1947,7 +1938,7 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
-  // causes a collision which result in only one of the objects being taken
+  // causes a mismatch which result in only one of the objects being taken
   // into consideration at LTO time (which very likely causes undefined
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
