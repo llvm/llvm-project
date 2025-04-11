@@ -1,26 +1,28 @@
-! RUN: %flang -target amdgcn-- -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-AMDGPU
-! RUN: %flang -target x86_64-- -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-x86_64
+! RUN: %flang -target amdgcn-- -mmlir -use-alloc-runtime -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK
+! RUN: %flang -target amdgcn-- -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK-NO-FLAG
+
+! Test to check if usage of flag -use-alloc-runtime results in runtime calls.
 
 subroutine allocate_deallocate()
   real, allocatable :: x
 
   allocate(x)
-! CHECK-AMDGPU: call i32 @_FortranAAllocatableAllocate
-! CHECK-x86_64: call ptr @malloc
+! CHECK: call i32 @_FortranAAllocatableAllocate
+! CHECK-NO-FLAG: call ptr @malloc
 
   deallocate(x)
-! CHECK-AMDGPU: call i32 @_FortranAAllocatableDeallocate
-! CHECK-x86_64: call void @free
+! CHECK: call i32 @_FortranAAllocatableDeallocate
+! CHECK-NO-FLAG: call void @free
 end subroutine
 
 subroutine allocate_deallocate_ptr()
   integer, pointer :: x
 
   allocate(x)
-! CHECK-AMDGPU: call i32 @_FortranAPointerAllocate
-! CHECK-x86_64: call i32 @_FortranAPointerAllocate
+! CHECK: call i32 @_FortranAPointerAllocate
+! CHECK-NO-FLAG: call i32 @_FortranAPointerAllocate
 
   deallocate(x)
-! CHECK-AMDGPU: call i32 @_FortranAPointerDeallocate
-! CHECK-x86_64: call i32 @_FortranAPointerDeallocate
+! CHECK: call i32 @_FortranAPointerDeallocate
+! CHECK-NO-FLAG: call i32 @_FortranAPointerDeallocate
 end subroutine

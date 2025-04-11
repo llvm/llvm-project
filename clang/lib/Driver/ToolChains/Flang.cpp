@@ -432,10 +432,6 @@ void Flang::AddAMDGPUTargetArgs(const ArgList &Args,
         Args.MakeArgString("--amdhsa-code-object-version=" + Val));
   }
 
-  // Force the use of runtime and descriptors for heap allocate/deallocate.
-  CmdArgs.push_back(Args.MakeArgString("-mmlir"));
-  CmdArgs.push_back(Args.MakeArgString("--use-alloc-runtime"));
-
   const ToolChain &TC = getToolChain();
   TC.addClangTargetOptions(Args, CmdArgs, Action::OffloadKind::OFK_OpenMP);
 }
