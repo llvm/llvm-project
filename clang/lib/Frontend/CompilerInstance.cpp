@@ -1252,28 +1252,22 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   return InstancePtr;
 }
 
-/// Compile a module file for the given module, using the options
-/// provided by the importing compiler instance. Returns true if the module
-/// was built without errors.
-static bool compileModule(CompilerInstance &ImportingInstance,
-                          SourceLocation ImportLoc, StringRef ModuleName,
-                          StringRef ModuleFileName,
-                          CompilerInstance &Instance) {
+bool CompilerInstance::compileModule(SourceLocation ImportLoc,
+                                     StringRef ModuleName,
+                                     StringRef ModuleFileName,
+                                     CompilerInstance &Instance) {
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
 
   // Never compile a module that's already finalized - this would cause the
   // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
+  if (getModuleCache().getInMemoryModuleCache().isPCMFinal(ModuleFileName)) {
+    getDiagnostics().Report(ImportLoc, diag::err_module_rebuild_finalized)
         << ModuleName;
     return false;
   }
 
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build)
-    << ModuleName << ModuleFileName;
+  getDiagnostics().Report(ImportLoc, diag::remark_module_build)
+      << ModuleName << ModuleFileName;
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
@@ -1284,13 +1278,12 @@ static bool compileModule(CompilerInstance &ImportingInstance,
       },
       DesiredStackSize);
 
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build_done)
-    << ModuleName;
+  getDiagnostics().Report(ImportLoc, diag::remark_module_build_done)
+      << ModuleName;
 
   // Propagate the statistics to the parent FileManager.
-  if (!ImportingInstance.getFrontendOpts().ModulesShareFileManager)
-    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
+  if (!getFrontendOpts().ModulesShareFileManager)
+    getFileManager().AddStats(Instance.getFileManager());
 
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams
@@ -1304,8 +1297,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
 
   // We've rebuilt a module. If we're allowed to generate or update the global
   // module index, record that fact in the importing compiler instance.
-  if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
-    ImportingInstance.setBuildGlobalModuleIndex(true);
+  if (getFrontendOpts().GenerateGlobalModuleIndex) {
+    setBuildGlobalModuleIndex(true);
   }
 
   // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
@@ -1452,9 +1445,9 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
   auto Instance = ImportingInstance.cloneForModuleCompile(ModuleNameLoc, Module,
                                                           ModuleFileName);
 
-  if (!compileModule(ImportingInstance, ModuleNameLoc,
-                     Module->getTopLevelModuleName(), ModuleFileName,
-                     *Instance)) {
+  if (!ImportingInstance.compileModule(ModuleNameLoc,
+                                       Module->getTopLevelModuleName(),
+                                       ModuleFileName, *Instance)) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_built)
         << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
@@ -2244,8 +2237,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   Other->DeleteBuiltModules = false;
 
   // Build the module, inheriting any modules that we've built locally.
-  bool Success =
-      compileModule(*this, ImportLoc, ModuleName, ModuleFileName, *Other);
+  bool Success = compileModule(ImportLoc, ModuleName, ModuleFileName, *Other);
 
   BuiltModules = std::move(Other->BuiltModules);
 

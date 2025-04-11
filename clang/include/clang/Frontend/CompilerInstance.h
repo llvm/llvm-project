@@ -886,6 +886,14 @@ public:
   cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
                         StringRef ModuleFileName);
 
+  /// Compile a module file for the given module, using the options
+  /// provided by the importing compiler instance. Returns true if the module
+  /// was built without errors.
+  // FIXME: This should be private, but it's called from static non-member
+  // functions in the implementation file.
+  bool compileModule(SourceLocation ImportLoc, StringRef ModuleName,
+                     StringRef ModuleFileName, CompilerInstance &Instance);
+
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override;
