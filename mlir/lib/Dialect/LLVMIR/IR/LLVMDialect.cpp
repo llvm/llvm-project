@@ -2302,19 +2302,31 @@ static LogicalResult verifyComdat(Operation *op,
 static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   llvm::DenseSet<BlockTagAttr> blockTags;
   BlockTagOp badBlockTagOp;
+  enum { DupTag, UnrecheableBlock } errorMsgType;
   if (funcOp
           .walk([&](BlockTagOp blockTagOp) {
+            mlir::Block *block = blockTagOp->getBlock();
+            if (!block->isEntryBlock() && block->use_empty()) {
+              badBlockTagOp = blockTagOp;
+              errorMsgType = UnrecheableBlock;
+              return WalkResult::interrupt();
+            }
+
             if (blockTags.contains(blockTagOp.getTag())) {
               badBlockTagOp = blockTagOp;
+              errorMsgType = DupTag;
               return WalkResult::interrupt();
             }
             blockTags.insert(blockTagOp.getTag());
             return WalkResult::advance();
           })
           .wasInterrupted()) {
-    badBlockTagOp.emitError()
-        << "duplicate block tag '" << badBlockTagOp.getTag().getId()
-        << "' in the same function: ";
+    if (errorMsgType == DupTag)
+      badBlockTagOp.emitError()
+          << "duplicate block tag '" << badBlockTagOp.getTag().getId()
+          << "' in the same function: ";
+    else
+      badBlockTagOp.emitError() << "not allowed in unrecheable blocks";
     return failure();
   }
 
