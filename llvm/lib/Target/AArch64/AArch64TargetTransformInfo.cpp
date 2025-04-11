@@ -1492,10 +1492,6 @@ static bool isAllActivePredicate(Value *Pred) {
     if (cast<ScalableVectorType>(Pred->getType())->getMinNumElements() <=
         cast<ScalableVectorType>(UncastedPred->getType())->getMinNumElements())
       Pred = UncastedPred;
-  if (match(Pred, m_Intrinsic<Intrinsic::aarch64_sve_ptrue>(
-                      m_ConstantInt<AArch64SVEPredPattern::all>())))
-    return true;
-
   auto *C = dyn_cast<Constant>(Pred);
   return (C && C->isAllOnesValue());
 }
@@ -2638,9 +2634,8 @@ static std::optional<Instruction *> instCombineDMB(InstCombiner &IC,
 
 static std::optional<Instruction *> instCombinePTrue(InstCombiner &IC,
                                                      IntrinsicInst &II) {
-  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>())) {
+  if (match(II.getOperand(0), m_ConstantInt<AArch64SVEPredPattern::all>()))
     return IC.replaceInstUsesWith(II, Constant::getAllOnesValue(II.getType()));
-  }
   return std::nullopt;
 }
 
