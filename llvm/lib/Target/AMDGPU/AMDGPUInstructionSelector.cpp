@@ -4324,11 +4324,11 @@ enum class SrcStatus {
   IS_UPPER_HALF,
   IS_LOWER_HALF,
   IS_UPPER_HALF_NEG,
-  // This means current op = [op_upper, op_lower] and src = -op_lower
+  // This means current op = [op_upper, op_lower] and src = -op_lower.
   IS_LOWER_HALF_NEG,
   IS_HI_NEG,
   // This means current op = [op_upper, op_lower] and src = [op_upper,
-  // -op_lower]
+  // -op_lower].
   IS_LO_NEG,
   IS_BOTH_NEG,
   INVALID,
@@ -4548,8 +4548,9 @@ static SrcStatus getNegStatus(const MachineOperand *Op, SrcStatus S,
       return SrcStatus::IS_LOWER_HALF_NEG;
     }
     break;
+  default:
+    llvm_unreachable("unexpected SrcStatus");
   }
-  llvm_unreachable("unexpected SrcStatus");
 }
 
 static std::optional<std::pair<const MachineOperand *, SrcStatus>>
@@ -4558,15 +4559,9 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
   if (!Curr.first->isReg())
     return std::nullopt;
 
-  const MachineInstr *MI = nullptr;
-
-  if (!Curr.first->isDef())
-    MI = MRI.getVRegDef(Curr.first->getReg());
-  else
-    MI = Curr.first->getParent();
-
-  if (!MI)
-    return std::nullopt;
+  const MachineInstr *MI = Curr.first->isDef()
+                               ? Curr.first->getParent()
+                               : MRI.getVRegDef(Curr.first->getReg());
 
   unsigned Opc = MI->getOpcode();
 
@@ -4626,7 +4621,7 @@ calcNextStatus(std::pair<const MachineOperand *, SrcStatus> Curr,
 class searchOptions {
 private:
   bool HasNeg = false;
-  // Assume all complex pattern of VOP3P has opsel
+  // Assume all complex pattern of VOP3P has opsel.
   bool HasOpsel = true;
 
 public:
@@ -4635,11 +4630,11 @@ public:
     unsigned Opc = MI->getOpcode();
 
     if (Opc < TargetOpcode::GENERIC_OP_END) {
-      // Keep same for generic op
+      // Keep same for generic op.
       HasNeg = true;
     } else if (Opc == TargetOpcode::G_INTRINSIC) {
       Intrinsic::ID IntrinsicID = cast<GIntrinsic>(*MI).getIntrinsicID();
-      // Only float point intrinsic has neg & neg_hi bits
+      // Only float point intrinsic has neg & neg_hi bits.
       if (IntrinsicID == Intrinsic::amdgcn_fdot2)
         HasNeg = true;
     }
@@ -4666,9 +4661,8 @@ getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
 
   while (Depth <= MaxDepth && Curr.has_value()) {
     Depth++;
-    if (SearchOptions.checkOptions(Curr.value().second)) {
+    if (SearchOptions.checkOptions(Curr.value().second))
       Statlist.push_back(Curr.value());
-    }
     Curr = calcNextStatus(Curr.value(), MRI);
   }
 
@@ -4712,9 +4706,9 @@ static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
 
 static bool isSameOperand(const MachineOperand *Op1,
                           const MachineOperand *Op2) {
-  if (Op1->isReg()) {
+  if (Op1->isReg())
     return Op2->isReg() && Op1->getReg() == Op2->getReg();
-  }
+
   return Op1->isIdenticalTo(*Op2);
 }
 
@@ -4769,7 +4763,7 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
                                                bool IsDOT) const {
   unsigned Mods = 0;
   const MachineOperand *Op = RootOp;
-  // No modification if Root type is not form of <2 x Type>
+  // No modification if Root type is not form of <2 x Type>.
   if (isVectorOfTwoOrScalar(Op, MRI) != TypeClass::VECTOR_OF_TWO) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
@@ -4815,13 +4809,13 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *RootOp,
     return {Op, Mods};
   }
 
-  for (int i = StatlistHi.size() - 1; i >= 0; i--) {
-    for (int j = StatlistLo.size() - 1; j >= 0; j--) {
-      if (isSameOperand(StatlistHi[i].first, StatlistLo[j].first) &&
-          isValidToPack(StatlistHi[i].second, StatlistLo[j].second,
-                        StatlistHi[i].first, RootOp, TII, MRI))
-        return {StatlistHi[i].first,
-                updateMods(StatlistHi[i].second, StatlistLo[j].second, Mods)};
+  for (int I = StatlistHi.size() - 1; I >= 0; I--) {
+    for (int J = StatlistLo.size() - 1; J >= 0; J--) {
+      if (isSameOperand(StatlistHi[I].first, StatlistLo[J].first) &&
+          isValidToPack(StatlistHi[I].second, StatlistLo[J].second,
+                        StatlistHi[I].first, RootOp, TII, MRI))
+        return {StatlistHi[I].first,
+                updateMods(StatlistHi[I].second, StatlistLo[J].second, Mods)};
     }
   }
   // Packed instructions do not have abs modifiers.
@@ -4851,18 +4845,18 @@ static bool checkRB(const MachineOperand *Op, unsigned int RBNo,
   return RB->getID() == RBNo;
 }
 
-// This function is used to get the correct register bank for returned reg
+// This function is used to get the correct register bank for returned reg.
 // Assume:
-// 1. VOP3P is always legal for VGPR
-// 2. RootOp's regbank is legal
+// 1. VOP3P is always legal for VGPR.
+// 2. RootOp's regbank is legal.
 // Thus
-// 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR
-// 2. If RootOp is VGPR, then NewOp must be VGPR
+// 1. If RootOp is SGPR, then NewOp can be SGPR or VGPR.
+// 2. If RootOp is VGPR, then NewOp must be VGPR.
 static const MachineOperand *
 getLegalRegBank(const MachineOperand *NewOp, const MachineOperand *RootOp,
                 const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
                 const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
-  // RootOp can only be VGPR or SGPR (some hand written cases such as
+  // RootOp can only be VGPR or SGPR (some hand written cases such as.
   // inst-select-ashr.v2s16.mir::ashr_v2s16_vs).
   if (checkRB(RootOp, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
       checkRB(NewOp, AMDGPU::VGPRRegBankID, RBI, MRI, TRI))
@@ -4884,7 +4878,7 @@ getLegalRegBank(const MachineOperand *NewOp, const MachineOperand *RootOp,
       BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
           .addReg(NewOp->getReg());
 
-  // only accept VGPR
+  // only accept VGPR.
   return &MIB->getOperand(0);
 }
 
