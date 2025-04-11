@@ -1597,11 +1597,10 @@ Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
   auto *NewDD = cast_if_present<DecompositionDecl>(
       VisitVarDecl(D, /*InstantiatingVarTemplate=*/false, &NewBindingArray));
 
-  if (!NewDD || NewDD->isInvalidDecl())
+  if (!NewDD || NewDD->isInvalidDecl()) {
     for (auto *NewBD : NewBindings)
       NewBD->setInvalidDecl();
-
-  if (OldBindingPack) {
+  } else if (OldBindingPack) {
     // Mark the bindings in the pack as instantiated.
     auto Bindings = NewDD->bindings();
     BindingDecl *NewBindingPack = *llvm::find_if(
