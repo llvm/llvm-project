@@ -3596,14 +3596,9 @@ void Verifier::visitCallBase(CallBase &Call) {
     Check(Callee->getValueType() == FTy,
           "Intrinsic called with incompatible signature", Call);
 
-  // Disallow calls to functions with the amdgpu_cs_chain[_preserve] calling
-  // convention.
-  auto CC = Call.getCallingConv();
-  Check(CC != CallingConv::AMDGPU_CS_Chain &&
-            CC != CallingConv::AMDGPU_CS_ChainPreserve,
-        "Direct calls to amdgpu_cs_chain/amdgpu_cs_chain_preserve functions "
-        "not allowed. Please use the @llvm.amdgpu.cs.chain intrinsic instead.",
-        Call);
+  // Verify if the calling convention of the callee is callable.
+  Check(isCallableCC(Call.getCallingConv()),
+        "calling convention does not permit calls", Call);
 
   // Disallow passing/returning values with alignment higher than we can
   // represent.
