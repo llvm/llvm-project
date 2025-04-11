@@ -52,7 +52,7 @@ def test_infer_contraction_dimensions_from_ops():
                 dims = linalg.infer_contraction_dimensions(contraction_op)
                 assert dims is not None
 
-                # Expect m=[0], n=[1], k=[2] as per standard matmul
+                # Expect m=[0], n=[1], k=[2] as per standard matmul.
                 assert list(dims.m) == [0], f"Expected m=[0], got {list(dims.m)}"
                 assert list(dims.n) == [1], f"Expected n=[1], got {list(dims.n)}"
                 assert list(dims.k) == [2], f"Expected k=[2], got {list(dims.k)}"
@@ -95,3 +95,67 @@ def test_infer_contraction_dimensions_from_ops():
                 assert (
                     list(dims.batch) == []
                 ), f"Expected batch=[], got {list(dims.batch)}"
+
+
+@run
+def test_infer_convolution_dimensions_from_ops():
+    with Context(), Location.unknown():
+        module = Module.create()
+        f32 = F32Type.get()
+
+        with InsertionPoint(module.body):
+            # === Static shapes ===
+            batch, h, w, c_in, kh, kw, c_out = 1, 8, 8, 4, 3, 3, 16
+            input_type = RankedTensorType.get((batch, h, w, c_in), f32)
+            filter_type = RankedTensorType.get((kh, kw, c_in, c_out), f32)
+            output_type = RankedTensorType.get(
+                (batch, h - kh + 1, w - kw + 1, c_out), f32
+            )
+
+            @func.FuncOp.from_py_func(input_type, filter_type, output_type)
+            def conv_fn(input, filter, output):
+                zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.0), result=f32)
+                filled = linalg.fill(zero, outs=[output])
+                fill_op = filled.owner
+
+                assert not linalg.isa_convolution_op(fill_op)
+                assert linalg.infer_convolution_dimensions(fill_op) is None
+
+                result = linalg.conv_2d_nhwc_hwcf(input, filter, outs=[filled])
+                conv_op = result.owner
+
+                assert linalg.isa_convolution_op(conv_op)
+                dims = linalg.infer_convolution_dimensions(conv_op)
+                assert dims is not None
+                assert list(dims.batch) == [0]
+                assert list(dims.output_image) == [1, 2]
+                assert list(dims.output_channel) == [3]
+                assert list(dims.filter_loop) == [4, 5]
+                assert list(dims.input_channel) == [6]
+                assert list(dims.depth) == []
+                assert list(dims.strides) == [1, 1]
+                assert list(dims.dilations) == [1, 1]
+
+            # === Dynamic shapes ===
+            dyn = ShapedType.get_dynamic_size()
+            dyn_input_type = RankedTensorType.get((batch, dyn, dyn, c_in), f32)
+            dyn_output_type = RankedTensorType.get((batch, dyn, dyn, c_out), f32)
+
+            @func.FuncOp.from_py_func(dyn_input_type, filter_type, dyn_output_type)
+            def dyn_conv_fn(input, filter, output):
+                zero = arith.ConstantOp(value=FloatAttr.get(f32, 0.0), result=f32)
+                filled = linalg.fill(zero, outs=[output])
+                result = linalg.conv_2d_nhwc_hwcf(input, filter, outs=[filled])
+                conv_op = result.owner
+
+                assert linalg.isa_convolution_op(conv_op)
+                dims = linalg.infer_convolution_dimensions(conv_op)
+                assert dims is not None
+                assert list(dims.batch) == [0]
+                assert list(dims.output_image) == [1, 2]
+                assert list(dims.output_channel) == [3]
+                assert list(dims.filter_loop) == [4, 5]
+                assert list(dims.input_channel) == [6]
+                assert list(dims.depth) == []
+                assert list(dims.strides) == [1, 1]
+                assert list(dims.dilations) == [1, 1]
