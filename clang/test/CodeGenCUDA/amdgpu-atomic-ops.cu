@@ -20,6 +20,8 @@
 #include "Inputs/cuda.h"
 #include <stdatomic.h>
 
+typedef float __attribute__((ext_vector_type(2))) vector_float;
+
 __global__ void ffp1(float *p) {
   // FUN-LABEL: @_Z4ffp1Pf
   // SAFEIR: atomicrmw fadd ptr {{.*}} monotonic, align 4, [[DEFMD:!amdgpu.no.fine.grained.memory ![0-9]+, !amdgpu.no.remote.memory ![0-9]+$]]
@@ -218,6 +220,55 @@ __global__ void ffp6(_Float16 *p) {
   __hip_atomic_fetch_sub(p, 1.0f, memory_order_relaxed, __HIP_MEMORY_SCOPE_WORKGROUP);
   __hip_atomic_fetch_max(p, 1.0f, memory_order_relaxed, __HIP_MEMORY_SCOPE_AGENT);
   __hip_atomic_fetch_min(p, 1.0f, memory_order_relaxed, __HIP_MEMORY_SCOPE_WORKGROUP);
+}
+
+__global__ void ffp7(vector_float *p) {
+  // CHECK-LABEL: @_Z4ffp7PDv2_f
+  // SAFEIR: atomicrmw fadd ptr {{.*}}<2 x float>{{.*}} monotonic, align 8{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}}<2 x float>{{.*}} monotonic, align 8{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}}<2 x float>{{.*}} monotonic, align 8{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}}<2 x float>{{.*}} monotonic, align 8{{$}}
+  // SAFEIR: atomicrmw fadd ptr {{.*}}<2 x float>{{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fsub ptr {{.*}}<2 x float>{{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmax ptr {{.*}}<2 x float>{{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+  // SAFEIR: atomicrmw fmin ptr {{.*}}<2 x float>{{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]]{{$}}
+
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fsub ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fadd ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fsub ptr {{.*}}<2 x float>{{.*}} monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmax ptr {{.*}}<2 x float>{{.*}} syncscope("agent") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+  // UNSAFEIR: atomicrmw fmin ptr {{.*}}<2 x float>{{.*}} syncscope("workgroup") monotonic, align 8, !noalias.addrspace ![[$NO_PRIVATE]], !amdgpu.no.fine.grained.memory !{{[0-9]+$}}
+
+  // SAFE: _Z4ffp7PDv2_f
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+  // SAFE: global_atomic_cmpswap
+
+  // UNSAFE: _Z4ffp7PDv2_f
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  // UNSAFE: global_atomic_cmpswap
+  __atomic_fetch_add(p, {1.0f, 1.0f}, memory_order_relaxed);
+  __atomic_fetch_sub(p, {1.0f, 1.0f}, memory_order_relaxed);
+  __atomic_fetch_max(p, {1.0f, 1.0f}, memory_order_relaxed);
+  __atomic_fetch_min(p, {1.0f, 1.0f}, memory_order_relaxed);
+  __hip_atomic_fetch_add(p, {1.0f, 1.0f}, memory_order_relaxed, __HIP_MEMORY_SCOPE_AGENT);
+  __hip_atomic_fetch_sub(p, {1.0f, 1.0f}, memory_order_relaxed, __HIP_MEMORY_SCOPE_WORKGROUP);
+  __hip_atomic_fetch_max(p, {1.0f, 1.0f}, memory_order_relaxed, __HIP_MEMORY_SCOPE_AGENT);
+  __hip_atomic_fetch_min(p, {1.0f, 1.0f}, memory_order_relaxed, __HIP_MEMORY_SCOPE_WORKGROUP);
 }
 
 // CHECK-LABEL: @_Z12test_cmpxchgPiii
