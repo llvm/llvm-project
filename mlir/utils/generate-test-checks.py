@@ -236,9 +236,13 @@ def process_attribute_references(line, attribute_namer):
 # Pre-process a line of input to remove any character sequences that will be
 # problematic with FileCheck.
 def preprocess_line(line):
+    # Replace any `{{` with escaped replacements. `{{` corresponds to regex
+    # checks in FileCheck.
+    output_line = line.replace("{{", "{{\\{\\{}}")
+
     # Replace any double brackets, '[[' with escaped replacements. '[['
     # corresponds to variable names in FileCheck.
-    output_line = line.replace("[[", "{{\\[\\[}}")
+    output_line = output_line.replace("[[", "{{\\[\\[}}")
 
     # Replace any single brackets that are followed by an SSA identifier, the
     # identifier will be replace by a variable; Creating the same situation as
@@ -325,6 +329,11 @@ def main():
     # Process lines
     for input_line in input_lines:
         if not input_line:
+            continue
+
+        # When using `--starts_from_scope=0` to capture module lines, the file
+        # split needs to be skipped, otherwise a `CHECK: // -----` is inserted.
+        if input_line.startswith("// -----"):
             continue
 
         # Check if this is an attribute definition and process it
