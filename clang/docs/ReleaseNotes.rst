@@ -47,7 +47,7 @@ C/C++ Language Potentially Breaking Changes
   case for old-style offsetof idioms like ``((int)(&(((struct S *)0)->field)))``, to
   ensure they are not caught by these optimizations.  It is also possible to use
   ``-fwrapv-pointer`` or   ``-fno-delete-null-pointer-checks`` to make pointer arithmetic
-  on null pointers well-defined. (#GH130734, #GH130742)
+  on null pointers well-defined. (#GH130734, #GH130742, #GH130952)
 
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
