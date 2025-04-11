@@ -86,7 +86,8 @@ class RISCVTuneProcessorModel<string n,
                               list<SubtargetFeature> f = []>
     : ProcessorModel<n, m, f,tunef>;
 
-defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              TuneNoDefaultUnroll];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
