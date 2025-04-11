@@ -616,19 +616,81 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {NodePtr, RayExtent, RayOrigin, RayDir,
                                   RayInverseDir, TextureDescr});
   }
+  case AMDGPU::BI__builtin_amdgcn_image_bvh8_intersect_ray:
+  case AMDGPU::BI__builtin_amdgcn_image_bvh_dual_intersect_ray: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_image_bvh8_intersect_ray:
+      IID = Intrinsic::amdgcn_image_bvh8_intersect_ray;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_image_bvh_dual_intersect_ray:
+      IID = Intrinsic::amdgcn_image_bvh_dual_intersect_ray;
+      break;
+    }
+    llvm::Value *NodePtr = EmitScalarExpr(E->getArg(0));
+    llvm::Value *RayExtent = EmitScalarExpr(E->getArg(1));
+    llvm::Value *InstanceMask = EmitScalarExpr(E->getArg(2));
+    llvm::Value *RayOrigin = EmitScalarExpr(E->getArg(3));
+    llvm::Value *RayDir = EmitScalarExpr(E->getArg(4));
+    llvm::Value *Offset = EmitScalarExpr(E->getArg(5));
+    llvm::Value *TextureDescr = EmitScalarExpr(E->getArg(6));
 
-  case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_rtn: {
+    Address RetRayOriginPtr = EmitPointerWithAlignment(E->getArg(7));
+    Address RetRayDirPtr = EmitPointerWithAlignment(E->getArg(8));
+
+    llvm::Function *IntrinsicFunc = CGM.getIntrinsic(IID);
+
+    llvm::CallInst *CI = Builder.CreateCall(
+        IntrinsicFunc, {NodePtr, RayExtent, InstanceMask, RayOrigin, RayDir,
+                        Offset, TextureDescr});
+
+    llvm::Value *RetVData = Builder.CreateExtractValue(CI, 0);
+    llvm::Value *RetRayOrigin = Builder.CreateExtractValue(CI, 1);
+    llvm::Value *RetRayDir = Builder.CreateExtractValue(CI, 2);
+
+    Builder.CreateStore(RetRayOrigin, RetRayOriginPtr);
+    Builder.CreateStore(RetRayDir, RetRayDirPtr);
+
+    return RetVData;
+  }
+
+  case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_rtn:
+  case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push8_pop2_rtn: {
+    Intrinsic::ID IID;
+    switch (BuiltinID) {
+    case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_rtn:
+      IID = Intrinsic::amdgcn_ds_bvh_stack_rtn;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push4_pop1_rtn:
+      IID = Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push8_pop1_rtn:
+      IID = Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn;
+      break;
+    case AMDGPU::BI__builtin_amdgcn_ds_bvh_stack_push8_pop2_rtn:
+      IID = Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn;
+      break;
+    }
+
     SmallVector<Value *, 4> Args;
     for (int i = 0, e = E->getNumArgs(); i != e; ++i)
       Args.push_back(EmitScalarExpr(E->getArg(i)));
 
-    Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ds_bvh_stack_rtn);
+    Function *F = CGM.getIntrinsic(IID);
     Value *Call = Builder.CreateCall(F, Args);
     Value *Rtn = Builder.CreateExtractValue(Call, 0);
     Value *A = Builder.CreateExtractValue(Call, 1);
     llvm::Type *RetTy = ConvertType(E->getType());
     Value *I0 = Builder.CreateInsertElement(PoisonValue::get(RetTy), Rtn,
                                             (uint64_t)0);
+    // ds_bvh_stack_push8_pop2_rtn returns {i64, i32} but the builtin returns
+    // <2 x i64>, zext the second value.
+    if (A->getType()->getPrimitiveSizeInBits() <
+        RetTy->getScalarType()->getPrimitiveSizeInBits())
+      A = Builder.CreateZExt(A, RetTy->getScalarType());
+
     return Builder.CreateInsertElement(I0, A, 1);
   }
   case AMDGPU::BI__builtin_amdgcn_mfma_scale_f32_16x16x128_f8f6f4:
