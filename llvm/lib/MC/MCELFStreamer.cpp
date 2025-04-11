@@ -516,21 +516,6 @@ void MCELFStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCELFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
-  llvm_unreachable("ELF doesn't support this directive");
-}
-
-void MCELFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
-                                 uint64_t Size, Align ByteAlignment,
-                                 SMLoc Loc) {
-  llvm_unreachable("ELF doesn't support this directive");
-}
-
-void MCELFStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
-                                   uint64_t Size, Align ByteAlignment) {
-  llvm_unreachable("ELF doesn't support this directive");
-}
-
 void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
                                      bool OverwriteExisting) {
   // Look for existing attribute item
