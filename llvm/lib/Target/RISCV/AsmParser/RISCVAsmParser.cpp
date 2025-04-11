@@ -533,24 +533,18 @@ public:
   }
 
   // True if operand is a symbol with no modifiers, or a constant with no
-  // modifiers and isShiftedInt<N-K, K>(Op).
-  template <unsigned N, unsigned K> bool isBareSimmNLsbK() const {
+  // modifiers and isShiftedInt<N-1, 1>(Op).
+  template <int N> bool isBareSimmNLsb0() const {
     if (!isImm())
       return false;
 
     int64_t Imm;
     if (evaluateConstantImm(getImm(), Imm))
-      return isShiftedInt<N - K, K>(fixImmediateForRV32(Imm, isRV64Imm()));
+      return isShiftedInt<N - 1, 1>(fixImmediateForRV32(Imm, isRV64Imm()));
 
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            VK == RISCVMCExpr::VK_None;
-  }
-
-  // True if operand is a symbol with no modifiers, or a constant with no
-  // modifiers and isShiftedInt<N-1, 1>(Op).
-  template <int N> bool isBareSimmNLsb0() const {
-    return isBareSimmNLsbK<N, 1>();
   }
 
   // True if operand is a symbol with no modifiers, or a constant with no
@@ -858,7 +852,9 @@ public:
     return SignExtend64<32>(Imm);
   }
 
-  bool isSImm11Lsb0() const { return isBareSimmNLsb0<11>(); }
+  bool isSImm11Lsb0() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<10, 1>(Imm); });
+  }
 
   bool isSImm12() const {
     if (!isImm())
@@ -952,13 +948,21 @@ public:
         [](int64_t Imm) { return Imm != INT64_MIN && isInt<5>(Imm - 1); });
   }
 
-  bool isSImm18() const { return isBareSimmNLsbK<18, 0>(); }
+  bool isSImm18() const {
+    return isSImmPred([](int64_t Imm) { return isInt<18>(Imm); });
+  }
 
-  bool isSImm18Lsb0() const { return isBareSimmNLsb0<18>(); }
+  bool isSImm18Lsb0() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 1>(Imm); });
+  }
 
-  bool isSImm19Lsb00() const { return isBareSimmNLsbK<19, 2>(); }
+  bool isSImm19Lsb00() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 2>(Imm); });
+  }
 
-  bool isSImm20Lsb000() const { return isBareSimmNLsbK<20, 3>(); }
+  bool isSImm20Lsb000() const {
+    return isSImmPred([](int64_t Imm) { return isShiftedInt<17, 3>(Imm); });
+  }
 
   bool isSImm32Lsb0() const {
     return isSImmPred([](int64_t Imm) { return isShiftedInt<31, 1>(Imm); });
