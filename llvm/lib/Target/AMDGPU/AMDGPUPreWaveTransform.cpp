@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/InitializePasses.h"
 
@@ -41,7 +42,7 @@ public:
   }
 
 private:
-  MachineUniformityInfo *UniformInfo = nullptr;
+  MachineUniformityInfo *UI = nullptr;
 };
 
 } // End anonymous namespace.
@@ -61,8 +62,10 @@ FunctionPass *llvm::createAMDGPUPreWaveTransformPass() {
 
 /// \brief Run the AMDGPU Pre Wave Transform.
 bool AMDGPUPreWaveTransform::runOnMachineFunction(MachineFunction &MF) {
-  UniformInfo =
-      &getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
-  LLVM_DEBUG(UniformInfo->print(dbgs()));
+  SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  UI = &getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+  LLVM_DEBUG(UI->print(dbgs()));
+  MFI.setMachineUniformityInfo(UI);
+
   return false;
 }

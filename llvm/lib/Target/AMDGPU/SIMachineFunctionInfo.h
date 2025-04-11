@@ -23,6 +23,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
+#include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -583,6 +584,13 @@ private:
   // Emergency stack slot. Sometimes, we create this before finalizing the stack
   // frame, so save it here and add it to the RegScavenger later.
   std::optional<int> ScavengeFI;
+
+  // AMDGPUWaveTransform pass depends on MachineUniformityInfo computed in SSA
+  // form. Currently, there is no better way than adding MFI field as a placeholder
+  // for UA so that analysis can be computed during AMDGPUPreWaveTransform and reused in
+  // AMDGPUWaveTransform.
+  // TODO-WAVETRANSFORM: This is a workaround until we have a better solution.
+  MachineUniformityInfo *MUI = nullptr;
 
 private:
   Register VGPRForAGPRCopy;
@@ -1171,6 +1179,11 @@ public:
   unsigned getMaxNumWorkGroupsX() const { return MaxNumWorkGroups[0]; }
   unsigned getMaxNumWorkGroupsY() const { return MaxNumWorkGroups[1]; }
   unsigned getMaxNumWorkGroupsZ() const { return MaxNumWorkGroups[2]; }
+
+  void setMachineUniformityInfo(MachineUniformityInfo *MachineUniformityInfo) {
+    MUI = MachineUniformityInfo;
+  }
+  MachineUniformityInfo *getMachineUniformityInfo() const { return MUI; }
 };
 
 } // end namespace llvm
