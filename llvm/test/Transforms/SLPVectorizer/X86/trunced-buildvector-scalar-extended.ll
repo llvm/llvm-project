@@ -5,9 +5,8 @@ define <4 x float> @test(i64 %0) {
 ; CHECK-LABEL: define <4 x float> @test(
 ; CHECK-SAME: i64 [[TMP0:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[TMP1]], i32 2
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i32> [[TMP2]] to <4 x i64>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> <i64 0, i64 0, i64 poison, i64 0>, i64 [[TMP0]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <4 x i64> [[TMP3]] to <4 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sitofp <4 x i32> [[TMP2]] to <4 x float>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP4]], [[TMP5]]
