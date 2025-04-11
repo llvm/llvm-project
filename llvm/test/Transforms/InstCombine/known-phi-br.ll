@@ -15,8 +15,7 @@ define i64 @limit_i64_eq_7(i64 %x) {
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ 7, [[BODY]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 7
 ;
 entry:
   %cmp = icmp eq i64 %x, 7
@@ -36,8 +35,7 @@ define i64 @limit_i64_eq_7_commuted(i64 %x) {
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[BODY]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], [[END]] ], [ 7, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 7
 ;
 entry:
   %cmp = icmp eq i64 %x, 7
@@ -80,8 +78,7 @@ define i64 @limit_i64_ne_255(i64 %x) {
 ; CHECK:       body:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[X]], [[ENTRY:%.*]] ], [ 255, [[BODY]] ]
-; CHECK-NEXT:    ret i64 [[RES]]
+; CHECK-NEXT:    ret i64 255
 ;
 entry:
   %cmp = icmp ne i64 %x, 255

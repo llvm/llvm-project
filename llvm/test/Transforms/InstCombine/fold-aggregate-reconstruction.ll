@@ -178,7 +178,7 @@ define {ptr, i64} @test4(i1 %cond1, i1 %cond2, ptr %p1, ptr %p2) {
 ; CHECK-NEXT:    br i1 [[COND3_NOT]], label %[[EXIT]], label %[[BBB4]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[VAL1:%.*]] = phi ptr [ [[VAL11]], %[[BBB2]] ], [ [[VAL21]], %[[BBB3]] ], [ [[VAL31]], %[[BBB4]] ]
-; CHECK-NEXT:    [[VAL2:%.*]] = phi i64 [ [[VAL12]], %[[BBB2]] ], [ [[VAL22]], %[[BBB3]] ], [ [[VAL32]], %[[BBB4]] ]
+; CHECK-NEXT:    [[VAL2:%.*]] = phi i64 [ [[VAL12]], %[[BBB2]] ], [ [[VAL22]], %[[BBB3]] ], [ 0, %[[BBB4]] ]
 ; CHECK-NEXT:    [[TMP:%.*]] = insertvalue { ptr, i64 } poison, ptr [[VAL1]], 0
 ; CHECK-NEXT:    [[RES:%.*]] = insertvalue { ptr, i64 } [[TMP]], i64 [[VAL2]], 1
 ; CHECK-NEXT:    ret { ptr, i64 } [[RES]]
