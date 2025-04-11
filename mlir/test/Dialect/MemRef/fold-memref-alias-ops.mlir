@@ -819,18 +819,29 @@ func.func @test_ldmatrix(%arg0: memref<4x32x32xf16, 3>, %arg1: index, %arg2: ind
 
 // -----
 
-func.func @fold_vector_load_subview(
-  %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index) -> vector<12x32xf32> {
-  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
-  %1 = vector.load %0[] : memref<f32, strided<[], offset: ?>>, vector<12x32xf32>
-  return %1 : vector<12x32xf32>
+func.func @fold_vector_load_subview(%src : memref<24x64xf32>,
+                                    %off1 : index,
+                                    %off2 : index,
+                                    %dim1 : index,
+                                    %dim2 : index,
+                                    %idx : index) -> vector<12x32xf32> {
+
+    %0 = memref.subview %src[%off1, %off2][%dim1, %dim2][1, 1] : memref<24x64xf32> to memref<?x?xf32, strided<[64, 1], offset: ?>>
+    %1 = vector.load %0[%idx, %idx] :  memref<?x?xf32, strided<[64, 1], offset: ?>>, vector<12x32xf32>
+    return %1 : vector<12x32xf32>
 }
 
-//      CHECK: func @fold_vector_load_subview
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-//      CHECK:   vector.load %[[ARG0]][%[[ARG1]], %[[ARG2]]] :  memref<12x32xf32>, vector<12x32xf32>
+// CHECK: #[[$ATTR_46:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+// CHECK-LABEL:   func.func @fold_vector_load_subview(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9$._-]*]]: memref<24x64xf32>,
+// CHECK-SAME:      %[[OFF_1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[OFF_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[DIM_1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[DIM_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[IDX:[a-zA-Z0-9$._-]*]]: index) -> vector<12x32xf32> {
+// CHECK:           %[[VAL_6:.*]] = affine.apply #[[$ATTR_46]](){{\[}}%[[OFF_1]], %[[IDX]]]
+// CHECK:           %[[VAL_7:.*]] = affine.apply #[[$ATTR_46]](){{\[}}%[[OFF_2]], %[[IDX]]]
+// CHECK:           %[[VAL_8:.*]] = vector.load %[[SRC]]{{\[}}%[[VAL_6]], %[[VAL_7]]] : memref<24x64xf32>, vector<12x32xf32>
 
 // -----
 
@@ -851,20 +862,32 @@ func.func @fold_vector_maskedload_subview(
 
 // -----
 
-func.func @fold_vector_store_subview(
-  %arg0 : memref<12x32xf32>, %arg1 : index, %arg2 : index, %arg3: vector<2x32xf32>) -> () {
-  %0 = memref.subview %arg0[%arg1, %arg2][1, 1][1, 1] : memref<12x32xf32> to memref<f32, strided<[], offset: ?>>
-  vector.store %arg3, %0[] : memref<f32, strided<[], offset: ?>>, vector<2x32xf32>
-  return
+func.func @fold_vector_store_subview(%src : memref<24x64xf32>,
+                                     %off1 : index,
+                                     %off2 : index,
+                                     %vec: vector<2x32xf32>,
+                                     %idx : index,
+                                     %dim1 : index,
+                                     %dim2 : index) -> () {
+
+    %0 = memref.subview %src[%off1, %off2][%dim1, %dim2][1, 1] : memref<24x64xf32> to memref<?x?xf32, strided<[64, 1], offset: ?>>
+    vector.store %vec, %0[%idx, %idx] : memref<?x?xf32, strided<[64, 1], offset: ?>> , vector<2x32xf32>
+    return
 }
 
-//      CHECK: func @fold_vector_store_subview
-// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<12x32xf32>
-// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
-// CHECK-SAME:   %[[ARG3:[a-zA-Z0-9_]+]]: vector<2x32xf32>
-//      CHECK:   vector.store %[[ARG3]], %[[ARG0]][%[[ARG1]], %[[ARG2]]] :  memref<12x32xf32>, vector<2x32xf32>
-//      CHECK:   return
+// CHECK: #[[$ATTR_47:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
+
+// CHECK-LABEL:   func.func @fold_vector_store_subview(
+// CHECK-SAME:      %[[SRC:[a-zA-Z0-9$._-]*]]: memref<24x64xf32>,
+// CHECK-SAME:      %[[OFF1:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[OFF_2:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VEC:[a-zA-Z0-9$._-]*]]: vector<2x32xf32>,
+// CHECK-SAME:      %[[IDX:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VAL_5:[a-zA-Z0-9$._-]*]]: index,
+// CHECK-SAME:      %[[VAL_6:[a-zA-Z0-9$._-]*]]: index) {
+//      CHECK:      %[[VAL_7:.*]] = affine.apply #[[$ATTR_47]](){{\[}}%[[OFF1]], %[[IDX]]]
+//      CHECK:      %[[VAL_8:.*]] = affine.apply #[[$ATTR_47]](){{\[}}%[[OFF_2]], %[[IDX]]]
+//      CHECK:      vector.store %[[VEC]], %[[SRC]]{{\[}}%[[VAL_7]], %[[VAL_8]]] : memref<24x64xf32>, vector<2x32xf32>
 
 // -----
 
