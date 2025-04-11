@@ -50,6 +50,20 @@ public:
 
   std::vector<CVType> end(TypeIndex Index);
 };
+
+// Needed by RandomAccessVisitorTest.cpp
+#define TYPE_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
+  extern template LLVM_TEMPLATE_ABI void                                       \
+  ContinuationRecordBuilder::writeMemberType(Name##Record &Record);
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+#undef TYPE_RECORD
+#undef TYPE_RECORD_ALIAS
+#undef MEMBER_RECORD
+#undef MEMBER_RECORD_ALIAS
+
 } // namespace codeview
 } // namespace llvm
 
