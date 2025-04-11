@@ -78,15 +78,6 @@ MCStreamer *Target::createMCObjectStreamer(
   return S;
 }
 
-MCStreamer *Target::createMCObjectStreamer(
-    const Triple &T, MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
-    std::unique_ptr<MCObjectWriter> &&OW,
-    std::unique_ptr<MCCodeEmitter> &&Emitter, const MCSubtargetInfo &STI, bool,
-    bool, bool) const {
-  return createMCObjectStreamer(T, Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), STI);
-}
-
 MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
                                       std::unique_ptr<formatted_raw_ostream> OS,
                                       std::unique_ptr<MCInstPrinter> IP,

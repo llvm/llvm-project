@@ -895,6 +895,13 @@ public:
            is_contained(AddSub, getAltOpcode());
   }
 
+  /// Checks if main/alt instructions are cmp operations.
+  bool isCmpOp() const {
+    return (getOpcode() == Instruction::ICmp ||
+            getOpcode() == Instruction::FCmp) &&
+           getAltOpcode() == getOpcode();
+  }
+
   /// Checks if the current state is valid, i.e. has non-null MainOp
   bool valid() const { return MainOp && AltOp; }
 
@@ -1276,6 +1283,17 @@ static SmallBitVector getAltInstrMask(ArrayRef<Value *> VL, Type *ScalarTy,
                      Lane * ScalarTyNumElements + ScalarTyNumElements);
   }
   return OpcodeMask;
+}
+
+/// Replicates the given \p Val \p VF times.
+static SmallVector<Constant *> replicateMask(ArrayRef<Constant *> Val,
+                                             unsigned VF) {
+  assert(none_of(Val, [](Constant *C) { return C->getType()->isVectorTy(); }) &&
+         "Expected scalar constants.");
+  SmallVector<Constant *> NewVal(Val.size() * VF);
+  for (auto [I, V] : enumerate(Val))
+    std::fill_n(NewVal.begin() + I * VF, VF, V);
+  return NewVal;
 }
 
 namespace llvm {
@@ -5410,6 +5428,24 @@ static InstructionCost getVectorInstrCost(
                                 ScalarUserAndIdx);
 }
 
+/// This is similar to TargetTransformInfo::getExtractWithExtendCost, but if Dst
+/// is a FixedVectorType, a vector will be extracted instead of a scalar.
+static InstructionCost getExtractWithExtendCost(
+    const TargetTransformInfo &TTI, unsigned Opcode, Type *Dst,
+    VectorType *VecTy, unsigned Index,
+    TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) {
+  if (auto *ScalarTy = dyn_cast<FixedVectorType>(Dst)) {
+    assert(SLPReVec && "Only supported by REVEC.");
+    auto *SubTp =
+        getWidenedType(VecTy->getElementType(), ScalarTy->getNumElements());
+    return getShuffleCost(TTI, TTI::SK_ExtractSubvector, VecTy, {}, CostKind,
+                          Index * ScalarTy->getNumElements(), SubTp) +
+           TTI.getCastInstrCost(Opcode, Dst, SubTp, TTI::CastContextHint::None,
+                                CostKind);
+  }
+  return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index);
+}
+
 /// Correctly creates insert_subvector, checking that the index is multiple of
 /// the subvectors length. Otherwise, generates shuffle using \p Generator or
 /// using default shuffle.
@@ -9248,6 +9284,16 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
   // as alternate ops.
   if (NumParts >= VL.size())
     return false;
+  constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
+  InstructionCost InsertCost = ::getShuffleCost(
+      *TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
+  FixedVectorType *SubVecTy =
+      getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size()));
+  InstructionCost NewShuffleCost =
+      ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, Kind);
+  if (!LocalState.isCmpOp() && NumParts <= 1 &&
+      (Mask.empty() || InsertCost >= NewShuffleCost))
+    return false;
   if ((LocalState.getMainOp()->isBinaryOp() &&
        LocalState.getAltOp()->isBinaryOp() &&
        (LocalState.isShiftOp() || LocalState.isBitwiseLogicOp() ||
@@ -9255,15 +9301,6 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
       (LocalState.getMainOp()->isCast() && LocalState.getAltOp()->isCast()) ||
       (LocalState.getMainOp()->isUnaryOp() &&
        LocalState.getAltOp()->isUnaryOp())) {
-    constexpr TTI::TargetCostKind Kind = TTI::TCK_RecipThroughput;
-    InstructionCost InsertCost = ::getShuffleCost(
-        *TTI, TTI::SK_InsertSubvector, VecTy, {}, Kind, Op1.size(), Op2VecTy);
-    FixedVectorType *SubVecTy =
-        getWidenedType(ScalarTy, std::max(Op1.size(), Op2.size()));
-    InstructionCost NewShuffleCost =
-        ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, SubVecTy, Mask, Kind);
-    if (NumParts <= 1 && (Mask.empty() || InsertCost >= NewShuffleCost))
-      return false;
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, Kind) +
         TTI->getArithmeticInstrCost(Opcode1, VecTy, Kind);
@@ -9399,18 +9436,6 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
     OrdersType ReorderIndices;
     if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices))
       return false;
-
-    // Any value is used in split node already - just gather.
-    if (any_of(VL, [&](Value *V) {
-          return ScalarsInSplitNodes.contains(V) || isVectorized(V);
-        })) {
-      if (TryToFindDuplicates(S)) {
-        auto Invalid = ScheduleBundle::invalid();
-        newTreeEntry(VL, Invalid /*not vectorized*/, S, UserTreeIdx,
-                     ReuseShuffleIndices);
-      }
-      return true;
-    }
 
     SmallVector<Value *> NewVL(VL.size());
     copy(Op1, NewVL.begin());
@@ -9587,9 +9612,9 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
           ::getShuffleCost(*TTI, TTI::SK_PermuteTwoSrc, VecTy, {}, Kind) +
           ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Extracted,
                                      /*Insert=*/false, /*Extract=*/true, Kind);
-      InstructionCost ScalarizeCostEstimate =
-          ::getScalarizationOverhead(*TTI, ScalarTy, VecTy, Vectorized,
-                                     /*Insert=*/true, /*Extract=*/false, Kind);
+      InstructionCost ScalarizeCostEstimate = ::getScalarizationOverhead(
+          *TTI, ScalarTy, VecTy, Vectorized,
+          /*Insert=*/true, /*Extract=*/false, Kind, /*ForPoisonSrc=*/false);
       PreferScalarize = VectorizeCostEstimate > ScalarizeCostEstimate;
     }
     if (PreferScalarize) {
@@ -10588,7 +10613,11 @@ protected:
                                /*IsStrict=*/true) ||
                 (Shuffle && Mask.size() == Shuffle->getShuffleMask().size() &&
                  Shuffle->isZeroEltSplat() &&
-                 ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size())));
+                 ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()) &&
+                 all_of(enumerate(Mask), [&](const auto &P) {
+                   return P.value() == PoisonMaskElem ||
+                          Shuffle->getShuffleMask()[P.index()] == 0;
+                 })));
       }
       V = Op;
       return false;
@@ -12184,32 +12213,24 @@ public:
       unsigned VF = VL.size();
       if (MaskVF != 0)
         VF = std::min(VF, MaskVF);
+      Type *VLScalarTy = VL.front()->getType();
       for (Value *V : VL.take_front(VF)) {
-        if (isa<UndefValue>(V)) {
-          Vals.push_back(cast<Constant>(V));
+        Type *ScalarTy = VLScalarTy->getScalarType();
+        if (isa<PoisonValue>(V)) {
+          Vals.push_back(PoisonValue::get(ScalarTy));
           continue;
         }
-        Vals.push_back(Constant::getNullValue(V->getType()));
+        if (isa<UndefValue>(V)) {
+          Vals.push_back(UndefValue::get(ScalarTy));
+          continue;
+        }
+        Vals.push_back(Constant::getNullValue(ScalarTy));
       }
-      if (auto *VecTy = dyn_cast<FixedVectorType>(Vals.front()->getType())) {
+      if (auto *VecTy = dyn_cast<FixedVectorType>(VLScalarTy)) {
         assert(SLPReVec && "FixedVectorType is not expected.");
         // When REVEC is enabled, we need to expand vector types into scalar
         // types.
-        unsigned VecTyNumElements = VecTy->getNumElements();
-        SmallVector<Constant *> NewVals(VF * VecTyNumElements, nullptr);
-        for (auto [I, V] : enumerate(Vals)) {
-          Type *ScalarTy = V->getType()->getScalarType();
-          Constant *NewVal;
-          if (isa<PoisonValue>(V))
-            NewVal = PoisonValue::get(ScalarTy);
-          else if (isa<UndefValue>(V))
-            NewVal = UndefValue::get(ScalarTy);
-          else
-            NewVal = Constant::getNullValue(ScalarTy);
-          std::fill_n(NewVals.begin() + I * VecTyNumElements, VecTyNumElements,
-                      NewVal);
-        }
-        Vals.swap(NewVals);
+        Vals = replicateMask(Vals, VecTy->getNumElements());
       }
       return ConstantVector::get(Vals);
     }
@@ -14155,13 +14176,15 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
     const TreeEntry *Entry = &EU.E;
     auto It = MinBWs.find(Entry);
     if (It != MinBWs.end()) {
-      auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      Type *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy))
+        MinTy = getWidenedType(MinTy, VecTy->getNumElements());
       unsigned Extend = isKnownNonNegative(EU.Scalar, SimplifyQuery(*DL))
                             ? Instruction::ZExt
                             : Instruction::SExt;
       VecTy = getWidenedType(MinTy, BundleWidth);
-      ExtraCost = TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
-                                                VecTy, EU.Lane);
+      ExtraCost =
+          getExtractWithExtendCost(*TTI, Extend, ScalarTy, VecTy, EU.Lane);
     } else {
       ExtraCost =
           getVectorInstrCost(*TTI, ScalarTy, Instruction::ExtractElement, VecTy,
@@ -17590,6 +17613,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               ConstantInt::getFalse(VecTy->getContext()));
           for (int I : CompressMask)
             MaskValues[I] = ConstantInt::getTrue(VecTy->getContext());
+          if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+            assert(SLPReVec && "Only supported by REVEC.");
+            MaskValues = replicateMask(MaskValues, VecTy->getNumElements());
+          }
           Constant *MaskValue = ConstantVector::get(MaskValues);
           NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
                                            MaskValue);
@@ -17598,6 +17625,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
         NewLI = ::propagateMetadata(NewLI, E->Scalars);
         // TODO: include this cost into CommonCost.
+        if (auto *VecTy = dyn_cast<FixedVectorType>(LI->getType())) {
+          assert(SLPReVec && "FixedVectorType is not expected.");
+          transformScalarShuffleIndiciesToVector(VecTy->getNumElements(),
+                                                 CompressMask);
+        }
         NewLI =
             cast<Instruction>(Builder.CreateShuffleVector(NewLI, CompressMask));
       } else if (E->State == TreeEntry::StridedVectorize) {
