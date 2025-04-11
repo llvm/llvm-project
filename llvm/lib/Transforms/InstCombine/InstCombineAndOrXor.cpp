@@ -3644,6 +3644,48 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
             foldAddLikeCommutative(I.getOperand(1), I.getOperand(0),
                                    /*NSW=*/true, /*NUW=*/true))
       return R;
+
+    Value *Cond0 = nullptr, *Cond1 = nullptr;
+    ConstantInt *Op0True = nullptr, *Op0False = nullptr;
+    ConstantInt *Op1True = nullptr, *Op1False = nullptr;
+
+    //  (!(A & N) ? 0 : N * C) + (!(A & M) ? 0 : M * C) -> A & (N + M) * C
+    if (match(I.getOperand(0), m_Select(m_Value(Cond0), m_ConstantInt(Op0True),
+                                        m_ConstantInt(Op0False))) &&
+        match(I.getOperand(1), m_Select(m_Value(Cond1), m_ConstantInt(Op1True),
+                                        m_ConstantInt(Op1False))) &&
+        Op0True->isZero() && Op1True->isZero() &&
+        Op0False->getValue().tryZExtValue() &&
+        Op1False->getValue().tryZExtValue()) {
+      CmpPredicate Pred0, Pred1;
+      Value *CmpOp0 = nullptr, *CmpOp1 = nullptr;
+      ConstantInt *Op0Cond = nullptr, *Op1Cond = nullptr;
+      if (match(Cond0,
+                m_c_ICmp(Pred0, m_Value(CmpOp0), m_ConstantInt(Op0Cond))) &&
+          match(Cond1,
+                m_c_ICmp(Pred1, m_Value(CmpOp1), m_ConstantInt(Op1Cond))) &&
+          Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_EQ &&
+          Op0Cond->isZero() && Op1Cond->isZero()) {
+        Value *AndSrc0 = nullptr, *AndSrc1 = nullptr;
+        ConstantInt *BitSel0 = nullptr, *BitSel1 = nullptr;
+        if (match(CmpOp0, m_And(m_Value(AndSrc0), m_ConstantInt(BitSel0))) &&
+            match(CmpOp1, m_And(m_Value(AndSrc1), m_ConstantInt(BitSel1))) &&
+            AndSrc0 == AndSrc1 && BitSel0->getValue().tryZExtValue() &&
+            BitSel1->getValue().tryZExtValue()) {
+          unsigned Out0 = Op0False->getValue().getZExtValue();
+          unsigned Out1 = Op1False->getValue().getZExtValue();
+          unsigned Sel0 = BitSel0->getValue().getZExtValue();
+          unsigned Sel1 = BitSel1->getValue().getZExtValue();
+          if (!(Out0 % Sel0) && !(Out1 % Sel1) &&
+              ((Out0 / Sel0) == (Out1 / Sel1))) {
+            auto NewAnd = Builder.CreateAnd(
+                AndSrc0, ConstantInt::get(AndSrc0->getType(), Sel0 + Sel1));
+            return BinaryOperator::CreateMul(
+                NewAnd, ConstantInt::get(NewAnd->getType(), (Out1 / Sel1)));
+          }
+        }
+      }
+    }
   }
 
   Value *X, *Y;
