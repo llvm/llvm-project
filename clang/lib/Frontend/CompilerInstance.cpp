@@ -1335,23 +1335,15 @@ static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
   return FileMgr.getOptionalFileRef(PublicFilename);
 }
 
-/// Creates a \c CompilerInstance for compiling a module.
-///
-/// This takes care of creating appropriate \c FrontendInputFile for
-/// public/private frameworks, inferred modules and such.
-static std::unique_ptr<CompilerInstance>
-createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
-                                       SourceLocation ImportLoc, Module *Module,
-                                       StringRef ModuleFileName) {
+std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
+    SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName) {
   StringRef ModuleName = Module->getTopLevelModuleName();
 
-  InputKind IK(getLanguageFromOptions(ImportingInstance.getLangOpts()),
-               InputKind::ModuleMap);
+  InputKind IK(getLanguageFromOptions(getLangOpts()), InputKind::ModuleMap);
 
   // Get or create the module map that we'll use to build this module.
-  ModuleMap &ModMap =
-      ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
-  SourceManager &SourceMgr = ImportingInstance.getSourceManager();
+  ModuleMap &ModMap = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+  SourceManager &SourceMgr = getSourceManager();
 
   if (FileID ModuleMapFID = ModMap.getContainingModuleMapFileID(Module);
       ModuleMapFID.isValid()) {
@@ -1372,8 +1364,8 @@ createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
     // Canonicalize compilation to start with the public module map. This is
     // vital for submodules declarations in the private module maps to be
     // correctly parsed when depending on a top level module in the public one.
-    if (OptionalFileEntryRef PublicMMFile = getPublicModuleMap(
-            *ModuleMapFile, ImportingInstance.getFileManager()))
+    if (OptionalFileEntryRef PublicMMFile =
+            getPublicModuleMap(*ModuleMapFile, getFileManager()))
       ModuleMapFile = PublicMMFile;
 
     StringRef ModuleMapFilePath = ModuleMapFile->getNameAsRequested();
@@ -1387,7 +1379,7 @@ createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
 
     // Use the module map where this module resides.
     return createCompilerInstanceForModuleCompileImpl(
-        ImportingInstance, ImportLoc, ModuleName,
+        *this, ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
   }
@@ -1404,7 +1396,7 @@ createCompilerInstanceForModuleCompile(CompilerInstance &ImportingInstance,
   Module->print(OS);
 
   auto Instance = createCompilerInstanceForModuleCompileImpl(
-      ImportingInstance, ImportLoc, ModuleName,
+      *this, ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
 
@@ -1465,8 +1457,8 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
                                         SourceLocation ModuleNameLoc,
                                         Module *Module,
                                         StringRef ModuleFileName) {
-  auto Instance = createCompilerInstanceForModuleCompile(
-      ImportingInstance, ModuleNameLoc, Module, ModuleFileName);
+  auto Instance = ImportingInstance.cloneForModuleCompile(ModuleNameLoc, Module,
+                                                          ModuleFileName);
 
   if (!compileModule(ImportingInstance, ModuleNameLoc,
                      Module->getTopLevelModuleName(), ModuleFileName,
