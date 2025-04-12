@@ -460,7 +460,7 @@ LogicalResult TmaAsyncStoreOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// NVGPU_TmaAsyncStoreOp
+// NVGPU_TmaCreateDescriptorOp
 //===----------------------------------------------------------------------===//
 
 LogicalResult TmaCreateDescriptorOp::verify() {
