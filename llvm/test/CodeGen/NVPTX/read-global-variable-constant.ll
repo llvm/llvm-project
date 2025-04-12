@@ -17,7 +17,7 @@ define float @test_gv_float() {
 
 ; CHECK-LABEL: test_gv_float2()
 define <2 x float> @test_gv_float2() {
-; CHECK: ld.global.nc.v2.f32
+; CHECK: ld.global.nc.b64
   %v = load <2 x float>, ptr @gv_float2
   ret <2 x float> %v
 }

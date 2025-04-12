@@ -32,7 +32,7 @@ define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v2f16_param_0];
-; CHECK-NEXT:    ld.global.nc.u32 %r1, [%rd1];
+; CHECK-NEXT:    ld.global.nc.b32 %r1, [%rd1];
 ; CHECK-NEXT:    mov.b32 {%rs1, %rs2}, %r1;
 ; CHECK-NEXT:    cvt.f32.f16 %f1, %rs2;
 ; CHECK-NEXT:    cvt.f32.f16 %f2, %rs1;
@@ -125,6 +125,76 @@ define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
   %sum2 = fadd half %v3, %v4
   %sum = fadd half %sum1, %sum2
   ret half %sum
+}
+
+define float @ld_global_v2f32(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: ld_global_v2f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<4>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v2f32_param_0];
+; CHECK-NEXT:    ld.global.nc.v2.f32 {%f1, %f2}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f3, %f1, %f2;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f3;
+; CHECK-NEXT:    ret;
+  %a = load <2 x float>, ptr addrspace(1) %ptr, !invariant.load !0
+  %v1 = extractelement <2 x float> %a, i32 0
+  %v2 = extractelement <2 x float> %a, i32 1
+  %sum = fadd float %v1, %v2
+  ret float %sum
+}
+
+define float @ld_global_v4f32(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: ld_global_v4f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v4f32_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f5, %f1, %f2;
+; CHECK-NEXT:    add.rn.f32 %f6, %f3, %f4;
+; CHECK-NEXT:    add.rn.f32 %f7, %f5, %f6;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f7;
+; CHECK-NEXT:    ret;
+  %a = load <4 x float>, ptr addrspace(1) %ptr, !invariant.load !0
+  %v1 = extractelement <4 x float> %a, i32 0
+  %v2 = extractelement <4 x float> %a, i32 1
+  %v3 = extractelement <4 x float> %a, i32 2
+  %v4 = extractelement <4 x float> %a, i32 3
+  %sum1 = fadd float %v1, %v2
+  %sum2 = fadd float %v3, %v4
+  %sum = fadd float %sum1, %sum2
+  ret float %sum
+}
+
+define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
+; CHECK-LABEL: ld_global_v8f32(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<12>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.u64 %rd1, [ld_global_v8f32_param_0];
+; CHECK-NEXT:    ld.global.nc.v4.f32 {%f1, %f2, %f3, %f4}, [%rd1+16];
+; CHECK-NEXT:    ld.global.nc.v4.f32 {%f5, %f6, %f7, %f8}, [%rd1];
+; CHECK-NEXT:    add.rn.f32 %f9, %f5, %f7;
+; CHECK-NEXT:    add.rn.f32 %f10, %f1, %f3;
+; CHECK-NEXT:    add.rn.f32 %f11, %f9, %f10;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f11;
+; CHECK-NEXT:    ret;
+  %a = load <8 x float>, ptr addrspace(1) %ptr, !invariant.load !0
+  %v1 = extractelement <8 x float> %a, i32 0
+  %v2 = extractelement <8 x float> %a, i32 2
+  %v3 = extractelement <8 x float> %a, i32 4
+  %v4 = extractelement <8 x float> %a, i32 6
+  %sum1 = fadd float %v1, %v2
+  %sum2 = fadd float %v3, %v4
+  %sum = fadd float %sum1, %sum2
+  ret float %sum
 }
 
 define i8 @ld_global_v8i8(ptr addrspace(1) %ptr) {
