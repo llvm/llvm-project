@@ -355,23 +355,13 @@ BasicBlock *VPTransformState::CFGState::getPreheaderBBFor(VPRecipeBase *R) {
   return VPBB2IRBB[LoopRegion->getPreheaderVPBB()];
 }
 
-void VPTransformState::addNewMetadata(Instruction *To,
-                                      const Instruction *Orig) {
+void VPTransformState::addNewMetadata(Value *To, const Instruction *Orig) {
+
   // If the loop was versioned with memchecks, add the corresponding no-alias
   // metadata.
-  if (LVer && isa<LoadInst, StoreInst>(Orig))
-    LVer->annotateInstWithNoAlias(To, Orig);
-}
-
-void VPTransformState::addMetadata(Value *To, Instruction *From) {
-  // No source instruction to transfer metadata from?
-  if (!From)
-    return;
-
-  if (Instruction *ToI = dyn_cast<Instruction>(To)) {
-    propagateMetadata(ToI, From);
-    addNewMetadata(ToI, From);
-  }
+  Instruction *ToI = dyn_cast<Instruction>(To);
+  if (ToI && LVer && isa<LoadInst, StoreInst>(Orig))
+    LVer->annotateInstWithNoAlias(ToI, Orig);
 }
 
 void VPTransformState::setDebugLocFrom(DebugLoc DL) {
