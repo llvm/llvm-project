@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=thumbv7-none-eabi -mcpu=cortex-m7 -O3 -run-pass=tbaa,pipeliner %s -o - | FileCheck %s
 
 --- |
-  ; ModuleID = 'test.ll'
   source_filename = "test.ll"
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv7m-none-unknown-eabi"
