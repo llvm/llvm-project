@@ -94,7 +94,10 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_INTEL_fp_max_error",
          SPIRV::Extension::Extension::SPV_INTEL_fp_max_error},
         {"SPV_INTEL_ternary_bitwise_function",
-         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function}};
+         SPIRV::Extension::Extension::SPV_INTEL_ternary_bitwise_function},
+        {"SPV_INTEL_device_side_avc_motion_estimation",
+         SPIRV::Extension::Extension::
+             SPV_INTEL_device_side_avc_motion_estimation}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,
