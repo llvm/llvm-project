@@ -17,16 +17,37 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
+#include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 20
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// common_reference
-#if _LIBCPP_STD_VER >= 20
+template <class...>
+struct common_reference;
+
+template <class... _Types>
+using common_reference_t = typename common_reference<_Types...>::type;
+
+template <class, class, template <class> class, template <class> class>
+struct basic_common_reference {};
+
+#  if __has_builtin(__builtin_common_reference)
+
+template <class _Tp, class _Up, template <class> class _Tx, template <class> class _Ux>
+using __basic_common_reference_t = basic_common_reference<_Tp, _Up, _Tx, _Ux>::type;
+
+template <class... _Args>
+struct common_reference
+    : __builtin_common_reference<__basic_common_reference_t, common_type_t, type_identity, __empty, _Args...> {};
+
+#  else
+
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res _LIBCPP_NODEBUG = decltype(false ? std::declval<_Xp (&)()>()() : std::declval<_Yp (&)()>()());
@@ -108,12 +129,6 @@ struct __common_ref {};
 
 // Note C: For the common_reference trait applied to a parameter pack [...]
 
-template <class...>
-struct common_reference;
-
-template <class... _Types>
-using common_reference_t = typename common_reference<_Types...>::type;
-
 // bullet 1 - sizeof...(T) == 0
 template <>
 struct common_reference<> {};
@@ -145,8 +160,6 @@ struct __common_reference_sub_bullet1<_Tp, _Up> {
 
 // sub-bullet 2 - Otherwise, if basic_common_reference<remove_cvref_t<T1>, remove_cvref_t<T2>, XREF(T1), XREF(T2)>::type
 // is well-formed, then the member typedef `type` denotes that type.
-template <class, class, template <class> class, template <class> class>
-struct basic_common_reference {};
 
 template <class _Tp, class _Up>
 using __basic_common_reference_t _LIBCPP_NODEBUG =
@@ -185,8 +198,10 @@ struct common_reference<_Tp, _Up, _Vp, _Rest...> : common_reference<common_refer
 template <class...>
 struct common_reference {};
 
-#endif // _LIBCPP_STD_VER >= 20
+#  endif // __has_builtin(__builtin_common_reference)
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H
