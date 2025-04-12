@@ -5726,7 +5726,10 @@ private:
 QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
   if (E->getType().isNull())
     return QualType();
-  E = E->IgnoreParenImpCasts();
+  // Don't drop implicit cast if it's an array decay.
+  if (auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+      !ICE || ICE->getCastKind() != CK_ArrayToPointerDecay)
+    E = E->IgnoreParenImpCasts();
   QualType Unresolved = E->getType();
   // Resolve DependentNameType
   if (const auto *DNT = Unresolved->getAs<DependentNameType>()) {
