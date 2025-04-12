@@ -660,13 +660,15 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
     };
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
-
     ReplaceArgUses(Arg);
 
-    Arg = Arg->stripPointerCastsAndAliases();
+    Value *Stripped = Arg->stripPointerCastsAndAliases();
+    if (Stripped != Arg)
+      ReplaceArgUses(Stripped);
+
     // If Arg is a PHI node, get PHIs that are equivalent to it and replace
     // their uses.
-    if (PHINode *PN = dyn_cast<PHINode>(Arg)) {
+    if (PHINode *PN = dyn_cast<PHINode>(Stripped)) {
       SmallVector<Value *, 1> PHIList;
       getEquivalentPHIs(*PN, PHIList);
       for (Value *PHI : PHIList)
