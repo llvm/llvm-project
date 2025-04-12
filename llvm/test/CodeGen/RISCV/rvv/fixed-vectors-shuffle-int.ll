@@ -1346,10 +1346,9 @@ define <4 x i16> @vmerge_2(<4 x i16> %x) {
 define <4 x i16> @vmerge_3(<4 x i16> %x) {
 ; CHECK-LABEL: vmerge_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v0, 6
-; CHECK-NEXT:    vmv.v.i v9, 5
-; CHECK-NEXT:    vrgather.vi v8, v9, 1, v0.t
+; CHECK-NEXT:    vmerge.vim v8, v8, 5, v0
 ; CHECK-NEXT:    ret
    %s = shufflevector <4 x i16> %x, <4 x i16> <i16 poison, i16 5, i16 poison, i16 poison>, <4 x i32> <i32 0, i32 5, i32 5, i32 3>
    ret <4 x i16> %s
