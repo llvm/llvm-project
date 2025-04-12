@@ -10,4 +10,5 @@ add_mlir_translation_library(MLIRExportSMTLIB
   MLIRFuncDialect
   MLIRIR
   MLIRTranslateLib
+  MLIRArithDialect
 )
