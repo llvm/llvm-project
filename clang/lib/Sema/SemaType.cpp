@@ -4331,6 +4331,25 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
+  // Some builtin templates can be used in very limited ways, i.e. they must be
+  // used in template arguments and cannot have any qualifiers or form
+  // complicated types. Diagnose any misuses.
+  if (auto *TST = declSpecType.getDesugaredType(Context)
+                      ->getAs<TemplateSpecializationType>();
+      TST && isMultivaluedBuiltinTemplateName(TST->getTemplateName())) {
+    if (D.getNumTypeObjects() != 0 || D.getDeclSpec().getTypeQualifiers() ||
+        D.getContext() != DeclaratorContext::TemplateArg) {
+      // Use non-desugared type in diagnostics for better error messages.
+      S.Diag(D.getDeclSpec().getBeginLoc(),
+             diag::err_multivalued_builtin_template_outside_template_args)
+          << declSpecType->getAs<TemplateSpecializationType>()
+                 ->getTemplateName();
+      // No need to change anything after reporting an error, we should be able
+      // to recover going forward by never actually expanding the builtin to its
+      // template arguments.
+    }
+  }
+
   // Determine whether we should infer _Nonnull on pointer types.
   std::optional<NullabilityKind> inferNullability;
   bool inferNullabilityCS = false;

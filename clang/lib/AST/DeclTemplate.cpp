@@ -274,6 +274,20 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
   return new (C) char[sizeof(void*) * 2];
 }
 
+bool isMultivaluedBuiltinTemplate(TemplateDecl *D) {
+  auto *BD = llvm::dyn_cast<BuiltinTemplateDecl>(D);
+  return BD &&
+         (BD->getBuiltinTemplateKind() == clang::BTK__builtin_sort_types ||
+          BD->getBuiltinTemplateKind() == clang::BTK__builtin_expand_types ||
+          BD->getBuiltinTemplateKind() == clang::BTK__builtin_dedup_types);
+}
+
+bool isMultivaluedBuiltinTemplateName(TemplateName N) {
+  if (N.getKind() == TemplateName::DeducedTemplate)
+    return false;
+  auto *T = N.getAsTemplateDecl();
+  return T && isMultivaluedBuiltinTemplate(T);
+}
 } // namespace clang
 
 //===----------------------------------------------------------------------===//

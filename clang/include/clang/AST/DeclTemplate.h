@@ -1790,6 +1790,9 @@ public:
   BuiltinTemplateKind getBuiltinTemplateKind() const { return BTK; }
 };
 
+bool isMultivaluedBuiltinTemplate(TemplateDecl *D);
+bool isMultivaluedBuiltinTemplateName(TemplateName N);
+
 /// Provides information about an explicit instantiation of a variable or class
 /// template.
 struct ExplicitInstantiationInfo {

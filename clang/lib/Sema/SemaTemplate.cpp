@@ -17,7 +17,12 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/Mangle.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticSema.h"
@@ -36,9 +41,16 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <optional>
 using namespace clang;
@@ -3331,6 +3343,78 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     }
     return HasNoTypeMember;
   }
+  case BTK__builtin_dedup_types: {
+    assert(Converted.size() == 1 && "__builtin_dedup_types should be given "
+                                    "a parameter pack");
+    TemplateArgument Ts = Converted[0];
+    // Delay the computation until we can compute the final result. We choose
+    // not to remove the duplicates upfront before substitution to keep the code
+    // simple.
+    if (Ts.isDependent())
+      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                            Converted);
+    assert(Ts.getKind() == clang::TemplateArgument::Pack);
+    llvm::SmallVector<TemplateArgument> OutArgs;
+    llvm::SmallDenseSet<QualType> Seen;
+    // Synthesize a new template argument list, removing duplicates.
+    for (auto T : Ts.getPackAsArray()) {
+      assert(T.getKind() == clang::TemplateArgument::Type);
+      if (!Seen.insert(T.getAsType().getCanonicalType()).second)
+        continue;
+      OutArgs.push_back(T);
+    }
+    // Return __builtin_expand_types, it will handle the final expansion.
+    return Context.getCanonicalTemplateSpecializationType(
+        TemplateName(Context.get__builtin_expand_typesDecl()), OutArgs);
+  }
+  case BTK__builtin_sort_types: {
+    assert(Converted.size() == 1);
+    assert(Converted[0].getKind() == TemplateArgument::Pack);
+    // Delay if we have any dependencies, the mangled names may change after
+    // subsistution or may not be well-defined for dependent types.
+    if (Converted[0].isDependent())
+      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                            Converted);
+
+    auto InputArgs = Converted[0].getPackAsArray();
+    std::unique_ptr<MangleContext> Mangler(
+        SemaRef.getASTContext().createMangleContext());
+
+    // Prepare our sort keys, i.e. the mangled names.
+    llvm::SmallVector<std::string> MangledNames(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      llvm::raw_string_ostream OS(MangledNames[I]);
+      Mangler->mangleCanonicalTypeName(
+          InputArgs[I].getAsType().getCanonicalType(), OS);
+    }
+
+    // Sort array of indices into the InputArgs/MangledNames.
+    llvm::SmallVector<unsigned> Indexes(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      Indexes[I] = I;
+    }
+    llvm::stable_sort(Indexes, [&](unsigned L, unsigned R) {
+      return MangledNames[L] < MangledNames[R];
+    });
+
+    llvm::SmallVector<TemplateArgument> SortedArguments;
+    SortedArguments.reserve(InputArgs.size());
+    for (unsigned I : Indexes)
+      SortedArguments.push_back(InputArgs[I]);
+
+    // Use __builtin_expand_types to indicate we now have the final results.
+    return Context.getCanonicalTemplateSpecializationType(
+        TemplateName(Context.get__builtin_expand_typesDecl()), SortedArguments);
+  }
+  case BTK__builtin_expand_types: {
+    assert(Converted.size() == 1);
+    assert(Converted[0].getKind() == TemplateArgument::Pack);
+    auto InputArgs = Converted[0].getPackAsArray();
+    // Just return he inputs as is, the code processing template argument lists
+    // recognizes our builtin and does the actual expansion.
+    return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
+                                                          InputArgs);
+  }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
@@ -5507,6 +5591,70 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
   return true;
 }
 
+/// If there is a top-level __builtin_expand_types, it gets expanded and
+/// replaced with its underlying arguments.
+static void
+TryExpandBuiltinTemplateArgumentWrapper(Sema &S,
+                                        TemplateArgumentListInfo &ArgList) {
+  auto &Context = S.getASTContext();
+  llvm::ArrayRef<TemplateArgumentLoc> Args = ArgList.arguments();
+
+  // These builtins are rare, so defer doing anything until we actually see one.
+  llvm::SmallVector<unsigned> ExpandableIndices;
+  for (unsigned I = 0; I < Args.size(); ++I) {
+    auto A = Args[I].getArgument();
+    if (A.getKind() != TemplateArgument::Type)
+      continue;
+    auto *TST = A.getAsType()
+                    .getDesugaredType(Context)
+                    ->getAs<TemplateSpecializationType>();
+    if (!TST)
+      continue;
+    auto TName = TST->getTemplateName();
+    if (TName.getKind() == TemplateName::DeducedTemplate)
+      continue;
+    auto *T = dyn_cast_or_null<BuiltinTemplateDecl>(TName.getAsTemplateDecl());
+    if (!T || T->getBuiltinTemplateKind() != clang::BTK__builtin_expand_types)
+      continue;
+    ExpandableIndices.push_back(I);
+  }
+  if (ExpandableIndices.empty())
+    return;
+
+  // We know that some expansion needs to take place, so prepare to do it.
+  TemplateArgumentListInfo ExpandedArgList;
+  unsigned NextUnprocessedArg = 0;
+  auto CopyUpTo = [&](unsigned J) {
+    for (; NextUnprocessedArg < J; ++NextUnprocessedArg) {
+      ExpandedArgList.addArgument(ArgList[NextUnprocessedArg]);
+    }
+  };
+
+  // Do the actual expansion by looping over the indices we identified before.
+  for (unsigned NextExpandable : ExpandableIndices) {
+    CopyUpTo(NextExpandable);
+    // FIXME: attemp to carry around source location information.
+    auto ToExpand = Args[NextExpandable]
+                        .getArgument()
+                        .getAsType()
+                        .getDesugaredType(Context)
+                        ->getAs<TemplateSpecializationType>()
+                        ->template_arguments();
+    for (TemplateArgument A : ToExpand) {
+      assert(A.getKind() == TemplateArgument::Type);
+      ExpandedArgList.addArgument(TemplateArgumentLoc(
+          A, Context.getTrivialTypeSourceInfo(A.getAsType())));
+    }
+    NextUnprocessedArg = NextExpandable + 1;
+  }
+
+  // Carry over any leftovers.
+  CopyUpTo(ArgList.size());
+  assert(NextUnprocessedArg == ArgList.size());
+
+  ArgList = std::move(ExpandedArgList);
+}
+
 /// Check that the given template argument list is well-formed
 /// for specializing the given template.
 bool Sema::CheckTemplateArgumentList(
@@ -5522,6 +5670,10 @@ bool Sema::CheckTemplateArgumentList(
   // changes at the end when successful in matching the arguments to the
   // template.
   TemplateArgumentListInfo NewArgs = TemplateArgs;
+
+  // Process any immediate pack expansions from builtin templates.
+  // E.g. from __builtin_sort_types.
+  TryExpandBuiltinTemplateArgumentWrapper(*this, NewArgs);
 
   TemplateParameterList *Params = GetTemplateParameterList(Template);
 
