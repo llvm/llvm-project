@@ -192,12 +192,12 @@
 //      HTML-CALC: <p>if b is zero.</p>
 
 //      HTML-CALC: <p>public int mod(int a, int b)</p>
-//   CALC-NO-REPOSITORY: Defined at line 20 of file .{{.}}src{{.}}Calculator.cpp
+//   CALC-NO-REPOSITORY: Defined at line 54 of file .{{.}}include{{.}}Calculator.h
 //      CALC-REPOSITORY: Defined at line 
-// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp#20">20</a>
-//     CALC-LINE-PREFIX: <a href="https://repository.com/./src/Calculator.cpp#L20">20</a>
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#54">54</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L54">54</a>
 // CALC-REPOSITORY-NEXT: of file 
-// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./src/Calculator.cpp">Calculator.cpp</a>
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Performs the mod operation on integers.</p>
 //      HTML-CALC: <div>return</div>
