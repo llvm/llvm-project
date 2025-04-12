@@ -24269,12 +24269,34 @@ TEST_F(FormatTest, EmptyLinesInLambdas) {
 }
 
 TEST_F(FormatTest, LambdaBracesInGNU) {
-  verifyFormat("auto x = [&] ()\n"
+  auto Style = getGNUStyle();
+  EXPECT_EQ(Style.LambdaBodyIndentation, FormatStyle::LBI_Signature);
+
+  constexpr StringRef Code("auto x = [&] ()\n"
+                           "  {\n"
+                           "    for (int i = 0; i < y; ++i)\n"
+                           "      return 97;\n"
+                           "  };");
+  verifyFormat(Code, Style);
+
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  verifyFormat(Code, Style);
+  verifyFormat("for_each_thread ([] (thread_info *thread)\n"
                "  {\n"
-               "    for (int i = 0; i < y; ++i)\n"
-               "      return 97;\n"
-               "  };",
-               getGNUStyle());
+               "    /* Lambda body.  */\n"
+               "  });",
+               "for_each_thread([](thread_info *thread) {\n"
+               "  /* Lambda body.  */\n"
+               "});",
+               Style);
+  verifyFormat("iterate_over_lwps (scope_ptid, [=] (struct lwp_info *info)\n"
+               "  {\n"
+               "    /* Lambda body.  */\n"
+               "  });",
+               "iterate_over_lwps(scope_ptid, [=](struct lwp_info *info) {\n"
+               "  /* Lambda body.  */\n"
+               "});",
+               Style);
 }
 
 TEST_F(FormatTest, FormatsBlocks) {
