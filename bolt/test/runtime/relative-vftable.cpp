@@ -12,8 +12,8 @@
 // CHECK-NEXT: derived_bar
 // CHECK-NEXT: derived_goo
 
-// RUN: llvm-bolt --instrument %t/main.so -o %t/main.instr.so
-// RUN: %t/main.instr.so | FileCheck %s
+// RUN: llvm-bolt %t/main.so -o %t/main.bolted.so --trap-old-code
+// RUN: %t/main.bolted.so | FileCheck %s
 
 ;--- tt.h
 #include <stdio.h>
@@ -38,7 +38,7 @@ void Derived::goo() { printf("derived_goo\n"); }
 
 ;--- main.cpp
 #include "tt.h"
-// #pragma clang optimize off
+#pragma clang optimize off
 
 void Base::foo() { printf("base_foo\n"); }
 void Base::bar() { printf("base_bar\n"); }
