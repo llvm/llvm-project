@@ -337,6 +337,8 @@
 // MD-CALC:  Provides basic arithmetic operations.
 // MD-CALC: ## Members
 // MD-CALC: public int public_val
+// MD-CALC: ## Records
+// MD-CALC: static_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
