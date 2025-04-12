@@ -274,6 +274,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Access, Blob);
   case FUNCTION_IS_METHOD:
     return decodeRecord(R, I->IsMethod, Blob);
+  case FUNCTION_IS_STATIC:
+    return decodeRecord(R, I->IsStatic, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for FunctionInfo");
@@ -305,6 +307,8 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Name, Blob);
   case MEMBER_TYPE_ACCESS:
     return decodeRecord(R, I->Access, Blob);
+  case MEMBER_TYPE_IS_STATIC:
+    return decodeRecord(R, I->IsStatic, Blob);
   default:
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "invalid field for MemberTypeInfo");

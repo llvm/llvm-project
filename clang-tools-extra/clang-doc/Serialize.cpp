@@ -30,7 +30,7 @@ static void
 populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D);
+static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
 
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
@@ -375,11 +375,11 @@ static AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
 // record, the access specification of the field depends on the inheritance mode
 static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
                         AccessSpecifier Access = AccessSpecifier::AS_public) {
+  auto &LO = D->getLangOpts();
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
 
-    auto &LO = F->getLangOpts();
     // Use getAccessUnsafe so that we just get the default AS_none if it's not
     // valid, as opposed to an assert.
     MemberTypeInfo &NewMember = I.Members.emplace_back(
@@ -387,6 +387,19 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
         F->getNameAsString(),
         getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
     populateMemberTypeInfo(NewMember, F);
+  }
+  const CXXRecordDecl *CPP = dyn_cast<CXXRecordDecl>(D);
+  for (Decl *F : CPP->decls()) {
+    if (auto *VD = dyn_cast<VarDecl>(F)) {
+      if (VD->isStaticDataMember()) {
+        MemberTypeInfo &NewMember = I.Members.emplace_back(
+            getTypeInfoForType(VD->getTypeSourceInfo()->getType(), LO),
+            VD->getNameAsString(),
+            getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
+        NewMember.IsStatic = true;
+        populateMemberTypeInfo(NewMember, VD);
+      }
+    }
   }
 }
 
@@ -568,7 +581,7 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   }
 }
 
-static void populateMemberTypeInfo(MemberTypeInfo &I, const FieldDecl *D) {
+static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
   assert(D && "Expect non-null FieldDecl in populateMemberTypeInfo");
 
   ASTContext& Context = D->getASTContext();
@@ -619,6 +632,7 @@ parseBases(RecordInfo &I, const CXXRecordDecl *D, bool IsFileInRootDir,
               continue;
             FunctionInfo FI;
             FI.IsMethod = true;
+            FI.IsStatic = MD->isStatic();
             // The seventh arg in populateFunctionInfo is a boolean passed by
             // reference, its value is not relevant in here so it's not used
             // anywhere besides the function call.
@@ -729,61 +743,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   return {std::move(I), std::move(Parent)};
 }
 
-std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
-emitInfo(const VarDecl *D, const FullComment *FC, int LineNumber,
-         llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {
-  auto I = std::make_unique<RecordInfo>();
-  bool IsInAnonymousNamespace = false;
-  populateSymbolInfo(*I, D, FC, LineNumber, File, IsFileInRootDir,
-                     IsInAnonymousNamespace);
-  if (!shouldSerializeInfo(PublicOnly, IsInAnonymousNamespace, D))
-    return {};
-
-  I->Path = getInfoRelativePath(I->Namespace);
-
-  PopulateTemplateParameters(I->Template, D);
-
-  // Full and partial specializations.
-  if (auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    if (!I->Template)
-      I->Template.emplace();
-    I->Template->Specialization.emplace();
-    auto &Specialization = *I->Template->Specialization;
-
-    // What this is a specialization of.
-    auto SpecOf = CTSD->getSpecializedTemplateOrPartial();
-    if (auto *CTD = dyn_cast<ClassTemplateDecl *>(SpecOf))
-      Specialization.SpecializationOf = getUSRForDecl(CTD);
-    else if (auto *CTPSD =
-                 dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
-      Specialization.SpecializationOf = getUSRForDecl(CTPSD);
-
-    // Parameters to the specilization. For partial specializations, get the
-    // parameters "as written" from the ClassTemplatePartialSpecializationDecl
-    // because the non-explicit template parameters will have generated internal
-    // placeholder names rather than the names the user typed that match the
-    // template parameters.
-    if (const ClassTemplatePartialSpecializationDecl *CTPSD =
-            dyn_cast<ClassTemplatePartialSpecializationDecl>(D)) {
-      if (const ASTTemplateArgumentListInfo *AsWritten =
-              CTPSD->getTemplateArgsAsWritten()) {
-        for (unsigned i = 0; i < AsWritten->getNumTemplateArgs(); i++) {
-          Specialization.Params.emplace_back(
-              getSourceCode(D, (*AsWritten)[i].getSourceRange()));
-        }
-      }
-    } else {
-      for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
-        Specialization.Params.push_back(TemplateArgumentToInfo(D, Arg));
-      }
-    }
-  }
-
-  // Records are inserted into the parent by reference, so we need to return
-  // both the parent and the record itself.
-  auto Parent = MakeAndInsertIntoParent<const RecordInfo &>(*I);
-  return {std::move(I), std::move(Parent)};
-}
 
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
@@ -811,6 +770,7 @@ emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
     return {};
 
   Func.IsMethod = true;
+  Func.IsStatic = D->isStatic();
 
   const NamedDecl *Parent = nullptr;
   if (const auto *SD =

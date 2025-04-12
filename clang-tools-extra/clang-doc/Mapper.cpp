@@ -82,10 +82,6 @@ bool MapASTVisitor::VisitRecordDecl(const RecordDecl *D) {
   return mapDecl(D, D->isThisDeclarationADefinition());
 }
 
-bool MapASTVisitor::VisitVarDecl(const VarDecl *D) {
-  return mapDecl(D, D->isThisDeclarationADefinition());
-}
-
 bool MapASTVisitor::VisitEnumDecl(const EnumDecl *D) {
   return mapDecl(D, D->isThisDeclarationADefinition());
 }

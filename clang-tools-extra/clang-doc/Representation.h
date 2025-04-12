@@ -224,8 +224,9 @@ struct MemberTypeInfo : public FieldTypeInfo {
       : FieldTypeInfo(TI, Name), Access(Access) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
-    return std::tie(Type, Name, Access, Description) ==
-           std::tie(Other.Type, Other.Name, Other.Access, Other.Description);
+    return std::tie(Type, Name, Access, IsStatic, Description) ==
+           std::tie(Other.Type, Other.Name, Other.Access, Other.IsStatic,
+                    Other.Description);
   }
 
   // Access level associated with this info (public, protected, private, none).
@@ -235,6 +236,7 @@ struct MemberTypeInfo : public FieldTypeInfo {
   AccessSpecifier Access = AccessSpecifier::AS_public;
 
   std::vector<CommentInfo> Description; // Comment description of this field.
+  bool IsStatic = false;
 };
 
 struct Location {
@@ -314,6 +316,8 @@ struct NamespaceInfo : public Info {
 
 // Info for symbols.
 struct SymbolInfo : public Info {
+  bool IsStatic = false;
+
   SymbolInfo(InfoType IT, SymbolID USR = SymbolID(),
              StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}

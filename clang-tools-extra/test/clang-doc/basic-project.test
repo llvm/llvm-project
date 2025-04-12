@@ -52,15 +52,7 @@
 // JSON-INDEX-NEXT:           "Name": "Calculator",
 // JSON-INDEX-NEXT:           "RefType": "record",
 // JSON-INDEX-NEXT:           "Path": "GlobalNamespace",
-// JSON-INDEX-NEXT:           "Children": [
-// JSON-INDEX-NEXT:             {
-// JSON-INDEX-NEXT:               "USR": "{{([0-9A-F]{40})}}",
-// JSON-INDEX-NEXT:               "Name": "static_val",
-// JSON-INDEX-NEXT:               "RefType": "record",
-// JSON-INDEX-NEXT:               "Path": "GlobalNamespace{{[\/]+}}Calculator",
-// JSON-INDEX-NEXT:               "Children": []
-// JSON-INDEX-NEXT:             }
-// JSON-INDEX-NEXT:           ]
+// JSON-INDEX-NEXT:           "Children": []
 // JSON-INDEX-NEXT:         },
 // JSON-INDEX-NEXT:         {
 // JSON-INDEX-NEXT:           "USR": "{{([0-9A-F]{40})}}",
@@ -142,9 +134,9 @@
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> Holds a public value.</p>
 //      HTML-CALC: <div>public int public_val</div>
-
-//      HTML-CALC: <h2 id="Records">Records</h2>
-//      HTML-CALC: <a href="../GlobalNamespace/Calculator/static_val.html">static_val</a>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> A static value.</p>
+//      HTML-CALC: <div>public static const int static_val</div>
 
 //      HTML-CALC: <h2 id="Functions">Functions</h2>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">add</h3>
@@ -202,7 +194,7 @@
 //      HTML-CALC: <div>throw</div>
 //      HTML-CALC: <p>if b is zero.</p>
 
-//      HTML-CALC: <p>public int mod(int a, int b)</p>
+//      HTML-CALC: <p>public static int mod(int a, int b)</p>
 //   CALC-NO-REPOSITORY: Defined at line 54 of file .{{.}}include{{.}}Calculator.h
 //      CALC-REPOSITORY: Defined at line 
 // CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#54">54</a>
@@ -337,8 +329,6 @@
 // MD-CALC:  Provides basic arithmetic operations.
 // MD-CALC: ## Members
 // MD-CALC: public int public_val
-// MD-CALC: ## Records
-// MD-CALC: static_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
