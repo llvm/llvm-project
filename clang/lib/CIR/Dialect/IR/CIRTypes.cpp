@@ -14,6 +14,7 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 //===----------------------------------------------------------------------===//
@@ -275,6 +276,15 @@ bool cir::isAnyFloatingPointType(mlir::Type t) {
 }
 
 //===----------------------------------------------------------------------===//
+// Floating-point and Float-point Vector type helpers
+//===----------------------------------------------------------------------===//
+
+bool cir::isFPOrFPVectorTy(mlir::Type t) {
+  assert(!cir::MissingFeatures::vectorType());
+  return isAnyFloatingPointType(t);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -367,6 +377,22 @@ uint64_t
 BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                           ::mlir::DataLayoutEntryListRef params) const {
   return 1;
+}
+
+//===----------------------------------------------------------------------===//
+//  Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                             ::mlir::DataLayoutEntryListRef params) const {
+  return getSize() * dataLayout.getTypeSizeInBits(getEltType());
+}
+
+uint64_t
+ArrayType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                           ::mlir::DataLayoutEntryListRef params) const {
+  return dataLayout.getTypeABIAlignment(getEltType());
 }
 
 //===----------------------------------------------------------------------===//

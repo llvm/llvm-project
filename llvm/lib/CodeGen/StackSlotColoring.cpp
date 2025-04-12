@@ -484,8 +484,8 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     Register LoadReg;
     Register StoreReg;
-    unsigned LoadSize = 0;
-    unsigned StoreSize = 0;
+    TypeSize LoadSize = TypeSize::getZero();
+    TypeSize StoreSize = TypeSize::getZero();
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.

@@ -132,6 +132,12 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "XL")
   set(NO_RTTI_FLAGS "-qnoeh -qnortti")
 endif ()
 
+# When compiling LLVM_ENABLE_RUNTIMES=flang-rt, the build system looks for the
+# full path of quadmath.h. In this non-runtimes build, preserve the old behavior
+# of just including <quadmath.h>.
+set(FLANG_RT_INCLUDE_QUADMATH_H "<quadmath.h>")
+configure_file("${FLANG_RT_SOURCE_DIR}/cmake/quadmath_wrapper.h.in" "quadmath_wrapper.h")
+
 configure_file("${FLANG_RT_SOURCE_DIR}/cmake/config.h.cmake.in" config.h)
 # include_directories is used here instead of target_include_directories
 # because add_flang_library creates multiple objects (STATIC/SHARED, OBJECT)

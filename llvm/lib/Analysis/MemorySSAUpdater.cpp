@@ -670,9 +670,8 @@ void MemorySSAUpdater::updateForClonedLoop(const LoopBlocksRPO &LoopBlocks,
                                            ArrayRef<BasicBlock *> ExitBlocks,
                                            const ValueToValueMapTy &VMap,
                                            bool IgnoreIncomingWithNoClones) {
-  SmallSetVector<BasicBlock *, 16> Blocks;
-  for (BasicBlock *BB : concat<BasicBlock *const>(LoopBlocks, ExitBlocks))
-    Blocks.insert(BB);
+  SmallSetVector<BasicBlock *, 16> Blocks(
+      llvm::from_range, concat<BasicBlock *const>(LoopBlocks, ExitBlocks));
 
   auto IsInClonedRegion = [&](BasicBlock *BB) { return Blocks.contains(BB); };
 
@@ -1084,8 +1083,8 @@ void MemorySSAUpdater::applyInsertUpdates(ArrayRef<CFGUpdate> Updates,
   SmallVector<BasicBlock *, 32> IDFBlocks;
   if (!BlocksToProcess.empty()) {
     ForwardIDFCalculator IDFs(DT, GD);
-    SmallPtrSet<BasicBlock *, 16> DefiningBlocks(BlocksToProcess.begin(),
-                                                 BlocksToProcess.end());
+    SmallPtrSet<BasicBlock *, 16> DefiningBlocks(llvm::from_range,
+                                                 BlocksToProcess);
     IDFs.setDefiningBlocks(DefiningBlocks);
     IDFs.calculate(IDFBlocks);
 
@@ -1266,7 +1265,7 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
     assert(!Preds.empty() && "Must be moving at least one predecessor to the "
                              "new immediate predecessor.");
     MemoryPhi *NewPhi = MSSA->createMemoryPhi(New);
-    SmallPtrSet<BasicBlock *, 16> PredsSet(Preds.begin(), Preds.end());
+    SmallPtrSet<BasicBlock *, 16> PredsSet(llvm::from_range, Preds);
     // Currently only support the case of removing a single incoming edge when
     // identical edges were not merged.
     if (!IdenticalEdgesWereMerged)

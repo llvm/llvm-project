@@ -396,7 +396,7 @@ end
 ! CHECK: %[[I:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFacc_private_useEi"}
 ! CHECK: %[[DECL_I:.*]]:2 = hlfir.declare %0 {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.parallel
-! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#1 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
+! CHECK: %[[PRIV_I:.*]] = acc.private varPtr(%[[DECL_I]]#0 : !fir.ref<i32>) -> !fir.ref<i32> {implicit = true, name = "i"}
 ! CHECK: %[[DECL_PRIV_I:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFacc_private_useEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: acc.loop {{.*}} private(@privatization_ref_i32 -> %[[PRIV_I]] : !fir.ref<i32>) control(%[[IV0:.*]] : i32) = (%c1{{.*}} : i32) to (%c10{{.*}} : i32) step (%c1{{.*}} : i32)
 ! CHECK:   fir.store %[[IV0]] to %[[DECL_PRIV_I]]#0 : !fir.ref<i32>

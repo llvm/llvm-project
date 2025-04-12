@@ -1130,6 +1130,9 @@ public:
     return getNode(ISD::UNDEF, SDLoc(), VT);
   }
 
+  /// Return a POISON node. POISON does not have a useful SDLoc.
+  SDValue getPOISON(EVT VT) { return getNode(ISD::POISON, SDLoc(), VT); }
+
   /// Return a node that represents the runtime scaling 'MulImm * RuntimeVL'.
   SDValue getVScale(const SDLoc &DL, EVT VT, APInt MulImm,
                     bool ConstantFold = true);
@@ -1767,7 +1770,7 @@ public:
 
   /// Creates a VReg SDDbgValue node.
   SDDbgValue *getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                              unsigned VReg, bool IsIndirect,
+                              Register VReg, bool IsIndirect,
                               const DebugLoc &DL, unsigned O);
 
   /// Creates a SDDbgValue node from a list of locations.
@@ -2445,6 +2448,9 @@ public:
                                 const SDLoc &DLoc);
 
 private:
+#ifndef NDEBUG
+  void verifyNode(SDNode *N) const;
+#endif
   void InsertNode(SDNode *N);
   bool RemoveNodeFromCSEMaps(SDNode *N);
   void AddModifiedNodeToCSEMaps(SDNode *N);

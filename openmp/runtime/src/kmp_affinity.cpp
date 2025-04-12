@@ -1444,6 +1444,7 @@ void KMPAffinity::pick_api() {
   if (__kmp_affinity_top_method == affinity_top_method_hwloc &&
       __kmp_affinity.type != affinity_disabled) {
     affinity_dispatch = new KMPHwlocAffinity();
+    __kmp_hwloc_available = true;
   } else
 #endif
   {

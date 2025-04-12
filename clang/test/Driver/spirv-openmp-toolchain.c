@@ -4,8 +4,7 @@
 
 // verify the tools invocations
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-llvm-bc"{{.*}}"-x" "c"
-// CHECK: "-cc1" "-triple" "spirv64-intel" "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK: llvm-spirv{{.*}}
+// CHECK: "-cc1" "-triple" "spirv64-intel" "-aux-triple" "x86_64-unknown-linux-gnu"{{.*}} "-o" "{{.*}}.o"
 // CHECK: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-emit-obj"
 // CHECK: clang-linker-wrapper{{.*}} "-o" "a.out"
 
@@ -32,8 +31,7 @@
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp -fopenmp-targets=spirv64-intel -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-BINDINGS
 
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
-// CHECK-BINDINGS: "spirv64-intel" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
-// CHECK-BINDINGS: "spirv64-intel" - "SPIR-V::Translator", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_SPV:.+]]"
+// CHECK-BINDINGS: "spirv64-intel" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[DEVICE_SPV:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_SPV]]"], output: "[[DEVICE_IMAGE:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_IMAGE]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
@@ -43,8 +41,8 @@
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_PP:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_PP]]"], output: "[[HOST_BC:.+]]"
 // CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[INPUT]]"], output: "[[DEVICE_PP:.+]]"
-// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_TEMP_BC:.+]]"
-// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "SPIR-V::Translator", inputs: ["[[DEVICE_TEMP_BC]]"], output: "[[DEVICE_ASM:.+]]"
+// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[DEVICE_PP]]", "[[HOST_BC]]"], output: "[[DEVICE_BC:.+]]"
+// CHECK-BINDINGS-TEMPS: "spirv64-intel" - "clang", inputs: ["[[DEVICE_BC]]"], output: "[[DEVICE_ASM:.+]]"
 // CHECK-BINDINGS-TEMPS: "spirv64-intel" - "SPIR-V::Assembler", inputs: ["[[DEVICE_ASM]]"], output: "[[DEVICE_SPV:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[DEVICE_SPV]]"], output: "[[DEVICE_IMAGE:.+]]"
 // CHECK-BINDINGS-TEMPS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[DEVICE_IMAGE]]"], output: "[[HOST_ASM:.+]]"

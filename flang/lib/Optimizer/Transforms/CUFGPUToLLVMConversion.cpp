@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Transforms/CUFGPUToLLVMConversion.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
+#include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -175,6 +178,68 @@ struct GPULaunchKernelConversion
   }
 };
 
+static std::string getFuncName(cuf::SharedMemoryOp op) {
+  if (auto gpuFuncOp = op->getParentOfType<mlir::gpu::GPUFuncOp>())
+    return gpuFuncOp.getName().str();
+  if (auto funcOp = op->getParentOfType<mlir::func::FuncOp>())
+    return funcOp.getName().str();
+  if (auto llvmFuncOp = op->getParentOfType<mlir::LLVM::LLVMFuncOp>())
+    return llvmFuncOp.getSymName().str();
+  return "";
+}
+
+static mlir::Value createAddressOfOp(mlir::ConversionPatternRewriter &rewriter,
+                                     mlir::Location loc,
+                                     gpu::GPUModuleOp gpuMod,
+                                     std::string &sharedGlobalName) {
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(
+      rewriter.getContext(), mlir::NVVM::NVVMMemorySpace::kSharedMemorySpace);
+  if (auto g = gpuMod.lookupSymbol<fir::GlobalOp>(sharedGlobalName))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    g.getSymName());
+  if (auto g = gpuMod.lookupSymbol<mlir::LLVM::GlobalOp>(sharedGlobalName))
+    return rewriter.create<mlir::LLVM::AddressOfOp>(loc, llvmPtrTy,
+                                                    g.getSymName());
+  return {};
+}
+
+struct CUFSharedMemoryOpConversion
+    : public mlir::ConvertOpToLLVMPattern<cuf::SharedMemoryOp> {
+  explicit CUFSharedMemoryOpConversion(
+      const fir::LLVMTypeConverter &typeConverter, mlir::PatternBenefit benefit)
+      : mlir::ConvertOpToLLVMPattern<cuf::SharedMemoryOp>(typeConverter,
+                                                          benefit) {}
+  using OpAdaptor = typename cuf::SharedMemoryOp::Adaptor;
+
+  mlir::LogicalResult
+  matchAndRewrite(cuf::SharedMemoryOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op->getLoc();
+    if (!op.getOffset())
+      mlir::emitError(loc,
+                      "cuf.shared_memory must have an offset for code gen");
+
+    auto gpuMod = op->getParentOfType<gpu::GPUModuleOp>();
+    std::string sharedGlobalName =
+        (getFuncName(op) + llvm::Twine(cudaSharedMemSuffix)).str();
+    mlir::Value sharedGlobalAddr =
+        createAddressOfOp(rewriter, loc, gpuMod, sharedGlobalName);
+
+    if (!sharedGlobalAddr)
+      mlir::emitError(loc, "Could not find the shared global operation\n");
+
+    auto castPtr = rewriter.create<mlir::LLVM::AddrSpaceCastOp>(
+        loc, mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+        sharedGlobalAddr);
+    mlir::Type baseType = castPtr->getResultTypes().front();
+    llvm::SmallVector<mlir::LLVM::GEPArg> gepArgs = {op.getOffset()};
+    mlir::Value shmemPtr = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, baseType, rewriter.getI8Type(), castPtr, gepArgs);
+    rewriter.replaceOp(op, {shmemPtr});
+    return mlir::success();
+  }
+};
+
 class CUFGPUToLLVMConversion
     : public fir::impl::CUFGPUToLLVMConversionBase<CUFGPUToLLVMConversion> {
 public:
@@ -194,6 +259,7 @@ public:
                                          /*forceUnifiedTBAATree=*/false, *dl);
     cuf::populateCUFGPUToLLVMConversionPatterns(typeConverter, patterns);
     target.addIllegalOp<mlir::gpu::LaunchFuncOp>();
+    target.addIllegalOp<cuf::SharedMemoryOp>();
     target.addLegalDialect<mlir::LLVM::LLVMDialect>();
     if (mlir::failed(mlir::applyPartialConversion(getOperation(), target,
                                                   std::move(patterns)))) {
@@ -208,5 +274,6 @@ public:
 void cuf::populateCUFGPUToLLVMConversionPatterns(
     const fir::LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns,
     mlir::PatternBenefit benefit) {
-  patterns.add<GPULaunchKernelConversion>(converter, benefit);
+  patterns.add<CUFSharedMemoryOpConversion, GPULaunchKernelConversion>(
+      converter, benefit);
 }

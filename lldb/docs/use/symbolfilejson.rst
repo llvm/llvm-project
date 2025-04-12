@@ -74,14 +74,61 @@ sections
 * ``type``: a string representing the section type (see below).
 * ``address``: a number representing the section file address.
 * ``size``: a number representing the section size in bytes.
+* ``read``: a boolean value indicating if the section has read permissions.
+* ``write``: a boolean value indicating if the section has write permissions.
+* ``execute``: a boolean value indicating if the section has execute permissions.
+* ``subsections``: An array of child sections in the same format.
+* ``user_id``: a number representing the section identifier.
+* ``file_offset``: a number that represents the offset in the file for this section's contents.
+* ``file_size``: a number that represents the size in bytes in the file for this section's contents.
+* ``alignment``: a boolean value indicating if the section has execute permissions.
+* ``fake``: a boolean value indicating if the section is fake.
+* ``encrypted``: a boolean value indicating if the section is encrypted.
+* ``thread_specific``: a boolean value indicating if the section is thread specific.
 
 .. code-block:: JSON
 
   {
-      "name": "__TEXT",
-      "type": "code",
-      "address": 0,
-      "size": 546,
+    "user_id": 256,
+    "name": "__TEXT",
+    "type": "code",
+    "address": 0,
+    "size": 546,
+    "file_offset": 0,
+    "file_size": 4096,
+    "read": true,
+    "write": false,
+    "executable": true,
+    "subsections": [
+      {
+        "name": "__text",
+        "type": "code",
+        "address": 0,
+        "size": 200,
+        "alignment": 2,
+        "read": true,
+        "write": false,
+        "execute": true
+      },
+      {
+          "name": "__fake",
+          "address": 200,
+          "size": 10,
+          "fake": true
+      },
+      {
+          "name": "__encrypted",
+          "address": 210,
+          "size": 20,
+          "encrypted": true
+      },
+      {
+          "name": "__tls",
+          "address": 230,
+          "size": 30,
+          "thread_specific": true
+      }
+    ]
   }
 
 The ``type`` field accepts the following values: ``code``, ``container``,

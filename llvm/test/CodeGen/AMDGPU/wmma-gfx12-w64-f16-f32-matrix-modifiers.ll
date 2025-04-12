@@ -378,7 +378,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<4 x half> %A, <4 x 
 ; GFX12-NEXT:    s_endpgm
 bb:
   %C = load <8 x half>, ptr %Caddr
-  %C_shuffle = shufflevector <8 x half> %C, <8 x half> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %C_shuffle = shufflevector <8 x half> %C, <8 x half> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %fneg.C_shuffle = fneg <4 x half> %C_shuffle
   %res = call <4 x half> @llvm.amdgcn.wmma.f16.16x16x16.f16.v8f16.v8f16(<4 x half> %A, <4 x half> %B, <4 x half> %fneg.C_shuffle , i1 0)
   store <4 x half> %res, ptr addrspace(1) %out

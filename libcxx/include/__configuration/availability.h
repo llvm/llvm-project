@@ -78,6 +78,9 @@
 // in all versions of the library are available.
 #if !_LIBCPP_HAS_VENDOR_AVAILABILITY_ANNOTATIONS
 
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21 1
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE /* nothing */
+
 #  define _LIBCPP_INTRODUCED_IN_LLVM_20 1
 #  define _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE /* nothing */
 
@@ -113,6 +116,11 @@
 #elif defined(__APPLE__)
 
 // clang-format off
+
+// LLVM 21
+// TODO: Fill this in
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21 0
+#  define _LIBCPP_INTRODUCED_IN_LLVM_21_ATTRIBUTE __attribute__((unavailable))
 
 // LLVM 20
 // TODO: Fill this in
@@ -163,10 +171,10 @@
     __attribute__((availability(driverkit, strict, introduced = 23.0)))
 
 // LLVM 15
-#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 130400) ||   \
-      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 160500) || \
-      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 160500) ||         \
-      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 90500) ||    \
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 130300) ||   \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 160300) || \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 160300) ||         \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 90300) ||    \
       (defined(__ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_BRIDGE_OS_VERSION_MIN_REQUIRED__ < 70500) ||  \
       (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 220400)
 #    define _LIBCPP_INTRODUCED_IN_LLVM_15 0
@@ -174,10 +182,10 @@
 #    define _LIBCPP_INTRODUCED_IN_LLVM_15 1
 #  endif
 #  define _LIBCPP_INTRODUCED_IN_LLVM_15_ATTRIBUTE                                                                 \
-    __attribute__((availability(macos, strict, introduced = 13.4)))                                               \
-    __attribute__((availability(ios, strict, introduced = 16.5)))                                                 \
-    __attribute__((availability(tvos, strict, introduced = 16.5)))                                                \
-    __attribute__((availability(watchos, strict, introduced = 9.5)))                                              \
+    __attribute__((availability(macos, strict, introduced = 13.3)))                                               \
+    __attribute__((availability(ios, strict, introduced = 16.3)))                                                 \
+    __attribute__((availability(tvos, strict, introduced = 16.3)))                                                \
+    __attribute__((availability(watchos, strict, introduced = 9.3)))                                              \
     __attribute__((availability(bridgeos, strict, introduced = 7.5)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 22.4)))
 
@@ -358,6 +366,11 @@
 // These overloads were added later than the integer overloads.
 #define _LIBCPP_AVAILABILITY_HAS_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20
 #define _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE
+
+// This controls whether `std::__hash_memory` is available in the dylib, which
+// is used for some `std::hash` specializations.
+#define _LIBCPP_AVAILABILITY_HAS_HASH_MEMORY _LIBCPP_INTRODUCED_IN_LLVM_21
+// No attribute, since we've had hash in the headers before
 
 // Define availability attributes that depend on _LIBCPP_HAS_EXCEPTIONS.
 // Those are defined in terms of the availability attributes above, and

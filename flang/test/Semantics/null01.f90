@@ -112,7 +112,10 @@ subroutine test
   dt4x = dt4(null(dt2x%pps0))
   call canbenull(null(), null()) ! fine
   call canbenull(null(mold=ip0), null(mold=rp0)) ! fine
-  call optionalAllocatable(null(mold=ip0)) ! fine
+  !ERROR: ALLOCATABLE dummy argument 'x=' must be associated with an ALLOCATABLE actual argument
+  call optionalAllocatable(null(mold=ip0))
+  call optionalAllocatable(null(mold=ia0)) ! fine
+  call optionalAllocatable(null()) ! fine
   !ERROR: Null pointer argument requires an explicit interface
   call implicit(null())
   !ERROR: Null pointer argument requires an explicit interface

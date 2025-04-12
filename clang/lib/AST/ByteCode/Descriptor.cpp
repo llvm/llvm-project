@@ -16,6 +16,7 @@
 #include "PrimType.h"
 #include "Record.h"
 #include "Source.h"
+#include "clang/AST/ExprCXX.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -329,9 +330,10 @@ static BlockMoveFn getMoveArrayPrim(PrimType Type) {
 }
 
 /// Primitives.
-Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
-                       bool IsConst, bool IsTemporary, bool IsMutable)
-    : Source(D), ElemSize(primSize(Type)), Size(ElemSize),
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
+                       MetadataSize MD, bool IsConst, bool IsTemporary,
+                       bool IsMutable)
+    : Source(D), SourceType(SourceTy), ElemSize(primSize(Type)), Size(ElemSize),
       MDSize(MD.value_or(0)), AllocSize(align(Size + MDSize)), PrimT(Type),
       IsConst(IsConst), IsMutable(IsMutable), IsTemporary(IsTemporary),
       CtorFn(getCtorPrim(Type)), DtorFn(getDtorPrim(Type)),
@@ -367,10 +369,12 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
+                       const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
-    : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
+    : Source(D), SourceType(SourceTy),
+      ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
       AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
       ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
@@ -402,14 +406,16 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 }
 
 /// Dummy.
-Descriptor::Descriptor(const DeclTy &D)
-    : Source(D), ElemSize(1), Size(1), MDSize(0), AllocSize(MDSize),
-      ElemRecord(nullptr), IsConst(true), IsMutable(false), IsTemporary(false),
-      IsDummy(true) {
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
+      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
+      IsTemporary(false), IsDummy(true) {
   assert(Source && "Missing source");
 }
 
 QualType Descriptor::getType() const {
+  if (SourceType)
+    return QualType(SourceType, 0);
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))
@@ -446,6 +452,30 @@ QualType Descriptor::getElemQualType() const {
     return CT->getElementType();
 
   return T;
+}
+
+QualType Descriptor::getDataType(const ASTContext &Ctx) const {
+  auto MakeArrayType = [&](QualType ElemType) -> QualType {
+    if (IsArray)
+      return Ctx.getConstantArrayType(
+          ElemType, APInt(64, static_cast<uint64_t>(getNumElems()), false),
+          nullptr, ArraySizeModifier::Normal, 0);
+    return ElemType;
+  };
+
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return MakeArrayType(E->getType()->getPointeeType());
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return MakeArrayType(E->getType()->getPointeeType());
+    return E->getType();
+  }
+
+  return getType();
 }
 
 SourceLocation Descriptor::getLocation() const {

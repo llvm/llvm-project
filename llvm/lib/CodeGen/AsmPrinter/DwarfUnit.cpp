@@ -615,7 +615,9 @@ DIE *DwarfUnit::createTypeDIE(const DIScope *Context, DIE &ContextDIE,
       return &TyDIE;
     }
     construct(CTy);
-  } else if (auto *BT = dyn_cast<DIBasicType>(Ty))
+  } else if (auto *FPT = dyn_cast<DIFixedPointType>(Ty))
+    construct(FPT);
+  else if (auto *BT = dyn_cast<DIBasicType>(Ty))
     construct(BT);
   else if (auto *ST = dyn_cast<DIStringType>(Ty))
     construct(ST);
@@ -758,6 +760,30 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIBasicType *BTy) {
   if (uint32_t NumExtraInhabitants = BTy->getNumExtraInhabitants())
     addUInt(Buffer, dwarf::DW_AT_LLVM_num_extra_inhabitants, std::nullopt,
             NumExtraInhabitants);
+}
+
+void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIFixedPointType *BTy) {
+  // Base type handling.
+  constructTypeDIE(Buffer, static_cast<const DIBasicType *>(BTy));
+
+  if (BTy->isBinary())
+    addSInt(Buffer, dwarf::DW_AT_binary_scale, dwarf::DW_FORM_sdata,
+            BTy->getFactor());
+  else if (BTy->isDecimal())
+    addSInt(Buffer, dwarf::DW_AT_decimal_scale, dwarf::DW_FORM_sdata,
+            BTy->getFactor());
+  else {
+    assert(BTy->isRational());
+    DIE *ContextDIE = getOrCreateContextDIE(BTy->getScope());
+    DIE &Constant = createAndAddDIE(dwarf::DW_TAG_constant, *ContextDIE);
+
+    addInt(Constant, dwarf::DW_AT_GNU_numerator, BTy->getNumerator(),
+           !BTy->isSigned());
+    addInt(Constant, dwarf::DW_AT_GNU_denominator, BTy->getDenominator(),
+           !BTy->isSigned());
+
+    addDIEEntry(Buffer, dwarf::DW_AT_small, Constant);
+  }
 }
 
 void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIStringType *STy) {
@@ -1478,7 +1504,7 @@ void DwarfUnit::constructSubrangeDIE(DIE &DW_Subrange, const DISubrangeType *SR,
 
   AddBoundTypeEntry(dwarf::DW_AT_upper_bound, SR->getUpperBound());
 
-  AddBoundTypeEntry(dwarf::DW_AT_byte_stride, SR->getStride());
+  AddBoundTypeEntry(dwarf::DW_AT_bit_stride, SR->getStride());
 
   AddBoundTypeEntry(dwarf::DW_AT_GNU_bias, SR->getBias());
 }
@@ -1663,6 +1689,10 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     addBlock(Buffer, dwarf::DW_AT_rank, DwarfExpr.finalize());
   }
 
+  if (auto *BitStride = CTy->getBitStrideConst()) {
+    addUInt(Buffer, dwarf::DW_AT_bit_stride, {}, BitStride->getZExtValue());
+  }
+
   // Emit the element type.
   addType(Buffer, CTy->getBaseType());
 
@@ -1670,7 +1700,7 @@ void DwarfUnit::constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   DINodeArray Elements = CTy->getElements();
   for (DINode *E : Elements) {
     if (auto *Element = dyn_cast_or_null<DISubrangeType>(E)) {
-      DIE &TyDIE = createAndAddDIE(CTy->getTag(), Buffer, CTy);
+      DIE &TyDIE = createAndAddDIE(Element->getTag(), Buffer, CTy);
       constructSubrangeDIE(TyDIE, Element, true);
     } else if (auto *Element = dyn_cast_or_null<DISubrange>(E))
       constructSubrangeDIE(Buffer, Element);

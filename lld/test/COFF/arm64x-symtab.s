@@ -18,19 +18,19 @@
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err1.dll symref-aarch64.obj sym-arm64ec.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEF %s
-// UNDEF:      lld-link: error: undefined symbol: sym
+// UNDEF:      lld-link: error: undefined symbol: sym (native symbol)
 // UNDEF-NEXT: >>> referenced by symref-aarch64.obj:(.data)
 
 // Check that EC object files can't reference native symbols.
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:out.dll symref-arm64ec.obj sym-aarch64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEFEC %s
-// UNDEFEC:      lld-link: error: undefined symbol: sym
+// UNDEFEC:      lld-link: error: undefined symbol: sym (EC symbol)
 // UNDEFEC-NEXT: >>> referenced by symref-arm64ec.obj:(.data)
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:out.dll symref-x86_64.obj sym-aarch64.obj \
 // RUN:              2>&1 | FileCheck --check-prefix=UNDEFX86 %s
-// UNDEFX86:      lld-link: error: undefined symbol: sym
+// UNDEFX86:      lld-link: error: undefined symbol: sym (EC symbol)
 // UNDEFX86-NEXT: >>> referenced by symref-x86_64.obj:(.data)
 
 // RUN: not lld-link -machine:arm64x -dll -noentry -out:err2.dll symref-aarch64.obj sym-x86_64.obj \

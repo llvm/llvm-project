@@ -8,6 +8,7 @@
 
 #include "flang/Optimizer/Transforms/CUFOpConversion.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
@@ -809,7 +810,7 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = op.getLoc();
     auto idxTy = mlir::IndexType::get(op.getContext());
-    auto zero = rewriter.create<mlir::arith::ConstantOp>(
+    mlir::Value zero = rewriter.create<mlir::arith::ConstantOp>(
         loc, rewriter.getIntegerType(32), rewriter.getI32IntegerAttr(0));
     auto gridSizeX =
         rewriter.create<mlir::arith::IndexCastOp>(loc, idxTy, op.getGridX());
@@ -868,15 +869,18 @@ public:
       }
       args.push_back(arg);
     }
-
+    mlir::Value dynamicShmemSize = op.getBytes() ? op.getBytes() : zero;
     auto gpuLaunchOp = rewriter.create<mlir::gpu::LaunchFuncOp>(
         loc, kernelName, mlir::gpu::KernelDim3{gridSizeX, gridSizeY, gridSizeZ},
-        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ}, zero, args);
+        mlir::gpu::KernelDim3{blockSizeX, blockSizeY, blockSizeZ},
+        dynamicShmemSize, args);
     if (clusterDimX && clusterDimY && clusterDimZ) {
       gpuLaunchOp.getClusterSizeXMutable().assign(clusterDimX);
       gpuLaunchOp.getClusterSizeYMutable().assign(clusterDimY);
       gpuLaunchOp.getClusterSizeZMutable().assign(clusterDimZ);
     }
+    if (op.getStream())
+      gpuLaunchOp.getAsyncObjectMutable().assign(op.getStream());
     if (procAttr)
       gpuLaunchOp->setAttr(cuf::getProcAttrName(), procAttr);
     rewriter.replaceOp(op, gpuLaunchOp);
@@ -904,16 +908,7 @@ struct CUFSyncDescriptorOpConversion
 
     auto hostAddr = builder.create<fir::AddrOfOp>(
         loc, fir::ReferenceType::get(globalOp.getType()), op.getGlobalName());
-    mlir::func::FuncOp callee =
-        fir::runtime::getRuntimeFunc<mkRTKey(CUFSyncGlobalDescriptor)>(loc,
-                                                                       builder);
-    auto fTy = callee.getFunctionType();
-    mlir::Value sourceFile = fir::factory::locationToFilename(builder, loc);
-    mlir::Value sourceLine =
-        fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
-    llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
-        builder, loc, fTy, hostAddr, sourceFile, sourceLine)};
-    builder.create<fir::CallOp>(loc, callee, args);
+    fir::runtime::cuda::genSyncGlobalDescriptor(builder, loc, hostAddr);
     op.erase();
     return mlir::success();
   }

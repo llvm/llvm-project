@@ -126,6 +126,8 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+  static FileSpec GetCurrentXcodeToolchainDirectory() { return {}; }
+  static FileSpec GetCurrentCommandLineToolsDirectory() { return {}; }
 
   struct SDKOptions {
     std::optional<XcodeSDK> XcodeSDKSelection;

@@ -365,13 +365,13 @@ define void @mscatter_v4i16_align1(<4 x i16> %val, <4 x ptr> %ptrs, <4 x i1> %m)
 ; RV64-SLOW-NEXT:    beqz a0, .LBB6_4
 ; RV64-SLOW-NEXT:  .LBB6_8: # %cond.store5
 ; RV64-SLOW-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; RV64-SLOW-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-SLOW-NEXT:    vslidedown.vi v12, v8, 3
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-SLOW-NEXT:    vslidedown.vi v10, v10, 3
+; RV64-SLOW-NEXT:    vslidedown.vi v8, v10, 3
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; RV64-SLOW-NEXT:    vmv.x.s a0, v8
+; RV64-SLOW-NEXT:    vmv.x.s a0, v12
 ; RV64-SLOW-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; RV64-SLOW-NEXT:    vmv.x.s a1, v10
+; RV64-SLOW-NEXT:    vmv.x.s a1, v8
 ; RV64-SLOW-NEXT:    srli a2, a0, 8
 ; RV64-SLOW-NEXT:    sb a0, 0(a1)
 ; RV64-SLOW-NEXT:    sb a2, 1(a1)

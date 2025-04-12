@@ -47,7 +47,7 @@
 
 using namespace llvm;
 
-cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
+static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
 
 static cl::opt<bool>
     RegisterInfoDebug("register-info-debug", cl::init(false),

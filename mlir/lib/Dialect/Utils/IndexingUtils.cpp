@@ -220,10 +220,10 @@ bool mlir::isIdentityPermutation(ArrayRef<int64_t> permutation) {
 }
 
 bool mlir::isPermutationVector(ArrayRef<int64_t> interchange) {
-  assert(llvm::all_of(interchange, [](int64_t s) { return s >= 0; }) &&
-         "permutation must be non-negative");
   llvm::SmallDenseSet<int64_t, 4> seenVals;
   for (auto val : interchange) {
+    if (val < 0 || static_cast<uint64_t>(val) >= interchange.size())
+      return false;
     if (seenVals.count(val))
       return false;
     seenVals.insert(val);

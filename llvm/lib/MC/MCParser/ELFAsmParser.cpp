@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -57,12 +58,6 @@ public:
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveRoData>(".rodata");
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTData>(".tdata");
     addDirectiveHandler<&ELFAsmParser::parseSectionDirectiveTBSS>(".tbss");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveDataRel>(".data.rel");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveDataRelRo>(".data.rel.ro");
-    addDirectiveHandler<
-      &ELFAsmParser::parseSectionDirectiveEhFrame>(".eh_frame");
     addDirectiveHandler<&ELFAsmParser::parseDirectiveSection>(".section");
     addDirectiveHandler<
       &ELFAsmParser::parseDirectivePushSection>(".pushsection");
@@ -119,22 +114,6 @@ public:
                               ELF::SHF_ALLOC |
                               ELF::SHF_TLS | ELF::SHF_WRITE,
                               SectionKind::getThreadBSS());
-  }
-  bool parseSectionDirectiveDataRel(StringRef, SMLoc) {
-    return parseSectionSwitch(".data.rel", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
-  }
-  bool parseSectionDirectiveDataRelRo(StringRef, SMLoc) {
-    return parseSectionSwitch(".data.rel.ro", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC |
-                              ELF::SHF_WRITE,
-                              SectionKind::getReadOnlyWithRel());
-  }
-  bool parseSectionDirectiveEhFrame(StringRef, SMLoc) {
-    return parseSectionSwitch(".eh_frame", ELF::SHT_PROGBITS,
-                              ELF::SHF_ALLOC | ELF::SHF_WRITE,
-                              SectionKind::getData());
   }
   bool parseDirectivePushSection(StringRef, SMLoc);
   bool parseDirectivePopSection(StringRef, SMLoc);
@@ -423,10 +402,10 @@ bool ELFAsmParser::maybeParseSectionType(StringRef &TypeName) {
   Lex();
   if (L.isNot(AsmToken::At) && L.isNot(AsmToken::Percent) &&
       L.isNot(AsmToken::String)) {
-    if (L.getAllowAtInIdentifier())
-      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
-    else
+    if (getContext().getAsmInfo()->getCommentString().starts_with('@'))
       return TokError("expected '%<type>' or \"<type>\"");
+    else
+      return TokError("expected '@<type>', '%<type>' or \"<type>\"");
   }
   if (!L.is(AsmToken::String))
     Lex();
@@ -762,6 +741,13 @@ bool ELFAsmParser::parseDirectiveType(StringRef, SMLoc) {
 
   // Handle the identifier as the key symbol.
   MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+
+  bool AllowAt = getLexer().getAllowAtInIdentifier();
+  if (!AllowAt &&
+      !getContext().getAsmInfo()->getCommentString().starts_with("@"))
+    getLexer().setAllowAtInIdentifier(true);
+  auto _ =
+      make_scope_exit([&]() { getLexer().setAllowAtInIdentifier(AllowAt); });
 
   // NOTE the comma is optional in all cases.  It is only documented as being
   // optional in the first case, however, GAS will silently treat the comma as

@@ -99,6 +99,31 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     }
   }
 
+  if (!CSF.LowPrecisionPresent)
+    CSF.LowPrecisionPresent =
+        I.getType()->isIntegerTy(16) || I.getType()->isHalfTy();
+
+  if (!CSF.LowPrecisionPresent) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(16) || Op->getType()->isHalfTy()) {
+        CSF.LowPrecisionPresent = true;
+        break;
+      }
+    }
+  }
+
+  if (!CSF.Int64Ops)
+    CSF.Int64Ops = I.getType()->isIntegerTy(64);
+
+  if (!CSF.Int64Ops) {
+    for (const Value *Op : I.operands()) {
+      if (Op->getType()->isIntegerTy(64)) {
+        CSF.Int64Ops = true;
+        break;
+      }
+    }
+  }
+
   if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
     switch (II->getIntrinsicID()) {
     default:
@@ -162,6 +187,13 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                "DXIL Shader Flag analysis should not be run post-lowering.");
         continue;
       }
+
+      // Set UseNativeLowPrecision using dx.nativelowprec module metadata
+      if (auto *NativeLowPrec = mdconst::extract_or_null<ConstantInt>(
+              M.getModuleFlag("dx.nativelowprec")))
+        if (MMDI.DXILVersion >= VersionTuple(1, 2) &&
+            NativeLowPrec->getValue() != 0)
+          SCCSF.UseNativeLowPrecision = true;
 
       ComputedShaderFlags CSF;
       for (const auto &BB : *F)

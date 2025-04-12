@@ -19,6 +19,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -110,6 +111,23 @@ TEST_CONSTEXPR_CXX20 bool test_simple_cases() {
   return true;
 }
 
+template <std::size_t N>
+TEST_CONSTEXPR_CXX20 void test_vector_bool() {
+  std::vector<bool> f(N, false), t(N, true);
+  { // Test swap_ranges() with aligned bytes
+    std::vector<bool> f1 = f, t1 = t;
+    std::swap_ranges(f1.begin(), f1.end(), t1.begin());
+    assert(f1 == t);
+    assert(t1 == f);
+  }
+  { // Test swap_ranges() with unaligned bytes
+    std::vector<bool> f1(N, false), t1(N + 8, true);
+    std::swap_ranges(f1.begin(), f1.end(), t1.begin() + 4);
+    assert(std::equal(f1.begin(), f1.end(), t.begin()));
+    assert(std::equal(t1.begin() + 4, t1.end() - 4, f.begin()));
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
   test_simple_cases<forward_iterator, forward_iterator>();
   test_simple_cases<forward_iterator, bidirectional_iterator>();
@@ -126,9 +144,19 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 #if TEST_STD_VER >= 11
   // We can't test unique_ptr in constant evaluation before C++23 as it's constexpr only since C++23.
-  if (TEST_STD_VER >= 23 || !TEST_IS_CONSTANT_EVALUATED)
+  if (TEST_STD_AT_LEAST_23_OR_RUNTIME_EVALUATED)
     types::for_each(types::forward_iterator_list<std::unique_ptr<int>*>(), TestUniquePtr());
 #endif
+
+  { // Test vector<bool>::iterator optimization
+    test_vector_bool<8>();
+    test_vector_bool<19>();
+    test_vector_bool<32>();
+    test_vector_bool<49>();
+    test_vector_bool<64>();
+    test_vector_bool<199>();
+    test_vector_bool<256>();
+  }
 
   return true;
 }
