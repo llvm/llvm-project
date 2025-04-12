@@ -1198,16 +1198,15 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   DiagnosticOptions &DiagOpts = Invocation->getDiagnosticOpts();
 
   DiagOpts.VerifyDiagnostics = 0;
-  assert(getInvocation().getModuleHash() ==
-         Invocation->getModuleHash() && "Module hash mismatch!");
+  assert(getInvocation().getModuleHash() == Invocation->getModuleHash() &&
+         "Module hash mismatch!");
 
   // Construct a compiler instance that will be used to actually create the
   // module.  Since we're sharing an in-memory module cache,
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      getPCHContainerOperations(),
-      &getModuleCache());
+      getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
   auto &Inv = *Invocation;
@@ -1231,10 +1230,9 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
 
   // Note that this module is part of the module build stack, so that we
   // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(
-    getSourceManager().getModuleBuildStack());
+  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
   SourceMgr.pushModuleBuildStack(ModuleName,
-    FullSourceLoc(ImportLoc, getSourceManager()));
+                                 FullSourceLoc(ImportLoc, getSourceManager()));
 
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
@@ -2221,8 +2219,8 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   std::string NullTerminatedSource(Source.str());
 
-  auto Other = cloneForModuleCompileImpl(
-      ImportLoc, ModuleName, Input, StringRef(), ModuleFileName);
+  auto Other = cloneForModuleCompileImpl(ImportLoc, ModuleName, Input,
+                                         StringRef(), ModuleFileName);
 
   // Create a virtual file containing our desired source.
   // FIXME: We shouldn't need to do this.
