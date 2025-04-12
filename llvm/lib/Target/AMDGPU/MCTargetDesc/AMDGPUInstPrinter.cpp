@@ -1220,6 +1220,10 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
         (ModIdx != -1) ? MI->getOperand(ModIdx).getImm() : DefaultValue;
   }
 
+  const bool HasDst =
+      (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vdst) != -1) ||
+      (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::sdst) != -1);
+
   // Print three values of neg/opsel for wmma instructions (prints 0 when there
   // is no src_modifier operand instead of not printing anything).
   if (MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsSWMMAC ||
@@ -1238,9 +1242,8 @@ void AMDGPUInstPrinter::printPackedModifier(const MCInst *MI,
   }
 
   const bool HasDstSel =
-    NumOps > 0 &&
-    Mod == SISrcMods::OP_SEL_0 &&
-    MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
+      HasDst && NumOps > 0 && Mod == SISrcMods::OP_SEL_0 &&
+      MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::VOP3_OPSEL;
 
   const bool IsPacked =
     MII.get(MI->getOpcode()).TSFlags & SIInstrFlags::IsPacked;
