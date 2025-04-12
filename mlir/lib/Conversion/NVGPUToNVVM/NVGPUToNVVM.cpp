@@ -1184,9 +1184,17 @@ struct NVGPUTmaCreateDescriptorOpLowering
 
     Value boxArrayPtr = b.create<LLVM::AllocaOp>(llvmPointerType, llvmInt64Type,
                                                  makeI64Const(b, 5));
-    for (auto [index, value] : llvm::enumerate(adaptor.getBoxDimensions())) {
+    unsigned idx = 0;
+    ValueRange dynamicDim = adaptor.getBoxDimensions();
+    for (auto [index, shape] :
+         llvm::enumerate(adaptor.getStaticBoxDimensions())) {
       Value gep = b.create<LLVM::GEPOp>(llvmPointerType, llvmPointerType,
                                         boxArrayPtr, makeI64Const(b, index));
+      Value value;
+      if (ShapedType::isDynamic(shape))
+        value = dynamicDim[idx++];
+      else
+        value = makeI64Const(b, shape);
       b.create<LLVM::StoreOp>(value, gep);
     }
 

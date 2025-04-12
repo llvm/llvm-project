@@ -813,6 +813,32 @@ func.func @create_tensor_map(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : m
   func.return
 }
 
+func.func @create_tensor_map_constant_box_dim(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : memref<128xf32>) {
+  %devicePtr2d_unranked = memref.cast %devicePtr2d : memref<64x128xf32> to memref<*xf32>
+  // CHECK: %[[C5_0:.*]] = llvm.mlir.constant(5 : i32) : i64
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[C5_0]] x i64 : (i64) -> !llvm.ptr
+  // CHECK: %[[C0_0:.*]] = llvm.mlir.constant(0 : i32) : i64
+  // CHECK: %[[GEP_0:.*]] = llvm.getelementptr %[[ALLOCA]]{{\[}}%[[C0_0]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+  // CHECK: %[[C64:.*]] = llvm.mlir.constant(64 : i32) : i64
+  // CHECK: llvm.store %[[C64]], %[[GEP_0]] : i64, !llvm.ptr
+  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i64
+  // CHECK: %[[GEP_1:.*]] = llvm.getelementptr %[[ALLOCA]]{{\[}}%[[C1]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+  // CHECK: %[[C128_0:.*]] = llvm.mlir.constant(128 : i32) : i64
+  // CHECK: llvm.store %[[C128_0]], %[[GEP_1]] : i64, !llvm.ptr
+  // CHECK: llvm.call @mgpuTensorMapEncodeTiledMemref({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, %[[ALLOCA]])
+  %tensorMap2d = nvgpu.tma.create.descriptor %devicePtr2d_unranked box[64, 128] : memref<*xf32> -> !tensorMap2d
+  %devicePtr1d_unranked = memref.cast %devicePtr1d : memref<128xf32> to memref<*xf32>
+  // CHECK: %[[C5_1:.*]] = llvm.mlir.constant(5 : i32) : i64
+  // CHECK: %[[ALLOCA_1:.*]] = llvm.alloca %[[C5_1]] x i64 : (i64) -> !llvm.ptr
+  // CHECK: %[[C0_1:.*]] = llvm.mlir.constant(0 : i32) : i64
+  // CHECK: %[[GEP_2:.*]] = llvm.getelementptr %[[ALLOCA_1]]{{\[}}%[[C0_1]]] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+  // CHECK: %[[C128_1:.*]] = llvm.mlir.constant(128 : i32) : i64
+  // CHECK: llvm.store %[[C128_1]], %[[GEP_2]] : i64, !llvm.ptr
+  // CHECK: llvm.call @mgpuTensorMapEncodeTiledMemref({{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, {{.*}}, %[[ALLOCA_1]])
+  %tensorMap1d = nvgpu.tma.create.descriptor %devicePtr1d_unranked box[128] : memref<*xf32> -> !tensorMap1d
+  func.return
+}
+
 // CHECK-LABEL: @tma_prefetch(
 // CHECK-SAME: %[[arg0:[a-zA-Z0-9_]+]]: !nvgpu.tensormap.descriptor<tensor = memref<128xf32, 3>, swizzle = none, l2promo = none, oob = nan, interleave = none>, %[[arg1:[a-zA-Z0-9_]+]]: i1
 func.func @tma_prefetch(%tensorMap1d: !tensorMap1d, %p : i1) {
