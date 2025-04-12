@@ -916,7 +916,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasCvtPkF16F32Inst()) {
-    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Legal);
+    setOperationAction(ISD::FP_ROUND, MVT::v2f16, Custom);
   }
 
   setTargetDAGCombine({ISD::ADD,
@@ -6893,6 +6893,19 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     return Op;
 
   EVT DstVT = Op.getValueType();
+
+  if (DstVT == MVT::v2f16) {
+    // FIXME: We should only use fast math flag here. However, the fast math
+    // flag is lost during fptrunc to fp_round lowering. In addition, the flag
+    // is not propagated during subsequent lowering.
+    bool AllowInaccurateFP_ROUND = Op->getFlags().hasApproximateFuncs() ||
+                                   DAG.getTarget().Options.UnsafeFPMath;
+    // With fast math, the tablegen pattern is used to select native
+    // instructions. Otherwise, the vector will be scalarized and custom lowered
+    // to preserve the precision.
+    return AllowInaccurateFP_ROUND ? Op : SDValue();
+  }
+
   SDLoc DL(Op);
   if (DstVT == MVT::f16) {
     // TODO: Handle strictfp
