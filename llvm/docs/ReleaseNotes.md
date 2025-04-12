@@ -159,6 +159,7 @@ Changes to the RISC-V Backend
 * Adds assembler support for ``.option exact``, which disables automatic compression,
   and branch and linker relaxation. This can be disabled with ``.option noexact``,
   which is also the default.
+* Adds assembler support for the Andes `XAndesperf` (Andes Performance extension).
 
 Changes to the WebAssembly Backend
 ----------------------------------
