@@ -57,7 +57,7 @@
 // JSON-INDEX-NEXT:               "USR": "{{([0-9A-F]{40})}}",
 // JSON-INDEX-NEXT:               "Name": "static_val",
 // JSON-INDEX-NEXT:               "RefType": "record",
-// JSON-INDEX-NEXT:               "Path": "GlobalNamespace/Calculator",
+// JSON-INDEX-NEXT:               "Path": "GlobalNamespace{{[\/]}}Calculator",
 // JSON-INDEX-NEXT:               "Children": []
 // JSON-INDEX-NEXT:             }
 // JSON-INDEX-NEXT:           ]
