@@ -38,6 +38,7 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
+- The `-Wreturn-type` warning now defaults to an error in all language modes.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
