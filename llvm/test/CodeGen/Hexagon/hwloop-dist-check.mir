@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=hwloops %s -o - | FileCheck %s
+# RUN: llc --mtriple=hexagon -run-pass=hwloops %s -o - | FileCheck %s
 
 # CHECK-LABEL: name: f
 # CHECK: [[R1:%[0-9]+]]:predregs = C2_cmpgti [[R0:%[0-9]+]], 0
@@ -63,11 +63,7 @@
   ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
   declare i32 @llvm.smax.i32(i32, i32) #1
 
-  attributes #0 = { minsize nofree norecurse nosync nounwind optsize memory(write, argmem: none, inaccessiblemem: none) "frame-pointer"="all" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv68" "target-features"="+v68,-long-calls" }
-  attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-
   !llvm.module.flags = !{!0, !1, !2, !3}
-
   !0 = !{i32 1, !"wchar_size", i32 4}
   !1 = !{i32 8, !"PIC Level", i32 2}
   !2 = !{i32 7, !"PIE Level", i32 2}
