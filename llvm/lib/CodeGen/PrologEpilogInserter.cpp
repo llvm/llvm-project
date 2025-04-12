@@ -476,8 +476,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
     // Now that we know which registers need to be saved and restored, allocate
     // stack slots for them.
     for (auto &CS : CSI) {
-      // If the target has spilled this register to another register, we don't
-      // need to allocate a stack slot.
+      // If the target has spilled this register to another register or already
+      // handled it , we don't need to allocate a stack slot.
       if (CS.isSpilledToReg())
         continue;
 
@@ -597,25 +597,14 @@ static void updateLiveness(MachineFunction &MF) {
 static void insertCSRSaves(MachineBasicBlock &SaveBlock,
                            ArrayRef<CalleeSavedInfo> CSI) {
   MachineFunction &MF = *SaveBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
   MachineBasicBlock::iterator I = SaveBlock.begin();
   if (!TFI->spillCalleeSavedRegisters(SaveBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CS : CSI) {
-      // Insert the spill to the stack frame.
-      MCRegister Reg = CS.getReg();
-
-      if (CS.isSpilledToReg()) {
-        BuildMI(SaveBlock, I, DebugLoc(),
-                TII.get(TargetOpcode::COPY), CS.getDstReg())
-          .addReg(Reg, getKillRegState(true));
-      } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                                TRI, Register());
-      }
+      TFI->spillCalleeSavedRegister(SaveBlock, I, CS, TII, TRI);
     }
   }
 }
@@ -624,7 +613,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
                               std::vector<CalleeSavedInfo> &CSI) {
   MachineFunction &MF = *RestoreBlock.getParent();
-  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
@@ -634,19 +623,7 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
 
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
-      MCRegister Reg = CI.getReg();
-      if (CI.isSpilledToReg()) {
-        BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
-          .addReg(CI.getDstReg(), getKillRegState(true));
-      } else {
-        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-        TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC,
-                                 TRI, Register());
-        assert(I != RestoreBlock.begin() &&
-               "loadRegFromStackSlot didn't insert any code!");
-        // Insert in reverse order.  loadRegFromStackSlot can insert
-        // multiple instructions.
-      }
+      TFI->restoreCalleeSavedRegister(RestoreBlock, I, CI, TII, TRI);
     }
   }
 }
