@@ -420,7 +420,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
-  Value lane01 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 1);
+  Value lane00 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 0);
   if (ci.clusterSize >= 32) {
     auto permArg = b.getI32IntegerAttr(15);
     dppResult = b.create<amdgpu::DPPOp>(
@@ -434,7 +434,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                         result, dppResult);
     if (ci.subgroupSize == 32) {
       result =
-          b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane01);
+          b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane00);
     }
   }
 
@@ -446,7 +446,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
     // Value lane63 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 63);
-    result = b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane01);
+    result = b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane00);
   }
 
   assert(result.getType() == input.getType());
