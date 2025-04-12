@@ -432,16 +432,6 @@ LogicalResult ForallOp::verifyRegions() {
   return verifyQuantifierRegions(*this);
 }
 
-void ForallOp::build(
-    OpBuilder &odsBuilder, OperationState &odsState, TypeRange boundVarTypes,
-    function_ref<Value(OpBuilder &, Location, ValueRange)> bodyBuilder,
-    std::optional<ArrayRef<StringRef>> boundVarNames,
-    function_ref<ValueRange(OpBuilder &, Location, ValueRange)> patternBuilder,
-    uint32_t weight, bool noPattern) {
-  buildQuantifier<Properties>(odsBuilder, odsState, boundVarTypes, bodyBuilder,
-                              boundVarNames, patternBuilder, weight, noPattern);
-}
-
 //===----------------------------------------------------------------------===//
 // ExistsOp
 //===----------------------------------------------------------------------===//
@@ -456,16 +446,6 @@ LogicalResult ExistsOp::verify() {
 
 LogicalResult ExistsOp::verifyRegions() {
   return verifyQuantifierRegions(*this);
-}
-
-void ExistsOp::build(
-    OpBuilder &odsBuilder, OperationState &odsState, TypeRange boundVarTypes,
-    function_ref<Value(OpBuilder &, Location, ValueRange)> bodyBuilder,
-    std::optional<ArrayRef<StringRef>> boundVarNames,
-    function_ref<ValueRange(OpBuilder &, Location, ValueRange)> patternBuilder,
-    uint32_t weight, bool noPattern) {
-  buildQuantifier<Properties>(odsBuilder, odsState, boundVarTypes, bodyBuilder,
-                              boundVarNames, patternBuilder, weight, noPattern);
 }
 
 #define GET_OP_CLASSES
