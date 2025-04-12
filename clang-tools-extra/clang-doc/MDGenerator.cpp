@@ -172,8 +172,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
   StringRef Access = getAccessSpelling(I.Access);
   writeLine(genItalic(Twine(Access) + (!Access.empty() ? " " : "") +
                       (I.IsStatic ? "static " : "") +
-                      I.ReturnType.Type.QualName.str() + " " + I.Name.str() + "(" +
-                      Twine(Stream.str()) + ")"),
+                      I.ReturnType.Type.QualName.str() + " " + I.Name.str() +
+                      "(" + Twine(Stream.str()) + ")"),
             OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
@@ -261,8 +261,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
     for (const auto &Member : I.Members) {
       StringRef Access = getAccessSpelling(Member.Access);
       writeLine(Twine(Access) + (Access.empty() ? "" : " ") +
-                    (Member.IsStatic ? "static " : "") + Member.Type.Name.str() +
-                    " " + Member.Name.str(),
+                    (Member.IsStatic ? "static " : "") +
+                    Member.Type.Name.str() + " " + Member.Name.str(),
                 OS);
     }
     writeNewLine(OS);
