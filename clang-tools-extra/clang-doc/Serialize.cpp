@@ -702,7 +702,7 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(SpecOf))
       Specialization.SpecializationOf = getUSRForDecl(CTPSD);
 
-    // Parameters to the specilization. For partial specializations, get the
+    // Parameters to the specialization. For partial specializations, get the
     // parameters "as written" from the ClassTemplatePartialSpecializationDecl
     // because the non-explicit template parameters will have generated internal
     // placeholder names rather than the names the user typed that match the
