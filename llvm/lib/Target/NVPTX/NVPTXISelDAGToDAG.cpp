@@ -513,8 +513,8 @@ static std::optional<unsigned> convertAS(unsigned AS) {
     return NVPTX::AddressSpace::Global;
   case llvm::ADDRESS_SPACE_SHARED:
     return NVPTX::AddressSpace::Shared;
-  case llvm::ADDRESS_SPACE_DSHARED:
-    return NVPTX::AddressSpace::Dshared;
+  case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
+    return NVPTX::AddressSpace::SharedCluster;
   case llvm::ADDRESS_SPACE_GENERIC:
     return NVPTX::AddressSpace::Generic;
   case llvm::ADDRESS_SPACE_PARAM:
@@ -661,7 +661,7 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
       (CodeAddrSpace == NVPTX::AddressSpace::Generic ||
        CodeAddrSpace == NVPTX::AddressSpace::Global ||
        CodeAddrSpace == NVPTX::AddressSpace::Shared ||
-       CodeAddrSpace == NVPTX::AddressSpace::Dshared);
+       CodeAddrSpace == NVPTX::AddressSpace::SharedCluster);
   if (!AddrGenericOrGlobalOrShared)
     return NVPTX::Ordering::NotAtomic;
 
@@ -982,8 +982,9 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_SHARED:
       Opc = TM.is64Bit() ? NVPTX::cvta_shared_64 : NVPTX::cvta_shared;
       break;
-    case ADDRESS_SPACE_DSHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_dshared_64 : NVPTX::cvta_dshared;
+    case ADDRESS_SPACE_SHARED_CLUSTER:
+      Opc = TM.is64Bit() ? NVPTX::cvta_shared_cluster_64
+                         : NVPTX::cvta_shared_cluster;
       break;
     case ADDRESS_SPACE_CONST:
       Opc = TM.is64Bit() ? NVPTX::cvta_const_64 : NVPTX::cvta_const;
@@ -1010,8 +1011,9 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
     case ADDRESS_SPACE_SHARED:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_64 : NVPTX::cvta_to_shared;
       break;
-    case ADDRESS_SPACE_DSHARED:
-      Opc = TM.is64Bit() ? NVPTX::cvta_to_dshared_64 : NVPTX::cvta_to_dshared;
+    case ADDRESS_SPACE_SHARED_CLUSTER:
+      Opc = TM.is64Bit() ? NVPTX::cvta_to_shared_cluster_64
+                         : NVPTX::cvta_to_shared_cluster;
       break;
     case ADDRESS_SPACE_CONST:
       Opc = TM.is64Bit() ? NVPTX::cvta_to_const_64 : NVPTX::cvta_to_const;

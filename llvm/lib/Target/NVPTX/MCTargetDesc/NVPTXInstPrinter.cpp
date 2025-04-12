@@ -285,7 +285,7 @@ void NVPTXInstPrinter::printLdStCode(const MCInst *MI, int OpNum,
     case NVPTX::AddressSpace::Global:
     case NVPTX::AddressSpace::Const:
     case NVPTX::AddressSpace::Shared:
-    case NVPTX::AddressSpace::Dshared:
+    case NVPTX::AddressSpace::SharedCluster:
     case NVPTX::AddressSpace::Param:
     case NVPTX::AddressSpace::Local:
       O << "." << A;

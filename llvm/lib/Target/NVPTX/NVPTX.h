@@ -176,7 +176,7 @@ enum AddressSpace : AddressSpaceUnderlyingType {
   Shared = 3,
   Const = 4,
   Local = 5,
-  Dshared = 7,
+  SharedCluster = 7,
 
   // NVPTX Backend Private:
   Param = 101

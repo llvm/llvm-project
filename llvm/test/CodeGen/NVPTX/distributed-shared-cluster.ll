@@ -170,8 +170,8 @@ define i32 @test_distributed_shared_cluster(ptr %ptr, ptr addrspace(3) %smem_ptr
 ; CHECK-NEXT:    @%p12 bra $L__BB0_13;
 ; CHECK-NEXT:  $L__BB0_15: // %partword.cmpxchg.end
 ; CHECK-NEXT:    fence.acq_rel.sys;
-; CHECK-NEXT:    selp.u32 %r61, 1, 0, %p1;
-; CHECK-NEXT:    selp.u32 %r62, 1, 0, %p2;
+; CHECK-NEXT:    selp.b32 %r61, 1, 0, %p1;
+; CHECK-NEXT:    selp.b32 %r62, 1, 0, %p2;
 ; CHECK-NEXT:    add.s32 %r63, %r61, %r62;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r63;
 ; CHECK-NEXT:    ret;

@@ -939,8 +939,8 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
-static Intrinsic::ID shouldUpgradeNVPTXDSharedIntrinsic(Function *F,
-                                                        StringRef Name) {
+static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
+                                                              StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
     if (F->getReturnType()->getPointerAddressSpace() ==
         NVPTXAS::ADDRESS_SPACE_SHARED)
@@ -1321,7 +1321,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       }
 
       // Upgrade Distributed Shared Memory Intrinsics
-      Intrinsic::ID IID = shouldUpgradeNVPTXDSharedIntrinsic(F, Name);
+      Intrinsic::ID IID = shouldUpgradeNVPTXSharedClusterIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
@@ -4797,7 +4797,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     Args[0] = Builder.CreateAddrSpaceCast(
         Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_GENERIC));
     Args[0] = Builder.CreateAddrSpaceCast(
-        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_DSHARED));
+        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
 
     NewCall = Builder.CreateCall(NewFn, Args);
     NewCall->takeName(CI);

@@ -46,7 +46,7 @@ enum NVVMMemorySpace {
   kTensorMemorySpace = 6,
   /// Distributed shared memory space identifier.
   /// Distributed shared memory is available only in sm80+.
-  kDSharedMemorySpace = 7,
+  kSharedClusterMemorySpace = 7,
 };
 
 /// Return the element type and number of elements associated with a wmma matrix

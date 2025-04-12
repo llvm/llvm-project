@@ -168,7 +168,7 @@ inline std::string AddressSpaceToString(AddressSpace A) {
     return "const";
   case AddressSpace::Shared:
     return "shared";
-  case AddressSpace::Dshared:
+  case AddressSpace::SharedCluster:
     return "shared::cluster";
   case AddressSpace::Param:
     return "param";
