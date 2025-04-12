@@ -33,6 +33,9 @@ def AS_match {
   code shared = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
   }];
+  code dshared = [{
+   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_DSHARED);
+  }];
   code global = [{
    return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
   }];
@@ -1979,9 +1982,10 @@ class ATOMIC_GLOBAL_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.global>;
 class ATOMIC_SHARED_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.shared>;
+class ATOMIC_DSHARED_CHK <dag frag>
+ : PatFrag<!setdagop(frag, ops), frag, AS_match.dshared>;
 class ATOMIC_GENERIC_CHK <dag frag>
  : PatFrag<!setdagop(frag, ops), frag, AS_match.generic>;
-
 
 multiclass F_ATOMIC_2<RegTyInfo t, string sem_str, string as_str, string op_str,
                       SDPatternOperator op, list<Predicate> preds> {
@@ -2034,6 +2038,7 @@ multiclass F_ATOMIC_2_AS<RegTyInfo t, SDPatternOperator frag, string op_str, lis
   defvar frag_pat = (frag node:$a, node:$b);
   defm _G : F_ATOMIC_2<t, "", ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_2<t, "", ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
+  defm _DS : F_ATOMIC_2<t, "", ".shared::cluster", op_str, ATOMIC_DSHARED_CHK<frag_pat>, !listconcat([hasSM<80>], preds)>;
   defm _GEN : F_ATOMIC_2<t, "", "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2041,6 +2046,7 @@ multiclass F_ATOMIC_3_AS<RegTyInfo t, SDPatternOperator frag, string sem_str, st
   defvar frag_pat = (frag node:$a, node:$b, node:$c);
   defm _G : F_ATOMIC_3<t, sem_str, ".global", op_str, ATOMIC_GLOBAL_CHK<frag_pat>, preds>;
   defm _S : F_ATOMIC_3<t, sem_str, ".shared", op_str, ATOMIC_SHARED_CHK<frag_pat>, preds>;
+  defm _DS : F_ATOMIC_3<t, sem_str, ".shared::cluster", op_str, ATOMIC_DSHARED_CHK<frag_pat>, !listconcat([hasSM<80>], preds)>;
   defm _GEN : F_ATOMIC_3<t, sem_str, "", op_str, ATOMIC_GENERIC_CHK<frag_pat>, preds>;
 }
 
@@ -2337,11 +2343,13 @@ multiclass G_TO_NG<string Str> {
 
 defm cvta_local  : NG_TO_G<"local">;
 defm cvta_shared : NG_TO_G<"shared">;
+defm cvta_dshared : NG_TO_G<"shared::cluster">;
 defm cvta_global : NG_TO_G<"global">;
 defm cvta_const  : NG_TO_G<"const">;
 
 defm cvta_to_local  : G_TO_NG<"local">;
 defm cvta_to_shared : G_TO_NG<"shared">;
+defm cvta_to_dshared : G_TO_NG<"shared::cluster">;
 defm cvta_to_global : G_TO_NG<"global">;
 defm cvta_to_const  : G_TO_NG<"const">;
 
