@@ -1498,6 +1498,10 @@ private:
                                            : OMPDeclareVariantScopes.back().TI;
   }
 
+  void annotateAStmt(const ASTContext &Context, Stmt *StmtP,
+                     SemaOpenMP *SemaPtr, ArrayRef<OMPClause *> &Clauses,
+                     SourceLocation StartLoc);
+
   /// The current `omp begin/end declare variant` scopes.
   SmallVector<OMPDeclareVariantScope, 4> OMPDeclareVariantScopes;
 
