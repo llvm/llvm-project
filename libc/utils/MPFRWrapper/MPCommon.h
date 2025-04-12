@@ -180,6 +180,7 @@ public:
   bool is_nan() const;
   MPFRNumber abs() const;
   MPFRNumber acos() const;
+  MPFRNumber acospi() const;
   MPFRNumber acosh() const;
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
