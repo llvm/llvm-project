@@ -953,7 +953,14 @@ void AccAttributeVisitor::Post(
   const auto &clauseList = std::get<parser::AccClauseList>(x.t);
   for (const auto &clause : clauseList.v) {
     // Restriction - line 2414
-    DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    // We assume the restriction is present because clauses that require
+    // moving data would require the size of the data to be present, but
+    // the deviceptr and present clauses do not require moving data and
+    // thus we permit them.
+    if (!std::holds_alternative<parser::AccClause::Deviceptr>(clause.u) &&
+        !std::holds_alternative<parser::AccClause::Present>(clause.u)) {
+      DoNotAllowAssumedSizedArray(GetAccObjectList(clause));
+    }
   }
 }
 
