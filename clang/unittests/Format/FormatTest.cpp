@@ -22483,8 +22483,7 @@ TEST_F(FormatTest, UnderstandsPragmas) {
                "#pragma comment(linker,      \\\n"
                "                 \"argument\" \\\n"
                "                 \"argument\"",
-               getStyleWithColumns(
-                   getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp), 32));
+               getStyleWithColumns(getChromiumStyle(FormatStyle::LK_Cpp), 32));
 }
 
 TEST_F(FormatTest, UnderstandsPragmaOmpTarget) {
@@ -25968,14 +25967,14 @@ TEST_F(FormatTest, GoogleDefaultStyle) {
                Style);
 }
 TEST_F(FormatTest, ChromiumDefaultStyle) {
-  FormatStyle Style = getChromiumStyle(FormatStyle::LanguageKind::LK_Cpp);
+  FormatStyle Style = getChromiumStyle(FormatStyle::LK_Cpp);
   verifyFormat("extern \"C\" {\n"
                "int foo();\n"
                "}",
                Style);
 }
 TEST_F(FormatTest, MicrosoftDefaultStyle) {
-  FormatStyle Style = getMicrosoftStyle(FormatStyle::LanguageKind::LK_Cpp);
+  FormatStyle Style = getMicrosoftStyle(FormatStyle::LK_Cpp);
   verifyFormat("extern \"C\"\n"
                "{\n"
                "    int foo();\n"

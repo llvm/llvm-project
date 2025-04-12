@@ -3591,13 +3591,12 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript &&
-      isMpegTS(Code)) {
-    return Replaces;
-  }
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript)
+  if (Style.isJavaScript()) {
+    if (isMpegTS(Code))
+      return Replaces;
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
-  if (Style.Language == FormatStyle::LanguageKind::LK_Java)
+  }
+  if (Style.isJava())
     return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
   if (Style.isCpp())
     sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
@@ -3777,7 +3776,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))
     return {tooling::Replacements(), 0};
-  if (Expanded.Language == FormatStyle::LK_JavaScript && isMpegTS(Code))
+  if (Expanded.isJavaScript() && isMpegTS(Code))
     return {tooling::Replacements(), 0};
 
   // JSON only needs the formatting passing.
