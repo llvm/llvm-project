@@ -15,6 +15,7 @@
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_callable.h>
+#include <__type_traits/is_integral.h>
 #include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -38,9 +39,10 @@ public:
   }
 };
 
-template <class _Iter, class _Sent, class _Proj, class _Comp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
-__minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+template<class _Iter, class _Sent, class _Proj, class _Comp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> 
+__minmax_element_loop(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  __builtin_printf("Debug: __minmax_element_impl called, %d\n", __LINE__);  // 不需要 iostream
   auto __less = _MinmaxElementLessFunc<_Comp, _Proj>(__comp, __proj);
 
   pair<_Iter, _Iter> __result(__first, __first);
@@ -76,6 +78,50 @@ __minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj)
   }
 
   return __result;
+}
+
+
+// template<class _Tp>
+// typename std::iterator_traits<_Iter>::value_type
+// __minmax_element_vectorized(_Tp __first, _Tp __last) {
+
+// }
+
+
+template <class _Iter, class _Proj, class _Comp,
+          __enable_if_t<is_integral_v<typename std::iterator_traits<_Iter>::value_type>
+          && __is_identity<_Proj>::value && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
+          int> = 0
+          >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+__minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
+  if (__libcpp_is_constant_evaluated()) {
+    return __minmax_element_loop(__first, __last, __comp, __proj);
+  } else {
+
+  }
+}
+
+template <class _Iter, class _Proj, class _Comp,
+          __enable_if_t<!is_integral_v<typename std::iterator_traits<_Iter>::value_type>
+          && __can_map_to_integer_v<typename std::iterator_traits<_Iter>::value_type> 
+          && __libcpp_is_trivially_equality_comparable<typename std::iterator_traits<_Iter>::value_type, typename std::iterator_traits<_Iter>::value_type>::value
+          && __is_identity<_Proj>::value && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
+          int> = 0
+          >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+__minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
+  if (__libcpp_is_constant_evaluated()) {
+    return __minmax_element_loop(__first, __last, __comp, __proj);
+  } else {
+
+  }
+}
+
+template <class _Iter, class _Sent, class _Proj, class _Comp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+__minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
+  return std::__minmax_element_loop(__first, __last, __comp, __proj);
 }
 
 template <class _ForwardIterator, class _Compare>
