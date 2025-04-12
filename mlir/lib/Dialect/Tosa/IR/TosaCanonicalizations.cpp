@@ -754,9 +754,7 @@ struct SliceDynamicSizeCanonicalization
     // if size op has -1 indicating dynamic shape but corresponding dim on the
     // output is statically known, update size to match with known output dim
     // shape
-    for (const auto i : llvm::enumerate(sliceSizes)) {
-      int64_t size = i.value();
-      size_t index = i.index();
+    for (const auto &[index, size] : llvm::enumerate(sliceSizes)) {
       if (size == -1 && !resultType.isDynamicDim(index)) {
         sliceSizes[index] = resultType.getDimSize(index);
         replaceSliceSize = true;
