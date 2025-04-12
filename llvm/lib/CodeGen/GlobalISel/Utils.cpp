@@ -1027,39 +1027,45 @@ llvm::ConstantFoldCountZeros(Register Src, const MachineRegisterInfo &MRI,
 
 std::optional<SmallVector<APInt>>
 llvm::ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
+                       unsigned DstScalarSizeInBits, unsigned ExtOp,
                        const MachineRegisterInfo &MRI) {
-  LLT Ty = MRI.getType(Op1);
-  if (Ty != MRI.getType(Op2))
-    return std::nullopt;
+  assert(ExtOp == TargetOpcode::G_SEXT || ExtOp == TargetOpcode::G_ZEXT ||
+         ExtOp == TargetOpcode::G_ANYEXT);
 
-  auto TryFoldScalar = [&MRI, Pred](Register LHS,
-                                    Register RHS) -> std::optional<APInt> {
+  const LLT Ty = MRI.getType(Op1);
+
+  auto TryFoldScalar = [&](Register LHS, Register RHS) -> std::optional<APInt> {
     auto LHSCst = getIConstantVRegVal(LHS, MRI);
     auto RHSCst = getIConstantVRegVal(RHS, MRI);
     if (!LHSCst || !RHSCst)
       return std::nullopt;
 
+    const APInt FalseCst = APInt::getZero(DstScalarSizeInBits);
+    const APInt TrueCst = (ExtOp == TargetOpcode::G_SEXT)
+                              ? APInt::getAllOnes(DstScalarSizeInBits)
+                              : APInt::getOneBitSet(DstScalarSizeInBits, 0);
+
     switch (Pred) {
     case CmpInst::Predicate::ICMP_EQ:
-      return APInt(/*numBits=*/1, LHSCst->eq(*RHSCst));
+      return LHSCst->eq(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_NE:
-      return APInt(/*numBits=*/1, LHSCst->ne(*RHSCst));
+      return LHSCst->ne(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_UGT:
-      return APInt(/*numBits=*/1, LHSCst->ugt(*RHSCst));
+      return LHSCst->ugt(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_UGE:
-      return APInt(/*numBits=*/1, LHSCst->uge(*RHSCst));
+      return LHSCst->uge(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_ULT:
-      return APInt(/*numBits=*/1, LHSCst->ult(*RHSCst));
+      return LHSCst->ult(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_ULE:
-      return APInt(/*numBits=*/1, LHSCst->ule(*RHSCst));
+      return LHSCst->ule(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_SGT:
-      return APInt(/*numBits=*/1, LHSCst->sgt(*RHSCst));
+      return LHSCst->sgt(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_SGE:
-      return APInt(/*numBits=*/1, LHSCst->sge(*RHSCst));
+      return LHSCst->sge(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_SLT:
-      return APInt(/*numBits=*/1, LHSCst->slt(*RHSCst));
+      return LHSCst->slt(*RHSCst) ? TrueCst : FalseCst;
     case CmpInst::Predicate::ICMP_SLE:
-      return APInt(/*numBits=*/1, LHSCst->sle(*RHSCst));
+      return LHSCst->sle(*RHSCst) ? TrueCst : FalseCst;
     default:
       return std::nullopt;
     }
