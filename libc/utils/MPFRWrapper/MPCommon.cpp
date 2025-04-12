@@ -64,16 +64,26 @@ MPFRNumber MPFRNumber::acos() const {
   return result;
 }
 
-MPFRNumber MPFRNumber::acospi() const {
-  MPFRNumber result(*this);
-  mpfr_acospi(result.value, value, mpfr_rounding);
-  return result;
-}
-
 MPFRNumber MPFRNumber::acosh() const {
   MPFRNumber result(*this);
   mpfr_acosh(result.value, value, mpfr_rounding);
   return result;
+}
+
+MPFRNumber MPFRNumber::acospi() const {
+  MPFRNumber result(*this);
+
+#if MPFR_VERSION_MAJOR > 4 ||                                                  \
+    (MPFR_VERSION_MAJOR == 4 && MPFR_VERSION_MINOR >= 2)
+  mpfr_acospi(result.value, value, mpfr_rounding);
+  return result;
+#else
+  mpfr_acos(result.value, value, mpfr_rounding);
+  MPFRNumber value_pi(0.0, 1280);
+  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_div(result.value, result.value, value_pi.value, mpfr_rounding);
+  return result;
+#endif
 }
 
 MPFRNumber MPFRNumber::add(const MPFRNumber &b) const {
