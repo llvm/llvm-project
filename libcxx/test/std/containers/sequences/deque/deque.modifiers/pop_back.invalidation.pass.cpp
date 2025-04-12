@@ -37,7 +37,7 @@ void test(C c) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   std::deque<int> queue;
   for (int i = 0; i < 4098; ++i)
     queue.push_back(i);
@@ -47,6 +47,14 @@ int main(int, char**) {
     queue.pop_back();
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(queue));
   }
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
+#endif
 
   return 0;
 }

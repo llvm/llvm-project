@@ -347,6 +347,11 @@ feature_test_macros = [
             "headers": ["complex"],
         },
         {
+            "name": "__cpp_lib_constexpr_deque",
+            "values": {"c++26": 202502},
+            "headers": ["deque"],
+        },
+        {
             "name": "__cpp_lib_constexpr_dynamic_alloc",
             "values": {"c++20": 201907},
             "headers": ["memory"],

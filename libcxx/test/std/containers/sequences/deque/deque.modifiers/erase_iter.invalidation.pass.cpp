@@ -56,7 +56,7 @@ void del_at_end(C c) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::deque<int> queue;
   for (int i = 0; i < 20; ++i)
     queue.push_back(i);
@@ -66,6 +66,14 @@ int main(int, char**) {
     del_at_end(queue);
     queue.pop_back();
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -26,7 +26,7 @@ void test(const C& x, const typename C::allocator_type& a) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);
@@ -48,6 +48,14 @@ int main(int, char**) {
     int* an  = ab + sizeof(ab) / sizeof(ab[0]);
     test(std::deque<int, safe_allocator<int> >(ab, an, safe_allocator<int>()), safe_allocator<int>());
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;

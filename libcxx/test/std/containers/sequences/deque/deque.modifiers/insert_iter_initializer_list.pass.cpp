@@ -19,7 +19,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::deque<int> d(10, 1);
     std::deque<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
@@ -62,6 +62,14 @@ int main(int, char**) {
     assert(d[13] == 1);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

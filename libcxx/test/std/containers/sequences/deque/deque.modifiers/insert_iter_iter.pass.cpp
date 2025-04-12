@@ -235,7 +235,7 @@ void test_move() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -269,6 +269,14 @@ int main(int, char**) {
     testNI<std::deque<int> >(1500, 2000, 1000);
     test_move<std::deque<MoveOnly, safe_allocator<MoveOnly> > >();
   }
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(tests());
 #endif
 
   return 0;
