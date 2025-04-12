@@ -374,6 +374,8 @@ static AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
   return AccessSpecifier::AS_public;
 }
 
+// The Access parameter is only provided when parsing the field of an inherited
+// record, the access specification of the field depends on the inheritance mode
 static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
                         AccessSpecifier Access = AccessSpecifier::AS_public) {
   for (const FieldDecl *F : D->fields()) {
@@ -590,8 +592,6 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
   }
 }
 
-// The Access parameter is only provided when parsing the field of an inherited
-// record, the access specification of the field depends on the inheritance mode
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
                                    const DeclaratorDecl *D, bool IsStatic) {
   // Use getAccessUnsafe so that we just get the default AS_none if it's not
