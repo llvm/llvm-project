@@ -14,7 +14,9 @@
 #include "llvm/ObjectYAML/DXContainerYAML.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <system_error>
 
 namespace llvm {
 
@@ -29,16 +31,59 @@ DXContainerYAML::ShaderFeatureFlags::ShaderFeatureFlags(uint64_t FlagData) {
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 }
 
-DXContainerYAML::RootSignatureYamlDesc::RootSignatureYamlDesc(
-    const object::DirectX::RootSignature &Data)
-    : Version(Data.getVersion()), NumParameters(Data.getNumParameters()),
-      RootParametersOffset(Data.getRootParametersOffset()),
-      NumStaticSamplers(Data.getNumStaticSamplers()),
-      StaticSamplersOffset(Data.getStaticSamplersOffset()) {
+llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+DXContainerYAML::RootSignatureYamlDesc::create(
+    const object::DirectX::RootSignature &Data) {
+
+  RootSignatureYamlDesc RootSigDesc;
+
+  RootSigDesc.Version = Data.getVersion();
+  RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
+  RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
+
   uint32_t Flags = Data.getFlags();
+  for (const auto &PH : Data.param_headers()) {
+
+    RootParameterYamlDesc NewP;
+    NewP.Offset = PH.ParameterOffset;
+
+    if (!dxbc::isValidParameterType(PH.ParameterType))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for parameter type");
+
+    NewP.Type = (dxbc::RootParameterType)PH.ParameterType;
+
+    if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
+      return createStringError(std::errc::invalid_argument,
+                               "Invalid value for shader visibility");
+
+    NewP.Visibility = (dxbc::ShaderVisibility)PH.ShaderVisibility;
+
+    llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
+        Data.getParameter(PH);
+    if (Error E = ParamViewOrErr.takeError()) {
+      return std::move(E);
+    }
+    object::DirectX::RootParameterView ParamView = ParamViewOrErr.get();
+
+    if (auto *RCV = dyn_cast<object::DirectX::RootConstantView>(&ParamView)) {
+      llvm::Expected<dxbc::RootConstants> ConstantsOrErr = RCV->read();
+      if (Error E = ConstantsOrErr.takeError()) {
+        return std::move(E);
+      }
+
+      auto Constants = *ConstantsOrErr;
+
+      NewP.Constants.Num32BitValues = Constants.Num32BitValues;
+      NewP.Constants.ShaderRegister = Constants.ShaderRegister;
+      NewP.Constants.RegisterSpace = Constants.RegisterSpace;
+    }
+    RootSigDesc.Parameters.push_back(NewP);
+  }
 #define ROOT_ELEMENT_FLAG(Num, Val)                                            \
-  Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
+  RootSigDesc.Val = (Flags & (uint32_t)dxbc::RootElementFlag::Val) > 0;
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+  return RootSigDesc;
 }
 
 uint32_t DXContainerYAML::RootSignatureYamlDesc::getEncodedFlags() {
@@ -212,12 +257,29 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
 void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
   IO.mapRequired("Version", S.Version);
-  IO.mapRequired("NumParameters", S.NumParameters);
-  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
+  IO.mapRequired("Parameters", S.Parameters);
 #define ROOT_ELEMENT_FLAG(Num, Val) IO.mapOptional(#Val, S.Val, false);
 #include "llvm/BinaryFormat/DXContainerConstants.def"
+}
+
+void MappingTraits<llvm::DXContainerYAML::RootConstantsYaml>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootConstantsYaml &C) {
+  IO.mapRequired("Num32BitValues", C.Num32BitValues);
+  IO.mapRequired("RegisterSpace", C.RegisterSpace);
+  IO.mapRequired("ShaderRegister", C.ShaderRegister);
+}
+
+void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
+    IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P) {
+  IO.mapRequired("ParameterType", P.Type);
+  IO.mapRequired("ShaderVisibility", P.Visibility);
+  switch (P.Type) {
+  case dxbc::RootParameterType::Constants32Bit:
+    IO.mapRequired("Constants", P.Constants);
+    break;
+  }
 }
 
 void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
@@ -320,6 +382,18 @@ void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
+    IO &IO, dxbc::RootParameterType &Value) {
+  for (const auto &E : dxbc::getRootParameterTypes())
+    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
+}
+
+void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
+    IO &IO, dxbc::ShaderVisibility &Value) {
+  for (const auto &E : dxbc::getShaderVisibility())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 
