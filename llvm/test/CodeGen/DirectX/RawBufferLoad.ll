@@ -69,7 +69,7 @@ define void @loadv4f32_struct(i32 %index) {
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 3
-  ; CHECK: insertelement <4 x float> undef
+  ; CHECK: insertelement <4 x float> poison
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
@@ -97,7 +97,7 @@ define void @loadv4f32_byte(i32 %offset) {
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATA]], 3
-  ; CHECK: insertelement <4 x float> undef
+  ; CHECK: insertelement <4 x float> poison
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
@@ -125,7 +125,7 @@ define void @loadelements(i32 %index) {
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 3
-  ; CHECK: insertelement <4 x float> undef
+  ; CHECK: insertelement <4 x float> poison
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
@@ -144,7 +144,7 @@ define void @loadelements(i32 %index) {
   ; CHECK: extractvalue %dx.types.ResRet.i32 [[DATAI32]], 1
   ; CHECK: extractvalue %dx.types.ResRet.i32 [[DATAI32]], 2
   ; CHECK: extractvalue %dx.types.ResRet.i32 [[DATAI32]], 3
-  ; CHECK: insertelement <4 x i32> undef
+  ; CHECK: insertelement <4 x i32> poison
   ; CHECK: insertelement <4 x i32>
   ; CHECK: insertelement <4 x i32>
   ; CHECK: insertelement <4 x i32>
@@ -180,7 +180,7 @@ define void @loadnested(i32 %index) {
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f32 [[DATAF32]], 3
-  ; CHECK: insertelement <4 x float> undef
+  ; CHECK: insertelement <4 x float> poison
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
   ; CHECK: insertelement <4 x float>
@@ -196,7 +196,7 @@ define void @loadnested(i32 %index) {
   ; CHECK: extractvalue %dx.types.ResRet.f16 [[DATAF16]], 0
   ; CHECK: extractvalue %dx.types.ResRet.f16 [[DATAF16]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f16 [[DATAF16]], 2
-  ; CHECK: insertelement <3 x half> undef
+  ; CHECK: insertelement <3 x half> poison
   ; CHECK: insertelement <3 x half>
   ; CHECK: insertelement <3 x half>
   ; CHECK: call void @v3f16_user(<3 x half>
@@ -221,7 +221,7 @@ define void @loadv4f64_byte(i32 %offset) {
   ; CHECK: extractvalue %dx.types.ResRet.f64 [[DATA]], 1
   ; CHECK: extractvalue %dx.types.ResRet.f64 [[DATA]], 2
   ; CHECK: extractvalue %dx.types.ResRet.f64 [[DATA]], 3
-  ; CHECK: insertelement <4 x double> undef
+  ; CHECK: insertelement <4 x double> poison
   ; CHECK: insertelement <4 x double>
   ; CHECK: insertelement <4 x double>
   ; CHECK: insertelement <4 x double>

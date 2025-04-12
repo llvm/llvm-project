@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SampleProfileMatcher.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -726,6 +727,33 @@ bool SampleProfileMatcher::functionMatchesProfileHelper(
   // The value is in the range [0, 1]. The bigger the value is, the more similar
   // two sequences are.
   float Similarity = 0.0;
+
+  // Match the functions if they have the same base name(after demangling) and
+  // skip the similarity check.
+  ItaniumPartialDemangler Demangler;
+  // Helper lambda to demangle and get the base name. If the demangling failed,
+  // return an empty string.
+  auto GetBaseName = [&](StringRef FName) {
+    auto FunctionName = FName.str();
+    if (Demangler.partialDemangle(FunctionName.c_str()))
+      return std::string();
+    constexpr size_t MaxBaseNameSize = 4096;
+    char BaseNameBuf[MaxBaseNameSize] = {};
+    size_t BaseNameSize = MaxBaseNameSize;
+    char *BaseNamePtr =
+        Demangler.getFunctionBaseName(BaseNameBuf, &BaseNameSize);
+    return (BaseNamePtr && BaseNameSize)
+               ? std::string(BaseNamePtr, BaseNameSize)
+               : std::string();
+  };
+  auto IRBaseName = GetBaseName(IRFunc.getName());
+  auto ProfBaseName = GetBaseName(ProfFunc.stringRef());
+  if (!IRBaseName.empty() && IRBaseName == ProfBaseName) {
+    LLVM_DEBUG(dbgs() << "The functions " << IRFunc.getName() << "(IR) and "
+                      << ProfFunc << "(Profile) share the same base name: "
+                      << IRBaseName << ".\n");
+    return true;
+  }
 
   const auto *FSForMatching = getFlattenedSamplesFor(ProfFunc);
   // With extbinary profile format, initial profile loading only reads profile

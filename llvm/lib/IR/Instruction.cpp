@@ -48,7 +48,7 @@ Instruction::Instruction(Type *ty, unsigned it, AllocInfo AllocInfo,
 Instruction::~Instruction() {
   assert(!getParent() && "Instruction still linked in the program!");
 
-  // Replace any extant metadata uses of this instruction with undef to
+  // Replace any extant metadata uses of this instruction with poison to
   // preserve debug info accuracy. Some alternatives include:
   // - Treat Instruction like any other Value, and point its extant metadata
   //   uses to an empty ValueAsMetadata node. This makes extant dbg.value uses
@@ -58,7 +58,7 @@ Instruction::~Instruction() {
   //   correct. OTOH results in wasted work in some common cases (e.g. when all
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
-    ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
+    ValueAsMetadata::handleRAUW(this, PoisonValue::get(getType()));
 
   // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
   // mapping in LLVMContext.

@@ -397,7 +397,7 @@ makeRecordV2(std::initializer_list<::llvm::memprof::CallStackId> AllocFrames,
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
   for (const auto &CSId : CallSiteFrames)
-    MR.CallSiteIds.push_back(CSId);
+    MR.CallSites.push_back(llvm::memprof::IndexedCallSiteInfo(CSId));
   return MR;
 }
 

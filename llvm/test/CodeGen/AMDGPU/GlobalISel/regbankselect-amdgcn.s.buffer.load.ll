@@ -653,7 +653,7 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_offset(<4 x i32> inreg %rsrc, i32 
   ; GFX7-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s128), align 4)
   ; GFX7-NEXT:   [[TRUNC:%[0-9]+]]:vgpr(s96) = G_TRUNC [[AMDGPU_BUFFER_LOAD]](s128)
-  ; GFX7-NEXT:   G_STORE [[TRUNC]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[TRUNC]](s96), [[DEF]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_i96_vgpr_offset
@@ -671,10 +671,10 @@ define amdgpu_ps void @s_buffer_load_i96_vgpr_offset(<4 x i32> inreg %rsrc, i32 
   ; GFX12-NEXT:   [[C1:%[0-9]+]]:vgpr(s32) = G_CONSTANT i32 0
   ; GFX12-NEXT:   [[AMDGPU_BUFFER_LOAD:%[0-9]+]]:vgpr(s96) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 0, 0, 0 :: (dereferenceable invariant load (s96), align 4)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[AMDGPU_BUFFER_LOAD]](s96), [[COPY5]](p1) :: (store (s96) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[AMDGPU_BUFFER_LOAD]](s96), [[COPY5]](p1) :: (store (s96) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call i96 @llvm.amdgcn.s.buffer.load.i96(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i96 %val, ptr addrspace(1) undef
+  store i96 %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -697,10 +697,10 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128), align 4)
   ; GFX7-NEXT:   [[MV:%[0-9]+]]:vgpr(s256) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](s128), [[AMDGPU_BUFFER_LOAD1]](s128)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](s256)
-  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 16, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_i256_vgpr_offset
@@ -721,14 +721,14 @@ define amdgpu_ps void @s_buffer_load_i256_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[MV:%[0-9]+]]:vgpr(s256) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](s128), [[AMDGPU_BUFFER_LOAD1]](s128)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](s256)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](s128), [[COPY5]](p1) :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](s128), [[COPY5]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](s128), [[COPY6]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 16, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](s128), [[COPY6]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call i256 @llvm.amdgcn.s.buffer.load.i256(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i256 %val, ptr addrspace(1) undef
+  store i256 %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -753,16 +753,16 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(s128) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 4)
   ; GFX7-NEXT:   [[MV:%[0-9]+]]:vgpr(s512) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](s128), [[AMDGPU_BUFFER_LOAD1]](s128), [[AMDGPU_BUFFER_LOAD2]](s128), [[AMDGPU_BUFFER_LOAD3]](s128)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128), [[UV2:%[0-9]+]]:vgpr(s128), [[UV3:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](s512)
-  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](s128), [[DEF]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 16, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](s128), [[PTR_ADD]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX7-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV2]](s128), [[PTR_ADD1]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 32, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV2]](s128), [[PTR_ADD1]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
   ; GFX7-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX7-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV3]](s128), [[PTR_ADD2]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 48, align 8, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV3]](s128), [[PTR_ADD2]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_i512_vgpr_offset
@@ -785,22 +785,22 @@ define amdgpu_ps void @s_buffer_load_i512_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[MV:%[0-9]+]]:vgpr(s512) = G_MERGE_VALUES [[AMDGPU_BUFFER_LOAD]](s128), [[AMDGPU_BUFFER_LOAD1]](s128), [[AMDGPU_BUFFER_LOAD2]](s128), [[AMDGPU_BUFFER_LOAD3]](s128)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(s128), [[UV1:%[0-9]+]]:vgpr(s128), [[UV2:%[0-9]+]]:vgpr(s128), [[UV3:%[0-9]+]]:vgpr(s128) = G_UNMERGE_VALUES [[MV]](s512)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](s128), [[COPY5]](p1) :: (store (s128) into `ptr addrspace(1) undef`, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](s128), [[COPY5]](p1) :: (store (s128) into `ptr addrspace(1) poison`, align 8, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](s128), [[COPY6]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 16, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](s128), [[COPY6]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 16, align 8, addrspace 1)
   ; GFX12-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX12-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD1]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV2]](s128), [[COPY7]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 32, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV2]](s128), [[COPY7]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 32, align 8, addrspace 1)
   ; GFX12-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX12-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD2]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV3]](s128), [[COPY8]](p1) :: (store (s128) into `ptr addrspace(1) undef` + 48, align 8, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV3]](s128), [[COPY8]](p1) :: (store (s128) into `ptr addrspace(1) poison` + 48, align 8, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call i512 @llvm.amdgcn.s.buffer.load.i512(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store i512 %val, ptr addrspace(1) undef
+  store i512 %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -823,10 +823,10 @@ define amdgpu_ps void @s_buffer_load_v16i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128), align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s16>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<8 x s16>), [[AMDGPU_BUFFER_LOAD1]](<8 x s16>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<8 x s16>), [[UV1:%[0-9]+]]:vgpr(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<8 x s16>), [[PTR_ADD]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<8 x s16>), [[PTR_ADD]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v16i16_vgpr_offset
@@ -847,14 +847,14 @@ define amdgpu_ps void @s_buffer_load_v16i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<16 x s16>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<8 x s16>), [[AMDGPU_BUFFER_LOAD1]](<8 x s16>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<8 x s16>), [[UV1:%[0-9]+]]:vgpr(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<16 x s16>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<8 x s16>), [[COPY5]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<8 x s16>), [[COPY5]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<8 x s16>), [[COPY6]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<8 x s16>), [[COPY6]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <16 x i16> @llvm.amdgcn.s.buffer.load.v16i16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <16 x i16> %val, ptr addrspace(1) undef
+  store <16 x i16> %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -879,16 +879,16 @@ define amdgpu_ps void @s_buffer_load_v32i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<8 x s16>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<32 x s16>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<8 x s16>), [[AMDGPU_BUFFER_LOAD1]](<8 x s16>), [[AMDGPU_BUFFER_LOAD2]](<8 x s16>), [[AMDGPU_BUFFER_LOAD3]](<8 x s16>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<8 x s16>), [[UV1:%[0-9]+]]:vgpr(<8 x s16>), [[UV2:%[0-9]+]]:vgpr(<8 x s16>), [[UV3:%[0-9]+]]:vgpr(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<32 x s16>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<8 x s16>), [[DEF]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<8 x s16>), [[PTR_ADD]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<8 x s16>), [[PTR_ADD]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX7-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV2]](<8 x s16>), [[PTR_ADD1]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV2]](<8 x s16>), [[PTR_ADD1]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX7-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV3]](<8 x s16>), [[PTR_ADD2]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV3]](<8 x s16>), [[PTR_ADD2]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v32i16_vgpr_offset
@@ -911,22 +911,22 @@ define amdgpu_ps void @s_buffer_load_v32i16_vgpr_offset(<4 x i32> inreg %rsrc, i
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<32 x s16>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<8 x s16>), [[AMDGPU_BUFFER_LOAD1]](<8 x s16>), [[AMDGPU_BUFFER_LOAD2]](<8 x s16>), [[AMDGPU_BUFFER_LOAD3]](<8 x s16>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<8 x s16>), [[UV1:%[0-9]+]]:vgpr(<8 x s16>), [[UV2:%[0-9]+]]:vgpr(<8 x s16>), [[UV3:%[0-9]+]]:vgpr(<8 x s16>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<32 x s16>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<8 x s16>), [[COPY5]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<8 x s16>), [[COPY5]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<8 x s16>), [[COPY6]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<8 x s16>), [[COPY6]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX12-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD1]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV2]](<8 x s16>), [[COPY7]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV2]](<8 x s16>), [[COPY7]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX12-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD2]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV3]](<8 x s16>), [[COPY8]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV3]](<8 x s16>), [[COPY8]](p1) :: (store (<8 x s16>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <32 x i16> @llvm.amdgcn.s.buffer.load.v32i16(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <32 x i16> %val, ptr addrspace(1) undef
+  store <32 x i16> %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -949,10 +949,10 @@ define amdgpu_ps void @s_buffer_load_v4i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128), align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x s64>), [[AMDGPU_BUFFER_LOAD1]](<2 x s64>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x s64>), [[UV1:%[0-9]+]]:vgpr(<2 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x s64>), [[PTR_ADD]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x s64>), [[PTR_ADD]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v4i64_vgpr_offset
@@ -973,14 +973,14 @@ define amdgpu_ps void @s_buffer_load_v4i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x s64>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x s64>), [[AMDGPU_BUFFER_LOAD1]](<2 x s64>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x s64>), [[UV1:%[0-9]+]]:vgpr(<2 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x s64>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<2 x s64>), [[COPY5]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<2 x s64>), [[COPY5]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x s64>), [[COPY6]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x s64>), [[COPY6]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <4 x i64> @llvm.amdgcn.s.buffer.load.v4i64(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <4 x i64> %val, ptr addrspace(1) undef
+  store <4 x i64> %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -1005,16 +1005,16 @@ define amdgpu_ps void @s_buffer_load_v8i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x s64>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x s64>), [[AMDGPU_BUFFER_LOAD1]](<2 x s64>), [[AMDGPU_BUFFER_LOAD2]](<2 x s64>), [[AMDGPU_BUFFER_LOAD3]](<2 x s64>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x s64>), [[UV1:%[0-9]+]]:vgpr(<2 x s64>), [[UV2:%[0-9]+]]:vgpr(<2 x s64>), [[UV3:%[0-9]+]]:vgpr(<2 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<2 x s64>), [[DEF]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x s64>), [[PTR_ADD]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x s64>), [[PTR_ADD]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX7-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV2]](<2 x s64>), [[PTR_ADD1]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV2]](<2 x s64>), [[PTR_ADD1]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX7-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV3]](<2 x s64>), [[PTR_ADD2]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV3]](<2 x s64>), [[PTR_ADD2]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v8i64_vgpr_offset
@@ -1037,22 +1037,22 @@ define amdgpu_ps void @s_buffer_load_v8i64_vgpr_offset(<4 x i32> inreg %rsrc, i3
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x s64>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x s64>), [[AMDGPU_BUFFER_LOAD1]](<2 x s64>), [[AMDGPU_BUFFER_LOAD2]](<2 x s64>), [[AMDGPU_BUFFER_LOAD3]](<2 x s64>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x s64>), [[UV1:%[0-9]+]]:vgpr(<2 x s64>), [[UV2:%[0-9]+]]:vgpr(<2 x s64>), [[UV3:%[0-9]+]]:vgpr(<2 x s64>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x s64>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<2 x s64>), [[COPY5]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<2 x s64>), [[COPY5]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x s64>), [[COPY6]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x s64>), [[COPY6]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX12-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD1]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV2]](<2 x s64>), [[COPY7]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV2]](<2 x s64>), [[COPY7]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX12-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD2]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV3]](<2 x s64>), [[COPY8]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV3]](<2 x s64>), [[COPY8]](p1) :: (store (<2 x s64>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <8 x i64> @llvm.amdgcn.s.buffer.load.v8i64(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <8 x i64> %val, ptr addrspace(1) undef
+  store <8 x i64> %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -1075,10 +1075,10 @@ define amdgpu_ps void @s_buffer_load_v4p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 16, 0, 0 :: (dereferenceable invariant load (s128), align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x p1>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x p1>), [[AMDGPU_BUFFER_LOAD1]](<2 x p1>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x p1>), [[UV1:%[0-9]+]]:vgpr(<2 x p1>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x p1>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x p1>), [[PTR_ADD]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x p1>), [[PTR_ADD]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v4p1_vgpr_offset
@@ -1099,14 +1099,14 @@ define amdgpu_ps void @s_buffer_load_v4p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<4 x p1>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x p1>), [[AMDGPU_BUFFER_LOAD1]](<2 x p1>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x p1>), [[UV1:%[0-9]+]]:vgpr(<2 x p1>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<4 x p1>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<2 x p1>), [[COPY5]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef`, align 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<2 x p1>), [[COPY5]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, align 32, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x p1>), [[COPY6]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 16, basealign 32, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x p1>), [[COPY6]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 16, basealign 32, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <4 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v4p1(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <4 x ptr addrspace(1)> %val, ptr addrspace(1) undef
+  store <4 x ptr addrspace(1)> %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -1131,16 +1131,16 @@ define amdgpu_ps void @s_buffer_load_v8p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX7-NEXT:   [[AMDGPU_BUFFER_LOAD3:%[0-9]+]]:vgpr(<2 x p1>) = G_AMDGPU_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[C1]](s32), [[COPY4]], [[C]], 48, 0, 0 :: (dereferenceable invariant load (s128) from unknown-address + 48, align 4)
   ; GFX7-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x p1>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x p1>), [[AMDGPU_BUFFER_LOAD1]](<2 x p1>), [[AMDGPU_BUFFER_LOAD2]](<2 x p1>), [[AMDGPU_BUFFER_LOAD3]](<2 x p1>)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x p1>), [[UV1:%[0-9]+]]:vgpr(<2 x p1>), [[UV2:%[0-9]+]]:vgpr(<2 x p1>), [[UV3:%[0-9]+]]:vgpr(<2 x p1>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x p1>)
-  ; GFX7-NEXT:   G_STORE [[UV]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV]](<2 x p1>), [[DEF]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX7-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX7-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x p1>), [[PTR_ADD]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV1]](<2 x p1>), [[PTR_ADD]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX7-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV2]](<2 x p1>), [[PTR_ADD1]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV2]](<2 x p1>), [[PTR_ADD1]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX7-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX7-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
-  ; GFX7-NEXT:   G_STORE [[UV3]](<2 x p1>), [[PTR_ADD2]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX7-NEXT:   G_STORE [[UV3]](<2 x p1>), [[PTR_ADD2]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX7-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: s_buffer_load_v8p1_vgpr_offset
@@ -1163,22 +1163,22 @@ define amdgpu_ps void @s_buffer_load_v8p1_vgpr_offset(<4 x i32> inreg %rsrc, i32
   ; GFX12-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:vgpr(<8 x p1>) = G_CONCAT_VECTORS [[AMDGPU_BUFFER_LOAD]](<2 x p1>), [[AMDGPU_BUFFER_LOAD1]](<2 x p1>), [[AMDGPU_BUFFER_LOAD2]](<2 x p1>), [[AMDGPU_BUFFER_LOAD3]](<2 x p1>)
   ; GFX12-NEXT:   [[UV:%[0-9]+]]:vgpr(<2 x p1>), [[UV1:%[0-9]+]]:vgpr(<2 x p1>), [[UV2:%[0-9]+]]:vgpr(<2 x p1>), [[UV3:%[0-9]+]]:vgpr(<2 x p1>) = G_UNMERGE_VALUES [[CONCAT_VECTORS]](<8 x p1>)
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr(p1) = COPY [[DEF]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV]](<2 x p1>), [[COPY5]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef`, align 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV]](<2 x p1>), [[COPY5]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison`, align 64, addrspace 1)
   ; GFX12-NEXT:   [[C2:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 16
   ; GFX12-NEXT:   [[PTR_ADD:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C2]](s64)
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x p1>), [[COPY6]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 16, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV1]](<2 x p1>), [[COPY6]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 16, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C3:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 32
   ; GFX12-NEXT:   [[PTR_ADD1:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C3]](s64)
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD1]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV2]](<2 x p1>), [[COPY7]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 32, align 32, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV2]](<2 x p1>), [[COPY7]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 32, align 32, basealign 64, addrspace 1)
   ; GFX12-NEXT:   [[C4:%[0-9]+]]:sgpr(s64) = G_CONSTANT i64 48
   ; GFX12-NEXT:   [[PTR_ADD2:%[0-9]+]]:sgpr(p1) = G_PTR_ADD [[DEF]], [[C4]](s64)
   ; GFX12-NEXT:   [[COPY8:%[0-9]+]]:vgpr(p1) = COPY [[PTR_ADD2]](p1)
-  ; GFX12-NEXT:   G_STORE [[UV3]](<2 x p1>), [[COPY8]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) undef` + 48, basealign 64, addrspace 1)
+  ; GFX12-NEXT:   G_STORE [[UV3]](<2 x p1>), [[COPY8]](p1) :: (store (<2 x p1>) into `ptr addrspace(1) poison` + 48, basealign 64, addrspace 1)
   ; GFX12-NEXT:   S_ENDPGM 0
   %val = call <8 x ptr addrspace(1)> @llvm.amdgcn.s.buffer.load.v8p1(<4 x i32> %rsrc, i32 %soffset, i32 0)
-  store <8 x ptr addrspace(1)> %val, ptr addrspace(1) undef
+  store <8 x ptr addrspace(1)> %val, ptr addrspace(1) poison
   ret void
 }
 

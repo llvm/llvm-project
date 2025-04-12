@@ -791,6 +791,8 @@ private:
 
   /// Sign bit of the number.
   unsigned int sign : 1;
+
+  friend class IEEEFloatUnitTestHelper;
 };
 
 hash_code hash_value(const IEEEFloat &Arg);
@@ -805,7 +807,7 @@ IEEEFloat frexp(const IEEEFloat &Val, int &Exp, roundingMode RM);
 class DoubleAPFloat final {
   // Note: this must be the first data member.
   const fltSemantics *Semantics;
-  std::unique_ptr<APFloat[]> Floats;
+  APFloat *Floats;
 
   opStatus addImpl(const APFloat &a, const APFloat &aa, const APFloat &c,
                    const APFloat &cc, roundingMode RM);
@@ -821,6 +823,7 @@ public:
   DoubleAPFloat(const fltSemantics &S, APFloat &&First, APFloat &&Second);
   DoubleAPFloat(const DoubleAPFloat &RHS);
   DoubleAPFloat(DoubleAPFloat &&RHS);
+  ~DoubleAPFloat();
 
   DoubleAPFloat &operator=(const DoubleAPFloat &RHS);
   inline DoubleAPFloat &operator=(DoubleAPFloat &&RHS);
@@ -1658,6 +1661,8 @@ APFloat &DoubleAPFloat::getFirst() { return Floats[0]; }
 const APFloat &DoubleAPFloat::getFirst() const { return Floats[0]; }
 APFloat &DoubleAPFloat::getSecond() { return Floats[1]; }
 const APFloat &DoubleAPFloat::getSecond() const { return Floats[1]; }
+
+inline DoubleAPFloat::~DoubleAPFloat() { delete[] Floats; }
 
 } // namespace detail
 

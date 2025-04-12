@@ -169,6 +169,8 @@ public:
   }
 };
 
+std::chrono::seconds ResumeTimeout() { return std::chrono::seconds(5); }
+
 } // namespace
 
 static PluginProperties &GetGlobalPluginProperties() {
@@ -1180,10 +1182,16 @@ Status ProcessGDBRemote::WillResume() {
   return Status();
 }
 
-Status ProcessGDBRemote::DoResume() {
+bool ProcessGDBRemote::SupportsReverseDirection() {
+  return m_gdb_comm.GetReverseStepSupported() ||
+         m_gdb_comm.GetReverseContinueSupported();
+}
+
+Status ProcessGDBRemote::DoResume(RunDirection direction) {
   Status error;
   Log *log = GetLog(GDBRLog::Process);
-  LLDB_LOGF(log, "ProcessGDBRemote::Resume()");
+  LLDB_LOGF(log, "ProcessGDBRemote::Resume(%s)",
+            direction == RunDirection::eRunForward ? "" : "reverse");
 
   ListenerSP listener_sp(
       Listener::MakeListener("gdb-remote.resume-packet-sent"));
@@ -1197,12 +1205,24 @@ Status ProcessGDBRemote::DoResume() {
 
     StreamString continue_packet;
     bool continue_packet_error = false;
-    if (m_gdb_comm.HasAnyVContSupport()) {
+    // Number of threads continuing with "c", i.e. continuing without a signal
+    // to deliver.
+    const size_t num_continue_c_tids = m_continue_c_tids.size();
+    // Number of threads continuing with "C", i.e. continuing with a signal to
+    // deliver.
+    const size_t num_continue_C_tids = m_continue_C_tids.size();
+    // Number of threads continuing with "s", i.e. single-stepping.
+    const size_t num_continue_s_tids = m_continue_s_tids.size();
+    // Number of threads continuing with "S", i.e. single-stepping with a signal
+    // to deliver.
+    const size_t num_continue_S_tids = m_continue_S_tids.size();
+    if (direction == RunDirection::eRunForward &&
+        m_gdb_comm.HasAnyVContSupport()) {
       std::string pid_prefix;
       if (m_gdb_comm.GetMultiprocessSupported())
         pid_prefix = llvm::formatv("p{0:x-}.", GetID());
 
-      if (m_continue_c_tids.size() == num_threads ||
+      if (num_continue_c_tids == num_threads ||
           (m_continue_c_tids.empty() && m_continue_C_tids.empty() &&
            m_continue_s_tids.empty() && m_continue_S_tids.empty())) {
         // All threads are continuing
@@ -1265,14 +1285,10 @@ Status ProcessGDBRemote::DoResume() {
     } else
       continue_packet_error = true;
 
-    if (continue_packet_error) {
+    if (direction == RunDirection::eRunForward && continue_packet_error) {
       // Either no vCont support, or we tried to use part of the vCont packet
       // that wasn't supported by the remote GDB server. We need to try and
-      // make a simple packet that can do our continue
-      const size_t num_continue_c_tids = m_continue_c_tids.size();
-      const size_t num_continue_C_tids = m_continue_C_tids.size();
-      const size_t num_continue_s_tids = m_continue_s_tids.size();
-      const size_t num_continue_S_tids = m_continue_S_tids.size();
+      // make a simple packet that can do our continue.
       if (num_continue_c_tids > 0) {
         if (num_continue_c_tids == num_threads) {
           // All threads are resuming...
@@ -1363,9 +1379,59 @@ Status ProcessGDBRemote::DoResume() {
       }
     }
 
+    if (direction == RunDirection::eRunReverse) {
+      if (num_continue_s_tids > 0 || num_continue_S_tids > 0) {
+        if (!m_gdb_comm.GetReverseStepSupported()) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
+                         "support reverse-stepping");
+          return Status::FromErrorString(
+              "target does not support reverse-stepping");
+        }
+
+        if (num_continue_S_tids > 0) {
+          LLDB_LOGF(
+              log,
+              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
+          return Status::FromErrorString(
+              "can't deliver signals while running in reverse");
+        }
+
+        if (num_continue_s_tids > 1) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: can't step multiple "
+                         "threads in reverse");
+          return Status::FromErrorString(
+              "can't step multiple threads while reverse-stepping");
+        }
+
+        m_gdb_comm.SetCurrentThreadForRun(m_continue_s_tids.front());
+        continue_packet.PutCString("bs");
+      } else {
+        if (!m_gdb_comm.GetReverseContinueSupported()) {
+          LLDB_LOGF(log, "ProcessGDBRemote::DoResume: target does not "
+                         "support reverse-continue");
+          return Status::FromErrorString(
+              "target does not support reverse-continue");
+        }
+
+        if (num_continue_C_tids > 0) {
+          LLDB_LOGF(
+              log,
+              "ProcessGDBRemote::DoResume: Signals not supported in reverse");
+          return Status::FromErrorString(
+              "can't deliver signals while running in reverse");
+        }
+
+        // All threads continue whether requested or not ---
+        // we can't change how threads ran in the past.
+        continue_packet.PutCString("bc");
+      }
+
+      continue_packet_error = false;
+    }
+
     if (continue_packet_error) {
-      error =
-          Status::FromErrorString("can't make continue packet for this resume");
+      return Status::FromErrorString(
+          "can't make continue packet for this resume");
     } else {
       EventSP event_sp;
       if (!m_async_thread.IsJoinable()) {
@@ -1380,7 +1446,7 @@ Status ProcessGDBRemote::DoResume() {
           std::make_shared<EventDataBytes>(continue_packet.GetString());
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue, data_sp);
 
-      if (!listener_sp->GetEvent(event_sp, std::chrono::seconds(5))) {
+      if (!listener_sp->GetEvent(event_sp, ResumeTimeout())) {
         error = Status::FromErrorString("Resume timed out.");
         LLDB_LOGF(log, "ProcessGDBRemote::DoResume: Resume timed out.");
       } else if (event_sp->BroadcasterIs(&m_async_broadcaster)) {
@@ -1826,6 +1892,10 @@ ThreadSP ProcessGDBRemote::SetThreadStopInfo(
           handled = true;
         } else if (reason == "exception") {
           thread_sp->SetStopInfo(StopInfo::CreateStopReasonWithException(
+              *thread_sp, description.c_str()));
+          handled = true;
+        } else if (reason == "history boundary") {
+          thread_sp->SetStopInfo(StopInfo::CreateStopReasonHistoryBoundary(
               *thread_sp, description.c_str()));
           handled = true;
         } else if (reason == "exec") {
@@ -2283,6 +2353,8 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         description = std::string(ostr.GetString());
       } else if (key.compare("swbreak") == 0 || key.compare("hwbreak") == 0) {
         reason = "breakpoint";
+      } else if (key.compare("replaylog") == 0) {
+        reason = "history boundary";
       } else if (key.compare("library") == 0) {
         auto error = LoadModules();
         if (error) {

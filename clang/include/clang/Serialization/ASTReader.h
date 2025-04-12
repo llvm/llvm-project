@@ -89,7 +89,7 @@ struct HeaderFileInfo;
 class HeaderSearchOptions;
 class LangOptions;
 class MacroInfo;
-class InMemoryModuleCache;
+class ModuleCache;
 class NamedDecl;
 class NamespaceDecl;
 class ObjCCategoryDecl;
@@ -234,6 +234,18 @@ public:
   /// \returns true to continue receiving the next input file, false to stop.
   virtual bool visitInputFile(StringRef Filename, bool isSystem,
                               bool isOverridden, bool isExplicitModule) {
+    return true;
+  }
+
+  /// Overloaded member function of \c visitInputFile that should
+  /// be defined when there is a distinction between
+  /// the file name and name-as-requested. For example, when deserializing input
+  /// files from precompiled AST files.
+  ///
+  /// \returns true to continue receiving the next input file, false to stop.
+  virtual bool visitInputFile(StringRef FilenameAsRequested, StringRef Filename,
+                              bool isSystem, bool isOverridden,
+                              bool isExplicitModule) {
     return true;
   }
 
@@ -1176,11 +1188,11 @@ private:
   /// Number of Decl/types that are currently deserializing.
   unsigned NumCurrentElementsDeserializing = 0;
 
-  /// Set true while we are in the process of passing deserialized
-  /// "interesting" decls to consumer inside FinishedDeserializing().
-  /// This is used as a guard to avoid recursively repeating the process of
+  /// Set false while we are in a state where we cannot safely pass deserialized
+  /// "interesting" decls to the consumer inside FinishedDeserializing().
+  /// This is used as a guard to avoid recursively entering the process of
   /// passing decls to consumer.
-  bool PassingDeclsToConsumer = false;
+  bool CanPassDeclsToConsumer = true;
 
   /// The set of identifiers that were read while the AST reader was
   /// (recursively) loading declarations.
@@ -1391,6 +1403,10 @@ private:
   std::string SuggestedPredefines;
 
   llvm::DenseMap<const Decl *, bool> DefinitionSource;
+
+  /// Friend functions that were defined but might have had their bodies
+  /// removed.
+  llvm::DenseSet<const FunctionDecl *> ThisDeclarationWasADefinitionSet;
 
   bool shouldDisableValidationForFile(const serialization::ModuleFile &M) const;
 
@@ -1742,8 +1758,8 @@ public:
   ///
   /// \param ReadTimer If non-null, a timer used to track the time spent
   /// deserializing.
-  ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
-            ASTContext *Context, const PCHContainerReader &PCHContainerRdr,
+  ASTReader(Preprocessor &PP, ModuleCache &ModCache, ASTContext *Context,
+            const PCHContainerReader &PCHContainerRdr,
             ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
             StringRef isysroot = "",
             DisableValidationForModuleKind DisableValidationKind =
@@ -1954,8 +1970,7 @@ public:
   ///
   /// \returns true if an error occurred, false otherwise.
   static bool readASTFileControlBlock(
-      StringRef Filename, FileManager &FileMgr,
-      const InMemoryModuleCache &ModuleCache,
+      StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
       const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
       ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
       unsigned ClientLoadCapabilities = ARR_ConfigurationMismatch |
@@ -1964,7 +1979,7 @@ public:
   /// Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.
   static bool isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                  const InMemoryModuleCache &ModuleCache,
+                                  const ModuleCache &ModCache,
                                   const PCHContainerReader &PCHContainerRdr,
                                   const LangOptions &LangOpts,
                                   const TargetOptions &TargetOpts,
@@ -2375,6 +2390,8 @@ public:
 
   ExtKind hasExternalDefinitions(const Decl *D) override;
 
+  bool wasThisDeclarationADefinition(const FunctionDecl *FD) override;
+
   /// Retrieve a selector from the given module with its local ID
   /// number.
   Selector getLocalSelector(ModuleFile &M, unsigned LocalID);
@@ -2654,7 +2671,7 @@ inline bool shouldSkipCheckingODR(const Decl *D) {
 
 /// Calculate a hash value for the primary module name of the given module.
 /// \returns std::nullopt if M is not a C++ standard module.
-std::optional<unsigned> getPrimaryModuleHash(const Module *M);
+UnsignedOrNone getPrimaryModuleHash(const Module *M);
 
 } // namespace clang
 

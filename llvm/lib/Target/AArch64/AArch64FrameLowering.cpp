@@ -5552,12 +5552,9 @@ void AArch64FrameLowering::emitRemarks(
     return;
 
   llvm::sort(StackAccesses);
-  StackAccesses.erase(llvm::remove_if(StackAccesses,
-                                      [](const StackAccess &S) {
-                                        return S.AccessTypes ==
-                                               StackAccess::NotAccessed;
-                                      }),
-                      StackAccesses.end());
+  llvm::erase_if(StackAccesses, [](const StackAccess &S) {
+    return S.AccessTypes == StackAccess::NotAccessed;
+  });
 
   SmallVector<const StackAccess *> MixedObjects;
   SmallVector<std::pair<const StackAccess *, const StackAccess *>> HazardPairs;

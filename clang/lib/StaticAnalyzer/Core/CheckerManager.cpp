@@ -50,11 +50,11 @@ bool CheckerManager::hasPathSensitiveCheckers() const {
 }
 
 void CheckerManager::reportInvalidCheckerOptionValue(
-    const CheckerBase *C, StringRef OptionName,
+    const CheckerBase *C, CheckerPartIdx Idx, StringRef OptionName,
     StringRef ExpectedValueDesc) const {
 
   getDiagnostics().Report(diag::err_analyzer_checker_option_invalid_input)
-      << (llvm::Twine() + C->getTagDescription() + ":" + OptionName).str()
+      << (llvm::Twine(C->getName(Idx)) + ":" + OptionName).str()
       << ExpectedValueDesc;
 }
 
@@ -139,7 +139,7 @@ std::string checkerScopeName(StringRef Name, const CheckerBase *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
   StringRef CheckerName =
-      Checker ? Checker->getCheckerName().getName() : "<unknown>";
+      Checker ? static_cast<StringRef>(Checker->getName()) : "<unknown>";
   return (Name + ":" + CheckerName).str();
 }
 
@@ -721,13 +721,13 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "The '{0}' call has been already evaluated by the {1} checker, "
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
-            toString(Call), evaluatorChecker->getName(),
-            EvalCallChecker.Checker->getCheckerName());
+            toString(Call), evaluatorChecker,
+            EvalCallChecker.Checker->getName());
         llvm_unreachable(AssertionMessage.c_str());
       }
 #endif
       if (evaluated) {
-        evaluatorChecker = EvalCallChecker.Checker->getCheckerName();
+        evaluatorChecker = EvalCallChecker.Checker->getName();
         Dst.insert(checkDst);
 #ifdef NDEBUG
         break; // on release don't check that no other checker also evals.
@@ -798,9 +798,8 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
     if (TempBuf.empty())
       continue;
 
-    Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getCheckerName().getName()
-        << "\", \"messages\": [" << NL;
+    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getName()
+                              << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;
     Indent(Out, Space, IsDot) << "]}";

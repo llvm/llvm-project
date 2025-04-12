@@ -12,8 +12,10 @@
 
 #include "MCTargetDesc/X86BaseInfo.h"
 #include "MCTargetDesc/X86FixupKinds.h"
+#include "MCTargetDesc/X86MCExpr.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -482,7 +484,7 @@ startsWithGlobalOffsetTable(const MCExpr *Expr) {
 
 static bool hasSecRelSymbolRef(const MCExpr *Expr) {
   if (Expr->getKind() == MCExpr::SymbolRef) {
-    const MCSymbolRefExpr *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
+    auto *Ref = static_cast<const MCSymbolRefExpr *>(Expr);
     return Ref->getKind() == MCSymbolRefExpr::VK_SECREL;
   }
   return false;
@@ -501,8 +503,8 @@ static bool isPCRel32Branch(const MCInst &MI, const MCInstrInfo &MCII) {
   if (!Op.isExpr())
     return false;
 
-  const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
-  return Ref && Ref->getKind() == MCSymbolRefExpr::VK_None;
+  auto *Ref = dyn_cast<MCSymbolRefExpr>(Op.getExpr());
+  return Ref && getSpecifier(Ref) == X86MCExpr::VK_None;
 }
 
 unsigned X86MCCodeEmitter::getX86RegNum(const MCOperand &MO) const {
@@ -542,7 +544,8 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       assert(ImmOffset == 0);
 
       if (Size == 8) {
-        FixupKind = MCFixupKind(X86::reloc_global_offset_table8);
+        FixupKind =
+            MCFixupKind(FirstLiteralRelocationKind + ELF::R_X86_64_GOTPC64);
       } else {
         assert(Size == 4);
         FixupKind = MCFixupKind(X86::reloc_global_offset_table);
@@ -795,7 +798,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
       // If the displacement is @tlscall, treat it as a zero.
       if (Disp.isExpr()) {
         auto *Sym = dyn_cast<MCSymbolRefExpr>(Disp.getExpr());
-        if (Sym && Sym->getKind() == MCSymbolRefExpr::VK_TLSCALL) {
+        if (Sym && getSpecifier(Sym) == X86MCExpr::VK_TLSCALL) {
           // This is exclusively used by call *a@tlscall(base). The relocation
           // (R_386_TLSCALL or R_X86_64_TLSCALL) applies to the beginning.
           Fixups.push_back(MCFixup::create(0, Sym, FK_NONE, MI.getLoc()));
@@ -1371,8 +1374,8 @@ PrefixKind X86MCCodeEmitter::emitREXPrefix(int MemOperand, const MCInst &MI,
       // handled as a special case here so that it also works for hand-written
       // assembly without the user needing to write REX, as with GNU as.
       const auto *Ref = dyn_cast<MCSymbolRefExpr>(MO.getExpr());
-      if (Ref && (Ref->getKind() == MCSymbolRefExpr::VK_GOTTPOFF ||
-                  Ref->getKind() == MCSymbolRefExpr::VK_TLSDESC)) {
+      if (Ref && (getSpecifier(Ref) == X86MCExpr::VK_GOTTPOFF ||
+                  getSpecifier(Ref) == X86MCExpr::VK_TLSDESC)) {
         Prefix.setLowerBound(REX);
       }
     }

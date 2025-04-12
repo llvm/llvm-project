@@ -1788,76 +1788,29 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
           = Self.ResolveAddressOfOverloadedFunction(SrcExpr.get(), DestType, false,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
-      SrcType = Self.Context.getMemberPointerType(Fn->getType(),
-                      Self.Context.getTypeDeclType(M->getParent()).getTypePtr());
+      SrcType = Self.Context.getMemberPointerType(
+          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
       WasOverloadedFunction = true;
     }
   }
 
-  const MemberPointerType *SrcMemPtr = SrcType->getAs<MemberPointerType>();
-  if (!SrcMemPtr) {
-    msg = diag::err_bad_static_cast_member_pointer_nonmp;
-    return TC_NotApplicable;
-  }
-
-  // Lock down the inheritance model right now in MS ABI, whether or not the
-  // pointee types are the same.
-  if (Self.Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    (void)Self.isCompleteType(OpRange.getBegin(), SrcType);
-    (void)Self.isCompleteType(OpRange.getBegin(), DestType);
-  }
-
-  // T == T, modulo cv
-  if (!Self.Context.hasSameUnqualifiedType(SrcMemPtr->getPointeeType(),
-                                           DestMemPtr->getPointeeType()))
-    return TC_NotApplicable;
-
-  // B base of D
-  QualType SrcClass(SrcMemPtr->getClass(), 0);
-  QualType DestClass(DestMemPtr->getClass(), 0);
-  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                  /*DetectVirtual=*/true);
-  if (!Self.IsDerivedFrom(OpRange.getBegin(), SrcClass, DestClass, Paths))
-    return TC_NotApplicable;
-
-  // B is a base of D. But is it an allowed base? If not, it's a hard error.
-  if (Paths.isAmbiguous(Self.Context.getCanonicalType(DestClass))) {
-    Paths.clear();
-    Paths.setRecordingPaths(true);
-    bool StillOkay =
-        Self.IsDerivedFrom(OpRange.getBegin(), SrcClass, DestClass, Paths);
-    assert(StillOkay);
-    (void)StillOkay;
-    std::string PathDisplayStr = Self.getAmbiguousPathsDisplayString(Paths);
-    Self.Diag(OpRange.getBegin(), diag::err_ambiguous_memptr_conv)
-      << 1 << SrcClass << DestClass << PathDisplayStr << OpRange;
-    msg = 0;
-    return TC_Failed;
-  }
-
-  if (const RecordType *VBase = Paths.getDetectedVirtual()) {
-    Self.Diag(OpRange.getBegin(), diag::err_memptr_conv_via_virtual)
-      << SrcClass << DestClass << QualType(VBase, 0) << OpRange;
-    msg = 0;
-    return TC_Failed;
-  }
-
-  if (!CStyle) {
-    switch (Self.CheckBaseClassAccess(OpRange.getBegin(),
-                                      DestClass, SrcClass,
-                                      Paths.front(),
-                                      diag::err_upcast_to_inaccessible_base)) {
-    case Sema::AR_accessible:
-    case Sema::AR_delayed:
-    case Sema::AR_dependent:
-      // Optimistically assume that the delayed and dependent cases
-      // will work out.
-      break;
-
-    case Sema::AR_inaccessible:
-      msg = 0;
-      return TC_Failed;
+  switch (Self.CheckMemberPointerConversion(
+      SrcType, DestMemPtr, Kind, BasePath, OpRange.getBegin(), OpRange, CStyle,
+      Sema::MemberPointerConversionDirection::Upcast)) {
+  case Sema::MemberPointerConversionResult::Success:
+    if (Kind == CK_NullToMemberPointer) {
+      msg = diag::err_bad_static_cast_member_pointer_nonmp;
+      return TC_NotApplicable;
     }
+    break;
+  case Sema::MemberPointerConversionResult::DifferentPointee:
+  case Sema::MemberPointerConversionResult::NotDerived:
+    return TC_NotApplicable;
+  case Sema::MemberPointerConversionResult::Ambiguous:
+  case Sema::MemberPointerConversionResult::Virtual:
+  case Sema::MemberPointerConversionResult::Inaccessible:
+    msg = 0;
+    return TC_Failed;
   }
 
   if (WasOverloadedFunction) {
@@ -1878,9 +1831,6 @@ TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
       return TC_Failed;
     }
   }
-
-  Self.BuildBasePathArray(Paths, BasePath);
-  Kind = CK_DerivedToBaseMemberPointer;
   return TC_Success;
 }
 
@@ -3141,10 +3091,10 @@ void CastOperation::CheckCStyleCast() {
     return;
   }
 
-  // C23 6.5.4p4:
-  //   The type nullptr_t shall not be converted to any type other than void,
-  //   bool, or a pointer type. No type other than nullptr_t shall be converted
-  //   to nullptr_t.
+  // C23 6.5.5p4:
+  //   ... The type nullptr_t shall not be converted to any type other than
+  //   void, bool or a pointer type.If the target type is nullptr_t, the cast
+  //   expression shall be a null pointer constant or have type nullptr_t.
   if (SrcType->isNullPtrType()) {
     // FIXME: 6.3.2.4p2 says that nullptr_t can be converted to itself, but
     // 6.5.4p4 is a constraint check and nullptr_t is not void, bool, or a
@@ -3165,11 +3115,20 @@ void CastOperation::CheckCStyleCast() {
                                          Self.CurFPFeatureOverrides());
     }
   }
+
   if (DestType->isNullPtrType() && !SrcType->isNullPtrType()) {
-    Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
-        << /*type to nullptr*/ 1 << SrcType;
-    SrcExpr = ExprError();
-    return;
+    if (!SrcExpr.get()->isNullPointerConstant(Self.Context,
+                                              Expr::NPC_NeverValueDependent)) {
+      Self.Diag(SrcExpr.get()->getExprLoc(), diag::err_nullptr_cast)
+          << /*type to nullptr*/ 1 << SrcType;
+      SrcExpr = ExprError();
+      return;
+    }
+    // Need to convert the source from whatever its type is to a null pointer
+    // type first.
+    SrcExpr = ImplicitCastExpr::Create(Self.Context, DestType, CK_NullToPointer,
+                                       SrcExpr.get(), nullptr, VK_PRValue,
+                                       Self.CurFPFeatureOverrides());
   }
 
   if (DestType->isExtVectorType()) {

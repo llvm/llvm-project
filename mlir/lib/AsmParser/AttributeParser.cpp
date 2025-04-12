@@ -12,17 +12,13 @@
 
 #include "Parser.h"
 
-#include "AsmParserImpl.h"
 #include "mlir/AsmParser/AsmParserState.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Endian.h"
 #include <optional>
 
 using namespace mlir;
@@ -570,6 +566,21 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
   if (ComplexType complexTy = dyn_cast<ComplexType>(eltType)) {
     eltType = complexTy.getElementType();
     isComplex = true;
+    // Complex types have N*2 elements or complex splat.
+    // Empty shape may mean a splat or empty literal, only validate splats.
+    bool isSplat = shape.empty() && type.getNumElements() != 0;
+    if (isSplat && storage.size() != 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << complexTy << ") expected 2 elements";
+      return nullptr;
+    }
+    if (!shape.empty() &&
+        storage.size() != static_cast<size_t>(type.getNumElements()) * 2) {
+      p.emitError(loc) << "parsed " << storage.size() << " elements, but type ("
+                       << type << ") expected " << type.getNumElements() * 2
+                       << " elements";
+      return nullptr;
+    }
   }
 
   // Handle integer and index types.
@@ -1085,6 +1096,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
     indicesType = RankedTensorType::get(indiceParser.getShape(), indiceEltType);
   }
   auto indices = indiceParser.getAttr(indicesLoc, indicesType);
+  if (!indices)
+    return nullptr;
 
   // If the values are a splat, set the shape explicitly based on the number of
   // indices. The number of indices is encoded in the first dimension of the
@@ -1095,6 +1108,8 @@ Attribute Parser::parseSparseElementsAttr(Type attrType) {
           ? RankedTensorType::get({indicesType.getDimSize(0)}, valuesEltType)
           : RankedTensorType::get(valuesParser.getShape(), valuesEltType);
   auto values = valuesParser.getAttr(valuesLoc, valuesType);
+  if (!values)
+    return nullptr;
 
   // Build the sparse elements attribute by the indices and values.
   return getChecked<SparseElementsAttr>(loc, type, indices, values);

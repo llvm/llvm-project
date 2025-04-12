@@ -39,7 +39,7 @@ using namespace bolt;
 
 namespace opts {
 
-cl::OptionCategory BatDumpCategory("BAT dump options");
+static cl::OptionCategory BatDumpCategory("BAT dump options");
 
 static cl::OptionCategory *BatDumpCategories[] = {&BatDumpCategory};
 

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
+#include "MCTargetDesc/WebAssemblyMCExpr.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
@@ -204,7 +205,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 
 // Perhaps this should go somewhere common.
 static wasm::WasmLimits defaultLimits() {
-  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0};
+  return {wasm::WASM_LIMITS_FLAG_NONE, 0, 0, 0};
 }
 
 static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
@@ -700,8 +701,8 @@ public:
       auto *WasmSym = cast<MCSymbolWasm>(Sym);
       WasmSym->setSignature(Signature);
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      const MCExpr *Expr = MCSymbolRefExpr::create(
-          WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
+      const MCExpr *Expr =
+          MCSymbolRefExpr::create(WasmSym, WebAssembly::S_TYPEINDEX, Ctx);
       Operands.push_back(std::make_unique<WebAssemblyOperand>(
           Loc.getLoc(), Loc.getEndLoc(), WebAssemblyOperand::SymOp{Expr}));
     }

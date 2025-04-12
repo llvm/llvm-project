@@ -5,6 +5,7 @@ add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CodeGenOptions.cpp
+  ParserActions.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp

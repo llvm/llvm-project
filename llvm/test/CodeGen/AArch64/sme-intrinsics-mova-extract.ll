@@ -438,21 +438,20 @@ define <vscale x 2 x double> @extract_col_q_v2f64(<vscale x 2 x double> %zd, <vs
 define <vscale x 4 x i32> @test_sink_offset_operand(<vscale x 4 x i1> %pg, i32 %base, i32 %N) {
 ; CHECK-LABEL: test_sink_offset_operand:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
 ; CHECK-NEXT:    mov w12, w0
 ; CHECK-NEXT:  .LBB26_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    mov z0.s, #0 // =0x0
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    subs w1, w1, #3
-; CHECK-NEXT:    mov z3.d, z0.d
-; CHECK-NEXT:    mov z1.s, p0/m, za0h.s[w12, 0]
-; CHECK-NEXT:    mov z2.s, p0/m, za0h.s[w12, 1]
-; CHECK-NEXT:    mov z3.s, p0/m, za0h.s[w12, 2]
+; CHECK-NEXT:    mov z2.s, #0 // =0x0
+; CHECK-NEXT:    mov z0.s, p0/m, za0h.s[w12, 0]
+; CHECK-NEXT:    mov z1.s, p0/m, za0h.s[w12, 1]
+; CHECK-NEXT:    mov z2.s, p0/m, za0h.s[w12, 2]
 ; CHECK-NEXT:    b.ne .LBB26_1
 ; CHECK-NEXT:  // %bb.2: // %exit
-; CHECK-NEXT:    add z0.s, z1.s, z2.s
-; CHECK-NEXT:    add z0.s, z0.s, z3.s
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    add z0.s, z0.s, z2.s
 ; CHECK-NEXT:    ret
 entry:
   %add1 = add i32 %base, 1

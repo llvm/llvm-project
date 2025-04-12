@@ -44,6 +44,7 @@
 ; CHECK-NEXT: sgprForEXECCopy: '$sgpr100_sgpr101'
 ; CHECK-NEXT: longBranchReservedReg: '$sgpr2_sgpr3'
 ; CHECK-NEXT: hasInitWholeWave: false
+; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
 ; CHECK-NEXT: body:
 define amdgpu_kernel void @uniform_long_forward_branch(ptr addrspace(1) %arg, i32 %arg1) #0 {
 bb0:
@@ -51,7 +52,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:

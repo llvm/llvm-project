@@ -29,7 +29,6 @@ define amdgpu_cs void @ttracedata_v(i32 %val) {
 ; GFX11-LABEL: ttracedata_v:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_mov_b32 m0, s0
 ; GFX11-NEXT:    s_ttracedata
 ; GFX11-NEXT:    s_endpgm

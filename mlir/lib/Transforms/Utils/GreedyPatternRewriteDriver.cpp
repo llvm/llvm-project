@@ -961,11 +961,11 @@ MultiOpPatternRewriteDriver::MultiOpPatternRewriteDriver(
     : GreedyPatternRewriteDriver(ctx, patterns, config),
       survivingOps(survivingOps) {
   if (config.strictMode != GreedyRewriteStrictness::AnyOp)
-    strictModeFilteredOps.insert(ops.begin(), ops.end());
+    strictModeFilteredOps.insert_range(ops);
 
   if (survivingOps) {
     survivingOps->clear();
-    survivingOps->insert(ops.begin(), ops.end());
+    survivingOps->insert_range(ops);
   }
 }
 

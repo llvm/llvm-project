@@ -723,3 +723,51 @@ void test() { NewDeleteAllocator abc(42); } // expected-error {{no viable constr
 // CHECK-NEXT:  `-ParmVarDecl {{.+}} 'T'
 
 } // namespace GH128691
+
+namespace GH132616_DeductionGuide {
+
+template <class T> struct A {
+  template <class U>
+  A(U);
+};
+
+template <typename>
+struct B : A<int> {
+  using A::A;
+};
+
+template <class T>
+B(T) -> B<T>;
+
+B b(24);
+
+// CHECK-LABEL: Dumping GH132616_DeductionGuide::<deduction guide for B>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for B>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 0
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for B> 'auto (U) -> B<type-parameter-0-0>'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} 'U'
+
+struct C {
+  template <class U>
+  C(U);
+};
+
+template <typename>
+struct D : C {
+  using C::C;
+};
+
+template <class T>
+D(T) -> D<T>;
+
+D d(24);
+
+// CHECK-LABEL: Dumping GH132616_DeductionGuide::<deduction guide for D>:
+// CHECK-NEXT: FunctionTemplateDecl {{.+}} implicit <deduction guide for D>
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} typename depth 0 index 0
+// CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for D> 'auto (U) -> D<type-parameter-0-0>'
+// CHECK-NEXT:  `-ParmVarDecl {{.+}} 'U'
+
+} // namespace GH132616_DeductionGuide

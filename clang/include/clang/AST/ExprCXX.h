@@ -51,6 +51,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <variant>
 
 namespace clang {
 
@@ -2128,7 +2129,7 @@ public:
   ArrayRef<NamedDecl *> getExplicitTemplateParameters() const;
 
   /// Get the trailing requires clause, if any.
-  Expr *getTrailingRequiresClause() const;
+  const AssociatedConstraint &getTrailingRequiresClause() const;
 
   /// Whether this is a generic lambda.
   bool isGenericLambda() const { return getTemplateParameterList(); }
@@ -2765,25 +2766,25 @@ public:
 /// \endcode
 class TypeTraitExpr final
     : public Expr,
-      private llvm::TrailingObjects<TypeTraitExpr, TypeSourceInfo *> {
+      private llvm::TrailingObjects<TypeTraitExpr, APValue, TypeSourceInfo *> {
   /// The location of the type trait keyword.
   SourceLocation Loc;
 
   ///  The location of the closing parenthesis.
   SourceLocation RParenLoc;
 
-  // Note: The TypeSourceInfos for the arguments are allocated after the
-  // TypeTraitExpr.
-
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
-                ArrayRef<TypeSourceInfo *> Args,
-                SourceLocation RParenLoc,
-                bool Value);
+                ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
+                std::variant<bool, APValue> Value);
 
-  TypeTraitExpr(EmptyShell Empty) : Expr(TypeTraitExprClass, Empty) {}
+  TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
   size_t numTrailingObjects(OverloadToken<TypeSourceInfo *>) const {
     return getNumArgs();
+  }
+
+  size_t numTrailingObjects(OverloadToken<APValue>) const {
+    return TypeTraitExprBits.IsBooleanTypeTrait ? 0 : 1;
   }
 
 public:
@@ -2798,7 +2799,13 @@ public:
                                SourceLocation RParenLoc,
                                bool Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc, APValue Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
+                                           bool IsStoredAsBool,
                                            unsigned NumArgs);
 
   /// Determine which type trait this expression uses.
@@ -2806,9 +2813,18 @@ public:
     return static_cast<TypeTrait>(TypeTraitExprBits.Kind);
   }
 
-  bool getValue() const {
-    assert(!isValueDependent());
+  bool isStoredAsBoolean() const {
+    return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool getBoolValue() const {
+    assert(!isValueDependent() && TypeTraitExprBits.IsBooleanTypeTrait);
     return TypeTraitExprBits.Value;
+  }
+
+  const APValue &getAPValue() const {
+    assert(!isValueDependent() && !TypeTraitExprBits.IsBooleanTypeTrait);
+    return *getTrailingObjects<APValue>();
   }
 
   /// Determine the number of arguments to this type trait.
@@ -4193,10 +4209,10 @@ class PackExpansionExpr : public Expr {
   Stmt *Pattern;
 
 public:
-  PackExpansionExpr(QualType T, Expr *Pattern, SourceLocation EllipsisLoc,
-                    std::optional<unsigned> NumExpansions)
-      : Expr(PackExpansionExprClass, T, Pattern->getValueKind(),
-             Pattern->getObjectKind()),
+  PackExpansionExpr(Expr *Pattern, SourceLocation EllipsisLoc,
+                    UnsignedOrNone NumExpansions)
+      : Expr(PackExpansionExprClass, Pattern->getType(),
+             Pattern->getValueKind(), Pattern->getObjectKind()),
         EllipsisLoc(EllipsisLoc),
         NumExpansions(NumExpansions ? *NumExpansions + 1 : 0),
         Pattern(Pattern) {
@@ -4217,7 +4233,7 @@ public:
 
   /// Determine the number of expansions that will be produced when
   /// this pack expansion is instantiated, if already known.
-  std::optional<unsigned> getNumExpansions() const {
+  UnsignedOrNone getNumExpansions() const {
     if (NumExpansions)
       return NumExpansions - 1;
 
@@ -4288,8 +4304,7 @@ class SizeOfPackExpr final
   /// the given parameter pack.
   SizeOfPackExpr(QualType SizeType, SourceLocation OperatorLoc, NamedDecl *Pack,
                  SourceLocation PackLoc, SourceLocation RParenLoc,
-                 std::optional<unsigned> Length,
-                 ArrayRef<TemplateArgument> PartialArgs)
+                 UnsignedOrNone Length, ArrayRef<TemplateArgument> PartialArgs)
       : Expr(SizeOfPackExprClass, SizeType, VK_PRValue, OK_Ordinary),
         OperatorLoc(OperatorLoc), PackLoc(PackLoc), RParenLoc(RParenLoc),
         Length(Length ? *Length : PartialArgs.size()), Pack(Pack) {
@@ -4309,7 +4324,7 @@ public:
   static SizeOfPackExpr *Create(ASTContext &Context, SourceLocation OperatorLoc,
                                 NamedDecl *Pack, SourceLocation PackLoc,
                                 SourceLocation RParenLoc,
-                                std::optional<unsigned> Length = std::nullopt,
+                                UnsignedOrNone Length = std::nullopt,
                                 ArrayRef<TemplateArgument> PartialArgs = {});
   static SizeOfPackExpr *CreateDeserialized(ASTContext &Context,
                                             unsigned NumPartialArgs);
@@ -4451,7 +4466,7 @@ public:
 
   Expr *getIndexExpr() const { return cast<Expr>(SubExprs[1]); }
 
-  std::optional<unsigned> getSelectedIndex() const {
+  UnsignedOrNone getSelectedIndex() const {
     if (isInstantiationDependent())
       return std::nullopt;
     ConstantExpr *CE = cast<ConstantExpr>(getIndexExpr());
@@ -4461,7 +4476,7 @@ public:
   }
 
   Expr *getSelectedExpr() const {
-    std::optional<unsigned> Index = getSelectedIndex();
+    UnsignedOrNone Index = getSelectedIndex();
     assert(Index && "extracting the indexed expression of a dependant pack");
     return getTrailingObjects<Expr *>()[*Index];
   }
@@ -4498,7 +4513,9 @@ class SubstNonTypeTemplateParmExpr : public Expr {
   llvm::PointerIntPair<Decl *, 1, bool> AssociatedDeclAndRef;
 
   unsigned Index : 15;
-  unsigned PackIndex : 16;
+  unsigned PackIndex : 15;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Final : 1;
 
   explicit SubstNonTypeTemplateParmExpr(EmptyShell Empty)
       : Expr(SubstNonTypeTemplateParmExprClass, Empty) {}
@@ -4507,11 +4524,12 @@ public:
   SubstNonTypeTemplateParmExpr(QualType Ty, ExprValueKind ValueKind,
                                SourceLocation Loc, Expr *Replacement,
                                Decl *AssociatedDecl, unsigned Index,
-                               std::optional<unsigned> PackIndex, bool RefParam)
+                               UnsignedOrNone PackIndex, bool RefParam,
+                               bool Final)
       : Expr(SubstNonTypeTemplateParmExprClass, Ty, ValueKind, OK_Ordinary),
         Replacement(Replacement),
         AssociatedDeclAndRef(AssociatedDecl, RefParam), Index(Index),
-        PackIndex(PackIndex ? *PackIndex + 1 : 0) {
+        PackIndex(PackIndex.toInternalRepresentation()), Final(Final) {
     assert(AssociatedDecl != nullptr);
     SubstNonTypeTemplateParmExprBits.NameLoc = Loc;
     setDependence(computeDependence(this));
@@ -4533,11 +4551,13 @@ public:
   /// This should match the result of `getParameter()->getIndex()`.
   unsigned getIndex() const { return Index; }
 
-  std::optional<unsigned> getPackIndex() const {
-    if (PackIndex == 0)
-      return std::nullopt;
-    return PackIndex - 1;
+  UnsignedOrNone getPackIndex() const {
+    return UnsignedOrNone::fromInternalRepresentation(PackIndex);
   }
+
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Final; }
 
   NonTypeTemplateParmDecl *getParameter() const;
 
@@ -4582,7 +4602,10 @@ class SubstNonTypeTemplateParmPackExpr : public Expr {
   const TemplateArgument *Arguments;
 
   /// The number of template arguments in \c Arguments.
-  unsigned NumArguments : 16;
+  unsigned NumArguments : 15;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Final : 1;
 
   unsigned Index : 16;
 
@@ -4596,7 +4619,8 @@ public:
   SubstNonTypeTemplateParmPackExpr(QualType T, ExprValueKind ValueKind,
                                    SourceLocation NameLoc,
                                    const TemplateArgument &ArgPack,
-                                   Decl *AssociatedDecl, unsigned Index);
+                                   Decl *AssociatedDecl, unsigned Index,
+                                   bool Final);
 
   /// A template-like entity which owns the whole pattern being substituted.
   /// This will own a set of template parameters.
@@ -4605,6 +4629,10 @@ public:
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getParameterPack()->getIndex()`.
   unsigned getIndex() const { return Index; }
+
+  // This substitution will be Final, which means the substitution will be fully
+  // sugared: it doesn't need to be resugared later.
+  bool getFinal() const { return Final; }
 
   /// Retrieve the non-type template parameter pack being substituted.
   NonTypeTemplateParmDecl *getParameterPack() const;
@@ -4851,7 +4879,7 @@ class CXXFoldExpr : public Expr {
   SourceLocation RParenLoc;
   // When 0, the number of expansions is not known. Otherwise, this is one more
   // than the number of expansions.
-  unsigned NumExpansions;
+  UnsignedOrNone NumExpansions = std::nullopt;
   Stmt *SubExprs[SubExpr::Count];
   BinaryOperatorKind Opcode;
 
@@ -4859,7 +4887,7 @@ public:
   CXXFoldExpr(QualType T, UnresolvedLookupExpr *Callee,
               SourceLocation LParenLoc, Expr *LHS, BinaryOperatorKind Opcode,
               SourceLocation EllipsisLoc, Expr *RHS, SourceLocation RParenLoc,
-              std::optional<unsigned> NumExpansions);
+              UnsignedOrNone NumExpansions);
 
   CXXFoldExpr(EmptyShell Empty) : Expr(CXXFoldExprClass, Empty) {}
 
@@ -4888,11 +4916,7 @@ public:
   SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
   BinaryOperatorKind getOperator() const { return Opcode; }
 
-  std::optional<unsigned> getNumExpansions() const {
-    if (NumExpansions)
-      return NumExpansions - 1;
-    return std::nullopt;
-  }
+  UnsignedOrNone getNumExpansions() const { return NumExpansions; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     if (LParenLoc.isValid())

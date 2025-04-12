@@ -12,8 +12,10 @@
 #include "DAPForward.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
@@ -153,6 +155,9 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 ///     The environment variables stored in the env key
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
+
+/// Take ownership of the stored error.
+llvm::Error ToError(const lldb::SBError &error);
 
 } // namespace lldb_dap
 

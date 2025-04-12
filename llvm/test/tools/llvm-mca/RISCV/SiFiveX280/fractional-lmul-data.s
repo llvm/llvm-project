@@ -29,9 +29,9 @@ vdiv.vv v12, v12, v12
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      56    57.00                       vdiv.vv	v12, v12, v12
+# CHECK-NEXT:  1      56    56.00                       vdiv.vv	v12, v12, v12
 # CHECK-NEXT:  1      3     1.00                  U     vsetvli	zero, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      30    31.00                       vdiv.vv	v12, v12, v12
+# CHECK-NEXT:  1      30    30.00                       vdiv.vv	v12, v12, v12
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFive7FDiv
