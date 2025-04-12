@@ -31,12 +31,20 @@ void test() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<int, std::allocator<int> >();
   test<NotConstructible, limited_allocator<NotConstructible, 1> >();
 #if TEST_STD_VER >= 11
   test<int, min_allocator<int> >();
   test<NotConstructible, min_allocator<NotConstructible> >();
+#endif
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

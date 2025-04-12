@@ -144,6 +144,8 @@ void test_iterators() {
 
 int main(int, char**) {
   basic_test();
-
+#if TEST_STD_VER >= 26
+  static_assert(basic_test());
+#endif
   return 0;
 }

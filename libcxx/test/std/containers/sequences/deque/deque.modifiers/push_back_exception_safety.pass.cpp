@@ -68,7 +68,7 @@ CMyClass::~CMyClass() {
 
 bool operator==(const CMyClass& lhs, const CMyClass& rhs) { return lhs.equal(rhs); }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   CMyClass instance(42);
   {
     std::deque<CMyClass> vec;
@@ -100,6 +100,14 @@ int main(int, char**) {
       assert(vec == vec2);
     }
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

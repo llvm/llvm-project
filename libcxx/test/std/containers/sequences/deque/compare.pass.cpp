@@ -37,7 +37,7 @@
 
 #include "test_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     const std::deque<int> d1, d2;
     assert(testComparisons(d1, d2, true, false));
@@ -113,6 +113,14 @@ int main(int, char**) {
     const std::deque<LessAndEqComp> d2(items2, items2 + 2);
     assert(testComparisons(d1, d2, false, false));
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
