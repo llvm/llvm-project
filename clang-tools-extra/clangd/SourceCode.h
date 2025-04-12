@@ -309,6 +309,9 @@ EligibleRegion getEligiblePoints(llvm::StringRef Code,
                                  llvm::StringRef FullyQualifiedName,
                                  const LangOptions &LangOpts);
 
+std::string getNamespaceAtPosition(llvm::StringRef Code, const Position &Pos,
+                                   const LangOptions &LangOpts);
+
 struct DefinedMacro {
   llvm::StringRef Name;
   const MacroInfo *Info;
