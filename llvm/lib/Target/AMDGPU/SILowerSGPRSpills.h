@@ -23,6 +23,7 @@ public:
         .set(MachineFunctionProperties::Property::IsSSA)
         .set(MachineFunctionProperties::Property::NoVRegs);
   }
+  static bool isRequired() { return true; }
 };
 } // namespace llvm
 
