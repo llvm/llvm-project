@@ -42,16 +42,16 @@ public:
                     raw_ostream &OS);
   void printMemASXOperand(const MCInst *MI, int OpNum,
                           const MCSubtargetInfo &STI, raw_ostream &OS,
-                          const char *Modifier = nullptr);
+                          StringRef Modifier = {});
   void printMemASOperandASX(const MCInst *MI, int OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &OS,
-                            const char *Modifier = nullptr);
+                            StringRef Modifier = {});
   void printMemASOperandRRM(const MCInst *MI, int OpNum,
                             const MCSubtargetInfo &STI, raw_ostream &OS,
-                            const char *Modifier = nullptr);
+                            StringRef Modifier = {});
   void printMemASOperandHM(const MCInst *MI, int OpNum,
                            const MCSubtargetInfo &STI, raw_ostream &OS,
-                           const char *Modifier = nullptr);
+                           StringRef Modifier = {});
   void printMImmOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &OS);
   void printCCOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
