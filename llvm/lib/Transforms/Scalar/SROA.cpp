@@ -1011,6 +1011,39 @@ static Value *foldPHINodeOrSelectInst(Instruction &I) {
   return foldSelectInst(cast<SelectInst>(I));
 }
 
+static constexpr size_t getMaxNumFixedVectorElements() {
+  // FIXME: hack. Do we have a named constant for this?
+  // SDAG SDNode can't have more than 65535 operands.
+  return std::numeric_limits<unsigned short>::max();
+}
+
+/// Returns a fixed vector type equivalent to the memory set by II or nullptr if
+/// unable to do so.
+static FixedVectorType *getVectorTypeFor(const MemSetInst &II,
+                                         const DataLayout &DL) {
+  const ConstantInt *Length = dyn_cast<ConstantInt>(II.getLength());
+  if (!Length)
+    return nullptr;
+
+  const APInt &Val = Length->getValue();
+  if (Val.ugt(getMaxNumFixedVectorElements()))
+    return nullptr;
+
+  // Element type will always be i8. TODO: Support
+  // llvm.experimental.memset.pattern?
+  uint64_t MemSetLen = Val.getZExtValue();
+  auto *VTy = FixedVectorType::get(II.getValue()->getType(), MemSetLen);
+
+  // FIXME: This is a workaround. Vector promotion sometimes inhibits our
+  // ability to merge constant stores. It seems to be related to the presence of
+  // alignment bytes. See
+  // test/Transforms/PhaseOrdering/X86/store-constant-merge.ll
+  if (MemSetLen != DL.getTypeAllocSize(VTy).getFixedValue())
+    return nullptr;
+
+  return VTy;
+}
+
 /// Builder for the alloca slices.
 ///
 /// This class builds a set of alloca slices by recursively visiting the uses
@@ -1099,15 +1132,16 @@ private:
     return Base::visitGetElementPtrInst(GEPI);
   }
 
+  bool isSplittableMemOp(Type *Ty, bool IsVolatile) {
+    return Ty->isIntegerTy() && !IsVolatile && DL.typeSizeEqualsStoreSize(Ty);
+  }
+
   void handleLoadOrStore(Type *Ty, Instruction &I, const APInt &Offset,
                          uint64_t Size, bool IsVolatile) {
     // We allow splitting of non-volatile loads and stores where the type is an
     // integer type. These may be used to implement 'memcpy' or other "transfer
     // of bits" patterns.
-    bool IsSplittable =
-        Ty->isIntegerTy() && !IsVolatile && DL.typeSizeEqualsStoreSize(Ty);
-
-    insertUse(I, Offset, Size, IsSplittable);
+    insertUse(I, Offset, Size, isSplittableMemOp(Ty, IsVolatile));
   }
 
   void visitLoadInst(LoadInst &LI) {
@@ -1170,10 +1204,17 @@ private:
     if (!IsOffsetKnown)
       return PI.setAborted(&II);
 
+    bool Splittable;
+
+    if (getVectorTypeFor(II, DL))
+      Splittable = isSplittableMemOp(AS.AI.getAllocatedType(), II.isVolatile());
+    else
+      Splittable = (bool)Length;
+
     insertUse(II, Offset,
               Length ? Length->getLimitedValue()
                      : AllocSize - Offset.getLimitedValue(),
-              (bool)Length);
+              Splittable);
   }
 
   void visitMemTransferInst(MemTransferInst &II) {
@@ -2072,8 +2113,20 @@ static bool isVectorPromotionViableForSlice(Partition &P, const Slice &S,
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(U->getUser())) {
     if (MI->isVolatile())
       return false;
-    if (!S.isSplittable())
-      return false; // Skip any unsplittable intrinsics.
+
+    auto *II = dyn_cast<MemSetInst>(U->getUser());
+    if (!II && !S.isSplittable()) {
+      // Skip any non-memset unsplittable intrinsics.
+      return false;
+    }
+    if (II) {
+      // For memset, allow if we have a suitable vector type
+      Type *VTy = getVectorTypeFor(*II, DL);
+      if (!VTy)
+        return false;
+      if (!canConvertValue(DL, SliceTy, VTy))
+        return false;
+    }
   } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(U->getUser())) {
     if (!II->isLifetimeStartOrEnd() && !II->isDroppable())
       return false;
@@ -2216,11 +2269,9 @@ checkVectorTypesForPromotion(Partition &P, const DataLayout &DL,
     CandidateTys.resize(1);
   }
 
-  // FIXME: hack. Do we have a named constant for this?
-  // SDAG SDNode can't have more than 65535 operands.
   llvm::erase_if(CandidateTys, [](VectorType *VTy) {
     return cast<FixedVectorType>(VTy)->getNumElements() >
-           std::numeric_limits<unsigned short>::max();
+           getMaxNumFixedVectorElements();
   });
 
   for (VectorType *VTy : CandidateTys)
@@ -2316,12 +2367,16 @@ static VectorType *isVectorPromotionViable(Partition &P, const DataLayout &DL) {
 
   // Put load and store types into a set for de-duplication.
   for (const Slice &S : P) {
-    Type *Ty;
+    Type *Ty = nullptr;
     if (auto *LI = dyn_cast<LoadInst>(S.getUse()->getUser()))
       Ty = LI->getType();
     else if (auto *SI = dyn_cast<StoreInst>(S.getUse()->getUser()))
       Ty = SI->getValueOperand()->getType();
-    else
+    else if (auto *II = dyn_cast<MemSetInst>(S.getUse()->getUser())) {
+      Ty = getVectorTypeFor(*II, DL);
+      if (!Ty)
+        continue;
+    } else
       continue;
 
     auto CandTy = Ty->getScalarType();
