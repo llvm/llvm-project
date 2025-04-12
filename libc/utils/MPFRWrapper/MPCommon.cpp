@@ -80,7 +80,7 @@ MPFRNumber MPFRNumber::acospi() const {
 #else
   mpfr_acos(result.value, value, mpfr_rounding);
   MPFRNumber value_pi(0.0, 1280);
-  mpfr_const_pi(value_pi.value, MPFR_RNDN);
+  mpfr_const_pi(value_pi.value, mpfr_rounding);
   mpfr_div(result.value, result.value, value_pi.value, mpfr_rounding);
   return result;
 #endif
