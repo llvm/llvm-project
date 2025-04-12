@@ -6,6 +6,8 @@ add_flang_library(FIRCodeGenDialect
 
   LINK_LIBS
   FIRDialect
+
+  MLIR_LIBS
   MLIRIR
 
   LINK_COMPONENTS
