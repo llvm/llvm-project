@@ -284,6 +284,7 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
     PM = std::move(evt);
     return true;
   }
+  llvm_unreachable("unhandled message type request.");
 }
 
 json::Value toJSON(const Message &M) {
