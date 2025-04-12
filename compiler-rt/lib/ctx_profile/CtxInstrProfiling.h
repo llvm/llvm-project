@@ -145,7 +145,9 @@ struct FunctionData {
 #define _PTRDECL(T, N) T *N = nullptr;
 #define _VOLATILE_PTRDECL(T, N) T *volatile N = nullptr;
 #define _MUTEXDECL(N) ::__sanitizer::SpinMutex N;
-  CTXPROF_FUNCTION_DATA(_PTRDECL, _VOLATILE_PTRDECL, _MUTEXDECL)
+#define _CONTEXT_PTR ContextRoot *CtxRoot = nullptr;
+  CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_PTR, _VOLATILE_PTRDECL, _MUTEXDECL)
+#undef _CONTEXT_PTR
 #undef _PTRDECL
 #undef _VOLATILE_PTRDECL
 #undef _MUTEXDECL
@@ -166,6 +168,8 @@ struct FunctionData {
 inline bool isScratch(const void *Ctx) {
   return (reinterpret_cast<uint64_t>(Ctx) & 1);
 }
+
+inline bool mustNotBeRoot(const ContextRoot *Ctx) { return isScratch(Ctx); }
 
 } // namespace __ctx_profile
 
