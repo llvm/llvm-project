@@ -710,7 +710,7 @@ Before Clang 19, a change in BMI of any (transitive) dependency would cause the
 outputs of the BMI to change. Starting with Clang 19, changes to non-direct
 dependencies should not directly affect the output BMI, unless they affect the
 results of the compilations. We expect that there are many more opportunities
-for this optimization than we currently have realized and would appreaciate 
+for this optimization than we currently have realized and would appreciate
 feedback about missed optimization opportunities. For example,
 
 .. code-block:: c++
@@ -2072,3 +2072,33 @@ Interoperability with Clang Modules
 We **wish** to support Clang modules and standard C++ modules at the same time,
 but the mixing them together is not well used/tested yet. Please file new
 GitHub issues as you find interoperability problems.
+
+Reducing test cases
+-------------------
+
+When the user encounters a problem with the implementation of standard modules,
+it's helpful to attach a reduced test case to the issue report.
+
+Reducing modules issues is complicated by the need to reduce multiple files at
+the same time, unlike non-modules issues which can generally be reproduced within
+a single translation unit.
+
+If you are familiar with performing automated reductions using tools like
+c-reduce, you can use `cvise <https://github.com/marxin/cvise>`_ to accomplish this
+reduction.
+
+Much in the same way as creduce, cvise takes an interestingness test
+in addition to the source code. In the latter case, you can create an
+interestingness test which uses your project's build system to perform
+the build part, and cvise will accept multiple source files or directories,
+and will take turns reducing each, which is something creduce does not support.
+
+Be aware that this can be highly compute intensive, but on the upside no manual
+intervention is required.
+
+Some initial low-effort manual reduction might be helpful, such as removing unneeded
+files and targets from the build, as cvise doesn't know what to prioritize in
+order to reduce build times.
+
+Setting up a build caching solution from within the interestingness test, such
+as ccache, is helpful as well.
