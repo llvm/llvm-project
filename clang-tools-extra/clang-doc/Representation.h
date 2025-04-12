@@ -317,16 +317,11 @@ struct NamespaceInfo : public Info {
 
 // Info for symbols.
 struct SymbolInfo : public Info {
-  bool IsStatic = false;
-
   SymbolInfo(InfoType IT, SymbolID USR = SymbolID(),
              StringRef Name = StringRef(), StringRef Path = StringRef())
       : Info(IT, USR, Name, Path) {}
 
   void merge(SymbolInfo &&I);
-
-  std::optional<Location> DefLoc;     // Location where this decl is defined.
-  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
 
   bool operator<(const SymbolInfo &Other) const {
     // Sort by declaration location since we want the doc to be
@@ -341,6 +336,10 @@ struct SymbolInfo : public Info {
 
     return extractName() < Other.extractName();
   }
+
+  std::optional<Location> DefLoc;     // Location where this decl is defined.
+  llvm::SmallVector<Location, 2> Loc; // Locations where this decl is declared.
+  bool IsStatic = false;
 };
 
 // TODO: Expand to allow for documenting templating and default args.
