@@ -126,7 +126,7 @@ public:
   }
 
   /// Hook to add any marker relocations that the target may need in addition
-  /// to the normal relocations on instructions. Currently used only by RISCV
+  /// to the normal relocations on instructions. Currently used only by RISC-V
   /// to add vendor relocations.
   virtual bool fixupNeedsMarkerELFRelocation(MCAssembler &Asm,
                                              const MCFragment &F,
