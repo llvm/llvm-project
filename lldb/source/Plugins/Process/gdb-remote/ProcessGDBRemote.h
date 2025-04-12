@@ -27,11 +27,13 @@
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
+
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationClient.h"
@@ -445,6 +447,10 @@ private:
   bool GPUBreakpointHit(void *baton, StoppointCallbackContext *context, 
                         lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
                     
+  void HandleGPUBreakpoints(const std::string plugin_name,
+                            const std::vector<GPUBreakpointInfo> &breakpoints);
+
+  Status HandleConnectionRequest(const GPUPluginConnectionInfo &connection_info);
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;
   void HandleAsyncMisc(llvm::StringRef data) override;

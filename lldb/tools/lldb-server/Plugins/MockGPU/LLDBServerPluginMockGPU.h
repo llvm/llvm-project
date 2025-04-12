@@ -12,6 +12,43 @@
 #include "Plugins/Process/gdb-remote/LLDBServerPlugin.h"
 #include "lldb/Utility/Status.h"
 
+// This is a mock GPU plugin that is used for testing the LLDBServerPlugin. It
+// should be run with the following code as the main binary:
+/*
+
+$ cat main.cpp
+#include <stdio.h>
+
+struct ShlibInfo {
+  const char *path = nullptr;
+  ShlibInfo *next = nullptr;
+};
+
+ShlibInfo g_shlib_list = { "/tmp/a.out", nullptr};
+
+int gpu_initialize() {
+  return puts(__FUNCTION__);
+}
+int gpu_shlib_load() {
+  return puts(__FUNCTION__);
+}
+int main(int argc, const char **argv) {
+  gpu_initialize();
+  gpu_shlib_load();
+  return 0; // Break here
+}
+
+$ clang++ -g -O0 -o a.out main.cpp
+$ ninja lldb lldb-server
+$ ./bin/lldb a.out -o 'b /Break here/ -o run
+
+*/
+// If the above code is run, you will be stopped at the breakpoint and the Mock
+// GPU target will be selected. Try doing a "reg read --all" to see the state
+// of the GPU registers. Then you can select the native process target with 
+// "target select 0" and issue commands to the native process, and then select
+// the GPU target with "target select 1" and issue commands to the GPU target.
+
 namespace lldb_private {
   
   class TCPSocket;
@@ -25,7 +62,7 @@ public:
   llvm::StringRef GetPluginName() override;
   int GetEventFileDescriptorAtIndex(size_t idx) override;
   bool HandleEventFileDescriptorEvent(int fd) override;
-  std::optional<std::string> GetConnectionURL() override;
+  std::optional<GPUPluginConnectionInfo> CreateConnection() override;
   void InitializePluginInfo() override;
   GPUPluginBreakpointHitResponse 
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) override;

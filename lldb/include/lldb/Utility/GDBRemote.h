@@ -55,13 +55,20 @@ public:
   ///
   ///     \code llvm::json::Value toJSON(const T &obj);
   ///
+  /// \param[in] hex_ascii
+  ///     If \a true then encode JSON as hex ASCII bytes. If \a false, then
+  ///     encode as an escaped string value.
+  ///
   /// \return
   ///     Number of bytes written.
-  template<class T> int PutAsJSON(const T &obj) {
+  template<class T> int PutAsJSON(const T &obj, bool hex_ascii) {
     std::string json_string;
     llvm::raw_string_ostream os(json_string);
     os << toJSON(obj);
-    return PutEscapedBytes(json_string.c_str(), json_string.size());  
+    if (hex_ascii)
+      return PutStringAsRawHex8(json_string);
+    else
+      return PutEscapedBytes(json_string.c_str(), json_string.size());  
   }
   /// Convert an array of objects into JSON and add the JSON text to the packet.
   ///

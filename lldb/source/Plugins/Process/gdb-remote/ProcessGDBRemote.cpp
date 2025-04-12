@@ -85,7 +85,6 @@
 #include "ProcessGDBRemoteLog.h"
 #include "ThreadGDBRemote.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 
@@ -865,8 +864,101 @@ bool ProcessGDBRemote::GPUBreakpointHit(void *baton,
       }
     }
   }
-  m_gdb_comm.GPUBreakpointHit(args);
+  std::optional<GPUPluginBreakpointHitResponse> response =
+      m_gdb_comm.GPUBreakpointHit(args);
+  if (response) {
+    // Disable the breakpoint if requested, but leave it around so we can see
+    // the hit count and other stats on the breakpoint.
+    if (response->disable_bp) {
+      BreakpointSP bp_sp = target.GetBreakpointByID(break_id);
+      if (bp_sp) 
+        bp_sp->SetEnabled(false);
+    }
+    //  Set any new breakpoints if requested.
+    if (response->breakpoints)
+      HandleGPUBreakpoints(args.plugin_name, response->breakpoints.value());
+    if (response->connect_info)
+      HandleConnectionRequest(*response->connect_info);
+  }
   return false; // Don't stop, auto continue.
+}
+
+Status ProcessGDBRemote::HandleConnectionRequest(
+    const GPUPluginConnectionInfo &connection_info) {
+  Log *log = GetLog(GDBRLog::Plugin);
+  LLDB_LOG(log, "ProcessGDBRemote::HandleConnectionRequest()"); 
+  auto &debugger = GetTarget().GetDebugger();
+  TargetSP gpu_target_sp;
+  llvm::StringRef exe_path;
+  llvm::StringRef triple;
+  OptionGroupPlatform *platform_options = nullptr;
+
+  if (connection_info.exe_path)
+      exe_path = *connection_info.exe_path;
+  if (connection_info.triple)
+    triple = *connection_info.triple;
+  // Create an empty target for our GPU.
+  Status error(debugger.GetTargetList().CreateTarget(
+    debugger, exe_path, triple, eLoadDependentsNo, platform_options, 
+    gpu_target_sp));
+  if (error.Fail())
+    return error;
+  if (!gpu_target_sp)
+    return Status::FromErrorString("failed to create target");
+
+  PlatformSP platform_sp = gpu_target_sp->GetPlatform();
+  if (!platform_sp)
+    return Status::FromErrorString("invalid platform for target needed for "
+                                   "connecting to process");
+
+  ProcessSP process_sp = platform_sp->ConnectProcess(
+      connection_info.connect_url, GetPluginNameStatic(), debugger,
+      gpu_target_sp.get(), error);
+  if (error.Fail())
+    return error;
+  if (!process_sp)
+    return Status::FromErrorString("invalid process after conneting");
+
+  LLDB_LOG(log, "ProcessGDBRemote::HandleConnectionRequest(): successfully "
+           "created process!!!");
+  return Status();
+}
+
+void ProcessGDBRemote::HandleGPUBreakpoints(
+    const std::string plugin_name,
+    const std::vector<GPUBreakpointInfo> &breakpoints) {
+  Target &target = GetTarget();
+  for (const auto &bp: breakpoints) {
+    // Create data that will live with the breakpoint so when we hit the 
+    // breakpoint and the GPUBreakpointHitCallback is called, we can use this
+    // data.
+    auto args_up = std::make_unique<GPUPluginBreakpointHitArgs>();
+    args_up->plugin_name = plugin_name;
+    args_up->breakpoint = bp;
+    FileSpecList bp_modules;
+    if (!bp.shlib.empty())
+      bp_modules.Append(FileSpec(bp.shlib, 
+                                  llvm::sys::path::Style::native));
+    BreakpointSP bp_sp = target.CreateBreakpoint(
+        &bp_modules, // Containing modules.
+        nullptr, // Containing source files.
+        bp.function_name.c_str(), // Function name.
+        eFunctionNameTypeFull, // Function name type.
+        eLanguageTypeUnknown, // Language type
+        0, // Byte offset.
+        eLazyBoolNo, // Skip prologue.
+        true, // Internal breakpoint.
+        false); // Request hardware.
+    if (bp_sp) {
+      // Create some JSON we can send back to the lldb-server
+      // that identifies the plug-in and the breakpoint for when
+      // the breakpoint gets hit.
+      auto baton_sp = 
+          std::make_shared<GPUBreakpointCallbackBaton>(std::move(args_up));
+      bp_sp->SetCallback(GPUBreakpointHitCallback, baton_sp,
+                          /*is_synchronous=*/true);
+    }
+  }
 }
 
 Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
@@ -922,38 +1014,9 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetVContSupported('c');
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
-  Target &target = GetTarget();
-  if (auto infos = m_gdb_comm.GetGPUPluginInfos()) {
-    for (const auto &info: *infos) {
-      for (const auto &bp_info: info.breakpoints) {
-        auto args_up = std::make_unique<GPUPluginBreakpointHitArgs>();
-        args_up->plugin_name = info.name;
-        args_up->breakpoint = bp_info;
-        FileSpecList bp_modules;
-        if (!bp_info.shlib.empty())
-          bp_modules.Append(FileSpec(bp_info.shlib, 
-                                     llvm::sys::path::Style::native));
-        BreakpointSP bp_sp = target.CreateBreakpoint(
-            &bp_modules, // Containing modules.
-            nullptr, // Containing source files.
-            bp_info.function_name.c_str(), // Function name.
-            eFunctionNameTypeFull, // Function name type.
-            eLanguageTypeUnknown, // Language type
-            0, // Byte offset.
-            eLazyBoolNo, // Skip prologue.
-            true, // Internal breakpoint.
-            false); // Request hardware.
-        if (bp_sp) {
-          // Create some JSON we can send back to the lldb-server
-          // that identifies the plug-in and the breakpoint for when
-          // the breakpoint gets hit.
-          auto baton_sp = 
-              std::make_shared<GPUBreakpointCallbackBaton>(std::move(args_up));
-          bp_sp->SetCallback(GPUBreakpointHitCallback, baton_sp,
-                             /*is_synchronous=*/true);
-        }
-      }
-    }
+  if (auto plugin_infos = m_gdb_comm.GetGPUPluginInfos()) {
+    for (const auto &plugin_info: *plugin_infos)
+      HandleGPUBreakpoints(plugin_info.name, plugin_info.breakpoints);
   }
   // First dispatch any commands from the platform:
   auto handle_cmds = [&] (const Args &args) ->  void {
@@ -2484,36 +2547,12 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(0, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
-      } else if (key.compare("gpu-url") == 0) {
-        Log *log = GetLog(GDBRLog::Plugin);
-        LLDB_LOG(log, "gpu-url: url = \"{0}\"", value); 
-        auto &debugger = GetTarget().GetDebugger();
-        TargetSP gpu_target_sp;
-        // Create an empty target for our GPU.
-        Status error(debugger.GetTargetList().CreateTarget(
-          debugger, llvm::StringRef(), llvm::StringRef(), eLoadDependentsNo, 
-          nullptr, gpu_target_sp));
-        if (error.Fail()) {
-          LLDB_LOG(log, "gpu-url: error creating target: \"{0}\"", error); 
-        } else if (gpu_target_sp) {
-          PlatformSP platform_sp = gpu_target_sp->GetPlatform();
-          if (platform_sp) {
-            ProcessSP process_sp = platform_sp->ConnectProcess(
-                        value, GetPluginNameStatic(), debugger,
-                        gpu_target_sp.get(), error);
-            if (error.Fail()) {
-              LLDB_LOG(log, "gpu-url: error connecting to process: \"{0}\"", error); 
-            } else if (!process_sp) {
-              LLDB_LOG(log, "gpu-url: invalid process"); 
-            } else {
-              LLDB_LOG(log, "gpu-url: successfully created process!!!");
-            }
-          } else {
-            LLDB_LOG(log, "gpu-url: invalid platform");
-          }
-        } else {
-          LLDB_LOG(log, "gpu-url: invalid target");
-        }
+      } else if (key.compare("gpu-connection") == 0) {
+        StringExtractorGDBRemote extractor(value);
+        std::optional<GPUPluginConnectionInfo> connect_info = 
+            extractor.GetFromJSONHexASCII<GPUPluginConnectionInfo>();
+        if (connect_info)
+          HandleConnectionRequest(*connect_info);
       } else if (key.size() == 2 && ::isxdigit(key[0]) && ::isxdigit(key[1])) {
         uint32_t reg = UINT32_MAX;
         if (!key.getAsInteger(16, reg))

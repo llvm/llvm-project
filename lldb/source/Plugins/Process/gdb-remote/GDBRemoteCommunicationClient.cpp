@@ -634,35 +634,26 @@ GDBRemoteCommunicationClient::GetGPUPluginInfos() {
   return std::nullopt;
 }
 
-bool GDBRemoteCommunicationClient::GPUBreakpointHit(
+std::optional<GPUPluginBreakpointHitResponse> 
+GDBRemoteCommunicationClient::GPUBreakpointHit(
   const GPUPluginBreakpointHitArgs &args) {
   StreamGDBRemote packet;
   packet.PutCString("jGPUPluginBreakpointHit:");
-  packet.PutAsJSON(args);
+  packet.PutAsJSON(args, /*hex_ascii=*/false);
   StringExtractorGDBRemote response;
-  
   if (SendPacketAndWaitForResponse(packet.GetString(), response) ==
       PacketResult::Success) {
     if (!response.Empty()) {
       if (llvm::Expected<GPUPluginBreakpointHitResponse> info = 
           llvm::json::parse<GPUPluginBreakpointHitResponse>(response.Peek(), 
               "GPUPluginBreakpointHitResponse")) {
-        if (info->disable_bp) {
-          // TODO: disable BP
-        }
-        if (info->breakpoints) {
-          // TODO: set new breakpoints
-        }
-        if (info->connect_url) {
-          // TODO: connect to URL
-        }
-        return true; // Auto continue
+        return *info;
       } else {
         llvm::consumeError(info.takeError());
       }
     }
   }
-  return false; // Stop at BP
+  return std::nullopt;
 }
 
 bool GDBRemoteCommunicationClient::GetThreadExtendedInfoSupported() {

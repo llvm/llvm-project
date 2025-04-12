@@ -62,9 +62,15 @@ bool fromJSON(const llvm::json::Value &value, GPUPluginBreakpointHitArgs &data,
 
 llvm::json::Value toJSON(const GPUPluginBreakpointHitArgs &data);
 
+///-----------------------------------------------------------------------------
+/// GPUPluginConnectionInfo
+///
 /// A structure that contains all of the information needed for LLDB to create
 /// a reverse connection to a GPU GDB server
+///-----------------------------------------------------------------------------
 struct GPUPluginConnectionInfo {
+  /// A target executable path to use when creating the target.
+  std::optional<std::string> exe_path;
   /// The name of the platform to select when creating the target.
   std::optional<std::string> platform_name;
   /// The target triple to use as the architecture when creating the target.
@@ -78,6 +84,12 @@ bool fromJSON(const llvm::json::Value &value, GPUPluginConnectionInfo &data,
 
 llvm::json::Value toJSON(const GPUPluginConnectionInfo &data);
 
+///-----------------------------------------------------------------------------
+/// GPUPluginBreakpointHitResponse
+///
+/// A response structure from the GPU plugin from hitting a native breakpoint
+/// set by the GPU plugin.
+///-----------------------------------------------------------------------------
 struct GPUPluginBreakpointHitResponse {
   ///< Set to true if this berakpoint should be disabled.
   bool disable_bp = false; 
@@ -85,7 +97,7 @@ struct GPUPluginBreakpointHitResponse {
   std::optional<std::vector<GPUBreakpointInfo>> breakpoints;
   /// If a GPU connection is available return a connect URL to use to reverse
   /// connect to the GPU GDB server.
-  std::optional<std::string> connect_url;
+  std::optional<GPUPluginConnectionInfo> connect_info;
 };
 
 bool fromJSON(const llvm::json::Value &value, 
