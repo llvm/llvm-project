@@ -3107,6 +3107,23 @@ let TargetPrefix = "aarch64" in {
     }
   }
 
+  class SME_OuterProduct_TMOP_Intrinsic
+     : DefaultAttrsIntrinsic<[],
+         [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>,
+          llvm_nxv16i8_ty,
+          llvm_i32_ty],
+         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
+          IntrNoMem, IntrHasSideEffects]>;
+
+  def int_aarch64_sme_tmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_stmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_utmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_sutmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_ustmopa : SME_OuterProduct_TMOP_Intrinsic;
+
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
