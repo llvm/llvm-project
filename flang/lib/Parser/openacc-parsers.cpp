@@ -187,22 +187,25 @@ TYPE_PARSER(construct<AccBeginCombinedDirective>(
 // 2.12 Atomic constructs
 TYPE_PARSER(construct<AccEndAtomic>(startAccLine >> "END ATOMIC"_tok))
 
-TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicRead>(verbatim("READ"_tok) / endAccLine,
-        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
+TYPE_PARSER("ATOMIC" >> construct<AccAtomicRead>(verbatim("READ"_tok),
+                            Parser<AccClauseList>{} / endAccLine,
+                            statement(assignmentStmt),
+                            maybe(Parser<AccEndAtomic>{} / endAccLine)))
+
+TYPE_PARSER("ATOMIC" >> construct<AccAtomicWrite>(verbatim("WRITE"_tok),
+                            Parser<AccClauseList>{} / endAccLine,
+                            statement(assignmentStmt),
+                            maybe(Parser<AccEndAtomic>{} / endAccLine)))
 
 TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicWrite>(verbatim("WRITE"_tok) / endAccLine,
-        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
+    construct<AccAtomicUpdate>(maybe(verbatim("UPDATE"_tok)),
+        Parser<AccClauseList>{} / endAccLine, statement(assignmentStmt),
+        maybe(Parser<AccEndAtomic>{} / endAccLine)))
 
 TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicUpdate>(maybe(verbatim("UPDATE"_tok)) / endAccLine,
-        statement(assignmentStmt), maybe(Parser<AccEndAtomic>{} / endAccLine)))
-
-TYPE_PARSER("ATOMIC" >>
-    construct<AccAtomicCapture>(verbatim("CAPTURE"_tok) / endAccLine,
-        statement(assignmentStmt), statement(assignmentStmt),
-        Parser<AccEndAtomic>{} / endAccLine))
+    construct<AccAtomicCapture>(verbatim("CAPTURE"_tok),
+        Parser<AccClauseList>{} / endAccLine, statement(assignmentStmt),
+        statement(assignmentStmt), Parser<AccEndAtomic>{} / endAccLine))
 
 TYPE_PARSER(
     sourced(construct<OpenACCAtomicConstruct>(Parser<AccAtomicRead>{})) ||
