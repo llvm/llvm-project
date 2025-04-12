@@ -1563,6 +1563,8 @@ def MFMALdScaleModifierOp : TImmLeaf<i32, [{
 // Complex patterns
 //===----------------------------------------------------------------------===//
 
+def SOP1SGPR : ComplexPattern<untyped, 1, "SelectSGPR">;
+
 def DS1Addr1Offset : ComplexPattern<iPTR, 2, "SelectDS1Addr1Offset">;
 def DS64Bit4ByteAligned : ComplexPattern<iPTR, 3, "SelectDS64Bit4ByteAligned">;
 def DS128Bit8ByteAligned : ComplexPattern<iPTR, 3, "SelectDS128Bit8ByteAligned">;

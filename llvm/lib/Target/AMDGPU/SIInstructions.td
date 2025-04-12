@@ -1257,6 +1257,15 @@ defm : f16_fp_Pats<V_CVT_F16_F32_t16_e64, V_CVT_F32_F16_t16_e64, VSrcT_b16>;
 let True16Predicate = UseFakeTrue16Insts in
 defm : f16_fp_Pats<V_CVT_F16_F32_fake16_e64, V_CVT_F32_F16_fake16_e64, VSrc_b16>;
 
+def : GCNPat <
+  (or (i32 (SOP1SGPR i32:$src)), (shl 1, (i32 (SOP1SGPR i32:$bit_idx)))),
+  (S_BITSET1_B32 i32:$bit_idx, i32:$src)
+>;
+
+def : GCNPat <
+  (i32 (and (i32 (SOP1SGPR i32:$src)),(not (shl 1, (i32 (SOP1SGPR i32:$bit_idx)))))),
+  (i32 (S_BITSET0_B32 i32:$bit_idx, i32:$src))
+>;
 //===----------------------------------------------------------------------===//
 // VOP2 Patterns
 //===----------------------------------------------------------------------===//
