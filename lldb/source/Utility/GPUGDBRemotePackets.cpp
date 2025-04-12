@@ -76,14 +76,16 @@ bool fromJSON(const llvm::json::Value &value, GPUPluginConnectionInfo &data,
               llvm::json::Path path) {
   ObjectMapper o(value, path);
   return o && 
-          o.mapOptional("platform_name", data.platform_name) &&
-          o.mapOptional("triple", data.triple) &&
-          o.map("connect_url", data.connect_url);
+         o.mapOptional("exe_path", data.exe_path) &&
+         o.mapOptional("platform_name", data.platform_name) &&
+         o.mapOptional("triple", data.triple) &&
+         o.map("connect_url", data.connect_url);
 }
 
 llvm::json::Value toJSON(const GPUPluginConnectionInfo &data) {
   return json::Value(
-      Object{{"platform_name", data.platform_name}, 
+      Object{{"exe_path", data.exe_path}, 
+             {"platform_name", data.platform_name}, 
              {"triple", data.triple},
              {"connect_url", data.connect_url},
             });
@@ -123,14 +125,14 @@ bool fromJSON(const llvm::json::Value &value,
   return o && 
          o.map("disable_bp", data.disable_bp) &&
          o.mapOptional("breakpoints", data.breakpoints) &&
-         o.mapOptional("connect_url", data.connect_url);
+         o.mapOptional("connect_info", data.connect_info);
 }
 
 llvm::json::Value toJSON(const GPUPluginBreakpointHitResponse &data) {
   return json::Value(
     Object{{"disable_bp", data.disable_bp}, 
            {"breakpoints", data.breakpoints},
-           {"connect_url", data.connect_url},
+           {"connect_info", data.connect_info},
           });
 }
 

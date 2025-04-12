@@ -12,6 +12,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 
 #include <optional>
 #include <string>
@@ -217,6 +218,25 @@ public:
   // does not list a PID, default_pid is used.
   std::optional<std::pair<lldb::pid_t, lldb::tid_t>>
   GetPidTid(lldb::pid_t default_pid);
+
+
+  template<class T> std::optional<T> GetFromJSONText() {
+    llvm::Expected<T> info = llvm::json::parse<T>(Peek(), "");
+    if (info)
+      return *info;
+    llvm::consumeError(info.takeError());
+    return std::nullopt;
+  }
+
+  template<class T> std::optional<T> GetFromJSONHexASCII() {
+    std::string json;
+    GetHexByteString(json);
+    llvm::Expected<T> info = llvm::json::parse<T>(json.c_str(), "");
+    if (info)
+      return *info;
+    llvm::consumeError(info.takeError());
+    return std::nullopt;
+  }
 
 protected:
   ResponseValidatorCallback m_validator = nullptr;

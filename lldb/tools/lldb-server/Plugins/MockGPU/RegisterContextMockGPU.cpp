@@ -101,11 +101,11 @@ enum CompilerRegNum : uint32_t {
   EH_FRAME_V7,
 };
 
-uint32_t g_gpr_regnums[32] = {LLDB_R0, LLDB_R1, LLDB_R2, LLDB_R3,
-                              LLDB_R4, LLDB_R5, LLDB_R6, LLDB_R7,
-                              LLDB_SP, LLDB_FP, LLDB_PC, LLDB_Flags};
-uint32_t g_vec_regnums[32] = {LLDB_V0, LLDB_V1, LLDB_V2, LLDB_V3,
-                              LLDB_V4, LLDB_V5, LLDB_V6, LLDB_V7};
+uint32_t g_gpr_regnums[] = {LLDB_R0, LLDB_R1, LLDB_R2, LLDB_R3,
+                            LLDB_R4, LLDB_R5, LLDB_R6, LLDB_R7,
+                            LLDB_SP, LLDB_FP, LLDB_PC, LLDB_Flags};
+uint32_t g_vec_regnums[] = {LLDB_V0, LLDB_V1, LLDB_V2, LLDB_V3,
+                            LLDB_V4, LLDB_V5, LLDB_V6, LLDB_V7};
 
 static const RegisterSet g_reg_sets[] = {
     {"General Purpose Registers", "gpr",

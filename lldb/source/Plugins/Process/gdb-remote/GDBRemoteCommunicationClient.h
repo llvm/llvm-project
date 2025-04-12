@@ -22,6 +22,7 @@
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/GDBRemote.h"
+#include "lldb/Utility/GPUGDBRemotePackets.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
@@ -33,10 +34,6 @@
 #include "llvm/Support/VersionTuple.h"
 
 namespace lldb_private {
-
-  struct GPUPluginBreakpointHitArgs;
-  struct GPUPluginInfo;
-
 namespace process_gdb_remote {
 
 /// The offsets used by the target when relocating the executable. Decoded from
@@ -439,7 +436,8 @@ public:
 
   std::optional<std::vector<GPUPluginInfo>> GetGPUPluginInfos();
 
-  bool GPUBreakpointHit(const GPUPluginBreakpointHitArgs &args);
+  std::optional<GPUPluginBreakpointHitResponse> 
+  GPUBreakpointHit(const GPUPluginBreakpointHitArgs &args);
 
   bool GetThreadExtendedInfoSupported();
 

@@ -1099,17 +1099,19 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Stopped(
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
   // Check if any plug-ins have new connections
-  std::string extra_stop_reply_args;
+  StreamGDBRemote extra_stop_reply_args;
   for (auto &plugin_up : m_plugins) {
-    if (!plugin_up->IsConnected()) {
-      if (std::optional<std::string> opt_url = plugin_up->GetConnectionURL())
-        extra_stop_reply_args += opt_url.value();
+    if (std::optional<GPUPluginConnectionInfo> connection_info = 
+          plugin_up->NativeProcessIsStopping()) {
+      extra_stop_reply_args.PutCString("gpu-connection:");
+      extra_stop_reply_args.PutAsJSON(*connection_info, /*hex_ascii=*/true);
+      extra_stop_reply_args.PutChar(';');
     } 
   }
 
   PacketResult result = SendStopReasonForState(
       *process, StateType::eStateStopped, /*force_synchronous=*/false, 
-      extra_stop_reply_args);
+      extra_stop_reply_args.GetData());
   if (result != PacketResult::Success) {
     LLDB_LOGF(log,
               "GDBRemoteCommunicationServerLLGS::%s failed to send stop "
@@ -3695,20 +3697,6 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginInitialize(
       infos.push_back(plugin_up->GetPluginInfo());
   StreamGDBRemote response;
   response.PutAsJSONArray(infos);
-
-  // std::string json_string;
-  // llvm::raw_string_ostream os(json_string);
-  // bool first = true;
-  // os << "[";
-  // for (auto &plugin_up: m_plugins) {
-  //   if (first)
-  //     first = false;
-  //   else
-  //     os << ",";
-  //   os << toJSON(plugin_up->GetPluginInfo());
-  // }
-  // os << "]";
-  // response.PutEscapedBytes(json_string.data(), json_string.size());
   return SendPacketNoLock(response.GetString());
 }
 
@@ -3728,7 +3716,7 @@ GDBRemoteCommunicationServerLLGS::Handle_jGPUPluginBreakpointHit(
       GPUPluginBreakpointHitResponse bp_response = 
           plugin_up->BreakpointWasHit(*args);
       StreamGDBRemote response;
-      response.PutAsJSON(bp_response);
+      response.PutAsJSON(bp_response, /*hex_ascii=*/false);
       return SendPacketNoLock(response.GetString());
     }
   }

@@ -95,83 +95,74 @@ bool LLDBServerPluginMockGPU::HandleEventFileDescriptorEvent(int fd) {
   return false;
 }
 
-#if 0
-TEST_P(SocketTest, TCPAcceptTimeout) {
-  if (!HostSupportsProtocol())
-    return;
-
-  const bool child_processes_inherit = false;
-  auto listen_socket_up =
-      std::make_unique<TCPSocket>(true, child_processes_inherit);
-  Status error = listen_socket_up->Listen(
-      llvm::formatv("[{0}]:0", GetParam().localhost_ip).str(), 5);
-  ASSERT_THAT_ERROR(error.ToError(), llvm::Succeeded());
-  ASSERT_TRUE(listen_socket_up->IsValid());
-
-  Socket *socket;
-  ASSERT_THAT_ERROR(
-      listen_socket_up->Accept(std::chrono::milliseconds(10), socket)
-          .takeError(),
-      llvm::Failed<llvm::ErrorInfoBase>(
-          testing::Property(&llvm::ErrorInfoBase::convertToErrorCode,
-                            std::make_error_code(std::errc::timed_out))));
-}
-#endif
-
 void LLDBServerPluginMockGPU::AcceptAndMainLoopThread(
     std::unique_ptr<TCPSocket> listen_socket_up) {
   Log *log = GetLog(GDBRLog::Plugin);
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() spawned");
-
-  if (!listen_socket_up)
-    return;
+  LLDB_LOGF(log, "%s spawned", __PRETTY_FUNCTION__);
   Socket *socket = nullptr;
   Status error = listen_socket_up->Accept(std::chrono::seconds(30), socket);
-  if (error.Fail()) {
-    LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() error "
-              "returned from Accept(): %s", error.AsCString());  
-    return;
+  // Scope for lock guard.
+  {
+    // Protect access to m_is_listening and m_is_connected.
+    std::lock_guard<std::mutex> guard(m_connect_mutex);
+    m_is_listening = false;
+    if (error.Fail()) {
+      LLDB_LOGF(log, "%s error returned from Accept(): %s", __PRETTY_FUNCTION__, 
+                error.AsCString());  
+      return;
+    }
+    m_is_connected = true;
   }
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() initializing connection");
-  std::unique_ptr<Connection> connection_up(new ConnectionFileDescriptor(socket));
+
+  LLDB_LOGF(log, "%s initializing connection", __PRETTY_FUNCTION__);
+  std::unique_ptr<Connection> connection_up(
+      new ConnectionFileDescriptor(socket));
   m_gdb_server->InitializeConnection(std::move(connection_up));
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() running main loop");
+  LLDB_LOGF(log, "%s running main loop", __PRETTY_FUNCTION__);
   m_main_loop_status = m_main_loop.Run();
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() main loop exited!");
+  LLDB_LOGF(log, "%s main loop exited!", __PRETTY_FUNCTION__);
   if (m_main_loop_status.Fail()) {
-    LLDB_LOGF(log, "LLDBServerPluginMockGPU::AcceptAndMainLoopThread() main "
-              "loop exited with an error: %s", m_main_loop_status.AsCString());
+    LLDB_LOGF(log, "%s main loop exited with an error: %s", __PRETTY_FUNCTION__,
+              m_main_loop_status.AsCString());
 
   }
+  // Protect access to m_is_connected.
+  std::lock_guard<std::mutex> guard(m_connect_mutex);
+  m_is_connected = false;
 }
 
-std::optional<std::string> LLDBServerPluginMockGPU::GetConnectionURL() {
-  static int g_counter = 0;
+std::optional<GPUPluginConnectionInfo> LLDBServerPluginMockGPU::CreateConnection() {
+  std::lock_guard<std::mutex> guard(m_connect_mutex);
   Log *log = GetLog(GDBRLog::Plugin);
-  ++g_counter;
-  LLDB_LOGF(log, "LLDBServerPluginMockGPU::GetConnectionURL() g_counter = %i", 
-            g_counter);
-  if (++g_counter == 2) {
-    LLDB_LOGF(log, "LLDBServerPluginMockGPU::GetConnectionURL() trying to "
-              "listen on port 0");
-    llvm::Expected<std::unique_ptr<TCPSocket>> sock = 
-        Socket::TcpListen("localhost:0", 5);
-    if (sock) {
-      const uint16_t listen_port = (*sock)->GetLocalPortNumber();
-      auto extra_args = llvm::formatv("gpu-url:connect://localhost:{};", 
-                                      listen_port);
-      LLDB_LOGF(log, 
-                "LLDBServerPluginMockGPU::GetConnectionURL() listening to %u", 
-                listen_port);
-      std::thread t(&LLDBServerPluginMockGPU::AcceptAndMainLoopThread, this, 
-                    std::move(*sock));
-      t.detach();
-      return extra_args.str();
-    } else {
-      LLDB_LOGF(log, "LLDBServerPluginMockGPU::GetConnectionURL() failed to "
-                "listen to localhost:0");      
-    }
+  LLDB_LOGF(log, "%s called", __PRETTY_FUNCTION__);
+  if (m_is_connected) {
+    LLDB_LOGF(log, "%s already connected", __PRETTY_FUNCTION__);
+    return std::nullopt;
   }
+  if (m_is_listening) {
+    LLDB_LOGF(log, "%s already listening", __PRETTY_FUNCTION__);
+    return std::nullopt;
+  }
+  m_is_listening = true;
+  LLDB_LOGF(log, "%s trying to listen on port 0", __PRETTY_FUNCTION__);
+  llvm::Expected<std::unique_ptr<TCPSocket>> sock = 
+      Socket::TcpListen("localhost:0", 5);
+  if (sock) {
+    GPUPluginConnectionInfo connection_info;
+    const uint16_t listen_port = (*sock)->GetLocalPortNumber();
+    connection_info.connect_url = llvm::formatv("connect://localhost:{}", 
+                                                listen_port);
+    LLDB_LOGF(log, "%s listening to %u", __PRETTY_FUNCTION__, listen_port);
+    std::thread t(&LLDBServerPluginMockGPU::AcceptAndMainLoopThread, this, 
+                  std::move(*sock));
+    t.detach();
+    return connection_info;
+  } else {
+    std::string error = llvm::toString(sock.takeError());
+    LLDB_LOGF(log, "%s failed to listen to localhost:0: %s", 
+              __PRETTY_FUNCTION__, error.c_str());
+  }
+  m_is_listening = false;
   return std::nullopt;
 }
 
@@ -190,7 +181,7 @@ LLDBServerPluginMockGPU::BreakpointWasHit(GPUPluginBreakpointHitArgs &args) {
     response.disable_bp = true;
     LLDB_LOGF(log, "LLDBServerPluginMockGPU::BreakpointWasHit(\"%s\") disabling breakpoint", 
               bp_identifier.c_str());
-    // response.connect_url = GetConnectionURL();
+    response.connect_info = CreateConnection();
   }
   return response;
 }

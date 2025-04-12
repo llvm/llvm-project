@@ -19,6 +19,8 @@
 #include <optional>
 #include <stdint.h>
 #include <string>
+#include <mutex>
+
 namespace lldb_private {
 
 namespace process_gdb_remote {
@@ -36,6 +38,7 @@ protected:
   MainLoop m_main_loop;
   std::unique_ptr<Manager> m_process_manager_up;
   std::unique_ptr<GDBServer> m_gdb_server;
+  bool m_is_listening = false;
   bool m_is_connected = false;
 
 public:
@@ -47,17 +50,28 @@ public:
 
   virtual llvm::StringRef GetPluginName() = 0;
 
-  /// Get an connection URL to connect to this plug-in.
+  /// Get notified when the process is stopping.
   ///
-  /// This function will get called each time native process stops if this
-  /// object is not connected already. If the plug-in is ready to be activated,
-  /// return a valid URL to use with "process connect" that can connect to this
-  /// plug-in. Execution should wait for a connection to be made before trying
-  /// to do any blocking code. The plug-in should assume the users do not want
-  /// to use any features unless a connection is made.
-  virtual std::optional<std::string> GetConnectionURL() {
+  /// This function will get called each time native process stops as the stop
+  /// reply packet is being created. If the plug-in is ready to be activated,
+  /// return a GPUPluginConnectionInfo with a value connection URL to use with 
+  /// "process connect" which can connect to this plug-in. Plug-ins should wait 
+  /// for a connection to be made before trying to do any blocking code. The 
+  /// plug-in should assume the users do not want to use any features unless a 
+  /// connection is made.
+  virtual std::optional<GPUPluginConnectionInfo> NativeProcessIsStopping() {
     return std::nullopt;
   };
+
+  /// Get an connection URL to connect to this plug-in.
+  ///
+  /// This function will get called when the plug-in is ready to be activated
+  /// and connected to LLDB. The plug-in should create a connection that listens
+  /// for a connection from LLDB and it should fill in the connection URL 
+  /// with a valid URL that can be used with "process connect". Typical plug-ins
+  /// will listen on a TCP port or a Unix domain socket and spin up a thread
+  /// that will accept the connection and run the main loop. 
+  virtual std::optional<GPUPluginConnectionInfo> CreateConnection() = 0;
 
   /// Get the GPU plug-in information.
   ///
@@ -111,6 +125,7 @@ public:
   BreakpointWasHit(GPUPluginBreakpointHitArgs &args) = 0;
 
   protected:
+    std::mutex m_connect_mutex;
     GPUPluginInfo m_info;
 };
 
