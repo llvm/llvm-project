@@ -6422,36 +6422,41 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
 
 /// getUnaryTransformationType - We don't unique these, since the memory
 /// savings are minimal and these are rare.
-QualType ASTContext::getUnaryTransformType(QualType BaseType,
-                                           QualType UnderlyingType,
-                                           UnaryTransformType::UTTKind Kind)
-    const {
-  UnaryTransformType *ut = nullptr;
+QualType
+ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
+                                  UnaryTransformType::UTTKind Kind) const {
 
-  if (BaseType->isDependentType()) {
-    // Look in the folding set for an existing type.
-    llvm::FoldingSetNodeID ID;
-    DependentUnaryTransformType::Profile(ID, getCanonicalType(BaseType), Kind);
+  llvm::FoldingSetNodeID ID;
+  UnaryTransformType::Profile(ID, BaseType, UnderlyingType, Kind);
 
-    void *InsertPos = nullptr;
-    DependentUnaryTransformType *Canon
-      = DependentUnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos);
+  void *InsertPos = nullptr;
+  if (UnaryTransformType *UT =
+          UnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(UT, 0);
 
-    if (!Canon) {
-      // Build a new, canonical __underlying_type(type) type.
-      Canon = new (*this, alignof(DependentUnaryTransformType))
-          DependentUnaryTransformType(*this, getCanonicalType(BaseType), Kind);
-      DependentUnaryTransformTypes.InsertNode(Canon, InsertPos);
-    }
-    ut = new (*this, alignof(UnaryTransformType))
-        UnaryTransformType(BaseType, QualType(), Kind, QualType(Canon, 0));
+  QualType CanonType;
+  if (!BaseType->isDependentType()) {
+    CanonType = UnderlyingType.getCanonicalType();
   } else {
-    QualType CanonType = getCanonicalType(UnderlyingType);
-    ut = new (*this, alignof(UnaryTransformType))
-        UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
+    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
+    UnderlyingType = QualType();
+    if (QualType CanonBase = BaseType.getCanonicalType();
+        BaseType != CanonBase) {
+      CanonType = getUnaryTransformType(CanonBase, QualType(), Kind);
+      assert(CanonType.isCanonical());
+
+      // Find the insertion position again.
+      [[maybe_unused]] UnaryTransformType *UT =
+          UnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!UT && "broken canonicalization");
+    }
   }
-  Types.push_back(ut);
-  return QualType(ut, 0);
+
+  auto *UT = new (*this, alignof(UnaryTransformType))
+      UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
+  UnaryTransformTypes.InsertNode(UT, InsertPos);
+  Types.push_back(UT);
+  return QualType(UT, 0);
 }
 
 QualType ASTContext::getAutoTypeInternal(

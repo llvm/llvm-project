@@ -4127,11 +4127,6 @@ UnaryTransformType::UnaryTransformType(QualType BaseType,
     : Type(UnaryTransform, CanonicalType, BaseType->getDependence()),
       BaseType(BaseType), UnderlyingType(UnderlyingType), UKind(UKind) {}
 
-DependentUnaryTransformType::DependentUnaryTransformType(const ASTContext &C,
-                                                         QualType BaseType,
-                                                         UTTKind UKind)
-     : UnaryTransformType(BaseType, C.DependentTy, UKind, QualType()) {}
-
 TagType::TagType(TypeClass TC, const TagDecl *D, QualType can)
     : Type(TC, can,
            D->isDependentType() ? TypeDependence::DependentInstantiation
