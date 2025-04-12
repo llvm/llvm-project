@@ -10995,6 +10995,15 @@ struct AAPotentialValuesImpl : AAPotentialValues {
       Value *NewV = getSingleValue(A, *this, getIRPosition(), Values);
       if (!NewV || NewV == &OldV)
         continue;
+      // FIXME: ConstantPointerNull represents a pointer with value 0, but it
+      // doesn’t necessarily mean a nullptr. `ptr addrspace(x) null` is not the
+      // same as `addrspacecast (ptr null to ptr addrspace(x))` if the nullptr
+      // in AS x is not zero. Therefore, we can't simply replace it.
+      if (isa<ConstantPointerNull>(NewV)) {
+        if (auto *CE = dyn_cast<ConstantExpr>(&OldV);
+            CE && CE->getOpcode() == Instruction::AddrSpaceCast)
+          continue;
+      }
       if (getCtxI() &&
           !AA::isValidAtPosition({*NewV, *getCtxI()}, A.getInfoCache()))
         continue;
