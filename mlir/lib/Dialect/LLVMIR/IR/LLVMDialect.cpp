@@ -3904,6 +3904,20 @@ SuccessorOperands IndirectBrOp::getSuccessorOperands(unsigned index) {
   return SuccessorOperands(getSuccOperandsMutable()[index]);
 }
 
+void IndirectBrOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                         Value addr, ArrayRef<ValueRange> succOperands,
+                         BlockRange successors) {
+  odsState.addOperands(addr);
+  for (ValueRange range : succOperands)
+    odsState.addOperands(range);
+  SmallVector<int32_t> rangeSegments;
+  for (ValueRange range : succOperands)
+    rangeSegments.push_back(range.size());
+  odsState.getOrAddProperties<Properties>().indbr_operand_segments =
+      odsBuilder.getDenseI32ArrayAttr(rangeSegments);
+  odsState.addSuccessors(successors);
+}
+
 static ParseResult parseIndirectBrOpSucessors(
     OpAsmParser &parser, Type &flagType,
     SmallVectorImpl<Block *> &succOperandBlocks,

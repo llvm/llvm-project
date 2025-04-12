@@ -1762,10 +1762,12 @@ def LLVM_IndirectBrOp : LLVM_TerminatorOp<"indirectbr",
     attr-dict
   }];
 
+  let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Value":$addr,
-      CArg<"BlockRange", "{}">:$successors,
-      CArg<"ArrayRef<ValueRange>", "{}">:$succOperands)>
+      CArg<"ArrayRef<ValueRange>", "{}">:$succOperands,
+      CArg<"BlockRange", "{}">:$successors
+      )>
   ];
 }
 

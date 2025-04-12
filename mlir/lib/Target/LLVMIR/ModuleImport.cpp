@@ -1996,7 +1996,10 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
       return failure();
 
     SmallVector<Block *> succBlocks;
-    SmallVector<ValueRange> succBlockArgs;
+    // `succBlockArgs` is storage for the block arguments ranges used in
+    // `succBlockArgsRange`, so the later references live data.
+    SmallVector<SmallVector<Value>> succBlockArgs;
+    SmallVector<ValueRange> succBlockArgsRange;
     for (auto i : llvm::seq<unsigned>(0, indBrInst->getNumSuccessors())) {
       llvm::BasicBlock *succ = indBrInst->getSuccessor(i);
       SmallVector<Value> blockArgs;
@@ -2004,10 +2007,11 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         return failure();
       succBlocks.push_back(lookupBlock(succ));
       succBlockArgs.push_back(blockArgs);
+      succBlockArgsRange.push_back(succBlockArgs.back());
     }
     Location loc = translateLoc(inst->getDebugLoc());
     auto indBrOp = builder.create<LLVM::IndirectBrOp>(
-        loc, TypeRange{}, *basePtr, succBlockArgs, succBlocks);
+        loc, *basePtr, succBlockArgsRange, succBlocks);
 
     mapNoResultOp(inst, indBrOp);
     return success();
