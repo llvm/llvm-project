@@ -883,6 +883,8 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+    // Creates a step vector starting from 0 with a step of 1.
+    StepVector,
   };
 
 private:
@@ -1042,6 +1044,9 @@ public:
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
+    if (isa<VPInstruction>(R) &&
+        cast<VPInstruction>(R)->getOpcode() == VPInstruction::StepVector)
+      return true;
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
     return R->isScalarCast();
@@ -1812,6 +1817,7 @@ public:
                                Step, IndDesc, DL),
         Trunc(nullptr) {
     addOperand(VF);
+    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1821,6 +1827,7 @@ public:
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
+    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
     SmallVector<std::pair<unsigned, MDNode *>> Metadata;
     (void)Metadata;
     if (Trunc)
@@ -1851,10 +1858,14 @@ public:
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
+  VPValue *getStepVector() { return getOperand(3); }
+  const VPValue *getStepVector() const { return getOperand(3); }
+  void setStepVector(VPValue *V) { setOperand(3, V); }
+
   VPValue *getSplatVFValue() {
-    // If the recipe has been unrolled (4 operands), return the VPValue for the
+    // If the recipe has been unrolled, return the VPValue for the
     // induction increment.
-    return getNumOperands() == 5 ? getOperand(3) : nullptr;
+    return isUnrolled() ? getOperand(getNumOperands() - 2) : nullptr;
   }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
@@ -1876,8 +1887,11 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : this;
+    return isUnrolled() ? getOperand(getNumOperands() - 1) : this;
   }
+
+private:
+  bool isUnrolled() const { return getNumOperands() == 6; }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
