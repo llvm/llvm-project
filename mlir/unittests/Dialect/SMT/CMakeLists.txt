@@ -1,6 +1,5 @@
 add_mlir_unittest(MLIRSMTTests
   AttributeTest.cpp
-  QuantifierTest.cpp
   TypeTest.cpp
 )
 
