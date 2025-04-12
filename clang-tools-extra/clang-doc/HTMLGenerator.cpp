@@ -745,9 +745,6 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   if (I.IsStatic)
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>("static "));
-  else {
-    llvm::errs() << I.Name << " is not static\n";
-  }
   if (I.ReturnType.Type.Name != "") {
     FunctionHeader->Children.emplace_back(
         genReference(I.ReturnType.Type, ParentInfoDir));

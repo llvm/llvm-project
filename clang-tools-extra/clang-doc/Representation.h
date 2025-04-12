@@ -220,8 +220,9 @@ struct FieldTypeInfo : public TypeInfo {
 // Info for member types.
 struct MemberTypeInfo : public FieldTypeInfo {
   MemberTypeInfo() = default;
-  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access)
-      : FieldTypeInfo(TI, Name), Access(Access) {}
+  MemberTypeInfo(const TypeInfo &TI, StringRef Name, AccessSpecifier Access,
+                 bool IsStatic = false)
+      : FieldTypeInfo(TI, Name), Access(Access), IsStatic(IsStatic) {}
 
   bool operator==(const MemberTypeInfo &Other) const {
     return std::tie(Type, Name, Access, IsStatic, Description) ==

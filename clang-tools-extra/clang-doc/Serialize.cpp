@@ -31,6 +31,10 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
                          const T *D, bool &IsAnonymousNamespace);
 
 static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
+static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
+                                   const LangOptions &LO,
+                                   const DeclaratorDecl *D,
+                                   bool IsStatic = false);
 
 // A function to extract the appropriate relative path for a given info's
 // documentation. The path returned is a composite of the parent namespaces.
@@ -371,35 +375,25 @@ static AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
   return AccessSpecifier::AS_public;
 }
 
-// The Access parameter is only provided when parsing the field of an inherited
-// record, the access specification of the field depends on the inheritance mode
 static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
                         AccessSpecifier Access = AccessSpecifier::AS_public) {
   auto &LO = D->getLangOpts();
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
-
-    // Use getAccessUnsafe so that we just get the default AS_none if it's not
-    // valid, as opposed to an assert.
-    MemberTypeInfo &NewMember = I.Members.emplace_back(
-        getTypeInfoForType(F->getTypeSourceInfo()->getType(), LO),
-        F->getNameAsString(),
-        getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
-    populateMemberTypeInfo(NewMember, F);
+    populateMemberTypeInfo(I, Access, LO, F);
   }
-  const CXXRecordDecl *CPP = dyn_cast<CXXRecordDecl>(D);
-  for (Decl *F : CPP->decls()) {
-    if (auto *VD = dyn_cast<VarDecl>(F)) {
-      if (VD->isStaticDataMember()) {
-        MemberTypeInfo &NewMember = I.Members.emplace_back(
-            getTypeInfoForType(VD->getTypeSourceInfo()->getType(), LO),
-            VD->getNameAsString(),
-            getFinalAccessSpecifier(Access, F->getAccessUnsafe()));
-        NewMember.IsStatic = true;
-        populateMemberTypeInfo(NewMember, VD);
-      }
-    }
+  const auto *CxxRD = dyn_cast<CXXRecordDecl>(D);
+  if (!CxxRD)
+    return;
+  for (Decl *CxxDecl : CxxRD->decls()) {
+    auto *VD = dyn_cast<VarDecl>(CxxDecl);
+    if (!VD ||
+        !shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, VD))
+      continue;
+
+    if (VD->isStaticDataMember())
+      populateMemberTypeInfo(I, Access, LO, VD, /*IsStatic=*/true);
   }
 }
 
@@ -596,6 +590,21 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
     I.Description.emplace_back();
     parseFullComment(fc, I.Description.back());
   }
+}
+
+// The Access parameter is only provided when parsing the field of an inherited
+// record, the access specification of the field depends on the inheritance mode
+static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
+                                   const LangOptions &LO,
+                                   const DeclaratorDecl *D,
+                                   bool IsStatic) {
+  // Use getAccessUnsafe so that we just get the default AS_none if it's not
+  // valid, as opposed to an assert.
+  MemberTypeInfo &NewMember = I.Members.emplace_back(
+      getTypeInfoForType(D->getTypeSourceInfo()->getType(), LO),
+      D->getNameAsString(),
+      getFinalAccessSpecifier(Access, D->getAccessUnsafe()), IsStatic);
+  populateMemberTypeInfo(NewMember, D);
 }
 
 static void
