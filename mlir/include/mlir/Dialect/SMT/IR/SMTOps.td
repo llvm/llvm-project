@@ -448,6 +448,18 @@ class QuantifierOp<string mnemonic> : SMTOp<mnemonic, [
                         VariadicRegion<SizedRegion<1>>:$patterns);
   let results = (outs BoolType:$result);
 
+  let builders = [
+    OpBuilder<(ins
+      "TypeRange":$boundVarTypes,
+      "function_ref<Value(OpBuilder &, Location, ValueRange)>":$bodyBuilder,
+      CArg<"std::optional<ArrayRef<StringRef>>", "std::nullopt">:$boundVarNames,
+      CArg<"function_ref<ValueRange(OpBuilder &, Location, ValueRange)>",
+           "{}">:$patternBuilder,
+      CArg<"uint32_t", "0">:$weight,
+      CArg<"bool", "false">:$noPattern)>
+  ];
+  let skipDefaultBuilders = true;
+
   let assemblyFormat = [{
     ($boundVarNames^)? (`no_pattern` $noPattern^)? (`weight` $weight^)?
     attr-dict-with-keyword $body (`patterns` $patterns^)?
