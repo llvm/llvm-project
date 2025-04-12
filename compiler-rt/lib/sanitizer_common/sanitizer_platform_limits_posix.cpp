@@ -367,7 +367,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 
 #  if !SANITIZER_ANDROID && !SANITIZER_HAIKU
   const int wordexp_wrde_dooffs = WRDE_DOOFFS;
-#  endif  // !SANITIZER_ANDROID
+#  endif  // !SANITIZER_ANDROID && !SANITIZER_HAIKU
 
 #  if SANITIZER_LINUX && !SANITIZER_ANDROID &&                               \
       (defined(__i386) || defined(__x86_64) || defined(__mips64) ||          \

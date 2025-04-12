@@ -1567,6 +1567,6 @@ extern const int si_SEGV_ACCERR;
 typedef void *__sanitizer_timer_t;
 #  endif
 
-#endif  // SANITIZER_LINUX || SANITIZER_APPLE
+#endif  // SANITIZER_LINUX || SANITIZER_APPLE || SANITIZER_HAIKU
 
 #endif
