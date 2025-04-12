@@ -17,6 +17,7 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanUtils.h"
 #include "VPlanVerifier.h"
@@ -2380,12 +2381,18 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
-    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+    BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder,
+    VFRange &Range) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
   VPBuilder Builder(LatchVPBB->getTerminator());
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPValue *IsEarlyExitTaken = nullptr;
+
+  // Clamp the range that make sure we insert extractElement for incoming value
+  // correctly.
+  bool IsScalarVF = LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) { return VF.isScalar(); }, Range);
 
   // Process the uncountable exiting block. Update IsEarlyExitTaken, which
   // tracks if the uncountable early exit has been taken. Also split the middle
@@ -2436,7 +2443,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn() && !Plan.hasScalarVFOnly()) {
+    if (!IncomingFromEarlyExit->isLiveIn() && !IsScalarVF) {
       VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
           VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
           "first.active.lane");

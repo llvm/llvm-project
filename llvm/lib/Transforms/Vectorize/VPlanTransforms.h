@@ -28,6 +28,7 @@ class PredicatedScalarEvolution;
 class TargetLibraryInfo;
 class VPBuilder;
 class VPRecipeBuilder;
+class VFRange;
 
 extern cl::opt<bool> VerifyEachVPlan;
 
@@ -174,7 +175,8 @@ struct VPlanTransforms {
   static void handleUncountableEarlyExit(VPlan &Plan, ScalarEvolution &SE,
                                          Loop *OrigLoop,
                                          BasicBlock *UncountableExitingBlock,
-                                         VPRecipeBuilder &RecipeBuilder);
+                                         VPRecipeBuilder &RecipeBuilder,
+                                         VFRange &Range);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
