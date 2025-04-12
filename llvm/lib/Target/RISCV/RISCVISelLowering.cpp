@@ -19709,6 +19709,19 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineToVCPOP(N, DAG, Subtarget))
       return V;
     break;
+  case RISCVISD::VRGATHER_VX_VL: {
+    // Drop a redundant vrgather_vx.
+    // Note this assumes that out of bounds indices produce poison
+    // and can thus be replaced without having to prove them inbounds..
+    SDValue Src = N->getOperand(0);
+    SDValue Passthru = N->getOperand(2);
+    SDValue VL = N->getOperand(4);
+    // TODO: Handle fmv.v.f?
+    if (Src.getOpcode() == RISCVISD::VMV_V_X_VL && Passthru.isUndef() &&
+        VL == Src.getOperand(2))
+      return Src;
+    break;
+  }
   }
 
   return SDValue();
