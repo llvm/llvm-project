@@ -158,7 +158,7 @@ def PseudoQCJumpSymbol : AsmOperandClass {
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidPseudoQCJumpSymbol";
   let DiagnosticString = "operand must be a valid jump target";
-  let ParserMethod = "parsePseudoQCJumpSymbol";
+  let ParserMethod = "parseBareSymbol";
 }
 
 def pseudo_qc_jump_symbol : Operand<XLenVT> {

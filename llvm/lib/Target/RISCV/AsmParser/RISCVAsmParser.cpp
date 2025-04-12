@@ -591,16 +591,7 @@ public:
            (VK == RISCVMCExpr::VK_CALL || VK == RISCVMCExpr::VK_CALL_PLT);
   }
 
-  bool isPseudoQCJumpSymbol() const {
-    int64_t Imm;
-    // Must be of 'immediate' type but not a constant.
-    if (!isImm() || evaluateConstantImm(getImm(), Imm))
-      return false;
-
-    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
-    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
-           VK == RISCVMCExpr::VK_QC_E_JUMP_PLT;
-  }
+  bool isPseudoQCJumpSymbol() const { return isBareSymbol(); }
 
   bool isPseudoJumpSymbol() const {
     int64_t Imm;
@@ -2157,25 +2148,10 @@ ParseStatus RISCVAsmParser::parsePseudoQCJumpSymbol(OperandVector &Operands) {
 
   std::string Identifier(getTok().getIdentifier());
   SMLoc E = getTok().getEndLoc();
-
-  if (getLexer().peekTok().is(AsmToken::At)) {
-    Lex();
-    Lex();
-    SMLoc PLTLoc = getLoc();
-    StringRef PLT;
-    E = getTok().getEndLoc();
-    if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return Error(PLTLoc,
-                   "'@plt' is the only valid operand for this instruction");
-  } else {
-    Lex();
-  }
-
-  RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_QC_E_JUMP_PLT;
+  Lex();
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
-  Res = RISCVMCExpr::create(Res, Kind, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }
