@@ -516,3 +516,10 @@ def : Pat<(v2i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv2d GPR64sp:$Rn)>;
 def : Pat<(v1i64 (AArch64dup (i64 (load GPR64sp:$Rn)))),
           (LD1Rv1d GPR64sp:$Rn)>;
+
+defm : LoadInsertPatterns<load, v16i8, v8i8, nxv16i8, i8,
+                          LDRBui, LDURBi, LDRBroW, LDRBroX,
+                          ro8, am_indexed8, am_unscaled8, uimm12s1, bsub>;
+def : Ld1Lane64Pat<load, VectorIndexB, v8i8, i8, LD1i8>;
+def : Ld1Lane128Pat<load, VectorIndexB, v16i8, i8, LD1i8>;
+defm : Neon_INS_elt_pattern<v16i8, v8i8, nxv16i8, i8, VectorIndexB, INSvi8lane>;
