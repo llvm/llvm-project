@@ -391,31 +391,35 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                         result, dppResult);
   }
 
-  if (ci.clusterSize <= 8) {
+  if (ci.clusterSize == 8) {
     dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_half_mirror,
         b.getUnitAttr(), allRows, allBanks, boundCtrl);
-  } else if (ci.clusterSize == 8) {
+    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                        result, dppResult);
+  } else if (ci.clusterSize >= 8) {
     auto permArg = b.getI32IntegerAttr(4);
-    dppResult =
-        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
+    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                        amdgpu::DPPPerm::row_shl, permArg,
+                                        allRows, allBanks, boundCtrl);
+    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                        result, dppResult);
   }
-  result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                          result, dppResult);
 
-  if (ci.clusterSize <= 16) {
+  if (ci.clusterSize == 16) {
     dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_mirror,
         b.getUnitAttr(), allRows, allBanks, boundCtrl);
-  } else if (ci.clusterSize == 16) {
-    auto permArg = b.getI32IntegerAttr(8);
-    dppResult =
-        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
-  }
-  result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
+  } else if (ci.clusterSize >= 16) {
+    auto permArg = b.getI32IntegerAttr(8);
+    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                        amdgpu::DPPPerm::row_shl, permArg,
+                                        allRows, allBanks, boundCtrl);
+    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                        result, dppResult);
+  }
 
   if (ci.clusterSize >= 32) {
     auto permArg = b.getI32IntegerAttr(15);
