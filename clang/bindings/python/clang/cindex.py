@@ -2593,7 +2593,7 @@ class Type(Structure):
         """
         return Type.from_result(conf.lib.clang_getCanonicalType(self), (self,))
 
-    def get_fully_qualified_name(self, policy, with_global_ns_prefix = False):
+    def get_fully_qualified_name(self, policy, with_global_ns_prefix=False):
         """
         Get the fully qualified name for a type.
 
