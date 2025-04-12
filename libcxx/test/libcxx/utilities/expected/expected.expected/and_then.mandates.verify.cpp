@@ -128,8 +128,7 @@ void test() {
   {
     const std::expected<int, int> f1(std::unexpected<int>(1));
     
-    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-    f1.and_then([](int&){ return 1; });
+    f1.and_then([](int& _){ return 1; }); // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   }
 }
 // clang-format on
