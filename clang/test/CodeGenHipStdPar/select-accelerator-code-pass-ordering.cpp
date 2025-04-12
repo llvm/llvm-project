@@ -2,12 +2,12 @@
 
 // Ensure Pass HipStdParAcceleratorCodeSelectionPass is not invoked in PreLink.
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -mllvm -amdgpu-enable-hipstdpar -flto -emit-llvm-bc -fcuda-is-device -fdebug-pass-manager \
-// RUN:  %s -o - 2>&1 | FileCheck --check-prefix=HIPSTDPAR-PRE %s
+// RUN:  %s -o /dev/null 2>&1 | FileCheck --check-prefix=HIPSTDPAR-PRE %s
 // HIPSTDPAR-PRE-NOT: Running pass: HipStdParAcceleratorCodeSelectionPass
 
 // Ensure Pass HipStdParAcceleratorCodeSelectionPass is invoked in PostLink.
 // RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -mllvm -amdgpu-enable-hipstdpar -fcuda-is-device -fdebug-pass-manager -emit-llvm \
-// RUN:  %s -o - 2>&1 | FileCheck --check-prefix=HIPSTDPAR-POST %s
+// RUN:  %s -o /dev/null 2>&1 | FileCheck --check-prefix=HIPSTDPAR-POST %s
 // HIPSTDPAR-POST: Running pass: HipStdParAcceleratorCodeSelection
 
 #define __device__ __attribute__((device))
