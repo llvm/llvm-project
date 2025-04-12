@@ -1691,7 +1691,7 @@ void DylibFile::loadReexport(StringRef path, DylibFile *umbrella,
   DylibFile *reexport = findDylib(path, umbrella, currentTopLevelTapi);
   if (!reexport) {
     // If not found in umbrella, retry since some rpaths might have been
-    // defined in "this" dyblib (which contains the LC_REEXPORT_DYLIB cmd) and
+    // defined in "this" dylib (which contains the LC_REEXPORT_DYLIB cmd) and
     // not in the umbrella.
     DylibFile *reexport2 = findDylib(path, this, currentTopLevelTapi);
     if (!reexport2) {
