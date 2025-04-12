@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify=expected,preferrednotes -std=c11 -Wno-unused-value -Wno-unused-but-set-variable
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify=expected,preferrednotes -std=c23 -Wno-unused-value -Wno-unused-but-set-variable
 // RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify=expected,bitfieldwarning,preferrednotes -std=c11 -Wno-unused-value -Wno-unused-but-set-variable -Wbitfield-width -Wbitfield-enum-conversion
-// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify=noerror,preferrednotes -std=c11 -Wno-unused-value -Wno-unused-but-set-variable -Wno-error=preferred-type-bitfield-enum-conversion -Wno-error=preferred-type-bitfield-width
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fsyntax-only -verify=noerror,preferrednotes -std=c23 -Wno-unused-value -Wno-unused-but-set-variable -Wno-error=preferred-type-bitfield-enum-conversion -Wno-error=preferred-type-bitfield-width
 
 enum A {
   A_a,

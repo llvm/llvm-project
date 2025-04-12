@@ -6472,7 +6472,7 @@ def warn_preferred_type_bitfield_too_small_for_enum : Warning<
 def warn_preferred_type_unsigned_bitfield_assigned_signed_enum : Warning<
   "assigning value of preferred signed enum type %1 to unsigned bit-field %0; "
   "negative enumerators of enum %1 will be converted to positive values">,
-  InGroup<PreferredTypeBitFieldEnumConversion>, DefaultIgnore;
+  InGroup<PreferredTypeBitFieldEnumConversion>, DefaultError;
 def warn_preferred_type_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of preferred type %1">,
