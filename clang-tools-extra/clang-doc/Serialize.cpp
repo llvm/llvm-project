@@ -32,7 +32,6 @@ populateParentNamespaces(llvm::SmallVector<Reference, 4> &Namespaces,
 
 static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D);
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
-                                   const LangOptions &LO,
                                    const DeclaratorDecl *D,
                                    bool IsStatic = false);
 
@@ -377,11 +376,10 @@ static AccessSpecifier getFinalAccessSpecifier(AccessSpecifier FirstAS,
 
 static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
                         AccessSpecifier Access = AccessSpecifier::AS_public) {
-  auto &LO = D->getLangOpts();
   for (const FieldDecl *F : D->fields()) {
     if (!shouldSerializeInfo(PublicOnly, /*IsInAnonymousNamespace=*/false, F))
       continue;
-    populateMemberTypeInfo(I, Access, LO, F);
+    populateMemberTypeInfo(I, Access, F);
   }
   const auto *CxxRD = dyn_cast<CXXRecordDecl>(D);
   if (!CxxRD)
@@ -393,7 +391,7 @@ static void parseFields(RecordInfo &I, const RecordDecl *D, bool PublicOnly,
       continue;
 
     if (VD->isStaticDataMember())
-      populateMemberTypeInfo(I, Access, LO, VD, /*IsStatic=*/true);
+      populateMemberTypeInfo(I, Access, VD, /*IsStatic=*/true);
   }
 }
 
@@ -595,13 +593,11 @@ static void populateMemberTypeInfo(MemberTypeInfo &I, const Decl *D) {
 // The Access parameter is only provided when parsing the field of an inherited
 // record, the access specification of the field depends on the inheritance mode
 static void populateMemberTypeInfo(RecordInfo &I, AccessSpecifier &Access,
-                                   const LangOptions &LO,
-                                   const DeclaratorDecl *D,
-                                   bool IsStatic) {
+                                   const DeclaratorDecl *D, bool IsStatic) {
   // Use getAccessUnsafe so that we just get the default AS_none if it's not
   // valid, as opposed to an assert.
   MemberTypeInfo &NewMember = I.Members.emplace_back(
-      getTypeInfoForType(D->getTypeSourceInfo()->getType(), LO),
+      getTypeInfoForType(D->getTypeSourceInfo()->getType(), D->getLangOpts()),
       D->getNameAsString(),
       getFinalAccessSpecifier(Access, D->getAccessUnsafe()), IsStatic);
   populateMemberTypeInfo(NewMember, D);

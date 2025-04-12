@@ -329,6 +329,7 @@
 // MD-CALC:  Provides basic arithmetic operations.
 // MD-CALC: ## Members
 // MD-CALC: public int public_val
+// MD-CALC: public static const int static_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
@@ -360,7 +361,7 @@
 // MD-CALC: **return** double The result of a / b.
 // MD-CALC: **throw**if b is zero.
 // MD-CALC: ### mod
-// MD-CALC: *public int mod(int a, int b)*
+// MD-CALC: *public static int mod(int a, int b)*
 // MD-CALC: *Defined at ./include{{[\/]}}Calculator.h#54*
 // MD-CALC: **brief** Performs the mod operation on integers.
 // MD-CALC: **a** First integer.
