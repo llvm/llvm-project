@@ -2183,7 +2183,7 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
 
   case LOLR_Template: {
     TemplateArgumentListInfo ExplicitArgs;
-    TemplateArgument Arg(Lit);
+    TemplateArgument Arg(Lit, /*IsCanonical=*/false);
     TemplateArgumentLocInfo ArgInfo(Lit);
     ExplicitArgs.addArgument(TemplateArgumentLoc(Arg, ArgInfo));
     return BuildLiteralOperatorCall(R, OpNameInfo, {}, StringTokLocs.back(),
@@ -21108,8 +21108,22 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     Diag(Temp->getLocation(), diag::note_referenced_type_template)
         << IsTypeAliasTemplateDecl;
 
-    QualType TST =
-        Context.getTemplateSpecializationType(TN, ULE->template_arguments());
+    TemplateArgumentListInfo TAL(ULE->getLAngleLoc(), ULE->getRAngleLoc());
+    bool HasAnyDependentTA = false;
+    for (const TemplateArgumentLoc &Arg : ULE->template_arguments()) {
+      HasAnyDependentTA |= Arg.getArgument().isDependent();
+      TAL.addArgument(Arg);
+    }
+
+    QualType TST;
+    {
+      SFINAETrap Trap(*this);
+      TST = CheckTemplateIdType(TN, NameInfo.getBeginLoc(), TAL);
+    }
+    if (TST.isNull())
+      TST = Context.getTemplateSpecializationType(
+          TN, ULE->template_arguments(), /*CanonicalArgs=*/std::nullopt,
+          HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},
