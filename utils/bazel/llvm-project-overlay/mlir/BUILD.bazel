@@ -6401,7 +6401,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":ControlFlowInterfaces"
+        ":ControlFlowInterfaces",
         ":IR",
         ":InferTypeOpInterface",
         ":SMTIncGen",
