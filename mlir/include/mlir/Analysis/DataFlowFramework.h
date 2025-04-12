@@ -378,7 +378,7 @@ public:
     analysisStates.erase(latticeAnchor);
   }
 
-  // Erase all analysis states.
+  /// Erase all analysis states.
   void eraseAllStates() {
     analysisStates.clear();
     equivalentAnchorMap.clear();
@@ -479,10 +479,10 @@ private:
   DenseMap<LatticeAnchor, DenseMap<TypeID, std::unique_ptr<AnalysisState>>>
       analysisStates;
 
-  /// A type-erased map of lattice type to the equivalet lattice anchors.
-  /// Lattice anchors are considered equivalent under a certain lattice type if
-  /// and only if, under this lattice type, the lattices pointed to by these
-  /// lattice anchors necessarily contain identical value.
+  /// A map of Ananlysis state type to the equivalent lattice anchors.
+  /// Lattice anchors are considered equivalent under a certain analysis state
+  /// type if and only if, the analysis states pointed to by these lattice
+  /// anchors necessarily contain identical value.
   DenseMap<TypeID, llvm::EquivalenceClasses<LatticeAnchor>> equivalentAnchorMap;
 
   /// Allow the base child analysis class to access the internals of the solver.
@@ -715,8 +715,11 @@ AnalysisT *DataFlowSolver::load(Args &&...args) {
 template <typename StateT>
 LatticeAnchor
 DataFlowSolver::getLeaderAnchorOrSelf(LatticeAnchor latticeAnchor) const {
-  const llvm::EquivalenceClasses<LatticeAnchor> eqClass =
-      equivalentAnchorMap.lookup(TypeID::get<StateT>());
+  if (!equivalentAnchorMap.contains(TypeID::get<StateT>())) {
+    return latticeAnchor;
+  }
+  const llvm::EquivalenceClasses<LatticeAnchor> &eqClass =
+      equivalentAnchorMap.at(TypeID::get<StateT>());
   llvm::EquivalenceClasses<LatticeAnchor>::member_iterator leaderIt =
       eqClass.findLeader(latticeAnchor);
   if (leaderIt != eqClass.member_end()) {
@@ -743,8 +746,11 @@ StateT *DataFlowSolver::getOrCreateState(AnchorT anchor) {
 
 template <typename StateT>
 bool DataFlowSolver::isEquivalent(LatticeAnchor lhs, LatticeAnchor rhs) const {
-  const llvm::EquivalenceClasses<LatticeAnchor> eqClass =
-      equivalentAnchorMap.lookup(TypeID::get<StateT>());
+  if (!equivalentAnchorMap.contains(TypeID::get<StateT>())) {
+    return false;
+  }
+  const llvm::EquivalenceClasses<LatticeAnchor> &eqClass =
+      equivalentAnchorMap.at(TypeID::get<StateT>());
   if (!eqClass.contains(lhs) || !eqClass.contains(rhs))
     return false;
   return eqClass.isEquivalent(lhs, rhs);
