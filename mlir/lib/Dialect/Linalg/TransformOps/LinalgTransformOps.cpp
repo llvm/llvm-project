@@ -718,6 +718,42 @@ static Operation *replaceForAllWithNewSignature(
   return newforallOp;
 }
 
+/// Given two operands coming from a loop iter arg, 'src' and 'dst', return true
+/// if the operand 'src' is equal to 'dst' or equal to a iter arg present in a
+/// outer loop. To determine the second condition, this function iterates
+/// recursively over the enclosing loops, trying to find 'src' in any of the
+/// parent loop's iter args.
+static bool sameOrEquivalentIterArg(Value src, Value dst) {
+  // Base case.
+  if (src == dst)
+    return true;
+
+  // Recursively look for equivalent iter args in enclosing loops.
+  if (auto bbArg = dyn_cast<BlockArgument>(dst)) {
+    Block *parentBlock = bbArg.getOwner();
+    assert(parentBlock && "unlinked block argument");
+
+    // Because we stop doing recursive calls when we find a non loop-like op,
+    // this should never happen.
+    assert(parentBlock->getParentOp() &&
+           "expected block argument with parent operation");
+
+    // Check if parent is loop-like.
+    if (auto parentLoop =
+            dyn_cast<LoopLikeOpInterface>(parentBlock->getParentOp())) {
+      for (auto innerIterArg : parentLoop.getRegionIterArgs()) {
+        OpOperand *operand = parentLoop.getTiedLoopInit(innerIterArg);
+        Value loopBlockArgument =
+            parentLoop->getOperand(operand->getOperandNumber());
+        if (sameOrEquivalentIterArg(src, loopBlockArgument))
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /// Find the first "extract" user of `producerOp` and tile it right before its
 /// use. The tiled op is fused under the `containingOp`.
 /// Return this fused op on success or nullptr if anything fails.
@@ -754,6 +790,39 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   // Try to fuse the producer in-place.
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(sliceOpToTile);
+
+  // Clone the producer inside the consumer and try to update the producer init
+  // operands using the loop bbArgs if applicable. More precisely, if the bbArg
+  // of the container loop points to a value that it is used by the consumer op,
+  // then, instead of using such value on the consumer, use the value coming
+  // from the bbArg instead. This allows to reuse the output tensor (instead of
+  // creating a new one) of the container when both producer and container write
+  // to the same output.
+  if (LoopLikeOpInterface containerLoop =
+          dyn_cast<LoopLikeOpInterface>(sliceOpToTile->getParentOp())) {
+    Operation *clone = rewriter.clone(*producerOp);
+    rewriter.modifyOpInPlace(clone, [&]() {
+      // Iterate over the outputs of the producer and over the loop bbArgs and
+      // check if any bbArg points to the same value as the producer output. In
+      // such case, make the producer output point to the bbArg directly.
+      for (auto &initOperandPtr :
+           cast<DestinationStyleOpInterface>(clone).getDpsInitsMutable()) {
+        Value producerOperand =
+            clone->getOperand(initOperandPtr.getOperandNumber());
+        for (auto containerIterArg : containerLoop.getRegionIterArgs()) {
+          OpOperand *bbArg = containerLoop.getTiedLoopInit(containerIterArg);
+          Value consumerOperand =
+              containerLoop->getOperand(bbArg->getOperandNumber());
+          // The producer has the same init as the loop bbArg, use it.
+          if (sameOrEquivalentIterArg(producerOperand, consumerOperand)) {
+            initOperandPtr.set(containerIterArg);
+          }
+        }
+      }
+    });
+
+    tileableProducer = dyn_cast<TilingInterface>(clone);
+  }
 
   // Tile the producer.
   int64_t resultNumber =
@@ -796,6 +865,10 @@ tileAndFuseFirstExtractUse(RewriterBase &rewriter, Diagnostic &diag,
   Operation *newContainingOp = replaceForAllWithNewSignature(
       rewriter, diag, producerOp, containingOp, *tileAndFuseResult,
       resultNumber, offsets, sizes);
+
+  // Cleanup clone.
+  if (dyn_cast<LoopLikeOpInterface>(containingOp))
+    rewriter.eraseOp(tileableProducer);
 
   return std::make_tuple(tileAndFuseResult->tiledOps, newContainingOp);
 }
