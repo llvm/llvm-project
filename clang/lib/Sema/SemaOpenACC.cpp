@@ -1426,30 +1426,6 @@ void SemaOpenACC::ActOnForStmtEnd(SourceLocation ForLoc, StmtResult Body) {
 }
 
 namespace {
-// Get a list of clause Kinds for diagnosing a list, joined by a commas and an
-// 'or'.
-std::string GetListOfClauses(llvm::ArrayRef<OpenACCClauseKind> Clauses) {
-  assert(!Clauses.empty() && "empty clause list not supported");
-
-  std::string Output;
-  llvm::raw_string_ostream OS{Output};
-
-  if (Clauses.size() == 1) {
-    OS << '\'' << Clauses[0] << '\'';
-    return Output;
-  }
-
-  llvm::ArrayRef<OpenACCClauseKind> AllButLast{Clauses.begin(),
-                                               Clauses.end() - 1};
-
-  llvm::interleave(
-      AllButLast, [&](OpenACCClauseKind K) { OS << '\'' << K << '\''; },
-      [&] { OS << ", "; });
-
-  OS << " or \'" << Clauses.back() << '\'';
-  return Output;
-}
-
 // Helper that should mirror ActOnRoutineName to get the FunctionDecl out for
 // magic-static checking.
 FunctionDecl *getFunctionFromRoutineName(Expr *RoutineName) {
@@ -1682,86 +1658,8 @@ bool SemaOpenACC::ActOnStartStmtDirective(
         << OpenACCClauseKind::Tile;
   }
 
-  // OpenACC3.3 2.6.5: At least one copy, copyin, copyout, create, no_create,
-  // present, deviceptr, attach, or default clause must appear on a 'data'
-  // construct.
-  if (K == OpenACCDirectiveKind::Data &&
-      llvm::find_if(Clauses,
-                    llvm::IsaPred<OpenACCCopyClause, OpenACCCopyInClause,
-                                  OpenACCCopyOutClause, OpenACCCreateClause,
-                                  OpenACCNoCreateClause, OpenACCPresentClause,
-                                  OpenACCDevicePtrClause, OpenACCAttachClause,
-                                  OpenACCDefaultClause>) == Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses(
-                  {OpenACCClauseKind::Copy, OpenACCClauseKind::CopyIn,
-                   OpenACCClauseKind::CopyOut, OpenACCClauseKind::Create,
-                   OpenACCClauseKind::NoCreate, OpenACCClauseKind::Present,
-                   OpenACCClauseKind::DevicePtr, OpenACCClauseKind::Attach,
-                   OpenACCClauseKind::Default});
-
-  // OpenACC3.3 2.6.6: At least one copyin, create, or attach clause must appear
-  // on an enter data directive.
-  if (K == OpenACCDirectiveKind::EnterData &&
-      llvm::find_if(Clauses,
-                    llvm::IsaPred<OpenACCCopyInClause, OpenACCCreateClause,
-                                  OpenACCAttachClause>) == Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses({
-                  OpenACCClauseKind::CopyIn,
-                  OpenACCClauseKind::Create,
-                  OpenACCClauseKind::Attach,
-              });
-  // OpenACC3.3 2.6.6: At least one copyout, delete, or detach clause must
-  // appear on an exit data directive.
-  if (K == OpenACCDirectiveKind::ExitData &&
-      llvm::find_if(Clauses,
-                    llvm::IsaPred<OpenACCCopyOutClause, OpenACCDeleteClause,
-                                  OpenACCDetachClause>) == Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses({
-                  OpenACCClauseKind::CopyOut,
-                  OpenACCClauseKind::Delete,
-                  OpenACCClauseKind::Detach,
-              });
-
-  // OpenACC3.3 2.8: At least 'one use_device' clause must appear.
-  if (K == OpenACCDirectiveKind::HostData &&
-      llvm::find_if(Clauses, llvm::IsaPred<OpenACCUseDeviceClause>) ==
-          Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K << GetListOfClauses({OpenACCClauseKind::UseDevice});
-
-  // OpenACC3.3 2.14.3: At least one default_async, device_num, or device_type
-  // clause must appear.
-  if (K == OpenACCDirectiveKind::Set &&
-      llvm::find_if(
-          Clauses,
-          llvm::IsaPred<OpenACCDefaultAsyncClause, OpenACCDeviceNumClause,
-                        OpenACCDeviceTypeClause, OpenACCIfClause>) ==
-          Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses({OpenACCClauseKind::DefaultAsync,
-                                OpenACCClauseKind::DeviceNum,
-                                OpenACCClauseKind::DeviceType,
-                                OpenACCClauseKind::If});
-
-  // OpenACC3.3 2.14.4: At least one self, host, or device clause must appear on
-  // an update directive.
-  if (K == OpenACCDirectiveKind::Update &&
-      llvm::find_if(Clauses, llvm::IsaPred<OpenACCSelfClause, OpenACCHostClause,
-                                           OpenACCDeviceClause>) ==
-          Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses({OpenACCClauseKind::Self,
-                                OpenACCClauseKind::Host,
-                                OpenACCClauseKind::Device});
-
+  if (DiagnoseRequiredClauses(K, StartLoc, Clauses))
+    return true;
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/true);
 }
 
@@ -1930,6 +1828,62 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   llvm_unreachable("Invalid associated statement application");
 }
 
+namespace {
+
+// Routine has some pretty complicated set of rules for how device_type
+// interacts with 'gang', 'worker', 'vector', and 'seq'. Enforce  part of it
+// here.
+bool CheckValidRoutineGangWorkerVectorSeqClauses(
+    SemaOpenACC &SemaRef, SourceLocation DirectiveLoc,
+    ArrayRef<const OpenACCClause *> Clauses) {
+  auto RequiredPred = llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                    OpenACCVectorClause, OpenACCSeqClause>;
+  // The clause handling has assured us that there is no duplicates.  That is,
+  // if there is 1 before a device_type, there are none after a device_type.
+  // If not, there is at most 1 applying to each device_type.
+
+  // What is left to legalize is that either:
+  // 1- there is 1 before the first device_type.
+  // 2- there is 1 AFTER each device_type.
+  auto *FirstDeviceType =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+  // If there is 1 before the first device_type (or at all if no device_type),
+  // we are legal.
+  auto *ClauseItr =
+      std::find_if(Clauses.begin(), FirstDeviceType, RequiredPred);
+
+  if (ClauseItr != FirstDeviceType)
+    return false;
+
+  // If there IS no device_type, and no clause, diagnose.
+  if (FirstDeviceType == Clauses.end())
+    return SemaRef.Diag(DirectiveLoc, diag::err_acc_construct_one_clause_of)
+           << OpenACCDirectiveKind::Routine
+           << "'gang', 'seq', 'vector', or 'worker'";
+
+  // Else, we have to check EACH device_type group. PrevDeviceType is the
+  // device-type before the current group.
+  auto *PrevDeviceType = FirstDeviceType;
+
+  while (PrevDeviceType != Clauses.end()) {
+    auto *NextDeviceType =
+        std::find_if(std::next(PrevDeviceType), Clauses.end(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    ClauseItr = std::find_if(PrevDeviceType, NextDeviceType, RequiredPred);
+
+    if (ClauseItr == NextDeviceType)
+      return SemaRef.Diag((*PrevDeviceType)->getBeginLoc(),
+                          diag::err_acc_clause_routine_one_of_in_region);
+
+    PrevDeviceType = NextDeviceType;
+  }
+
+  return false;
+}
+} // namespace
+
 bool SemaOpenACC::ActOnStartDeclDirective(
     OpenACCDirectiveKind K, SourceLocation StartLoc,
     ArrayRef<const OpenACCClause *> Clauses) {
@@ -1939,19 +1893,11 @@ bool SemaOpenACC::ActOnStartDeclDirective(
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
 
+  if (DiagnoseRequiredClauses(K, StartLoc, Clauses))
+    return true;
   if (K == OpenACCDirectiveKind::Routine &&
-      llvm::find_if(Clauses,
-                    llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
-                                  OpenACCVectorClause, OpenACCSeqClause>) ==
-          Clauses.end())
-    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
-           << K
-           << GetListOfClauses({
-                  OpenACCClauseKind::Gang,
-                  OpenACCClauseKind::Worker,
-                  OpenACCClauseKind::Vector,
-                  OpenACCClauseKind::Seq,
-              });
+      CheckValidRoutineGangWorkerVectorSeqClauses(*this, StartLoc, Clauses))
+    return true;
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }

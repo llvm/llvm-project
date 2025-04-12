@@ -12,13 +12,9 @@ void Test() {
 #pragma acc parallel num_gangs(1)
   while(1);
 
-  // expected-error@+2{{OpenACC 'num_gangs' clause cannot appear more than once on a 'kernels' directive}}
-  // expected-note@+1{{previous clause is here}}
 #pragma acc kernels num_gangs(1) num_gangs(2)
   while(1);
 
-  // expected-error@+2{{OpenACC 'num_gangs' clause cannot appear more than once on a 'parallel' directive}}
-  // expected-note@+1{{previous clause is here}}
 #pragma acc parallel num_gangs(1) num_gangs(2)
   while(1);
 

@@ -28,6 +28,9 @@
 #include <utility>
 #include <variant>
 
+namespace {
+class SemaOpenACCClauseVisitor;
+}
 namespace clang {
 class IdentifierInfo;
 class OpenACCClause;
@@ -176,6 +179,21 @@ private:
   OpenACCRoutineDecl *LastRoutineDecl = nullptr;
 
   void CheckLastRoutineDeclNameConflict(const NamedDecl *ND);
+
+  bool DiagnoseRequiredClauses(OpenACCDirectiveKind DK, SourceLocation DirLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
+
+  bool DiagnoseAllowedClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                              SourceLocation ClauseLoc);
+
+public:
+  // Needed from the visitor, so should be public.
+  bool DiagnoseAllowedOnceClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                  SourceLocation ClauseLoc,
+                                  ArrayRef<const OpenACCClause *> Clauses);
+  bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                                SourceLocation ClauseLoc,
+                                ArrayRef<const OpenACCClause *> Clauses);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {

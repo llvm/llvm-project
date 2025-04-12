@@ -12899,6 +12899,7 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     return OpenACCBindClause::Create(getContext(), BeginLoc, LParenLoc,
                                      readIdentifier(), EndLoc);
   }
+  case OpenACCClauseKind::Shortloop:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }
