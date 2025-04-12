@@ -41,6 +41,7 @@ void testExportSMTLIB(MlirContext ctx) {
 
   // CHECK: ; solver scope 0
   // CHECK-NEXT: (reset)
+  mlirModuleDestroy(module);
 }
 
 void testSMTType(MlirContext ctx) {
@@ -178,5 +179,8 @@ int main(void) {
   testExportSMTLIB(ctx);
   testSMTType(ctx);
   testSMTAttribute(ctx);
+
+  mlirContextDestroy(ctx);
+
   return 0;
 }
