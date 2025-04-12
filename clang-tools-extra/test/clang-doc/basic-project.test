@@ -129,6 +129,12 @@
 //      HTML-CALC: <div>brief</div>
 //      HTML-CALC: <p> A simple calculator class.</p>
 //      HTML-CALC: <p> Provides basic arithmetic operations.</p>
+
+//      HTML-CALC: <h2 id="Members">Members</h2>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> Holds a public value.</p>
+//      HTML-CALC: <div>public int public_val</div>
+
 //      HTML-CALC: <h2 id="Functions">Functions</h2>
 //      HTML-CALC: <h3 id="{{([0-9A-F]{40})}}">add</h3>
 //      HTML-CALC: <p>public int add(int a, int b)</p>
@@ -184,6 +190,18 @@
 //      HTML-CALC: <p> double The result of a / b.</p>
 //      HTML-CALC: <div>throw</div>
 //      HTML-CALC: <p>if b is zero.</p>
+
+//      HTML-CALC: <p>public int mod(int a, int b)</p>
+//   CALC-NO-REPOSITORY: Defined at line 54 of file .{{.}}include{{.}}Calculator.h
+//      CALC-REPOSITORY: Defined at line 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h#54">54</a>
+//     CALC-LINE-PREFIX: <a href="https://repository.com/./include/Calculator.h#L54">54</a>
+// CALC-REPOSITORY-NEXT: of file 
+// CALC-REPOSITORY-NEXT: <a href="https://repository.com/./include/Calculator.h">Calculator.h</a>
+//      HTML-CALC: <div>brief</div>
+//      HTML-CALC: <p> Performs the mod operation on integers.</p>
+//      HTML-CALC: <div>return</div>
+//      HTML-CALC: <p> The result of a % b.</p>
 
 //      HTML-RECTANGLE: <h1>class Rectangle</h1>
 // RECTANGLE-NO-REPOSITORY: <p>Defined at line 10 of file .{{.}}include{{.}}Rectangle.h</p>
@@ -306,6 +324,8 @@
 // MD-CALC: *Defined at .{{[\/]}}include{{[\/]}}Calculator.h#8*
 // MD-CALC: **brief** A simple calculator class.
 // MD-CALC:  Provides basic arithmetic operations.
+// MD-CALC: ## Members
+// MD-CALC: public int public_val
 // MD-CALC: ## Functions
 // MD-CALC: ### add
 // MD-CALC: *public int add(int a, int b)*
@@ -336,6 +356,13 @@
 // MD-CALC: **b** Second integer.
 // MD-CALC: **return** double The result of a / b.
 // MD-CALC: **throw**if b is zero.
+// MD-CALC: ### mod
+// MD-CALC: *public int mod(int a, int b)*
+// MD-CALC: *Defined at ./include{{[\/]}}Calculator.h#54*
+// MD-CALC: **brief** Performs the mod operation on integers.
+// MD-CALC: **a** First integer.
+// MD-CALC: **b** Second integer.
+// MD-CALC: **return** The result of a % b.
 
 // MD-CIRCLE: # class Circle
 // MD-CIRCLE: *Defined at .{{[\/]}}include{{[\/]}}Circle.h#10*
