@@ -606,9 +606,9 @@ bool SplitIndirectBrCriticalEdges(Function &F, bool IgnoreBlocksWithoutPHI,
 // successors
 void InvertBranch(BranchInst *PBI, IRBuilderBase &Builder);
 
-// Check whether the function only has simple terminator:
-// br/brcond/unreachable/ret
-bool hasOnlySimpleTerminator(const Function &F);
+// Check whether the function only has blocks with simple terminators:
+// br/brcond/unreachable/ret (or callbr if AllowCallBr)
+bool hasOnlySimpleTerminator(const Function &F, bool AllowCallBr = true);
 
 // Returns true if these basic blocks belong to a presplit coroutine and the
 // edge corresponds to the 'default' case in the switch statement in the
