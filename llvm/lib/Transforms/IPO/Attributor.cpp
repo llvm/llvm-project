@@ -3466,6 +3466,7 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
     }
   }
 
+  bool markedAsAAConvertArgument = false;
   for (Argument &Arg : F.args()) {
     IRPosition ArgPos = IRPosition::argument(Arg);
     auto ArgNo = Arg.getArgNo();
@@ -3518,6 +3519,12 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
       // Every argument with pointer type might be privatizable (or
       // promotable)
       getOrCreateAAFor<AAPrivatizablePtr>(ArgPos);
+
+      // Every function with pointer argument type can have out arguments.
+      if (!markedAsAAConvertArgument) {
+        getOrCreateAAFor<AAConvertOutArgument>(FPos);
+        markedAsAAConvertArgument = true;
+      }
     } else if (AttributeFuncs::isNoFPClassCompatibleType(Arg.getType())) {
       getOrCreateAAFor<AANoFPClass>(ArgPos);
     }
