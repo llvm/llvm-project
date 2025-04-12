@@ -731,9 +731,62 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
   }
 };
 
+// Update size operand of tosa.slice if size has dynamic dims but corresponding
+// output dim is static
+struct SliceDynamicSizeCanonicalization
+    : public OpRewritePattern<tosa::SliceOp> {
+  using OpRewritePattern<tosa::SliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tosa::SliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    ShapedType resultType = cast<ShapedType>(sliceOp.getType());
+
+    ElementsAttr sizeElems;
+    if (!matchPattern(sliceOp.getSize(), m_Constant(&sizeElems))) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "size of slice must be a static ranked shape");
+    }
+
+    llvm::SmallVector<int64_t> sliceSizes =
+        llvm::to_vector(sizeElems.getValues<int64_t>());
+
+    bool replaceSliceSize{false};
+    // if size op has -1 indicating dynamic shape but corresponding dim on the
+    // output is statically known, update size to match with known output dim
+    // shape
+    for (const auto &[index, size] : llvm::enumerate(sliceSizes)) {
+      if (size == -1 && !resultType.isDynamicDim(index)) {
+        sliceSizes[index] = resultType.getDimSize(index);
+        replaceSliceSize = true;
+      }
+    }
+
+    if (!replaceSliceSize) {
+      return rewriter.notifyMatchFailure(
+          sliceOp, "no dimension of size of slice is dynamic that resolves "
+                   "to static output shape");
+    }
+
+    auto size_op = getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
+    auto newSliceOp = rewriter.create<tosa::SliceOp>(
+        sliceOp.getLoc(), sliceOp.getType(), sliceOp.getInput1(),
+        sliceOp.getStart(), size_op);
+
+    rewriter.replaceOp(sliceOp, newSliceOp.getResult());
+
+    // Remove const_shape size op when it no longer has use point.
+    Operation *sizeConstShape = sliceOp.getSize().getDefiningOp();
+    if (sizeConstShape->getResult(0).hasOneUse())
+      rewriter.eraseOp(sizeConstShape);
+
+    return success();
+  }
+};
+
 void SliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<ConcatSliceOptimization>(context);
+  results.add<ConcatSliceOptimization, SliceDynamicSizeCanonicalization>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//
