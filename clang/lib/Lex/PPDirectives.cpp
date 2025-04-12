@@ -4012,6 +4012,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
+
+  if (MaybeFileRef->isDeviceFile()) {
+    Diag(FilenameTok, diag::err_pp_embed_device_file) << Filename;
+    return;
+  }
+
   std::optional<llvm::MemoryBufferRef> MaybeFile =
       getSourceManager().getMemoryBufferForFileOrNone(*MaybeFileRef);
   if (!MaybeFile) {
