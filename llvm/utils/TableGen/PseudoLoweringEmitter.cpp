@@ -90,7 +90,6 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // problem.
       // FIXME: We probably shouldn't ever get a non-zero BaseIdx here.
       assert(BaseIdx == 0 && "Named subargument in pseudo expansion?!");
-      // FIXME: Are the message operand types backward?
       if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec) {
         PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
                             "', operand type '" + DI->getDef()->getName() +
