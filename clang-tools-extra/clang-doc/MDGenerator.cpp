@@ -169,13 +169,11 @@ static void genMarkdown(const ClangDocContext &CDCtx, const FunctionInfo &I,
     First = false;
   }
   writeHeader(I.Name, 3, OS);
-  std::string Access = getAccessSpelling(I.Access).str();
-  if (!Access.empty())
-    Access += " ";
-  if (I.IsStatic)
-    Access += "static ";
-  writeLine(genItalic(Access + I.ReturnType.Type.QualName + " " + I.Name + "(" +
-                      Stream.str() + ")"),
+  StringRef Access = getAccessSpelling(I.Access);
+  writeLine(genItalic(Twine(Access) + (!Access.empty() ? " " : "") +
+                      (I.IsStatic ? "static " : "") +
+                      I.ReturnType.Type.QualName.str() + " " + I.Name.str() + "(" +
+                      Twine(Stream.str()) + ")"),
             OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
@@ -261,12 +259,11 @@ static void genMarkdown(const ClangDocContext &CDCtx, const RecordInfo &I,
   if (!I.Members.empty()) {
     writeHeader("Members", 2, OS);
     for (const auto &Member : I.Members) {
-      std::string Access = getAccessSpelling(Member.Access).str();
-      if (!Access.empty())
-        Access += " ";
-      if (Member.IsStatic)
-        Access += "static ";
-      writeLine(Access + Member.Type.Name + " " + Member.Name, OS);
+      StringRef Access = getAccessSpelling(Member.Access);
+      writeLine(Twine(Access) + (Access.empty() ? "" : " ") +
+                    (Member.IsStatic ? "static " : "") + Member.Type.Name.str() +
+                    " " + Member.Name.str(),
+                OS);
     }
     writeNewLine(OS);
   }
