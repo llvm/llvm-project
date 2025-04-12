@@ -34,6 +34,10 @@ static cl::opt<bool>
               cl::desc("Disable the emission of assembler pseudo instructions"),
               cl::init(false), cl::Hidden);
 
+static cl::opt<bool> EmitX8AsFP("riscv-emit-x8-as-fp",
+                                cl::desc("Emit x8 as fp instead of s0"),
+                                cl::init(false), cl::Hidden);
+
 // Print architectural register names rather than the ABI names (such as x2
 // instead of sp).
 // TODO: Make RISCVInstPrinter::getRegisterName non-static so that this can a
@@ -311,6 +315,8 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
+  if (EmitX8AsFP && Reg == RISCV::X8)
+    return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);
 }
