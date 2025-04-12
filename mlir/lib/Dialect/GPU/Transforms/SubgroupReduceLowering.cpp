@@ -369,46 +369,63 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                  gpu::AllReduceOperation mode,
                                  const ClusterInfo &ci) {
   Value result = input;
+  Value dppResult;
+  const int allRows = 0xf;
+  const int allBanks = 0xf;
+  const bool boundCtrl = true;
   if (ci.clusterSize >= 2) {
     auto permArg = b.getI32IntegerAttr(1);
-    Value dppResult =
+    dppResult =
         b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_shl, permArg);
+                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
 
   if (ci.clusterSize >= 4) {
     auto permArg = b.getI32IntegerAttr(2);
-    Value dppResult =
+    dppResult =
         b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_shl, permArg);
+                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
 
-  if (ci.clusterSize >= 8) {
-    Value dppResult = b.create<amdgpu::DPPOp>(
+  if (ci.clusterSize <= 8) {
+    dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_half_mirror,
-        b.getUnitAttr());
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
-  }
-
-  if (ci.clusterSize >= 16) {
-    Value dppResult =
+        b.getUnitAttr(), allRows, allBanks, boundCtrl);
+  } else if (ci.clusterSize == 8) {
+    auto permArg = b.getI32IntegerAttr(4);
+    dppResult =
         b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::row_mirror, b.getUnitAttr());
-    result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
-                                        result, dppResult);
+                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
   }
+  result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                          result, dppResult);
 
-  const int allRows = 0xf;
-  const int allBanks = 0xf;
+  if (ci.clusterSize <= 16) {
+    dppResult = b.create<amdgpu::DPPOp>(
+        loc, result.getType(), result, result, amdgpu::DPPPerm::row_mirror,
+        b.getUnitAttr(), allRows, allBanks, boundCtrl);
+  } else if (ci.clusterSize == 16) {
+    auto permArg = b.getI32IntegerAttr(8);
+    dppResult =
+        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                amdgpu::DPPPerm::row_shl, permArg, allRows, allBanks, boundCtrl);
+  }
+  result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
+                                        result, dppResult);
+
   if (ci.clusterSize >= 32) {
-    auto uIntMax = llvm::APInt::getMaxValue(32u);
-    Value uIntMaxConst = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), uIntMax);
-    Value dppResult = b.create<ROCDL::PermlaneX16Op>(loc, input.getType(), result, result, uIntMaxConst, uIntMaxConst, true, false);
+    auto permArg = b.getI32IntegerAttr(15);
+    dppResult = b.create<amdgpu::DPPOp>(
+        loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
+        b.getUnitAttr(), 0xa, allBanks, false);
+    // if (chipset.majorVersion == 9)
+    // auto uIntMax = llvm::APInt::getMaxValue(32u);
+    // Value uIntMaxConst = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), uIntMax);
+    // Value dppResult = b.create<ROCDL::PermlaneX16Op>(loc, input.getType(), result, result, uIntMaxConst, uIntMaxConst, true, false);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
     if (ci.subgroupSize == 32) {
@@ -420,7 +437,7 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
 
   if (ci.clusterSize == 64) {
     auto permArg = b.getI32IntegerAttr(31);
-    Value dppResult = b.create<amdgpu::DPPOp>(
+    dppResult = b.create<amdgpu::DPPOp>(
         loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
         b.getUnitAttr(), allRows, allBanks, false);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
