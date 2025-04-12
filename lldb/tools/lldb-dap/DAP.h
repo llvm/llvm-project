@@ -35,11 +35,15 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
+#include <condition_variable>
+#include <cstdint>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -397,7 +401,24 @@ struct DAP {
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
 
+  /// Checks if the request is cancelled.
+  bool IsCancelled(const protocol::Request &);
+
+  /// Clears the cancel request from the set of tracked cancel requests.
+  void ClearCancelRequest(const protocol::CancelArguments &);
+
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
+
+private:
+  std::mutex m_queue_mutex;
+  std::deque<protocol::Message> m_queue;
+  std::condition_variable m_queue_cv;
+
+  std::mutex m_cancelled_requests_mutex;
+  llvm::SmallSet<int64_t, 4> m_cancelled_requests;
+
+  std::mutex m_active_request_mutex;
+  const protocol::Request *m_active_request;
 };
 
 } // namespace lldb_dap
