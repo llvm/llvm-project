@@ -22,13 +22,17 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr size_t N_EXCEPTS = 2;
+static constexpr size_t N_EXCEPTS = 4;
 static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ATANHF16_EXCEPTS{{
     // (input, RZ output, RU offset, RD offset, RN offset)
     // x = 0x1.a5cp-4, atanhf16(x) = 0x1.a74p-4 (RZ)
     {0x2E97, 0x2E9D, 1, 0, 0},
     // x = -0x1.a5cp-4, atanhf16(x) = -0x1.a74p-4 (RZ)
     {0xAE97, 0xAE9D, 0, 1, 0},
+    // x = -0x1.99cp-4, atanhf16(x) = -0x1.9bp-4 (RZ)
+    {0xAE67, 0xAE6C, 0, 1, 1},
+    // x = -0x1.b8cp-3, atanhf16(x) = -0x1.bfcp-3 (RZ)
+    {0xB2E3, 0xB2FF, 0, 1, 0},
 }};
 
 LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
@@ -89,7 +93,7 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
   }
 
   float xf = x;
-  return fputil::cast<float16>(0.5 * log_eval((xf + 1.0f) / (xf - 1.0f)));
+  return fputil::cast<float16>(0.5 * log_eval_f((xf + 1.0f) / (xf - 1.0f)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
