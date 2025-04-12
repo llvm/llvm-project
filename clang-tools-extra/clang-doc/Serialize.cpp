@@ -743,7 +743,6 @@ emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
   return {std::move(I), std::move(Parent)};
 }
 
-
 std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
 emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
          llvm::StringRef File, bool IsFileInRootDir, bool PublicOnly) {

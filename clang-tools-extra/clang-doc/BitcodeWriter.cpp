@@ -224,7 +224,8 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // FieldType Block
         {BI_FIELD_TYPE_BLOCK_ID, {FIELD_TYPE_NAME, FIELD_DEFAULT_VALUE}},
         // MemberType Block
-        {BI_MEMBER_TYPE_BLOCK_ID, {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
+        {BI_MEMBER_TYPE_BLOCK_ID,
+         {MEMBER_TYPE_NAME, MEMBER_TYPE_ACCESS, MEMBER_TYPE_IS_STATIC}},
         // Enum Block
         {BI_ENUM_BLOCK_ID,
          {ENUM_USR, ENUM_NAME, ENUM_DEFLOCATION, ENUM_LOCATION, ENUM_SCOPED}},

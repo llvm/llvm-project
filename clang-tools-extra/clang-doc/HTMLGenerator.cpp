@@ -419,7 +419,7 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
     std::string Access = getAccessSpelling(M.Access).str();
     if (Access != "")
       Access = Access + " ";
-    if(M.IsStatic)
+    if (M.IsStatic)
       Access += "static ";
     auto LIBody = std::make_unique<TagNode>(HTMLTag::TAG_LI);
     auto MemberDecl = std::make_unique<TagNode>(HTMLTag::TAG_DIV);
@@ -742,10 +742,10 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   if (Access != "")
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>(Access + " "));
-  if(I.IsStatic)
+  if (I.IsStatic)
     FunctionHeader->Children.emplace_back(
         std::make_unique<TextNode>("static "));
-  else{
+  else {
     llvm::errs() << I.Name << " is not static\n";
   }
   if (I.ReturnType.Type.Name != "") {
