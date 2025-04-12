@@ -1334,6 +1334,11 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
+  if (Style.BraceWrapping.BeforeLambdaBody &&
+      Style.BraceWrapping.IndentBraces && Current.is(TT_LambdaLBrace)) {
+    return CurrentState.Indent + Style.IndentWidth;
+  }
+
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
       (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
     if (Current.NestingLevel == 0 ||

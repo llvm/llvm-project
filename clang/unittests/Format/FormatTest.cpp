@@ -24268,6 +24268,15 @@ TEST_F(FormatTest, EmptyLinesInLambdas) {
                "};");
 }
 
+TEST_F(FormatTest, LambdaBracesInGNU) {
+  verifyFormat("auto x = [&] ()\n"
+               "  {\n"
+               "    for (int i = 0; i < y; ++i)\n"
+               "      return 97;\n"
+               "  };",
+               getGNUStyle());
+}
+
 TEST_F(FormatTest, FormatsBlocks) {
   FormatStyle ShortBlocks = getLLVMStyle();
   ShortBlocks.AllowShortBlocksOnASingleLine = FormatStyle::SBS_Always;
