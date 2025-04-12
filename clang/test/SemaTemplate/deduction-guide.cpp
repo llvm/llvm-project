@@ -771,3 +771,42 @@ D d(24);
 // CHECK-NEXT:  `-ParmVarDecl {{.+}} 'U'
 
 } // namespace GH132616_DeductionGuide
+
+namespace GH133132 {
+
+template <class _Ty>
+struct A {};
+
+template <class T = int, class U = T>
+using AA = A<U>;
+
+AA a{};
+
+// CHECK-LABEL: Dumping GH133132::<deduction guide for AA>:
+// CHECK-NEXT:  FunctionTemplateDecl {{.+}} implicit <deduction guide for AA>
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 0 T
+// CHECK-NEXT:  | `-TemplateArgument type 'int'
+// CHECK-NEXT:  |   `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:  |-TemplateTypeParmDecl {{.+}} class depth 0 index 1 U
+// CHECK-NEXT:  | `-TemplateArgument type 'T':'type-parameter-0-0'
+// CHECK-NEXT:  |   `-TemplateTypeParmType {{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:  |     `-TemplateTypeParm {{.+}} 'T'
+// CHECK-NEXT:  |-TypeTraitExpr {{.+}} 'bool' __is_deducible
+// CHECK-NEXT:  | |-DeducedTemplateSpecializationType {{.+}} 'GH133132::AA' dependent
+// CHECK-NEXT:  | | `-name: 'GH133132::AA'
+// CHECK-NEXT:  | |   `-TypeAliasTemplateDecl {{.+}} AA
+// CHECK-NEXT:  | `-TemplateSpecializationType {{.+}} 'A<U>' dependent
+// CHECK-NEXT:  |   |-name: 'A':'GH133132::A' qualified
+// CHECK-NEXT:  |   | `-ClassTemplateDecl {{.+}} A
+// CHECK-NEXT:  |   `-TemplateArgument type 'U':'type-parameter-0-1'
+// CHECK-NEXT:  |     `-SubstTemplateTypeParmType {{.+}} 'U' sugar dependent class depth 0 index 0 _Ty
+// CHECK-NEXT:  |       |-FunctionTemplate {{.+}} '<deduction guide for A>'
+// CHECK-NEXT:  |       `-TemplateTypeParmType {{.+}} 'U' dependent depth 0 index 1
+// CHECK-NEXT:  |         `-TemplateTypeParm {{.+}} 'U'
+// CHECK-NEXT:  |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for AA> 'auto () -> A<U>'
+// CHECK-NEXT:  `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for AA> 'auto () -> A<int>' implicit_instantiation
+// CHECK-NEXT:    |-TemplateArgument type 'int'
+// CHECK-NEXT:    | `-BuiltinType {{.+}} 'int'
+// CHECK-NEXT:    `-TemplateArgument type 'int'
+// CHECK-NEXT:      `-BuiltinType {{.+}} 'int'
+}
