@@ -13024,9 +13024,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               LI0->getPointerAddressSpace(), CostKind);
 
         } else {
-          VecLdCost = TTI->getMemoryOpCost(
-              Instruction::Load, VecTy, LI0->getAlign(),
-              LI0->getPointerAddressSpace(), CostKind, TTI::OperandValueInfo());
+          if (VecTy->getElementType() ==
+                  IntegerType::getInt8Ty(VecTy->getContext()) &&
+              TTI->canVectorizei8s()) {
+            VecLdCost = 1;
+          } else {
+            VecLdCost =
+                TTI->getMemoryOpCost(Instruction::Load, VecTy, LI0->getAlign(),
+                                     LI0->getPointerAddressSpace(), CostKind,
+                                     TTI::OperandValueInfo());
+          }
         }
         break;
       case TreeEntry::StridedVectorize: {
@@ -21018,7 +21025,11 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     // provided vectorization factor (i.e. the scalar type is used for vector
     // code during codegen).
     auto *VecTy = getWidenedType(ScalarTy, VF);
-    if (TTI->getNumberOfParts(VecTy) == VF)
+    unsigned NumParts = TTI->getNumberOfParts(VecTy);
+    if (TTI->canVectorizei8s() &&
+        VecTy->getElementType() == IntegerType::getInt8Ty(VecTy->getContext()))
+      NumParts = 1;
+    if (NumParts == VF)
       continue;
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);

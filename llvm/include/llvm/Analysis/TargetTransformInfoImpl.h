@@ -1063,6 +1063,8 @@ public:
 
   unsigned getMaxNumArgs() const { return UINT_MAX; }
 
+  bool canVectorizei8s() const { return false; }
+
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const {
     return 0;
   }

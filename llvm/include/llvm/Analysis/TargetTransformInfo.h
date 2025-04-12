@@ -1907,6 +1907,10 @@ public:
   /// pad to. Default is no padding.
   unsigned getNumBytesToPadGlobalArray(unsigned Size, Type *ArrayType) const;
 
+  /// \return Returns true if vectorizing 4 x i8s into an i32 is possible.
+  /// Currently only used by the SLP vectorizer.
+  bool canVectorizei8s() const;
+
   /// @}
 
   /// Collect kernel launch bounds for \p F into \p LB.
@@ -2363,6 +2367,7 @@ public:
   virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const = 0;
+  virtual bool canVectorizei8s() const = 0;
 };
 
 template <typename T>
@@ -3229,6 +3234,8 @@ public:
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const override {
     Impl.collectKernelLaunchBounds(F, LB);
   }
+
+  bool canVectorizei8s() const override { return Impl.canVectorizei8s(); }
 };
 
 template <typename T>
