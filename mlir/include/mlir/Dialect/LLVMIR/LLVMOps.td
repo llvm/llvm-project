@@ -1690,8 +1690,8 @@ def LLVM_BlockTagOp : LLVM_Op<"blocktag"> {
     the target address.
 
     A given function should have at most one `llvm.blocktag` operation with a
-    given `tag`. This operation cannot be used as a terminator but can be
-    placed everywhere else in a block.
+    given `tag`. This operation cannot be used as a terminator and cannot be
+    part of an unreachable block.
 
     Example:
 
