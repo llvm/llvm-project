@@ -251,6 +251,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
                g_debugger_properties[ePropertyShowStatusline].name) {
       // Statusline setting changed. If we have a statusline instance, update it
       // now. Otherwise it will get created in the default event handler.
+      std::lock_guard<std::mutex> guard(m_statusline_mutex);
       if (StatuslineSupported())
         m_statusline.emplace(*this);
       else
@@ -391,8 +392,12 @@ bool Debugger::SetTerminalWidth(uint64_t term_width) {
 
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
-  if (m_statusline)
-    m_statusline->TerminalSizeChanged();
+
+  {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (m_statusline)
+      m_statusline->TerminalSizeChanged();
+  }
 
   return success;
 }
@@ -409,8 +414,12 @@ bool Debugger::SetTerminalHeight(uint64_t term_height) {
 
   if (auto handler_sp = m_io_handler_stack.Top())
     handler_sp->TerminalSizeChanged();
-  if (m_statusline)
-    m_statusline->TerminalSizeChanged();
+
+  {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (m_statusline)
+      m_statusline->TerminalSizeChanged();
+  }
 
   return success;
 }
@@ -1148,8 +1157,11 @@ void Debugger::SetErrorFile(FileSP file_sp) {
 }
 
 void Debugger::SaveInputTerminalState() {
-  if (m_statusline)
-    m_statusline->Disable();
+  {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (m_statusline)
+      m_statusline->Disable();
+  }
   int fd = GetInputFile().GetDescriptor();
   if (fd != File::kInvalidDescriptor)
     m_terminal_state.Save(fd, true);
@@ -1157,11 +1169,15 @@ void Debugger::SaveInputTerminalState() {
 
 void Debugger::RestoreInputTerminalState() {
   m_terminal_state.Restore();
-  if (m_statusline)
-    m_statusline->Enable();
+  {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (m_statusline)
+      m_statusline->Enable();
+  }
 }
 
 void Debugger::RedrawStatusline(bool update) {
+  std::lock_guard<std::mutex> guard(m_statusline_mutex);
   if (m_statusline)
     m_statusline->Redraw(update);
 }
@@ -2039,8 +2055,11 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
   // are now listening to all required events so no events get missed
   m_sync_broadcaster.BroadcastEvent(eBroadcastBitEventThreadIsListening);
 
-  if (!m_statusline && StatuslineSupported())
-    m_statusline.emplace(*this);
+  if (StatuslineSupported()) {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (!m_statusline)
+      m_statusline.emplace(*this);
+  }
 
   bool done = false;
   while (!done) {
@@ -2101,8 +2120,11 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
     }
   }
 
-  if (m_statusline)
-    m_statusline.reset();
+  {
+    std::lock_guard<std::mutex> guard(m_statusline_mutex);
+    if (m_statusline)
+      m_statusline.reset();
+  }
 
   return {};
 }
