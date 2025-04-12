@@ -12,13 +12,9 @@
 
 #include <__algorithm/comp.h>
 #include <__algorithm/iterator_operations.h>
-#include <__algorithm/search.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__iterator/advance.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/next.h>
-#include <__iterator/reverse_iterator.h>
 #include <__type_traits/invoke.h>
 #include <__utility/pair.h>
 

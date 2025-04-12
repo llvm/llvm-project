@@ -95,7 +95,7 @@ using namespace llvm::X86Disassembler;
 /// X86RecognizableInstr.cpp contains the implementation for a single
 ///   instruction.
 
-static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
+static void emitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
   const CodeGenTarget Target(Records);
   emitSourceFileHeader(" * " + Target.getName().str() + " Disassembler", OS);
 
@@ -132,5 +132,5 @@ static void EmitDisassembler(const RecordKeeper &Records, raw_ostream &OS) {
 
 cl::OptionCategory DisassemblerEmitterCat("Options for -gen-disassembler");
 
-static TableGen::Emitter::Opt X("gen-disassembler", EmitDisassembler,
+static TableGen::Emitter::Opt X("gen-disassembler", emitDisassembler,
                                 "Generate disassembler");

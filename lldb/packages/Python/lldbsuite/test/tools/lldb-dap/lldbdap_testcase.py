@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 
 import dap_server
 from lldbsuite.test.lldbtest import *
@@ -10,25 +11,26 @@ import lldbgdbserverutils
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    timeoutval = 10 * (10 if ('ASAN_OPTIONS' in os.environ) else 1)
+    timeoutval = 10 * (10 if ("ASAN_OPTIONS" in os.environ) else 1)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def create_debug_adaptor(self, lldbDAPEnv=None):
-        """Create the Visual Studio Code debug adaptor"""
+    def create_debug_adapter(self, lldbDAPEnv=None, connection=None):
+        """Create the Visual Studio Code debug adapter"""
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
         log_file_path = self.getBuildArtifact("dap.txt")
-        self.dap_server = dap_server.DebugAdaptorServer(
+        self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
+            connection=connection,
             init_commands=self.setUpCommands(),
             log_file=log_file_path,
             env=lldbDAPEnv,
         )
 
-    def build_and_create_debug_adaptor(self, lldbDAPEnv=None):
+    def build_and_create_debug_adapter(self, lldbDAPEnv=None):
         self.build()
-        self.create_debug_adaptor(lldbDAPEnv)
+        self.create_debug_adapter(lldbDAPEnv)
 
     def set_source_breakpoints(self, source_path, lines, data=None):
         """Sets source breakpoints and returns an array of strings containing
@@ -238,9 +240,10 @@ class DAPTestCaseBase(TestBase):
     def stepIn(
         self, threadId=None, targetId=None, waitForStop=True, granularity="statement"
     ):
-        self.dap_server.request_stepIn(
+        response = self.dap_server.request_stepIn(
             threadId=threadId, targetId=targetId, granularity=granularity
         )
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None
@@ -321,11 +324,11 @@ class DAPTestCaseBase(TestBase):
         gdbRemotePort=None,
         gdbRemoteHostname=None,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and attach to the process.
         """
 
-        # Make sure we disconnect and terminate the DAP debug adaptor even
+        # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
         def cleanup():
             if disconnectAutomatically:
@@ -367,7 +370,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -451,7 +454,7 @@ class DAPTestCaseBase(TestBase):
         cwd=None,
         env=None,
         stopOnEntry=False,
-        disableASLR=True,
+        disableASLR=False,
         disableSTDIO=False,
         shellExpandArguments=False,
         trace=False,
@@ -476,10 +479,10 @@ class DAPTestCaseBase(TestBase):
         launchCommands=None,
         expectFailure=False,
     ):
-        """Build the default Makefile target, create the DAP debug adaptor,
+        """Build the default Makefile target, create the DAP debug adapter,
         and launch the process.
         """
-        self.build_and_create_debug_adaptor(lldbDAPEnv)
+        self.build_and_create_debug_adapter(lldbDAPEnv)
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(

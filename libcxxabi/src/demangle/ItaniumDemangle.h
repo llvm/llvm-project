@@ -38,8 +38,10 @@
 DEMANGLE_NAMESPACE_BEGIN
 
 template <class T, size_t N> class PODSmallVector {
-  static_assert(std::is_trivial<T>::value,
-                "T is required to be a trivial type");
+  static_assert(std::is_trivially_copyable<T>::value,
+                "T is required to be a trivially copyable type");
+  static_assert(std::is_trivially_default_constructible<T>::value,
+                "T is required to be trivially default constructible");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
@@ -2077,17 +2079,23 @@ public:
 class CallExpr : public Node {
   const Node *Callee;
   NodeArray Args;
+  bool IsParen; // (func)(args ...) ?
 
 public:
-  CallExpr(const Node *Callee_, NodeArray Args_, Prec Prec_)
-      : Node(KCallExpr, Prec_), Callee(Callee_), Args(Args_) {}
+  CallExpr(const Node *Callee_, NodeArray Args_, bool IsParen_, Prec Prec_)
+      : Node(KCallExpr, Prec_), Callee(Callee_), Args(Args_),
+        IsParen(IsParen_) {}
 
   template <typename Fn> void match(Fn F) const {
-    F(Callee, Args, getPrecedence());
+    F(Callee, Args, IsParen, getPrecedence());
   }
 
   void printLeft(OutputBuffer &OB) const override {
+    if (IsParen)
+      OB.printOpen();
     Callee->print(OB);
+    if (IsParen)
+      OB.printClose();
     OB.printOpen();
     Args.printWithComma(OB);
     OB.printClose();
@@ -3354,9 +3362,12 @@ const typename AbstractManglingParser<
      "operator co_await"},
     {"az", OperatorInfo::OfIdOp, /*Type*/ false, Node::Prec::Unary, "alignof "},
     {"cc", OperatorInfo::NamedCast, false, Node::Prec::Postfix, "const_cast"},
-    {"cl", OperatorInfo::Call, false, Node::Prec::Postfix, "operator()"},
+    {"cl", OperatorInfo::Call, /*Paren*/ false, Node::Prec::Postfix,
+     "operator()"},
     {"cm", OperatorInfo::Binary, false, Node::Prec::Comma, "operator,"},
     {"co", OperatorInfo::Prefix, false, Node::Prec::Unary, "operator~"},
+    {"cp", OperatorInfo::Call, /*Paren*/ true, Node::Prec::Postfix,
+     "operator()"},
     {"cv", OperatorInfo::CCast, false, Node::Prec::Cast, "operator"}, // C Cast
     {"dV", OperatorInfo::Binary, false, Node::Prec::Assign, "operator/="},
     {"da", OperatorInfo::Del, /*Ary*/ true, Node::Prec::Unary,
@@ -4321,15 +4332,113 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 'h':
       First += 2;
       return make<NameType>("half");
-    //                ::= DF <number> _ # ISO/IEC TS 18661 binary floating point (N bits)
+    //       ::= DF16b         # C++23 std::bfloat16_t
+    //       ::= DF <number> _ # ISO/IEC TS 18661 binary floating point (N bits)
     case 'F': {
       First += 2;
+      if (consumeIf("16b"))
+        return make<NameType>("std::bfloat16_t");
       Node *DimensionNumber = make<NameType>(parseNumber());
       if (!DimensionNumber)
         return nullptr;
       if (!consumeIf('_'))
         return nullptr;
       return make<BinaryFPType>(DimensionNumber);
+    }
+    //                ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
+    //                ::= [DS] DR  # N1169 fixed-point [_Sat] T _Frac
+    // <fixed-point-size>
+    //                ::= s # short
+    //                ::= t # unsigned short
+    //                ::= i # plain
+    //                ::= j # unsigned
+    //                ::= l # long
+    //                ::= m # unsigned long
+    case 'A': {
+      char c = look(2);
+      First += 3;
+      switch (c) {
+      case 's':
+        return make<NameType>("short _Accum");
+      case 't':
+        return make<NameType>("unsigned short _Accum");
+      case 'i':
+        return make<NameType>("_Accum");
+      case 'j':
+        return make<NameType>("unsigned _Accum");
+      case 'l':
+        return make<NameType>("long _Accum");
+      case 'm':
+        return make<NameType>("unsigned long _Accum");
+      default:
+        return nullptr;
+      }
+    }
+    case 'R': {
+      char c = look(2);
+      First += 3;
+      switch (c) {
+      case 's':
+        return make<NameType>("short _Fract");
+      case 't':
+        return make<NameType>("unsigned short _Fract");
+      case 'i':
+        return make<NameType>("_Fract");
+      case 'j':
+        return make<NameType>("unsigned _Fract");
+      case 'l':
+        return make<NameType>("long _Fract");
+      case 'm':
+        return make<NameType>("unsigned long _Fract");
+      default:
+        return nullptr;
+      }
+    }
+    case 'S': {
+      First += 2;
+      if (look() != 'D')
+        return nullptr;
+      if (look(1) == 'A') {
+        char c = look(2);
+        First += 3;
+        switch (c) {
+        case 's':
+          return make<NameType>("_Sat short _Accum");
+        case 't':
+          return make<NameType>("_Sat unsigned short _Accum");
+        case 'i':
+          return make<NameType>("_Sat _Accum");
+        case 'j':
+          return make<NameType>("_Sat unsigned _Accum");
+        case 'l':
+          return make<NameType>("_Sat long _Accum");
+        case 'm':
+          return make<NameType>("_Sat unsigned long _Accum");
+        default:
+          return nullptr;
+        }
+      }
+      if (look(1) == 'R') {
+        char c = look(2);
+        First += 3;
+        switch (c) {
+        case 's':
+          return make<NameType>("_Sat short _Fract");
+        case 't':
+          return make<NameType>("_Sat unsigned short _Fract");
+        case 'i':
+          return make<NameType>("_Sat _Fract");
+        case 'j':
+          return make<NameType>("_Sat unsigned _Fract");
+        case 'l':
+          return make<NameType>("_Sat long _Fract");
+        case 'm':
+          return make<NameType>("_Sat unsigned long _Fract");
+        default:
+          return nullptr;
+        }
+      }
+      return nullptr;
     }
     //                ::= DB <number> _                             # C23 signed _BitInt(N)
     //                ::= DB <instantiation-dependent expression> _ # C23 signed _BitInt(N)
@@ -5004,6 +5113,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseRequiresExpr() {
 //              ::= <binary operator-name> <expression> <expression>
 //              ::= <ternary operator-name> <expression> <expression> <expression>
 //              ::= cl <expression>+ E                                   # call
+//              ::= cp <base-unresolved-name> <expression>* E            # (name) (expr-list), call that would use argument-dependent lookup but for the parentheses
 //              ::= cv <type> <expression>                               # conversion with one argument
 //              ::= cv <type> _ <expression>* E                          # conversion with a different number of arguments
 //              ::= [gs] nw <expression>* _ <type> E                     # new (expr-list) type
@@ -5139,7 +5249,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
         Names.push_back(E);
       }
       return make<CallExpr>(Callee, popTrailingNodeArray(ExprsBegin),
-                            Op->getPrecedence());
+                            /*IsParen=*/Op->getFlag(), Op->getPrecedence());
     }
     case OperatorInfo::CCast: {
       // C Cast: (type)expr
@@ -5326,7 +5436,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
       }
     }
     return make<CallExpr>(Name, popTrailingNodeArray(ExprsBegin),
-                          Node::Prec::Postfix);
+                          /*IsParen=*/false, Node::Prec::Postfix);
   }
 
   // Only unresolved names remain.
@@ -5631,14 +5741,16 @@ struct FloatData<double>
 template <>
 struct FloatData<long double>
 {
-#if defined(__mips__) && defined(__mips_n64) || defined(__aarch64__) || \
-    defined(__wasm__) || defined(__riscv) || defined(__loongarch__) || \
-    defined(__ve__)
-    static const size_t mangled_size = 32;
-#elif defined(__arm__) || defined(__mips__) || defined(__hexagon__)
-    static const size_t mangled_size = 16;
+#if __LDBL_MANT_DIG__ == 113 || __LDBL_MANT_DIG__ == 106
+  static const size_t mangled_size = 32;
+#elif __LDBL_MANT_DIG__ == 53 || defined(_MSC_VER)
+  // MSVC doesn't define __LDBL_MANT_DIG__, but it has long double equal to
+  // regular double on all current architectures.
+  static const size_t mangled_size = 16;
+#elif __LDBL_MANT_DIG__ == 64
+  static const size_t mangled_size = 20;
 #else
-    static const size_t mangled_size = 20;  // May need to be adjusted to 16 or 24 on other platforms
+#error Unknown size for __LDBL_MANT_DIG__
 #endif
     // `-0x1.ffffffffffffffffffffffffffffp+16383` + 'L' + '\0' == 42 bytes.
     // 28 'f's * 4 bits == 112 bits, which is the number of mantissa bits.

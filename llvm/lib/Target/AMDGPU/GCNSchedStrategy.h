@@ -29,7 +29,8 @@ enum class GCNSchedStageID : unsigned {
   UnclusteredHighRPReschedule = 1,
   ClusteredLowOccupancyReschedule = 2,
   PreRARematerialize = 3,
-  ILPInitialSchedule = 4
+  ILPInitialSchedule = 4,
+  MemoryClauseInitialSchedule = 5
 };
 
 #ifndef NDEBUG
@@ -147,6 +148,17 @@ protected:
 
 public:
   GCNMaxILPSchedStrategy(const MachineSchedContext *C);
+};
+
+/// The goal of this scheduling strategy is to maximize memory clause for a
+/// single wave.
+class GCNMaxMemoryClauseSchedStrategy final : public GCNSchedStrategy {
+protected:
+  bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
+                    SchedBoundary *Zone) const override;
+
+public:
+  GCNMaxMemoryClauseSchedStrategy(const MachineSchedContext *C);
 };
 
 class ScheduleMetrics {
@@ -430,7 +442,7 @@ private:
 
   // Map a trivially rematerializable def to a list of regions at MinOccupancy
   // that has the defined reg as a live-in.
-  DenseMap<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
+  MapVector<MachineInstr *, SmallVector<unsigned, 4>> RematDefToLiveInRegions;
 
   // Collect all trivially rematerializable VGPR instructions with a single def
   // and single use outside the defining block into RematerializableInsts.
@@ -443,6 +455,12 @@ private:
   // instructions. Returns true if we were able to sink instruction(s).
   bool sinkTriviallyRematInsts(const GCNSubtarget &ST,
                                const TargetInstrInfo *TII);
+
+  /// \p Returns true if all the uses in \p InstToRemat defined at \p
+  /// OriginalIdx are live at \p RematIdx. This only checks liveness of virtual
+  /// reg uses.
+  bool allUsesAvailableAt(const MachineInstr *InstToRemat,
+                          SlotIndex OriginalIdx, SlotIndex RematIdx) const;
 
 public:
   bool initGCNSchedStage() override;
@@ -460,6 +478,15 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   ILPInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class MemoryClauseInitialScheduleStage : public GCNSchedStage {
+public:
+  bool shouldRevertScheduling(unsigned WavesAfter) override;
+
+  MemoryClauseInitialScheduleStage(GCNSchedStageID StageID,
+                                   GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 

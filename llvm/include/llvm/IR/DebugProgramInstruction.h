@@ -192,10 +192,18 @@ public:
 
   DbgRecord *getNextNode() { return &*std::next(getIterator()); }
   DbgRecord *getPrevNode() { return &*std::prev(getIterator()); }
+
+  // Some generic lambdas supporting intrinsic-based debug-info mean we need
+  // to support both iterator and instruction position based insertion.
   void insertBefore(DbgRecord *InsertBefore);
   void insertAfter(DbgRecord *InsertAfter);
   void moveBefore(DbgRecord *MoveBefore);
   void moveAfter(DbgRecord *MoveAfter);
+
+  void insertBefore(self_iterator InsertBefore);
+  void insertAfter(self_iterator InsertAfter);
+  void moveBefore(self_iterator MoveBefore);
+  void moveAfter(self_iterator MoveAfter);
 
   DebugLoc getDebugLoc() const { return DbgLoc; }
   void setDebugLoc(DebugLoc Loc) { DbgLoc = std::move(Loc); }
@@ -371,29 +379,29 @@ public:
       return I == RHS.I;
     }
     const Value *operator*() const {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
+      ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                                 ? cast<ValueAsMetadata *>(I)
+                                 : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
     };
     Value *operator*() {
-      ValueAsMetadata *VAM = I.is<ValueAsMetadata *>()
-                                 ? I.get<ValueAsMetadata *>()
-                                 : *I.get<ValueAsMetadata **>();
+      ValueAsMetadata *VAM = isa<ValueAsMetadata *>(I)
+                                 ? cast<ValueAsMetadata *>(I)
+                                 : *cast<ValueAsMetadata **>(I);
       return VAM->getValue();
     }
     location_op_iterator &operator++() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() + 1;
+      if (auto *VAM = dyn_cast<ValueAsMetadata *>(I))
+        I = VAM + 1;
       else
-        I = I.get<ValueAsMetadata **>() + 1;
+        I = cast<ValueAsMetadata **>(I) + 1;
       return *this;
     }
     location_op_iterator &operator--() {
-      if (I.is<ValueAsMetadata *>())
-        I = I.get<ValueAsMetadata *>() - 1;
+      if (auto *VAM = dyn_cast<ValueAsMetadata *>(I))
+        I = VAM - 1;
       else
-        I = I.get<ValueAsMetadata **>() - 1;
+        I = cast<ValueAsMetadata **>(I) - 1;
       return *this;
     }
   };

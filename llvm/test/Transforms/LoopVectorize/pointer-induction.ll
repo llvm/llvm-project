@@ -32,7 +32,7 @@ define void @a(ptr readnone %b) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i8> [[REVERSE]], zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP6]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP6]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
@@ -140,19 +140,18 @@ define void @pointer_induction_used_as_vector(ptr noalias %start.1, ptr noalias 
 ; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr [[START_2:%.*]], i64 [[N_VEC]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START_2]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 1, i64 2, i64 3>
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START_1]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[VECTOR_GEP]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[NEXT_GEP]], i32 0
 ; CHECK-NEXT:    store <4 x ptr> [[TMP2]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i32 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i8> [[WIDE_LOAD]], <i8 1, i8 1, i8 1, i8 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 1)
 ; CHECK-NEXT:    store <4 x i8> [[TMP6]], ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 4
@@ -232,16 +231,15 @@ define void @non_constant_vector_expansion(i32 %0, ptr %call) {
 ; STRIDED-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr null, i64 [[TMP2]]
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; STRIDED:       vector.body:
-; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; STRIDED-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ null, [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
 ; STRIDED-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], 4
 ; STRIDED-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP1]], i64 0
 ; STRIDED-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
 ; STRIDED-NEXT:    [[TMP4:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[DOTSPLAT]]
 ; STRIDED-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[TMP4]]
 ; STRIDED-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; STRIDED-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX]], 0
-; STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[TMP5]]
+; STRIDED-NEXT:    [[TMP6:%.*]] = getelementptr ptr, ptr [[CALL:%.*]], i32 [[OFFSET_IDX]]
 ; STRIDED-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP6]], i32 0
 ; STRIDED-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP7]], align 4
 ; STRIDED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

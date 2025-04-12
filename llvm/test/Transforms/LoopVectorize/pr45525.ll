@@ -10,7 +10,7 @@ define void @main(i1 %cond, ptr %arr) {
 ; CHECK:         br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK:         [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK:         [[TMP5:%.*]] = mul <4 x i32> [[VEC_IND]], <i32 3, i32 3, i32 3, i32 3>
+; CHECK:         [[TMP5:%.*]] = mul <4 x i32> [[VEC_IND]], splat (i32 3)
 ;
 bb.0:
   br label %bb.1

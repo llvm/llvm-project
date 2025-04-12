@@ -59,7 +59,9 @@ static std::vector<Defined *> getSymbols(Ctx &ctx) {
     for (Symbol *b : file->getSymbols())
       if (auto *dr = dyn_cast<Defined>(b))
         if (!dr->isSection() && dr->section && dr->section->isLive() &&
-            (dr->file == file || dr->hasFlag(NEEDS_COPY) || dr->section->bss))
+            (dr->file == file || dr->hasFlag(NEEDS_COPY) ||
+             (isa<SyntheticSection>(dr->section) &&
+              cast<SyntheticSection>(dr->section)->bss)))
           v.push_back(dr);
   return v;
 }
@@ -87,7 +89,7 @@ static SymbolMapTy getSectionSyms(Ctx &ctx, ArrayRef<Defined *> syms) {
 }
 
 // Construct a map from symbols to their stringified representations.
-// Demangling symbols (which is what toString() does) is slow, so
+// Demangling symbols (which is what toStr(ctx, ) does) is slow, so
 // we do that in batch using parallel-for.
 static DenseMap<Symbol *, std::string>
 getSymbolStrings(Ctx &ctx, ArrayRef<Defined *> syms) {
@@ -98,7 +100,7 @@ getSymbolStrings(Ctx &ctx, ArrayRef<Defined *> syms) {
     uint64_t vma = syms[i]->getVA(ctx);
     uint64_t lma = osec ? osec->getLMA() + vma - osec->getVA(0) : 0;
     writeHeader(ctx, os, vma, lma, syms[i]->getSize(), 1);
-    os << indent16 << toString(*syms[i]);
+    os << indent16 << toStr(ctx, *syms[i]);
   });
 
   DenseMap<Symbol *, std::string> ret;
@@ -141,7 +143,7 @@ static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
   for (EhSectionPiece &p : pieces) {
     writeHeader(ctx, os, osec->addr + p.outputOff, osec->getLMA() + p.outputOff,
                 p.size, 1);
-    os << indent8 << toString(p.sec->file) << ":(" << p.sec->name << "+0x"
+    os << indent8 << toStr(ctx, p.sec->file) << ":(" << p.sec->name << "+0x"
        << Twine::utohexstr(p.inputOff) + ")\n";
   }
 }
@@ -186,7 +188,7 @@ static void writeMapFile(Ctx &ctx, raw_fd_ostream &os) {
 
           writeHeader(ctx, os, isec->getVA(), osec->getLMA() + isec->outSecOff,
                       isec->getSize(), isec->addralign);
-          os << indent8 << toString(isec) << '\n';
+          os << indent8 << toStr(ctx, isec) << '\n';
           for (Symbol *sym : llvm::make_first_range(sectionSyms[isec]))
             os << symStr[sym] << '\n';
         }
@@ -250,10 +252,10 @@ static void writeCref(Ctx &ctx, raw_fd_ostream &os) {
     Symbol *sym = kv.first;
     SetVector<InputFile *> &files = kv.second;
 
-    print(toString(*sym), toString(sym->file));
+    print(toStr(ctx, *sym), toStr(ctx, sym->file));
     for (InputFile *file : files)
       if (file != sym->file)
-        print("", toString(file));
+        print("", toStr(ctx, file));
   }
 }
 
@@ -268,7 +270,7 @@ void elf::writeMapAndCref(Ctx &ctx) {
   StringRef mapFile = ctx.arg.mapFile.empty() ? "-" : ctx.arg.mapFile;
   raw_fd_ostream os = ctx.openAuxiliaryFile(mapFile, ec);
   if (ec) {
-    error("cannot open " + mapFile + ": " + ec.message());
+    ErrAlways(ctx) << "cannot open " << mapFile << ": " << ec.message();
     return;
   }
 

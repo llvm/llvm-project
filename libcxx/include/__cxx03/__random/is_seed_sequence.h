@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
-#define _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
+#ifndef _LIBCPP___CXX03___RANDOM_IS_SEED_SEQUENCE_H
+#define _LIBCPP___CXX03___RANDOM_IS_SEED_SEQUENCE_H
 
-#include <__config>
-#include <__type_traits/is_convertible.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/remove_cv.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_convertible.h>
+#include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_cv.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -28,4 +28,4 @@ struct __is_seed_sequence {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANDOM_IS_SEED_SEQUENCE_H
+#endif // _LIBCPP___CXX03___RANDOM_IS_SEED_SEQUENCE_H

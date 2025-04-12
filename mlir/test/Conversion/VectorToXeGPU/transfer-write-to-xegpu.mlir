@@ -164,3 +164,16 @@ func.func @no_store_unsupported_map(%vec: vector<8x16xf32>,
 
 // CHECK-LABEL: @no_store_unsupported_map(
 // CHECK:       vector.transfer_write
+
+// -----
+
+func.func @no_store_out_of_bounds_1D_vector(%vec: vector<8xf32>,
+    %source: memref<8x16x32xf32>, %offset: index) {
+  vector.transfer_write %vec, %source[%offset, %offset, %offset]
+    {in_bounds = [false]}
+    : vector<8xf32>, memref<8x16x32xf32>
+  return
+}
+
+// CHECK-LABEL: @no_store_out_of_bounds_1D_vector(
+// CHECK:       vector.transfer_write

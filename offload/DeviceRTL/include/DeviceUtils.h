@@ -15,9 +15,53 @@
 #include "DeviceTypes.h"
 #include "Shared/Utils.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace utils {
+
+template <typename T> struct type_identity {
+  using type = T;
+};
+
+template <typename T, T v> struct integral_constant {
+  inline static constexpr T value = v;
+};
+
+/// Freestanding SFINAE helpers.
+template <class T> struct remove_cv : type_identity<T> {};
+template <class T> struct remove_cv<const T> : type_identity<T> {};
+template <class T> struct remove_cv<volatile T> : type_identity<T> {};
+template <class T> struct remove_cv<const volatile T> : type_identity<T> {};
+template <class T> using remove_cv_t = typename remove_cv<T>::type;
+
+using true_type = integral_constant<bool, true>;
+using false_type = integral_constant<bool, false>;
+
+template <typename T, typename U> struct is_same : false_type {};
+template <typename T> struct is_same<T, T> : true_type {};
+template <typename T, typename U>
+inline constexpr bool is_same_v = is_same<T, U>::value;
+
+template <typename T> struct is_floating_point {
+  inline static constexpr bool value =
+      is_same_v<remove_cv_t<T>, float> || is_same_v<remove_cv_t<T>, double>;
+};
+template <typename T>
+inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
+
+template <bool B, typename T = void> struct enable_if;
+template <typename T> struct enable_if<true, T> : type_identity<T> {};
+template <bool B, typename T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+template <class T> struct remove_addrspace : type_identity<T> {};
+template <class T, int N>
+struct remove_addrspace<T [[clang::address_space(N)]]> : type_identity<T> {};
+template <class T>
+using remove_addrspace_t = typename remove_addrspace<T>::type;
+
+template <typename To, typename From> inline To bitCast(From V) {
+  static_assert(sizeof(To) == sizeof(From), "Bad conversion");
+  return __builtin_bit_cast(To, V);
+}
 
 /// Return the value \p Var from thread Id \p SrcLane in the warp if the thread
 /// is identified by \p Mask.
@@ -48,7 +92,5 @@ bool isThreadLocalMemPtr(void *Ptr);
 #define OMP_UNLIKELY(EXPR) __builtin_expect((bool)(EXPR), false)
 
 } // namespace utils
-
-#pragma omp end declare target
 
 #endif

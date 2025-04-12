@@ -22,8 +22,6 @@
 // Forward declaration.
 struct KernelEnvironmentTy;
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 
 namespace memory {
@@ -33,7 +31,7 @@ namespace memory {
 /// Note: See the restrictions on __kmpc_alloc_shared for proper usage.
 void *allocShared(uint64_t Size, const char *Reason);
 
-/// Free \p Ptr, alloated via allocShared, for \p Reason.
+/// Free \p Ptr, allocated via allocShared, for \p Reason.
 ///
 /// Note: See the restrictions on __kmpc_free_shared for proper usage.
 void freeShared(void *Ptr, uint64_t Bytes, const char *Reason);
@@ -44,7 +42,7 @@ void *allocGlobal(uint64_t Size, const char *Reason);
 /// Return a pointer to the dynamic shared memory buffer.
 void *getDynamicBuffer();
 
-/// Free \p Ptr, alloated via allocGlobal, for \p Reason.
+/// Free \p Ptr, allocated via allocGlobal, for \p Reason.
 void freeGlobal(void *Ptr, const char *Reason);
 
 } // namespace memory
@@ -88,8 +86,7 @@ struct TeamStateTy {
   ParallelRegionFnTy ParallelRegionFnVar;
 };
 
-extern TeamStateTy TeamState;
-#pragma omp allocate(TeamState) allocator(omp_pteam_mem_alloc)
+extern Local<TeamStateTy> TeamState;
 
 struct ThreadStateTy {
 
@@ -115,8 +112,7 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy **ThreadStates;
-#pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
+extern Local<ThreadStateTy **> ThreadStates;
 
 /// Initialize the state machinery. Must be called by all threads.
 void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -158,63 +154,61 @@ struct DateEnvironmentRAII {
 /// TODO
 void resetStateForThread(uint32_t TId);
 
-inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
-                                       IdentTy *Ident, bool ForceTeamState) {
-  if (OMP_LIKELY(ForceTeamState || !config::mayUseThreadStates() ||
-                 !TeamState.HasThreadState))
-    return TeamState.ICVState.*Var;
-  uint32_t TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(!ThreadStates[TId])) {
-    ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
-        sizeof(ThreadStateTy), "ICV modification outside data environment"));
-    ASSERT(ThreadStates[TId] != nullptr, "Nullptr returned by malloc!");
-    TeamState.HasThreadState = true;
-    ThreadStates[TId]->init();
+// FIXME: https://github.com/llvm/llvm-project/issues/123241.
+#define lookupForModify32Impl(Member, Ident, ForceTeamState)                   \
+  {                                                                            \
+    if (OMP_LIKELY(ForceTeamState || !config::mayUseThreadStates() ||          \
+                   !TeamState.HasThreadState))                                 \
+      return TeamState.ICVState.Member;                                        \
+    uint32_t TId = mapping::getThreadIdInBlock();                              \
+    if (OMP_UNLIKELY(!ThreadStates[TId])) {                                    \
+      ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(                   \
+          memory::allocGlobal(sizeof(ThreadStateTy),                           \
+                              "ICV modification outside data environment"));   \
+      ASSERT(ThreadStates[TId] != nullptr, "Nullptr returned by malloc!");     \
+      TeamState.HasThreadState = true;                                         \
+      ThreadStates[TId]->init();                                               \
+    }                                                                          \
+    return ThreadStates[TId]->ICVState.Member;                                 \
   }
-  return ThreadStates[TId]->ICVState.*Var;
-}
 
-inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
-                            bool ForceTeamState) {
-  auto TId = mapping::getThreadIdInBlock();
-  if (OMP_UNLIKELY(!ForceTeamState && config::mayUseThreadStates() &&
-                   TeamState.HasThreadState && ThreadStates[TId]))
-    return ThreadStates[TId]->ICVState.*Var;
-  return TeamState.ICVState.*Var;
-}
+// FIXME: https://github.com/llvm/llvm-project/issues/123241.
+#define lookupImpl(Member, ForceTeamState)                                     \
+  {                                                                            \
+    auto TId = mapping::getThreadIdInBlock();                                  \
+    if (OMP_UNLIKELY(!ForceTeamState && config::mayUseThreadStates() &&        \
+                     TeamState.HasThreadState && ThreadStates[TId]))           \
+      return ThreadStates[TId]->ICVState.Member;                               \
+    return TeamState.ICVState.Member;                                          \
+  }
 
 [[gnu::always_inline, gnu::flatten]] inline uint32_t &
 lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_NThreads:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::NThreadsVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident,
-                                 ForceTeamState);
+      lookupImpl(NThreadsVar, ForceTeamState);
+    lookupForModify32Impl(NThreadsVar, Ident, ForceTeamState);
   case state::VK_Level:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::LevelVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::LevelVar, Ident, ForceTeamState);
+      lookupImpl(LevelVar, ForceTeamState);
+    lookupForModify32Impl(LevelVar, Ident, ForceTeamState);
   case state::VK_ActiveLevel:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::ActiveLevelVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::ActiveLevelVar, Ident,
-                                 ForceTeamState);
+      lookupImpl(ActiveLevelVar, ForceTeamState);
+    lookupForModify32Impl(ActiveLevelVar, Ident, ForceTeamState);
   case state::VK_MaxActiveLevels:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::MaxActiveLevelsVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::MaxActiveLevelsVar, Ident,
-                                 ForceTeamState);
+      lookupImpl(MaxActiveLevelsVar, ForceTeamState);
+    lookupForModify32Impl(MaxActiveLevelsVar, Ident, ForceTeamState);
   case state::VK_RunSched:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::RunSchedVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedVar, Ident,
-                                 ForceTeamState);
+      lookupImpl(RunSchedVar, ForceTeamState);
+    lookupForModify32Impl(RunSchedVar, Ident, ForceTeamState);
   case state::VK_RunSchedChunk:
     if (IsReadonly)
-      return lookupImpl(&ICVStateTy::RunSchedChunkVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::RunSchedChunkVar, Ident,
-                                 ForceTeamState);
+      lookupImpl(RunSchedChunkVar, ForceTeamState);
+    lookupForModify32Impl(RunSchedChunkVar, Ident, ForceTeamState);
   case state::VK_ParallelTeamSize:
     return TeamState.ParallelTeamSize;
   case state::VK_HasThreadState:
@@ -367,7 +361,7 @@ inline state::Value<uint32_t, state::VK_Level> Level;
 /// The `active-level` describes which of the parallel level counted with the
 /// `level-var` is active. There can only be one.
 ///
-/// active-level-var is 1, if ActiveLevelVar is not 0, otherweise it is 0.
+/// active-level-var is 1, if ActiveLevelVar is not 0, otherwise it is 0.
 inline state::Value<uint32_t, state::VK_ActiveLevel> ActiveLevel;
 
 /// TODO
@@ -379,7 +373,5 @@ inline state::Value<uint32_t, state::VK_RunSched> RunSched;
 } // namespace icv
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

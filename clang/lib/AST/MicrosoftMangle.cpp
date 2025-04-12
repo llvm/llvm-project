@@ -26,14 +26,12 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
 #include "clang/Basic/DiagnosticOptions.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/xxhash.h"
 #include <functional>
@@ -697,7 +695,7 @@ void MicrosoftCXXNameMangler::mangleVariableEncoding(const VarDecl *VD) {
       mangleQualifiers(MPT->getPointeeType().getQualifiers(), true);
       // Member pointers are suffixed with a back reference to the member
       // pointer's class name.
-      mangleName(MPT->getClass()->getAsCXXRecordDecl());
+      mangleName(MPT->getMostRecentCXXRecordDecl());
     } else
       mangleQualifiers(Ty->getPointeeType().getQualifiers(), false);
   } else if (const ArrayType *AT = getASTContext().getAsArrayType(Ty)) {
@@ -1016,6 +1014,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_x87DoubleExtended: Out << 'X'; break;
   case APFloat::S_IEEEquad: Out << 'Y'; break;
   case APFloat::S_PPCDoubleDouble: Out << 'Z'; break;
+  case APFloat::S_PPCDoubleDoubleLegacy:
   case APFloat::S_Float8E5M2:
   case APFloat::S_Float8E4M3:
   case APFloat::S_Float8E4M3FN:
@@ -1163,9 +1162,15 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->getTemplatedDecl()
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        bool IsOCLDeviceStub =
+            ND && isa<FunctionDecl>(ND) && ND->hasAttr<OpenCLKernelAttr>() &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
               (llvm::Twine("__device_stub__") + II->getName()).str());
+        else if (IsOCLDeviceStub)
+          mangleSourceName(
+              (llvm::Twine("__clang_ocl_kern_imp_") + II->getName()).str());
         else
           mangleSourceName(II->getName());
         break;
@@ -1485,8 +1490,9 @@ void MicrosoftCXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   // <operator-name> ::= ?_G # scalar deleting destructor
   case Dtor_Deleting: Out << "?_G"; return;
   // <operator-name> ::= ?_E # vector deleting destructor
-  // FIXME: Add a vector deleting dtor type.  It goes in the vtable, so we need
-  // it.
+  case Dtor_VectorDeleting:
+    Out << "?_E";
+    return;
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   }
@@ -2793,6 +2799,10 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__bf16", {"__clang"});
     break;
 
+  case BuiltinType::MFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__mfp8", {"__clang"});
+    break;
+
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
@@ -2807,47 +2817,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Float128: {
+    // Issue an error for any type not explicitly handled.
+  default:
     Error(Range.getBegin(), "built-in type: ",
           T->getName(Context.getASTContext().getPrintingPolicy()))
         << Range;
     break;
-  }
   }
 }
 
@@ -2918,9 +2893,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
     if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
-      // The scalar deleting destructor takes an extra int argument which is not
-      // reflected in the AST.
-      if (StructorType == Dtor_Deleting) {
+      // The deleting destructors take an extra argument of type int that
+      // indicates whether the storage for the object should be deleted and
+      // whether a single object or an array of objects is being destroyed. This
+      // extra argument is not reflected in the AST.
+      if (StructorType == Dtor_Deleting ||
+          StructorType == Dtor_VectorDeleting) {
         Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
         return;
       }
@@ -3363,18 +3341,26 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
   manglePointerExtQualifiers(Quals, PointeeType);
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleFunctionType(FPT, nullptr, true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleType(PointeeType, Range, QMM_Drop);
   }
 }
 
 void MicrosoftCXXNameMangler::mangleType(const TemplateTypeParmType *T,
                                          Qualifiers, SourceRange Range) {
-  Error(Range.getBegin(), "template type parameter type") << Range;
+  Out << '?';
+
+  llvm::SmallString<64> Name;
+  Name += "<TTPT_";
+  Name += llvm::utostr(T->getDepth());
+  Name += "_";
+  Name += llvm::utostr(T->getIndex());
+  Name += ">";
+  mangleSourceName(Name);
 }
 
 void MicrosoftCXXNameMangler::mangleType(const SubstTemplateTypeParmPackType *T,
@@ -3885,10 +3871,10 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                                                     const ThunkInfo &Thunk,
                                                     bool /*ElideOverrideInfo*/,
                                                     raw_ostream &Out) {
-  // FIXME: Actually, the dtor thunk should be emitted for vector deleting
-  // dtors rather than scalar deleting dtors. Just use the vector deleting dtor
-  // mangling manually until we support both deleting dtor types.
-  assert(Type == Dtor_Deleting);
+  // The dtor thunk should use vector deleting dtor mangling, however as an
+  // optimization we may end up emitting only scalar deleting dtor body, so just
+  // use the vector deleting dtor mangling manually.
+  assert(Type == Dtor_Deleting || Type == Dtor_VectorDeleting);
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";
@@ -4333,11 +4319,11 @@ void MicrosoftCXXNameMangler::mangleAutoReturnType(const MemberPointerType *T,
   manglePointerExtQualifiers(Quals, PointeeType);
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleFunctionType(FPT, nullptr, true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleAutoReturnType(PointeeType, QMM_Drop);
   }
 }

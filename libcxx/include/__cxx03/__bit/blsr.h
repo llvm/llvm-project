@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___BIT_BLSR_H
-#define _LIBCPP___BIT_BLSR_H
+#ifndef _LIBCPP___CXX03___BIT_BLSR_H
+#define _LIBCPP___CXX03___BIT_BLSR_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -31,4 +31,4 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR unsigned long long __libcpp_blsr(
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___BIT_BLSR_H
+#endif // _LIBCPP___CXX03___BIT_BLSR_H

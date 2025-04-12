@@ -5,7 +5,7 @@
 
 ; CHECK-LABEL: vector.body:
 ; CHECK-LABEL: middle.block:
-; CHECK-NEXT:    br i1 true,
+; CHECK-NEXT:    br label %while.end.loopexit
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
@@ -45,8 +45,8 @@ while.end:
 ;
 define void @reuse_const_btc(ptr %A) optsize {
 ; CHECK-LABEL: @reuse_const_btc
-; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, <i32 13, i32 13, i32 13, i32 13>
-; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> <i32 12, i32 12, i32 12, i32 12>, <4 x i32> <i32 13, i32 13, i32 13, i32 13>
+; CHECK: {{%.*}} = icmp ule <4 x i32> {{%.*}}, splat (i32 13)
+; CHECK: {{%.*}} = select <4 x i1> {{%.*}}, <4 x i32> splat (i32 12), <4 x i32> splat (i32 13)
 ;
 entry:
   br label %loop

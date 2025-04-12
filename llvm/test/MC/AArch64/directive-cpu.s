@@ -39,3 +39,15 @@ sha512h q0, q1, v2.2d
 .cpu generic+sm4
 sm4e v2.4s, v15.4s
 // CHECK: sm4e  v2.4s, v15.4s
+
+.cpu generic+fprcvt
+scvtf d1, s2
+// CHECK: scvtf d1, s2
+
+.cpu generic+f8f16mm
+fmmla v0.8h, v1.16b, v2.16b
+// CHECK: fmmla v0.8h, v1.16b, v2.16b
+
+.cpu generic+f8f32mm
+fmmla v0.4s, v1.16b, v2.16b
+// CHECK: fmmla v0.4s, v1.16b, v2.16b

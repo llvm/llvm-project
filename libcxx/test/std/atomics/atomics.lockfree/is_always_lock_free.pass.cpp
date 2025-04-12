@@ -18,7 +18,7 @@
 
 // Ignore diagnostic about vector types changing the ABI on some targets, since
 // that is irrelevant for this test.
-// ADDITIONAL_COMPILE_FLAGS: -Wno-psabi
+// ADDITIONAL_COMPILE_FLAGS(gcc-style-warnings): -Wno-psabi
 
 #include <atomic>
 #include <cassert>

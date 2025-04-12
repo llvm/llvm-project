@@ -16,12 +16,11 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -46,12 +45,11 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 {
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -91,12 +89,11 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast olt <4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -121,12 +118,11 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) #0 
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[C:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
 ; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast olt <vscale x 4 x float> [[WIDE_LOAD]], [[BROADCAST_SPLAT]]
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -164,12 +160,11 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -192,12 +187,11 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -235,12 +229,11 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], <i32 3, i32 3, i32 3, i32 3>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -263,12 +256,11 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 3, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 3)
+; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -306,12 +298,11 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD]], <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[TMP4:%.*]] = fcmp fast ueq <4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> [[TMP4]], splat (i1 true)
 ; CHECK-NEXT:    [[TMP5]] = or <4 x i1> [[VEC_PHI]], [[NOT]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -334,12 +325,11 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) #0 {
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP9:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[V:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x float>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast ueq <vscale x 4 x float> [[WIDE_LOAD]], shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 3.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP8:%.*]] = fcmp fast ueq <vscale x 4 x float> [[WIDE_LOAD]], splat (float 3.000000e+00)
+; SCALABLE-NEXT:    [[NOT:%.*]] = xor <vscale x 4 x i1> [[TMP8]], splat (i1 true)
 ; SCALABLE-NEXT:    [[TMP9]] = or <vscale x 4 x i1> [[VEC_PHI]], [[NOT]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP11]]
 ; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -402,15 +392,14 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP1]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], <i32 35, i32 35, i32 35, i32 35>
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 35)
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[TMP6]], i32 4, <4 x i1> [[TMP4]], <4 x i32> poison)
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_MASKED_LOAD]], <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP9:%.*]] = or <4 x i1> [[VEC_PHI]], [[TMP8]]
 ; CHECK-NEXT:    [[PREDPHI]] = select <4 x i1> [[TMP4]], <4 x i1> [[TMP9]], <4 x i1> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -434,15 +423,14 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; SCALABLE:       vector.body:
 ; SCALABLE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; SCALABLE-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i1> [ zeroinitializer, [[VECTOR_PH]] ], [ [[PREDPHI:%.*]], [[VECTOR_BODY]] ]
-; SCALABLE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 0
-; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[SRC1:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP6]], align 4
-; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 35, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
-; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[TMP4]]
+; SCALABLE-NEXT:    [[TMP8:%.*]] = icmp sgt <vscale x 4 x i32> [[WIDE_LOAD]], splat (i32 35)
+; SCALABLE-NEXT:    [[TMP9:%.*]] = getelementptr i32, ptr [[SRC2:%.*]], i64 [[INDEX]]
 ; SCALABLE-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[TMP9]], i32 0
 ; SCALABLE-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr [[TMP10]], i32 4, <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i32> poison)
-; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 2, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer)
+; SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq <vscale x 4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 2)
 ; SCALABLE-NEXT:    [[TMP13:%.*]] = or <vscale x 4 x i1> [[VEC_PHI]], [[TMP12]]
 ; SCALABLE-NEXT:    [[PREDPHI]] = select <vscale x 4 x i1> [[TMP8]], <vscale x 4 x i1> [[TMP13]], <vscale x 4 x i1> [[VEC_PHI]]
 ; SCALABLE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP16]]

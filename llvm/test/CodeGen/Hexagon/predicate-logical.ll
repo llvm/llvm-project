@@ -1,4 +1,4 @@
-; RUN: llc -O2 -march=hexagon < %s | FileCheck %s
+; RUN: llc -O2 -mtriple=hexagon < %s | FileCheck %s
 ; CHECK: p{{[0-9]}} = or(p{{[0-9]}},and(p{{[0-9]}},p{{[0-9]}}))
 
 target triple = "hexagon"

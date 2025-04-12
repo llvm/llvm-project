@@ -1,4 +1,4 @@
-; RUN: llc -march=sparc -disable-sparc-leaf-proc=0 < %s | FileCheck %s
+; RUN: llc -mtriple=sparc -disable-sparc-leaf-proc=0 < %s | FileCheck %s
 
 ; CHECK-LABEL:      func_nobody:
 ; CHECK:      retl

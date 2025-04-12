@@ -36,6 +36,7 @@ program test
   call c_f_pointer(scalarC, scalarIntF, [1_8])
   !ERROR: FPTR= argument to C_F_POINTER() may not have a deferred type parameter
   call c_f_pointer(scalarC, charDeferredF)
+  !ERROR: cosubscript 0 is less than lower cobound 1 for codimension 1 of array
   !ERROR: FPTR= argument to C_F_POINTER() may not be a coindexed object
   !ERROR: A coindexed object may not be a pointer target
   call c_f_pointer(scalarC, coindexed[0]%p)
@@ -47,7 +48,7 @@ program test
   call c_f_pointer(scalarC, multiDimIntF, shape=rankTwoArray)
   !WARNING: FPTR= argument to C_F_POINTER() should not be unlimited polymorphic
   call c_f_pointer(scalarC, unlimited)
-  !WARNING: FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)
+  !PORTABILITY: FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C)
   call c_f_pointer(scalarC, notBindC)
   !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable character length CHARACTER(KIND=1,LEN=2_8)
   call c_f_pointer(scalarC, c2ptr)

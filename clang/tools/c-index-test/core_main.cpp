@@ -25,6 +25,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -219,8 +220,9 @@ static bool printSourceSymbols(const char *Executable,
   SmallVector<const char *, 4> ArgsWithProgName;
   ArgsWithProgName.push_back(Executable);
   ArgsWithProgName.append(Args.begin(), Args.end());
-  IntrusiveRefCntPtr<DiagnosticsEngine>
-    Diags(CompilerInstance::createDiagnostics(new DiagnosticOptions));
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          new DiagnosticOptions));
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
   CIOpts.ProbePrecompiled = true; // FIXME: historical default. Needed?
@@ -273,7 +275,8 @@ static bool printSourceSymbolsFromModule(StringRef modulePath,
   auto HSOpts = std::make_shared<HeaderSearchOptions>();
 
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          new DiagnosticOptions());
   std::unique_ptr<ASTUnit> AU =
       ASTUnit::LoadFromASTFile(modulePath, *pchRdr, ASTUnit::LoadASTOnly, Diags,
                                FileSystemOpts, HSOpts, /*LangOpts=*/nullptr,

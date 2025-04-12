@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_CONDITIONAL_H
-#define _LIBCPP___TYPE_TRAITS_CONDITIONAL_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_CONDITIONAL_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_CONDITIONAL_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -55,4 +55,4 @@ using __conditional_t _LIBCPP_NODEBUG = typename conditional<_Bp, _If, _Then>::t
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_CONDITIONAL_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_CONDITIONAL_H

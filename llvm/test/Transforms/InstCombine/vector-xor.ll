@@ -33,7 +33,7 @@ declare <4 x i32> @llvm.bswap.v4i32(<4 x i32>)
 
 define <4 x i32> @test_v4i32_xor_bswap_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_xor_bswap_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A0:%.*]], <i32 -16777216, i32 -16777216, i32 -16777216, i32 -16777216>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i32> [[A0:%.*]], splat (i32 -16777216)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
@@ -68,7 +68,7 @@ define <4 x i32> @test_v4i32_xor_bswap_const_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_and(
-; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
@@ -82,7 +82,7 @@ define <4 x i32> @test_v4i32_demorgan_and(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @test_v4i32_demorgan_or(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_demorgan_or(
-; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[Y_NOT:%.*]] = xor <4 x i32> [[Y:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i32> [[X:%.*]], [[Y_NOT]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
@@ -120,7 +120,7 @@ define <4 x i32> @test_v4i32_not_ashr_not_poison(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @test_v4i32_not_ashr_negative_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_ashr_negative_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 2, i32 2, i32 2, i32 2>, [[A0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> splat (i32 2), [[A0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = ashr <4 x i32> <i32 -3, i32 -3, i32 -3, i32 -3>, %a0
@@ -152,7 +152,7 @@ define <4 x i32> @test_v4i32_not_ashr_negative_const_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_lshr_nonnegative_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_lshr_nonnegative_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> <i32 -4, i32 -4, i32 -4, i32 -4>, [[A0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> splat (i32 -4), [[A0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = lshr <4 x i32> <i32  3, i32  3, i32  3, i32  3>, %a0
@@ -184,7 +184,7 @@ define <4 x i32> @test_v4i32_not_lshr_nonnegative_const_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_not_sub_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_not_sub_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -4, i32 -4, i32 -4, i32 -4>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], splat (i32 -4)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = sub <4 x i32> <i32  3, i32  3, i32  3, i32  3>, %a0
@@ -216,7 +216,7 @@ define <4 x i32> @test_v4i32_not_sub_const_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_xor_signmask_sub_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_xor_signmask_sub_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 -2147483645, i32 -2147483645, i32 -2147483645, i32 -2147483645>, [[A0:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> splat (i32 -2147483645), [[A0:%.*]]
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = sub <4 x i32> <i32  3, i32  3, i32  3, i32  3>, %a0
@@ -227,7 +227,7 @@ define <4 x i32> @test_v4i32_xor_signmask_sub_splatconst(<4 x i32> %a0) {
 define <4 x i32> @test_v4i32_xor_signmask_sub_const(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_xor_signmask_sub_const(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 3, i32 5, i32 -1, i32 15>, [[A0:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = sub <4 x i32> <i32  3, i32 5, i32 -1, i32 15>, %a0
@@ -250,7 +250,7 @@ define <4 x i32> @test_v4i32_xor_signmask_sub_const_poison(<4 x i32> %a0) {
 
 define <4 x i32> @test_v4i32_xor_signmask_add_splatconst(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_xor_signmask_add_splatconst(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 -2147483645, i32 -2147483645, i32 -2147483645, i32 -2147483645>
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], splat (i32 -2147483645)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
   %1 = add <4 x i32> <i32  3, i32  3, i32  3, i32  3>, %a0
@@ -261,7 +261,7 @@ define <4 x i32> @test_v4i32_xor_signmask_add_splatconst(<4 x i32> %a0) {
 define <4 x i32> @test_v4i32_xor_signmask_add_const(<4 x i32> %a0) {
 ; CHECK-LABEL: @test_v4i32_xor_signmask_add_const(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[A0:%.*]], <i32 3, i32 5, i32 -1, i32 15>
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], <i32 -2147483648, i32 -2147483648, i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i32> [[TMP1]], splat (i32 -2147483648)
 ; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
 ;
   %1 = add <4 x i32> <i32  3, i32 5, i32 -1, i32 15>, %a0

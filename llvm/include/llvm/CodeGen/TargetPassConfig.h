@@ -21,10 +21,8 @@
 
 namespace llvm {
 
-class LLVMTargetMachine;
-struct MachineSchedContext;
+class TargetMachine;
 class PassConfigImpl;
-class ScheduleDAGInstrs;
 class CSEConfigBase;
 class PassInstrumentationCallbacks;
 
@@ -120,7 +118,7 @@ private:
   void setStartStopPasses();
 
 protected:
-  LLVMTargetMachine *TM;
+  TargetMachine *TM;
   PassConfigImpl *Impl = nullptr; // Internal data structures
   bool Initialized = false; // Flagged after all passes are configured.
 
@@ -148,7 +146,7 @@ protected:
   bool addCoreISelPasses();
 
 public:
-  TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm);
+  TargetPassConfig(TargetMachine &TM, PassManagerBase &PM);
   // Dummy constructor.
   TargetPassConfig();
 
@@ -300,27 +298,6 @@ public:
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();
 
-  /// Create an instance of ScheduleDAGInstrs to be run within the standard
-  /// MachineScheduler pass for this function and target at the current
-  /// optimization level.
-  ///
-  /// This can also be used to plug a new MachineSchedStrategy into an instance
-  /// of the standard ScheduleDAGMI:
-  ///   return new ScheduleDAGMI(C, std::make_unique<MyStrategy>(C), /*RemoveKillFlags=*/false)
-  ///
-  /// Return NULL to select the default (generic) machine scheduler.
-  virtual ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
-
-  /// Similar to createMachineScheduler but used when postRA machine scheduling
-  /// is enabled.
-  virtual ScheduleDAGInstrs *
-  createPostMachineScheduler(MachineSchedContext *C) const {
-    return nullptr;
-  }
-
   /// printAndVerify - Add a pass to dump then verify the machine function, if
   /// those steps are enabled.
   void printAndVerify(const std::string &Banner);
@@ -413,7 +390,8 @@ protected:
   virtual void addFastRegAlloc();
 
   /// addOptimizedRegAlloc - Add passes related to register allocation.
-  /// LLVMTargetMachine provides standard regalloc passes for most targets.
+  /// CodeGenTargetMachineImpl provides standard regalloc passes for most
+  /// targets.
   virtual void addOptimizedRegAlloc();
 
   /// addPreRewrite - Add passes to the optimized register allocation pipeline
@@ -497,7 +475,7 @@ protected:
 };
 
 void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                             LLVMTargetMachine &);
+                             TargetMachine &);
 
 } // end namespace llvm
 

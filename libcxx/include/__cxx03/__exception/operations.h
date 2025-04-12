@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___EXCEPTION_OPERATIONS_H
-#define _LIBCPP___EXCEPTION_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___EXCEPTION_OPERATIONS_H
+#define _LIBCPP___CXX03___EXCEPTION_OPERATIONS_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -38,4 +38,4 @@ _LIBCPP_EXPORTED_FROM_ABI exception_ptr current_exception() _NOEXCEPT;
 _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void rethrow_exception(exception_ptr);
 } // namespace std
 
-#endif // _LIBCPP___EXCEPTION_OPERATIONS_H
+#endif // _LIBCPP___CXX03___EXCEPTION_OPERATIONS_H

@@ -75,10 +75,10 @@ export using ::E;
   )cpp",
           MainFilePath);
 
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      CompilerInstance::createDiagnostics(new DiagnosticOptions());
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
       llvm::vfs::createPhysicalFileSystem();
+  IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
+      CompilerInstance::createDiagnostics(*VFS, new DiagnosticOptions());
 
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;

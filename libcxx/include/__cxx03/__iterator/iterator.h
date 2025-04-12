@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ITERATOR_ITERATOR_H
-#define _LIBCPP___ITERATOR_ITERATOR_H
+#ifndef _LIBCPP___CXX03___ITERATOR_ITERATOR_H
+#define _LIBCPP___CXX03___ITERATOR_ITERATOR_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,4 +30,4 @@ struct _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 iterator {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ITERATOR_ITERATOR_H
+#endif // _LIBCPP___CXX03___ITERATOR_ITERATOR_H

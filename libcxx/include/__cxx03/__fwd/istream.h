@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FWD_ISTREAM_H
-#define _LIBCPP___FWD_ISTREAM_H
+#ifndef _LIBCPP___CXX03___FWD_ISTREAM_H
+#define _LIBCPP___CXX03___FWD_ISTREAM_H
 
-#include <__config>
-#include <__fwd/string.h>
+#include <__cxx03/__config>
+#include <__cxx03/__fwd/string.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -40,4 +40,4 @@ class _LIBCPP_PREFERRED_NAME(iostream) _LIBCPP_IF_WIDE_CHARACTERS(_LIBCPP_PREFER
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FWD_ISTREAM_H
+#endif // _LIBCPP___CXX03___FWD_ISTREAM_H

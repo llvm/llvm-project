@@ -9,12 +9,12 @@
 #ifndef MLIR_BINDINGS_PYTHON_REWRITE_H
 #define MLIR_BINDINGS_PYTHON_REWRITE_H
 
-#include "PybindUtils.h"
+#include "NanobindUtils.h"
 
 namespace mlir {
 namespace python {
 
-void populateRewriteSubmodule(pybind11::module &m);
+void populateRewriteSubmodule(nanobind::module_ &m);
 
 } // namespace python
 } // namespace mlir

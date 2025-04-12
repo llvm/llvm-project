@@ -13,8 +13,8 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
-#include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
@@ -34,25 +34,6 @@ class FuncOp;
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
-
-/// Pass that moves ops which are likely an index computation into gpu.launch
-/// body.
-std::unique_ptr<Pass> createGpuLauchSinkIndexComputationsPass();
-
-/// Replaces `gpu.launch` with `gpu.launch_func` by moving the region into
-/// a separate kernel function.
-std::unique_ptr<OperationPass<ModuleOp>>
-createGpuKernelOutliningPass(StringRef dataLayoutStr = StringRef());
-
-/// Rewrites a function region so that GPU ops execute asynchronously.
-std::unique_ptr<OperationPass<func::FuncOp>> createGpuAsyncRegionPass();
-
-/// Maps the parallel loops found in the given function to workgroups. The first
-/// loop encountered will be mapped to the global workgroup and the second loop
-/// encountered to the local workgroup. Within each mapping, the first three
-/// dimensions are mapped to x/y/z hardware ids and all following dimensions are
-/// mapped to sequential loops.
-std::unique_ptr<OperationPass<func::FuncOp>> createGpuMapParallelLoopsPass();
 
 /// Collect a set of patterns to rewrite GlobalIdOp op within the GPU dialect.
 void populateGpuGlobalIdPatterns(RewritePatternSet &patterns);
@@ -109,9 +90,6 @@ LogicalResult transformGpuModulesToBinaries(
 
 /// Collect a set of patterns to decompose memrefs ops.
 void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
-
-/// Pass decomposes memref ops inside `gpu.launch` body.
-std::unique_ptr<Pass> createGpuDecomposeMemrefsPass();
 
 /// Erase barriers that do not enforce conflicting memory side effects.
 void populateGpuEliminateBarriersPatterns(RewritePatternSet &patterns);

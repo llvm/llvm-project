@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MATH_TRAITS_H
-#define _LIBCPP___MATH_TRAITS_H
+#ifndef _LIBCPP___CXX03___MATH_TRAITS_H
+#define _LIBCPP___CXX03___MATH_TRAITS_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_arithmetic.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_signed.h>
-#include <__type_traits/promote.h>
-#include <limits>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_arithmetic.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/is_integral.h>
+#include <__cxx03/__type_traits/is_signed.h>
+#include <__cxx03/__type_traits/promote.h>
+#include <__cxx03/limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -185,4 +185,4 @@ _LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MATH_TRAITS_H
+#endif // _LIBCPP___CXX03___MATH_TRAITS_H

@@ -62,6 +62,10 @@ public:
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2);
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const;
+
   /// @}
 
   /// \name Vector TTI Implementations
@@ -81,6 +85,11 @@ public:
   bool hasDivRemOp(Type *DataType, bool IsSigned);
   bool prefersVectorizedAddressing() { return false; }
   bool LSRWithInstrQueries() { return true; }
+  InstructionCost getScalarizationOverhead(VectorType *Ty,
+                                           const APInt &DemandedElts,
+                                           bool Insert, bool Extract,
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
   bool supportsEfficientVectorElementLoadStore() { return true; }
   bool enableInterleavedAccessVectorization() { return true; }
 
@@ -124,6 +133,13 @@ public:
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
       bool UseMaskForCond = false, bool UseMaskForGaps = false);
+
+  InstructionCost getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
+                                             std::optional<FastMathFlags> FMF,
+                                             TTI::TargetCostKind CostKind);
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
+                                         TTI::TargetCostKind CostKind);
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);

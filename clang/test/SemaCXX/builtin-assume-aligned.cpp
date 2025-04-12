@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -triple x86_64-linux-gnu %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -triple x86_64-linux-gnu %s -fexperimental-new-constant-interpreter
 
 int n;
 constexpr int *p = 0;

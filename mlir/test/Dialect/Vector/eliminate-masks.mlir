@@ -5,16 +5,22 @@
 // CHECK-LABEL: @eliminate_redundant_masks_through_insert_and_extracts
 // CHECK: %[[ALL_TRUE_MASK:.*]] = vector.constant_mask [4] : vector<[4]xi1>
 // CHECK: vector.transfer_read {{.*}} %[[ALL_TRUE_MASK]]
+// CHECK: vector.mask %[[ALL_TRUE_MASK:.*]] {
+// CHECK-SAME:  vector.outerproduct
 // CHECK: vector.transfer_write {{.*}} %[[ALL_TRUE_MASK]]
-func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor<1x1000xf32>) {
-  %c0 = arith.constant 0 : index
+#map = affine_map<()[s0] -> (-(1080 mod s0) + 1080)>
+
+func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor<1x1000xf32>, %rhs : f32) {
   %c4 = arith.constant 4 : index
-  %c1000 = arith.constant 1000 : index
-  %c0_f32 = arith.constant 0.0 : f32
   %vscale = vector.vscale
   %c4_vscale = arith.muli %vscale, %c4 : index
+  %ub = affine.apply #map()[%c4_vscale]
+
+  %c0 = arith.constant 0 : index
+  %c1000 = arith.constant 1000 : index
+  %c0_f32 = arith.constant 0.0 : f32
   %extracted_slice_0 = tensor.extract_slice %tensor[0, 0] [1, %c4_vscale] [1, 1] : tensor<1x1000xf32> to tensor<1x?xf32>
-  %output_tensor = scf.for %i = %c0 to %c1000 step %c4_vscale iter_args(%arg = %extracted_slice_0) -> tensor<1x?xf32> {
+  %output_tensor = scf.for %i = %c0 to %ub step %c4_vscale iter_args(%arg = %extracted_slice_0) -> tensor<1x?xf32> {
     // 1. Extract a slice.
     %extracted_slice_1 = tensor.extract_slice %arg[0, %i] [1, %c4_vscale] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
 
@@ -23,8 +29,8 @@ func.func @eliminate_redundant_masks_through_insert_and_extracts(%tensor: tensor
     %mask = vector.create_mask %dim_1 : vector<[4]xi1>
 
     // 3. Read the slice and do some computation.
-    %vec = vector.transfer_read %extracted_slice_1[%c0], %c0_f32, %mask {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32>
-    %new_vec = "test.some_computation"(%vec) : (vector<[4]xf32>) -> (vector<[4]xf32>)
+    %lhs = vector.transfer_read %extracted_slice_1[%c0], %c0_f32, %mask {in_bounds = [true]} : tensor<?xf32>, vector<[4]xf32>
+    %new_vec = vector.mask %mask { vector.outerproduct %lhs, %rhs {kind = #vector.kind<add>} : vector<[4]xf32>, f32 } : vector<[4]xi1> -> vector<[4]xf32>
 
     // 4. Write the new value.
     %write = vector.transfer_write %new_vec, %extracted_slice_1[%c0], %mask {in_bounds = [true]} : vector<[4]xf32>, tensor<?xf32>

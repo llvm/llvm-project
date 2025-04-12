@@ -15,6 +15,7 @@
 
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
+#include "llvm/CGData/StableFunctionMapRecord.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
@@ -36,9 +37,14 @@ public:
   virtual CGDataKind getDataKind() const = 0;
   /// Return true if the data has an outlined hash tree.
   virtual bool hasOutlinedHashTree() const = 0;
+  /// Return true if the data has a stable function map.
+  virtual bool hasStableFunctionMap() const = 0;
   /// Return the outlined hash tree that is released from the reader.
   std::unique_ptr<OutlinedHashTree> releaseOutlinedHashTree() {
     return std::move(HashTreeRecord.HashTree);
+  }
+  std::unique_ptr<StableFunctionMap> releaseStableFunctionMap() {
+    return std::move(FunctionMapRecord.FunctionMap);
   }
 
   /// Factory method to create an appropriately typed reader for the given
@@ -56,14 +62,20 @@ public:
   /// is used by `llvm-cgdata --merge` or ThinLTO's two-codegen rounds.
   /// Optionally, \p CombinedHash can be used to compuate the combined hash of
   /// the merged data.
-  static Error mergeFromObjectFile(const object::ObjectFile *Obj,
-                                   OutlinedHashTreeRecord &GlobalOutlineRecord,
-                                   stable_hash *CombinedHash = nullptr);
+  static Error
+  mergeFromObjectFile(const object::ObjectFile *Obj,
+                      OutlinedHashTreeRecord &GlobalOutlineRecord,
+                      StableFunctionMapRecord &GlobalFunctionMapRecord,
+                      stable_hash *CombinedHash = nullptr);
 
 protected:
   /// The outlined hash tree that has been read. When it's released by
   /// releaseOutlinedHashTree(), it's no longer valid.
   OutlinedHashTreeRecord HashTreeRecord;
+
+  /// The stable function map that has been read. When it's released by
+  // releaseStableFunctionMap(), it's no longer valid.
+  StableFunctionMapRecord FunctionMapRecord;
 
   /// Set the current error and return same.
   Error error(cgdata_error Err, const std::string &ErrMsg = "") {
@@ -115,6 +127,11 @@ public:
     return Header.DataKind &
            static_cast<uint32_t>(CGDataKind::FunctionOutlinedHashTree);
   }
+  /// Return true if the header indicates the data has a stable function map.
+  bool hasStableFunctionMap() const override {
+    return Header.DataKind &
+           static_cast<uint32_t>(CGDataKind::StableFunctionMergingMap);
+  }
 };
 
 /// This format is a simple text format that's suitable for test data.
@@ -149,6 +166,12 @@ public:
   bool hasOutlinedHashTree() const override {
     return static_cast<uint32_t>(DataKind) &
            static_cast<uint32_t>(CGDataKind::FunctionOutlinedHashTree);
+  }
+  /// Return true if the header indicates the data has a stable function map.
+  /// This does not mean that the data is still available.
+  bool hasStableFunctionMap() const override {
+    return static_cast<uint32_t>(DataKind) &
+           static_cast<uint32_t>(CGDataKind::StableFunctionMergingMap);
   }
 };
 

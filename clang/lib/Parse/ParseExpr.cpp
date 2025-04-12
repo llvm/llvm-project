@@ -248,6 +248,25 @@ ExprResult Parser::ParseArrayBoundExpression() {
   // If we parse the bound of a VLA... we parse a non-constant
   // constant-expression!
   Actions.ExprEvalContexts.back().InConditionallyConstantEvaluateContext = true;
+  // For a VLA type inside an unevaluated operator like:
+  //
+  //   sizeof(typeof(*(int (*)[N])array))
+  //
+  // N and array are supposed to be ODR-used.
+  // Initially when encountering `array`, it is deemed unevaluated and non-ODR
+  // used because that occurs before parsing the type cast. Therefore we use
+  // Sema::TransformToPotentiallyEvaluated() to rebuild the expression to ensure
+  // it's actually ODR-used.
+  //
+  // However, in other unevaluated contexts as in constraint substitution, it
+  // would end up rebuilding the type twice which is unnecessary. So we push up
+  // a flag to help distinguish these cases.
+  for (auto Iter = Actions.ExprEvalContexts.rbegin() + 1;
+       Iter != Actions.ExprEvalContexts.rend(); ++Iter) {
+    if (!Iter->isUnevaluated())
+      break;
+    Iter->InConditionallyConstantEvaluateContext = true;
+  }
   return ParseConstantExpressionInExprEvalContext(NotTypeCast);
 }
 
@@ -805,7 +824,6 @@ bool Parser::isRevertibleTypeTrait(const IdentifierInfo *II,
     REVERTIBLE_TYPE_TRAIT(__is_pointer);
     REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
     REVERTIBLE_TYPE_TRAIT(__is_reference);
-    REVERTIBLE_TYPE_TRAIT(__is_referenceable);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
     REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
     REVERTIBLE_TYPE_TRAIT(__is_same);
@@ -886,6 +904,8 @@ ExprResult Parser::ParseBuiltinPtrauthTypeDiscriminator() {
 /// [GNU]   '__alignof' '(' type-name ')'
 /// [C11]   '_Alignof' '(' type-name ')'
 /// [C++11] 'alignof' '(' type-id ')'
+/// [C2y]   '_Countof' unary-expression
+/// [C2y]   '_Countof' '(' type-name ')'
 /// [GNU]   '&&' identifier
 /// [C++11] 'noexcept' '(' expression ')' [C++11 5.3.7]
 /// [C++]   new-expression
@@ -1199,7 +1219,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         // If the token is not annotated, then it might be an expression pack
         // indexing
         if (!TryAnnotateTypeOrScopeToken() &&
-            Tok.is(tok::annot_pack_indexing_type))
+            Tok.isOneOf(tok::annot_pack_indexing_type, tok::annot_cxxscope))
           return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                      isVectorLiteral, NotPrimaryExpression);
       }
@@ -1526,6 +1546,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
   case tok::kw___builtin_vectorelements:
+  case tok::kw__Countof:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     AllowSuffix = false;
@@ -2199,10 +2220,17 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
       };
       if (OpKind == tok::l_paren || !LHS.isInvalid()) {
         if (Tok.isNot(tok::r_paren)) {
-          if (ParseExpressionList(ArgExprs, [&] {
+          bool HasTrailingComma = false;
+          bool HasError = ParseExpressionList(
+              ArgExprs,
+              [&] {
                 PreferredType.enterFunctionArgument(Tok.getLocation(),
                                                     RunSignatureHelp);
-              })) {
+              },
+              /*FailImmediatelyOnInvalidExpr*/ false,
+              /*EarlyTypoCorrection*/ false, &HasTrailingComma);
+
+          if (HasError && !HasTrailingComma) {
             (void)Actions.CorrectDelayedTyposInExpr(LHS);
             // If we got an error when parsing expression list, we don't call
             // the CodeCompleteCall handler inside the parser. So call it here
@@ -2211,6 +2239,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
             if (PP.isCodeCompletionReached() && !CalledSignatureHelp)
               RunSignatureHelp();
             LHS = ExprError();
+          } else if (!HasError && HasTrailingComma) {
+            Diag(Tok, diag::err_expected_expression);
           } else if (LHS.isInvalid()) {
             for (auto &E : ArgExprs)
               Actions.CorrectDelayedTyposInExpr(E);
@@ -2436,7 +2466,7 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                        tok::kw___datasizeof, tok::kw___alignof, tok::kw_alignof,
                        tok::kw__Alignof, tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align,
-                       tok::kw___builtin_vectorelements) &&
+                       tok::kw___builtin_vectorelements, tok::kw__Countof) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
   ExprResult Operand;
@@ -2483,9 +2513,9 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // is not going to help when the nesting is too deep. In this corner case
     // we continue to parse with sufficient stack space to avoid crashing.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                      tok::kw_alignof, tok::kw__Alignof) &&
+                      tok::kw_alignof, tok::kw__Alignof, tok::kw__Countof) &&
         Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                    tok::kw_alignof, tok::kw__Alignof))
+                    tok::kw_alignof, tok::kw__Alignof, tok::kw__Countof))
       Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
         Operand = ParseCastExpression(UnaryExprOnly);
       });
@@ -2567,12 +2597,14 @@ ExprResult Parser::ParseSYCLUniqueStableNameExpression() {
 /// [GNU]   '__alignof' '(' type-name ')'
 /// [C11]   '_Alignof' '(' type-name ')'
 /// [C++11] 'alignof' '(' type-id ')'
+/// [C2y]   '_Countof' unary-expression
+/// [C2y]   '_Countof' '(' type-name ')'
 /// \endverbatim
 ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
                      tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
                      tok::kw___builtin_omp_required_simd_align,
-                     tok::kw___builtin_vectorelements) &&
+                     tok::kw___builtin_vectorelements, tok::kw__Countof) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();
@@ -2629,6 +2661,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
   else if (getLangOpts().C23 && OpTok.is(tok::kw_alignof))
     Diag(OpTok, diag::warn_c23_compat_keyword) << OpTok.getName();
+  else if (getLangOpts().C2y && OpTok.is(tok::kw__Countof))
+    Diag(OpTok, diag::warn_c2y_compat_keyword) << OpTok.getName();
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,
@@ -2662,6 +2696,12 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     break;
   case tok::kw___builtin_vectorelements:
     ExprKind = UETT_VectorElements;
+    break;
+  case tok::kw__Countof:
+    ExprKind = UETT_CountOf;
+    assert(!getLangOpts().CPlusPlus && "_Countof in C++ mode?");
+    if (!getLangOpts().C2y)
+      Diag(OpTok, diag::ext_c2y_feature) << OpTok.getName();
     break;
   default:
     break;
@@ -3662,7 +3702,8 @@ void Parser::injectEmbedTokens() {
 bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  llvm::function_ref<void()> ExpressionStarts,
                                  bool FailImmediatelyOnInvalidExpr,
-                                 bool EarlyTypoCorrection) {
+                                 bool EarlyTypoCorrection,
+                                 bool *HasTrailingComma) {
   bool SawError = false;
   while (true) {
     if (ExpressionStarts)
@@ -3705,6 +3746,12 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
     Token Comma = Tok;
     ConsumeToken();
     checkPotentialAngleBracketDelimiter(Comma);
+
+    if (Tok.is(tok::r_paren)) {
+      if (HasTrailingComma)
+        *HasTrailingComma = true;
+      break;
+    }
   }
   if (SawError) {
     // Ensure typos get diagnosed when errors were encountered while parsing the

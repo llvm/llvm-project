@@ -1309,10 +1309,10 @@ LogicalResult OpTrait::impl::verifyNoRegionArguments(Operation *op) {
 
 LogicalResult OpTrait::impl::verifyElementwise(Operation *op) {
   auto isMappableType = llvm::IsaPred<VectorType, TensorType>;
-  auto resultMappableTypes = llvm::to_vector<1>(
-      llvm::make_filter_range(op->getResultTypes(), isMappableType));
-  auto operandMappableTypes = llvm::to_vector<2>(
-      llvm::make_filter_range(op->getOperandTypes(), isMappableType));
+  auto resultMappableTypes =
+      llvm::filter_to_vector<1>(op->getResultTypes(), isMappableType);
+  auto operandMappableTypes =
+      llvm::filter_to_vector<2>(op->getOperandTypes(), isMappableType);
 
   // If the op only has scalar operand/result types, then we have nothing to
   // check.

@@ -9,4 +9,4 @@ end
 ! CHECK:   llvm.call @_FortranACUFRegisterAllocator() : () -> ()
 ! CHECK:   llvm.return
 ! CHECK: }
-! CHECK: llvm.mlir.global_ctors {ctors = [@__cudaFortranConstructor], priorities = [0 : i32]}
+! CHECK: llvm.mlir.global_ctors ctors = [@__cudaFortranConstructor], priorities = [0 : i32], data = [#llvm.zero]

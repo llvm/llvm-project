@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReduceInstructionFlags.h"
-#include "Delta.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -19,7 +18,8 @@
 
 using namespace llvm;
 
-static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceInstructionFlagsDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   // Keep this in sync with computeIRComplexityScoreImpl().
   for (Function &F : WorkItem.getModule()) {
     for (Instruction &I : instructions(F)) {
@@ -42,6 +42,9 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
       } else if (auto *PDI = dyn_cast<PossiblyDisjointInst>(&I)) {
         if (PDI->isDisjoint() && !O.shouldKeep())
           PDI->setIsDisjoint(false);
+      } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
+        if (ICmp->hasSameSign() && !O.shouldKeep())
+          ICmp->setSameSign(false);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         GEPNoWrapFlags NW = GEP->getNoWrapFlags();
         if (NW.isInBounds() && !O.shouldKeep())
@@ -79,8 +82,4 @@ static void reduceFlagsInModule(Oracle &O, ReducerWorkItem &WorkItem) {
       }
     }
   }
-}
-
-void llvm::reduceInstructionFlagsDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceFlagsInModule, "Reducing Instruction Flags");
 }

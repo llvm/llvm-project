@@ -57,19 +57,15 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 4 x s1>) = COPY $v8
     ; RV32-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; RV32-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C]](s64)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SELECT [[COPY]](<vscale x 4 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT2]](s64)
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[C3]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR3:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT3]](s64)
+    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C2]](s64)
+    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV32-NEXT: [[SPLAT_VECTOR3:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C3]](s64)
     ; RV32-NEXT: [[SELECT1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[SPLAT_VECTOR3]], [[SPLAT_VECTOR2]]
     ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
     ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 4 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[SELECT1]](<vscale x 2 x s8>), 0
@@ -82,9 +78,8 @@ body:             |
     ; RV32-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[READ_VLENB1]], [[C5]](s64)
     ; RV32-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LSHR1]], [[LSHR]]
     ; RV32-NEXT: [[VSLIDEUP_VL:%[0-9]+]]:_(<vscale x 4 x s8>) = G_VSLIDEUP_VL [[SELECT]], [[INSERT_SUBVECTOR]], [[LSHR1]](s64), [[VMSET_VL]](<vscale x 4 x s1>), [[ADD]](s64), 1
-    ; RV32-NEXT: [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[C6]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR4:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[ANYEXT4]](s64)
+    ; RV32-NEXT: [[C6:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR4:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SPLAT_VECTOR [[C6]](s64)
     ; RV32-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 4 x s1>) = G_ICMP intpred(ne), [[VSLIDEUP_VL]](<vscale x 4 x s8>), [[SPLAT_VECTOR4]]
     ; RV32-NEXT: $v8 = COPY [[ICMP]](<vscale x 4 x s1>)
     ; RV32-NEXT: PseudoRET implicit $v8
@@ -138,19 +133,15 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 8 x s1>) = COPY $v8
     ; RV32-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT]](s64)
-    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT1]](s64)
+    ; RV32-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C]](s64)
+    ; RV32-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV32-NEXT: [[SPLAT_VECTOR1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C1]](s64)
     ; RV32-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SELECT [[COPY]](<vscale x 8 x s1>), [[SPLAT_VECTOR1]], [[SPLAT_VECTOR]]
-    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[C2]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT2]](s64)
-    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; RV32-NEXT: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[C3]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR3:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[ANYEXT3]](s64)
+    ; RV32-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR2:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C2]](s64)
+    ; RV32-NEXT: [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
+    ; RV32-NEXT: [[SPLAT_VECTOR3:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SPLAT_VECTOR [[C3]](s64)
     ; RV32-NEXT: [[SELECT1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[SPLAT_VECTOR3]], [[SPLAT_VECTOR2]]
     ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
     ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[SELECT1]](<vscale x 2 x s8>), 0
@@ -164,9 +155,8 @@ body:             |
     ; RV32-NEXT: [[LSHR1:%[0-9]+]]:_(s64) = G_LSHR [[READ_VLENB1]], [[C6]](s64)
     ; RV32-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LSHR1]], [[LSHR]]
     ; RV32-NEXT: [[VSLIDEUP_VL:%[0-9]+]]:_(<vscale x 8 x s8>) = G_VSLIDEUP_VL [[SELECT]], [[INSERT_SUBVECTOR]], [[LSHR1]](s64), [[VMSET_VL]](<vscale x 8 x s1>), [[ADD]](s64), 0
-    ; RV32-NEXT: [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; RV32-NEXT: [[ANYEXT4:%[0-9]+]]:_(s64) = G_ANYEXT [[C7]](s32)
-    ; RV32-NEXT: [[SPLAT_VECTOR4:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[ANYEXT4]](s64)
+    ; RV32-NEXT: [[C7:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; RV32-NEXT: [[SPLAT_VECTOR4:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SPLAT_VECTOR [[C7]](s64)
     ; RV32-NEXT: [[ICMP:%[0-9]+]]:_(<vscale x 8 x s1>) = G_ICMP intpred(ne), [[VSLIDEUP_VL]](<vscale x 8 x s8>), [[SPLAT_VECTOR4]]
     ; RV32-NEXT: $v8 = COPY [[ICMP]](<vscale x 8 x s1>)
     ; RV32-NEXT: PseudoRET implicit $v8

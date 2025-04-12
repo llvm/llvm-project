@@ -24,36 +24,6 @@ using namespace llvm;
 using namespace llvm::LegalizeActions;
 using namespace llvm::LegalityPredicates;
 
-static const std::set<unsigned> TypeFoldingSupportingOpcs = {
-    TargetOpcode::G_ADD,
-    TargetOpcode::G_FADD,
-    TargetOpcode::G_SUB,
-    TargetOpcode::G_FSUB,
-    TargetOpcode::G_MUL,
-    TargetOpcode::G_FMUL,
-    TargetOpcode::G_SDIV,
-    TargetOpcode::G_UDIV,
-    TargetOpcode::G_FDIV,
-    TargetOpcode::G_SREM,
-    TargetOpcode::G_UREM,
-    TargetOpcode::G_FREM,
-    TargetOpcode::G_FNEG,
-    TargetOpcode::G_CONSTANT,
-    TargetOpcode::G_FCONSTANT,
-    TargetOpcode::G_AND,
-    TargetOpcode::G_OR,
-    TargetOpcode::G_XOR,
-    TargetOpcode::G_SHL,
-    TargetOpcode::G_ASHR,
-    TargetOpcode::G_LSHR,
-    TargetOpcode::G_SELECT,
-    TargetOpcode::G_EXTRACT_VECTOR_ELT,
-};
-
-bool isTypeFoldingSupported(unsigned Opcode) {
-  return TypeFoldingSupportingOpcs.count(Opcode) > 0;
-}
-
 LegalityPredicate typeOfExtendedScalars(unsigned TypeIdx, bool IsExtendedInts) {
   return [IsExtendedInts, TypeIdx](const LegalityQuery &Query) {
     const LLT Ty = Query.Types[TypeIdx];
@@ -112,13 +82,18 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT p5 =
       LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
   const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
+  const LLT p7 = LLT::pointer(7, PSize); // Input
+  const LLT p8 = LLT::pointer(8, PSize); // Output
+  const LLT p10 = LLT::pointer(10, PSize); // Private
+  const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
-      p0,    p1,    p2,    p3,    p4,     p5,     p6,    s1,   s8,   s16,
-      s32,   s64,   v2s1,  v2s8,  v2s16,  v2s32,  v2s64, v3s1, v3s8, v3s16,
-      v3s32, v3s64, v4s1,  v4s8,  v4s16,  v4s32,  v4s64, v8s1, v8s8, v8s16,
-      v8s32, v8s64, v16s1, v16s8, v16s16, v16s32, v16s64};
+      p0,    p1,    p2,     p3,     p4,    p5,    p6,    p7,    p8,
+      p10,   p11,   s1,     s8,     s16,   s32,   s64,   v2s1,  v2s8,
+      v2s16, v2s32, v2s64,  v3s1,   v3s8,  v3s16, v3s32, v3s64, v4s1,
+      v4s8,  v4s16, v4s32,  v4s64,  v8s1,  v8s8,  v8s16, v8s32, v8s64,
+      v16s1, v16s8, v16s16, v16s32, v16s64};
 
   auto allVectors = {v2s1,  v2s8,   v2s16,  v2s32, v2s64, v3s1,  v3s8,
                      v3s16, v3s32,  v3s64,  v4s1,  v4s8,  v4s16, v4s32,
@@ -145,10 +120,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       s16,   s32,   s64,   v2s16, v2s32, v2s64, v3s16,  v3s32,  v3s64,
       v4s16, v4s32, v4s64, v8s16, v8s32, v8s64, v16s16, v16s32, v16s64};
 
-  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,
-                                       p2, p3,  p4,  p5,  p6};
+  auto allFloatAndIntScalarsAndPtrs = {s8, s16, s32, s64, p0, p1,  p2, p3,
+                                       p4, p5,  p6,  p7,  p8, p10, p11};
 
-  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6};
+  auto allPtrs = {p0, p1, p2, p3, p4, p5, p6, p7, p8, p10, p11};
 
   bool IsExtendedInts =
       ST.canUseExtension(
@@ -171,7 +146,7 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
         return IsExtendedInts && Ty.isValid();
       };
 
-  for (auto Opc : TypeFoldingSupportingOpcs)
+  for (auto Opc : getTypeFoldingSupportedOpcodes())
     getActionDefinitionsBuilder(Opc).custom();
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).alwaysLegal();
@@ -212,11 +187,15 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX, G_ABS,
                                G_BITREVERSE, G_SADDSAT, G_UADDSAT, G_SSUBSAT,
-                               G_USUBSAT})
+                               G_USUBSAT, G_SCMP, G_UCMP})
       .legalFor(allIntScalarsAndVectors)
       .legalIf(extendedScalarsAndVectors);
 
-  getActionDefinitionsBuilder(G_FMA).legalFor(allFloatScalarsAndVectors);
+  getActionDefinitionsBuilder({G_FMA, G_STRICT_FMA})
+      .legalFor(allFloatScalarsAndVectors);
+
+  getActionDefinitionsBuilder(G_STRICT_FLDEXP)
+      .legalForCartesianProduct(allFloatScalarsAndVectors, allIntScalars);
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct(allIntScalarsAndVectors,
@@ -305,7 +284,8 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   // tighten these requirements. Many of these math functions are only legal on
   // specific bitwidths, so they are not selectable for
   // allFloatScalarsAndVectors.
-  getActionDefinitionsBuilder({G_FPOW,
+  getActionDefinitionsBuilder({G_STRICT_FSQRT,
+                               G_FPOW,
                                G_FEXP,
                                G_FEXP2,
                                G_FLOG,
@@ -357,12 +337,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   verify(*ST.getInstrInfo());
 }
 
-static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpirvType,
+static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVType *SpvType,
                                 LegalizerHelper &Helper,
                                 MachineRegisterInfo &MRI,
                                 SPIRVGlobalRegistry *GR) {
   Register ConvReg = MRI.createGenericVirtualRegister(ConvTy);
-  GR->assignSPIRVTypeToVReg(SpirvType, ConvReg, Helper.MIRBuilder.getMF());
+  MRI.setRegClass(ConvReg, GR->getRegClass(SpvType));
+  GR->assignSPIRVTypeToVReg(SpvType, ConvReg, Helper.MIRBuilder.getMF());
   Helper.MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
       .addDef(ConvReg)
       .addUse(Reg);
@@ -374,8 +355,7 @@ bool SPIRVLegalizerInfo::legalizeCustom(
     LostDebugLocObserver &LocObserver) const {
   auto Opc = MI.getOpcode();
   MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-  if (!isTypeFoldingSupported(Opc)) {
-    assert(Opc == TargetOpcode::G_ICMP);
+  if (Opc == TargetOpcode::G_ICMP) {
     assert(GR->getSPIRVTypeForVReg(MI.getOperand(0).getReg()));
     auto &Op0 = MI.getOperand(2);
     auto &Op1 = MI.getOperand(3);
@@ -389,7 +369,8 @@ bool SPIRVLegalizerInfo::legalizeCustom(
       LLT ConvT = LLT::scalar(ST->getPointerSize());
       Type *LLVMTy = IntegerType::get(MI.getMF()->getFunction().getContext(),
                                       ST->getPointerSize());
-      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(LLVMTy, Helper.MIRBuilder);
+      SPIRVType *SpirvTy = GR->getOrCreateSPIRVType(
+          LLVMTy, Helper.MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
       Op0.setReg(convertPtrToInt(Reg0, ConvT, SpirvTy, Helper, MRI, GR));
       Op1.setReg(convertPtrToInt(Reg1, ConvT, SpirvTy, Helper, MRI, GR));
     }

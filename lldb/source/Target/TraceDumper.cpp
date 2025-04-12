@@ -510,9 +510,9 @@ CalculateDisass(const TraceDumper::SymbolInfo &symbol_info,
   const ArchSpec arch = target.GetArchitecture();
   lldb_private::AddressRange range(symbol_info.address,
                                    arch.GetMaximumOpcodeByteSize());
-  DisassemblerSP disassembler =
-      Disassembler::DisassembleRange(arch, /*plugin_name*/ nullptr,
-                                     /*flavor*/ nullptr, target, range);
+  DisassemblerSP disassembler = Disassembler::DisassembleRange(
+      arch, /*plugin_name=*/nullptr,
+      /*flavor=*/nullptr, /*cpu=*/nullptr, /*features=*/nullptr, target, range);
   return std::make_tuple(
       disassembler,
       disassembler ? disassembler->GetInstructionList().GetInstructionAtAddress(

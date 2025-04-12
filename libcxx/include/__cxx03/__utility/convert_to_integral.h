@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_CONVERT_TO_INTEGRAL_H
-#define _LIBCPP___UTILITY_CONVERT_TO_INTEGRAL_H
+#ifndef _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H
+#define _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H
 
-#include <__config>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/is_enum.h>
-#include <__type_traits/is_floating_point.h>
-#include <__type_traits/underlying_type.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/is_enum.h>
+#include <__cxx03/__type_traits/is_floating_point.h>
+#include <__cxx03/__type_traits/underlying_type.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -65,4 +65,4 @@ __convert_to_integral(_Tp __val) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_CONVERT_TO_INTEGRAL_H
+#endif // _LIBCPP___CXX03___UTILITY_CONVERT_TO_INTEGRAL_H

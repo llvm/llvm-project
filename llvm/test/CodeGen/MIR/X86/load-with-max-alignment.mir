@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -run-pass=none -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -run-pass=none -o - %s | FileCheck %s
 
 # CHECK: name:            truly_aligned_load
 # CHECK: MOV32rm {{.*}} :: (load (s32), align 4294967296)

@@ -61,6 +61,16 @@ std::size_t TokenSequence::SkipBlanks(std::size_t at) const {
   return tokens; // even if at > tokens
 }
 
+std::optional<std::size_t> TokenSequence::SkipBlanksBackwards(
+    std::size_t at) const {
+  while (at-- > 0) {
+    if (!TokenAt(at).IsBlank()) {
+      return at;
+    }
+  }
+  return std::nullopt;
+}
+
 // C-style /*comments*/ are removed from preprocessing directive
 // token sequences by the prescanner, but not C++ or Fortran
 // free-form line-ending comments (//...  and !...) because
@@ -177,7 +187,7 @@ TokenSequence &TokenSequence::ToLowerCase() {
       } else if (*p == 'h' || *p == 'H') {
         // Hollerith
         *p = 'h';
-      } else if (*p == '_') {
+      } else if (*p == '_' && p + 1 < limit && (p[1] == '"' || p[1] == '\'')) {
         // kind-prefixed character literal (e.g., 1_"ABC")
       } else {
         // exponent
@@ -308,6 +318,7 @@ llvm::raw_ostream &TokenSequence::Dump(llvm::raw_ostream &o) const {
     o << '[' << j << "] @ " << start_[j] << " '" << TokenAt(j).ToString()
       << "'\n";
   }
+  provenances_.Dump(o << "provenances_:\n");
   return o;
 }
 

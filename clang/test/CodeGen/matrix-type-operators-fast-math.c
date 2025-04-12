@@ -41,7 +41,7 @@ void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // CHECK-LABEL: define{{.*}} void @add_matrix_scalar_double_float(<25 x double> noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:       [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
-  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[SCALAR]] to double
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
   // CHECK-NEXT:  [[RES:%.*]] = fadd reassoc nnan ninf nsz arcp afn <25 x double> [[MATRIX]], [[SCALAR_EMBED1]]
@@ -53,7 +53,7 @@ void add_matrix_scalar_double_float(dx5x5_t a, float vf) {
 void add_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // CHECK-LABEL: define{{.*}} void @add_compound_matrix_scalar_double_float(<25 x double> noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
-  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[SCALAR]] to double
   // CHECK-NEXT:  [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
@@ -66,7 +66,7 @@ void add_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
 void subtract_compound_matrix_scalar_double_float(dx5x5_t a, float vf) {
   // CHECK-LABEL: define{{.*}} void @subtract_compound_matrix_scalar_double_float(<25 x double> noundef nofpclass(nan inf) %a, float noundef nofpclass(nan inf) %vf)
   // CHECK:  [[SCALAR:%.*]] = load float, ptr %vf.addr, align 4
-  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext float [[SCALAR]] to double
+  // CHECK-NEXT:  [[SCALAR_EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[SCALAR]] to double
   // CHECK-NEXT:  [[MATRIX:%.*]] = load <25 x double>, ptr {{.*}}, align 8
   // CHECK-NEXT:  [[SCALAR_EMBED:%.*]] = insertelement <25 x double> poison, double [[SCALAR_EXT]], i64 0
   // CHECK-NEXT:  [[SCALAR_EMBED1:%.*]] = shufflevector <25 x double> [[SCALAR_EMBED]], <25 x double> poison, <25 x i32> zeroinitializer
@@ -104,7 +104,7 @@ void multiply_compound_matrix_matrix_double(dx5x5_t b, dx5x5_t c) {
 // CHECK-LABEL: @multiply_double_matrix_scalar_float(
 // CHECK:         [[A:%.*]] = load <25 x double>, ptr {{.*}}, align 8
 // CHECK-NEXT:    [[S:%.*]] = load float, ptr %s.addr, align 4
-// CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
+// CHECK-NEXT:    [[S_EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[S]] to double
 // CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fmul reassoc nnan ninf nsz arcp afn <25 x double> [[A]], [[VECSPLAT]]
@@ -117,7 +117,7 @@ void multiply_double_matrix_scalar_float(dx5x5_t a, float s) {
 
 // CHECK-LABEL: @multiply_compound_double_matrix_scalar_float
 // CHECK:         [[S:%.*]] = load float, ptr %s.addr, align 4
-// CHECK-NEXT:    [[S_EXT:%.*]] = fpext float [[S]] to double
+// CHECK-NEXT:    [[S_EXT:%.*]] = fpext reassoc nnan ninf nsz arcp afn float [[S]] to double
 // CHECK-NEXT:    [[A:%.*]] = load <25 x double>, ptr {{.*}}, align 8
 // CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <25 x double> poison, double [[S_EXT]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <25 x double> [[VECINSERT]], <25 x double> poison, <25 x i32> zeroinitializer
@@ -132,7 +132,7 @@ void multiply_compound_double_matrix_scalar_float(dx5x5_t a, float s) {
 // CHECK-LABEL: @divide_float_matrix_scalar_double(
 // CHECK:         [[MAT:%.*]] = load <6 x float>, ptr [[MAT_ADDR:%.*]], align 4
 // CHECK-NEXT:    [[S:%.*]] = load double, ptr %s.addr, align 8
-// CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc double [[S]] to float
+// CHECK-NEXT:    [[S_TRUNC:%.*]] = fptrunc reassoc nnan ninf nsz arcp afn double [[S]] to float
 // CHECK-NEXT:    [[VECINSERT:%.*]] = insertelement <6 x float> poison, float [[S_TRUNC]], i64 0
 // CHECK-NEXT:    [[VECSPLAT:%.*]] = shufflevector <6 x float> [[VECINSERT]], <6 x float> poison, <6 x i32> zeroinitializer
 // CHECK-NEXT:    [[RES:%.*]] = fdiv reassoc nnan ninf nsz arcp afn <6 x float> [[MAT]], [[VECSPLAT]]

@@ -20,8 +20,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -47,6 +45,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-private.h"
 #include "clang/AST/ASTConsumer.h"
@@ -1883,7 +1883,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       return;
     }
 
-    fun_address = function->GetAddressRange().GetBaseAddress();
+    fun_address = function->GetAddress();
 
     CompilerType copied_function_type = GuardedCopyType(function_clang_type);
     if (copied_function_type) {

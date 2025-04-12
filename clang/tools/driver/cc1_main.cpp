@@ -45,6 +45,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
@@ -110,9 +111,10 @@ static void ensureSufficientStack() {}
 
 /// Print supported cpus of the given target.
 static int PrintSupportedCPUs(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -121,15 +123,16 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
+      TheTarget->createTargetMachine(Triple, "", "+cpuhelp", Options,
                                      std::nullopt));
   return 0;
 }
 
 static int PrintSupportedExtensions(std::string TargetStr) {
+  llvm::Triple Triple(TargetStr);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetStr, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -137,7 +140,7 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "", Options, std::nullopt));
+      TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
@@ -164,9 +167,10 @@ static int PrintSupportedExtensions(std::string TargetStr) {
 }
 
 static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
+  llvm::Triple Triple(TargetOpts.Triple);
   std::string Error;
   const llvm::Target *TheTarget =
-      llvm::TargetRegistry::lookupTarget(TargetOpts.Triple, Error);
+      llvm::TargetRegistry::lookupTarget(Triple, Error);
   if (!TheTarget) {
     llvm::errs() << Error;
     return 1;
@@ -178,7 +182,8 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
   llvm::TargetOptions BackendOptions;
   std::string FeaturesStr = llvm::join(TargetOpts.FeaturesAsWritten, ",");
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetOpts.Triple, TargetOpts.CPU, FeaturesStr, BackendOptions, std::nullopt));
+      TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
+                                     BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
   const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
@@ -264,7 +269,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
       CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics();
+  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
   if (!Clang->hasDiagnostics())
     return 1;
 
@@ -282,6 +287,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Execute the frontend actions.
   {
     llvm::TimeTraceScope TimeScope("ExecuteCompiler");
+    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
+    if (TimePasses)
+      Clang->createFrontendTimer();
+    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
     Success = ExecuteCompilerInvocation(Clang.get());
   }
 

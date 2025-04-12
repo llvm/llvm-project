@@ -362,7 +362,7 @@ define i32 @rev_i1(i1 %x) {
 
 define <2 x i8> @rev_v2i1(<2 x i1> %x) {
 ; CHECK-LABEL: @rev_v2i1(
-; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> <i8 -128, i8 -128>, <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> splat (i8 -128), <2 x i8> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %z = zext <2 x i1> %x to <2 x i8>

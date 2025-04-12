@@ -2919,6 +2919,7 @@
 	vgbm	%v17, 0x1234
 
 #CHECK: vgef    %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x13]
+#CHECK: vgef    %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x13]
 #CHECK: vgef    %v0, 0(%v0,%r1), 0      # encoding: [0xe7,0x00,0x10,0x00,0x00,0x13]
 #CHECK: vgef    %v0, 0(%v0,%r1), 3      # encoding: [0xe7,0x00,0x10,0x00,0x30,0x13]
 #CHECK: vgef    %v0, 0(%v0,%r15), 0     # encoding: [0xe7,0x00,0xf0,0x00,0x00,0x13]
@@ -2943,7 +2944,8 @@
 #CHECK: vgef    %v31, 0(%v0,%r1), 0     # encoding: [0xe7,0xf0,0x10,0x00,0x08,0x13]
 #CHECK: vgef    %v10, 1000(%v19,%r7), 1 # encoding: [0xe7,0xa3,0x73,0xe8,0x14,0x13]
 
-	vgef	%v0, 0(%v0), 0
+	vgef	%v0, 0(%v0,), 0
+	vgef	%v0, 0(%v0,0), 0
 	vgef	%v0, 0(%v0,%r1), 0
 	vgef	%v0, 0(%v0,%r1), 3
 	vgef	%v0, 0(%v0,%r15), 0
@@ -2957,7 +2959,7 @@
 	vgef	%v0, 0(%v0,1), 3
 	vgef	%v0, 0(0,%r15), 0
 	vgef	%v0, 0(%v15,1), 0
-	vgef	0, 0(0), 0
+	vgef	0, 0(0,), 0
 	vgef	0, 0(0,1), 0
 	vgef	0, 0(0,1), 3
 	vgef	0, 0(0,15), 0
@@ -2969,6 +2971,7 @@
 	vgef	10, 1000(19,7), 1
 
 #CHECK: vgeg    %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x12]
+#CHECK: vgeg    %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x12]
 #CHECK: vgeg    %v0, 0(%v0,%r1), 0      # encoding: [0xe7,0x00,0x10,0x00,0x00,0x12]
 #CHECK: vgeg    %v0, 0(%v0,%r1), 1      # encoding: [0xe7,0x00,0x10,0x00,0x10,0x12]
 #CHECK: vgeg    %v0, 0(%v0,%r15), 0     # encoding: [0xe7,0x00,0xf0,0x00,0x00,0x12]
@@ -2993,7 +2996,8 @@
 #CHECK: vgeg    %v31, 0(%v0,%r1), 0     # encoding: [0xe7,0xf0,0x10,0x00,0x08,0x12]
 #CHECK: vgeg    %v10, 1000(%v19,%r7), 1 # encoding: [0xe7,0xa3,0x73,0xe8,0x14,0x12]
 
-	vgeg	%v0, 0(%v0), 0
+	vgeg	%v0, 0(%v0,), 0
+	vgeg	%v0, 0(%v0,0), 0
 	vgeg	%v0, 0(%v0,%r1), 0
 	vgeg	%v0, 0(%v0,%r1), 1
 	vgeg	%v0, 0(%v0,%r15), 0
@@ -3007,7 +3011,7 @@
 	vgeg	%v0, 0(%v0,1), 1
 	vgeg	%v0, 0(0,%r15), 0
 	vgeg	%v0, 0(%v15,1), 0
-	vgeg	0, 0(0), 0
+	vgeg	0, 0(0,), 0
 	vgeg	0, 0(0,1), 0
 	vgeg	0, 0(0,1), 1
 	vgeg	0, 0(0,15), 0
@@ -5951,6 +5955,7 @@
 	vscbiq	%v18, %v3, %v20
 
 #CHECK: vscef   %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x1b]
+#CHECK: vscef   %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x1b]
 #CHECK: vscef   %v0, 0(%v0,%r1), 0      # encoding: [0xe7,0x00,0x10,0x00,0x00,0x1b]
 #CHECK: vscef   %v0, 0(%v0,%r1), 3      # encoding: [0xe7,0x00,0x10,0x00,0x30,0x1b]
 #CHECK: vscef   %v0, 0(%v0,%r15), 0     # encoding: [0xe7,0x00,0xf0,0x00,0x00,0x1b]
@@ -5961,7 +5966,8 @@
 #CHECK: vscef   %v31, 0(%v0,%r1), 0     # encoding: [0xe7,0xf0,0x10,0x00,0x08,0x1b]
 #CHECK: vscef   %v10, 1000(%v19,%r7), 1 # encoding: [0xe7,0xa3,0x73,0xe8,0x14,0x1b]
 
-	vscef	%v0, 0(%v0), 0
+	vscef	%v0, 0(%v0,), 0
+	vscef	%v0, 0(%v0,0), 0
 	vscef	%v0, 0(%v0,%r1), 0
 	vscef	%v0, 0(%v0,%r1), 3
 	vscef	%v0, 0(%v0,%r15), 0
@@ -5973,6 +5979,7 @@
 	vscef	%v10, 1000(%v19,%r7), 1
 
 #CHECK: vsceg   %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x1a]
+#CHECK: vsceg   %v0, 0(%v0,0), 0        # encoding: [0xe7,0x00,0x00,0x00,0x00,0x1a]
 #CHECK: vsceg   %v0, 0(%v0,%r1), 0      # encoding: [0xe7,0x00,0x10,0x00,0x00,0x1a]
 #CHECK: vsceg   %v0, 0(%v0,%r1), 1      # encoding: [0xe7,0x00,0x10,0x00,0x10,0x1a]
 #CHECK: vsceg   %v0, 0(%v0,%r15), 0     # encoding: [0xe7,0x00,0xf0,0x00,0x00,0x1a]
@@ -5983,7 +5990,8 @@
 #CHECK: vsceg   %v31, 0(%v0,%r1), 0     # encoding: [0xe7,0xf0,0x10,0x00,0x08,0x1a]
 #CHECK: vsceg   %v10, 1000(%v19,%r7), 1 # encoding: [0xe7,0xa3,0x73,0xe8,0x14,0x1a]
 
-	vsceg	%v0, 0(%v0), 0
+	vsceg	%v0, 0(%v0,), 0
+	vsceg	%v0, 0(%v0,0), 0
 	vsceg	%v0, 0(%v0,%r1), 0
 	vsceg	%v0, 0(%v0,%r1), 1
 	vsceg	%v0, 0(%v0,%r15), 0

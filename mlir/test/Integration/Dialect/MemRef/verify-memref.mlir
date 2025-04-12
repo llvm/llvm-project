@@ -1,24 +1,24 @@
 // RUN: mlir-opt %s \
-// RUN: -func-bufferize -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
+// RUN:   -one-shot-bufferize="bufferize-function-boundaries" --canonicalize \
 // RUN:   -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm\
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
-// RUN: mlir-cpu-runner \
+// RUN: mlir-runner \
 // RUN:  -e entry -entry-point-result=void \
 // RUN:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils |\
 // RUN: FileCheck %s
 
 module {
-  func.func private @verifyMemRefI8(%a : tensor<*xi8>, %b : tensor<*xi8>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefI16(%a : tensor<*xi16>, %b : tensor<*xi16>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefI32(%a : tensor<*xi32>, %b : tensor<*xi32>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefI64(%a : tensor<*xi64>, %b : tensor<*xi64>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefBF16(%a : tensor<*xbf16>, %b : tensor<*xbf16>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefF16(%a : tensor<*xf16>, %b : tensor<*xf16>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefF32(%a : tensor<*xf32>, %b : tensor<*xf32>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefF64(%a : tensor<*xf64>, %b : tensor<*xf64>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefC32(%a : tensor<*xcomplex<f32>>, %b : tensor<*xcomplex<f32>>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefC64(%a : tensor<*xcomplex<f64>>, %b : tensor<*xcomplex<f64>>) -> i64 attributes { llvm.emit_c_interface }
-  func.func private @verifyMemRefInd(%a : tensor<*xindex>, %b : tensor<*xindex>) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefI8(%a : tensor<*xi8> {bufferization.access = "read"}, %b : tensor<*xi8> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefI16(%a : tensor<*xi16> {bufferization.access = "read"}, %b : tensor<*xi16> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefI32(%a : tensor<*xi32> {bufferization.access = "read"}, %b : tensor<*xi32> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefI64(%a : tensor<*xi64> {bufferization.access = "read"}, %b : tensor<*xi64> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefBF16(%a : tensor<*xbf16> {bufferization.access = "read"}, %b : tensor<*xbf16> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefF16(%a : tensor<*xf16> {bufferization.access = "read"}, %b : tensor<*xf16> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefF32(%a : tensor<*xf32> {bufferization.access = "read"}, %b : tensor<*xf32> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefF64(%a : tensor<*xf64> {bufferization.access = "read"}, %b : tensor<*xf64> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefC32(%a : tensor<*xcomplex<f32>> {bufferization.access = "read"}, %b : tensor<*xcomplex<f32>> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefC64(%a : tensor<*xcomplex<f64>> {bufferization.access = "read"}, %b : tensor<*xcomplex<f64>> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
+  func.func private @verifyMemRefInd(%a : tensor<*xindex> {bufferization.access = "read"}, %b : tensor<*xindex> {bufferization.access = "read"}) -> i64 attributes { llvm.emit_c_interface }
 
   func.func @entry() {
     %i8 = arith.constant dense<90> : tensor<3x3xi8>

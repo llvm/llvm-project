@@ -101,6 +101,11 @@ public:
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
+  /// Reset the statistics collected for this target.
+  /// This includes clearing symbol table and debug info parsing/index time for
+  /// all modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
+
   /// Return the platform object associated with the target.
   ///
   /// After return, the platform object should be checked for
@@ -337,7 +342,7 @@ public:
   uint32_t GetAddressByteSize();
 
   const char *GetTriple();
-  
+
   const char *GetABIName();
 
   const char *GetLabel() const;
@@ -941,6 +946,8 @@ public:
   ///     An error if a Trace already exists or the trace couldn't be created.
   lldb::SBTrace CreateTrace(SBError &error);
 
+  lldb::SBMutex GetAPIMutex() const;
+
 protected:
   friend class SBAddress;
   friend class SBAddressRange;
@@ -959,6 +966,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBType;
   friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;

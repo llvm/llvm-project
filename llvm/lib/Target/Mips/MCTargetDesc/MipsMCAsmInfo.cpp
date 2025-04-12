@@ -16,10 +16,10 @@
 
 using namespace llvm;
 
-void MipsMCAsmInfo::anchor() { }
+void MipsELFMCAsmInfo::anchor() {}
 
-MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple,
-                             const MCTargetOptions &Options) {
+MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
+                                   const MCTargetOptions &Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI = MipsABIInfo::computeTargetABI(TheTriple, "", Options);
@@ -39,15 +39,19 @@ MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple,
   Data64bitsDirective         = "\t.8byte\t";
   CommentString               = "#";
   ZeroDirective               = "\t.space\t";
-  GPRel32Directive            = "\t.gpword\t";
-  GPRel64Directive            = "\t.gpdword\t";
-  DTPRel32Directive           = "\t.dtprelword\t";
-  DTPRel64Directive           = "\t.dtpreldword\t";
-  TPRel32Directive            = "\t.tprelword\t";
-  TPRel64Directive            = "\t.tpreldword\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
-  HasMipsExpressions = true;
+}
+
+void MipsCOFFMCAsmInfo::anchor() {}
+
+MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
+  HasSingleParameterDotFile = true;
+  WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  ExceptionsType = ExceptionHandling::WinEH;
+
+  AllowAtInName = true;
 }

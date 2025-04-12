@@ -52,16 +52,16 @@
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, record(unless(is_union)), variable, enum))
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(enum_constant, function, record(unless(is_union)), variable, variable(is_parameter), enum))
 // FIXME: comma in this diagnostic is wrong.
-// expected-error@-2 {{attribute 'abi_tag' can't be applied to 'enum_constant', and 'enum'}}
+// expected-error@-2 {{attribute 'abi_tag' cannot be applied to 'enum_constant', and 'enum'}}
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(function, record(unless(is_union)), enum))
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 #pragma clang attribute pop
 
 // Verify the non-strict subject set verification.
@@ -96,12 +96,12 @@
 
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = any(record(unless(is_union)), function, variable, enum, enum_constant))
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum_constant', and 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum_constant', and 'enum'}}
 
 #pragma clang attribute pop
 
 #pragma clang attribute push (__attribute__((abi_tag("a"))), apply_to = enum)
-// expected-error@-1 {{attribute 'abi_tag' can't be applied to 'enum'}}
+// expected-error@-1 {{attribute 'abi_tag' cannot be applied to 'enum'}}
 
 #pragma clang attribute pop
 
@@ -124,21 +124,21 @@
 #pragma clang attribute pop
 
 #pragma clang attribute push(__attribute__((objc_subclassing_restricted)), apply_to = any(objc_interface, objc_protocol))
-// expected-error@-1 {{attribute 'objc_subclassing_restricted' can't be applied to 'objc_protocol'}}
+// expected-error@-1 {{attribute 'objc_subclassing_restricted' cannot be applied to 'objc_protocol'}}
 #pragma clang attribute pop
 
 #pragma clang attribute push(__attribute__((objc_subclassing_restricted)), apply_to = any(objc_protocol))
-// expected-error@-1 {{attribute 'objc_subclassing_restricted' can't be applied to 'objc_protocol'}}
+// expected-error@-1 {{attribute 'objc_subclassing_restricted' cannot be applied to 'objc_protocol'}}
 // Don't report an error about missing 'objc_interface' as we aren't parsing
 // Objective-C.
 #pragma clang attribute pop
 
 #pragma clang attribute push(__attribute__((objc_subclassing_restricted)), apply_to = any(objc_interface, objc_protocol))
-// expected-error@-1 {{attribute 'objc_subclassing_restricted' can't be applied to 'objc_protocol'}}
+// expected-error@-1 {{attribute 'objc_subclassing_restricted' cannot be applied to 'objc_protocol'}}
 #pragma clang attribute pop
 
 #pragma clang attribute push(__attribute__((objc_subclassing_restricted)), apply_to = any(objc_protocol))
-// expected-error@-1 {{attribute 'objc_subclassing_restricted' can't be applied to 'objc_protocol'}}
+// expected-error@-1 {{attribute 'objc_subclassing_restricted' cannot be applied to 'objc_protocol'}}
 // Don't report an error about missing 'objc_interface' as we aren't parsing
 // Objective-C.
 #pragma clang attribute pop

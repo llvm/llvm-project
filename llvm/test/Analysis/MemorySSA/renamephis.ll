@@ -11,20 +11,20 @@ declare void @g()
 declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #0
 
 ; CHECK-LABEL: @f
-define void @f() align 2 {
+define void @f(i1 %arg) align 2 {
 entry:
   %P = alloca ptr, align 8
   br label %cond.end.i.i.i.i
 
 cond.end.i.i.i.i:                                 ; preds = %cont20, %entry
-  br i1 undef, label %cont20, label %if.end
+  br i1 %arg, label %cont20, label %if.end
 
 cont20:                                           ; preds = %cond.end.i.i.i.i, %cond.end.i.i.i.i, %cond.end.i.i.i.i
   store ptr undef, ptr %P, align 8
   br label %cond.end.i.i.i.i
 
 if.end:                                           ; preds = %cond.end.i.i.i.i
-  br i1 undef, label %cond.exit, label %handler.type_mismatch2.i
+  br i1 %arg, label %cond.exit, label %handler.type_mismatch2.i
 
 handler.type_mismatch2.i:                         ; preds = %if.end
   tail call void @g()

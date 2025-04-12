@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/TokenKinds.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/Designator.h"
@@ -445,7 +445,7 @@ ExprResult Parser::createEmbedExpr() {
           Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
           Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
-      return StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
+      return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
                                    false, ArrayTy, StartLoc);
     };
 

@@ -93,17 +93,17 @@ define dso_local double @fld_fsd_global(double %a, double %b) nounwind {
 ;
 ; RV32IZFINXZDINX-LABEL: fld_fsd_global:
 ; RV32IZFINXZDINX:       # %bb.0:
+; RV32IZFINXZDINX-NEXT:    lui a4, %hi(G)
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, a2
-; RV32IZFINXZDINX-NEXT:    lui a2, %hi(G)
-; RV32IZFINXZDINX-NEXT:    lw a4, %lo(G)(a2)
-; RV32IZFINXZDINX-NEXT:    lw a5, %lo(G+4)(a2)
-; RV32IZFINXZDINX-NEXT:    addi a3, a2, %lo(G)
-; RV32IZFINXZDINX-NEXT:    sw a0, %lo(G)(a2)
-; RV32IZFINXZDINX-NEXT:    sw a1, %lo(G+4)(a2)
-; RV32IZFINXZDINX-NEXT:    lw a4, 72(a3)
-; RV32IZFINXZDINX-NEXT:    lw a5, 76(a3)
-; RV32IZFINXZDINX-NEXT:    sw a0, 72(a3)
-; RV32IZFINXZDINX-NEXT:    sw a1, 76(a3)
+; RV32IZFINXZDINX-NEXT:    lw a2, %lo(G)(a4)
+; RV32IZFINXZDINX-NEXT:    lw a3, %lo(G+4)(a4)
+; RV32IZFINXZDINX-NEXT:    addi a2, a4, %lo(G)
+; RV32IZFINXZDINX-NEXT:    sw a0, %lo(G)(a4)
+; RV32IZFINXZDINX-NEXT:    sw a1, %lo(G+4)(a4)
+; RV32IZFINXZDINX-NEXT:    lw a4, 72(a2)
+; RV32IZFINXZDINX-NEXT:    lw a5, 76(a2)
+; RV32IZFINXZDINX-NEXT:    sw a0, 72(a2)
+; RV32IZFINXZDINX-NEXT:    sw a1, 76(a2)
 ; RV32IZFINXZDINX-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fld_fsd_global:

@@ -164,3 +164,13 @@ a diagnostic but we still wouldn't have line numbers.
 To provide line numbers and character positions or source lines as the user
 wrote them we would have to save some amount of provenance information in the
 module file as well.
+
+## Hermetic modules files
+
+Top-level module files for libraries can be build with `-fhermetic-module-files`.
+This option causes these module files to contain copies of all of the non-intrinsic
+modules on which they depend, so that non-top-level local modules and the
+modules of dependent libraries need not also be packaged with the library.
+When the compiler reads a hermetic module file, the copies of the dependent
+modules are read into their own scope, and will not conflict with other modules
+of the same name that client code might `USE`.

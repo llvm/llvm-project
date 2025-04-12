@@ -9,129 +9,196 @@
 #include "RPC.h"
 
 #include "Shared/Debug.h"
+#include "Shared/RPCOpcodes.h"
 
 #include "PluginInterface.h"
 
-#if defined(LIBOMPTARGET_RPC_SUPPORT)
-#include "llvm-libc-types/rpc_opcodes_t.h"
-#include "llvmlibc_rpc_server.h"
-#endif
+#include "shared/rpc.h"
+#include "shared/rpc_opcodes.h"
+#include "shared/rpc_server.h"
 
 using namespace llvm;
 using namespace omp;
 using namespace target;
 
+template <uint32_t NumLanes>
+rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
+                                 rpc::Server::Port &Port) {
+
+  switch (Port.get_opcode()) {
+  case LIBC_MALLOC: {
+    Port.recv_and_send([&](rpc::Buffer *Buffer, uint32_t) {
+      Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
+          Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
+    });
+    break;
+  }
+  case LIBC_FREE: {
+    Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
+      Device.free(reinterpret_cast<void *>(Buffer->data[0]),
+                  TARGET_ALLOC_DEVICE_NON_BLOCKING);
+    });
+    break;
+  }
+  case OFFLOAD_HOST_CALL: {
+    uint64_t Sizes[NumLanes] = {0};
+    unsigned long long Results[NumLanes] = {0};
+    void *Args[NumLanes] = {nullptr};
+    Port.recv_n(Args, Sizes, [&](uint64_t Size) { return new char[Size]; });
+    Port.recv([&](rpc::Buffer *buffer, uint32_t ID) {
+      using FuncPtrTy = unsigned long long (*)(void *);
+      auto Func = reinterpret_cast<FuncPtrTy>(buffer->data[0]);
+      Results[ID] = Func(Args[ID]);
+    });
+    Port.send([&](rpc::Buffer *Buffer, uint32_t ID) {
+      Buffer->data[0] = static_cast<uint64_t>(Results[ID]);
+      delete[] reinterpret_cast<char *>(Args[ID]);
+    });
+    break;
+  }
+  default:
+    return rpc::RPC_UNHANDLED_OPCODE;
+    break;
+  }
+  return rpc::RPC_SUCCESS;
+}
+
+static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
+                                        rpc::Server::Port &Port,
+                                        uint32_t NumLanes) {
+  if (NumLanes == 1)
+    return handleOffloadOpcodes<1>(Device, Port);
+  else if (NumLanes == 32)
+    return handleOffloadOpcodes<32>(Device, Port);
+  else if (NumLanes == 64)
+    return handleOffloadOpcodes<64>(Device, Port);
+  else
+    return rpc::RPC_ERROR;
+}
+
+static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
+  uint64_t NumPorts =
+      std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
+  rpc::Server Server(NumPorts, Buffer);
+
+  auto Port = Server.try_open(Device.getWarpSize());
+  if (!Port)
+    return rpc::RPC_SUCCESS;
+
+  rpc::Status Status =
+      handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
+
+  // Let the `libc` library handle any other unhandled opcodes.
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
+                                                         Device.getWarpSize());
+
+  Port->close();
+
+  return Status;
+}
+
+void RPCServerTy::ServerThread::startThread() {
+  if (!Running.fetch_or(true, std::memory_order_acquire))
+    Worker = std::thread([this]() { run(); });
+}
+
+void RPCServerTy::ServerThread::shutDown() {
+  if (!Running.fetch_and(false, std::memory_order_release))
+    return;
+  {
+    std::lock_guard<decltype(Mutex)> Lock(Mutex);
+    CV.notify_all();
+  }
+  if (Worker.joinable())
+    Worker.join();
+}
+
+void RPCServerTy::ServerThread::run() {
+  std::unique_lock<decltype(Mutex)> Lock(Mutex);
+  for (;;) {
+    CV.wait(Lock, [&]() {
+      return NumUsers.load(std::memory_order_acquire) > 0 ||
+             !Running.load(std::memory_order_acquire);
+    });
+
+    if (!Running.load(std::memory_order_acquire))
+      return;
+
+    Lock.unlock();
+    while (NumUsers.load(std::memory_order_relaxed) > 0 &&
+           Running.load(std::memory_order_relaxed)) {
+      std::lock_guard<decltype(Mutex)> Lock(BufferMutex);
+      for (const auto &[Buffer, Device] : llvm::zip_equal(Buffers, Devices)) {
+        if (!Buffer || !Device)
+          continue;
+
+        // If running the server failed, print a message but keep running.
+        if (runServer(*Device, Buffer) != rpc::RPC_SUCCESS)
+          FAILURE_MESSAGE("Unhandled or invalid RPC opcode!");
+      }
+    }
+    Lock.lock();
+  }
+}
+
 RPCServerTy::RPCServerTy(plugin::GenericPluginTy &Plugin)
-    : Handles(Plugin.getNumDevices()) {}
+    : Buffers(std::make_unique<void *[]>(Plugin.getNumDevices())),
+      Devices(std::make_unique<plugin::GenericDeviceTy *[]>(
+          Plugin.getNumDevices())),
+      Thread(new ServerThread(Buffers.get(), Devices.get(),
+                              Plugin.getNumDevices(), BufferMutex)) {}
+
+llvm::Error RPCServerTy::startThread() {
+  Thread->startThread();
+  return Error::success();
+}
+
+llvm::Error RPCServerTy::shutDown() {
+  Thread->shutDown();
+  return Error::success();
+}
 
 llvm::Expected<bool>
 RPCServerTy::isDeviceUsingRPC(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  return Handler.isSymbolInImage(Device, Image, rpc_client_symbol_name);
-#else
-  return false;
-#endif
+  return Handler.isSymbolInImage(Device, Image, "__llvm_rpc_client");
 }
 
 Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
                               plugin::GenericGlobalHandlerTy &Handler,
                               plugin::DeviceImageTy &Image) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  auto Alloc = [](uint64_t Size, void *Data) {
-    plugin::GenericDeviceTy &Device =
-        *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
-    return Device.allocate(Size, nullptr, TARGET_ALLOC_HOST);
-  };
   uint64_t NumPorts =
-      std::min(Device.requestedRPCPortCount(), RPC_MAXIMUM_PORT_COUNT);
-  rpc_device_t RPCDevice;
-  if (rpc_status_t Err = rpc_server_init(&RPCDevice, NumPorts,
-                                         Device.getWarpSize(), Alloc, &Device))
+      std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
+  void *RPCBuffer = Device.allocate(
+      rpc::Server::allocation_size(Device.getWarpSize(), NumPorts), nullptr,
+      TARGET_ALLOC_HOST);
+  if (!RPCBuffer)
     return plugin::Plugin::error(
-        "Failed to initialize RPC server for device %d: %d",
-        Device.getDeviceId(), Err);
-
-  // Register a custom opcode handler to perform plugin specific allocation.
-  auto MallocHandler = [](rpc_port_t Port, void *Data) {
-    rpc_recv_and_send(
-        Port,
-        [](rpc_buffer_t *Buffer, void *Data) {
-          plugin::GenericDeviceTy &Device =
-              *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
-          Buffer->data[0] = reinterpret_cast<uintptr_t>(Device.allocate(
-              Buffer->data[0], nullptr, TARGET_ALLOC_DEVICE_NON_BLOCKING));
-        },
-        Data);
-  };
-  if (rpc_status_t Err =
-          rpc_register_callback(RPCDevice, RPC_MALLOC, MallocHandler, &Device))
-    return plugin::Plugin::error(
-        "Failed to register RPC malloc handler for device %d: %d\n",
-        Device.getDeviceId(), Err);
-
-  // Register a custom opcode handler to perform plugin specific deallocation.
-  auto FreeHandler = [](rpc_port_t Port, void *Data) {
-    rpc_recv(
-        Port,
-        [](rpc_buffer_t *Buffer, void *Data) {
-          plugin::GenericDeviceTy &Device =
-              *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
-          Device.free(reinterpret_cast<void *>(Buffer->data[0]),
-                      TARGET_ALLOC_DEVICE_NON_BLOCKING);
-        },
-        Data);
-  };
-  if (rpc_status_t Err =
-          rpc_register_callback(RPCDevice, RPC_FREE, FreeHandler, &Device))
-    return plugin::Plugin::error(
-        "Failed to register RPC free handler for device %d: %d\n",
-        Device.getDeviceId(), Err);
+        "Failed to initialize RPC server for device %d", Device.getDeviceId());
 
   // Get the address of the RPC client from the device.
-  void *ClientPtr;
-  plugin::GlobalTy ClientGlobal(rpc_client_symbol_name, sizeof(void *));
+  plugin::GlobalTy ClientGlobal("__llvm_rpc_client", sizeof(rpc::Client));
   if (auto Err =
           Handler.getGlobalMetadataFromDevice(Device, Image, ClientGlobal))
     return Err;
 
-  if (auto Err = Device.dataRetrieve(&ClientPtr, ClientGlobal.getPtr(),
-                                     sizeof(void *), nullptr))
+  rpc::Client client(NumPorts, RPCBuffer);
+  if (auto Err = Device.dataSubmit(ClientGlobal.getPtr(), &client,
+                                   sizeof(rpc::Client), nullptr))
     return Err;
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Buffers[Device.getDeviceId()] = RPCBuffer;
+  Devices[Device.getDeviceId()] = &Device;
 
-  const void *ClientBuffer = rpc_get_client_buffer(RPCDevice);
-  if (auto Err = Device.dataSubmit(ClientPtr, ClientBuffer,
-                                   rpc_get_client_size(), nullptr))
-    return Err;
-  Handles[Device.getDeviceId()] = RPCDevice.handle;
-#endif
-  return Error::success();
-}
-
-Error RPCServerTy::runServer(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  rpc_device_t RPCDevice{Handles[Device.getDeviceId()]};
-  if (rpc_status_t Err = rpc_handle_server(RPCDevice))
-    return plugin::Plugin::error(
-        "Error while running RPC server on device %d: %d", Device.getDeviceId(),
-        Err);
-#endif
   return Error::success();
 }
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
-#ifdef LIBOMPTARGET_RPC_SUPPORT
-  rpc_device_t RPCDevice{Handles[Device.getDeviceId()]};
-  auto Dealloc = [](void *Ptr, void *Data) {
-    plugin::GenericDeviceTy &Device =
-        *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
-    Device.free(Ptr, TARGET_ALLOC_HOST);
-  };
-  if (rpc_status_t Err = rpc_server_shutdown(RPCDevice, Dealloc, &Device))
-    return plugin::Plugin::error(
-        "Failed to shut down RPC server for device %d: %d",
-        Device.getDeviceId(), Err);
-#endif
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST);
+  Buffers[Device.getDeviceId()] = nullptr;
+  Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
 }

@@ -212,6 +212,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
     response.PutCString("ostype:tvos;");
 #elif defined(TARGET_OS_WATCH) && TARGET_OS_WATCH == 1
     response.PutCString("ostype:watchos;");
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+    response.PutCString("ostype:xros;");
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
     response.PutCString("ostype:bridgeos;");
 #else
@@ -231,7 +233,8 @@ GDBRemoteCommunicationServerCommon::Handle_qHostInfo(
       host_arch.GetMachine() == llvm::Triple::aarch64_32 ||
       host_arch.GetMachine() == llvm::Triple::aarch64_be ||
       host_arch.GetMachine() == llvm::Triple::arm ||
-      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS())
+      host_arch.GetMachine() == llvm::Triple::armeb || host_arch.IsMIPS() ||
+      host_arch.GetTriple().isLoongArch())
     response.Printf("watchpoint_exceptions_received:before;");
   else
     response.Printf("watchpoint_exceptions_received:after;");

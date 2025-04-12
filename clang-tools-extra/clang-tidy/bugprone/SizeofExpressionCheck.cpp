@@ -400,7 +400,9 @@ void SizeofExpressionCheck::check(const MatchFinder::MatchResult &Result) {
            "suspicious usage of 'sizeof(array)/sizeof(...)';"
            " denominator differs from the size of array elements")
           << E->getLHS()->getSourceRange() << E->getRHS()->getSourceRange();
-    } else if (NumTy && DenomTy && NumTy == DenomTy) {
+    } else if (NumTy && DenomTy && NumTy == DenomTy &&
+               !NumTy->isDependentType()) {
+      // Dependent type should not be compared.
       diag(E->getOperatorLoc(),
            "suspicious usage of 'sizeof(...)/sizeof(...)'; both expressions "
            "have the same type")

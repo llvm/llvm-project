@@ -21,7 +21,7 @@ loop:
   %i.01 = phi i32 [ -39, %entry ], [ %inc, %loop ]
   %conv = sitofp i32 %i.01 to double
   %inc = add nsw i32 %i.01, 1
-  br i1 undef, label %loop, label %for.end
+  br i1 true, label %loop, label %for.end
 
 for.end:
   unreachable
@@ -40,7 +40,7 @@ loop:
   %conv = sitofp i32 %i.01 to double
   %div = fdiv double %conv, 4.000000e+01
   %inc = add nsw i32 %i.01, 1
-  br i1 undef, label %loop, label %for.end
+  br i1 false, label %loop, label %for.end
 
 for.end:
   unreachable

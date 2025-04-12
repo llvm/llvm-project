@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_VOIDIFY_H
-#define _LIBCPP___MEMORY_VOIDIFY_H
+#ifndef _LIBCPP___CXX03___MEMORY_VOIDIFY_H
+#define _LIBCPP___CXX03___MEMORY_VOIDIFY_H
 
-#include <__config>
-#include <__memory/addressof.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,4 +27,4 @@ _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void* 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_VOIDIFY_H
+#endif // _LIBCPP___CXX03___MEMORY_VOIDIFY_H

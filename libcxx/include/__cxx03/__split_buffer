@@ -7,42 +7,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___SPLIT_BUFFER
-#define _LIBCPP___SPLIT_BUFFER
+#ifndef _LIBCPP___CXX03___SPLIT_BUFFER
+#define _LIBCPP___CXX03___SPLIT_BUFFER
 
-#include <__algorithm/max.h>
-#include <__algorithm/move.h>
-#include <__algorithm/move_backward.h>
-#include <__config>
-#include <__iterator/distance.h>
-#include <__iterator/iterator_traits.h>
-#include <__iterator/move_iterator.h>
-#include <__memory/allocate_at_least.h>
-#include <__memory/allocator.h>
-#include <__memory/allocator_traits.h>
-#include <__memory/compressed_pair.h>
-#include <__memory/pointer_traits.h>
-#include <__memory/swap_allocator.h>
-#include <__type_traits/add_lvalue_reference.h>
-#include <__type_traits/conditional.h>
-#include <__type_traits/enable_if.h>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_nothrow_assignable.h>
-#include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_swappable.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/remove_reference.h>
-#include <__utility/forward.h>
-#include <__utility/move.h>
-#include <cstddef>
+#include <__cxx03/__algorithm/max.h>
+#include <__cxx03/__algorithm/move.h>
+#include <__cxx03/__algorithm/move_backward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__iterator/distance.h>
+#include <__cxx03/__iterator/iterator_traits.h>
+#include <__cxx03/__iterator/move_iterator.h>
+#include <__cxx03/__memory/allocate_at_least.h>
+#include <__cxx03/__memory/allocator.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__memory/compressed_pair.h>
+#include <__cxx03/__memory/pointer_traits.h>
+#include <__cxx03/__memory/swap_allocator.h>
+#include <__cxx03/__type_traits/add_lvalue_reference.h>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/enable_if.h>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_nothrow_assignable.h>
+#include <__cxx03/__type_traits/is_nothrow_constructible.h>
+#include <__cxx03/__type_traits/is_swappable.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/__type_traits/is_trivially_relocatable.h>
+#include <__cxx03/__type_traits/remove_reference.h>
+#include <__cxx03/__utility/forward.h>
+#include <__cxx03/__utility/move.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -582,4 +582,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___SPLIT_BUFFER
+#endif // _LIBCPP___CXX03___SPLIT_BUFFER

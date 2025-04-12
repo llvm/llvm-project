@@ -46,6 +46,10 @@ sdkroot = None
 make_path = None
 
 # The overriden dwarf verison.
+# Don't use this to test the current compiler's
+# DWARF version, as this won't be set if the
+# version isn't overridden.
+# Use lldbplatformutils.getDwarfVersion() instead.
 dwarf_version = 0
 
 # Any overridden settings.
@@ -99,6 +103,7 @@ failed = False
 lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
+lldb_platform_available_ports = None
 
 # Apple SDK
 apple_sdk = None

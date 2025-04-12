@@ -40,9 +40,7 @@
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -583,9 +581,9 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
 
   if (DebugTypeInfer) {
     errs() << "Final Type Equivalence Classes: ";
-    for (auto ClassIt = TECs.begin(); ClassIt != TECs.end(); ++ClassIt) {
+    for (const auto &Class : TECs) {
       // only print non-empty classes.
-      if (auto MembIt = TECs.member_begin(ClassIt);
+      if (auto MembIt = TECs.member_begin(*Class);
           MembIt != TECs.member_end()) {
         errs() << '[';
         StringRef Sep = "";
@@ -2647,18 +2645,18 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()],
-                           L->insnmatchers_front().getNumOperandMatchers()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()],
-                           R->insnmatchers_front().getNumOperandMatchers());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)

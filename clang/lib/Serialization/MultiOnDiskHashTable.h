@@ -93,7 +93,7 @@ private:
     using result_type = OnDiskTable *;
 
     result_type operator()(void *P) const {
-      return Table::getFromOpaqueValue(P).template get<OnDiskTable *>();
+      return llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(P));
     }
   };
 
@@ -127,10 +127,10 @@ private:
 
   void removeOverriddenTables() {
     llvm::DenseSet<file_type> Files;
-    Files.insert(PendingOverrides.begin(), PendingOverrides.end());
+    Files.insert_range(PendingOverrides);
     // Explicitly capture Files to work around an MSVC 2015 rejects-valid bug.
     auto ShouldRemove = [&Files](void *T) -> bool {
-      auto *ODT = Table::getFromOpaqueValue(T).template get<OnDiskTable *>();
+      auto *ODT = llvm::cast<OnDiskTable *>(Table::getFromOpaqueValue(T));
       bool Remove = Files.count(ODT->File);
       if (Remove)
         delete ODT;

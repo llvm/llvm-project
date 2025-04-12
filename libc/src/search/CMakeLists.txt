@@ -98,3 +98,28 @@ add_entrypoint_object(
     libc.include.search
     libc.src.__support.intrusive_list
 )
+
+add_entrypoint_object(
+  lfind
+  SRCS
+    lfind.cpp
+  HDRS
+    lfind.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+)
+
+add_entrypoint_object(
+  lsearch
+  SRCS
+    lsearch.cpp
+  HDRS
+    lsearch.h
+  DEPENDS
+    libc.include.search
+    libc.src.__support.CPP.cstddef
+    libc.src.__support.memory_size
+    libc.src.string.memory_utils.inline_memcpy
+)

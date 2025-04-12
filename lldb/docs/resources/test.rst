@@ -418,8 +418,8 @@ An overview of all LLDB builders can be found here:
 `https://lab.llvm.org/buildbot/#/builders?tags=lldb <https://lab.llvm.org/buildbot/#/builders?tags=lldb>`_
 
 Building and testing for macOS uses a different platform called GreenDragon. It
-has a dedicated tab for LLDB: `https://green.lab.llvm.org/green/view/LLDB/
-<https://green.lab.llvm.org/green/view/LLDB/>`_
+has a dedicated tab for LLDB: `https://green.lab.llvm.org/job/llvm.org/view/LLDB/
+<https://green.lab.llvm.org/job/llvm.org/view/LLDB/>`_
 
 
 Running The Tests
@@ -586,24 +586,60 @@ To run a specific test, pass a filter, for example:
 Running the Test Suite Remotely
 ```````````````````````````````
 
-Running the test-suite remotely is similar to the process of running a local
-test suite, but there are two things to have in mind:
+1. Run lldb-server on the remote system, so that it can accept multiple connections.
+   This is called "platform" mode:
 
-1. You must have the lldb-server running on the remote system, ready to accept
-   multiple connections. For more information on how to setup remote debugging
-   see the Remote debugging page.
-2. You must tell the test-suite how to connect to the remote system. This is
-   achieved using the ``LLDB_TEST_PLATFORM_URL``, ``LLDB_TEST_PLATFORM_WORKING_DIR``
-   flags to cmake, and ``--platform-name`` parameter to ``dotest.py``.
-   These parameters correspond to the platform select and platform connect
-   LLDB commands. You will usually also need to specify the compiler and
-   architecture for the remote system.
-3. Remote Shell tests execution is currently supported only for Linux target
-   platform. It's triggered when ``LLDB_TEST_SYSROOT`` is provided for building
-   test sources. It can be disabled by setting ``LLDB_TEST_SHELL_DISABLE_REMOTE=On``.
-   Shell tests are not guaranteed to pass against remote target if the compiler
-   being used is other than Clang.
+   ::
 
+      lldb-server platform --server --listen 0.0.0.0:<port A> --gdbserver-port <port B>
+
+   Assuming that ``port A`` and ``port B`` on the remote system can be reached
+   from your host system. If your remote system is a simulator on your host machine,
+   you may need to forward these ports to the host when you start the simulator.
+
+   For more information on how to setup remote debugging see :doc:`/use/remote`.
+
+2. Tell the test-suite how to connect to the remote system. This is done using the
+   ``LLDB_TEST_PLATFORM_URL`` and ``LLDB_TEST_PLATFORM_WORKING_DIR`` flags of CMake,
+   or the ``--platform-name``, ``--platform-url`` and ``--platform-working-dir``
+   parameters of ``dotest.py``. These parameters are passed on to the ``platform select``
+   and ``platform connect`` LLDB commands when the tests are run.
+
+   You will usually need to specify the compiler and architecture for the
+   remote system. This is done with CMake options ``LLDB_TEST_COMPILER`` and
+   ``LLDB_TEST_ARCH``, or the ``dotest.py`` options ``--compiler`` and ``--arch``.
+
+   .. note::
+      Even in cases where the two systems are the same architecture and run the
+      same operating system, there may be version differences between the two
+      which require you to use a different compiler version for remote testing.
+
+   For example, to run tests using ``dotest.py`` on a remote AArch64 Linux system
+   you might run:
+
+   ::
+
+      ./bin/lldb-dotest --platform-name remote-linux --arch aarch64 --compiler aarch64-none-linux-gnu-gcc --platform-url connect://<remote-ip>:<port A> --platform-working-dir /tmp/test_lldb -p <test-name>.py
+
+   This is the equivalent of:
+
+      * ``LLDB_TEST_ARCH`` = ``aarch64``
+      * ``LLDB_TEST_COMPILER`` = ``aarch64-none-linux-gnu-gcc``
+      * ``LLDB_TEST_PLATFORM_URL`` = ``connect://<remote-ip>:<port A>``
+      * ``LLDB_TEST_PLATFORM_WORKING_DIR`` = ``/tmp/test_lldb``
+
+   Setting these values using CMake allows you to run ``ninja check-lldb`` to run
+   tests on the remote system.
+
+   If you have a host build that you sometimes check on a remote system, but otherwise
+   test on the host, adding arguments to ``dotest.py`` manually is easier.
+
+.. note::
+   Remote Shell test execution is currently supported only for Linux targets.
+   It is enabled when ``LLDB_TEST_SYSROOT`` is set. Remote Shell testing can
+   be disabled by setting ``LLDB_TEST_SHELL_DISABLE_REMOTE=On``. Shell tests
+   are not guaranteed to pass against remote target if the test compiler is not
+   Clang.
 
 Running tests in QEMU System Emulation Environment
 ``````````````````````````````````````````````````

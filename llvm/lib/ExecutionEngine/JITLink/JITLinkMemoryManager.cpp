@@ -144,7 +144,9 @@ orc::shared::AllocActions &BasicLayout::graphAllocActions() {
 }
 
 void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
-                                const JITLinkDylib *JD, SegmentMap Segments,
+                                std::shared_ptr<orc::SymbolStringPool> SSP,
+                                Triple TT, const JITLinkDylib *JD,
+                                SegmentMap Segments,
                                 OnCreatedFunction OnCreated) {
 
   static_assert(orc::AllocGroup::NumGroups == 32,
@@ -155,8 +157,9 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
       "__---.finalize", "__R--.finalize", "__-W-.finalize", "__RW-.finalize",
       "__--X.finalize", "__R-X.finalize", "__-WX.finalize", "__RWX.finalize"};
 
-  auto G = std::make_unique<LinkGraph>("", Triple(), 0,
-                                       llvm::endianness::native, nullptr);
+  auto G =
+      std::make_unique<LinkGraph>("", std::move(SSP), std::move(TT),
+                                  SubtargetFeatures(), getGenericEdgeKindName);
   orc::AllocGroupSmallMap<Block *> ContentBlocks;
 
   orc::ExecutorAddr NextAddr(0x100000);
@@ -200,12 +203,12 @@ void SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr,
                   });
 }
 
-Expected<SimpleSegmentAlloc>
-SimpleSegmentAlloc::Create(JITLinkMemoryManager &MemMgr, const JITLinkDylib *JD,
-                           SegmentMap Segments) {
+Expected<SimpleSegmentAlloc> SimpleSegmentAlloc::Create(
+    JITLinkMemoryManager &MemMgr, std::shared_ptr<orc::SymbolStringPool> SSP,
+    Triple TT, const JITLinkDylib *JD, SegmentMap Segments) {
   std::promise<MSVCPExpected<SimpleSegmentAlloc>> AllocP;
   auto AllocF = AllocP.get_future();
-  Create(MemMgr, JD, std::move(Segments),
+  Create(MemMgr, std::move(SSP), std::move(TT), JD, std::move(Segments),
          [&](Expected<SimpleSegmentAlloc> Result) {
            AllocP.set_value(std::move(Result));
          });
@@ -257,28 +260,14 @@ public:
     }
 
     // Run finalization actions.
-    auto DeallocActions = runFinalizeActions(G->allocActions());
-    if (!DeallocActions) {
-      OnFinalized(DeallocActions.takeError());
-      return;
-    }
-
-    // Release the finalize segments slab.
-    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
-      OnFinalized(errorCodeToError(EC));
-      return;
-    }
-
-#ifndef NDEBUG
-    // Set 'G' to null to flag that we've been successfully finalized.
-    // This allows us to assert at destruction time that a call has been made
-    // to either finalize or abandon.
-    G = nullptr;
-#endif
-
-    // Continue with finalized allocation.
-    OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
-                                            std::move(*DeallocActions)));
+    using WrapperFunctionCall = orc::shared::WrapperFunctionCall;
+    runFinalizeActions(
+        G->allocActions(),
+        [this, OnFinalized = std::move(OnFinalized)](
+            Expected<std::vector<WrapperFunctionCall>> DeallocActions) mutable {
+          completeFinalization(std::move(OnFinalized),
+                               std::move(DeallocActions));
+        });
   }
 
   void abandon(OnAbandonedFunction OnAbandoned) override {
@@ -299,6 +288,31 @@ public:
   }
 
 private:
+  void completeFinalization(
+      OnFinalizedFunction OnFinalized,
+      Expected<std::vector<orc::shared::WrapperFunctionCall>> DeallocActions) {
+
+    if (!DeallocActions)
+      return OnFinalized(DeallocActions.takeError());
+
+    // Release the finalize segments slab.
+    if (auto EC = sys::Memory::releaseMappedMemory(FinalizationSegments)) {
+      OnFinalized(errorCodeToError(EC));
+      return;
+    }
+
+#ifndef NDEBUG
+    // Set 'G' to null to flag that we've been successfully finalized.
+    // This allows us to assert at destruction time that a call has been made
+    // to either finalize or abandon.
+    G = nullptr;
+#endif
+
+    // Continue with finalized allocation.
+    OnFinalized(MemMgr.createFinalizedAlloc(std::move(StandardSegments),
+                                            std::move(*DeallocActions)));
+  }
+
   Error applyProtections() {
     for (auto &KV : BL.segments()) {
       const auto &AG = KV.first;

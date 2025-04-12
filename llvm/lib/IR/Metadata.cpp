@@ -29,6 +29,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/ConstantRangeList.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -275,7 +275,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
     OwnerTy Owner = Pair.second.first;
     if (Owner.isNull())
       continue;
-    if (!Owner.is<DebugValueUser *>())
+    if (!isa<DebugValueUser *>(Owner))
       continue;
     DVRUsersWithID.push_back(&UseMap[Pair.first]);
   }
@@ -289,7 +289,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   });
   SmallVector<DbgVariableRecord *> DVRUsers;
   for (auto UserWithID : DVRUsersWithID)
-    DVRUsers.push_back(UserWithID->first.get<DebugValueUser *>()->getUser());
+    DVRUsers.push_back(cast<DebugValueUser *>(UserWithID->first)->getUser());
   return DVRUsers;
 }
 
@@ -339,7 +339,8 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
   ValueAsMetadata *MD = I->second;
   using UseTy =
       std::pair<void *, std::pair<MetadataTracking::OwnerTy, uint64_t>>;
-  // Copy out uses and update value of Constant used by debug info metadata with undef below
+  // Copy out uses and update value of Constant used by debug info metadata with
+  // poison below
   SmallVector<UseTy, 8> Uses(MD->UseMap.begin(), MD->UseMap.end());
 
   for (const auto &Pair : Uses) {
@@ -349,7 +350,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
     // Check for MetadataAsValue.
     if (isa<MetadataAsValue *>(Owner)) {
       cast<MetadataAsValue *>(Owner)->handleChangedMetadata(
-          ValueAsMetadata::get(UndefValue::get(C.getType())));
+          ValueAsMetadata::get(PoisonValue::get(C.getType())));
       continue;
     }
     if (!isa<Metadata *>(Owner))
@@ -359,7 +360,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
       continue;
     if (isa<DINode>(OwnerMD)) {
       OwnerMD->handleChangedOperand(
-          Pair.first, ValueAsMetadata::get(UndefValue::get(C.getType())));
+          Pair.first, ValueAsMetadata::get(PoisonValue::get(C.getType())));
     }
   }
 }
@@ -397,8 +398,8 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
       continue;
     }
 
-    if (Owner.is<DebugValueUser *>()) {
-      Owner.get<DebugValueUser *>()->handleChangedValue(Pair.first, MD);
+    if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
+      DVU->handleChangedValue(Pair.first, MD);
       continue;
     }
 
@@ -437,7 +438,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
     auto Owner = Pair.second.first;
     if (!Owner)
       continue;
-    if (!Owner.is<Metadata *>())
+    if (!isa<Metadata *>(Owner))
       continue;
 
     // Resolve MDNodes that point at this.
@@ -1354,6 +1355,43 @@ MDNode *MDNode::getMostGenericRange(MDNode *A, MDNode *B) {
   return MDNode::get(A->getContext(), MDs);
 }
 
+MDNode *MDNode::getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B) {
+  if (!A || !B)
+    return nullptr;
+
+  if (A == B)
+    return A;
+
+  SmallVector<ConstantRange> RangeListA, RangeListB;
+  for (unsigned I = 0, E = A->getNumOperands() / 2; I != E; ++I) {
+    auto *LowA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 0));
+    auto *HighA = mdconst::extract<ConstantInt>(A->getOperand(2 * I + 1));
+    RangeListA.push_back(ConstantRange(LowA->getValue(), HighA->getValue()));
+  }
+
+  for (unsigned I = 0, E = B->getNumOperands() / 2; I != E; ++I) {
+    auto *LowB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 0));
+    auto *HighB = mdconst::extract<ConstantInt>(B->getOperand(2 * I + 1));
+    RangeListB.push_back(ConstantRange(LowB->getValue(), HighB->getValue()));
+  }
+
+  ConstantRangeList CRLA(RangeListA);
+  ConstantRangeList CRLB(RangeListB);
+  ConstantRangeList Result = CRLA.intersectWith(CRLB);
+  if (Result.empty())
+    return nullptr;
+
+  SmallVector<Metadata *> MDs;
+  for (const ConstantRange &CR : Result) {
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getLower())));
+    MDs.push_back(ConstantAsMetadata::get(
+        ConstantInt::get(A->getContext(), CR.getUpper())));
+  }
+
+  return MDNode::get(A->getContext(), MDs);
+}
+
 MDNode *MDNode::getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B) {
   if (!A || !B)
     return nullptr;
@@ -1597,8 +1635,7 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
   if (!Value::hasMetadata())
     return; // Nothing to remove!
 
-  SmallSet<unsigned, 32> KnownSet;
-  KnownSet.insert(KnownIDs.begin(), KnownIDs.end());
+  SmallSet<unsigned, 32> KnownSet(llvm::from_range, KnownIDs);
 
   // A DIAssignID attachment is debug metadata, don't drop it.
   KnownSet.insert(LLVMContext::MD_DIAssignID);

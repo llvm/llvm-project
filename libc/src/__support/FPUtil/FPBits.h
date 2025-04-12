@@ -127,7 +127,11 @@ template <> struct FPLayout<FPType::IEEE754_Binary128> {
 };
 
 template <> struct FPLayout<FPType::X86_Binary80> {
+#if __SIZEOF_LONG_DOUBLE__ == 12
+  using StorageType = UInt<__SIZEOF_LONG_DOUBLE__ * CHAR_BIT>;
+#else
   using StorageType = UInt128;
+#endif
   LIBC_INLINE_VAR static constexpr int SIGN_LEN = 1;
   LIBC_INLINE_VAR static constexpr int EXP_LEN = 15;
   LIBC_INLINE_VAR static constexpr int SIG_LEN = 64;
@@ -243,11 +247,11 @@ protected:
     using UP::UP;
 
     LIBC_INLINE constexpr BiasedExponent(Exponent exp)
-        : UP(static_cast<int32_t>(exp) + EXP_BIAS) {}
+        : UP(static_cast<uint32_t>(static_cast<int32_t>(exp) + EXP_BIAS)) {}
 
     // Cast operator to get convert from BiasedExponent to Exponent.
     LIBC_INLINE constexpr operator Exponent() const {
-      return Exponent(UP::value - EXP_BIAS);
+      return Exponent(static_cast<int32_t>(UP::value - EXP_BIAS));
     }
 
     LIBC_INLINE constexpr BiasedExponent &operator++() {
@@ -682,7 +686,7 @@ public:
   }
 
   LIBC_INLINE constexpr void set_biased_exponent(StorageType biased) {
-    UP::set_biased_exponent(BiasedExponent((int32_t)biased));
+    UP::set_biased_exponent(BiasedExponent(static_cast<uint32_t>(biased)));
   }
 
   LIBC_INLINE constexpr int get_exponent() const {

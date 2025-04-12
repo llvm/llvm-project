@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_TEMP_VALUE_H
-#define _LIBCPP___MEMORY_TEMP_VALUE_H
+#ifndef _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H
+#define _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H
 
-#include <__config>
-#include <__memory/addressof.h>
-#include <__memory/allocator_traits.h>
-#include <__type_traits/aligned_storage.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__memory/allocator_traits.h>
+#include <__cxx03/__type_traits/aligned_storage.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -55,4 +55,4 @@ struct __temp_value {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_TEMP_VALUE_H
+#endif // _LIBCPP___CXX03___MEMORY_TEMP_VALUE_H

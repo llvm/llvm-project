@@ -23,9 +23,6 @@ public:
   ARMAsmBackend(const Target &T, bool isThumb, llvm::endianness Endian)
       : MCAsmBackend(Endian), isThumbMode(isThumb) {}
 
-  unsigned getNumFixupKinds() const override {
-    return ARM::NumTargetFixupKinds;
-  }
 
   bool hasNOP(const MCSubtargetInfo *STI) const {
     return STI->hasFeature(ARM::HasV6T2Ops);

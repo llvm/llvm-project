@@ -24,7 +24,7 @@ define <4 x i8> @phi_v4i8_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, %a ], [ <i8 2, i8 2, i8 2, i8 2>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i8> [ splat (i8 1), %a ], [ splat (i8 2), %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %x
 ;
   br i1 %c, label %a, label %b
@@ -79,7 +79,7 @@ define <4 x i8> @phi_v4i8_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i8> [ <i8 1, i8 1, i8 1, i8 1>, %a ], [ <i8 8, i8 32, i8 -59, i8 12>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i8> [ splat (i8 1), %a ], [ <i8 8, i8 32, i8 -59, i8 12>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i8> %x
 ;
   br i1 %c, label %a, label %b
@@ -97,7 +97,7 @@ define <4 x i16> @phi_v4i16_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i16> [ <i16 1, i16 1, i16 1, i16 1>, %a ], [ <i16 2, i16 2, i16 2, i16 2>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i16> [ splat (i16 1), %a ], [ splat (i16 2), %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %x
 ;
   br i1 %c, label %a, label %b
@@ -152,7 +152,7 @@ define <4 x i16> @phi_v4i16_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i16> [ <i16 1, i16 1, i16 1, i16 1>, %a ], [ <i16 7432, i16 -4832, i16 -11835, i16 12>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i16> [ splat (i16 1), %a ], [ <i16 7432, i16 -4832, i16 -11835, i16 12>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i16> %x
 ;
   br i1 %c, label %a, label %b
@@ -170,7 +170,7 @@ define <4 x i32> @phi_v4i32_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, %a ], [ <i32 2, i32 2, i32 2, i32 2>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i32> [ splat (i32 1), %a ], [ splat (i32 2), %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %x
 ;
   br i1 %c, label %a, label %b
@@ -225,7 +225,7 @@ define <4 x i32> @phi_v4i32_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i32> [ <i32 1, i32 1, i32 1, i32 1>, %a ], [ <i32 7432, i32 -4832, i32 381381, i32 12>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i32> [ splat (i32 1), %a ], [ <i32 7432, i32 -4832, i32 381381, i32 12>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i32> %x
 ;
   br i1 %c, label %a, label %b
@@ -243,7 +243,7 @@ define <4 x i64> @phi_v4i64_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i64> [ <i64 1, i64 1, i64 1, i64 1>, %a ], [ <i64 2, i64 2, i64 2, i64 2>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i64> [ splat (i64 1), %a ], [ splat (i64 2), %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %x
 ;
   br i1 %c, label %a, label %b
@@ -298,7 +298,7 @@ define <4 x i64> @phi_v4i64_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i64> [ <i64 1, i64 1, i64 1, i64 1>, %a ], [ <i64 7432, i64 -4832, i64 381381, i64 12>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x i64> [ splat (i64 1), %a ], [ <i64 7432, i64 -4832, i64 381381, i64 12>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x i64> %x
 ;
   br i1 %c, label %a, label %b
@@ -316,7 +316,7 @@ define <4 x half> @phi_v4f16_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x half> [ <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, %a ], [ <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4D00>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x half> [ splat (half 0xH3C00), %a ], [ <half 0xH4000, half 0xH4000, half 0xH4000, half 0xH4D00>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x half> %x
 ;
   br i1 %c, label %a, label %b
@@ -353,7 +353,7 @@ define <4 x half> @phi_v4f16_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x half> [ <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, %a ], [ <half 0xH6F42, half 0xHECB8, half 0xH5DF6, half 0xH4A40>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x half> [ splat (half 0xH3C00), %a ], [ <half 0xH6F42, half 0xHECB8, half 0xH5DF6, half 0xH4A40>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x half> %x
 ;
   br i1 %c, label %a, label %b
@@ -371,7 +371,7 @@ define <4 x float> @phi_v4f32_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x float> [ <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %a ], [ <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+01>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x float> [ splat (float 1.000000e+00), %a ], [ <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float 2.000000e+01>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %x
 ;
   br i1 %c, label %a, label %b
@@ -408,7 +408,7 @@ define <4 x float> @phi_v4f32_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x float> [ <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %a ], [ <float 7.432000e+03, float -4.832000e+03, float 3.815000e+02, float 1.250000e+01>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x float> [ splat (float 1.000000e+00), %a ], [ <float 7.432000e+03, float -4.832000e+03, float 3.815000e+02, float 1.250000e+01>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x float> %x
 ;
   br i1 %c, label %a, label %b
@@ -426,7 +426,7 @@ define <4 x double> @phi_v4f64_splat(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x double> [ <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %a ], [ <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+01>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x double> [ splat (double 1.000000e+00), %a ], [ <double 2.000000e+00, double 2.000000e+00, double 2.000000e+00, double 2.000000e+01>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %x
 ;
   br i1 %c, label %a, label %b
@@ -463,7 +463,7 @@ define <4 x double> @phi_v4f64_cheap_and_expensive(i1 %c) {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br i1 %c, label %a, label %b
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: br label %d
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x double> [ <double 1.000000e+00, double 1.000000e+00, double 1.000000e+00, double 1.000000e+00>, %a ], [ <double 7.432000e+03, double -4.832000e+03, double 3.815000e+02, double 1.250000e+01>, %b ]
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %x = phi <4 x double> [ splat (double 1.000000e+00), %a ], [ <double 7.432000e+03, double -4.832000e+03, double 3.815000e+02, double 1.250000e+01>, %b ]
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret <4 x double> %x
 ;
   br i1 %c, label %a, label %b

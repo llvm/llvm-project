@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <__utility/is_pointer_in_range.h>
 #include <cassert>
 

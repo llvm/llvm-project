@@ -682,7 +682,7 @@ define i4 @simplify_or_common_op_commute2(i4 %x, i4 %y, i4 %p, i4 %q)  {
 
 define <2 x i4> @simplify_or_common_op_commute3(<2 x i4> %x, <2 x i4> %y, <2 x i4> %p)  {
 ; CHECK-LABEL: @simplify_or_common_op_commute3(
-; CHECK-NEXT:    ret <2 x i4> <i4 -1, i4 -1>
+; CHECK-NEXT:    ret <2 x i4> splat (i4 -1)
 ;
   %z = mul <2 x i4> %p, %p ; thwart complexity-based canonicalization
   %xy = and <2 x i4> %y, %x

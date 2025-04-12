@@ -23,17 +23,20 @@ namespace llvm::sandboxir {
 
 class Context;
 // Forward declare friend classes for MSVC.
-class PointerType;
-class VectorType;
-class FixedVectorType;
-class ScalableVectorType;
-class IntegerType;
-class FunctionType;
 class ArrayType;
+class CallBase;
+class CmpInst;
+class ConstantDataSequential;
+class FixedVectorType;
+class FPMathOperator;
+class FunctionType;
+class IntegerType;
+class Module;
+class PointerType;
+class ScalableVectorType;
 class StructType;
 class TargetExtType;
-class Module;
-class FPMathOperator;
+class VectorType;
 #define DEF_INSTR(ID, OPCODE, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #include "llvm/SandboxIR/Values.def"
@@ -63,6 +66,7 @@ protected:
   friend class TargetExtType;      // For LLVMTy.
   friend class Module;             // For LLVMTy.
   friend class FPMathOperator;     // For LLVMTy.
+  friend class ConstantDataSequential; // For LLVMTy.
 
   // Friend all instruction classes because `create()` functions use LLVMTy.
 #define DEF_INSTR(ID, OPCODE, CLASS) friend class CLASS;
@@ -283,18 +287,15 @@ public:
   }
 
 #ifndef NDEBUG
-  void dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }
-  LLVM_DUMP_METHOD void dump() {
-    dumpOS(dbgs());
-    dbgs() << "\n";
-  }
+  void dumpOS(raw_ostream &OS);
+  LLVM_DUMP_METHOD void dump();
 #endif // NDEBUG
 };
 
 class PointerType : public Type {
 public:
   // TODO: add missing functions
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+
   static PointerType *get(Context &Ctx, unsigned AddressSpace);
 
   static bool classof(const Type *From) {

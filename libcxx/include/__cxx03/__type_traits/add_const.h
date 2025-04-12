@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_ADD_CONST_H
-#define _LIBCPP___TYPE_TRAITS_ADD_CONST_H
+#ifndef _LIBCPP___CXX03___TYPE_TRAITS_ADD_CONST_H
+#define _LIBCPP___CXX03___TYPE_TRAITS_ADD_CONST_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,4 +29,4 @@ using add_const_t = typename add_const<_Tp>::type;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_ADD_CONST_H
+#endif // _LIBCPP___CXX03___TYPE_TRAITS_ADD_CONST_H

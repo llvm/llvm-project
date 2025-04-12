@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_OPERATIONS_H
-#define _LIBCPP___FUNCTIONAL_OPERATIONS_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H
+#define _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H
 
-#include <__config>
-#include <__functional/binary_function.h>
-#include <__functional/unary_function.h>
-#include <__type_traits/desugars_to.h>
-#include <__utility/forward.h>
+#include <__cxx03/__config>
+#include <__cxx03/__functional/binary_function.h>
+#include <__cxx03/__functional/unary_function.h>
+#include <__cxx03/__type_traits/desugars_to.h>
+#include <__cxx03/__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -538,4 +538,4 @@ struct _LIBCPP_TEMPLATE_VIS logical_or<void> {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_OPERATIONS_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_OPERATIONS_H

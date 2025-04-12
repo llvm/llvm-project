@@ -608,7 +608,11 @@ public:
   virtual SymbolFile *GetSymbolFile(bool can_create = true,
                                     Stream *feedback_strm = nullptr);
 
-  Symtab *GetSymtab();
+  /// Get the module's symbol table
+  ///
+  /// If the symbol table has already been loaded, this function returns it.
+  /// Otherwise, it will only be loaded when can_create is true.
+  Symtab *GetSymtab(bool can_create = true);
 
   /// Get a reference to the UUID value contained in this object.
   ///
@@ -881,6 +885,8 @@ public:
   /// ElapsedTime RAII object.
   StatsDuration &GetSymtabIndexTime() { return m_symtab_index_time; }
 
+  void ResetStatistics();
+
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
   ///
@@ -945,8 +951,8 @@ public:
     /// names we are looking for
     lldb::FunctionNameType m_name_type_mask = lldb::eFunctionNameTypeNone;
 
-    ///< If \b true, then demangled names that match will need to contain
-    ///< "m_name" in order to be considered a match
+    /// If \b true, then demangled names that match will need to contain
+    /// "m_name" in order to be considered a match
     bool m_match_name_after_lookup = false;
   };
 

@@ -11,9 +11,7 @@
 
 #include "__llvm-libc-common.h"
 
-#include "llvm-libc-types/struct_timeval.h"
-
-#include "llvm-libc-macros/sys-time-macros.h"
+#include "../llvm-libc-macros/sys-time-macros.h"
 
 %%public_api()
 

@@ -243,8 +243,8 @@ define void @select_vectorized(i1 %c, <2 x i8> %a, <2 x i8> %b) {
 ; CHECK-SAME: i1 [[C:%.*]], <2 x i8> [[A:%.*]], <2 x i8> [[B:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], <2 x i8> [[A]], <2 x i8> [[B]]
-; CHECK-NEXT:    [[RET1:%.*]] = and <2 x i8> [[S]], <i8 4, i8 4>
-; CHECK-NEXT:    [[RET2:%.*]] = and <2 x i8> [[S]], <i8 12, i8 12>
+; CHECK-NEXT:    [[RET1:%.*]] = and <2 x i8> [[S]], splat (i8 4)
+; CHECK-NEXT:    [[RET2:%.*]] = and <2 x i8> [[S]], splat (i8 12)
 ; CHECK-NEXT:    call void @use3(<2 x i8> [[RET1]])
 ; CHECK-NEXT:    call void @use3(<2 x i8> [[RET2]])
 ; CHECK-NEXT:    ret void

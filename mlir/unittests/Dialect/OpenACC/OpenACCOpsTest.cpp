@@ -1,4 +1,4 @@
-//===- OpenACCOpsTest.cpp - OpenACC ops extra functiosn Tests -------------===//
+//===- OpenACCOpsTest.cpp - Unit tests for OpenACC ops --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/Value.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -23,7 +26,8 @@ using namespace mlir::acc;
 class OpenACCOpsTest : public ::testing::Test {
 protected:
   OpenACCOpsTest() : b(&context), loc(UnknownLoc::get(&context)) {
-    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect>();
+    context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
+                        memref::MemRefDialect>();
   }
 
   MLIRContext context;
@@ -74,6 +78,54 @@ TEST_F(OpenACCOpsTest, asyncOnlyTest) {
 }
 
 template <typename Op>
+void testAsyncOnlyDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
+                            llvm::SmallVector<DeviceType> &dtypes) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_FALSE(op->hasAsyncOnly());
+  for (auto d : dtypes)
+    EXPECT_FALSE(op->hasAsyncOnly(d));
+
+  auto dtypeNone = DeviceTypeAttr::get(&context, DeviceType::None);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeNone}));
+  EXPECT_TRUE(op->hasAsyncOnly());
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::None));
+  op->removeAsyncOnlyAttr();
+
+  auto dtypeHost = DeviceTypeAttr::get(&context, DeviceType::Host);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeHost}));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Host));
+  EXPECT_FALSE(op->hasAsyncOnly());
+  op->removeAsyncOnlyAttr();
+
+  auto dtypeStar = DeviceTypeAttr::get(&context, DeviceType::Star);
+  op->setAsyncOnlyAttr(b.getArrayAttr({dtypeHost, dtypeStar}));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Star));
+  EXPECT_TRUE(op->hasAsyncOnly(DeviceType::Host));
+  EXPECT_FALSE(op->hasAsyncOnly());
+
+  op->removeAsyncOnlyAttr();
+}
+
+TEST_F(OpenACCOpsTest, asyncOnlyTestDataEntry) {
+  testAsyncOnlyDataEntry<DevicePtrOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<PresentOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<CopyinOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<CreateOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<NoCreateOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<AttachOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<UpdateDeviceOp>(b, context, loc, dtypes);
+  testAsyncOnlyDataEntry<UseDeviceOp>(b, context, loc, dtypes);
+}
+
+template <typename Op>
 void testAsyncValue(OpBuilder &b, MLIRContext &context, Location loc,
                     llvm::SmallVector<DeviceType> &dtypes) {
   OwningOpRef<Op> op = b.create<Op>(loc, TypeRange{}, ValueRange{});
@@ -99,6 +151,46 @@ TEST_F(OpenACCOpsTest, asyncValueTest) {
   testAsyncValue<ParallelOp>(b, context, loc, dtypes);
   testAsyncValue<KernelsOp>(b, context, loc, dtypes);
   testAsyncValue<SerialOp>(b, context, loc, dtypes);
+}
+
+template <typename Op>
+void testAsyncValueDataEntry(OpBuilder &b, MLIRContext &context, Location loc,
+                             llvm::SmallVector<DeviceType> &dtypes) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  mlir::Value empty;
+  EXPECT_EQ(op->getAsyncValue(), empty);
+  for (auto d : dtypes)
+    EXPECT_EQ(op->getAsyncValue(d), empty);
+
+  OwningOpRef<arith::ConstantIndexOp> val =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  auto dtypeNvidia = DeviceTypeAttr::get(&context, DeviceType::Nvidia);
+  op->setAsyncOperandsDeviceTypeAttr(b.getArrayAttr({dtypeNvidia}));
+  op->getAsyncOperandsMutable().assign(val->getResult());
+  EXPECT_EQ(op->getAsyncValue(), empty);
+  EXPECT_EQ(op->getAsyncValue(DeviceType::Nvidia), val->getResult());
+
+  op->getAsyncOperandsMutable().clear();
+  op->removeAsyncOperandsDeviceTypeAttr();
+}
+
+TEST_F(OpenACCOpsTest, asyncValueTestDataEntry) {
+  testAsyncValueDataEntry<DevicePtrOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<PresentOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<CopyinOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<CreateOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<NoCreateOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<AttachOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<UpdateDeviceOp>(b, context, loc, dtypes);
+  testAsyncValueDataEntry<UseDeviceOp>(b, context, loc, dtypes);
 }
 
 template <typename Op>
@@ -435,4 +527,252 @@ TEST_F(OpenACCOpsTest, routineOpTest) {
     EXPECT_FALSE(op->getBindNameValue(d).has_value());
   op->removeBindNameDeviceTypeAttr();
   op->removeBindNameAttr();
+}
+
+template <typename Op>
+void testShortDataEntryOpBuilders(OpBuilder &b, MLIRContext &context,
+                                  Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getVarPtr(), varPtr);
+  EXPECT_EQ(op->getType(), memrefTy);
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+  EXPECT_FALSE(op->getVarPtrPtr());
+
+  OwningOpRef<Op> op2 = b.create<Op>(loc, varPtr,
+                                     /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, varPtr,
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, varPtr,
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataEntryOpBuilder) {
+  testShortDataEntryOpBuilders<PrivateOp>(b, context, loc,
+                                          DataClause::acc_private);
+  testShortDataEntryOpBuilders<FirstprivateOp>(b, context, loc,
+                                               DataClause::acc_firstprivate);
+  testShortDataEntryOpBuilders<ReductionOp>(b, context, loc,
+                                            DataClause::acc_reduction);
+  testShortDataEntryOpBuilders<DevicePtrOp>(b, context, loc,
+                                            DataClause::acc_deviceptr);
+  testShortDataEntryOpBuilders<PresentOp>(b, context, loc,
+                                          DataClause::acc_present);
+  testShortDataEntryOpBuilders<CopyinOp>(b, context, loc,
+                                         DataClause::acc_copyin);
+  testShortDataEntryOpBuilders<CreateOp>(b, context, loc,
+                                         DataClause::acc_create);
+  testShortDataEntryOpBuilders<NoCreateOp>(b, context, loc,
+                                           DataClause::acc_no_create);
+  testShortDataEntryOpBuilders<AttachOp>(b, context, loc,
+                                         DataClause::acc_attach);
+  testShortDataEntryOpBuilders<GetDevicePtrOp>(b, context, loc,
+                                               DataClause::acc_getdeviceptr);
+  testShortDataEntryOpBuilders<UpdateDeviceOp>(b, context, loc,
+                                               DataClause::acc_update_device);
+  testShortDataEntryOpBuilders<UseDeviceOp>(b, context, loc,
+                                            DataClause::acc_use_device);
+  testShortDataEntryOpBuilders<DeclareDeviceResidentOp>(
+      b, context, loc, DataClause::acc_declare_device_resident);
+  testShortDataEntryOpBuilders<DeclareLinkOp>(b, context, loc,
+                                              DataClause::acc_declare_link);
+  testShortDataEntryOpBuilders<CacheOp>(b, context, loc, DataClause::acc_cache);
+}
+
+template <typename Op>
+void testShortDataExitOpBuilders(OpBuilder &b, MLIRContext &context,
+                                 Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+
+  OwningOpRef<GetDevicePtrOp> accPtrOp = b.create<GetDevicePtrOp>(
+      loc, varPtr, /*structured=*/true, /*implicit=*/true);
+  TypedValue<PointerLikeType> accPtr =
+      cast<TypedValue<PointerLikeType>>(accPtrOp->getResult());
+
+  OwningOpRef<Op> op = b.create<Op>(loc, accPtr, varPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getVarPtr(), varPtr);
+  EXPECT_EQ(op->getAccPtr(), accPtr);
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+
+  OwningOpRef<Op> op2 = b.create<Op>(loc, accPtr, varPtr,
+                                     /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, accPtr, varPtr,
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, accPtr, varPtr,
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataExitOpBuilder) {
+  testShortDataExitOpBuilders<CopyoutOp>(b, context, loc,
+                                         DataClause::acc_copyout);
+  testShortDataExitOpBuilders<UpdateHostOp>(b, context, loc,
+                                            DataClause::acc_update_host);
+}
+
+template <typename Op>
+void testShortDataExitNoVarPtrOpBuilders(OpBuilder &b, MLIRContext &context,
+                                         Location loc, DataClause dataClause) {
+  auto memrefTy = MemRefType::get({}, b.getI32Type());
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+  TypedValue<PointerLikeType> varPtr =
+      cast<TypedValue<PointerLikeType>>(varPtrOp->getResult());
+
+  OwningOpRef<GetDevicePtrOp> accPtrOp = b.create<GetDevicePtrOp>(
+      loc, varPtr, /*structured=*/true, /*implicit=*/true);
+  TypedValue<PointerLikeType> accPtr =
+      cast<TypedValue<PointerLikeType>>(accPtrOp->getResult());
+
+  OwningOpRef<Op> op = b.create<Op>(loc, accPtr,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getAccPtr(), accPtr);
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+
+  OwningOpRef<Op> op2 = b.create<Op>(loc, accPtr,
+                                     /*structured=*/false, /*implicit=*/false);
+  EXPECT_FALSE(op2->getImplicit());
+  EXPECT_FALSE(op2->getStructured());
+
+  OwningOpRef<arith::ConstantIndexOp> extent =
+      b.create<arith::ConstantIndexOp>(loc, 1);
+  OwningOpRef<DataBoundsOp> bounds =
+      b.create<DataBoundsOp>(loc, extent->getResult());
+  OwningOpRef<Op> opWithBounds =
+      b.create<Op>(loc, accPtr,
+                   /*structured=*/true, /*implicit=*/true, bounds->getResult());
+  EXPECT_FALSE(opWithBounds->getBounds().empty());
+  EXPECT_EQ(opWithBounds->getBounds().back(), bounds->getResult());
+
+  OwningOpRef<Op> opWithName =
+      b.create<Op>(loc, accPtr,
+                   /*structured=*/true, /*implicit=*/true, "varName");
+  EXPECT_EQ(opWithName->getNameAttr().str(), "varName");
+}
+
+TEST_F(OpenACCOpsTest, shortDataExitOpNoVarPtrBuilder) {
+  testShortDataExitNoVarPtrOpBuilders<DeleteOp>(b, context, loc,
+                                                DataClause::acc_delete);
+  testShortDataExitNoVarPtrOpBuilders<DetachOp>(b, context, loc,
+                                                DataClause::acc_detach);
+}
+
+template <typename Op>
+void testShortDataEntryOpBuildersMappableVar(OpBuilder &b, MLIRContext &context,
+                                             Location loc,
+                                             DataClause dataClause) {
+  auto int64Ty = b.getI64Type();
+  auto memrefTy = MemRefType::get({}, int64Ty);
+  OwningOpRef<memref::AllocaOp> varPtrOp =
+      b.create<memref::AllocaOp>(loc, memrefTy);
+  SmallVector<Value> indices;
+  OwningOpRef<memref::LoadOp> loadVarOp =
+      b.create<memref::LoadOp>(loc, int64Ty, varPtrOp->getResult(), indices);
+
+  EXPECT_TRUE(isMappableType(loadVarOp->getResult().getType()));
+  TypedValue<MappableType> var =
+      cast<TypedValue<MappableType>>(loadVarOp->getResult());
+  OwningOpRef<Op> op = b.create<Op>(loc, var,
+                                    /*structured=*/true, /*implicit=*/true);
+
+  EXPECT_EQ(op->getVar(), var);
+  EXPECT_EQ(op->getVarPtr(), nullptr);
+  EXPECT_EQ(op->getType(), int64Ty);
+  EXPECT_EQ(op->getVarType(), int64Ty);
+  EXPECT_EQ(op->getDataClause(), dataClause);
+  EXPECT_TRUE(op->getImplicit());
+  EXPECT_TRUE(op->getStructured());
+  EXPECT_TRUE(op->getBounds().empty());
+  EXPECT_FALSE(op->getVarPtrPtr());
+}
+
+struct IntegerOpenACCMappableModel
+    : public mlir::acc::MappableType::ExternalModel<IntegerOpenACCMappableModel,
+                                                    IntegerType> {};
+
+TEST_F(OpenACCOpsTest, mappableTypeBuilderDataEntry) {
+  // First, set up the test by attaching MappableInterface to IntegerType.
+  IntegerType i64ty = IntegerType::get(&context, 8);
+  ASSERT_FALSE(isMappableType(i64ty));
+  IntegerType::attachInterface<IntegerOpenACCMappableModel>(context);
+  ASSERT_TRUE(isMappableType(i64ty));
+
+  testShortDataEntryOpBuildersMappableVar<PrivateOp>(b, context, loc,
+                                                     DataClause::acc_private);
+  testShortDataEntryOpBuildersMappableVar<FirstprivateOp>(
+      b, context, loc, DataClause::acc_firstprivate);
+  testShortDataEntryOpBuildersMappableVar<ReductionOp>(
+      b, context, loc, DataClause::acc_reduction);
+  testShortDataEntryOpBuildersMappableVar<DevicePtrOp>(
+      b, context, loc, DataClause::acc_deviceptr);
+  testShortDataEntryOpBuildersMappableVar<PresentOp>(b, context, loc,
+                                                     DataClause::acc_present);
+  testShortDataEntryOpBuildersMappableVar<CopyinOp>(b, context, loc,
+                                                    DataClause::acc_copyin);
+  testShortDataEntryOpBuildersMappableVar<CreateOp>(b, context, loc,
+                                                    DataClause::acc_create);
+  testShortDataEntryOpBuildersMappableVar<NoCreateOp>(
+      b, context, loc, DataClause::acc_no_create);
+  testShortDataEntryOpBuildersMappableVar<AttachOp>(b, context, loc,
+                                                    DataClause::acc_attach);
+  testShortDataEntryOpBuildersMappableVar<GetDevicePtrOp>(
+      b, context, loc, DataClause::acc_getdeviceptr);
+  testShortDataEntryOpBuildersMappableVar<UpdateDeviceOp>(
+      b, context, loc, DataClause::acc_update_device);
+  testShortDataEntryOpBuildersMappableVar<UseDeviceOp>(
+      b, context, loc, DataClause::acc_use_device);
+  testShortDataEntryOpBuildersMappableVar<DeclareDeviceResidentOp>(
+      b, context, loc, DataClause::acc_declare_device_resident);
+  testShortDataEntryOpBuildersMappableVar<DeclareLinkOp>(
+      b, context, loc, DataClause::acc_declare_link);
+  testShortDataEntryOpBuildersMappableVar<CacheOp>(b, context, loc,
+                                                   DataClause::acc_cache);
 }

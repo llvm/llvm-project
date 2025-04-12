@@ -37,6 +37,10 @@ class AffineApplyOp;
 /// operations (not necessarily restricted to Affine dialect).
 void populateAffineExpandIndexOpsPatterns(RewritePatternSet &patterns);
 
+/// Populate patterns that expand affine index operations into their equivalent
+/// `affine.apply` representations.
+void populateAffineExpandIndexOpsAsAffinePatterns(RewritePatternSet &patterns);
+
 /// Helper function to rewrite `op`'s affine map and reorder its operands such
 /// that they are in increasing order of hoistability (i.e. the least hoistable)
 /// operands come first in the operand list.

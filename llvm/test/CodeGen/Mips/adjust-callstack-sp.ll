@@ -1,10 +1,10 @@
-; RUN: llc < %s -march=mips -mattr=mips16 | FileCheck %s -check-prefix=M16
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips3 -target-abi n64 | FileCheck %s -check-prefix=GP64
-; RUN: llc < %s -march=mips -mcpu=mips64 -target-abi n64 | FileCheck %s -check-prefix=GP64
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 | FileCheck %s -check-prefix=GP64
+; RUN: llc < %s -mtriple=mips -mattr=mips16 | FileCheck %s -check-prefix=M16
+; RUN: llc < %s -mtriple=mips -mcpu=mips2 | FileCheck %s -check-prefix=GP32
+; RUN: llc < %s -mtriple=mips -mcpu=mips32 | FileCheck %s -check-prefix=GP32
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 | FileCheck %s -check-prefix=GP32
+; RUN: llc < %s -mtriple=mips -mcpu=mips3 -target-abi n64 | FileCheck %s -check-prefix=GP64
+; RUN: llc < %s -mtriple=mips -mcpu=mips64 -target-abi n64 | FileCheck %s -check-prefix=GP64
+; RUN: llc < %s -mtriple=mips -mcpu=mips64r6 -target-abi n64 | FileCheck %s -check-prefix=GP64
 
 declare void @bar(ptr)
 

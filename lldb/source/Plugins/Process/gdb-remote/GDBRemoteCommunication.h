@@ -168,7 +168,7 @@ public:
                                     GDBRemoteCommunication &server);
 
   /// Expand GDB run-length encoding.
-  static std::string ExpandRLE(std::string);
+  static std::optional<std::string> ExpandRLE(std::string);
 
 protected:
   std::chrono::seconds m_packet_timeout;

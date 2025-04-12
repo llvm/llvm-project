@@ -45,9 +45,6 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
-  unsigned getNumFixupKinds() const override {
-    return AVR::NumTargetFixupKinds;
-  }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

@@ -50,7 +50,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/InitializePasses.h"
@@ -61,7 +60,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
@@ -614,7 +612,7 @@ void ARMLoadStoreOpt::moveLiveRegsBefore(const MachineBasicBlock &MBB,
   }
 }
 
-static bool ContainsReg(const ArrayRef<std::pair<unsigned, bool>> &Regs,
+static bool ContainsReg(ArrayRef<std::pair<unsigned, bool>> Regs,
                         unsigned Reg) {
   for (const std::pair<unsigned, bool> &R : Regs)
     if (R.first == Reg)

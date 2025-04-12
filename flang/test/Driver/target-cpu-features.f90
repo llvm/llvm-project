@@ -41,6 +41,9 @@
 ! RUN: %flang --target=r600-unknown-unknown -mcpu=cayman -nogpulib -c %s -### 2>&1 \
 ! RUN: | FileCheck %s -check-prefix=CHECK-AMDGPU-R600
 
+! RUN: %flang --target=loongarch64-linux-gnu -c %s -### 2>&1 \
+! RUN: | FileCheck %s -check-prefix=CHECK-LOONGARCH64
+
 ! CHECK-A57: "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! CHECK-A57-SAME: "-target-cpu" "cortex-a57"
 ! CHECK-A57-SAME: "-target-feature" "+v8a" "-target-feature" "+aes" "-target-feature" "+crc" "-target-feature" "+fp-armv8" "-target-feature" "+neon" "-target-feature" "+perfmon" "-target-feature" "+sha2
@@ -86,3 +89,6 @@
 
 ! CHECK-AMDGPU-R600: "-fc1" "-triple" "r600-unknown-unknown"
 ! CHECK-AMDGPU-R600-SAME: "-target-cpu" "cayman"
+
+! CHECK-LOONGARCH64: "-fc1" "-triple" "loongarch64-unknown-linux-gnu"
+! CHECK-LOONGARCH64-SAME: "-target-cpu" "loongarch64" "-target-feature" "+lsx" "-target-feature" "+64bit" "-target-feature" "+f" "-target-feature" "+d" "-target-feature" "+ual"

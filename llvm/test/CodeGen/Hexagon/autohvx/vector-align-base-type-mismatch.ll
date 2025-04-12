@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; The getelementptr's based on %a2, but with different base types caused
 ; a problem in vector alignment code.

@@ -19,6 +19,32 @@ import sys
 from libomputils import ScriptError, error
 
 
+class TargetPlatform:
+    """Convenience class for handling the target platform for configuration/compilation"""
+
+    system_override = None
+    """
+    Target system name override by the user.
+    It follows the conventions from https://docs.python.org/3/library/platform.html#platform.system
+    """
+
+    def set_system_override(override_system):
+        """
+        Set a system override for the target.
+        Please follow the style from https://docs.python.org/3/library/platform.html#platform.system
+        """
+        TargetPlatform.system_override = override_system
+
+    def system():
+        """
+        Target System name.
+        It follows the conventions from https://docs.python.org/3/library/platform.html#platform.system
+        """
+        if TargetPlatform.system_override is None:
+            return platform.system()
+        return TargetPlatform.system_override
+
+
 class ParseMessageDataError(ScriptError):
     """Convenience class for parsing message data file errors"""
 
@@ -55,7 +81,7 @@ class Message(object):
         self.text = text
 
     def toSrc(self):
-        if platform.system() == "Windows":
+        if TargetPlatform.system().casefold() == "Windows".casefold():
             return re.sub(r"%([0-9])\$(s|l?[du])", r"%\1!\2!", self.text)
         return str(self.text)
 
@@ -363,6 +389,13 @@ def main():
     parser.add_argument(
         "--message", metavar="FILE", help="Generate message file named FILE"
     )
+    parser.add_argument(
+        "--target-system-override",
+        metavar="TARGET_SYSTEM_NAME",
+        help="Target System override.\n"
+        "By default the target system is the host system\n"
+        "See possible values at https://docs.python.org/3/library/platform.html#platform.system",
+    )
     parser.add_argument("inputfile")
     commandArgs = parser.parse_args()
 
@@ -371,6 +404,8 @@ def main():
         return
     data = MessageData.create(commandArgs.inputfile)
     prefix = commandArgs.prefix
+    if commandArgs.target_system_override:
+        TargetPlatform.set_system_override(commandArgs.target_system_override)
     if commandArgs.enum:
         generate_enum_file(commandArgs.enum, prefix, data)
     if commandArgs.default:
@@ -378,7 +413,7 @@ def main():
     if commandArgs.signature:
         generate_signature_file(commandArgs.signature, data)
     if commandArgs.message:
-        if platform.system() == "Windows":
+        if TargetPlatform.system().casefold() == "Windows".casefold():
             generate_message_file_windows(commandArgs.message, data)
         else:
             generate_message_file_unix(commandArgs.message, data)

@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_FORWARD_H
-#define _LIBCPP___UTILITY_FORWARD_H
+#ifndef _LIBCPP___CXX03___UTILITY_FORWARD_H
+#define _LIBCPP___CXX03___UTILITY_FORWARD_H
 
-#include <__config>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/remove_reference.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/is_reference.h>
+#include <__cxx03/__type_traits/remove_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -35,4 +35,4 @@ forward(_LIBCPP_LIFETIMEBOUND __libcpp_remove_reference_t<_Tp>&& __t) _NOEXCEPT 
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_FORWARD_H
+#endif // _LIBCPP___CXX03___UTILITY_FORWARD_H

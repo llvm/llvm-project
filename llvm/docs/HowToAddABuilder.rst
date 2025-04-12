@@ -6,7 +6,13 @@ Introduction
 ============
 
 This document contains information about adding a build configuration and
-buildbot-worker to private worker builder to LLVM Buildbot Infrastructure.
+buildbot worker to the LLVM Buildbot Infrastructure.
+
+.. note:: The term "buildmaster" is used in this document to refer to the
+  server that manages which builds are run and where. Though we would not
+  normally choose to use "master" terminology, it is used in this document
+  because it is the term that the Buildbot package currently
+  `uses <https://github.com/buildbot/buildbot/issues/5382>`_.
 
 Buildmasters
 ============
@@ -178,6 +184,109 @@ Here are the steps you can follow to do so:
    To move a worker to production (once approved), stop your worker, edit the
    buildbot.tac file to change the port number from 9994 to 9990 and start it
    again.
+
+Testing a Builder Config Locally
+================================
+
+It is possible to test a builder running against a local version of LLVM's
+buildmaster setup. This allows you to test changes to builder, worker, and
+buildmaster configuration. A buildmaster launched in this "local testing" mode
+will:
+
+* Bind only to local interfaces.
+* Use SQLite as the database.
+* Use a single fixed password for workers.
+* Disable extras like GitHub authentication.
+
+In order to use this "local testing" mode:
+
+* Create and activate a Python `venv
+  <https://docs.python.org/3/library/venv.html>`_ and install the necessary
+  dependencies. This step can be run from any directory.
+
+    .. code-block:: bash
+
+       python -m venv bbenv
+       source bbenv/bin/activate
+       pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
+
+* If your system has Python 3.13 or newer you will need to additionally
+  install ``legacy-cgi`` and make a minor patch to the installed buildbot
+  package. This step does not need to be followed for earlier Python versions.
+
+    .. code-block:: bash
+
+       pip install legacy-cgi
+       sed -i \
+         -e 's/import pipes/import shlex/' \
+         -e 's/pipes\.quote/shlex.quote/' \
+         bbenv/lib/python3.13/site-packages/buildbot_worker/runprocess.py
+
+* Initialise the necessary buildmaster files, link to the configuration in a
+  local checkout out of `llvm-zorg <https://github.com/llvm/llvm-zorg>`_, and
+  ask ``buildbot`` to check the configuration. This step can be run from any
+  directory.
+
+    .. code-block:: bash
+
+       buildbot create-master llvm-testbbmaster
+       cd llvm-testbbmaster
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
+       ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
+       ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
+       BUILDBOT_TEST=1 buildbot checkconfig
+
+* Start the buildmaster.
+
+    .. code-block:: bash
+
+       BUILDBOT_TEST=1 buildbot start --nodaemon .
+
+* After waiting a few seconds for startup to complete, you should be able to
+  open the web UI at ``http://localhost:8011``.  If there are any errors or
+  this isn't working, check ``twistd.log`` (within the current directory) for
+  more information.
+
+* You can now create and start a buildbot worker. Ensure you pick the correct
+  name for the worker associated with the build configuration you want to test
+  in ``buildbot/osuosl/master/config/builders.py``.
+
+    .. code-block:: bash
+
+       buildbot-worker create-worker <buildbot-worker-root-directory> \
+                       localhost:9990 \
+                       <buildbot-worker-name> \
+                       test
+       buildbot-worker start --nodaemon <buildbot-worker-root-directory>
+
+* Either wait until the poller sets off a build, or alternatively force a
+  build to start in the web UI.
+
+* Review the progress and results of the build in the web UI.
+
+This local testing configuration defaults to binding only to the loopback
+interface for security reasons.
+
+If you want to run the test worker on a different machine, or to run the
+buildmaster on a remote server, ssh port forwarding can be used to make
+connection possible. For instance, if running the buildmaster on a remote
+server the following command will suffice to make the web UI accessible via
+``http://localhost:8011`` and make it possible for a local worker to connect
+to the remote buildmaster by connecting to ``localhost:9900``:
+
+    .. code-block:: bash
+
+       ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
+
+Be aware that some build configurations may checkout the current upstream
+``llvm-zorg`` repository in order to retrieve additional scripts used during
+the build process, meaning any local changes will not be reflected in this
+part of the build. If you wish to test changes to any of these scripts without
+committing them upstream, you will need to temporarily patch the builder logic
+in order to instead check out your own branch.
+Typically, ``addGetSourcecodeForProject`` from
+``zorg/buildbot/process/factory.py`` is used for this and you can edit the
+caller to specify your own ``repourl`` and/or ``branch`` keyword argument.
 
 Best Practices for Configuring a Fast Builder
 =============================================

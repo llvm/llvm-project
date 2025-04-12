@@ -184,6 +184,13 @@ def fir_FortranVariableOpInterface : OpInterface<"FortranVariableOpInterface"> {
                         fir::FortranVariableFlagsEnum::target);
     }
 
+    /// Is this variable captured in an internal procedure via Fortran host association?
+    bool isCapturedInInternalProcedure() {
+      auto attrs = getFortranAttrs();
+      return attrs && bitEnumContainsAny(*attrs,
+                        fir::FortranVariableFlagsEnum::internal_assoc);
+    }
+
     /// Is this variable a Fortran intent(in)?
     bool isIntentIn() {
       auto attrs = getFortranAttrs();

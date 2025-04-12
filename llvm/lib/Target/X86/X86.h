@@ -145,7 +145,7 @@ FunctionPass *createX86IndirectThunksPass();
 FunctionPass *createX86ReturnThunksPass();
 
 /// This pass ensures instructions featuring a memory operand
-/// have distinctive <LineNumber, Discriminator> (with respect to eachother)
+/// have distinctive <LineNumber, Discriminator> (with respect to each other)
 FunctionPass *createX86DiscriminateMemOpsPass();
 
 /// This pass applies profiling information to insert cache prefetches.

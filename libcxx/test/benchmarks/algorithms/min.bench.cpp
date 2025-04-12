@@ -6,10 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
 #include <algorithm>
 #include <cassert>
 
 #include <benchmark/benchmark.h>
+#include "test_macros.h"
 
 void run_sizes(auto benchmark) {
   benchmark->Arg(1)
@@ -68,11 +71,15 @@ BENCHMARK(BM_std_min<char>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<short>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<int>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<long long>)->Apply(run_sizes);
+#ifndef TEST_HAS_NO_INT128
 BENCHMARK(BM_std_min<__int128>)->Apply(run_sizes);
+#endif
 BENCHMARK(BM_std_min<unsigned char>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned short>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned int>)->Apply(run_sizes);
 BENCHMARK(BM_std_min<unsigned long long>)->Apply(run_sizes);
+#ifndef TEST_HAS_NO_INT128
 BENCHMARK(BM_std_min<unsigned __int128>)->Apply(run_sizes);
+#endif
 
 BENCHMARK_MAIN();

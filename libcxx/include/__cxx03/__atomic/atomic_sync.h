@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ATOMIC_SYNC_H
-#define _LIBCPP___ATOMIC_ATOMIC_SYNC_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H
+#define _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H
 
-#include <__atomic/contention_t.h>
-#include <__atomic/cxx_atomic_impl.h>
-#include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
-#include <__chrono/duration.h>
-#include <__config>
-#include <__memory/addressof.h>
-#include <__thread/poll_with_backoff.h>
-#include <__thread/support.h>
-#include <__type_traits/conjunction.h>
-#include <__type_traits/decay.h>
-#include <__type_traits/invoke.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
-#include <cstring>
+#include <__cxx03/__atomic/contention_t.h>
+#include <__cxx03/__atomic/cxx_atomic_impl.h>
+#include <__cxx03/__atomic/memory_order.h>
+#include <__cxx03/__atomic/to_gcc_order.h>
+#include <__cxx03/__chrono/duration.h>
+#include <__cxx03/__config>
+#include <__cxx03/__memory/addressof.h>
+#include <__cxx03/__thread/poll_with_backoff.h>
+#include <__cxx03/__thread/support.h>
+#include <__cxx03/__type_traits/conjunction.h>
+#include <__cxx03/__type_traits/decay.h>
+#include <__cxx03/__type_traits/invoke.h>
+#include <__cxx03/__type_traits/void_t.h>
+#include <__cxx03/__utility/declval.h>
+#include <__cxx03/cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -202,4 +202,4 @@ __atomic_wait(_AtomicWaitable& __a, _Up __val, memory_order __order) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ATOMIC_SYNC_H
+#endif // _LIBCPP___CXX03___ATOMIC_ATOMIC_SYNC_H

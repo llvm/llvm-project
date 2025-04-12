@@ -11,6 +11,7 @@
 
 #include "flang/Runtime/entry-names.h"
 #include <cstddef>
+#include <cstdint>
 
 namespace Fortran::runtime::cuda {
 
@@ -22,6 +23,10 @@ void *RTDECL(CUFRegisterModule)(void *data);
 /// Register a device function.
 void RTDECL(CUFRegisterFunction)(
     void **module, const char *fctSym, char *fctName);
+
+/// Register a device variable.
+void RTDECL(CUFRegisterVariable)(
+    void **module, char *varSym, const char *varName, int64_t size);
 
 } // extern "C"
 

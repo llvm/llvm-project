@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/Symbolize/Markup.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 
 namespace llvm {
 namespace symbolize {

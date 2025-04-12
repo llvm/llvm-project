@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_KILL_DEPENDENCY_H
-#define _LIBCPP___ATOMIC_KILL_DEPENDENCY_H
+#ifndef _LIBCPP___CXX03___ATOMIC_KILL_DEPENDENCY_H
+#define _LIBCPP___CXX03___ATOMIC_KILL_DEPENDENCY_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,4 +24,4 @@ _LIBCPP_HIDE_FROM_ABI _Tp kill_dependency(_Tp __y) _NOEXCEPT {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_KILL_DEPENDENCY_H
+#endif // _LIBCPP___CXX03___ATOMIC_KILL_DEPENDENCY_H

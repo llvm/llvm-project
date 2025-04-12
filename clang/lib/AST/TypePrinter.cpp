@@ -22,9 +22,9 @@
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
-#include "clang/AST/TextNodeDumper.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
+#include "clang/Basic/AttrKinds.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
@@ -37,7 +37,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -506,9 +505,9 @@ void TypePrinter::printMemberPointerBefore(const MemberPointerType *T,
 
   PrintingPolicy InnerPolicy(Policy);
   InnerPolicy.IncludeTagDefinition = false;
-  TypePrinter(InnerPolicy).print(QualType(T->getClass(), 0), OS, StringRef());
+  T->getQualifier()->print(OS, InnerPolicy);
 
-  OS << "::*";
+  OS << "*";
 }
 
 void TypePrinter::printMemberPointerAfter(const MemberPointerType *T,
@@ -1001,6 +1000,8 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     OS << " __arm_streaming_compatible";
   if (SMEBits & FunctionType::SME_PStateSMEnabledMask)
     OS << " __arm_streaming";
+  if (SMEBits & FunctionType::SME_AgnosticZAStateMask)
+    OS << "__arm_agnostic(\"sme_za_state\")";
   if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_Preserves)
     OS << " __arm_preserves(\"za\")";
   if (FunctionType::getArmZAState(SMEBits) == FunctionType::ARM_In)
@@ -1135,6 +1136,23 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_RISCVVectorCall:
       OS << "__attribute__((riscv_vector_cc))";
       break;
+#define CC_VLS_CASE(ABI_VLEN)                                                  \
+  case CC_RISCVVLSCall_##ABI_VLEN:                                             \
+    OS << "__attribute__((riscv_vls_cc" #ABI_VLEN "))";                        \
+    break;
+      CC_VLS_CASE(32)
+      CC_VLS_CASE(64)
+      CC_VLS_CASE(128)
+      CC_VLS_CASE(256)
+      CC_VLS_CASE(512)
+      CC_VLS_CASE(1024)
+      CC_VLS_CASE(2048)
+      CC_VLS_CASE(4096)
+      CC_VLS_CASE(8192)
+      CC_VLS_CASE(16384)
+      CC_VLS_CASE(32768)
+      CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
     }
   }
 
@@ -1775,9 +1793,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
   if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
-  if (T->getQualifier())
-    T->getQualifier()->print(OS, Policy);
-  OS << "template " << T->getIdentifier()->getName();
+  T->getDependentTemplateName().print(OS, Policy);
   printTemplateArgumentList(OS, T->template_arguments(), Policy);
   spaceBeforePlaceHolder(OS);
 }
@@ -1909,6 +1925,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     OS << " [[clang::lifetimebound]]";
     return;
   }
+  if (T->getAttrKind() == attr::LifetimeCaptureBy) {
+    OS << " [[clang::lifetime_capture_by(";
+    if (auto *attr = dyn_cast_or_null<LifetimeCaptureByAttr>(T->getAttr()))
+      llvm::interleaveComma(attr->getArgIdents(), OS,
+                            [&](auto it) { OS << it->getName(); });
+    OS << ")]]";
+    return;
+  }
 
   // The printing of the address_space attribute is handled by the qualifier
   // since it is still stored in the qualifier. Return early to prevent printing
@@ -1931,6 +1955,14 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   }
   if (T->getAttrKind() == attr::ArmStreamingCompatible) {
     OS << "__arm_streaming_compatible";
+    return;
+  }
+
+  if (T->getAttrKind() == attr::SwiftAttr) {
+    if (auto *swiftAttr = dyn_cast_or_null<SwiftAttrAttr>(T->getAttr())) {
+      OS << " __attribute__((swift_attr(\"" << swiftAttr->getAttribute()
+         << "\")))";
+    }
     return;
   }
 
@@ -1968,6 +2000,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::SizedBy:
   case attr::SizedByOrNull:
   case attr::LifetimeBound:
+  case attr::LifetimeCaptureBy:
   case attr::TypeNonNull:
   case attr::TypeNullable:
   case attr::TypeNullableResult:
@@ -1984,6 +2017,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::CmseNSCall:
   case attr::AnnotateType:
   case attr::WebAssemblyFuncref:
+  case attr::ArmAgnostic:
   case attr::ArmStreaming:
   case attr::ArmStreamingCompatible:
   case attr::ArmIn:
@@ -1994,6 +2028,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::NonAllocating:
   case attr::Blocking:
   case attr::Allocating:
+  case attr::SwiftAttr:
     llvm_unreachable("This attribute should have been handled already");
 
   case attr::NSReturnsRetained:
@@ -2044,6 +2079,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::RISCVVectorCC:
     OS << "riscv_vector_cc";
     break;
+  case attr::RISCVVLSCC:
+    OS << "riscv_vls_cc";
+    break;
   case attr::NoDeref:
     OS << "noderef";
     break;
@@ -2052,6 +2090,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
     break;
   case attr::ArmMveStrictPolymorphism:
     OS << "__clang_arm_mve_strict_polymorphism";
+    break;
+  case attr::ExtVectorType:
+    OS << "ext_vector_type";
     break;
   }
   OS << "))";
@@ -2455,14 +2496,18 @@ void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgument> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  PrintingPolicy InnerPolicy = Policy;
+  InnerPolicy.SuppressScope = false;
+  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
 }
 
 void clang::printTemplateArgumentList(raw_ostream &OS,
                                       ArrayRef<TemplateArgumentLoc> Args,
                                       const PrintingPolicy &Policy,
                                       const TemplateParameterList *TPL) {
-  printTo(OS, Args, Policy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
+  PrintingPolicy InnerPolicy = Policy;
+  InnerPolicy.SuppressScope = false;
+  printTo(OS, Args, InnerPolicy, TPL, /*isPack*/ false, /*parmIndex*/ 0);
 }
 
 std::string Qualifiers::getAsString() const {
@@ -2532,10 +2577,14 @@ std::string Qualifiers::getAddrSpaceAsString(LangAS AS) {
     return "__uptr __ptr32";
   case LangAS::ptr64:
     return "__ptr64";
-  case LangAS::wasm_funcref:
-    return "__funcref";
   case LangAS::hlsl_groupshared:
     return "groupshared";
+  case LangAS::hlsl_constant:
+    return "hlsl_constant";
+  case LangAS::hlsl_private:
+    return "hlsl_private";
+  case LangAS::wasm_funcref:
+    return "__funcref";
   default:
     return std::to_string(toTargetAddressSpace(AS));
   }

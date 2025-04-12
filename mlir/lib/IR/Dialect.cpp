@@ -217,7 +217,7 @@ DialectRegistry::DialectRegistry() { insert<BuiltinDialect>(); }
 
 DialectAllocatorFunctionRef
 DialectRegistry::getDialectAllocator(StringRef name) const {
-  auto it = registry.find(name.str());
+  auto it = registry.find(name);
   if (it == registry.end())
     return nullptr;
   return it->second.second;

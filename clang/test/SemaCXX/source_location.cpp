@@ -524,6 +524,57 @@ TestClass<test_func::C> t2;
 TestStruct<test_func::S> t3;
 TestEnum<test_func::E> t4;
 
+class A { int b;};
+namespace inner {
+  template <class Ty>
+  class C {
+  public:
+    template <class T>
+    static void f(int i) {
+      (void)i;
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::f"));
+#else
+     static_assert(is_equal(__FUNCTION__, "f"));
+#endif
+    }
+    template <class T>
+    static constexpr void cf(int i) {
+      (void)i;
+#ifdef MS
+     static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cf"));
+#else
+     static_assert(is_equal(__FUNCTION__, "cf"));
+#endif
+    }
+    template <class T>
+    static void df(double f) {
+      (void)f;
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::df"));
+#else
+      static_assert(is_equal(__FUNCTION__, "df"));
+#endif
+    }
+    template <class T>
+    static constexpr void cdf(double f) {
+      (void)f;
+#ifdef MS
+      static_assert(is_equal(__FUNCTION__, "test_func::inner::C<class test_func::A>::cdf"));
+#else
+      static_assert(is_equal(__FUNCTION__, "cdf"));
+#endif
+    }
+  };
+}
+
+  void foo() {
+  test_func::inner::C<test_func::A>::f<char>(1);
+  test_func::inner::C<test_func::A>::cf<char>(1);
+  test_func::inner::C<test_func::A>::df<void>(1.0);
+  test_func::inner::C<test_func::A>::cdf<void>(1.0);
+}
+
 } // namespace test_func
 
 
@@ -1011,4 +1062,22 @@ int h = Var<int>;
 #endif
 
 
+}
+
+namespace GH119129 {
+struct X{
+  constexpr int foo(std::source_location loc = std::source_location::current()) {
+    return loc.line();
+  }
+};
+static_assert(X{}.foo() == __LINE__);
+static_assert(X{}.
+                foo() == __LINE__);
+static_assert(X{}.
+
+
+                foo() == __LINE__);
+#line 10000
+static_assert(X{}.
+                foo() == 10001);
 }

@@ -3,7 +3,7 @@
 
 @global = external global i64, align 8
 
-define void @f() {
+define void @f(i1 %arg) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -15,12 +15,28 @@ define void @f() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @global, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[BB23:%.*]], label [[BB23]]
-; CHECK:       bb23:
+; CHECK:       bb10:
+; CHECK-NEXT:    [[TMP11:%.*]] = load i64, ptr @global, align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp slt i64 [[TMP11]], 5
+; CHECK-NEXT:    br i1 [[TMP12]], label [[BB14:%.*]], label [[BB17:%.*]]
+; CHECK:       bb14:
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[BB15:%.*]], label [[BB10:%.*]]
+; CHECK:       bb15:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb17:
 ; CHECK-NEXT:    br label [[BB26:%.*]]
+; CHECK:       bb18:
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB23]], label [[BB14]]
+; CHECK:       bb21:
+; CHECK-NEXT:    br label [[BB26]]
+; CHECK:       bb23:
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB24:%.*]], label [[BB14]]
+; CHECK:       bb24:
+; CHECK-NEXT:    br i1 [[ARG]], label [[BB28:%.*]], label [[BB21:%.*]]
 ; CHECK:       bb26:
 ; CHECK-NEXT:    br label [[BB1]]
 ; CHECK:       bb27:
-; CHECK-NEXT:    br label [[BB26]]
+; CHECK-NEXT:    br label [[BB24]]
 ;
 bb:
   br label %bb1
@@ -52,7 +68,7 @@ bb13:
   br label %bb14
 
 bb14:
-  br i1 undef, label %bb15, label %bb16
+  br i1 %arg, label %bb15, label %bb16
 
 bb15:
   unreachable
@@ -64,10 +80,10 @@ bb17:
   br label %bb18
 
 bb18:
-  br i1 undef, label %bb22, label %bb13
+  br i1 %arg, label %bb22, label %bb13
 
 bb19:
-  br i1 undef, label %bb20, label %bb21
+  br i1 %arg, label %bb20, label %bb21
 
 bb20:
   unreachable
@@ -79,10 +95,10 @@ bb22:
   br label %bb23
 
 bb23:
-  br i1 undef, label %bb24, label %bb13
+  br i1 %arg, label %bb24, label %bb13
 
 bb24:
-  br i1 undef, label %bb26, label %bb25
+  br i1 %arg, label %bb26, label %bb25
 
 bb25:
   br label %bb19

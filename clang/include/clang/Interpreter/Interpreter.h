@@ -177,7 +177,8 @@ private:
 
   CodeGenerator *getCodeGen() const;
   std::unique_ptr<llvm::Module> GenModule();
-  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU);
+  PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
+                                      std::unique_ptr<llvm::Module> M = {});
 
   // A cache for the compiled destructors used to for de-allocation of managed
   // clang::Values.

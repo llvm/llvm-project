@@ -20,24 +20,15 @@
 
 #include "NVPTX.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 using namespace llvm;
-
-namespace llvm {
-void initializeNVPTXProxyRegErasurePass(PassRegistry &);
-}
 
 namespace {
 
 struct NVPTXProxyRegErasure : public MachineFunctionPass {
   static char ID;
-  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {
-    initializeNVPTXProxyRegErasurePass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXProxyRegErasure() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

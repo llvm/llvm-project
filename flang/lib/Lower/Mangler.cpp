@@ -266,6 +266,8 @@ static std::string typeToString(Fortran::common::TypeCategory cat, int kind,
   switch (cat) {
   case Fortran::common::TypeCategory::Integer:
     return "i" + std::to_string(kind);
+  case Fortran::common::TypeCategory::Unsigned:
+    return "u" + std::to_string(kind);
   case Fortran::common::TypeCategory::Real:
     return "r" + std::to_string(kind);
   case Fortran::common::TypeCategory::Complex:

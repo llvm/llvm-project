@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
-#define _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_UNARY_FUNCTION_H
+#define _LIBCPP___CXX03___FUNCTIONAL_UNARY_FUNCTION_H
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -48,4 +48,4 @@ using __unary_function = __unary_function_keep_layout_base<_Arg, _Result>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_UNARY_FUNCTION_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_UNARY_FUNCTION_H

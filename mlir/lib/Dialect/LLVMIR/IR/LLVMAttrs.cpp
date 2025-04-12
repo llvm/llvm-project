@@ -27,8 +27,8 @@ using namespace mlir::LLVM;
 /// Parses DWARF expression arguments with respect to the DWARF operation
 /// opcode. Some DWARF expression operations have a specific number of operands
 /// and may appear in a textual form.
-static LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                        SmallVector<uint64_t> &args);
+static ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                                      SmallVector<uint64_t> &args);
 
 /// Prints DWARF expression arguments with respect to the specific DWARF
 /// operation. Some operands are printed in their textual form.
@@ -48,7 +48,25 @@ void LLVMDialect::registerAttributes() {
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
+
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// AliasScopeAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       Attribute id, AliasScopeDomainAttr domain,
+                       StringAttr description) {
+  (void)domain;
+  (void)description;
+  if (!llvm::isa<StringAttr, DistinctAttr>(id))
+    return emitError()
+           << "id of an alias scope must be a StringAttr or a DistrinctAttr";
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -56,13 +74,13 @@ void LLVMDialect::registerAttributes() {
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-                   DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                   DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
-                   DILexicalBlockAttr, DILexicalBlockFileAttr,
-                   DILocalVariableAttr, DIModuleAttr, DINamespaceAttr,
-                   DINullTypeAttr, DIAnnotationAttr, DIStringTypeAttr,
-                   DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
+  return llvm::isa<
+      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
+      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
+      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
+      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
       attr);
 }
 
@@ -144,8 +162,8 @@ DIExpressionAttr DIExpressionAttr::get(MLIRContext *context) {
   return get(context, ArrayRef<DIExpressionElemAttr>({}));
 }
 
-LogicalResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
-                                 SmallVector<uint64_t> &args) {
+ParseResult parseExpressionArg(AsmParser &parser, uint64_t opcode,
+                               SmallVector<uint64_t> &args) {
   auto operandParser = [&]() -> LogicalResult {
     uint64_t operand = 0;
     if (!args.empty() && opcode == llvm::dwarf::DW_OP_LLVM_convert) {
@@ -232,7 +250,7 @@ DIRecursiveTypeAttrInterface DISubprogramAttr::withRecId(DistinctAttr recId) {
 
 DIRecursiveTypeAttrInterface DISubprogramAttr::getRecSelf(DistinctAttr recId) {
   return DISubprogramAttr::get(recId.getContext(), recId, /*isRecSelf=*/true,
-                               {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {}, {});
+                               {}, {}, {}, {}, {}, {}, 0, 0, {}, {}, {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -252,11 +270,9 @@ Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
   if (parser.parseInteger(lower) || parser.parseComma() ||
       parser.parseInteger(upper) || parser.parseGreater())
     return Attribute{};
-  // For some reason, 0 is always parsed as 64-bits, fix that if needed.
-  if (lower.isZero())
-    lower = lower.sextOrTrunc(bitWidth);
-  if (upper.isZero())
-    upper = upper.sextOrTrunc(bitWidth);
+  // Non-positive numbers may use more bits than `bitWidth`
+  lower = lower.sextOrTrunc(bitWidth);
+  upper = upper.sextOrTrunc(bitWidth);
   return parser.getChecked<ConstantRangeAttr>(loc, parser.getContext(), lower,
                                               upper);
 }
@@ -288,12 +304,32 @@ TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                    }));
 }
 
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context,
+                               llvm::ArrayRef<StringRef> features) {
+  return Base::getChecked(emitError, context,
+                          llvm::map_to_vector(features, [&](StringRef feature) {
+                            return StringAttr::get(context, feature);
+                          }));
+}
+
 TargetFeaturesAttr TargetFeaturesAttr::get(MLIRContext *context,
                                            StringRef targetFeatures) {
   SmallVector<StringRef> features;
   targetFeatures.split(features, ',', /*MaxSplit=*/-1,
                        /*KeepEmpty=*/false);
   return get(context, features);
+}
+
+TargetFeaturesAttr
+TargetFeaturesAttr::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                               MLIRContext *context, StringRef targetFeatures) {
+  SmallVector<StringRef> features;
+  targetFeatures.split(features, ',', /*MaxSplit=*/-1,
+                       /*KeepEmpty=*/false);
+  ArrayRef featuresRef(features);
+  return getChecked(emitError, context, featuresRef);
 }
 
 LogicalResult

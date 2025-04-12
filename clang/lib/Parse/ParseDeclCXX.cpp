@@ -16,11 +16,11 @@
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/Attributes.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/LiteralSupport.h"
-#include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -81,26 +81,16 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   ParsedAttributes attrs(AttrFactory);
 
-  auto ReadAttributes = [&] {
-    bool MoreToParse;
-    do {
-      MoreToParse = false;
-      if (Tok.is(tok::kw___attribute)) {
-        ParseGNUAttributes(attrs);
-        MoreToParse = true;
-      }
-      if (getLangOpts().CPlusPlus11 && isCXX11AttributeSpecifier()) {
+  while (MaybeParseGNUAttributes(attrs) || isAllowedCXX11AttributeSpecifier()) {
+    if (isAllowedCXX11AttributeSpecifier()) {
+      if (getLangOpts().CPlusPlus11)
         Diag(Tok.getLocation(), getLangOpts().CPlusPlus17
                                     ? diag::warn_cxx14_compat_ns_enum_attribute
                                     : diag::ext_ns_enum_attribute)
             << 0 /*namespace*/;
-        ParseCXX11Attributes(attrs);
-        MoreToParse = true;
-      }
-    } while (MoreToParse);
-  };
-
-  ReadAttributes();
+      ParseCXX11Attributes(attrs);
+    }
+  }
 
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
@@ -126,7 +116,9 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     }
   }
 
-  ReadAttributes();
+  DiagnoseAndSkipCXX11Attributes();
+  MaybeParseGNUAttributes(attrs);
+  DiagnoseAndSkipCXX11Attributes();
 
   SourceLocation attrLoc = attrs.Range.getBegin();
 
@@ -459,6 +451,15 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
 Decl *Parser::ParseExportDeclaration() {
   assert(Tok.is(tok::kw_export));
   SourceLocation ExportLoc = ConsumeToken();
+
+  if (Tok.is(tok::code_completion)) {
+    cutOffParsing();
+    Actions.CodeCompletion().CodeCompleteOrdinaryName(
+        getCurScope(), PP.isIncrementalProcessingEnabled()
+                           ? SemaCodeCompletion::PCC_TopLevelOrExpression
+                           : SemaCodeCompletion::PCC_Namespace);
+    return nullptr;
+  }
 
   ParseScope ExportScope(this, Scope::DeclScope);
   Decl *ExportDecl = Actions.ActOnStartExportDecl(
@@ -1812,7 +1813,6 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
           tok::kw___is_pointer,
           tok::kw___is_polymorphic,
           tok::kw___is_reference,
-          tok::kw___is_referenceable,
           tok::kw___is_rvalue_expr,
           tok::kw___is_rvalue_reference,
           tok::kw___is_same,
@@ -2350,7 +2350,8 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
       // Parse the definition body.
       ParseStructUnionBody(StartLoc, TagType, cast<RecordDecl>(D));
       if (SkipBody.CheckSameAsPrevious &&
-          !Actions.ActOnDuplicateDefinition(TagOrTempResult.get(), SkipBody)) {
+          !Actions.ActOnDuplicateDefinition(getCurScope(),
+                                            TagOrTempResult.get(), SkipBody)) {
         DS.SetTypeSpecError();
         return;
       }
@@ -2490,6 +2491,9 @@ BaseResult Parser::ParseBaseSpecifier(Decl *ClassDecl) {
 
     IsVirtual = true;
   }
+
+  if (getLangOpts().HLSL && IsVirtual)
+    Diag(Tok.getLocation(), diag::err_hlsl_virtual_inheritance);
 
   CheckMisplacedCXX11Attribute(Attributes, StartLoc);
 
@@ -3728,7 +3732,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     return ParseOpenMPDeclarativeDirectiveWithExtDecl(
         AS, AccessAttrs, /*Delayed=*/true, TagType, TagDecl);
   case tok::annot_pragma_openacc:
-    return ParseOpenACCDirectiveDecl();
+    return ParseOpenACCDirectiveDecl(AS, AccessAttrs, TagType, TagDecl);
 
   default:
     if (tok::isPragmaAnnotation(Tok.getKind())) {

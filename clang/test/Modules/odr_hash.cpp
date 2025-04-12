@@ -264,8 +264,8 @@ struct S6 {
 };
 #else
 S6 s6;
-// expected-error@second.h:* {{'Field::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x'}}
-// expected-note@first.h:* {{but in 'FirstModule' found non-bitfield 'x'}}
+// expected-error@second.h:* {{'Field::S6' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x'}}
+// expected-note@first.h:* {{but in 'FirstModule' found non-bit-field 'x'}}
 #endif
 
 #if defined(FIRST)
@@ -278,8 +278,8 @@ struct S7 {
 };
 #else
 S7 s7;
-// expected-error@second.h:* {{'Field::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
-// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+// expected-error@second.h:* {{'Field::S7' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bit-field 'x' with different width expression}}
 #endif
 
 #if defined(FIRST)
@@ -292,8 +292,8 @@ struct S8 {
 };
 #else
 S8 s8;
-// expected-error@second.h:* {{'Field::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found bitfield 'x' with one width expression}}
-// expected-note@first.h:* {{but in 'FirstModule' found bitfield 'x' with different width expression}}
+// expected-error@second.h:* {{'Field::S8' has different definitions in different modules; first difference is definition in module 'SecondModule' found bit-field 'x' with one width expression}}
+// expected-note@first.h:* {{but in 'FirstModule' found bit-field 'x' with different width expression}}
 #endif
 
 #if defined(FIRST)
@@ -3084,8 +3084,8 @@ struct S5 {
 };
 #else
 S5 s5;
-// expected-error@second.h:* {{'PointersAndReferences::S5::x' from module 'SecondModule' is not present in definition of 'PointersAndReferences::S5' in module 'FirstModule'}}
-// expected-note@first.h:* {{declaration of 'x' does not match}}
+// expected-error@first.h:* {{'PointersAndReferences::S5::x' from module 'FirstModule' is not present in definition of 'PointersAndReferences::S5' in module 'SecondModule'}}
+// expected-note@second.h:* {{declaration of 'x' does not match}}
 #endif
 
 #if defined(FIRST)
@@ -4020,7 +4020,7 @@ struct Valid {
 };
 #else
 Invalid::L2<1>::L3<1> invalid;
-// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<>' in module 'FirstModule'}}
+// expected-error@second.h:* {{'Types::InjectedClassName::Invalid::L2::L3::x' from module 'SecondModule' is not present in definition of 'L3<value-parameter-1-0>' in module 'FirstModule'}}
 // expected-note@first.h:* {{declaration of 'x' does not match}}
 Valid::L2<1>::L3<1> valid;
 #endif

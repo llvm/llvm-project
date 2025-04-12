@@ -247,6 +247,7 @@ public:
     Instance.setInvocation(
         std::make_shared<CompilerInvocation>(CI.getInvocation()));
     Instance.createDiagnostics(
+        CI.getVirtualFileSystem(),
         new ForwardingDiagnosticConsumer(CI.getDiagnosticClient()),
         /*ShouldOwnClient=*/true);
     Instance.getFrontendOpts().DisableFree = false;

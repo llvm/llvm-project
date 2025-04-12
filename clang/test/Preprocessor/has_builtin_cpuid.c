@@ -8,8 +8,8 @@
 // RUN:   -verify %s
 // expected-no-diagnostics
 #if __has_builtin(__builtin_cpu_is)
-# if defined(ARM) || defined(RISCV)
-#   error "ARM/RISCV shouldn't have __builtin_cpu_is"
+# if defined(ARM)
+#   error "ARM shouldn't have __builtin_cpu_is"
 # endif
 #endif
 

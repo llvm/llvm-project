@@ -7,7 +7,7 @@ void __attribute__((target_clones("default+sha3"))) warn1(void);
 
 // expected-error@+2 {{'target_clones' and 'target_version' attributes are not compatible}}
 // expected-note@+1 {{conflicting attribute is here}}
-void __attribute__((target_version("sve-bf16"), target_clones("sme+memtag"))) not_compat(void);
+void __attribute__((target_version("sve"), target_clones("sme+memtag"))) not_compat(void);
 
 int redecl(void);
 int __attribute__((target_clones("frintts", "simd+fp", "default"))) redecl(void) { return 1; }
@@ -19,10 +19,9 @@ int __attribute__((target_clones("sve+dotprod"))) redecl3(void);
 int redecl3(void);
 
 int __attribute__((target_clones("rng", "fp16fml+fp", "default"))) redecl4(void);
-// expected-error@+3 {{'target_clones' attribute does not match previous declaration}}
+// expected-error@+2 {{'target_clones' attribute does not match previous declaration}}
 // expected-note@-2 {{previous declaration is here}}
-// expected-warning@+1 {{version list contains entries that don't impact code generation}}
-int __attribute__((target_clones("dgh+rpres", "ebf16+dpb", "default"))) redecl4(void) { return 1; }
+int __attribute__((target_clones("dit", "bf16+dpb", "default"))) redecl4(void) { return 1; }
 
 int __attribute__((target_version("flagm2"))) redef2(void) { return 1; }
 // expected-error@+2 {{multiversioned function redeclarations require identical target attributes}}
@@ -69,7 +68,7 @@ empty_target_5(void);
 void __attribute__((target_clones("sve2-bitperm", "sve2-bitperm")))
 dupe_normal(void);
 
-void __attribute__((target_clones("default"), target_clones("memtag3+bti"))) dupe_normal2(void);
+void __attribute__((target_clones("default"), target_clones("memtag+bti"))) dupe_normal2(void);
 
 int mv_after_use(void);
 int useage(void) {
@@ -78,4 +77,4 @@ int useage(void) {
 // expected-error@+1 {{function declaration cannot become a multiversioned function after first usage}}
 int __attribute__((target_clones("sve2-sha3+ssbs", "sm4"))) mv_after_use(void) { return 1; }
 // expected-error@+1 {{'main' cannot be a multiversioned function}}
-int __attribute__((target_clones("sve-i8mm"))) main() { return 1; }
+int __attribute__((target_clones("i8mm"))) main() { return 1; }
