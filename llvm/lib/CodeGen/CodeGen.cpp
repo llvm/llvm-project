@@ -23,7 +23,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
-  initializeBranchRelaxationPass(Registry);
+  initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
   initializeCFGuardLongjmpPass(Registry);
