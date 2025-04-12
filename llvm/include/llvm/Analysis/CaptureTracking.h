@@ -41,6 +41,8 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This assumes the pointer is to a function-local object. The caller is
+  /// responsible for ensuring this.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                             unsigned MaxUsesToExplore = 0);
 
@@ -48,6 +50,8 @@ namespace llvm {
   /// components that are part of \p Mask. Once \p StopFn on the accumulated
   /// components returns true, the traversal is aborted early. By default, this
   /// happens when *any* of the components in \p Mask are captured.
+  /// This assumes the pointer is to a function-local object. The caller is
+  /// responsible for ensuring this.
   CaptureComponents PointerMayBeCaptured(
       const Value *V, bool ReturnCaptures, CaptureComponents Mask,
       function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
@@ -64,6 +68,8 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This assumes the pointer is to a function-local object. The caller is
+  /// responsible for ensuring this.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
                                   const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
@@ -184,6 +190,8 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This assumes the pointer is to a function-local object. The caller is
+  /// responsible for ensuring this.
   void PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                             unsigned MaxUsesToExplore = 0);
 
