@@ -447,14 +447,17 @@ def ROCDL_ds_read_tr16_b64 : ROCDL_LDS_Read_Tr_IntrOp<"ds.read.tr16.b64">;
 // Global load to LDS intrinsic (available in GFX950)
 
 def ROCDL_GlobalLoadLDSOp :
-  ROCDL_IntrOp<"global.load.lds", [], [], [], 0, 0, 1> {
-  dag args = (ins Arg<ROCDLGlobalBuffer, "", [MemRead]>:$globalPtr,
+  ROCDL_IntrOp<"global.load.lds", [], [0], [], 0, 0, 1, [2, 3, 4], ["size", "offset", "aux"]> {
+  dag args = (ins Arg<LLVM_AnyPointer, "", [MemRead]>:$globalPtr,
                  Arg<ROCDLBufferLDS, "", [MemWrite]>:$ldsPtr,
-                 I32:$size,
-                 I32:$offset,
-                 I32:$aux);
+                 I32Attr:$size,
+                 I32Attr:$offset,
+                 I32Attr:$aux);
   let arguments = !con(args, aliasAttrs);
-  let assemblyFormat = "operands attr-dict";
+  let assemblyFormat = [{
+    $globalPtr `,`  $ldsPtr `,` $size `,` $offset `,` $aux
+    attr-dict `:` type($globalPtr)
+  }];
   let extraClassDefinition = [{
     ::llvm::SmallVector<::mlir::Value> $cppClass::getAccessedOperands() {
       return {getGlobalPtr(), getLdsPtr()};

@@ -21,8 +21,8 @@ func.func @global_load_to_rocdl_f32(%global : memref<128x72xf32, #gpu_global_add
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] 
-  
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
@@ -35,8 +35,7 @@ func.func @global_load_to_rocdl_f32(%global : memref<128x72xf32, #gpu_global_add
   // CHECK: %[[DST_OFFSET:.*]] = llvm.add %[[MUL_2]], %[[IC0]] : i64
 
   // CHECK: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DST_OFFSET]]]
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]]
+  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 4
   amdgpu.gather_to_lds %global[%c12, %c0], %alloc[%c32, %c0]
     : f32, memref<128x72xf32, #gpu_global_addrspace>, memref<64x64xf32, #gpu_lds_addrspace>
   func.return
@@ -56,8 +55,8 @@ func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu_global_addrs
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] 
-  
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
@@ -70,8 +69,7 @@ func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu_global_addrs
   // CHECK: %[[DST_OFFSET:.*]] = llvm.add %[[MUL_2]], %[[IC0]] : i64
 
   // CHECK: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DST_OFFSET]]]
-  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C1]]
+  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 1
   %c0 = arith.constant 0 : index
   %c12 = arith.constant 12 : index
   %c32 = arith.constant 32 : index
@@ -85,7 +83,7 @@ func.func @global_load_to_rocdl_i8(%global : memref<128x72xi8, #gpu_global_addrs
 // CHECK-SAME: (%[[ARG0:.*]]: memref<128x72xi16, 1>)
 func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu_global_addrspace>) {
   // CHECK: %[[GLOBAL_DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]]
-  
+
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[IC0:.*]] = builtin.unrealized_conversion_cast %c0 : index to i64
   // CHECK: %[[C12:.*]] = arith.constant 12 : index
@@ -95,8 +93,8 @@ func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu_global_add
 
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] 
-  
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
+
   // CHECK: %[[C72:.*]] = llvm.mlir.constant(72 : index) : i64
   // CHECK: %[[MUL:.*]] = llvm.mul %[[IC12]], %[[C72]] : i64
   // CHECK: %[[SRC_OFFSET:.*]] = llvm.add %[[MUL]], %[[IC0]] : i64
@@ -109,8 +107,7 @@ func.func @global_load_to_rocdl_vec(%global : memref<128x72xi16, #gpu_global_add
   // CHECK: %[[DST_OFFSET:.*]] = llvm.add %[[MUL_2]], %[[IC0]] : i64
 
   // CHECK: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DST_OFFSET]]]
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]]
+  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 4
   %c0 = arith.constant 0 : index
   %c12 = arith.constant 12 : index
   %c32 = arith.constant 32 : index
@@ -129,12 +126,11 @@ func.func @global_load_to_rocdl_dynamic_indices(%global : memref<512xi32, #gpu_g
   // CHECK: %[[GLOBAL_DESC:.*]] = builtin.unrealized_conversion_cast %[[ARG0]]
   // CHECK: %[[ALLOC:.*]] = memref.alloc()
   // CHECK: %[[LDS_DESC:.*]] = builtin.unrealized_conversion_cast %[[ALLOC]]
-  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1] 
+  // CHECK: %[[GLOBAL_BASE:.*]] = llvm.extractvalue %[[GLOBAL_DESC]][1]
   // CHECK: %[[GLOBAL_PTR:.*]] = llvm.getelementptr %[[GLOBAL_BASE]][%[[SRCIDX_CAST]]]
   // CHECK: %[[LDS_BASE:.*]] = llvm.extractvalue %[[LDS_DESC]][1]
   // CHECK: %[[LDS_PTR:.*]] = llvm.getelementptr %[[LDS_BASE]][%[[DSTIDX_CAST]]]
-  // CHECK: %[[C4:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], %[[C4]]
+  // CHECK: rocdl.global.load.lds %[[GLOBAL_PTR]], %[[LDS_PTR]], 4
   %alloc = memref.alloc() : memref<4x64xi32, #gpu_lds_addrspace>
   %c0 = arith.constant 0 : index
   amdgpu.gather_to_lds %global[%src_idx], %alloc[%dst_idx, %c0]
