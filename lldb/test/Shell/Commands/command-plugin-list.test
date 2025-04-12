@@ -13,38 +13,23 @@ plugin list
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
-# Test plugin list with an argument will match a plugin name by substring.
-plugin list macosx
-# CHECK-LABEL: plugin list macosx
-# CHECK: system-runtime
-# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
-
-# Test plugin exact list works with fully qualified name.
-plugin list -x system-runtime.systemruntime-macosx
-# CHECK-LABEL: plugin list -x system-runtime.systemruntime-macosx
-# CHECK: system-runtime
-# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
-
-# Test plugin glob list works with fully qualified name.
+# Test plugin list works with fully qualified name.
 plugin list system-runtime.systemruntime-macosx
 # CHECK-LABEL: plugin list system-runtime.systemruntime-macosx
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
-# Test plugin exact list still allows glob patterns.
-plugin list -x system*
-# CHECK-LABEL: plugin list -x system*
+# Test plugin list on plugin namespace works.
+plugin list system-runtime
+# CHECK-LABEL: plugin list system-runtime
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
-# Test plugin glob list still allows glob patterns.
-plugin list system-runtime.*
-# CHECK-LABEL: plugin list system-runtime.*
-# CHECK: system-runtime
-# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+# Test plugin list does not match a plugin name by substring.
+# RUN: %lldb -o "plugin list macosx" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 
-# Test plugin list can disable implicit glob patterns.
-# RUN: %lldb -o "plugin list -x macosx" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# Test plugin list does not match a plugin namespace by substring.
+# RUN: %lldb -o "plugin list system-runtime." 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
 
 # Test plugin list for unknown plugin returns an error.
 # RUN: %lldb -o "plugin list some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND

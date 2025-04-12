@@ -14,8 +14,8 @@ plugin list
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
 # Test plugin disable disables a plugin.
-plugin disable systemruntime-macosx
-# CHECK-LABEL: plugin disable systemruntime-macosx
+plugin disable system-runtime.systemruntime-macosx
+# CHECK-LABEL: plugin disable system-runtime.systemruntime-macosx
 # CHECK: system-runtime
 # CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
@@ -25,8 +25,8 @@ plugin list
 # CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
 # Test plugin enable re-enables a plugin.
-plugin enable systemruntime-macosx
-# CHECK-LABEL: plugin enable systemruntime-macosx
+plugin enable system-runtime.systemruntime-macosx
+# CHECK-LABEL: plugin enable system-runtime.systemruntime-macosx
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
@@ -35,15 +35,15 @@ plugin list
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
-# Test plugin disable with wildcard works.
-plugin disable system*
-# CHECK-LABEL: plugin disable system*
+# Test plugin disable with namespace works.
+plugin disable system-runtime
+# CHECK-LABEL: plugin disable system-runtime
 # CHECK: system-runtime
 # CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
-# Test plugin enable with wildcard works.
-plugin enable system*
-# CHECK-LABEL: plugin enable system*
+# Test plugin enable with namespace works.
+plugin enable system-runtime
+# CHECK-LABEL: plugin enable system-runtime
 # CHECK: system-runtime
 # CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
 
