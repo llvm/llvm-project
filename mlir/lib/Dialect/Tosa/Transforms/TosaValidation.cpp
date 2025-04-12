@@ -1012,8 +1012,30 @@ bool checkErrorIfMul(Operation *op) {
   return true;
 }
 
+bool checkErrorIfTable(Operation *op) {
+  auto table = dyn_cast<tosa::TableOp>(op);
+  if (!table)
+    return true;
+
+  // REQUIRE(length(table) == TABLE_SIZE) where TABLE_SIZE is 256 or 513
+  const auto inputElemType = getElementTypeOrSelf(table.getInput1().getType());
+  const int tableSize = inputElemType.isInteger(8) ? 256 : 513;
+
+  const ShapeAdaptor tableShape(table.getTable().getType());
+  if (tableShape.hasStaticShape()) {
+    const auto numElements = tableShape.getNumElements();
+    if (numElements != tableSize) {
+      op->emitOpError() << "requires table size of " << tableSize << ", got "
+                        << numElements;
+      return false;
+    }
+  }
+
+  return true;
+}
+
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (!checkErrorIfResize(op) || !checkErrorIfMul(op))
+  if (!checkErrorIfResize(op) || !checkErrorIfMul(op) || !checkErrorIfTable(op))
     return failure();
   return success();
 }

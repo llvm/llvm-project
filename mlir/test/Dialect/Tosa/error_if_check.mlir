@@ -113,3 +113,19 @@ func.func @test_mul_non_zero_shift(%arg0: tensor<1x8x8x8xi16>, %arg1: tensor<1x8
   %mul = tosa.mul %arg0, %arg1, %shift : (tensor<1x8x8x8xi16>, tensor<1x8x8x8xi16>, tensor<1xi8>) -> tensor<1x8x8x8xi32>
   return %mul : tensor<1x8x8x8xi32>
 }
+
+// -----
+// CHECK-LABEL: test_i16_table_size
+func.func @test_i16_table_size(%arg0: tensor<2x64xi16>, %arg1: tensor<256xi16>) -> tensor<2x64xi32> {
+  // expected-error@+1 {{'tosa.table' op requires table size of 513, got 256}}
+    %0 = tosa.table %arg0, %arg1 : (tensor<2x64xi16>, tensor<256xi16>) -> tensor<2x64xi32>
+    return %0 : tensor<2x64xi32>
+}
+
+// -----
+// CHECK-LABEL: test_i8_table_size
+func.func @test_i8_table_size(%arg0: tensor<2x64xi8>, %arg1: tensor<513xi8>) -> tensor<2x64xi8> {
+  // expected-error@+1 {{'tosa.table' op requires table size of 256, got 513}}
+    %0 = tosa.table %arg0, %arg1 : (tensor<2x64xi8>, tensor<513xi8>) -> tensor<2x64xi8>
+    return %0 : tensor<2x64xi8>
+}
