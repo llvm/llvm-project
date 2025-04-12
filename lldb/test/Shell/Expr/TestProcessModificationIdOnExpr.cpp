@@ -7,15 +7,15 @@
 // RUN: %lldb %t \
 // RUN:   -o "settings set target.process.track-memory-cache-changes false" \
 // RUN:   -o "run" \
-// RUN:   -o "process dump-modification-id" \
+// RUN:   -o "process status -d" \
 // RUN:   -o "expr x.i != 42" \
-// RUN:   -o "process dump-modification-id" \
+// RUN:   -o "process status -d" \
 // RUN:   -o "expr x.get()" \
-// RUN:   -o "process dump-modification-id" \
+// RUN:   -o "process status -d" \
 // RUN:   -o "expr x.i = 10" \
-// RUN:   -o "process dump-modification-id" \
+// RUN:   -o "process status -d" \
 // RUN:   -o "continue" \
-// RUN:   -o "process dump-modification-id" \
+// RUN:   -o "process status -d" \
 // RUN:   -o "exit" | FileCheck %s -dump-input=fail
 
 class X {
@@ -34,34 +34,34 @@ int main() {
   return 0;
 }
 
-// CHECK-LABEL: process dump-modification-id
+// CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 2
 // CHECK: m_memory_id: 0
 
 // CHECK-LABEL: expr x.i != 42
 // IDs are not changed when executing simple expressions
 
-// CHECK-LABEL: process dump-modification-id
+// CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 2
 // CHECK: m_memory_id: 0
 
 // CHECK-LABEL: expr x.get()
 // Expression causes ID to be bumped because LLDB has to execute function
 
-// CHECK-LABEL: process dump-modification-id
+// CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 3
 // CHECK: m_memory_id: 1
 
 // CHECK-LABEL: expr x.i = 10
 // Expression causes MemoryID to be bumped because LLDB writes to non-cache memory
 
-// CHECK-LABEL: process dump-modification-id
+// CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 3
 // CHECK: m_memory_id: 2
 
 // CHECK-LABEL: continue
 // Continue causes StopID to be bumped because process is resumed
 
-// CHECK-LABEL: process dump-modification-id
+// CHECK-LABEL: process status -d
 // CHECK: m_stop_id: 4
 // CHECK: m_memory_id: 2

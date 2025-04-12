@@ -1377,6 +1377,9 @@ public:
       case 'v':
         m_verbose = true;
         break;
+      case 'd':
+        m_dump = true;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1386,6 +1389,7 @@ public:
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_verbose = false;
+      m_dump = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -1394,6 +1398,7 @@ public:
 
     // Instance variables to hold the values for command options.
     bool m_verbose = false;
+    bool m_dump = false;
   };
 
 protected:
@@ -1446,6 +1451,14 @@ protected:
         strm.EOL();
         strm.PutCString("Extended Crash Information:\n");
         crash_info_sp->GetDescription(strm);
+      }
+    }
+
+    if (m_options.m_dump) {
+      StateType state = process->GetState();
+      if (state == eStateStopped) {
+        ProcessModID process_mod_id = process->GetModID();
+        process_mod_id.Dump(result.GetOutputStream());
       }
     }
   }
@@ -1827,33 +1840,6 @@ public:
   ~CommandObjectMultiwordProcessTrace() override = default;
 };
 
-// CommandObjectProcessDumpModificationId
-class CommandObjectProcessDumpModificationId : public CommandObjectParsed {
-public:
-  CommandObjectProcessDumpModificationId(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "process dump-modification-id",
-                            "Dump the state of the ProcessModID. Intended to "
-                            "be used for debugging LLDB itself.",
-                            "process dump-modification-id",
-                            eCommandRequiresProcess) {}
-
-  ~CommandObjectProcessDumpModificationId() override = default;
-
-protected:
-  void DoExecute(Args &command, CommandReturnObject &result) override {
-    Process *process = m_exe_ctx.GetProcessPtr();
-    StateType state = process->GetState();
-    if (state != eStateStopped) {
-      result.SetStatus(eReturnStatusFailed);
-      return;
-    }
-
-    ProcessModID process_mod_id = process->GetModID();
-    process_mod_id.Dump(result.GetOutputStream());
-    result.SetStatus(eReturnStatusSuccessFinishResult);
-  }
-};
-
 // CommandObjectMultiwordProcess
 
 CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
@@ -1893,9 +1879,6 @@ CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(
   LoadSubCommand(
       "trace",
       CommandObjectSP(new CommandObjectMultiwordProcessTrace(interpreter)));
-  LoadSubCommand(
-      "dump-modification-id",
-      CommandObjectSP(new CommandObjectProcessDumpModificationId(interpreter)));
 }
 
 CommandObjectMultiwordProcess::~CommandObjectMultiwordProcess() = default;
