@@ -1102,6 +1102,13 @@ supported for the ``amdgcn`` target.
   achieve truly-efficient lane-sharing, compiler needs to promote lane-shared
   variables into wave-group-shared VGPR.
 
+**Distributed**
+  The distributed address space provides a way for all workgroups in a cluster
+  to access all the LDS space across all workgroups in the cluster as one large
+  shared memory space. Other workgroups' LDS is referred to using their
+  workgroup-ID. The 32-bit address consists of two fields: byte address within
+  LDS of one workgroup and logical workgroup ID within the cluster.
+
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
