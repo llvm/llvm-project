@@ -284,14 +284,14 @@ void splitAndWriteThinLTOBitcode(
     ProfileSummaryInfo PSI(M);
     M.addModuleFlag(Module::Error, "ThinLTO", uint32_t(0));
     ModuleSummaryIndex Index = buildModuleSummaryIndex(M, nullptr, &PSI);
-    WriteBitcodeToFile(M, OS, /*ShouldPreserveUseListOrder=*/false, &Index,
+    WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, &Index,
                        /*UnifiedLTO=*/false);
 
     if (ThinLinkOS)
       // We don't have a ThinLTO part, but still write the module to the
       // ThinLinkOS if requested so that the expected output file is produced.
-      WriteBitcodeToFile(M, *ThinLinkOS, /*ShouldPreserveUseListOrder=*/false,
-                         &Index, /*UnifiedLTO=*/false);
+      WriteBitcodeToFile(M, *ThinLinkOS, ShouldPreserveUseListOrder, &Index,
+                         /*UnifiedLTO=*/false);
 
     return;
   }
