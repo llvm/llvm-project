@@ -1435,7 +1435,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
-        /*BeforeLambdaBody=*/false,
+        /*BeforeLambdaBody=*/true,
         /*BeforeWhile=*/true,
         /*IndentBraces=*/true,
         /*SplitEmptyFunction=*/true,
