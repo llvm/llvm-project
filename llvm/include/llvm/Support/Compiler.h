@@ -175,8 +175,7 @@
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
 #define LLVM_ABI_NOT_EXPORTED
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS) ||       \
-    defined(LLVM_ENABLE_PLUGINS)
+#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS)
 // Some libraries like those for tablegen are linked in to tools that used
 // in the build so can't depend on the llvm shared library. If export macros
 // were left enabled when building these we would get duplicate or
