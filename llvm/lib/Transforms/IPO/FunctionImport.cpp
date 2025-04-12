@@ -1701,13 +1701,16 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     if (NewLinkage == GV.getLinkage())
       return;
 
+    bool ForceImportFunction = isa<Function>(GV) && ForceImportAll;
+
     // Check for a non-prevailing def that has interposable linkage
     // (e.g. non-odr weak or linkonce). In that case we can't simply
     // convert to available_externally, since it would lose the
     // interposable property and possibly get inlined. Simply drop
     // the definition in that case.
     if (GlobalValue::isAvailableExternallyLinkage(NewLinkage) &&
-        GlobalValue::isInterposableLinkage(GV.getLinkage())) {
+        GlobalValue::isInterposableLinkage(GV.getLinkage()) &&
+        !ForceImportFunction) {
       if (!convertToDeclaration(GV))
         // FIXME: Change this to collect replaced GVs and later erase
         // them from the parent module once thinLTOResolvePrevailingGUID is
