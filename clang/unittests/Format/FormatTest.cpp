@@ -6223,6 +6223,16 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "int z;\n"
                "#endif",
                Style);
+  // Treat #pragma once as part of an include guard.
+  verifyFormat("#pragma once\n"
+               "#ifndef HEADER_H\n"
+               "#define HEADER_H\n"
+               "#ifdef NOT_GUARD\n"
+               "#  define NOT_GUARD\n"
+               "#endif\n"
+               "code();\n"
+               "#endif",
+               Style);
   // FIXME: This doesn't handle the case where there's code between the
   // #ifndef and #define but all other conditions hold. This is because when
   // the #define line is parsed, UnwrappedLineParser::Lines doesn't hold the
@@ -6239,7 +6249,7 @@ TEST_F(FormatTest, IndentPreprocessorDirectives) {
                "#endif",
                Style);
   // FIXME: This doesn't handle cases where legitimate preprocessor lines may
-  // be outside an include guard. Examples are #pragma once and
+  // be outside an include guard. Examples include
   // #pragma GCC diagnostic, or anything else that does not change the meaning
   // of the file if it's included multiple times.
   verifyFormat("#ifdef WIN32\n"
