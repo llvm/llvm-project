@@ -11,8 +11,8 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_and_b32 s4, s4, 0xffff
-; GFX9-NEXT:    s_mul_i32 s12, s12, s4
-; GFX9-NEXT:    s_add_i32 s5, s5, s12
+; GFX9-NEXT:    s_mul_i32 s14, s14, s4
+; GFX9-NEXT:    s_add_i32 s5, s5, s14
 ; GFX9-NEXT:    v_add_u32_e32 v0, s5, v0
 ; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-NEXT:    v_lshlrev_b64 v[4:5], 4, v[0:1]
@@ -39,8 +39,8 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_and_b32 s4, s4, 0xffff
-; GFX10-NEXT:    s_mul_i32 s12, s12, s4
-; GFX10-NEXT:    v_add3_u32 v0, s5, s12, v0
+; GFX10-NEXT:    s_mul_i32 s14, s14, s4
+; GFX10-NEXT:    v_add3_u32 v0, s5, s14, v0
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX10-NEXT:    v_lshlrev_b64 v[4:5], 4, v[0:1]
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v4
