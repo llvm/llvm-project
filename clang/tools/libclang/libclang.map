@@ -431,6 +431,7 @@ LLVM_19 {
 
 LLVM_20 {
   global:
+    clang_getFullyQualifiedName;
     clang_getOffsetOfBase;
     clang_getTypePrettyPrinted;
     clang_isBeforeInTranslationUnit;
