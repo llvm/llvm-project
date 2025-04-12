@@ -43,6 +43,9 @@ public:
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                            AAQueryInfo &AAQI);
 
+  void collectScopedDomains(const MDNode *NoAlias,
+                            SmallPtrSetImpl<const MDNode *> &Domains) const;
+
 private:
   bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
 };
