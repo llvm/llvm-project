@@ -157,11 +157,9 @@ void UnrollState::unrollWidenInductionByUF(
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
-  VPInstruction *VectorStep =
-      Builder.createNaryOp(VPInstruction::WideIVStep,
-                           {&Plan.getVF(), ScalarStep,
-                            Plan.getOrAddLiveIn(Constant::getNullValue(IVTy))},
-                           FMFs, IV->getDebugLoc());
+  VPInstruction *VectorStep = Builder.createNaryOp(
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 

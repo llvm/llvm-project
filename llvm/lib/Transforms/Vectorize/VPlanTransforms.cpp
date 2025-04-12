@@ -1012,11 +1012,11 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
 
-  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
-                    m_VPValue(X), m_SpecificInt(1), m_VPValue(Y)))) {
-    if (TypeInfo.inferScalarType(X) != TypeInfo.inferScalarType(Y)) {
-      X = new VPWidenCastRecipe(Instruction::Trunc, X,
-                                TypeInfo.inferScalarType(Y));
+  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
+                                                           m_SpecificInt(1)))) {
+    Type *WideStepTy = TypeInfo.inferScalarType(R.getVPSingleValue());
+    if (TypeInfo.inferScalarType(X) != WideStepTy) {
+      X = new VPWidenCastRecipe(Instruction::Trunc, X, WideStepTy);
       X->getDefiningRecipe()->insertBefore(&R);
     }
     R.getVPSingleValue()->replaceAllUsesWith(X);
@@ -2392,14 +2392,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
 
       VPValue *VectorStep;
       VPValue *ScalarStep;
-      VPValue *IVTyOp;
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
-                         m_VPValue(VectorStep), m_VPValue(ScalarStep),
-                         m_VPValue(IVTyOp))))
+                         m_VPValue(VectorStep), m_VPValue(ScalarStep))))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       VPBuilder Builder(VPI->getParent(), VPI->getIterator());
-      Type *IVTy = TypeInfo.inferScalarType(IVTyOp);
+      Type *IVTy = TypeInfo.inferScalarType(VPI);
       if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
         Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
                                           ? Instruction::UIToFP
