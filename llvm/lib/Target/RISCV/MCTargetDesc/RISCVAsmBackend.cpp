@@ -702,6 +702,33 @@ bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
   return true;
 }
 
+bool RISCVAsmBackend::fixupNeedsMarkerELFRelocation(
+    MCAssembler &Asm, const MCFragment &F, const MCFixup &Fixup,
+    unsigned &PreRelocType, MCSymbol *&PreRelocSymbol,
+    uint64_t &PreRelocAddend) const {
+  switch (Fixup.getTargetKind()) {
+  default:
+    return false;
+  case RISCV::fixup_riscv_qc_e_branch:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_jump_plt: {
+    MCContext &Ctx = Asm.getContext();
+    MCSymbol *VendorSymbol = Ctx.getOrCreateSymbol("QUALCOMM");
+    MCFragment &DF = F.getParent()->getDummyFragment();
+    VendorSymbol->setFragment(&DF);
+    VendorSymbol->setOffset(0);
+
+    Asm.registerSymbol(*VendorSymbol);
+
+    PreRelocType = ELF::R_RISCV_VENDOR;
+    PreRelocSymbol = VendorSymbol;
+    PreRelocAddend = 0;
+    return true;
+  }
+  }
+}
+
 void RISCVAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                                  const MCValue &Target,
                                  MutableArrayRef<char> Data, uint64_t Value,

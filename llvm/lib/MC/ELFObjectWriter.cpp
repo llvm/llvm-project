@@ -1435,6 +1435,21 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
                         : C;
   FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
 
+  // Some RISC-V relocations need a marker relocation that appears before the
+  // relocation in question.
+  unsigned PreRelocType;
+  MCSymbol *PreRelocSymbol;
+  uint64_t PreRelocAddend;
+  if (Backend.fixupNeedsMarkerELFRelocation(Asm, *Fragment, Fixup, PreRelocType,
+                                            PreRelocSymbol, PreRelocAddend)) {
+    auto *SymbolELF = cast<MCSymbolELF>(PreRelocSymbol);
+    if (SymbolELF)
+      SymbolELF->setUsedInReloc();
+    ELFRelocationEntry Rec(FixupOffset, SymbolELF, PreRelocType,
+                           PreRelocAddend);
+    Relocations[&FixupSection].push_back(Rec);
+  }
+
   if (!RelocateWithSymbol) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;

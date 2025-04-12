@@ -125,6 +125,18 @@ public:
     return false;
   }
 
+  /// Hook to add any marker relocations that the target may need in addition
+  /// to the normal relocations on instructions. Currently used only by RISCV
+  /// to add vendor relocations.
+  virtual bool fixupNeedsMarkerELFRelocation(MCAssembler &Asm,
+                                             const MCFragment &F,
+                                             const MCFixup &Fixup,
+                                             unsigned &PreRelocType,
+                                             MCSymbol *&PreRelocSymbol,
+                                             uint64_t &PreRelocAddend) const {
+    return false;
+  }
+
   /// Apply the \p Value for given \p Fixup into the provided data fragment, at
   /// the offset specified by the fixup and following the fixup kind as
   /// appropriate. Errors (such as an out of range fixup value) should be

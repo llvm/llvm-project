@@ -56,6 +56,12 @@ public:
                                const MCFixup &Fixup, const MCValue &Target,
                                uint64_t &FixedValue) const override;
 
+  bool fixupNeedsMarkerELFRelocation(MCAssembler &Asm, const MCFragment &F,
+                                     const MCFixup &Fixup,
+                                     unsigned &PreRelocType,
+                                     MCSymbol *&PreRelocSymbol,
+                                     uint64_t &PreRelocAddend) const override;
+
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsResolved,
