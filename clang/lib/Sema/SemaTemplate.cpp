@@ -909,7 +909,7 @@ static TemplateArgumentLoc translateTemplateArgument(Sema &SemaRef,
 
   case ParsedTemplateArgument::NonType: {
     Expr *E = static_cast<Expr *>(Arg.getAsExpr());
-    return TemplateArgumentLoc(TemplateArgument(E), E);
+    return TemplateArgumentLoc(TemplateArgument(E, /*IsCanonical=*/false), E);
   }
 
   case ParsedTemplateArgument::Template: {
@@ -1576,8 +1576,9 @@ NamedDecl *Sema::ActOnNonTypeTemplateParameter(Scope *S, Declarator &D,
       return Param;
 
     Param->setDefaultArgument(
-        Context, getTrivialTemplateArgumentLoc(TemplateArgument(Default),
-                                               QualType(), SourceLocation()));
+        Context, getTrivialTemplateArgumentLoc(
+                     TemplateArgument(Default, /*IsCanonical=*/false),
+                     QualType(), SourceLocation()));
   }
 
   return Param;
@@ -3250,8 +3251,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
 
     TemplateArgument NumArgsArg = Converted[2];
     if (NumArgsArg.isDependent())
-      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
-                                                            Converted);
+      return QualType();
 
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
@@ -3288,12 +3288,11 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     //    __type_pack_element<Index, T_1, ..., T_N>
     // are treated like T_Index.
     assert(Converted.size() == 2 &&
-      "__type_pack_element should be given an index and a parameter pack");
+           "__type_pack_element should be given an index and a parameter pack");
 
     TemplateArgument IndexArg = Converted[0], Ts = Converted[1];
     if (IndexArg.isDependent() || Ts.isDependent())
-      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
-                                                            Converted);
+      return QualType();
 
     llvm::APSInt Index = IndexArg.getAsIntegral();
     assert(Index >= 0 && "the index used with __type_pack_element should be of "
@@ -3313,12 +3312,9 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
   case BTK__builtin_common_type: {
     assert(Converted.size() == 4);
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
-      return Context.getCanonicalTemplateSpecializationType(TemplateName(BTD),
-                                                            Converted);
+      return QualType();
 
     TemplateName BaseTemplate = Converted[0].getAsTemplate();
-    TemplateName HasTypeMember = Converted[1].getAsTemplate();
-    QualType HasNoTypeMember = Converted[2].getAsType();
     ArrayRef<TemplateArgument> Ts = Converted[3].getPackAsArray();
     if (auto CT = builtinCommonTypeImpl(SemaRef, BaseTemplate, TemplateLoc, Ts);
         !CT.isNull()) {
@@ -3326,9 +3322,10 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
       TAs.addArgument(TemplateArgumentLoc(
           TemplateArgument(CT), SemaRef.Context.getTrivialTypeSourceInfo(
                                     CT, TemplateArgs[1].getLocation())));
-
+      TemplateName HasTypeMember = Converted[1].getAsTemplate();
       return SemaRef.CheckTemplateIdType(HasTypeMember, TemplateLoc, TAs);
     }
+    QualType HasNoTypeMember = Converted[2].getAsType();
     return HasNoTypeMember;
   }
   }
@@ -3492,20 +3489,19 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
       resolveAssumedTemplateNameAsType(/*Scope=*/nullptr, Name, TemplateLoc))
     return QualType();
 
-  auto [Template, DefaultArgs] = Name.getTemplateDeclAndDefaultArgs();
-
-  if (!Template || isa<FunctionTemplateDecl>(Template) ||
-      isa<VarTemplateDecl>(Template) || isa<ConceptDecl>(Template)) {
-    // We might have a substituted template template parameter pack. If so,
-    // build a template specialization type for it.
-    if (Name.getAsSubstTemplateTemplateParmPack())
-      return Context.getTemplateSpecializationType(Name,
-                                                   TemplateArgs.arguments());
-
-    Diag(TemplateLoc, diag::err_template_id_not_a_type)
-      << Name;
-    NoteAllFoundTemplates(Name);
-    return QualType();
+  TemplateDecl *Template;
+  DefaultArguments DefaultArgs;
+  if (const SubstTemplateTemplateParmPackStorage *S =
+          Name.getAsSubstTemplateTemplateParmPack()) {
+    Template = S->getParameterPack();
+  } else {
+    std::tie(Template, DefaultArgs) = Name.getTemplateDeclAndDefaultArgs();
+    if (!Template || isa<FunctionTemplateDecl>(Template) ||
+        isa<VarTemplateDecl>(Template) || isa<ConceptDecl>(Template)) {
+      Diag(TemplateLoc, diag::err_template_id_not_a_type) << Name;
+      NoteAllFoundTemplates(Name);
+      return QualType();
+    }
   }
 
   // Check that the template argument list is well-formed for this
@@ -3519,8 +3515,11 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
 
   QualType CanonType;
 
-  if (TypeAliasTemplateDecl *AliasTemplate =
-          dyn_cast<TypeAliasTemplateDecl>(Template)) {
+  if (isa<TemplateTemplateParmDecl>(Template)) {
+    // We might have a substituted template template parameter pack. If so,
+    // build a template specialization type for it.
+  } else if (TypeAliasTemplateDecl *AliasTemplate =
+                 dyn_cast<TypeAliasTemplateDecl>(Template)) {
 
     // Find the canonical type for this type alias template specialization.
     TypeAliasDecl *Pattern = AliasTemplate->getTemplatedDecl();
@@ -3602,7 +3601,9 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     //
     //   template<typename T, typename U = T> struct A;
     CanonType = Context.getCanonicalTemplateSpecializationType(
-        Name, CTAI.CanonicalConverted);
+        Context.getCanonicalTemplateName(Name, /*IgnoreDeduced=*/true),
+        CTAI.CanonicalConverted);
+    assert(CanonType->isCanonicalUnqualified());
 
     // This might work out to be a current instantiation, in which
     // case the canonical type needs to be the InjectedClassNameType.
@@ -3688,8 +3689,8 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
   // Build the fully-sugared type for this class template
   // specialization, which refers back to the class template
   // specialization we created or found.
-  return Context.getTemplateSpecializationType(Name, TemplateArgs.arguments(),
-                                               CanonType);
+  return Context.getTemplateSpecializationType(
+      Name, TemplateArgs.arguments(), CTAI.CanonicalConverted, CanonType);
 }
 
 void Sema::ActOnUndeclaredTypeTemplateName(Scope *S, TemplateTy &ParsedName,
@@ -5286,7 +5287,7 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
       // If the resulting expression is new, then use it in place of the
       // old expression in the template argument.
       if (R != E) {
-        TemplateArgument TA(R);
+        TemplateArgument TA(R, /*IsCanonical=*/false);
         ArgLoc = TemplateArgumentLoc(TA, R);
       }
       break;
@@ -6476,7 +6477,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
   // Stop checking the precise nature of the argument if it is value dependent,
   // it should be checked when instantiated.
   if (Arg->isValueDependent()) {
-    SugaredConverted = TemplateArgument(ArgIn);
+    SugaredConverted = TemplateArgument(ArgIn, /*IsCanonical=*/false);
     CanonicalConverted =
         S.Context.getCanonicalTemplateArgument(SugaredConverted);
     return false;
@@ -6667,7 +6668,7 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
     if (VD->getType()->isMemberPointerType()) {
       if (isa<NonTypeTemplateParmDecl>(VD)) {
         if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-          SugaredConverted = TemplateArgument(Arg);
+          SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
           CanonicalConverted =
               S.Context.getCanonicalTemplateArgument(SugaredConverted);
         } else {
@@ -6733,7 +6734,7 @@ CheckTemplateArgumentPointerToMember(Sema &S, NonTypeTemplateParmDecl *Param,
     // Okay: this is the address of a non-static member, and therefore
     // a member pointer constant.
     if (Arg->isTypeDependent() || Arg->isValueDependent()) {
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           S.Context.getCanonicalTemplateArgument(SugaredConverted);
     } else {
@@ -6784,7 +6785,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (DeductionArg->isTypeDependent()) {
       auto *AT = dyn_cast<AutoType>(DeducedT);
       if (AT && AT->isDecltypeAuto()) {
-        SugaredConverted = TemplateArgument(Arg);
+        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
         CanonicalConverted = TemplateArgument(
             Context.getCanonicalTemplateArgument(SugaredConverted));
         return Arg;
@@ -6858,7 +6859,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (E.isInvalid())
       return ExprError();
     setDeductionArg(E.get());
-    SugaredConverted = TemplateArgument(Arg);
+    SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
     CanonicalConverted = TemplateArgument(
         Context.getCanonicalTemplateArgument(SugaredConverted));
     return Arg;
@@ -6889,7 +6890,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   // normal template rules apply: we accept the template if it would be valid
   // for any number of expansions (i.e. none).
   if (ArgPE && !StrictCheck) {
-    SugaredConverted = TemplateArgument(Arg);
+    SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
     CanonicalConverted = TemplateArgument(
         Context.getCanonicalTemplateArgument(SugaredConverted));
     return Arg;
@@ -6915,7 +6916,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       return Arg;
     }
     if (isa<NonTypeTemplateParmDecl>(ND)) {
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -6972,7 +6973,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // permitted (and expected) to be unable to determine a value.
     if (ArgResult.get()->isValueDependent()) {
       setDeductionArg(ArgResult.get());
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7010,7 +7011,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
           Value.getLValuePath()[0].getAsArrayIndex() == 0 &&
           !Value.isLValueOnePastTheEnd() && ParamType->isPointerType()) {
         if (ArgPE) {
-          SugaredConverted = TemplateArgument(Arg);
+          SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
           CanonicalConverted =
               Context.getCanonicalTemplateArgument(SugaredConverted);
         } else {
@@ -7041,7 +7042,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
       return Diag(StartLoc, diag::err_non_type_template_arg_addr_label_diff);
 
     if (ArgPE) {
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
     } else {
@@ -7086,7 +7087,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
 
       // We can't check arbitrary value-dependent arguments.
       if (DeductionArg->isValueDependent()) {
-        SugaredConverted = TemplateArgument(Arg);
+        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
         CanonicalConverted =
             Context.getCanonicalTemplateArgument(SugaredConverted);
         return Arg;
@@ -7103,7 +7104,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
                                    : Context.getTypeSize(IntegerType));
 
       if (ArgPE) {
-        SugaredConverted = TemplateArgument(Arg);
+        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
         CanonicalConverted =
             Context.getCanonicalTemplateArgument(SugaredConverted);
       } else {
@@ -7187,7 +7188,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     if (DeductionArg->isValueDependent()) {
       // The argument is value-dependent. Create a new
       // TemplateArgument with the converted expression.
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7243,7 +7244,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     }
 
     if (ArgPE) {
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
     } else {
@@ -7366,7 +7367,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
   // Deal with parameters of type std::nullptr_t.
   if (ParamType->isNullPtrType()) {
     if (DeductionArg->isTypeDependent() || DeductionArg->isValueDependent()) {
-      SugaredConverted = TemplateArgument(Arg);
+      SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
       CanonicalConverted =
           Context.getCanonicalTemplateArgument(SugaredConverted);
       return Arg;
@@ -7386,7 +7387,7 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     case NPV_NullPointer:
       Diag(Arg->getExprLoc(), diag::warn_cxx98_compat_template_arg_null);
       if (ArgPE) {
-        SugaredConverted = TemplateArgument(Arg);
+        SugaredConverted = TemplateArgument(Arg, /*IsCanonical=*/false);
         CanonicalConverted =
             Context.getCanonicalTemplateArgument(SugaredConverted);
       } else {
@@ -8523,17 +8524,34 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
                                        isPartialSpecialization))
     return true;
 
-  // The canonical type
   QualType CanonType;
-  if (isPartialSpecialization) {
-    // Build the canonical type that describes the converted template
-    // arguments of the class template partial specialization.
-    TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
-    CanonType = Context.getTemplateSpecializationType(CanonTemplate,
-                                                      CTAI.CanonicalConverted);
+  if (!isPartialSpecialization) {
+    // Create a new class template specialization declaration node for
+    // this explicit specialization or friend declaration.
+    Specialization = ClassTemplateSpecializationDecl::Create(
+        Context, Kind, ClassTemplate->getDeclContext(), KWLoc, TemplateNameLoc,
+        ClassTemplate, CTAI.CanonicalConverted, CTAI.StrictPackMatch, PrevDecl);
+    Specialization->setTemplateArgsAsWritten(TemplateArgs);
+    SetNestedNameSpecifier(*this, Specialization, SS);
+    if (TemplateParameterLists.size() > 0) {
+      Specialization->setTemplateParameterListsInfo(Context,
+                                                    TemplateParameterLists);
+    }
 
-    if (Context.hasSameType(CanonType,
-                        ClassTemplate->getInjectedClassNameSpecialization()) &&
+    if (!PrevDecl)
+      ClassTemplate->AddSpecialization(Specialization, InsertPos);
+
+    if (!CurContext->isDependentContext())
+      CanonType = Context.getTypeDeclType(Specialization);
+  }
+
+  TypeSourceInfo *WrittenTy = Context.getTemplateSpecializationTypeInfo(
+      Name, TemplateNameLoc, TemplateArgs, CTAI.CanonicalConverted, CanonType);
+
+  if (isPartialSpecialization) {
+    if (Context.hasSameType(
+            WrittenTy->getType(),
+            ClassTemplate->getInjectedClassNameSpecialization()) &&
         (!Context.getLangOpts().CPlusPlus20 ||
          !TemplateParams->hasAssociatedConstraints())) {
       // C++ [temp.class.spec]p9b3:
@@ -8560,7 +8578,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     ClassTemplatePartialSpecializationDecl *Partial =
         ClassTemplatePartialSpecializationDecl::Create(
             Context, Kind, DC, KWLoc, TemplateNameLoc, TemplateParams,
-            ClassTemplate, CTAI.CanonicalConverted, CanonType, PrevPartial);
+            ClassTemplate, CTAI.CanonicalConverted, WrittenTy->getType(),
+            PrevPartial);
     Partial->setTemplateArgsAsWritten(TemplateArgs);
     SetNestedNameSpecifier(*this, Partial, SS);
     if (TemplateParameterLists.size() > 1 && SS.isSet()) {
@@ -8578,29 +8597,6 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
       PrevPartial->setMemberSpecialization();
 
     CheckTemplatePartialSpecialization(Partial);
-  } else {
-    // Create a new class template specialization declaration node for
-    // this explicit specialization or friend declaration.
-    Specialization = ClassTemplateSpecializationDecl::Create(
-        Context, Kind, DC, KWLoc, TemplateNameLoc, ClassTemplate,
-        CTAI.CanonicalConverted, CTAI.StrictPackMatch, PrevDecl);
-    Specialization->setTemplateArgsAsWritten(TemplateArgs);
-    SetNestedNameSpecifier(*this, Specialization, SS);
-    if (TemplateParameterLists.size() > 0) {
-      Specialization->setTemplateParameterListsInfo(Context,
-                                                    TemplateParameterLists);
-    }
-
-    if (!PrevDecl)
-      ClassTemplate->AddSpecialization(Specialization, InsertPos);
-
-    if (CurContext->isDependentContext()) {
-      TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
-      CanonType = Context.getTemplateSpecializationType(
-          CanonTemplate, CTAI.CanonicalConverted);
-    } else {
-      CanonType = Context.getTypeDeclType(Specialization);
-    }
   }
 
   // C++ [temp.expl.spec]p6:
@@ -8690,8 +8686,6 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
     // actually wrote the specialization, rather than formatting the
     // name based on the "canonical" representation used to store the
     // template arguments in the specialization.
-    TypeSourceInfo *WrittenTy = Context.getTemplateSpecializationTypeInfo(
-        Name, TemplateNameLoc, TemplateArgs, CanonType);
     FriendDecl *Friend = FriendDecl::Create(Context, CurContext,
                                             TemplateNameLoc,
                                             WrittenTy,
