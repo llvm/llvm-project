@@ -1136,6 +1136,41 @@ is conservatively correct for OpenCL.
                              other operations within the same address space.
      ======================= ===================================================
 
+Relaxed Buffer OOB (Out Of Bounds) Mode
+---------------------------------------
+
+Instructions that load from or store to buffer resources (and thus, by extension
+buffer fat pointers and buffer strided pointers) generally implement handling for
+out of bounds (OOB) memory accesses, including those that are partially OOB,
+if the buffer resource resource has the required flags set.
+
+When operating on more than 32 bits of data, the `voffset` used for the access
+will be range-checked for each 32-bit word independently. This check uses saturating
+arithmetic and interprets the offset as an unsigned value.
+
+The behavior described above conflicts with the ABI requirements of certain graphics
+APIs that require out of bounds accesses to be handled strictly so that accessed
+that begin out of bounds but then access in-bounds elements (such as loading A
+``<4 x i32>`` beginning at offset ``-4``) still load the three in-bounds integers.
+
+Similarly, buffer fat pointers permit operating types such as `<8 x i8>` which
+must be accessed (and bounds-checked) 4 bytes at a time. Non-word-aligned
+accesses to such types from near the end of a buffer resource (such as starting
+a load of an ``<8xi8>`` from an offset of ``6`` on an 8-byte buffer) will treat
+the initial two bytes to be loaded/stored as out of bounds, even though, under
+a strict interpretation of the bounds-checking semantics, they would be out of bounds.
+
+These violations of strict bounds-checking semantics for buffer resources require
+usage of less-vectorized code to ensure correctness. Ifthis strict conformance
+is not required, the target feature ``relaxed-oob-buffer-mode`` should be enabled
+(using ``-mcpu``, ``-offload-arch`` or ``-mattr``).
+
+``relaxed-buffer-oob-mode`` permits unaligned memory acceses through a buffer resource
+to propagate to nearby elemennts, causing them to become out of bounds as well.
+
+``relaxed-buffer-oob-mode`` is **enabled** on HSA targets by default to preserve
+compute performance and existing ABI expectations.
+
 LLVM IR Intrinsics
 ------------------
 
