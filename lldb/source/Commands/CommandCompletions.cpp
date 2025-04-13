@@ -91,7 +91,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        nullptr} // This one has to be last in the list.
   };
 
-  for (int i = 0;; i++) {
+  for (int i = 0; !request.ShouldStopAddingResults(); i++) {
     if (common_completions[i].type == lldb::eTerminatorCompletion)
       break;
     else if ((common_completions[i].type & completion_mask) ==
@@ -167,7 +167,9 @@ public:
         m_matching_files.AppendIfUnique(context.comp_unit->GetPrimaryFile());
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_matching_files.GetSize() >= m_request.GetMaxNumberOfResultsToAdd()
+               ? Searcher::eCallbackReturnStop
+               : Searcher::eCallbackReturnContinue;
   }
 
   void DoCompletion(SearchFilter *filter) override {
@@ -230,6 +232,10 @@ public:
 
       // Now add the functions & symbols to the list - only add if unique:
       for (const SymbolContext &sc : sc_list) {
+        if (m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd()) {
+          break;
+        }
+
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
         // Ensure that the function name matches the regex. This is more than
         // a sanity check. It is possible that the demangled function name
@@ -239,7 +245,9 @@ public:
           m_match_set.insert(func_name);
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd()
+               ? Searcher::eCallbackReturnStop
+               : Searcher::eCallbackReturnContinue;
   }
 
   void DoCompletion(SearchFilter *filter) override {

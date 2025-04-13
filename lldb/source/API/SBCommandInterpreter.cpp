@@ -266,6 +266,8 @@ int SBCommandInterpreter::HandleCompletionWithDescriptions(
   lldb_private::StringList lldb_matches, lldb_descriptions;
   CompletionResult result;
   CompletionRequest request(current_line, cursor - current_line, result);
+  if (max_return_elements >= 0)
+    request.SetMaxReturnElements(max_return_elements);
   m_opaque_ptr->HandleCompletion(request);
   result.GetMatches(lldb_matches);
   result.GetDescriptions(lldb_descriptions);
