@@ -568,8 +568,8 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
                                     const MCRelaxableFragment &DF,
                                     const MCFixup &Fixup, const MCValue &,
-                                    uint64_t Value, bool Resolved,
-                                    bool) const override {
+                                    uint64_t Value,
+                                    bool Resolved) const override {
     MCInst const &MCB = DF.getInst();
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
