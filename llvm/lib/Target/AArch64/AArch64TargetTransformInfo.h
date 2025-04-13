@@ -219,7 +219,8 @@ public:
                                                 VectorType *ValTy,
                                                 TTI::TargetCostKind CostKind);
 
-  InstructionCost getSpliceCost(VectorType *Tp, int Index);
+  InstructionCost getSpliceCost(VectorType *Tp, int Index,
+                                TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
