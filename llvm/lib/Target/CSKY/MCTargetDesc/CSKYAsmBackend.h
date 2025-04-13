@@ -39,11 +39,10 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCRelaxableFragment &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool, bool) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
