@@ -206,6 +206,9 @@ public:
   void addSignedPointer(llvm::Constant *Pointer,
                         const PointerAuthSchema &Schema, GlobalDecl CalleeDecl,
                         QualType CalleeType);
+  void addSignedPointer(llvm::Constant *Pointer, unsigned Key,
+                        bool UseAddressDiscrimination,
+                        llvm::ConstantInt *OtherDiscriminator);
 
   /// Add a null pointer of a specific type.
   void addNullPointer(llvm::PointerType *ptrTy) {

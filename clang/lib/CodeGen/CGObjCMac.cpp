@@ -7676,10 +7676,26 @@ CGObjCNonFragileABIMac::GetInterfaceEHType(const ObjCInterfaceDecl *ID,
   }
 
   llvm::Value *VTableIdx = llvm::ConstantInt::get(CGM.Int32Ty, 2);
+  llvm::Constant *VTablePtr = llvm::ConstantExpr::getInBoundsGetElementPtr(
+      VTableGV->getValueType(), VTableGV, VTableIdx);
+
   ConstantInitBuilder builder(CGM);
   auto values = builder.beginStruct(ObjCTypes.EHTypeTy);
-  values.add(llvm::ConstantExpr::getInBoundsGetElementPtr(
-      VTableGV->getValueType(), VTableGV, VTableIdx));
+
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXTypeInfoVTablePointer) {
+    uint32_t discrimination = 0;
+    if (Schema.hasOtherDiscrimination()) {
+      assert(Schema.getOtherDiscrimination() ==
+             PointerAuthSchema::Discrimination::Constant);
+      discrimination = Schema.getConstantDiscrimination();
+    }
+    values.addSignedPointer(
+        VTablePtr, Schema.getKey(), Schema.isAddressDiscriminated(),
+        llvm::ConstantInt::get(CGM.IntPtrTy, discrimination));
+  } else {
+    values.add(VTablePtr);
+  }
   values.add(GetClassName(ClassName));
   values.add(GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition));
 
