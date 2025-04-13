@@ -477,7 +477,7 @@ template <typename Opnd_t> struct Argument_match {
   }
 };
 
-/// Match call argument.
+/// Match a call argument.
 template <unsigned OpI, typename Opnd_t>
 inline Argument_match<Opnd_t> m_Argument(const Opnd_t &Op) {
   return Argument_match<Opnd_t>(OpI, Op);
