@@ -836,7 +836,8 @@ struct FormatStyle {
   /// * ``InlineOnly``
   ///   Only merge functions defined inside a class. Same as ``inline``,
   ///   except it does not implies ``empty``: i.e. top level empty functions
-  ///   are not merged either.
+  ///   are not merged either. This option is **deprecated** and is retained
+  ///   for backwards compatibility. See ``Inline`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
@@ -849,7 +850,9 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Empty``
-  ///   Only merge empty functions.
+  ///   Only merge empty functions. This option is **deprecated** and is
+  ///   retained for backwards compatibility. See ``Empty`` of
+  ///   ``ShortFunctionStyle``.
   ///   \code
   ///     void f() {}
   ///     void f2() {
@@ -858,7 +861,9 @@ struct FormatStyle {
   ///   \endcode
   ///
   /// * ``Inline``
-  ///   Only merge functions defined inside a class. Implies ``empty``.
+  ///   Only merge functions defined inside a class. Implies ``empty``. This
+  ///   option is **deprecated** and is retained for backwards compatibility.
+  ///   See ``Inline`` and ``Empty`` of ``ShortFunctionStyle``.
   ///   \code
   ///     class Foo {
   ///       void f() { foo(); }
