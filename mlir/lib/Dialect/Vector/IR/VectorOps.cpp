@@ -5348,6 +5348,9 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return rewriter.notifyMatchFailure(op, "base must be of memref type");
+
     if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
       return failure();
 
