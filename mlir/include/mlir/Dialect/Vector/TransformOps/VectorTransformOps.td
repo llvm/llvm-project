@@ -491,6 +491,7 @@ def ApplySinkVectorMemPatternsOp : Op<Transform_Dialect,
     %c1 = arith.constant 1 : index
     %0 = arith.addi %arg1, %c1 overflow<nsw> : index
     %1 = memref.load %arg0[%0] : memref<?xf32>
+    ```
   }];
 
   let assemblyFormat = "attr-dict";
