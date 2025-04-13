@@ -645,7 +645,7 @@ Python Binding Changes
   the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
-- Added ``Type.getFullyQualifiedName``, which provides fully qualified type names as
+- Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
   instructed by a PrintingPolicy.
 
 OpenMP Support
