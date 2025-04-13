@@ -1757,7 +1757,7 @@ static bool PrintFunctionNameWithArgs(Stream &s,
 }
 
 bool CPlusPlusLanguage::GetFunctionDisplayName(
-    const SymbolContext *sc, const ExecutionContext *exe_ctx,
+    const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
   switch (representation) {
   case FunctionNameRepresentation::eNameWithArgs: {
