@@ -20207,6 +20207,16 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "double b();",
                AlignmentLeft);
 
+  auto Style = AlignmentLeft;
+  Style.AlignConsecutiveDeclarations.AlignFunctionPointers = true;
+  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  verifyFormat("int function_name(const wchar_t*  title,\n"
+               "                  int             x          = 0,\n"
+               "                  long            extraStyle = 0,\n"
+               "                  bool            readOnly   = false,\n"
+               "                  FancyClassType* module     = nullptr);",
+               Style);
+
   // PAS_Middle
   FormatStyle AlignmentMiddle = Alignment;
   AlignmentMiddle.PointerAlignment = FormatStyle::PAS_Middle;
@@ -20438,7 +20448,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                Alignment);
 
   // See PR37175
-  FormatStyle Style = getMozillaStyle();
+  Style = getMozillaStyle();
   Style.AlignConsecutiveDeclarations.Enabled = true;
   verifyFormat("DECOR1 /**/ int8_t /**/ DECOR2 /**/\n"
                "foo(int a);",
