@@ -22,26 +22,28 @@ define void @test() personality ptr @__gxx_personality_sj0 {
 ; CHECK-NEXT:    movq $.LBB0_3, -80(%rbp)
 ; CHECK-NEXT:    leaq -136(%rbp), %rdi
 ; CHECK-NEXT:    callq _Unwind_SjLj_Register@PLT
-; CHECK-NEXT:    leaq -44(%rbp), %rdi
-; CHECK-NEXT:    leaq .LJTI0_0(%rip), %rax
+; CHECK-NEXT:    leaq -44(%rbp), %rcx
 ; CHECK-NEXT:  .LBB0_1: # %while.cond
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl $1, -128(%rbp)
 ; CHECK-NEXT:  .Ltmp0:
+; CHECK-NEXT:    movq %rcx, %rdi
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    jmp .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    movl -128(%rbp), %ecx
-; CHECK-NEXT:    cmpl $1, %ecx
+; CHECK-NEXT:    leaq -44(%rbp), %rcx
+; CHECK-NEXT:    movl -128(%rbp), %eax
+; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    jae .LBB0_5
 ; CHECK-NEXT:  # %bb.4: # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    jmpq *(%rax,%rcx,8)
+; CHECK-NEXT:    leaq .LJTI0_0(%rip), %rdx
+; CHECK-NEXT:    jmpq *(%rdx,%rax,8)
 ; CHECK-NEXT:  .LBB0_6: # %lpad
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:  .Ltmp2:
-; CHECK-NEXT:    movl -124(%rbp), %ecx
-; CHECK-NEXT:    movl -120(%rbp), %ecx
+; CHECK-NEXT:    movl -124(%rbp), %eax
+; CHECK-NEXT:    movl -120(%rbp), %eax
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: # %while.end
 ; CHECK-NEXT:    leaq -136(%rbp), %rdi
