@@ -1102,15 +1102,14 @@ public:
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(loadOp);
     Location loc = loadOp.getLoc();
+    ArithIndexingBuilder idxBuilderf(rewriter, loc);
     for (auto i : llvm::seq<int64_t>(rankOffset, indices.size() - finalRank)) {
       OpFoldResult pos = extractPos[i - rankOffset];
       if (isConstantIntValue(pos, 0))
         continue;
 
       Value offset = getValueOrCreateConstantIndexOp(rewriter, loc, pos);
-
-      auto ovf = arith::IntegerOverflowFlags::nsw;
-      indices[i] = rewriter.create<arith::AddIOp>(loc, indices[i], offset, ovf);
+      indices[i] = idxBuilderf.add(indices[i], offset);
     }
 
     Value base = loadOp.getBase();
