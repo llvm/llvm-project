@@ -12,10 +12,3 @@ b2659ca44 [InstCombine] Propagate flags in `foldSelectICmpAndBinOp` (#127437)
 revert: breaks rocBLAS build
 d57230c7 [AMDGPU][MC] Disallow op_sel in some VOP3P dot instructions (#100485)
 ---
-breaks aompSmoke:
-[Clang][AMDGPU] Remove special handling for COV4 libraries 
-huber,saiyed
----
-Revert "[clang-doc][NFC] refactor out file helpers (#134298)"
-This reverts commit e10f67a8270c7745b8a9306a9910b06cfc8d2c55.
----
