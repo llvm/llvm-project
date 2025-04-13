@@ -65,6 +65,10 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       FiniteOnly.Off = FilePath;
     } else if (BaseName == "oclc_finite_only_on") {
       FiniteOnly.On = FilePath;
+    } else if (BaseName == "oclc_daz_opt_on") {
+      DenormalsAreZero.On = FilePath;
+    } else if (BaseName == "oclc_daz_opt_off") {
+      DenormalsAreZero.Off = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
       CorrectlyRoundedSqrt.On = FilePath;
     } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
@@ -881,6 +885,10 @@ void ROCMToolChain::addClangTargetOptions(
     return;
 
   bool Wave64 = isWave64(DriverArgs, Kind);
+  // TODO: There are way too many flags that change this. Do we need to check
+  // them all?
+  bool DAZ = DriverArgs.hasArg(options::OPT_cl_denorms_are_zero) ||
+             getDefaultDenormsAreZeroForTarget(Kind);
   bool FiniteOnly = DriverArgs.hasArg(options::OPT_cl_finite_math_only);
 
   bool UnsafeMathOpt =
@@ -901,7 +909,7 @@ void ROCMToolChain::addClangTargetOptions(
 
   // Add the generic set of libraries.
   BCLibs.append(RocmInstallation->getCommonBitcodeLibs(
-      DriverArgs, LibDeviceFile, Wave64, FiniteOnly, UnsafeMathOpt,
+      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, false));
 
   for (auto [BCFile, Internalize] : BCLibs) {
@@ -940,8 +948,9 @@ bool RocmInstallationDetector::checkCommonBitcodeLibs(
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
 RocmInstallationDetector::getCommonBitcodeLibs(
     const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile, bool Wave64,
-    bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath, bool CorrectSqrt,
-    DeviceLibABIVersion ABIVer, bool GPUSan, bool isOpenMP) const {
+    bool DAZ, bool FiniteOnly, bool UnsafeMathOpt, bool FastRelaxedMath,
+    bool CorrectSqrt, DeviceLibABIVersion ABIVer, bool GPUSan,
+    bool isOpenMP) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
@@ -960,6 +969,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(getOCKLPath());
   else if (GPUSan && isOpenMP)
     AddBCLib(getOCKLPath(), false);
+  AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(CorrectSqrt));
@@ -987,6 +997,11 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
     return {};
 
   // If --hip-device-lib is not set, add the default bitcode libraries.
+  // TODO: There are way too many flags that change this. Do we need to check
+  // them all?
+  bool DAZ = DriverArgs.hasFlag(options::OPT_fgpu_flush_denormals_to_zero,
+                                options::OPT_fno_gpu_flush_denormals_to_zero,
+                                getDefaultDenormsAreZeroForTarget(Kind));
   bool FiniteOnly = DriverArgs.hasFlag(
       options::OPT_ffinite_math_only, options::OPT_fno_finite_math_only, false);
   bool UnsafeMathOpt =
@@ -1006,7 +1021,7 @@ ROCMToolChain::getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                 getSanitizerArgs(DriverArgs).needsAsanRt();
 
   return RocmInstallation->getCommonBitcodeLibs(
-      DriverArgs, LibDeviceFile, Wave64, FiniteOnly, UnsafeMathOpt,
+      DriverArgs, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
       FastRelaxedMath, CorrectSqrt, ABIVer, GPUSan, isOpenMP);
 }
 

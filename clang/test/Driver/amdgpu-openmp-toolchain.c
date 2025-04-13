@@ -54,12 +54,12 @@
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx803 \
 // RUN:   --no-offloadlib --offloadlib --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-LIB-DEVICE
-// CHECK-LIB-DEVICE: "-cc1" {{.*}}ocml.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"
+// CHECK-LIB-DEVICE: "-cc1" {{.*}}ocml.bc"{{.*}}oclc_daz_opt_on.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx803 -nogpulib \
 // RUN:   --offloadlib --no-offloadlib --rocm-device-lib-path=%S/Inputs/rocm/amdgcn/bitcode %s  2>&1 | \
 // RUN: FileCheck %s --check-prefix=CHECK-LIB-DEVICE-NOGPULIB
-// CHECK-LIB-DEVICE-NOGPULIB-NOT: "-cc1" {{.*}}ocml.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"
+// CHECK-LIB-DEVICE-NOGPULIB-NOT: "-cc1" {{.*}}ocml.bc"{{.*}}oclc_daz_opt_on.bc"{{.*}}oclc_unsafe_math_off.bc"{{.*}}oclc_finite_only_off.bc"{{.*}}oclc_correctly_rounded_sqrt_on.bc"{{.*}}oclc_wavefrontsize64_on.bc"{{.*}}oclc_isa_version_803.bc"
 
 // RUN: %clang -### -target x86_64-pc-linux-gnu -fopenmp --offload-arch=gfx90a:sramecc-:xnack+ \
 // RUN:   -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-TARGET-ID
