@@ -221,7 +221,7 @@ Task<int> c_ShouldDiag(const int a, const int b) noexcept {
 
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:11: note: example of unhandled exception throw stack, starting from function 'c_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-7]]:11: note: throw stack of unhandled exception, starting from function 'c_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-8]]:11: note: frame #0: function 'c_ShouldDiag'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -233,7 +233,7 @@ Task<int, true> d_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: an exception may be thrown in function 'd_ShouldDiag' which should not throw exceptions
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:17: note: example of unhandled exception throw stack, starting from function 'd_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:17: note: throw stack of unhandled exception, starting from function 'd_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:17: note: frame #0: function 'd_ShouldDiag'
 // CHECK-MESSAGES: :104:8: note: frame #1: function 'get_return_object'
 // CHECK-MESSAGES: :54:7: note: frame #2: function 'Task' throws unhandled exception here
@@ -246,7 +246,7 @@ Task<int, false, true> e_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: an exception may be thrown in function 'e_ShouldDiag' which should not throw exceptions
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:24: note: example of unhandled exception throw stack, starting from function 'e_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:24: note: throw stack of unhandled exception, starting from function 'e_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:24: note: frame #0: function 'e_ShouldDiag'
 // CHECK-MESSAGES: :100:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -258,7 +258,7 @@ Task<int, false, false, true> f_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: an exception may be thrown in function 'f_ShouldDiag' which should not throw exceptions
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:31: note: example of unhandled exception throw stack, starting from function 'f_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: throw stack of unhandled exception, starting from function 'f_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:31: note: frame #0: function 'f_ShouldDiag'
 // CHECK-MESSAGES: :114:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -271,7 +271,7 @@ Task<int, false, false, false, true> g_ShouldDiag(const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:38: warning: an exception may be thrown in function 'g_ShouldDiag' which should not throw exceptions
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:38: note: example of unhandled exception throw stack, starting from function 'g_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-5]]:38: note: throw stack of unhandled exception, starting from function 'g_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-6]]:38: note: frame #0: function 'g_ShouldDiag'
 // CHECK-MESSAGES: :106:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -285,7 +285,7 @@ Task<int, false, false, false, false, true> h_ShouldDiag(const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: an exception may be thrown in function 'h_ShouldDiag' which should not throw exceptions
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:45: note: example of unhandled exception throw stack, starting from function 'h_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-5]]:45: note: throw stack of unhandled exception, starting from function 'h_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-6]]:45: note: frame #0: function 'h_ShouldDiag'
 // CHECK-MESSAGES: :133:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -315,7 +315,7 @@ j_ShouldDiag(const int a, const int b) noexcept {
 
   co_return a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:1: note: example of unhandled exception throw stack, starting from function 'j_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-7]]:1: note: throw stack of unhandled exception, starting from function 'j_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'j_ShouldDiag' throws unhandled exception here
 
 } // namespace coreturn
@@ -350,7 +350,7 @@ Task<int> c_ShouldDiag(const int a, const int b) noexcept {
 
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:11: note: example of unhandled exception throw stack, starting from function 'c_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-7]]:11: note: throw stack of unhandled exception, starting from function 'c_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-8]]:11: note: frame #0: function 'c_ShouldDiag'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -362,7 +362,7 @@ Task<int, true> d_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: an exception may be thrown in function 'd_ShouldDiag' which should not throw exceptions
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:17: note: example of unhandled exception throw stack, starting from function 'd_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:17: note: throw stack of unhandled exception, starting from function 'd_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:17: note: frame #0: function 'd_ShouldDiag'
 // CHECK-MESSAGES: :104:8: note: frame #1: function 'get_return_object'
 // CHECK-MESSAGES: :54:7: note: frame #2: function 'Task' throws unhandled exception here
@@ -375,7 +375,7 @@ Task<int, false, true> e_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: an exception may be thrown in function 'e_ShouldDiag' which should not throw exceptions
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:24: note: example of unhandled exception throw stack, starting from function 'e_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:24: note: throw stack of unhandled exception, starting from function 'e_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:24: note: frame #0: function 'e_ShouldDiag'
 // CHECK-MESSAGES: :100:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -387,7 +387,7 @@ Task<int, false, false, true> f_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: an exception may be thrown in function 'f_ShouldDiag' which should not throw exceptions
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:31: note: example of unhandled exception throw stack, starting from function 'f_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:31: note: throw stack of unhandled exception, starting from function 'f_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:31: note: frame #0: function 'f_ShouldDiag'
 // CHECK-MESSAGES: :114:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -400,7 +400,7 @@ Task<int, false, false, false, true> g_ShouldDiag(const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:38: warning: an exception may be thrown in function 'g_ShouldDiag' which should not throw exceptions
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:38: note: example of unhandled exception throw stack, starting from function 'g_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-5]]:38: note: throw stack of unhandled exception, starting from function 'g_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-6]]:38: note: frame #0: function 'g_ShouldDiag'
 // CHECK-MESSAGES: :106:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -414,7 +414,7 @@ Task<int, false, false, false, false, true> h_ShouldDiag(const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:45: warning: an exception may be thrown in function 'h_ShouldDiag' which should not throw exceptions
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:45: note: example of unhandled exception throw stack, starting from function 'h_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-5]]:45: note: throw stack of unhandled exception, starting from function 'h_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-6]]:45: note: frame #0: function 'h_ShouldDiag'
 // CHECK-MESSAGES: :133:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -444,7 +444,7 @@ j_ShouldDiag(const int a, const int b) noexcept {
 
   co_yield a / b;
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:1: note: example of unhandled exception throw stack, starting from function 'j_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-7]]:1: note: throw stack of unhandled exception, starting from function 'j_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'j_ShouldDiag' throws unhandled exception here
 
 } // namespace coyield
@@ -479,7 +479,7 @@ Task<void> c_ShouldDiag(const int a, const int b) noexcept {
 
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-7]]:12: note: example of unhandled exception throw stack, starting from function 'c_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-7]]:12: note: throw stack of unhandled exception, starting from function 'c_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-8]]:12: note: frame #0: function 'c_ShouldDiag'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -491,7 +491,7 @@ Task<void, true> d_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: an exception may be thrown in function 'd_ShouldDiag' which should not throw exceptions
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:18: note: example of unhandled exception throw stack, starting from function 'd_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:18: note: throw stack of unhandled exception, starting from function 'd_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:18: note: frame #0: function 'd_ShouldDiag'
 // CHECK-MESSAGES: :153:8: note: frame #1: function 'get_return_object'
 // CHECK-MESSAGES: :81:7: note: frame #2: function 'Task' throws unhandled exception here
@@ -504,7 +504,7 @@ Task<void, false, true> e_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: an exception may be thrown in function 'e_ShouldDiag' which should not throw exceptions
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:25: note: example of unhandled exception throw stack, starting from function 'e_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:25: note: throw stack of unhandled exception, starting from function 'e_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:25: note: frame #0: function 'e_ShouldDiag'
 // CHECK-MESSAGES: :149:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -516,7 +516,7 @@ Task<void, false, false, true> f_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: an exception may be thrown in function 'f_ShouldDiag' which should not throw exceptions
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:32: note: example of unhandled exception throw stack, starting from function 'f_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:32: note: throw stack of unhandled exception, starting from function 'f_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:32: note: frame #0: function 'f_ShouldDiag'
 // CHECK-MESSAGES: :163:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -530,7 +530,7 @@ Task<void, false, false, false, true> g_ShouldDiag(const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:39: warning: an exception may be thrown in function 'g_ShouldDiag' which should not throw exceptions
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:39: note: example of unhandled exception throw stack, starting from function 'g_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-5]]:39: note: throw stack of unhandled exception, starting from function 'g_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-6]]:39: note: frame #0: function 'g_ShouldDiag'
 // CHECK-MESSAGES: :155:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -544,7 +544,7 @@ h_ShouldDiag(const int a, const int b) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: an exception may be thrown in function 'h_ShouldDiag' which should not throw exceptions
   co_await returnOne();
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:1: note: example of unhandled exception throw stack, starting from function 'h_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-4]]:1: note: throw stack of unhandled exception, starting from function 'h_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-5]]:1: note: frame #0: function 'h_ShouldDiag'
 // CHECK-MESSAGES: :175:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -572,7 +572,7 @@ j_ShouldDiag(const int a, const int b) noexcept {
   if (b == 0)
     throw b;
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:1: note: example of unhandled exception throw stack, starting from function 'j_ShouldDiag'
+// CHECK-MESSAGES: :[[@LINE-6]]:1: note: throw stack of unhandled exception, starting from function 'j_ShouldDiag'
 // CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: function 'j_ShouldDiag' throws unhandled exception here
 
 } // namespace coawait
@@ -612,7 +612,7 @@ const auto c_ShouldDiag = [](const int a, const int b) noexcept -> Task<int> {
 
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-7]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-7]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-8]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -625,7 +625,7 @@ const auto d_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :104:8: note: frame #1: function 'get_return_object'
 // CHECK-MESSAGES: :54:7: note: frame #2: function 'Task' throws unhandled exception here
@@ -640,7 +640,7 @@ const auto e_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :100:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -654,7 +654,7 @@ const auto f_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-4]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :114:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -669,7 +669,7 @@ const auto g_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :106:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -685,7 +685,7 @@ const auto h_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :133:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -719,7 +719,7 @@ const auto j_ShouldDiag =
 
   co_return a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-8]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-8]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'operator()' throws unhandled exception here
 
 } // namespace coreturn
@@ -755,7 +755,7 @@ const auto c_ShouldDiag = [](const int a, const int b) noexcept -> Task<int> {
 
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-7]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-7]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-8]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -768,7 +768,7 @@ const auto d_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :104:8: note: frame #1: function 'get_return_object'
 
@@ -782,7 +782,7 @@ const auto e_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :100:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -796,7 +796,7 @@ const auto f_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-4]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :114:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -811,7 +811,7 @@ const auto g_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :106:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -827,7 +827,7 @@ const auto h_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :133:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -861,7 +861,7 @@ const auto j_ShouldDiag =
 
   co_yield a / b;
 };
-// CHECK-MESSAGES: :[[@LINE-8]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-8]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'operator()' throws unhandled exception here
 
 } // namespace coyield
@@ -897,7 +897,7 @@ const auto c_ShouldDiag = [](const int a, const int b) noexcept -> Task<void> {
 
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-7]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-7]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-8]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :186:5: note: frame #1: function '~Evil' throws unhandled exception here
 
@@ -910,7 +910,7 @@ const auto d_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :153:8: note: frame #1: function 'get_return_object'
 
@@ -924,7 +924,7 @@ const auto e_ShouldDiag = [](const int a,
   // CHECK-MESSAGES: :[[@LINE-2]]:27: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:27: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:27: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:27: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :149:7: note: frame #1: function 'Promise' throws unhandled exception here
 
@@ -938,7 +938,7 @@ const auto f_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-4]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-4]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-5]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :163:7: note: frame #1: function 'initial_suspend' throws unhandled exception here
 
@@ -953,7 +953,7 @@ const auto g_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :155:7: note: frame #1: function 'get_return_object' throws unhandled exception here
 
@@ -969,7 +969,7 @@ const auto h_ShouldDiag =
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: an exception may be thrown in function 'operator()' which should not throw exceptions
   co_await returnOne();
 };
-// CHECK-MESSAGES: :[[@LINE-5]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-5]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-6]]:5: note: frame #0: function 'operator()'
 // CHECK-MESSAGES: :175:7: note: frame #1: function 'unhandled_exception' throws unhandled exception here
 
@@ -1001,7 +1001,7 @@ const auto j_ShouldDiag =
   if (b == 0)
     throw b;
 };
-// CHECK-MESSAGES: :[[@LINE-7]]:5: note: example of unhandled exception throw stack, starting from function 'operator()'
+// CHECK-MESSAGES: :[[@LINE-7]]:5: note: throw stack of unhandled exception, starting from function 'operator()'
 // CHECK-MESSAGES: :[[@LINE-3]]:5: note: frame #0: function 'operator()' throws unhandled exception here
 
 } // namespace coawait
