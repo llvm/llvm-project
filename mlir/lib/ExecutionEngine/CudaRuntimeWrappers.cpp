@@ -15,7 +15,6 @@
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 
 #include <cstdio>
-#include <vector>
 
 #include "cuda.h"
 #include "cuda_bf16.h"
@@ -122,16 +121,6 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   CUDA_REPORT_IF_ERROR(cuModuleLoadData(&module, data));
-  // Preload functions in the module so that the first call to
-  // cuModuleGetFunction below doesn't synchronize context.
-  unsigned numFunctions = 0;
-  CUDA_REPORT_IF_ERROR(cuModuleGetFunctionCount(&numFunctions, module));
-  std::vector<CUfunction> functions(numFunctions);
-  CUDA_REPORT_IF_ERROR(
-      cuModuleEnumerateFunctions(functions.data(), numFunctions, module));
-  for (CUfunction function : functions) {
-    CUDA_REPORT_IF_ERROR(cuFuncLoad(function));
-  }
   return module;
 }
 
