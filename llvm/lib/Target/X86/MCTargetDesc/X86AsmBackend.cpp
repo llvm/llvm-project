@@ -180,7 +180,7 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                     const MCRelaxableFragment &,
                                     const MCFixup &, const MCValue &, uint64_t,
-                                    bool, bool) const override;
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -732,7 +732,7 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
 
 bool X86AsmBackend::fixupNeedsRelaxationAdvanced(
     const MCAssembler &, const MCRelaxableFragment &, const MCFixup &Fixup,
-    const MCValue &Target, uint64_t Value, bool Resolved, bool) const {
+    const MCValue &Target, uint64_t Value, bool Resolved) const {
   // If resolved, relax if the value is too big for a (signed) i8.
   //
   // Currently, `jmp local@plt` relaxes JMP even if the offset is small,

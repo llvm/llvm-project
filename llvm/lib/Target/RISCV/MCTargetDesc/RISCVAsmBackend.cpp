@@ -143,19 +143,15 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
 
 bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
     const MCAssembler &, const MCRelaxableFragment &, const MCFixup &Fixup,
-    const MCValue &, uint64_t Value, bool Resolved,
-    const bool WasForced) const {
+    const MCValue &, uint64_t Value, bool Resolved) const {
   if (!RelaxBranches)
     return false;
 
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
 
-  // Return true if the symbol is actually unresolved.
-  // Resolved could be always false when shouldForceRelocation return true.
-  // We use !WasForced to indicate that the symbol is unresolved and not forced
-  // by shouldForceRelocation.
-  if (!Resolved && !WasForced)
+  // Return true if the symbol is unresolved.
+  if (!Resolved)
     return true;
 
   switch (Kind) {
@@ -595,12 +591,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCFragment *DF,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI,
-                                          uint64_t &Value, bool &WasForced) {
+bool RISCVAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
+    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -647,12 +640,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
-    WasForced = true;
-    return false;
-  }
-
-  return true;
+  return !shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI);
 }
 
 bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,

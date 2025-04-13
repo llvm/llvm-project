@@ -49,8 +49,8 @@ public:
 
   bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                            const MCFragment *DF, const MCValue &Target,
-                           const MCSubtargetInfo *STI, uint64_t &Value,
-                           bool &WasForced) override;
+                           const MCSubtargetInfo *STI,
+                           uint64_t &Value) override;
 
   bool handleAddSubRelocations(const MCAssembler &Asm, const MCFragment &F,
                                const MCFixup &Fixup, const MCValue &Target,
@@ -71,7 +71,7 @@ public:
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                     const MCRelaxableFragment &,
                                     const MCFixup &, const MCValue &, uint64_t,
-                                    bool, bool) const override;
+                                    bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

@@ -356,7 +356,7 @@ static bool needsInterworking(const MCAssembler &Asm, const MCSymbol *Sym,
 
 bool ARMAsmBackend::fixupNeedsRelaxationAdvanced(
     const MCAssembler &Asm, const MCRelaxableFragment &, const MCFixup &Fixup,
-    const MCValue &Target, uint64_t Value, bool Resolved, bool) const {
+    const MCValue &Target, uint64_t Value, bool Resolved) const {
   const MCSymbol *Sym = Target.getAddSym();
   if (needsInterworking(Asm, Sym, Fixup.getTargetKind()))
     return true;
