@@ -100,7 +100,7 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
   // stack of thrown exception.
   const utils::ExceptionAnalyzer::CallStack &Stack = ThrowInfo.Stack;
   diag(Stack.front()->getLocation(),
-       "example of unhandled exception throw stack, starting from function %0",
+       "throw stack of unhandled exception, starting from function %0",
        DiagnosticIDs::Note)
       << Stack.front();
 
