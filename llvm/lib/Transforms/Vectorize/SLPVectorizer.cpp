@@ -19974,8 +19974,10 @@ void BoUpSLP::computeMinimumValueSizes() {
                       return false;
                     if (!isa<CastInst, BinaryOperator, FreezeInst, PHINode,
                              SelectInst>(U) ||
+                        isa<SIToFPInst, UIToFPInst>(U) ||
                         !isa<CastInst, BinaryOperator, FreezeInst, PHINode,
-                             SelectInst>(UserTE->getMainOp()))
+                             SelectInst>(UserTE->getMainOp()) ||
+                        isa<SIToFPInst, UIToFPInst>(UserTE->getMainOp()))
                       return true;
                     unsigned UserTESz = DL->getTypeSizeInBits(
                         UserTE->Scalars.front()->getType());
