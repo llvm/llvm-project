@@ -307,7 +307,7 @@ bool isConstexprUnknown(const Pointer &P) {
   if (P.isDummy())
     return false;
   const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
-  return VD && VD->hasLocalStorage();
+  return VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD);
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {

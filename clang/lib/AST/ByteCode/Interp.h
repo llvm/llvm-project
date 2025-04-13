@@ -771,6 +771,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                   bool CanOverflow) {
   assert(!Ptr.isDummy());
 
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(Ptr))
+      return false;
+  }
+
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
       return Invalid(S, OpPC);
