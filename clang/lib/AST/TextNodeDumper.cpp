@@ -1949,8 +1949,6 @@ void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
 void TextNodeDumper::VisitDependentSizedArrayType(
     const DependentSizedArrayType *T) {
   VisitArrayType(T);
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
 }
 
 void TextNodeDumper::VisitDependentSizedExtVectorType(

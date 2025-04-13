@@ -148,7 +148,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
       else if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(AT))
         QT = Context.getDependentSizedArrayType(
             ElementTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
-            DSAT->getIndexTypeCVRQualifiers(), DSAT->getBracketsRange());
+            DSAT->getIndexTypeCVRQualifiers());
       else if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
         QT = Context.getIncompleteArrayType(ElementTy, IAT->getSizeModifier(),
                                             IAT->getIndexTypeCVRQualifiers());
