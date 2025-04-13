@@ -1781,7 +1781,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
           MaxStoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
-    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
+    uint64_t MaxVF =
+        bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
     MaxStoreLoadForwardSafeDistanceInBits =
         std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
