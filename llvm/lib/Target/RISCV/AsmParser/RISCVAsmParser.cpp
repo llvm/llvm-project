@@ -2079,9 +2079,6 @@ ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
-  if (Identifier.consume_back("@plt"))
-    return Error(getLoc(), "'@plt' operand not valid for instruction");
-
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
@@ -2129,8 +2126,9 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
     Lex();
     Lex();
     StringRef PLT;
+    SMLoc Loc = getLoc();
     if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return ParseStatus::Failure;
+      return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
     return ParseStatus::NoMatch;
