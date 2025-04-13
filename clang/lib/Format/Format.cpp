@@ -1435,7 +1435,7 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
         /*AfterExternBlock=*/true,
         /*BeforeCatch=*/true,
         /*BeforeElse=*/true,
-        /*BeforeLambdaBody=*/false,
+        /*BeforeLambdaBody=*/true,
         /*BeforeWhile=*/true,
         /*IndentBraces=*/true,
         /*SplitEmptyFunction=*/true,
@@ -3078,7 +3078,7 @@ private:
       for (const FormatToken *FormatTok = Line->First; FormatTok;
            FormatTok = FormatTok->Next) {
         if ((FormatTok->Previous && FormatTok->Previous->is(tok::at) &&
-             (FormatTok->Tok.getObjCKeywordID() != tok::objc_not_keyword ||
+             (FormatTok->isNot(tok::objc_not_keyword) ||
               FormatTok->isOneOf(tok::numeric_constant, tok::l_square,
                                  tok::l_brace))) ||
             (FormatTok->Tok.isAnyIdentifier() &&
@@ -3591,13 +3591,12 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
     return Replaces;
   if (isLikelyXml(Code))
     return Replaces;
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript &&
-      isMpegTS(Code)) {
-    return Replaces;
-  }
-  if (Style.Language == FormatStyle::LanguageKind::LK_JavaScript)
+  if (Style.isJavaScript()) {
+    if (isMpegTS(Code))
+      return Replaces;
     return sortJavaScriptImports(Style, Code, Ranges, FileName);
-  if (Style.Language == FormatStyle::LanguageKind::LK_Java)
+  }
+  if (Style.isJava())
     return sortJavaImports(Style, Code, Ranges, FileName, Replaces);
   if (Style.isCpp())
     sortCppIncludes(Style, Code, Ranges, FileName, Replaces, Cursor);
@@ -3777,7 +3776,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     return {tooling::Replacements(), 0};
   if (isLikelyXml(Code))
     return {tooling::Replacements(), 0};
-  if (Expanded.Language == FormatStyle::LK_JavaScript && isMpegTS(Code))
+  if (Expanded.isJavaScript() && isMpegTS(Code))
     return {tooling::Replacements(), 0};
 
   // JSON only needs the formatting passing.
@@ -4086,8 +4085,10 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef FileName) {
     return FormatStyle::LK_TableGen;
   if (FileName.ends_with_insensitive(".cs"))
     return FormatStyle::LK_CSharp;
-  if (FileName.ends_with_insensitive(".json"))
+  if (FileName.ends_with_insensitive(".json") ||
+      FileName.ends_with_insensitive(".ipynb")) {
     return FormatStyle::LK_Json;
+  }
   if (FileName.ends_with_insensitive(".sv") ||
       FileName.ends_with_insensitive(".svh") ||
       FileName.ends_with_insensitive(".v") ||

@@ -845,6 +845,13 @@ namespace {
       return TLI.isOperationLegalOrCustom(Opcode, VT, LegalOperations);
     }
 
+    bool hasUMin(EVT VT) const {
+      auto LK = TLI.getTypeConversion(*DAG.getContext(), VT);
+      return (LK.first == TargetLoweringBase::TypeLegal ||
+              LK.first == TargetLoweringBase::TypePromoteInteger) &&
+             TLI.isOperationLegal(ISD::UMIN, LK.second);
+    }
+
   public:
     /// Runs the dag combiner on all nodes in the work list
     void Run(CombineLevel AtLevel);
@@ -4250,6 +4257,20 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
       sd_match(N0, m_UMinLike(m_Value(A), m_Value(B))) &&
       sd_match(N1, m_UMaxLike(m_Specific(A), m_Specific(B))))
     return DAG.getNegative(DAG.getNode(ISD::ABDU, DL, VT, A, B), DL, VT);
+
+  // (sub x, (select (ult x, y), 0, y)) -> (umin x, (sub x, y))
+  // (sub x, (select (uge x, y), y, 0)) -> (umin x, (sub x, y))
+  if (hasUMin(VT)) {
+    SDValue Y;
+    if (sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                               m_SpecificCondCode(ISD::SETULT)),
+                                       m_Zero(), m_Deferred(Y)))) ||
+        sd_match(N1, m_OneUse(m_Select(m_SetCC(m_Specific(N0), m_Value(Y),
+                                               m_SpecificCondCode(ISD::SETUGE)),
+                                       m_Deferred(Y), m_Zero()))))
+      return DAG.getNode(ISD::UMIN, DL, VT, N0,
+                         DAG.getNode(ISD::SUB, DL, VT, N0, Y));
+  }
 
   return SDValue();
 }
@@ -12057,6 +12078,17 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
 
     if (SDValue NewSel = SimplifySelect(DL, N0, N1, N2))
       return NewSel;
+
+    // (select (ugt x, C), (add x, ~C), x) -> (umin (add x, ~C), x)
+    // (select (ult x, C), x, (add x, -C)) -> (umin x, (add x, -C))
+    APInt C;
+    if (sd_match(Cond1, m_ConstInt(C)) && hasUMin(VT)) {
+      if ((CC == ISD::SETUGT && Cond0 == N2 &&
+           sd_match(N1, m_Add(m_Specific(N2), m_SpecificInt(~C)))) ||
+          (CC == ISD::SETULT && Cond0 == N1 &&
+           sd_match(N2, m_Add(m_Specific(N1), m_SpecificInt(-C)))))
+        return DAG.getNode(ISD::UMIN, DL, VT, N1, N2);
+    }
   }
 
   if (!VT.isVector())

@@ -21,6 +21,7 @@
 #include "mlir/IR/Value.h"
 
 #include <cassert>
+#include <utility>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -156,9 +157,25 @@ public:
   }
 
   mlir::Value VisitCastExpr(CastExpr *e);
+  mlir::Value VisitCallExpr(const CallExpr *e);
+
+  mlir::Value VisitArraySubscriptExpr(ArraySubscriptExpr *e) {
+    if (e->getBase()->getType()->isVectorType()) {
+      assert(!cir::MissingFeatures::scalableVectors());
+      cgf.getCIRGenModule().errorNYI("VisitArraySubscriptExpr: VectorType");
+      return {};
+    }
+    // Just load the lvalue formed by the subscript expression.
+    return emitLoadOfLValue(e);
+  }
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
     return VisitCastExpr(e);
+  }
+
+  mlir::Value VisitCXXNullPtrLiteralExpr(CXXNullPtrLiteralExpr *e) {
+    return cgf.cgm.emitNullConstant(e->getType(),
+                                    cgf.getLoc(e->getSourceRange()));
   }
 
   /// Perform a pointer to boolean conversion.
@@ -444,6 +461,22 @@ public:
     llvm_unreachable("Unexpected signed overflow behavior kind");
   }
 
+  mlir::Value VisitUnaryAddrOf(const UnaryOperator *e) {
+    if (llvm::isa<MemberPointerType>(e->getType())) {
+      cgf.cgm.errorNYI(e->getSourceRange(), "Address of member pointer");
+      return builder.getNullPtr(cgf.convertType(e->getType()),
+                                cgf.getLoc(e->getExprLoc()));
+    }
+
+    return cgf.emitLValue(e->getSubExpr()).getPointer();
+  }
+
+  mlir::Value VisitUnaryDeref(const UnaryOperator *e) {
+    if (e->getType()->isVoidType())
+      return Visit(e->getSubExpr()); // the actual value should be unused
+    return emitLoadOfLValue(e);
+  }
+
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
     return emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
   }
@@ -707,6 +740,144 @@ public:
   HANDLEBINOP(Xor)
   HANDLEBINOP(Or)
 #undef HANDLEBINOP
+
+  mlir::Value emitCmp(const BinaryOperator *e) {
+    const mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    mlir::Value result;
+    QualType lhsTy = e->getLHS()->getType();
+    QualType rhsTy = e->getRHS()->getType();
+
+    auto clangCmpToCIRCmp =
+        [](clang::BinaryOperatorKind clangCmp) -> cir::CmpOpKind {
+      switch (clangCmp) {
+      case BO_LT:
+        return cir::CmpOpKind::lt;
+      case BO_GT:
+        return cir::CmpOpKind::gt;
+      case BO_LE:
+        return cir::CmpOpKind::le;
+      case BO_GE:
+        return cir::CmpOpKind::ge;
+      case BO_EQ:
+        return cir::CmpOpKind::eq;
+      case BO_NE:
+        return cir::CmpOpKind::ne;
+      default:
+        llvm_unreachable("unsupported comparison kind for cir.cmp");
+      }
+    };
+
+    if (lhsTy->getAs<MemberPointerType>()) {
+      assert(!cir::MissingFeatures::dataMemberType());
+      assert(e->getOpcode() == BO_EQ || e->getOpcode() == BO_NE);
+      mlir::Value lhs = cgf.emitScalarExpr(e->getLHS());
+      mlir::Value rhs = cgf.emitScalarExpr(e->getRHS());
+      cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+      result = builder.createCompare(loc, kind, lhs, rhs);
+    } else if (!lhsTy->isAnyComplexType() && !rhsTy->isAnyComplexType()) {
+      BinOpInfo boInfo = emitBinOps(e);
+      mlir::Value lhs = boInfo.lhs;
+      mlir::Value rhs = boInfo.rhs;
+
+      if (lhsTy->isVectorType()) {
+        assert(!cir::MissingFeatures::vectorType());
+        cgf.cgm.errorNYI(loc, "vector comparisons");
+        result = builder.getBool(false, loc);
+      } else if (boInfo.isFixedPointOp()) {
+        assert(!cir::MissingFeatures::fixedPointType());
+        cgf.cgm.errorNYI(loc, "fixed point comparisons");
+        result = builder.getBool(false, loc);
+      } else {
+        // integers and pointers
+        if (cgf.cgm.getCodeGenOpts().StrictVTablePointers &&
+            mlir::isa<cir::PointerType>(lhs.getType()) &&
+            mlir::isa<cir::PointerType>(rhs.getType())) {
+          cgf.cgm.errorNYI(loc, "strict vtable pointer comparisons");
+        }
+
+        cir::CmpOpKind kind = clangCmpToCIRCmp(e->getOpcode());
+        result = builder.createCompare(loc, kind, lhs, rhs);
+      }
+    } else {
+      // Complex Comparison: can only be an equality comparison.
+      assert(!cir::MissingFeatures::complexType());
+      cgf.cgm.errorNYI(loc, "complex comparison");
+      result = builder.getBool(false, loc);
+    }
+
+    return emitScalarConversion(result, cgf.getContext().BoolTy, e->getType(),
+                                e->getExprLoc());
+  }
+
+// Comparisons.
+#define VISITCOMP(CODE)                                                        \
+  mlir::Value VisitBin##CODE(const BinaryOperator *E) { return emitCmp(E); }
+  VISITCOMP(LT)
+  VISITCOMP(GT)
+  VISITCOMP(LE)
+  VISITCOMP(GE)
+  VISITCOMP(EQ)
+  VISITCOMP(NE)
+#undef VISITCOMP
+
+  mlir::Value VisitBinAssign(const BinaryOperator *e) {
+    const bool ignore = std::exchange(ignoreResultAssign, false);
+
+    mlir::Value rhs;
+    LValue lhs;
+
+    switch (e->getLHS()->getType().getObjCLifetime()) {
+    case Qualifiers::OCL_Strong:
+    case Qualifiers::OCL_Autoreleasing:
+    case Qualifiers::OCL_ExplicitNone:
+    case Qualifiers::OCL_Weak:
+      assert(!cir::MissingFeatures::objCLifetime());
+      break;
+    case Qualifiers::OCL_None:
+      // __block variables need to have the rhs evaluated first, plus this
+      // should improve codegen just a little.
+      rhs = Visit(e->getRHS());
+      assert(!cir::MissingFeatures::sanitizers());
+      // TODO(cir): This needs to be emitCheckedLValue() once we support
+      // sanitizers
+      lhs = cgf.emitLValue(e->getLHS());
+
+      // Store the value into the LHS. Bit-fields are handled specially because
+      // the result is altered by the store, i.e., [C99 6.5.16p1]
+      // 'An assignment expression has the value of the left operand after the
+      // assignment...'.
+      if (lhs.isBitField()) {
+        rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
+      } else {
+        cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
+        CIRGenFunction::SourceLocRAIIObject loc{
+            cgf, cgf.getLoc(e->getSourceRange())};
+        cgf.emitStoreThroughLValue(RValue::get(rhs), lhs);
+      }
+    }
+
+    // If the result is clearly ignored, return now.
+    if (ignore)
+      return nullptr;
+
+    // The result of an assignment in C is the assigned r-value.
+    if (!cgf.getLangOpts().CPlusPlus)
+      return rhs;
+
+    // If the lvalue is non-volatile, return the computed value of the
+    // assignment.
+    if (!lhs.isVolatile())
+      return rhs;
+
+    // Otherwise, reload the value.
+    return emitLoadOfLValue(lhs, e->getExprLoc());
+  }
+
+  mlir::Value VisitBinComma(const BinaryOperator *e) {
+    cgf.emitIgnoredExpr(e->getLHS());
+    // NOTE: We don't need to EnsureInsertPoint() like LLVM codegen.
+    return Visit(e->getRHS());
+  }
 };
 
 LValue ScalarExprEmitter::emitCompoundAssignLValue(
@@ -858,9 +1029,11 @@ mlir::Value CIRGenFunction::emitPromotedScalarExpr(const Expr *e,
 }
 
 [[maybe_unused]] static bool mustVisitNullValue(const Expr *e) {
-  // If a null pointer expression's type is the C++0x nullptr_t, then
-  // it's not necessarily a simple constant and it must be evaluated
+  // If a null pointer expression's type is the C++0x nullptr_t and
+  // the expression is not a simple literal, it must be evaluated
   // for its potential side effects.
+  if (isa<IntegerLiteral>(e) || isa<CXXNullPtrLiteralExpr>(e))
+    return false;
   return e->getType()->isNullPtrType();
 }
 
@@ -1343,6 +1516,18 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                    "CastExpr: ", ce->getCastKindName());
   }
   return {};
+}
+
+mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
+  if (e->getCallReturnType(cgf.getContext())->isReferenceType()) {
+    cgf.getCIRGenModule().errorNYI(
+        e->getSourceRange(), "call to function with non-void return type");
+    return {};
+  }
+
+  auto v = cgf.emitCallExpr(e).getScalarVal();
+  assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
+  return v;
 }
 
 mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,

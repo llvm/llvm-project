@@ -112,10 +112,8 @@ private:
   /// For example, 'public:' labels in classes are offset by 1 or 2
   /// characters to the left from their level.
   int getIndentOffset(const AnnotatedLine &Line) {
-    if (Style.Language == FormatStyle::LK_Java || Style.isJavaScript() ||
-        Style.isCSharp()) {
+    if (Style.isJava() || Style.isJavaScript() || Style.isCSharp())
       return 0;
-    }
     const auto &RootToken = *Line.First;
     if (Line.Type == LT_AccessModifier ||
         RootToken.isAccessSpecifier(/*ColonRequired=*/false) ||
@@ -468,13 +466,10 @@ private:
       switch (PreviousLine->First->Tok.getKind()) {
       case tok::at:
         // Don't merge block with left brace wrapped after ObjC special blocks.
-        if (PreviousLine->First->Next) {
-          tok::ObjCKeywordKind kwId =
-              PreviousLine->First->Next->Tok.getObjCKeywordID();
-          if (kwId == tok::objc_autoreleasepool ||
-              kwId == tok::objc_synchronized) {
-            return 0;
-          }
+        if (PreviousLine->First->Next &&
+            PreviousLine->First->Next->isOneOf(tok::objc_autoreleasepool,
+                                               tok::objc_synchronized)) {
+          return 0;
         }
         break;
 
@@ -803,10 +798,8 @@ private:
     // Don't merge ObjC @ keywords and methods.
     // FIXME: If an option to allow short exception handling clauses on a single
     // line is added, change this to not return for @try and friends.
-    if (Style.Language != FormatStyle::LK_Java &&
-        Line.First->isOneOf(tok::at, tok::minus, tok::plus)) {
+    if (!Style.isJava() && Line.First->isOneOf(tok::at, tok::minus, tok::plus))
       return 0;
-    }
 
     // Check that the current line allows merging. This depends on whether we
     // are in a control flow statements as well as several style flags.

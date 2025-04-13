@@ -10,18 +10,16 @@ target triple = "x86_64-grtev4-linux-gnu"
 ; 2. Similarly if a constant is accessed by both cold function and un-profiled
 ;    function, constant pools for this constant should not have .unlikely suffix.
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true -data-sections=true \
-; RUN:     -unique-section-names=false \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -data-sections -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true -data-sections=true \
-; RUN:     -unique-section-names=true \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections -data-sections -unique-section-names \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=false -data-sections=false \
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -partition-static-data-sections \
+; RUN:     -function-sections=false -data-sections=false \
 ; RUN:     -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 

@@ -871,6 +871,14 @@ private:
                                                  bool IsInclusionDirective);
 
 public:
+  /// Creates a new \c CompilerInstance for compiling a module.
+  ///
+  /// This takes care of creating appropriate \c FrontendInputFile for
+  /// public/private frameworks, inferred modules and such.
+  std::unique_ptr<CompilerInstance>
+  cloneForModuleCompile(SourceLocation ImportLoc, Module *Module,
+                        StringRef ModuleFileName);
+
   ModuleLoadResult loadModule(SourceLocation ImportLoc, ModuleIdPath Path,
                               Module::NameVisibilityKind Visibility,
                               bool IsInclusionDirective) override;
