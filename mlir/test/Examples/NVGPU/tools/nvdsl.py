@@ -145,7 +145,10 @@ class TMA:
         )
         box_static_dim = [MLIR_DYNAMIC] * len(self.tma_box_shape)
         self.tma_descriptor = nvgpu.TmaCreateDescriptorOp(
-            tma_descriptor_ty, device_unranked_memref, map(const, self.tma_box_shape), box_static_dim
+            tma_descriptor_ty,
+            device_unranked_memref,
+            map(const, self.tma_box_shape),
+            box_static_dim,
         )
         return self.tma_descriptor.result
 
