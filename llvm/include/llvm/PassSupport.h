@@ -36,7 +36,7 @@ namespace llvm {
 class Pass;
 
 #define INITIALIZE_PASS_BEGIN(passName, arg, name, cfg, analysis)              \
-  static void *initialize##passName##PassOnce(PassRegistry &Registry) {
+  static void initialize##passName##PassOnce(PassRegistry &Registry) {
 
 #define INITIALIZE_PASS_DEPENDENCY(depName) initialize##depName##Pass(Registry);
 
@@ -45,7 +45,6 @@ class Pass;
       name, arg, &passName::ID,                                                \
       PassInfo::NormalCtor_t(callDefaultCtor<passName>), cfg, analysis);       \
   Registry.registerPass(*PI, true);                                            \
-  return PI;                                                                   \
   }                                                                            \
   static llvm::once_flag Initialize##passName##PassFlag;                       \
   void llvm::initialize##passName##Pass(PassRegistry &Registry) {              \

@@ -4674,6 +4674,51 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   llvm_unreachable("invalid frontend action");
 }
 
+static bool isCodeGenAction(frontend::ActionKind Action) {
+  switch (Action) {
+  case frontend::EmitAssembly:
+  case frontend::EmitBC:
+  case frontend::EmitCIR:
+  case frontend::EmitHTML:
+  case frontend::EmitLLVM:
+  case frontend::EmitLLVMOnly:
+  case frontend::EmitCodeGenOnly:
+  case frontend::EmitObj:
+  case frontend::GenerateModule:
+  case frontend::GenerateModuleInterface:
+  case frontend::GenerateReducedModuleInterface:
+  case frontend::GenerateHeaderUnit:
+  case frontend::GeneratePCH:
+  case frontend::GenerateInterfaceStubs:
+    return true;
+  case frontend::ASTDeclList:
+  case frontend::ASTDump:
+  case frontend::ASTPrint:
+  case frontend::ASTView:
+  case frontend::ExtractAPI:
+  case frontend::FixIt:
+  case frontend::ParseSyntaxOnly:
+  case frontend::ModuleFileInfo:
+  case frontend::VerifyPCH:
+  case frontend::PluginAction:
+  case frontend::RewriteObjC:
+  case frontend::RewriteTest:
+  case frontend::RunAnalysis:
+  case frontend::TemplightDump:
+  case frontend::DumpCompilerOptions:
+  case frontend::DumpRawTokens:
+  case frontend::DumpTokens:
+  case frontend::InitOnly:
+  case frontend::PrintPreamble:
+  case frontend::PrintPreprocessedInput:
+  case frontend::RewriteMacros:
+  case frontend::RunPreprocessorOnly:
+  case frontend::PrintDependencyDirectivesSourceMinimizerOutput:
+    return false;
+  }
+  llvm_unreachable("invalid frontend action");
+}
+
 static void GeneratePreprocessorArgs(const PreprocessorOptions &Opts,
                                      ArgumentConsumer Consumer,
                                      const LangOptions &LangOpts,
@@ -5000,6 +5045,10 @@ bool CompilerInvocation::CreateFromArgsImpl(
     if (LangOpts.CUDAIsDevice)
       Res.getTargetOpts().HostTriple = Res.getFrontendOpts().AuxTriple;
   }
+
+  if (LangOpts.OpenACC && !Res.getFrontendOpts().UseClangIRPipeline &&
+      isCodeGenAction(Res.getFrontendOpts().ProgramAction))
+    Diags.Report(diag::warn_drv_openacc_without_cir);
 
   // Set the triple of the host for OpenMP device compile.
   if (LangOpts.OpenMPIsTargetDevice)

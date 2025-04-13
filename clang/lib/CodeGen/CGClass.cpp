@@ -147,16 +147,13 @@ Address CodeGenFunction::LoadCXXThisAddress() {
 /// Emit the address of a field using a member data pointer.
 ///
 /// \param E Only used for emergency diagnostics
-Address
-CodeGenFunction::EmitCXXMemberDataPointerAddress(const Expr *E, Address base,
-                                                 llvm::Value *memberPtr,
-                                      const MemberPointerType *memberPtrType,
-                                                 LValueBaseInfo *BaseInfo,
-                                                 TBAAAccessInfo *TBAAInfo) {
+Address CodeGenFunction::EmitCXXMemberDataPointerAddress(
+    const Expr *E, Address base, llvm::Value *memberPtr,
+    const MemberPointerType *memberPtrType, bool IsInBounds,
+    LValueBaseInfo *BaseInfo, TBAAAccessInfo *TBAAInfo) {
   // Ask the ABI to compute the actual address.
-  llvm::Value *ptr =
-    CGM.getCXXABI().EmitMemberDataPointerAddress(*this, E, base,
-                                                 memberPtr, memberPtrType);
+  llvm::Value *ptr = CGM.getCXXABI().EmitMemberDataPointerAddress(
+      *this, E, base, memberPtr, memberPtrType, IsInBounds);
 
   QualType memberType = memberPtrType->getPointeeType();
   CharUnits memberAlign =

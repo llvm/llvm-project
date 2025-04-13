@@ -202,6 +202,19 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
+    auto op = create<cir::CallOp>(loc, callee);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
+  }
+
+  //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
@@ -333,6 +346,11 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
   //

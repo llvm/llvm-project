@@ -926,74 +926,6 @@ static void recursivelyDeleteDeadRecipes(VPValue *V) {
 static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
-  if (auto *Blend = dyn_cast<VPBlendRecipe>(&R)) {
-    // Try to remove redundant blend recipes.
-    SmallPtrSet<VPValue *, 4> UniqueValues;
-    if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
-      UniqueValues.insert(Blend->getIncomingValue(0));
-    for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
-      if (!match(Blend->getMask(I), m_False()))
-        UniqueValues.insert(Blend->getIncomingValue(I));
-
-    if (UniqueValues.size() == 1) {
-      Blend->replaceAllUsesWith(*UniqueValues.begin());
-      Blend->eraseFromParent();
-      return;
-    }
-
-    if (Blend->isNormalized())
-      return;
-
-    // Normalize the blend so its first incoming value is used as the initial
-    // value with the others blended into it.
-
-    unsigned StartIndex = 0;
-    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-      // If a value's mask is used only by the blend then is can be deadcoded.
-      // TODO: Find the most expensive mask that can be deadcoded, or a mask
-      // that's used by multiple blends where it can be removed from them all.
-      VPValue *Mask = Blend->getMask(I);
-      if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
-        StartIndex = I;
-        break;
-      }
-    }
-
-    SmallVector<VPValue *, 4> OperandsWithMask;
-    OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
-
-    for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
-      if (I == StartIndex)
-        continue;
-      OperandsWithMask.push_back(Blend->getIncomingValue(I));
-      OperandsWithMask.push_back(Blend->getMask(I));
-    }
-
-    auto *NewBlend = new VPBlendRecipe(
-        cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
-    NewBlend->insertBefore(&R);
-
-    VPValue *DeadMask = Blend->getMask(StartIndex);
-    Blend->replaceAllUsesWith(NewBlend);
-    Blend->eraseFromParent();
-    recursivelyDeleteDeadRecipes(DeadMask);
-
-    /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
-    VPValue *NewMask;
-    if (NewBlend->getNumOperands() == 3 &&
-        match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
-      VPValue *Inc0 = NewBlend->getOperand(0);
-      VPValue *Inc1 = NewBlend->getOperand(1);
-      VPValue *OldMask = NewBlend->getOperand(2);
-      NewBlend->setOperand(0, Inc1);
-      NewBlend->setOperand(1, Inc0);
-      NewBlend->setOperand(2, NewMask);
-      if (OldMask->getNumUsers() == 0)
-        cast<VPInstruction>(OldMask)->eraseFromParent();
-    }
-    return;
-  }
-
   // VPScalarIVSteps can only be simplified after unrolling. VPScalarIVSteps for
   // part 0 can be replaced by their start value, if only the first lane is
   // demanded.
@@ -1088,6 +1020,85 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       simplifyRecipe(R, TypeInfo);
+    }
+  }
+}
+
+/// Normalize and simplify VPBlendRecipes. Should be run after simplifyRecipes
+/// to make sure the masks are simplified.
+static void simplifyBlends(VPlan &Plan) {
+  using namespace llvm::VPlanPatternMatch;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(&R);
+      if (!Blend)
+        continue;
+
+      // Try to remove redundant blend recipes.
+      SmallPtrSet<VPValue *, 4> UniqueValues;
+      if (Blend->isNormalized() || !match(Blend->getMask(0), m_False()))
+        UniqueValues.insert(Blend->getIncomingValue(0));
+      for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
+        if (!match(Blend->getMask(I), m_False()))
+          UniqueValues.insert(Blend->getIncomingValue(I));
+
+      if (UniqueValues.size() == 1) {
+        Blend->replaceAllUsesWith(*UniqueValues.begin());
+        Blend->eraseFromParent();
+        continue;
+      }
+
+      if (Blend->isNormalized())
+        continue;
+
+      // Normalize the blend so its first incoming value is used as the initial
+      // value with the others blended into it.
+
+      unsigned StartIndex = 0;
+      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+        // If a value's mask is used only by the blend then is can be deadcoded.
+        // TODO: Find the most expensive mask that can be deadcoded, or a mask
+        // that's used by multiple blends where it can be removed from them all.
+        VPValue *Mask = Blend->getMask(I);
+        if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+          StartIndex = I;
+          break;
+        }
+      }
+
+      SmallVector<VPValue *, 4> OperandsWithMask;
+      OperandsWithMask.push_back(Blend->getIncomingValue(StartIndex));
+
+      for (unsigned I = 0; I != Blend->getNumIncomingValues(); ++I) {
+        if (I == StartIndex)
+          continue;
+        OperandsWithMask.push_back(Blend->getIncomingValue(I));
+        OperandsWithMask.push_back(Blend->getMask(I));
+      }
+
+      auto *NewBlend = new VPBlendRecipe(
+          cast<PHINode>(Blend->getUnderlyingValue()), OperandsWithMask);
+      NewBlend->insertBefore(&R);
+
+      VPValue *DeadMask = Blend->getMask(StartIndex);
+      Blend->replaceAllUsesWith(NewBlend);
+      Blend->eraseFromParent();
+      recursivelyDeleteDeadRecipes(DeadMask);
+
+      /// Simplify BLEND %a, %b, Not(%mask) -> BLEND %b, %a, %mask.
+      VPValue *NewMask;
+      if (NewBlend->getNumOperands() == 3 &&
+          match(NewBlend->getMask(1), m_Not(m_VPValue(NewMask)))) {
+        VPValue *Inc0 = NewBlend->getOperand(0);
+        VPValue *Inc1 = NewBlend->getOperand(1);
+        VPValue *OldMask = NewBlend->getOperand(2);
+        NewBlend->setOperand(0, Inc1);
+        NewBlend->setOperand(1, Inc0);
+        NewBlend->setOperand(2, NewMask);
+        if (OldMask->getNumUsers() == 0)
+          cast<VPInstruction>(OldMask)->eraseFromParent();
+      }
     }
   }
 }
@@ -1733,6 +1744,7 @@ void VPlanTransforms::optimize(VPlan &Plan) {
   runPass(removeRedundantInductionCasts, Plan);
 
   runPass(simplifyRecipes, Plan, *Plan.getCanonicalIV()->getScalarType());
+  runPass(simplifyBlends, Plan);
   runPass(removeDeadRecipes, Plan);
   runPass(legalizeAndOptimizeInductions, Plan);
   runPass(removeRedundantExpandSCEVRecipes, Plan);

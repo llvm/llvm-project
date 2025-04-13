@@ -2222,21 +2222,27 @@ LogicalResult ParallelOp::verify() {
 }
 
 LogicalResult ParallelOp::verifyRegions() {
-  auto distributeChildOps = getOps<DistributeOp>();
-  if (!distributeChildOps.empty()) {
+  auto distChildOps = getOps<DistributeOp>();
+  int numDistChildOps = std::distance(distChildOps.begin(), distChildOps.end());
+  if (numDistChildOps > 1)
+    return emitError()
+           << "multiple 'omp.distribute' nested inside of 'omp.parallel'";
+
+  if (numDistChildOps == 1) {
     if (!isComposite())
       return emitError()
              << "'omp.composite' attribute missing from composite operation";
 
     auto *ompDialect = getContext()->getLoadedDialect<OpenMPDialect>();
-    Operation &distributeOp = **distributeChildOps.begin();
+    Operation &distributeOp = **distChildOps.begin();
     for (Operation &childOp : getOps()) {
       if (&childOp == &distributeOp || ompDialect != childOp.getDialect())
         continue;
 
       if (!childOp.hasTrait<OpTrait::IsTerminator>())
         return emitError() << "unexpected OpenMP operation inside of composite "
-                              "'omp.parallel'";
+                              "'omp.parallel': "
+                           << childOp.getName();
     }
   } else if (isComposite()) {
     return emitError()
@@ -2388,9 +2394,15 @@ void WorkshareOp::build(OpBuilder &builder, OperationState &state,
 
 LogicalResult WorkshareLoopWrapperOp::verify() {
   if (!(*this)->getParentOfType<WorkshareOp>())
-    return emitError() << "must be nested in an omp.workshare";
-  if (getNestedWrapper())
-    return emitError() << "cannot be composite";
+    return emitOpError() << "must be nested in an omp.workshare";
+  return success();
+}
+
+LogicalResult WorkshareLoopWrapperOp::verifyRegions() {
+  if (isa_and_nonnull<LoopWrapperInterface>((*this)->getParentOp()) ||
+      getNestedWrapper())
+    return emitOpError() << "expected to be a standalone loop wrapper";
+
   return success();
 }
 
@@ -2415,7 +2427,7 @@ LogicalResult LoopWrapperInterface::verifyImpl() {
 
   Operation &firstOp = *region.op_begin();
   if (!isa<LoopNestOp, LoopWrapperInterface>(firstOp))
-    return emitOpError() << "op nested in loop wrapper is not another loop "
+    return emitOpError() << "nested in loop wrapper is not another loop "
                             "wrapper or `omp.loop_nest`";
 
   return success();
@@ -2444,7 +2456,7 @@ LogicalResult LoopOp::verify() {
 LogicalResult LoopOp::verifyRegions() {
   if (llvm::isa_and_nonnull<LoopWrapperInterface>((*this)->getParentOp()) ||
       getNestedWrapper())
-    return emitError() << "`omp.loop` expected to be a standalone loop wrapper";
+    return emitOpError() << "expected to be a standalone loop wrapper";
 
   return success();
 }
@@ -2601,9 +2613,13 @@ LogicalResult DistributeOp::verifyRegions() {
     // Check for the allowed leaf constructs that may appear in a composite
     // construct directly after DISTRIBUTE.
     if (isa<WsloopOp>(nested)) {
-      if (!llvm::dyn_cast_if_present<ParallelOp>((*this)->getParentOp()))
+      Operation *parentOp = (*this)->getParentOp();
+      if (!llvm::dyn_cast_if_present<ParallelOp>(parentOp) ||
+          !cast<ComposableOpInterface>(parentOp).isComposite()) {
         return emitError() << "an 'omp.wsloop' nested wrapper is only allowed "
-                              "when 'omp.parallel' is the direct parent";
+                              "when a composite 'omp.parallel' is the direct "
+                              "parent";
+      }
     } else if (!isa<SimdOp>(nested))
       return emitError() << "only supported nested wrappers are 'omp.simd' and "
                             "'omp.wsloop'";

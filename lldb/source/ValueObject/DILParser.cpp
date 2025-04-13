@@ -66,8 +66,7 @@ DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
                      llvm::Error &error)
     : m_ctx_scope(frame_sp), m_input_expr(dil_input_expr),
       m_dil_lexer(std::move(lexer)), m_error(error), m_use_dynamic(use_dynamic),
-      m_use_synthetic(use_synthetic), m_fragile_ivar(fragile_ivar),
-      m_check_ptr_vs_member(check_ptr_vs_member) {}
+      m_use_synthetic(use_synthetic) {}
 
 ASTNodeUP DILParser::Run() {
   ASTNodeUP expr = ParseExpression();
