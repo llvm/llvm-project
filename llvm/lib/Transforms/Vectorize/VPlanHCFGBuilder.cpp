@@ -99,18 +99,12 @@ void PlainCFGBuilder::fixHeaderPhis() {
     assert(VPPhi->getNumOperands() == 0 &&
            "Expected VPInstruction with no operands.");
     assert(isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent())));
-    // For header phis, make sure the incoming value from the loop
-    // predecessor is the first operand of the recipe.
     assert(Phi->getNumOperands() == 2 &&
            "header phi must have exactly 2 operands");
     for (BasicBlock *Pred : predecessors(Phi->getParent()))
       VPPhi->addOperand(
           getOrCreateVPOperand(Phi->getIncomingValueForBlock(Pred)));
   }
-}
-
-static bool isHeaderVPBB(VPBasicBlock *VPBB) {
-  return VPBB->getParent() && VPBB->getParent()->getEntry() == VPBB;
 }
 
 // Create a new empty VPBasicBlock for an incoming BasicBlock or retrieve an
@@ -122,7 +116,7 @@ VPBasicBlock *PlainCFGBuilder::getOrCreateVPBB(BasicBlock *BB) {
   }
 
   // Create new VPBB.
-  StringRef Name = isHeaderBB(BB, TheLoop) ? "vector.body" : BB->getName();
+  StringRef Name = BB->getName();
   LLVM_DEBUG(dbgs() << "Creating VPBasicBlock for " << Name << "\n");
   VPBasicBlock *VPBB = Plan.createVPBasicBlock(Name);
   BB2VPBB[BB] = VPBB;
@@ -325,10 +319,7 @@ void PlainCFGBuilder::buildPlainCFG(
     auto *BI = cast<BranchInst>(BB->getTerminator());
     unsigned NumSuccs = succ_size(BB);
     if (NumSuccs == 1) {
-      auto *Successor = getOrCreateVPBB(BB->getSingleSuccessor());
-      VPBB->setOneSuccessor(isHeaderVPBB(Successor)
-                                ? Successor->getParent()
-                                : static_cast<VPBlockBase *>(Successor));
+      VPBB->setOneSuccessor(getOrCreateVPBB(BB->getSingleSuccessor()));
       continue;
     }
     assert(BI->isConditional() && NumSuccs == 2 && BI->isConditional() &&
@@ -341,8 +332,8 @@ void PlainCFGBuilder::buildPlainCFG(
 
     // Don't connect any blocks outside the current loop except the latches for
     // inner loops.
-    if (LoopForBB &&
-        (LoopForBB == TheLoop || BB != LoopForBB->getLoopLatch())) {
+    // TODO: Also connect exit blocks during initial VPlan construction.
+    if (LoopForBB == TheLoop || BB != LoopForBB->getLoopLatch()) {
       if (!LoopForBB->contains(IRSucc0)) {
         VPBB->setOneSuccessor(Successor1);
         continue;

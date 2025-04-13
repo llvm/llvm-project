@@ -46,9 +46,10 @@ getPreheaderAndLatch(VPBlockBase *HeaderVPB, const VPDominatorTree &VPDT) {
   return std::nullopt;
 }
 
-/// Create a new VPRegionBlock if there is a loop starting at \p HeaderVPB.
-static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB,
-                             VPDominatorTree &VPDT) {
+/// Try to create a new VPRegionBlock if there is a loop starting at \p
+/// HeaderVPB.
+static void tryToCreateLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB,
+                                  VPDominatorTree &VPDT) {
   auto Res = getPreheaderAndLatch(HeaderVPB, VPDT);
   if (!Res)
     return;
@@ -93,7 +94,7 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
   for (VPBlockBase *HeaderVPB : vp_depth_first_shallow(Plan.getEntry()))
-    createLoopRegion(Plan, HeaderVPB, VPDT);
+    tryToCreateLoopRegion(Plan, HeaderVPB, VPDT);
 
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   auto *OrigExiting = TopRegion->getExiting();
@@ -101,6 +102,7 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan, Type *InductionTy,
   VPBlockUtils::insertBlockAfter(LatchVPBB, OrigExiting);
   TopRegion->setExiting(LatchVPBB);
   TopRegion->setName("vector loop");
+  TopRegion->getEntryBasicBlock()->setName("vector.body");
 
   // Create SCEV and VPValue for the trip count.
   // We use the symbolic max backedge-taken-count, which works also when
