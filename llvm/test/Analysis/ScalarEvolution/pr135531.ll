@@ -9,7 +9,7 @@ define i32 @pr135511(i32 %x) {
 ; CHECK-NEXT:    %neg = sub nsw i32 0, %and
 ; CHECK-NEXT:    --> (-2 * (zext i13 (trunc i32 (%x /u 2) to i13) to i32))<nsw> U: [0,-1) S: [-16382,1)
 ; CHECK-NEXT:    %res = and i32 %neg, 268431360
-; CHECK-NEXT:    --> (4096 * (zext i16 (trunc i32 ((2147483647 * (zext i13 (trunc i32 (%x /u 2) to i13) to i32))<nuw><nsw> /u 2048) to i16) to i32))<nuw><nsw> U: [0,268431361) S: [0,268431361)
+; CHECK-NEXT:    --> (4096 * (zext i16 (trunc i32 ((-1 * (zext i13 (trunc i32 (%x /u 2) to i13) to i32))<nsw> /u 2048) to i16) to i32))<nuw><nsw> U: [0,268431361) S: [0,268431361)
 ; CHECK-NEXT:  Determining loop execution counts for: @pr135511
 ;
   %and = and i32 %x, 16382
