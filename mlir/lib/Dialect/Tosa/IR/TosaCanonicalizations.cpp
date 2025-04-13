@@ -773,12 +773,6 @@ struct SliceDynamicSizeCanonicalization
         sliceOp.getStart(), size_op);
 
     rewriter.replaceOp(sliceOp, newSliceOp.getResult());
-
-    // Remove const_shape size op when it no longer has use point.
-    Operation *sizeConstShape = sliceOp.getSize().getDefiningOp();
-    if (sizeConstShape->getResult(0).hasOneUse())
-      rewriter.eraseOp(sizeConstShape);
-
     return success();
   }
 };
