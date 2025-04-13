@@ -5431,39 +5431,39 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
-
-    if (Cond) {
-      if (!this->visitBool(Cond))
-        return false;
-      if (!this->jumpFalse(EndLabel))
-        return false;
-    }
-
-    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+  // Start of loop body.
+  LocalScope<Emitter> CondScope(this);
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
       return false;
 
-    if (Body && !this->visitStmt(Body))
+  if (Cond) {
+    if (!this->visitBool(Cond))
       return false;
-
-    this->fallthrough(IncLabel);
-    this->emitLabel(IncLabel);
-    if (Inc && !this->discard(Inc))
-      return false;
-
-    if (!CondScope.destroyLocals())
+    if (!this->jumpFalse(EndLabel))
       return false;
   }
-  if (!this->jump(CondLabel))
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
     return false;
 
-  this->fallthrough(EndLabel);
+  if (Body && !this->visitStmt(Body))
+    return false;
+
+  this->fallthrough(IncLabel);
+  this->emitLabel(IncLabel);
+  if (Inc && !this->discard(Inc))
+    return false;
+
+  if (!CondScope.destroyLocals())
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+  // End of loop body.
+
   this->emitLabel(EndLabel);
-  return true;
+  // If we jumped out of the loop above, we still need to clean up the condition
+  // scope.
+  return CondScope.destroyLocals();
 }
 
 template <class Emitter>
