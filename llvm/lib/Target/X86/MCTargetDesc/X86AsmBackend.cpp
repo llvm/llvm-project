@@ -177,11 +177,10 @@ public:
   bool mayNeedRelaxation(const MCInst &Inst,
                          const MCSubtargetInfo &STI) const override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCRelaxableFragment &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool, bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -731,22 +730,20 @@ bool X86AsmBackend::mayNeedRelaxation(const MCInst &MI,
           MI.getOperand(MI.getNumOperands() - 1 - SkipOperands).isExpr());
 }
 
-bool X86AsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                                 const MCFixup &Fixup,
-                                                 bool Resolved, uint64_t Value,
-                                                 const MCRelaxableFragment *DF,
-                                                 const bool WasForced) const {
+bool X86AsmBackend::fixupNeedsRelaxationAdvanced(
+    const MCAssembler &, const MCRelaxableFragment &, const MCFixup &Fixup,
+    const MCValue &Target, uint64_t Value, bool Resolved, bool) const {
   // If resolved, relax if the value is too big for a (signed) i8.
+  //
+  // Currently, `jmp local@plt` relaxes JMP even if the offset is small,
+  // different from gas.
   if (Resolved)
-    return !isInt<8>(Value);
+    return !isInt<8>(Value) || Target.getSpecifier();
 
   // Otherwise, relax unless there is a @ABS8 specifier.
-  if (Fixup.getKind() == FK_Data_1) {
-    MCValue Target;
-    if (Fixup.getValue()->evaluateAsRelocatable(Target, &Asm) &&
-        Target.getAddSym() && Target.getSpecifier() == X86MCExpr::VK_ABS8)
-      return false;
-  }
+  if (Fixup.getKind() == FK_Data_1 && Target.getAddSym() &&
+      Target.getSpecifier() == X86MCExpr::VK_ABS8)
+    return false;
   return true;
 }
 

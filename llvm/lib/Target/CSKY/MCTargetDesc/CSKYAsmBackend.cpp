@@ -171,10 +171,11 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
+bool CSKYAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                                  const MCRelaxableFragment &,
                                                   const MCFixup &Fixup,
-                                                  bool Resolved, uint64_t Value,
-                                                  const MCRelaxableFragment *DF,
+                                                  const MCValue &,
+                                                  uint64_t Value, bool Resolved,
                                                   const bool WasForced) const {
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.

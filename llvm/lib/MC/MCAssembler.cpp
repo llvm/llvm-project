@@ -1015,8 +1015,8 @@ bool MCAssembler::fixupNeedsRelaxation(const MCFixup &Fixup,
   bool WasForced;
   bool Resolved = evaluateFixup(Fixup, DF, Target, DF->getSubtargetInfo(),
                                 Value, WasForced);
-  return getBackend().fixupNeedsRelaxationAdvanced(*this, Fixup, Resolved,
-                                                   Value, DF, WasForced);
+  return getBackend().fixupNeedsRelaxationAdvanced(*this, *DF, Fixup, Target,
+                                                   Value, Resolved, WasForced);
 }
 
 bool MCAssembler::fragmentNeedsRelaxation(const MCRelaxableFragment *F) const {

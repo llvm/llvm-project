@@ -68,12 +68,10 @@ public:
                              const MCValue &Target,
                              const MCSubtargetInfo *STI) override;
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override;
-
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCRelaxableFragment &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool, bool) const override;
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 

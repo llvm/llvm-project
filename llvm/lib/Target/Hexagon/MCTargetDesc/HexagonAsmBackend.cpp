@@ -566,11 +566,11 @@ public:
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override {
-    MCInst const &MCB = DF->getInst();
+                                    const MCRelaxableFragment &DF,
+                                    const MCFixup &Fixup, const MCValue &,
+                                    uint64_t Value, bool Resolved,
+                                    bool) const override {
+    MCInst const &MCB = DF.getInst();
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
