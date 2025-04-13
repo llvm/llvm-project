@@ -44,7 +44,6 @@ public:
 template<class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> 
 __minmax_element_loop(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
-  __builtin_printf("Debug: __minmax_element_impl called, %d\n", __LINE__);  // 不需要 iostream
   auto __less = _MinmaxElementLessFunc<_Comp, _Proj>(__comp, __proj);
 
   pair<_Iter, _Iter> __result(__first, __first);
@@ -154,11 +153,11 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
     } else if (__epilogue_min_element < __min_element) {
       __min_element = __epilogue_min_element;
       __min_block_start = __first;
-      __min_block_end = __last;
+      __min_block_end = __first;  // this is global min_element
     } else {
       __max_element = __epilogue_max_element;
       __max_block_start = __first;
-      __max_block_end = __last;
+      __max_block_end = __first;  // this is global max_element 
     }
   }
 
@@ -168,6 +167,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       break;
   }
 
+  // locate max
   for(; __max_block_start != __max_block_end; ++__max_block_start) {
     if (*__max_block_start == __max_element) 
       break;
