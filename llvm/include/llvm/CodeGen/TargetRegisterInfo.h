@@ -467,10 +467,7 @@ public:
 
   /// Returns true if Reg contains RegUnit.
   bool hasRegUnit(MCRegister Reg, MCRegUnit RegUnit) const {
-    for (MCRegUnit Unit : regunits(Reg))
-      if (Unit == RegUnit)
-        return true;
-    return false;
+    return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
   /// Returns the original SrcReg unless it is the target of a copy-like
