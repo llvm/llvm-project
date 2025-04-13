@@ -1364,8 +1364,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   }
 
   // We either rejected the fixup or folded B into C at this point.
-  const auto *RefA = Target.getAddSym();
-  const auto *SymA = RefA ? cast<MCSymbolELF>(RefA) : nullptr;
+  const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
 
   bool ViaWeakRef = false;
   if (SymA && SymA->isVariable()) {
@@ -1398,33 +1397,26 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;
   FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
   if (UseSectionSym) {
-    const auto *SectionSymbol =
-        SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
-    if (SectionSymbol)
-      SectionSymbol->setUsedInReloc();
-    ELFRelocationEntry Rec(FixupOffset, SectionSymbol, Type, Addend);
-    Relocations[&FixupSection].push_back(Rec);
-    return;
+    SymA = cast<MCSymbolELF>(SecA->getBeginSymbol());
+    SymA->setUsedInReloc();
+  } else {
+    // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
+    // reference the null symbol.
+    if (Type == ELF::R_PPC64_TOC &&
+        TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
+      SymA = nullptr;
+
+    if (SymA) {
+      if (const MCSymbolELF *R = Renames.lookup(SymA))
+        SymA = R;
+
+      if (ViaWeakRef)
+        SymA->setIsWeakrefUsedInReloc();
+      else
+        SymA->setUsedInReloc();
+    }
   }
-
-  // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
-  // reference the null symbol.
-  if (Type == ELF::R_PPC64_TOC &&
-      TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
-    SymA = nullptr;
-
-  const MCSymbolELF *RenamedSymA = SymA;
-  if (SymA) {
-    if (const MCSymbolELF *R = Renames.lookup(SymA))
-      RenamedSymA = R;
-
-    if (ViaWeakRef)
-      RenamedSymA->setIsWeakrefUsedInReloc();
-    else
-      RenamedSymA->setUsedInReloc();
-  }
-  ELFRelocationEntry Rec(FixupOffset, RenamedSymA, Type, Addend);
-  Relocations[&FixupSection].push_back(Rec);
+  Relocations[&FixupSection].emplace_back(FixupOffset, SymA, Type, Addend);
 }
 
 bool ELFObjectWriter::usesRela(const MCTargetOptions *TO,
