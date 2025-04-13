@@ -1099,9 +1099,19 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
-  O << " = " << Instruction::getOpcodeName(getOpcode()) << " ";
-  printOperands(O, SlotTracker);
-  O << " to " << *ResultTy;
+  O << " = ";
+
+  switch (getOpcode()) {
+  case VPInstruction::WideIVStep:
+    O << "wide-iv-step";
+    printOperands(O, SlotTracker);
+    break;
+  default:
+    assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
+    O << Instruction::getOpcodeName(getOpcode()) << " ";
+    printOperands(O, SlotTracker);
+    O << " to " << *ResultTy;
+  }
 }
 #endif
 

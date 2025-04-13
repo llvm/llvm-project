@@ -7949,8 +7949,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       BestVPlan, BestVF,
       TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::removeDeadRecipes(BestVPlan);
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan,
-                                            Legal->getWidestInductionType());
+  VPTypeAnalysis TypeInfo(Legal->getWidestInductionType());
+  VPlanTransforms::convertToConcreteRecipes(BestVPlan, TypeInfo);
 
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.Builder, &ILV, &BestVPlan,

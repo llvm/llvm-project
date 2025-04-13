@@ -2378,9 +2378,8 @@ void VPlanTransforms::createInterleaveGroups(
 }
 
 void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
-                                               Type *CanonicalIVTy) {
+                                               VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
-  VPTypeAnalysis TypeInfo(CanonicalIVTy);
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
