@@ -994,6 +994,13 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (match(&R, m_c_BinaryOr(m_VPValue(X), m_AllOnes()))) {
+    R.getVPSingleValue()->replaceAllUsesWith(
+        R.getOperand(0) == Y ? R.getOperand(1) : R.getOperand(0));
+    R.eraseFromParent();
+    return;
+  }
+
   if (match(&R, m_Select(m_VPValue(), m_VPValue(X), m_Deferred(X))))
     return R.getVPSingleValue()->replaceAllUsesWith(X);
 

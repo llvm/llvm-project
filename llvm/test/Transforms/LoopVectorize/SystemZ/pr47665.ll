@@ -15,8 +15,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i32> [[TMP3]] to <16 x i1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <16 x i1> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult <16 x i1> zeroinitializer, [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or <16 x i1> [[TMP6]], splat (i1 true)
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <16 x i1> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    br i1 true, label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
