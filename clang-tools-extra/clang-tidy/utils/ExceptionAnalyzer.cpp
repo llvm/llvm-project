@@ -491,9 +491,13 @@ ExceptionAnalyzer::throwsException(const FunctionDecl *Func,
 
   auto Result = ExceptionInfo::createUnknown();
   if (const auto *FPT = Func->getType()->getAs<FunctionProtoType>()) {
-    for (const QualType &Ex : FPT->exceptions())
-      // Nothing in ThrowInfo because there is no location of 'throw'
-      Result.registerException(Ex.getTypePtr(), {});
+    for (const QualType &Ex : FPT->exceptions()) {
+      CallStack.insert(Func);
+      Result.registerException(
+          Ex.getTypePtr(),
+          {Func->getExceptionSpecSourceRange().getBegin(), CallStack});
+      CallStack.remove(Func);
+    }
   }
   return Result;
 }
