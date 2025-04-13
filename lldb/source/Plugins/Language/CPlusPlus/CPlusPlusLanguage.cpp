@@ -1707,22 +1707,6 @@ static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
   return sc.function->GetBlock(true).GetBlockVariableList(true);
 }
 
-static char const *GetInlinedFunctionName(const SymbolContext &sc) {
-  if (!sc.block)
-    return nullptr;
-
-  const Block *inline_block = sc.block->GetContainingInlinedBlock();
-  if (!inline_block)
-    return nullptr;
-
-  const InlineFunctionInfo *inline_info =
-      inline_block->GetInlinedFunctionInfo();
-  if (!inline_info)
-    return nullptr;
-
-  return inline_info->GetName().AsCString(nullptr);
-}
-
 static bool PrintFunctionNameWithArgs(Stream &s,
                                       const ExecutionContext *exe_ctx,
                                       const SymbolContext &sc) {
@@ -1731,15 +1715,10 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
 
-  const char *cstr = sc.function->GetName().AsCString(nullptr);
+  const char *cstr = sc.GetPossiblyInlinedFunctionName(
+      Mangled::NamePreference::ePreferDemangled);
   if (!cstr)
     return false;
-
-  if (const char *inlined_name = GetInlinedFunctionName(sc)) {
-    s.PutCString(cstr);
-    s.PutCString(" [inlined] ");
-    cstr = inlined_name;
-  }
 
   VariableList args;
   if (auto variable_list_sp = GetFunctionVariableList(sc))
