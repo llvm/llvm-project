@@ -10,6 +10,8 @@
 #define _LIBCPP___ALGORITHM_MINMAX_ELEMENT_H
 
 #include <__algorithm/comp.h>
+#include <__algorithm/simd_utils.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
@@ -81,43 +83,133 @@ __minmax_element_loop(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj)
 }
 
 
-// template<class _Tp>
-// typename std::iterator_traits<_Iter>::value_type
-// __minmax_element_vectorized(_Tp __first, _Tp __last) {
+template<class _Iter>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter> 
+__minmax_element_vectorized(_Iter __first, _Iter __last) {
+  using __value_type              = __iter_value_type<_Iter>;
+  constexpr size_t __unroll_count = 4;
+  constexpr size_t __vec_size     = __native_vector_size<__value_type>;
+  using __vec_type                    = __simd_vector<__value_type, __vec_size>;
+  if (__last == __first) [[__unlikely__]] {
+    return {__first, __first};
+  }
 
+  __value_type __min_element = *__first;
+  __value_type __max_element = *__first;
+
+  _Iter __min_block_start = __first;
+  _Iter __min_block_end = __last + 1;
+  _Iter __max_block_start = __first;
+  _Iter __max_block_end = __last + 1;
+  
+  while(static_cast<size_t>(__last - __first) >= __unroll_count * __vec_size) [[__likely__]]{
+    __vec_type __vec[__unroll_count];
+    for(size_t __i = 0; __i < __unroll_count; ++__i) {
+      __vec[__i] = std::__load_vector<__vec_type>(__first + __i * __vec_size);
+      // min
+      auto __block_min_element = __builtin_reduce_min(__vec[__i]);
+      if (__block_min_element < __min_element) {
+        __min_element = __block_min_element;
+        __min_block_start = __first + __i * __vec_size;
+        __min_block_start = __first + (__i + 1) * __vec_size;
+      }
+      // max
+      auto __block_max_element = __builtin_reduce_max(__vec[__i]);
+      if (__block_max_element > __max_element) {
+        __max_element = __block_max_element;
+        __max_block_start = __first + __i * __vec_size;
+        __max_block_start = __first + (__i + 1) * __vec_size;
+      }
+    }
+    __first += __unroll_count * __vec_size;
+  }
+
+  // remaining vectors 
+  while(static_cast<size_t>(__last - __first) >=  __vec_size) {
+      __vec_type __vec = std::__load_vector<__vec_type>(__first + __vec_size);
+      auto __block_min_element = __builtin_reduce_min(__vec);
+      if (__block_min_element < __min_element) {
+        __min_element = __block_min_element;
+        __min_block_start = __first + __i * __vec_size;
+        __min_block_start = __first + (__i + 1) * __vec_size;
+      }
+      // max
+      auto __block_max_element = __builtin_reduce_max(__vec);
+      if (__block_max_element > __max_element) {
+        __max_element = __block_max_element;
+        __max_block_start = __first + __i * __vec_size;
+        __max_block_start = __first + (__i + 1) * __vec_size;
+      }
+      __first += __vec_size;
+  }
+
+  if (__last > __first) {
+    __less_tag __pred;
+    __identity __proj;
+    auto __epilogue = std::__minmax_element_loop(__first, __last, __pred, __proj);
+    auto __epilogue_min_element = *__epilogue.first;
+    auto __epilogue_max_element = *__epilogue.second;
+    if (__epilogue_min_element < __min_element && __epilogue_max_element > __max_element) {
+      return __epilogue;
+    } else if (__epilogue_min_element < __min_element) {
+      __min_element = __epilogue_min_element;
+      __min_block_start = __first;
+      __min_block_end = __last;
+    } else {
+      __max_element = __epilogue_max_element;
+      __max_block_start = __first;
+      __max_block_end = __last;
+    }
+  }
+
+  // locate min
+  for(; __min_block_start != __min_block_end; ++__min_block_start) {
+    if (*__min_block_start == __min_element) 
+      break;
+  }
+
+  for(; __max_block_start != __max_block_end; ++__max_block_start) {
+    if (*__max_block_start == __max_element) 
+      break;
+  }
+
+  return {__min_block_start, __max_block_start};
+}
+
+template <class _Iter, class _Proj, class _Comp,
+          __enable_if_t
+          <is_integral_v<__iter_value_type<_Iter>>
+          && is_same_v<__iterator_category_type<_Iter>, random_access_iterator_tag>
+          && __is_identity<_Proj>::value
+          && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
+          int> = 0
+          >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+__minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
+  if (__libcpp_is_constant_evaluated()) {
+    return __minmax_element_loop(__first, __last, __comp, __proj);
+  } else {
+    auto __res = std::__minmax_element_vectorized(std::__unwrap_iter(__first), std::__unwrap_iter(__last));
+    return {std::__rewrap_iter(__first, __res.first), std::__rewrap_iter(__first, __res.second)};
+  }
+}
+// template <class _Iter, class _Proj, class _Comp,
+//           __enable_if_t
+//           <!is_integral_v<__iter_value_type<_Iter>>
+//           && is_same_v<__iterator_category_type<_Iter>, random_access_iterator_tag>
+//           && __can_map_to_integer_v<__iter_value_type<_Iter>> 
+//           && __libcpp_is_trivially_equality_comparable<__iter_value_type<_Iter>, __iter_value_type<_Iter>>::value
+//           && __is_identity<_Proj>::value 
+//           && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
+//           int> = 0
+//         >
+// _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
+// __minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
+//   if (__libcpp_is_constant_evaluated()) {
+//     return __minmax_element_loop(__first, __last, __comp, __proj);
+//   } else {
+//   }
 // }
-
-
-template <class _Iter, class _Proj, class _Comp,
-          __enable_if_t<is_integral_v<typename std::iterator_traits<_Iter>::value_type>
-          && __is_identity<_Proj>::value && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
-          int> = 0
-          >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
-__minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
-  if (__libcpp_is_constant_evaluated()) {
-    return __minmax_element_loop(__first, __last, __comp, __proj);
-  } else {
-
-  }
-}
-
-template <class _Iter, class _Proj, class _Comp,
-          __enable_if_t<!is_integral_v<typename std::iterator_traits<_Iter>::value_type>
-          && __can_map_to_integer_v<typename std::iterator_traits<_Iter>::value_type> 
-          && __libcpp_is_trivially_equality_comparable<typename std::iterator_traits<_Iter>::value_type, typename std::iterator_traits<_Iter>::value_type>::value
-          && __is_identity<_Proj>::value && __desugars_to_v<__less_tag, _Comp, _Iter, _Iter>,
-          int> = 0
-          >
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
-__minmax_element_impl(_Iter __first, _Iter __last, _Comp& __comp, _Proj& __proj) {
-  if (__libcpp_is_constant_evaluated()) {
-    return __minmax_element_loop(__first, __last, __comp, __proj);
-  } else {
-
-  }
-}
-
 template <class _Iter, class _Sent, class _Proj, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iter, _Iter>
 __minmax_element_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
