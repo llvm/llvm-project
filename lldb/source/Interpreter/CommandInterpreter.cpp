@@ -1377,14 +1377,7 @@ bool CommandInterpreter::GetAliasFullName(llvm::StringRef cmd,
 }
 
 bool CommandInterpreter::AliasExists(llvm::StringRef cmd) const {
-  const bool exact_match = (m_alias_dict.find(cmd) != m_alias_dict.end());
-  if (exact_match)
-    return true;
-
-  StringList matches;
-  const int num_cmd_matches =
-      AddNamesMatchingPartialString(m_command_dict, cmd, matches);
-  return num_cmd_matches > 0;
+  return m_alias_dict.find(cmd) != m_alias_dict.end();
 }
 
 bool CommandInterpreter::UserCommandExists(llvm::StringRef cmd) const {
