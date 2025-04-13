@@ -23722,6 +23722,7 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("function([]() { return b; })", MergeInline);
   verifyFormat("function([]() { return b; }, a)", MergeInline);
   verifyFormat("function(a, []() { return b; })", MergeInline);
+  verifyFormat("auto guard = foo{[&] { exit_status = true; }};", MergeInline);
 
   // Check option "BraceWrapping.BeforeLambdaBody" and different state of
   // AllowShortLambdasOnASingleLine
