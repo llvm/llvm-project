@@ -191,6 +191,9 @@ Non-comprehensive list of changes in this release
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
+- Added `__builtin_get_vtable_pointer` to directly load the primary vtable pointer from a
+  polymorphic object and `__builtin_virtual_member_address` to load the real function pointer of a
+  virtual method.
 
 New Compiler Flags
 ------------------

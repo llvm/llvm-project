@@ -970,6 +970,18 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
+def GetVtablePointer : LangBuiltin<"CXX_LANG"> {
+  let Spellings = ["__builtin_get_vtable_pointer"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*)";
+}
+
+def VirtualMemberAddress : Builtin {
+  let Spellings = ["__builtin_virtual_member_address"];
+  let Attributes = [CustomTypeChecking, NoThrow, Const];
+  let Prototype = "void*(void*,void*)";
+}
+
 // GCC exception builtins
 def EHReturn : Builtin {
   let Spellings = ["__builtin_eh_return"];

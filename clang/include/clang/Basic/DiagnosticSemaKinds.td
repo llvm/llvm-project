@@ -1013,6 +1013,17 @@ def err_ptrauth_indirect_goto_addrlabel_arithmetic : Error<
   "%select{subtraction|addition}0 of address-of-label expressions is not "
   "supported with ptrauth indirect gotos">;
 
+def err_virtual_member_lhs_cxxrec
+    : Error<"first argument to __builtin_virtual_member_address must have C++ "
+            "class type">;
+def err_virtual_member_addrof
+    : Error<
+          "second argument to __builtin_virtual_member_address must be the "
+          "address of a virtual C++ member function: for example '&Foo::func'">;
+def err_virtual_member_inherit
+    : Error<"first argument to __builtin_virtual_member_address must have a "
+            "type deriving from class where second argument was defined">;
+
 /// main()
 // static main() is not an error in C, just in C++.
 def warn_static_main : Warning<"'main' should not be declared static">,
@@ -12546,6 +12557,14 @@ def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;
 def err_bit_cast_type_size_mismatch : Error<
   "size of '__builtin_bit_cast' source type %0 does not match destination type %1 (%2 vs %3 bytes)">;
+
+def err_get_vtable_pointer_incorrect_type
+    : Error<"__builtin_get_vtable_pointer requires an argument of%select{| "
+            "polymorphic}0 class pointer type"
+            ", but %1 %select{was provided|has no virtual methods}0">;
+def err_get_vtable_pointer_requires_complete_type
+    : Error<"__builtin_get_vtable_pointer requires an argument with a complete "
+            "type, but %0 is incomplete">;
 
 // SYCL-specific diagnostics
 def warn_sycl_kernel_num_of_template_params : Warning<
