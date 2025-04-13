@@ -80,8 +80,6 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
                                                bool IsPCRel,
                                                MCContext &Ctx) const {
   unsigned Kind = Fixup.getTargetKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   uint8_t Specifier = Target.getSpecifier();
   auto CheckFDPIC = [&](uint32_t Type) {
     if (getOSABI() != ELF::ELFOSABI_ARM_FDPIC)
