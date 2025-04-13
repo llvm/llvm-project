@@ -9,8 +9,8 @@
 // This file implements the Linalg operations.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include <iostream>
 
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
@@ -4486,13 +4486,23 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // Verify result shape is greater than the minimum expected
   // by the pack operation, and that the output shape
   // represents full tiles.
-  auto expectedPackedShape = PackOp::inferPackedShape(
+  SmallVector<int64_t> expectedPackedShape = PackOp::inferPackedShape(
       unpackedType.getShape(), packOrUnPack.getStaticTiles(),
       packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
+
   if (!areAllInBound(expectedPackedShape, packedType.getShape())) {
+    auto elementType = unpackedType.getElementType();
+    Type expectedType, actualType;
+    if (packOrUnPack.hasPureTensorSemantics()) {
+      expectedType = RankedTensorType::get(expectedPackedShape, elementType);
+      actualType = RankedTensorType::get(packedType.getShape(), elementType);
+    } else {
+      expectedType = MemRefType::get(expectedPackedShape, elementType);
+      actualType = MemRefType::get(packedType.getShape(), elementType);
+    }
     return op->emitError("the shape of output is not large enough to hold the "
                          "packed data. Expected at least ")
-           << expectedPackedShape << ", got " << packedType.getShape();
+           << expectedType << ", got " << actualType;
   }
   if (!llvm::all_of(
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
@@ -4696,13 +4706,11 @@ asShapeWithAnyValueAsDynamic(ArrayRef<OpFoldResult> ofrs) {
   return result;
 }
 
-/// Helper for PackOp::{getResultShape,inferPackedTensorType}. Returns the shape
-/// of the packed type. Having a shared helper helps implement these two methods
-/// in a way that ensures that they agree on which dimensions are dynamic.
-static SmallVector<int64_t> getPackOpResultTypeShape(
-    ArrayRef<int64_t> sourceShape, ArrayRef<int64_t> innerTileSizes,
-    ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm) {
-  SmallVector<int64_t> resultShape = llvm::to_vector(sourceShape);
+SmallVector<int64_t> PackOp::inferPackedShape(ArrayRef<int64_t> inputShape,
+                                              ArrayRef<int64_t> innerTileSizes,
+                                              ArrayRef<int64_t> innerDimsPos,
+                                              ArrayRef<int64_t> outerDimsPerm) {
+  SmallVector<int64_t> resultShape = llvm::to_vector(inputShape);
   for (auto tiledDim : llvm::enumerate(llvm::to_vector(innerDimsPos))) {
     if (ShapedType::isDynamic(resultShape[tiledDim.value()]))
       continue;
@@ -4742,9 +4750,9 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   resultDims.append(innerTileSizes.begin(), innerTileSizes.end());
 
   SmallVector<int64_t> resultTypeShape =
-      getPackOpResultTypeShape(asShapeWithAnyValueAsDynamic(sourceDims),
-                               asShapeWithAnyValueAsDynamic(innerTileSizes),
-                               innerDimsPos, outerDimsPerm);
+      inferPackedShape(asShapeWithAnyValueAsDynamic(sourceDims),
+                       asShapeWithAnyValueAsDynamic(innerTileSizes),
+                       innerDimsPos, outerDimsPerm);
 
   // Fix-up `resultDims` to ensure that they are Value's if and only if the
   // result type shape says it's a dynamic dim. This is needed as callers may
@@ -4765,7 +4773,7 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
 RankedTensorType PackOp::inferPackedTensorType(
     RankedTensorType sourceType, ArrayRef<int64_t> innerTileSizes,
     ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm) {
-  SmallVector<int64_t> resultShape = getPackOpResultTypeShape(
+  SmallVector<int64_t> resultShape = inferPackedShape(
       sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
   return RankedTensorType::get(resultShape, sourceType.getElementType());
 }
@@ -4774,17 +4782,9 @@ MemRefType PackOp::inferPackedMemRefType(MemRefType sourceType,
                                          ArrayRef<int64_t> innerTileSizes,
                                          ArrayRef<int64_t> innerDimsPos,
                                          ArrayRef<int64_t> outerDimsPerm) {
-  SmallVector<int64_t> resultShape = getPackOpResultTypeShape(
+  SmallVector<int64_t> resultShape = inferPackedShape(
       sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
   return MemRefType::get(resultShape, sourceType.getElementType());
-}
-
-SmallVector<int64_t> PackOp::inferPackedShape(ArrayRef<int64_t> inputShape,
-                                              ArrayRef<int64_t> innerTileSizes,
-                                              ArrayRef<int64_t> innerDimsPos,
-                                              ArrayRef<int64_t> outerDimsPerm) {
-  return getPackOpResultTypeShape(inputShape, innerTileSizes, innerDimsPos,
-                                  outerDimsPerm);
 }
 
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
@@ -5004,10 +5004,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     return success();
   }
 
-  // Insert tensor.cast if static shape inference is available..
-  bool hasTensorSemantics = packOp.hasPureTensorSemantics();
-
-  // TODO: support memref.cast if static shape inference is available.
+  // Insert tensor.cast ops if static shape inference is available..
   SmallVector<int64_t> srcShape, destShape;
   if (inferStaticShape(packOp, srcShape, destShape)) {
     Location loc = packOp.getLoc();
@@ -5033,15 +5030,19 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     // Insert a cast if needed
     if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
+      Operation *castOp;
+      bool hasTensorSemantics = packOp.hasPureTensorSemantics();
       if (hasTensorSemantics) {
-        auto castOp =
+        castOp =
             rewriter.create<tensor::CastOp>(loc, originalResultType, packOp);
-        rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
       } else {
-        auto castOp =
+        castOp =
             rewriter.create<memref::CastOp>(loc, originalResultType, packOp);
-        rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
       }
+      rewriter.replaceAllUsesExcept(packOp, castOp->getResult(0), castOp);
+    } else {
+      // TODO: support memref.cast if static shape inference is available.
+      return failure();
     }
     return success();
   }
@@ -5423,6 +5424,7 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
     if (!tensor::hasFoldableTensorCastOperand(op))
       return failure();
 
+    // TODO: Support Memref PackOp. Temporarily return failure.
     if (!op.hasPureTensorSemantics())
       return failure();
 

@@ -77,10 +77,8 @@ struct OpenMPOpConversion : public ConvertOpToLLVMPattern<T> {
       if constexpr (llvm::is_one_of<T, omp::AtomicUpdateOp, omp::AtomicWriteOp,
                                     omp::FlushOp, omp::MapBoundsOp,
                                     omp::ThreadprivateOp>::value) {
-        if (isa<MemRefType>(originalOperand.getType())) {
-          // TODO: Support Memref PackOp. Temporarily return failure.
+        if (isa<MemRefType>(originalOperand.getType()))
           return rewriter.notifyMatchFailure(op, "memref is not supported yet");
-        }
       }
       convertedOperands.push_back(convertedOperand);
     }

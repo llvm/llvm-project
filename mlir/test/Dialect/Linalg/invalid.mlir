@@ -1676,7 +1676,6 @@ func.func @pack_source_dest_type_mismatch_1(%source: tensor<128x256xf32>, %dest:
   return
 }
 
-
 // -----
 
 func.func @pack_source_dest_type_mismatch_2(%source: memref<128x256xf32>, %dest: tensor<8x16x8x32xf32>) {
@@ -1688,7 +1687,7 @@ func.func @pack_source_dest_type_mismatch_2(%source: memref<128x256xf32>, %dest:
 
 // -----
 
-func.func @unpack_source_dest_type_mismatch_1(%source: tensor<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
+func.func @unpack_source_dest_type_mismatch_3(%source: tensor<16x8x8x32xf32>, %dest: memref<128x256xf32>) {
   // expected-error@+1 {{mixing tensor and buffer semantics is not allowed}}
   linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
       into %dest : tensor<16x8x8x32xf32> -> memref<128x256xf32>
@@ -1697,7 +1696,7 @@ func.func @unpack_source_dest_type_mismatch_1(%source: tensor<16x8x8x32xf32>, %d
 
 // -----
 
-func.func @unpack_source_dest_type_mismatch_1(%source: memref<16x8x8x32xf32>, %dest: tensor<128x256xf32>) {
+func.func @unpack_source_dest_type_mismatch_4(%source: memref<16x8x8x32xf32>, %dest: tensor<128x256xf32>) {
   // expected-error@+1 {{mixing tensor and buffer semantics is not allowed}}
   %0 = linalg.unpack %source inner_dims_pos = [0, 1] inner_tiles = [8, 32]
       into %dest : memref<16x8x8x32xf32> -> tensor<128x256xf32>

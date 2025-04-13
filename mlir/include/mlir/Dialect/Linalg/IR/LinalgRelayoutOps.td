@@ -190,6 +190,8 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Method to get the `RankedTensorType` of the result based on the inner
     // tiles, position of the inner tiles (innerDimsPos)  and interchange vector
     // of outer loops (outerDimsPerm).
+    /// This method uses inferPackedShape to ensure consistency with other shape
+    /// inference methods regarding which dimensions are dynamic.
     static RankedTensorType inferPackedTensorType(RankedTensorType sourceType,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
@@ -197,6 +199,8 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Method to get the `MemRefType` of the result based on the inner
     // tiles, position of the inner tiles (innerDimsPos)  and interchange vector
     // of outer loops (outerDimsPerm).
+    /// This method uses inferPackedShape to ensure consistency with other shape
+    /// inference methods regarding which dimensions are dynamic.
     static MemRefType inferPackedMemRefType(MemRefType sourceType,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});
@@ -204,6 +208,11 @@ def Linalg_PackOp : Linalg_RelayoutOp<"pack", [
     // Method to get the Shape of the result based on the input shape, inner
     // tiles, position of the inner tiles (innerDimsPos)  and interchange vector
     // of outer loops (outerDimsPerm).
+
+    /// Helper for PackOp::{getResultShape, inferPackedTensorType, inferPackedMemRefType}.
+    /// Returns the shape of the packed type. Having a shared helper helps
+    /// implement these three methods in a way that ensures
+    /// that they agree on which dimensions are dynamic.
     static SmallVector<int64_t> inferPackedShape(ArrayRef<int64_t> inputShape,
         ArrayRef<int64_t> innerTileSizes, ArrayRef<int64_t> innerDimsPos,
         ArrayRef<int64_t> outerDimsPerm = {});

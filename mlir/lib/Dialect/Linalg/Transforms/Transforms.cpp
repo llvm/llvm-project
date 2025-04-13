@@ -219,7 +219,6 @@ private:
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -269,6 +268,7 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
     highs[pos] = affine::makeComposedFoldedAffineApply(
         rewriter, loc, map, {outerSize, origSize, innerSize});
   }
+  // TODO: Need memref.pad operation to support memref operands
   RankedTensorType collapsed = tensor::CollapseShapeOp::inferCollapsedType(
       RankedTensorType::Builder(packedTensorType).setShape(stripMinedShape),
       packingMetadata.reassociations);
@@ -359,19 +359,11 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
                     bool lowerUnpadLikeWithExtractSlice) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!unPackOp.hasPureTensorSemantics()) {
-    return failure();
-  }
-
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
-  auto packedTensorType = dyn_cast<RankedTensorType>(unPackOp.getSourceType());
-  if (!packedTensorType)
-    return failure();
-
+  auto packedTensorType = cast<RankedTensorType>(unPackOp.getSourceType());
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -1038,13 +1030,13 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
+  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  if (!packOp.hasPureTensorSemantics())
+    return input;
+
   if (!packOp.getPaddingValue()) {
     return input;
   }
-
-  // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!packOp.hasPureTensorSemantics())
-    return packOp.getSource();
 
   assert(llvm::all_of(packOp.getAllOuterDims(),
                       [](int64_t val) { return val == 1; }) &&
@@ -1158,7 +1150,6 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
-  // TODO: Support Memref PackOp. Temporarily return failure.
   if (!packOp.hasPureTensorSemantics())
     return failure();
 
@@ -1263,10 +1254,8 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
 LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     linalg::UnPackOp unpackOp, PatternRewriter &rewriter) const {
-  // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!unpackOp.hasPureTensorSemantics()) {
+  if (!unpackOp.hasPureTensorSemantics())
     return failure();
-  }
 
   int64_t srcRank = unpackOp.getSourceRank();
   int64_t destRank = unpackOp.getDestRank();

@@ -63,9 +63,6 @@ getPackingInfoFromOperand(OpOperand *opOperand, linalg::GenericOp genericOp,
                           OpTy packOrUnPackOp) {
   static_assert(llvm::is_one_of<OpTy, linalg::PackOp, linalg::UnPackOp>::value,
                 "applies to only pack or unpack operations");
-  if (!packOrUnPackOp.hasPureTensorSemantics())
-    return failure();
-
   LLVM_DEBUG(
       { llvm::dbgs() << "--- Construct PackInfo From an operand ---\n"; });
 
@@ -376,9 +373,6 @@ static GenericOp packGenericOp(RewriterBase &rewriter, GenericOp genericOp,
 static FailureOr<GenericOp>
 bubbleUpPackOpThroughGenericOp(RewriterBase &rewriter, linalg::PackOp packOp,
                                const ControlPropagationFn &controlFn) {
-  if (!packOp.hasPureTensorSemantics())
-    return failure();
-
   auto genericOp = packOp.getSource().getDefiningOp<GenericOp>();
   if (!genericOp)
     return failure();

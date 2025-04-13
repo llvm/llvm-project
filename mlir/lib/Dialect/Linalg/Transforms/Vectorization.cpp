@@ -1588,10 +1588,6 @@ static LogicalResult
 vectorizeAsTensorPackOp(RewriterBase &rewriter, linalg::PackOp packOp,
                         ArrayRef<int64_t> inputVectorSizes,
                         SmallVectorImpl<Value> &newResults) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!packOp.hasPureTensorSemantics())
-    return failure();
-
   // TODO: Introduce a parent class that will handle the insertion point update.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(packOp);
@@ -1668,17 +1664,11 @@ static LogicalResult
 vectorizeAsTensorUnpackOp(RewriterBase &rewriter, linalg::UnPackOp unpackOp,
                           ArrayRef<int64_t> inputVectorSizes,
                           SmallVectorImpl<Value> &newResults) {
-  // TODO: Support Memref PackOp. Temporarily return failure.
-  if (!unpackOp.hasPureTensorSemantics())
-    return failure();
-
   // TODO: Introduce a parent class that will handle the insertion point update.
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unpackOp);
 
-  auto unpackTensorType = dyn_cast<RankedTensorType>(unpackOp.getSourceType());
-  if (!unpackTensorType)
-    return failure();
+  auto unpackTensorType = cast<RankedTensorType>(unpackOp.getSourceType());
 
   ArrayRef<int64_t> innerDimPos = unpackOp.getInnerDimsPos();
   ArrayRef<int64_t> innerTiles = unpackOp.getStaticInnerTiles();
