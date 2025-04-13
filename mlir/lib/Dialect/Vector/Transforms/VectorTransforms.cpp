@@ -1136,7 +1136,8 @@ public:
 /// ```
 /// memref.store %arg2, %arg0[%arg1] : memref<?xf32>
 /// ```
-class StoreFromSplat final : public OpRewritePattern<vector::StoreOp> {
+class StoreFromSplatOrBroadcast final
+    : public OpRewritePattern<vector::StoreOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
@@ -2245,8 +2246,8 @@ void mlir::vector::populateSinkVectorOpsPatterns(RewritePatternSet &patterns,
 
 void mlir::vector::populateSinkVectorMemOpsPatterns(RewritePatternSet &patterns,
                                                     PatternBenefit benefit) {
-  patterns.add<ExtractOpFromLoad, StoreFromSplat>(patterns.getContext(),
-                                                  benefit);
+  patterns.add<ExtractOpFromLoad, StoreFromSplatOrBroadcast>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::populateChainedVectorReductionFoldingPatterns(
