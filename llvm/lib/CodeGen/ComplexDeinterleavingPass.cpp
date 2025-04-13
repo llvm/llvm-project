@@ -2332,8 +2332,9 @@ void ComplexDeinterleavingGraph::replaceNodes() {
     } else if (RootNode->Operation ==
                ComplexDeinterleavingOperation::ReductionSingle) {
       auto *RootInst = cast<Instruction>(RootNode->Real);
-      ReductionInfo[RootInst].first->removeIncomingValue(BackEdge);
-      DeadInstrRoots.push_back(ReductionInfo[RootInst].second);
+      auto &Info = ReductionInfo[RootInst];
+      Info.first->removeIncomingValue(BackEdge);
+      DeadInstrRoots.push_back(Info.second);
     } else {
       assert(R && "Unable to find replacement for RootInstruction");
       DeadInstrRoots.push_back(RootInstruction);
