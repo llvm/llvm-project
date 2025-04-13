@@ -177,20 +177,19 @@ void write_enumB(S_B *s, B x) {
   s->field2 = x;
   // bitfieldwarnings-warning@-1 {{signed bit-field 'field2' needs an extra bit to represent the largest positive enumerators of 'B'}}
   // bitfieldwarnings-note@#S_B_field2 {{consider making the bit-field type unsigned}}
-  
   s->field3 = x;
   s->field4 = (unsigned)x;
-  // expected-error@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'B'}}
   // expected-note@#S_B_field4 {{widen this field to 2 bits to store all values of 'B'}}
   // expected-note@#preferred_S_B_field4 {{preferred type for bit-field 'B' specified here}}
   s->field5 = (unsigned)x;
   s->field6 = (unsigned)x;
   s->field7 = (int)x;
-  // expected-error@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'B'}}
   // expected-note@#S_B_field7 {{widen this field to 2 bits to store all values of 'B'}}
   // expected-note@#preferred_S_B_field7 {{preferred type for bit-field 'B' specified here}}
   s->field8 = (int)x;
-  // expected-error@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'B'}}
   // expected-note@#S_B_field8 {{consider making the bit-field type unsigned}}
   // expected-note@#preferred_S_B_field8 {{preferred type for bit-field 'B' specified here}}
   s->field9 = (int)x;
@@ -198,6 +197,7 @@ void write_enumB(S_B *s, B x) {
   s->field11 = (D)x;
   s->field12 = (D)x;
 }
+
 void write_enumC(S_C *s, C x) {
   s->field1 = x;
   // bitfieldwarnings-warning@-1 {{bit-field 'field1' is not wide enough to store all enumerators of 'C'}}
@@ -205,17 +205,17 @@ void write_enumC(S_C *s, C x) {
   s->field2 = x;
   s->field3 = x;
   s->field4 = (unsigned)x;
-  // expected-error@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'C'}}
   // expected-note@#S_C_field4 {{widen this field to 2 bits to store all values of 'C'}}
   // expected-note@#preferred_S_C_field4 {{preferred type for bit-field 'C' specified here}}
   s->field5 = (unsigned)x;
   s->field6 = (unsigned)x;
   s->field7 = (int)x;
-  // expected-error@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'C'}}
   // expected-note@#S_C_field7 {{widen this field to 2 bits to store all values of 'C'}}
   // expected-note@#preferred_S_C_field7 {{preferred type for bit-field 'C' specified here}}
   s->field8 = (int)x;
-  // expected-error@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'C'}}
   // expected-note@#S_C_field8 {{consider making the bit-field type unsigned}}
   // expected-note@#preferred_S_C_field8 {{preferred type for bit-field 'C' specified here}}
   s->field9 = (int)x;
@@ -231,17 +231,17 @@ void write_enum_intA(struct S_A *s, int x) {
   s->field2 = (A)x;
   s->field3 = (A)x;
   s->field4 = x;
-  // expected-error@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'A'}}
+  // expected-warning@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'A'}}
   // expected-note@#S_A_field4 {{widen this field to 2 bits to store all values of 'A'}}
   // expected-note@#preferred_S_A_field4 {{preferred type for bit-field 'A' specified here}}
   s->field5 = x;
   s->field6 = x;
   s->field7 = x;
-  // expected-error@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'A'}}
+  // expected-warning@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'A'}}
   // expected-note@#S_A_field7 {{widen this field to 2 bits to store all values of 'A'}}
   // expected-note@#preferred_S_A_field7 {{preferred type for bit-field 'A' specified here}}
   s->field8 = x;
-  // expected-error@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'A'}}
+  // expected-warning@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'A'}}
   // expected-note@#S_A_field8 {{consider making the bit-field type unsigned}}
   // expected-note@#preferred_S_A_field8 {{preferred type for bit-field 'A' specified here}}
   s->field9 = x;
@@ -259,17 +259,17 @@ void write_enum_intB(struct S_B *s, int x) {
   // bitfieldwarnings-note@#S_B_field2 {{consider making the bit-field type unsigned}}
   s->field3 = (B)x;
   s->field4 = x;
-  // expected-error@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'B'}}
   // expected-note@#S_B_field4 {{widen this field to 2 bits to store all values of 'B'}}
   // expected-note@#preferred_S_B_field4 {{preferred type for bit-field 'B' specified here}}
   s->field5 = x;
   s->field6 = x;
   s->field7 = x;
-  // expected-error@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'B'}}
   // expected-note@#S_B_field7 {{widen this field to 2 bits to store all values of 'B'}}
   // expected-note@#preferred_S_B_field7 {{preferred type for bit-field 'B' specified here}}
   s->field8 = x;
-  // expected-error@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'B'}}
+  // expected-warning@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'B'}}
   // expected-note@#S_B_field8 {{consider making the bit-field type unsigned}}
   // expected-note@#preferred_S_B_field8 {{preferred type for bit-field 'B' specified here}}
   s->field9 = x;
@@ -285,17 +285,17 @@ void write_enum_intC(struct S_C *s, int x) {
   s->field2 = (C)x;
   s->field3 = (C)x;
   s->field4 = x;
-  // expected-error@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{bit-field 'field4' is not wide enough to store all enumerators of preferred type 'C'}}
   // expected-note@#S_C_field4 {{widen this field to 2 bits to store all values of 'C'}}
   // expected-note@#preferred_S_C_field4 {{preferred type for bit-field 'C' specified here}}
   s->field5 = x;
   s->field6 = x;
   s->field7 = x;
-  // expected-error@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{bit-field 'field7' is not wide enough to store all enumerators of preferred type 'C'}}
   // expected-note@#S_C_field7 {{widen this field to 2 bits to store all values of 'C'}}
   // expected-note@#preferred_S_C_field7 {{preferred type for bit-field 'C' specified here}}
   s->field8 = x;
-  // expected-error@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'C'}}
+  // expected-warning@-1 {{signed bit-field 'field8' needs an extra bit to represent the largest positive enumerators of preferred type 'C'}}
   // expected-note@#S_C_field8 {{consider making the bit-field type unsigned}}
   // expected-note@#preferred_S_C_field8 {{preferred type for bit-field 'C' specified here}}
   s->field9 = x;
