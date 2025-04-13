@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy %s bugprone-unintended-char-ostream-output %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             {bugprone-unintended-char-ostream-output.CastTypeName: \"unsigned char\"}}"
+// RUN:             {bugprone-unintended-char-ostream-output.AllowedTypes: \"\"}}"
 
 namespace std {
 
@@ -27,19 +27,14 @@ using ostream = basic_ostream<char>;
 
 } // namespace std
 
-using uint8_t = unsigned char;
-using int8_t = signed char;
-
 void origin_ostream(std::ostream &os) {
-  uint8_t unsigned_value = 9;
+  unsigned char unsigned_value = 9;
   os << unsigned_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'uint8_t' (aka 'unsigned char') passed to 'operator<<' outputs as character instead of integer
-  // CHECK-FIXES: os << static_cast<unsigned char>(unsigned_value);
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'unsigned char' passed to 'operator<<' outputs as character instead of integer
 
-  int8_t signed_value = 9;
+  signed char signed_value = 9;
   os << signed_value;
-  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'int8_t' (aka 'signed char') passed to 'operator<<' outputs as character instead of integer
-  // CHECK-FIXES: os << static_cast<unsigned char>(signed_value);
+  // CHECK-MESSAGES: [[@LINE-1]]:6: warning: 'signed char' passed to 'operator<<' outputs as character instead of integer
 
   char char_value = 9;
   os << char_value;
