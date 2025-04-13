@@ -46,7 +46,7 @@
 #define DEBUGSERVER_BASENAME "lldb-server"
 #endif
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
 #include <compression.h>
 #endif
 
@@ -77,7 +77,7 @@ GDBRemoteCommunication::~GDBRemoteCommunication() {
     Disconnect();
   }
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (m_decompression_scratch)
     free (m_decompression_scratch);
 #endif
@@ -514,7 +514,7 @@ bool GDBRemoteCommunication::DecompressPacket() {
     }
   }
 
-#if defined(HAVE_LIBCOMPRESSION)
+#if HAVE_LIBCOMPRESSION
   if (m_compression_type == CompressionType::ZlibDeflate ||
       m_compression_type == CompressionType::LZFSE ||
       m_compression_type == CompressionType::LZ4 ||
