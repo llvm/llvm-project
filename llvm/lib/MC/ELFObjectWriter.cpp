@@ -1246,53 +1246,15 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm) {
 // It is always valid to create a relocation with a symbol. It is preferable
 // to use a relocation with a section if that is possible. Using the section
 // allows us to omit some local symbols from the symbol table.
-bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
-                                               const MCValue &Val,
-                                               const MCSymbolELF *Sym,
-                                               uint64_t C,
-                                               unsigned Type) const {
-  // A PCRel relocation to an absolute value has no symbol (or section). We
-  // represent that with a relocation to a null section.
-  if (!Val.getAddSym())
-    return false;
-
-  // An undefined symbol is not in any section, so the relocation has to point
-  // to the symbol itself.
-  assert(Sym && "Expected a symbol");
-  if (Sym->isUndefined()) {
-    // The .odp creation emits a relocation against the symbol ".TOC." which
-    // create a R_PPC64_TOC relocation. However the relocation symbol name
-    // in final object creation should be NULL, since the symbol does not
-    // really exist, it is just the reference to TOC base for the current
-    // object file. Since the symbol is undefined, returning false results
-    // in a relocation with a null section which is the desired result.
-    return !(Type == ELF::R_PPC64_TOC &&
-             TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
-  }
-
-  unsigned Binding = Sym->getBinding();
-  switch(Binding) {
-  default:
-    llvm_unreachable("Invalid Binding");
-  case ELF::STB_LOCAL:
-    break;
-  case ELF::STB_WEAK:
-    // If the symbol is weak, it might be overridden by a symbol in another
-    // file. The relocation has to point to the symbol so that the linker
-    // can update it.
-    return true;
-  case ELF::STB_GLOBAL:
-  case ELF::STB_GNU_UNIQUE:
-    // Global ELF symbols can be preempted by the dynamic linker. The relocation
-    // has to point to the symbol for a reason analogous to the STB_WEAK case.
-    return true;
-  }
-
+bool ELFObjectWriter::useSectionSymbol(const MCAssembler &Asm,
+                                       const MCValue &Val,
+                                       const MCSymbolELF *Sym, uint64_t C,
+                                       unsigned Type) const {
   // Keep symbol type for a local ifunc because it may result in an IRELATIVE
   // reloc that the dynamic loader will use to resolve the address at startup
   // time.
   if (Sym->getType() == ELF::STT_GNU_IFUNC)
-    return true;
+    return false;
 
   // If a relocation points to a mergeable section, we have to be careful.
   // If the offset is zero, a relocation with the section will encode the
@@ -1306,13 +1268,13 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     unsigned Flags = Sec.getFlags();
     if (Flags & ELF::SHF_MERGE) {
       if (C != 0)
-        return true;
+        return false;
 
       // gold<2.34 incorrectly ignored the addend for R_386_GOTOFF (9)
       // (http://sourceware.org/PR16794).
       if (TargetObjectWriter->getEMachine() == ELF::EM_386 &&
           Type == ELF::R_386_GOTOFF)
-        return true;
+        return false;
 
       // ld.lld handles R_MIPS_HI16/R_MIPS_LO16 separately, not as a whole, so
       // it doesn't know that an R_MIPS_HI16 with implicit addend 1 and an
@@ -1323,7 +1285,7 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
       // symbol for this case as well.
       if (TargetObjectWriter->getEMachine() == ELF::EM_MIPS &&
           !hasRelocationAddend())
-        return true;
+        return false;
     }
 
     // Most TLS relocations use a got, so they need the symbol. Even those that
@@ -1331,7 +1293,7 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
     // 5efeedf61e4fe720fd3e9a08e6c91c10abb66d42 (2014-09-26) which fixed
     // http://sourceware.org/PR16773.
     if (Flags & ELF::SHF_TLS)
-      return true;
+      return false;
   }
 
   // If the symbol is a thumb function the final relocation must set the lowest
@@ -1339,11 +1301,9 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   // set, so we would lose the bit if we relocated with the section.
   // FIXME: We could use the section but add the bit to the relocation value.
   if (Asm.isThumbFunc(Sym))
-    return true;
+    return false;
 
-  if (TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type))
-    return true;
-  return false;
+  return !TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type);
 }
 
 bool ELFObjectWriter::checkRelocation(MCContext &Ctx, SMLoc Loc,
@@ -1425,17 +1385,19 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     return;
 
   unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
-  const auto *Parent = cast<MCSectionELF>(Fragment->getParent());
-  // Emiting relocation with sybmol for CG Profile to  help with --cg-profile.
-  bool RelocateWithSymbol =
-      shouldRelocateWithSymbol(Asm, Target, SymA, C, Type) ||
-      (Parent->getType() == ELF::SHT_LLVM_CALL_GRAPH_PROFILE);
-  uint64_t Addend = !RelocateWithSymbol && SymA && !SymA->isUndefined()
-                        ? C + Asm.getSymbolOffset(*SymA)
-                        : C;
-  FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
+  bool UseSectionSym =
+      SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
+  if (UseSectionSym) {
+    UseSectionSym = useSectionSymbol(Asm, Target, SymA, C, Type);
 
-  if (!RelocateWithSymbol) {
+    // Disable STT_SECTION adjustment for CG Profile to help with --cg-profile.
+    const auto *Parent = cast<MCSectionELF>(Fragment->getParent());
+    UseSectionSym &= Parent->getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
+  }
+
+  uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;
+  FixedValue = usesRela(TO, FixupSection) ? 0 : Addend;
+  if (UseSectionSym) {
     const auto *SectionSymbol =
         SecA ? cast<MCSymbolELF>(SecA->getBeginSymbol()) : nullptr;
     if (SectionSymbol)
@@ -1444,6 +1406,12 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
     Relocations[&FixupSection].push_back(Rec);
     return;
   }
+
+  // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
+  // reference the null symbol.
+  if (Type == ELF::R_PPC64_TOC &&
+      TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
+    SymA = nullptr;
 
   const MCSymbolELF *RenamedSymA = SymA;
   if (SymA) {
