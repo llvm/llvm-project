@@ -549,11 +549,8 @@ class A
         };
         """
         tu = get_tu(source, lang="cpp")
-        c = get_cursor(tu, "A")
-        pp = PrintingPolicy.create(c)
-        base = list(c.get_children())[0].type.get_declaration()
-        set_it = list(base.get_children())[1]
-        arg = list(set_it.get_arguments())[0]
+        arg = next(get_cursor(tu, "setIt").get_arguments())
+        pp = PrintingPolicy.create(arg)
         self.assertEqual(arg.type.get_fully_qualified_name(pp), "home::Bar *")
         self.assertEqual(arg.type.get_fully_qualified_name(pp, True), "::home::Bar *")
 
