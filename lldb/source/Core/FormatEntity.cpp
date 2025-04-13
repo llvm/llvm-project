@@ -1147,19 +1147,6 @@ static void PrettyPrintFunctionNameWithArgs(Stream &out_stream,
     out_stream.PutChar(')');
 }
 
-static void FormatInlinedBlock(Stream &out_stream, Block *block) {
-  if (!block)
-    return;
-  Block *inline_block = block->GetContainingInlinedBlock();
-  if (inline_block) {
-    if (const InlineFunctionInfo *inline_info =
-            inline_block->GetInlinedFunctionInfo()) {
-      out_stream.PutCString(" [inlined] ");
-      inline_info->GetName().Dump(&out_stream);
-    }
-  }
-}
-
 static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
   assert(sc.function);
 
@@ -1170,22 +1157,6 @@ static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
   return sc.function->GetBlock(true).GetBlockVariableList(true);
 }
 
-static char const *GetInlinedFunctionName(const SymbolContext &sc) {
-  if (!sc.block)
-    return nullptr;
-
-  const Block *inline_block = sc.block->GetContainingInlinedBlock();
-  if (!inline_block)
-    return nullptr;
-
-  const InlineFunctionInfo *inline_info =
-      inline_block->GetInlinedFunctionInfo();
-  if (!inline_info)
-    return nullptr;
-
-  return inline_info->GetName().AsCString(nullptr);
-}
-
 static bool PrintFunctionNameWithArgs(Stream &s,
                                       const ExecutionContext *exe_ctx,
                                       const SymbolContext &sc) {
@@ -1194,15 +1165,10 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   ExecutionContextScope *exe_scope =
       exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
 
-  const char *cstr = sc.function->GetName().AsCString(nullptr);
+  const char *cstr =
+      sc.GetPossiblyInlinedFunctionName(Mangled::ePreferDemangled);
   if (!cstr)
     return false;
-
-  if (const char *inlined_name = GetInlinedFunctionName(sc)) {
-    s.PutCString(cstr);
-    s.PutCString(" [inlined] ");
-    cstr = inlined_name;
-  }
 
   VariableList args;
   if (auto variable_list_sp = GetFunctionVariableList(sc))
@@ -1724,21 +1690,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      const char *name = nullptr;
-      if (sc->function)
-        name = sc->function->GetName().AsCString(nullptr);
-      else if (sc->symbol)
-        name = sc->symbol->GetName().AsCString(nullptr);
-
-      if (name) {
-        s.PutCString(name);
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
+
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangled);
+    if (!name)
+      return false;
+
+    s.PutCString(name);
+
+    return true;
   }
-    return false;
 
   case Entry::Type::FunctionNameNoArgs: {
     if (!sc)
@@ -1760,20 +1722,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (language_plugin_handled) {
       s << ss.GetString();
       return true;
-    } else {
-      ConstString name;
-      if (sc->function)
-        name = sc->function->GetNameNoArguments();
-      else if (sc->symbol)
-        name = sc->symbol->GetNameNoArguments();
-      if (name) {
-        s.PutCString(name.GetCString());
-        FormatInlinedBlock(s, sc->block);
-        return true;
-      }
     }
+
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferDemangledWithoutArguments);
+    if (!name)
+      return false;
+
+    s.PutCString(name);
+
+    return true;
   }
-    return false;
 
   case Entry::Type::FunctionNameWithArgs: {
     if (!sc)
@@ -1815,19 +1774,13 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (!sc)
       return false;
 
-    const char *name = nullptr;
-    if (sc->symbol)
-      name =
-          sc->symbol->GetMangled().GetName(Mangled::ePreferMangled).AsCString();
-    else if (sc->function)
-      name = sc->function->GetMangled()
-                 .GetName(Mangled::ePreferMangled)
-                 .AsCString();
-
+    const char *name = sc->GetPossiblyInlinedFunctionName(
+        Mangled::NamePreference::ePreferMangled);
     if (!name)
       return false;
+
     s.PutCString(name);
-    FormatInlinedBlock(s, sc->block);
+
     return true;
   }
   case Entry::Type::FunctionAddrOffset:
