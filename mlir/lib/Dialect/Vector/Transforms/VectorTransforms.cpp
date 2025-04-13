@@ -902,6 +902,8 @@ private:
 };
 
 /// Reorders elementwise(broadcast/splat) to broadcast(elementwise). Ex:
+///
+/// Example:
 /// ```
 /// %a = vector.broadcast %arg1 : index to vector<1x4xindex>
 /// %b = vector.broadcast %arg2 : index to vector<1x4xindex>
@@ -987,6 +989,8 @@ struct ReorderElementwiseOpsOnBroadcast final
 /// This may result in cleaner code when extracting a single value
 /// from multi-element vector and also to help canonicalize 1-element vectors to
 /// scalars.
+///
+/// Example:
 /// ```
 ///  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
 ///  %1 = vector.extract %0[1] : f32 from vector<4xf32>
@@ -1044,6 +1048,8 @@ public:
 };
 
 /// Pattern to rewrite vector.extract(vector.load) -> vector/memref.load.
+///
+/// Example:
 /// ```
 ///  vector.load %arg0[%arg1] : memref<?xf32>, vector<4xf32>
 ///  vector.extract %0[1] : f32 from vector<4xf32>
@@ -1062,13 +1068,14 @@ public:
                                 PatternRewriter &rewriter) const override {
     auto loadOp = op.getVector().getDefiningOp<vector::LoadOp>();
     if (!loadOp)
-      return rewriter.notifyMatchFailure(op, "not a load op");
+      return rewriter.notifyMatchFailure(op, "expected a load op");
 
+    // Checking for single use so we won't duplicate load ops.
     if (!loadOp->hasOneUse())
       return rewriter.notifyMatchFailure(op, "expected single op use");
 
-    VectorType memVecType = loadOp.getVectorType();
-    if (memVecType.isScalable())
+    VectorType loadVecType = loadOp.getVectorType();
+    if (loadVecType.isScalable())
       return rewriter.notifyMatchFailure(op,
                                          "scalable vectors are not supported");
 
@@ -1077,7 +1084,7 @@ public:
       return rewriter.notifyMatchFailure(
           op, "memrefs of vectors are not supported");
 
-    int64_t rankOffset = memType.getRank() - memVecType.getRank();
+    int64_t rankOffset = memType.getRank() - loadVecType.getRank();
     if (rankOffset < 0)
       return rewriter.notifyMatchFailure(op, "unsupported ranks combination");
 
@@ -1089,6 +1096,9 @@ public:
     SmallVector<Value> indices = loadOp.getIndices();
     SmallVector<OpFoldResult> extractPos = op.getMixedPosition();
 
+    // There may be memory stores between the load and the extract op, so we
+    // need to make sure that the new load op is inserted at the same place as
+    // the original load op.
     OpBuilder::InsertionGuard g(rewriter);
     rewriter.setInsertionPoint(loadOp);
     Location loc = loadOp.getLoc();
@@ -1110,12 +1120,15 @@ public:
     } else {
       rewriter.replaceOpWithNewOp<memref::LoadOp>(op, base, indices);
     }
+    // We checked for single use so we can safely erase the load op.
     rewriter.eraseOp(loadOp);
     return success();
   }
 };
 
 /// Pattern to rewrite vector.store(vector.splat) -> vector/memref.store.
+///
+/// Example:
 /// ```
 /// %0 = vector.splat %arg2 : vector<1xf32>
 /// vector.store %0, %arg0[%arg1] : memref<?xf32>, vector<1xf32>
@@ -1145,8 +1158,9 @@ public:
 
     Operation *splat = op.getValueToStore().getDefiningOp();
     if (!isa_and_present<vector::BroadcastOp, vector::SplatOp>(splat))
-      return rewriter.notifyMatchFailure(op, "not a splat");
+      return rewriter.notifyMatchFailure(op, "neither a splat nor a broadcast");
 
+    // Checking for single use so we can remove splat.
     if (!splat->hasOneUse())
       return rewriter.notifyMatchFailure(op, "expected single op use");
 
