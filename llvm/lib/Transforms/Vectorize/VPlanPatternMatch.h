@@ -147,8 +147,8 @@ template <typename LTy, typename RTy> struct match_combine_and {
   }
 };
 
-template <typename LTy, typename RTy>
 /// Combine two pattern matchers matching L || R
+template <typename LTy, typename RTy>
 inline match_combine_or<LTy, RTy> m_CombineOr(const LTy &L, const RTy &R) {
   return match_combine_or<LTy, RTy>(L, R);
 }
@@ -457,7 +457,9 @@ m_DerivedIV(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
   return VPDerivedIV_match<Op0_t, Op1_t, Op2_t>({Op0, Op1, Op2});
 }
 
+/// Match a call argument at a given argument index.
 template <typename Opnd_t> struct Argument_match {
+  /// Call argument index to match.
   unsigned OpI;
   Opnd_t Val;
 
@@ -475,7 +477,7 @@ template <typename Opnd_t> struct Argument_match {
   }
 };
 
-/// Match an argument.
+/// Match call argument.
 template <unsigned OpI, typename Opnd_t>
 inline Argument_match<Opnd_t> m_Argument(const Opnd_t &Op) {
   return Argument_match<Opnd_t>(OpI, Op);
@@ -526,7 +528,7 @@ struct m_Intrinsic_Ty {
 };
 
 /// Match intrinsic calls like this:
-/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X))
+/// m_Intrinsic<Intrinsic::fabs>(m_VPValue(X), ...)
 template <Intrinsic::ID IntrID> inline IntrinsicID_match m_Intrinsic() {
   return IntrinsicID_match(IntrID);
 }
