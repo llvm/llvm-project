@@ -1184,6 +1184,40 @@ static bool PrintFunctionNameWithArgs(Stream &s,
   return true;
 }
 
+static bool HandleFunctionNameWithArgs(Stream &s,const ExecutionContext *exe_ctx,
+                                       const SymbolContext &sc) {
+  Language *language_plugin = nullptr;
+  bool language_plugin_handled = false;
+  StreamString ss;
+  if (sc.function)
+    language_plugin = Language::FindPlugin(sc.function->GetLanguage());
+  else if (sc.symbol)
+    language_plugin = Language::FindPlugin(sc.symbol->GetLanguage());
+
+  if (language_plugin)
+    language_plugin_handled = language_plugin->GetFunctionDisplayName(
+        sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+
+  if (language_plugin_handled) {
+    s << ss.GetString();
+    return true;
+  }
+
+  if (sc.function)
+    return PrintFunctionNameWithArgs(s, exe_ctx, sc);
+
+  if (!sc.symbol)
+    return false;
+
+  const char *cstr = sc.symbol->GetName().AsCString(nullptr);
+  if (!cstr)
+    return false;
+
+  s.PutCString(cstr);
+
+  return true;
+}
+
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    const SymbolContext *sc,
                                    const ExecutionContext *exe_ctx,
@@ -1738,36 +1772,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     if (!sc)
       return false;
 
-    Language *language_plugin = nullptr;
-    bool language_plugin_handled = false;
-    StreamString ss;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
-
-    if (language_plugin)
-      language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs,
-          ss);
-
-    if (language_plugin_handled) {
-      s << ss.GetString();
-      return true;
-    }
-
-    if (sc->function)
-      return PrintFunctionNameWithArgs(s, exe_ctx, *sc);
-
-    if (!sc->symbol)
-      return false;
-
-    const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-    if (!cstr)
-      return false;
-
-    s.PutCString(cstr);
-    return true;
+    return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
   }
 
   case Entry::Type::FunctionMangledName: {
