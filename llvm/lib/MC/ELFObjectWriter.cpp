@@ -1390,8 +1390,9 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (UseSectionSym) {
     UseSectionSym = useSectionSymbol(Asm, Target, SymA, C, Type);
 
-    // Disable STT_SECTION adjustment for .reloc directives.
-    UseSectionSym &= Fixup.getKind() >= FirstLiteralRelocationKind;
+    // Disable STT_SECTION adjustment for CG Profile to help with --cg-profile.
+    const auto *Parent = cast<MCSectionELF>(Fragment->getParent());
+    UseSectionSym &= Parent->getType() != ELF::SHT_LLVM_CALL_GRAPH_PROFILE;
   }
 
   uint64_t Addend = UseSectionSym ? C + Asm.getSymbolOffset(*SymA) : C;
