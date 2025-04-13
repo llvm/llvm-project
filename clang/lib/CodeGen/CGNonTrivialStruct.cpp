@@ -560,7 +560,8 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
       if (FD->isZeroLengthBitField())
         return;
 
-      QualType RT = QualType(FD->getParent()->getTypeForDecl(), 0);
+      CanQualType RT =
+          this->CGF->getContext().getCanonicalTagType(FD->getParent());
       llvm::Type *Ty = this->CGF->ConvertType(RT);
       Address DstAddr = this->getAddrWithOffset(Addrs[DstIdx], Offset);
       LValue DstBase =

@@ -4483,7 +4483,8 @@ void CXXNameMangler::mangleType(const InjectedClassNameType *T) {
   // Mangle injected class name types as if the user had written the
   // specialization out fully.  It may not actually be possible to see
   // this mangling, though.
-  mangleType(T->getCanonicalInjectedTST());
+  mangleType(T->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+      getASTContext()));
 }
 
 void CXXNameMangler::mangleType(const TemplateSpecializationType *T) {

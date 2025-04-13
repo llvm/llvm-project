@@ -2494,10 +2494,6 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::PredefinedSugar:
       llvm_unreachable("type class is never variably-modified!");
 
-    case Type::Elaborated:
-      type = cast<ElaboratedType>(ty)->getNamedType();
-      break;
-
     case Type::Adjusted:
       type = cast<AdjustedType>(ty)->getAdjustedType();
       break;

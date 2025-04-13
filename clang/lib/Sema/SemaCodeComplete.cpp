@@ -951,7 +951,9 @@ QualType clang::getDeclUsageType(ASTContext &C, const NamedDecl *ND) {
   else if (const auto *Method = dyn_cast<ObjCMethodDecl>(ND))
     T = Method->getSendResultType();
   else if (const auto *Enumerator = dyn_cast<EnumConstantDecl>(ND))
-    T = C.getTypeDeclType(cast<EnumDecl>(Enumerator->getDeclContext()));
+    T = C.getTagType(ElaboratedTypeKeyword::None, Qualifier,
+                     cast<EnumDecl>(Enumerator->getDeclContext()),
+                     /*OwnsTag=*/false);
   else if (const auto *Property = dyn_cast<ObjCPropertyDecl>(ND))
     T = Property->getType();
   else if (const auto *Value = dyn_cast<ValueDecl>(ND))
@@ -1053,7 +1055,7 @@ void ResultBuilder::AdjustResultPriorityForDecl(Result &R) {
   // If we have a preferred type, adjust the priority for results with exactly-
   // matching or nearly-matching types.
   if (!PreferredType.isNull()) {
-    QualType T = getDeclUsageType(SemaRef.Context, R.Declaration);
+    QualType T = getDeclUsageType(SemaRef.Context, R.Qualifier, R.Declaration);
     if (!T.isNull()) {
       CanQualType TC = SemaRef.Context.getCanonicalType(T);
       // Check for exactly-matching types (modulo qualifiers).
@@ -1070,10 +1072,9 @@ void ResultBuilder::AdjustResultPriorityForDecl(Result &R) {
 
 static DeclContext::lookup_result getConstructors(ASTContext &Context,
                                                   const CXXRecordDecl *Record) {
-  QualType RecordTy = Context.getTypeDeclType(Record);
+  CanQualType RecordTy = Context.getCanonicalTagType(Record);
   DeclarationName ConstructorName =
-      Context.DeclarationNames.getCXXConstructorName(
-          Context.getCanonicalType(RecordTy));
+      Context.DeclarationNames.getCXXConstructorName(RecordTy);
   return Record->lookup(ConstructorName);
 }
 
@@ -1664,7 +1665,8 @@ static bool isObjCReceiverType(ASTContext &C, QualType T) {
 }
 
 bool ResultBuilder::IsObjCMessageReceiver(const NamedDecl *ND) const {
-  QualType T = getDeclUsageType(SemaRef.Context, ND);
+  QualType T =
+      getDeclUsageType(SemaRef.Context, /*Qualifier=*/std::nullopt, ND);
   if (T.isNull())
     return false;
 
@@ -1689,7 +1691,8 @@ bool ResultBuilder::IsObjCCollection(const NamedDecl *ND) const {
       (!SemaRef.getLangOpts().CPlusPlus && !IsOrdinaryNonTypeName(ND)))
     return false;
 
-  QualType T = getDeclUsageType(SemaRef.Context, ND);
+  QualType T =
+      getDeclUsageType(SemaRef.Context, /*Qualifier=*/std::nullopt, ND);
   if (T.isNull())
     return false;
 
@@ -1745,8 +1748,10 @@ public:
 
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override {
-    ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
-                                 false, IsAccessible(ND, Ctx), FixIts);
+    ResultBuilder::Result Result(ND, Results.getBasePriority(ND),
+                                 /*Qualifier=*/std::nullopt,
+                                 /*QualifierIsInformative=*/false,
+                                 IsAccessible(ND, Ctx), FixIts);
     Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass, BaseType);
   }
 
@@ -2010,7 +2015,6 @@ static PrintingPolicy getCompletionPrintingPolicy(const ASTContext &Context,
   Policy.AnonymousTagLocations = false;
   Policy.SuppressStrongLifetime = true;
   Policy.SuppressUnwrittenScope = true;
-  Policy.SuppressScope = true;
   Policy.CleanUglifiedParameters = true;
   return Policy;
 }
@@ -2925,8 +2929,8 @@ static void AddResultTypeChunk(ASTContext &Context,
     else
       T = Method->getReturnType();
   } else if (const auto *Enumerator = dyn_cast<EnumConstantDecl>(ND)) {
-    T = Context.getTypeDeclType(cast<TypeDecl>(Enumerator->getDeclContext()));
-    T = clang::TypeName::getFullyQualifiedType(T, Context);
+    T = Context.getCanonicalTagType(
+        cast<EnumDecl>(Enumerator->getDeclContext()));
   } else if (isa<UnresolvedUsingValueDecl>(ND)) {
     /* Do nothing: ignore unresolved using declarations*/
   } else if (const auto *Ivar = dyn_cast<ObjCIvarDecl>(ND)) {
@@ -3021,7 +3025,7 @@ static void findTypeLocationForBlockDecl(const TypeSourceInfo *TSInfo,
     if (!SuppressBlock) {
       if (TypedefTypeLoc TypedefTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
         if (TypeSourceInfo *InnerTSInfo =
-                TypedefTL.getTypedefNameDecl()->getTypeSourceInfo()) {
+                TypedefTL.getDecl()->getTypeSourceInfo()) {
           TL = InnerTSInfo->getTypeLoc().getUnqualifiedLoc();
           continue;
         }
@@ -3391,7 +3395,7 @@ static void AddQualifierToCompletionString(CodeCompletionBuilder &Result,
   std::string PrintedNNS;
   {
     llvm::raw_string_ostream OS(PrintedNNS);
-    Qualifier->print(OS, Policy);
+    Qualifier.print(OS, Policy);
   }
   if (QualifierIsInformative)
     Result.AddInformativeChunk(Result.getAllocator().CopyString(PrintedNNS));
@@ -3520,11 +3524,9 @@ static void AddTypedNameChunk(ASTContext &Context, const PrintingPolicy &Policy,
   case DeclarationName::CXXConstructorName: {
     CXXRecordDecl *Record = nullptr;
     QualType Ty = Name.getCXXNameType();
-    if (const auto *RecordTy = Ty->getAs<RecordType>())
-      Record = cast<CXXRecordDecl>(RecordTy->getDecl());
-    else if (const auto *InjectedTy = Ty->getAs<InjectedClassNameType>())
-      Record = InjectedTy->getDecl();
-    else {
+    if (auto *RD = Ty->getAsCXXRecordDecl()) {
+      Record = RD;
+    } else {
       Result.AddTypedTextChunk(
           Result.getAllocator().CopyString(ND->getNameAsString()));
       break;
@@ -5185,7 +5187,8 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
     // expressions.
     if (!P->getType().getTypePtr()->isBlockPointerType() ||
         !IsBaseExprStatement) {
-      Result R = Result(P, Results.getBasePriority(P), nullptr);
+      Result R =
+          Result(P, Results.getBasePriority(P), /*Qualifier=*/std::nullopt);
       if (!InOriginalClass)
         setInBaseClass(R);
       Results.MaybeAddResult(R, CurContext);
@@ -5199,7 +5202,8 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
     findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
                                  BlockProtoLoc);
     if (!BlockLoc) {
-      Result R = Result(P, Results.getBasePriority(P), nullptr);
+      Result R =
+          Result(P, Results.getBasePriority(P), /*Qualifier=*/std::nullopt);
       if (!InOriginalClass)
         setInBaseClass(R);
       Results.MaybeAddResult(R, CurContext);
@@ -5777,7 +5781,7 @@ QualType getApproximateType(const Expr *E, HeuristicResolver &Resolver) {
     if (auto Decls = Resolver.resolveDependentNameType(DNT);
         Decls.size() == 1) {
       if (const auto *TD = dyn_cast<TypeDecl>(Decls[0]))
-        return QualType(TD->getTypeForDecl(), 0);
+        return TD->getASTContext().getTypeDeclType(TD);
     }
   }
   // We only resolve DependentTy, or undeduced autos (including auto* etc).
@@ -7034,7 +7038,7 @@ void SemaCodeCompletion::CodeCompleteNamespaceDecl(Scope *S) {
          NS != NSEnd; ++NS)
       Results.AddResult(
           CodeCompletionResult(NS->second, Results.getBasePriority(NS->second),
-                               nullptr),
+                               /*Qualifier=*/std::nullopt),
           SemaRef.CurContext, nullptr, false);
     Results.ExitScope();
   }
@@ -7821,7 +7825,8 @@ static void AddObjCMethods(ObjCContainerDecl *Container,
       if (!Selectors.insert(M->getSelector()).second)
         continue;
 
-      Result R = Result(M, Results.getBasePriority(M), nullptr);
+      Result R =
+          Result(M, Results.getBasePriority(M), /*Qualifier=*/std::nullopt);
       R.StartParameter = SelIdents.size();
       R.AllParametersAreInformative = (WantKind != MK_Any);
       if (!InOriginalClass)
@@ -8412,7 +8417,8 @@ AddClassMessageCompletions(Sema &SemaRef, Scope *S, ParsedType Receiver,
           continue;
 
         Result R(MethList->getMethod(),
-                 Results.getBasePriority(MethList->getMethod()), nullptr);
+                 Results.getBasePriority(MethList->getMethod()),
+                 /*Qualifier=*/std::nullopt);
         R.StartParameter = SelIdents.size();
         R.AllParametersAreInformative = false;
         Results.MaybeAddResult(R, SemaRef.CurContext);
@@ -8588,7 +8594,8 @@ void SemaCodeCompletion::CodeCompleteObjCInstanceMessage(
           continue;
 
         Result R(MethList->getMethod(),
-                 Results.getBasePriority(MethList->getMethod()), nullptr);
+                 Results.getBasePriority(MethList->getMethod()),
+                 /*Qualifier=*/std::nullopt);
         R.StartParameter = SelIdents.size();
         R.AllParametersAreInformative = false;
         Results.MaybeAddResult(R, SemaRef.CurContext);
@@ -8704,9 +8711,9 @@ static void AddProtocolResults(DeclContext *Ctx, DeclContext *CurContext,
     // Record any protocols we find.
     if (const auto *Proto = dyn_cast<ObjCProtocolDecl>(D))
       if (!OnlyForwardDeclarations || !Proto->hasDefinition())
-        Results.AddResult(
-            Result(Proto, Results.getBasePriority(Proto), nullptr), CurContext,
-            nullptr, false);
+        Results.AddResult(Result(Proto, Results.getBasePriority(Proto),
+                                 /*Qualifier=*/std::nullopt),
+                          CurContext, nullptr, false);
   }
 }
 
@@ -8772,9 +8779,9 @@ static void AddInterfaceResults(DeclContext *Ctx, DeclContext *CurContext,
     if (const auto *Class = dyn_cast<ObjCInterfaceDecl>(D))
       if ((!OnlyForwardDeclarations || !Class->hasDefinition()) &&
           (!OnlyUnimplemented || !Class->getImplementation()))
-        Results.AddResult(
-            Result(Class, Results.getBasePriority(Class), nullptr), CurContext,
-            nullptr, false);
+        Results.AddResult(Result(Class, Results.getBasePriority(Class),
+                                 /*Qualifier=*/std::nullopt),
+                          CurContext, nullptr, false);
   }
 }
 
@@ -8886,9 +8893,9 @@ void SemaCodeCompletion::CodeCompleteObjCInterfaceCategory(
   for (const auto *D : TU->decls())
     if (const auto *Category = dyn_cast<ObjCCategoryDecl>(D))
       if (CategoryNames.insert(Category->getIdentifier()).second)
-        Results.AddResult(
-            Result(Category, Results.getBasePriority(Category), nullptr),
-            SemaRef.CurContext, nullptr, false);
+        Results.AddResult(Result(Category, Results.getBasePriority(Category),
+                                 /*Qualifier=*/std::nullopt),
+                          SemaRef.CurContext, nullptr, false);
   Results.ExitScope();
 
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
@@ -8923,7 +8930,8 @@ void SemaCodeCompletion::CodeCompleteObjCImplementationCategory(
     for (const auto *Cat : Class->visible_categories()) {
       if ((!IgnoreImplemented || !Cat->getImplementation()) &&
           CategoryNames.insert(Cat->getIdentifier()).second)
-        Results.AddResult(Result(Cat, Results.getBasePriority(Cat), nullptr),
+        Results.AddResult(Result(Cat, Results.getBasePriority(Cat),
+                                 /*Qualifier=*/std::nullopt),
                           SemaRef.CurContext, nullptr, false);
     }
 
@@ -9023,7 +9031,8 @@ void SemaCodeCompletion::CodeCompleteObjCPropertySynthesizeIvar(
   for (; Class; Class = Class->getSuperClass()) {
     for (ObjCIvarDecl *Ivar = Class->all_declared_ivar_begin(); Ivar;
          Ivar = Ivar->getNextIvar()) {
-      Results.AddResult(Result(Ivar, Results.getBasePriority(Ivar), nullptr),
+      Results.AddResult(Result(Ivar, Results.getBasePriority(Ivar),
+                               /*Qualifier=*/std::nullopt),
                         SemaRef.CurContext, nullptr, false);
 
       // Determine whether we've seen an ivar with a name similar to the
@@ -10039,7 +10048,8 @@ void SemaCodeCompletion::CodeCompleteObjCMethodDeclSelector(
       }
 
       Result R(MethList->getMethod(),
-               Results.getBasePriority(MethList->getMethod()), nullptr);
+               Results.getBasePriority(MethList->getMethod()),
+               /*Qualifier=*/std::nullopt);
       R.StartParameter = SelIdents.size();
       R.AllParametersAreInformative = false;
       R.DeclaringEntity = true;

@@ -843,7 +843,7 @@ void CXXInstanceCall::getInitialStackFrameContents(
     if (MD->getCanonicalDecl() != getDecl()->getCanonicalDecl()) {
       ASTContext &Ctx = SVB.getContext();
       const CXXRecordDecl *Class = MD->getParent();
-      QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
+      CanQualType Ty = Ctx.getPointerType(Ctx.getCanonicalTagType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
       std::optional<SVal> V =
@@ -854,7 +854,8 @@ void CXXInstanceCall::getInitialStackFrameContents(
         // Fall back to a generic pointer cast for this-value.
         const CXXMethodDecl *StaticMD = cast<CXXMethodDecl>(getDecl());
         const CXXRecordDecl *StaticClass = StaticMD->getParent();
-        QualType StaticTy = Ctx.getPointerType(Ctx.getRecordType(StaticClass));
+        CanQualType StaticTy =
+            Ctx.getPointerType(Ctx.getCanonicalTagType(StaticClass));
         ThisVal = SVB.evalCast(ThisVal, Ty, StaticTy);
       } else
         ThisVal = *V;

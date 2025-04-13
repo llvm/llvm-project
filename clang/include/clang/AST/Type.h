@@ -6463,14 +6463,9 @@ class InjectedClassNameType final : public TagType {
 
   InjectedClassNameType(ElaboratedTypeKeyword Keyword,
                         NestedNameSpecifier Qualifier, const TagDecl *TD,
-                        bool IsInjected, CanQualType CanonicalInjectedTST,
-                        const Type *CanonicalType);
-
-  QualType CanonicalInjectedTST;
+                        bool IsInjected, const Type *CanonicalType);
 
 public:
-  CanQualType getCanonicalInjectedTST() const;
-
   CXXRecordDecl *getOriginalDecl() const {
     return reinterpret_cast<CXXRecordDecl *>(TagType::getOriginalDecl());
   }

@@ -5449,12 +5449,8 @@ TagType *ASTContext::getTagTypeInternal(ElaboratedTypeKeyword Keyword,
       return T;
     }
     case Type::InjectedClassName: {
-      CanQualType CanonicalInjectedTST =
-          cast<CXXRecordDecl>(TD)->getCanonicalTemplateSpecializationType(
-              *this);
-      auto *T =
-          new (Mem) InjectedClassNameType(Keyword, Qualifier, TD, IsInjected,
-                                          CanonicalInjectedTST, CanonicalType);
+      auto *T = new (Mem) InjectedClassNameType(Keyword, Qualifier, TD,
+                                                IsInjected, CanonicalType);
       assert(reinterpret_cast<void *>(T) ==
                  reinterpret_cast<void *>(static_cast<TagType *>(T)) &&
              "TagType must be the first base of InjectedClassNameType");

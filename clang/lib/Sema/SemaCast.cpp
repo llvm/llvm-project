@@ -1856,7 +1856,7 @@ TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr,
                                                     FoundOverload)) {
       CXXMethodDecl *M = cast<CXXMethodDecl>(Fn);
       SrcType = Self.Context.getMemberPointerType(
-          Fn->getType(), /*Qualifier=*/nullptr, M->getParent());
+          Fn->getType(), /*Qualifier=*/std::nullopt, M->getParent());
       WasOverloadedFunction = true;
     }
   }
@@ -2102,9 +2102,9 @@ void Sema::CheckCompatibleReinterpretCast(QualType SrcType, QualType DestType,
     return;
   }
   // or one of the types is a tag type.
-  if (SrcTy->getAs<TagType>() || DestTy->getAs<TagType>()) {
+  if (isa<TagType>(SrcTy.getCanonicalType()) ||
+      isa<TagType>(DestTy.getCanonicalType()))
     return;
-  }
 
   // FIXME: Scoped enums?
   if ((SrcTy->isUnsignedIntegerType() && DestTy->isSignedIntegerType()) ||

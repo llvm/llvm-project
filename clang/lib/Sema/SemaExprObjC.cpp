@@ -2337,10 +2337,10 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(ND))
       T = Context.getObjCInterfaceType(Class);
     else if (TypeDecl *Type = dyn_cast<TypeDecl>(ND)) {
-      T = Context.getTypeDeclType(Type);
       SemaRef.DiagnoseUseOfDecl(Type, NameLoc);
-    }
-    else
+      T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Type);
+    } else
       return ObjCInstanceMessage;
 
     //  We have a class message, and T is the type we're

@@ -1328,7 +1328,7 @@ public:
 
   // FIXME: Deleting the `TraverseParenTypeLoc` override doesn't change test
   // results. Find test coverage or remove it.
-  bool TraverseParenTypeLoc(ParenTypeLoc L) {
+  bool TraverseParenTypeLoc(ParenTypeLoc L, bool TraverseQualifier) {
     // We reverse order of traversal to get the proper syntax structure.
     if (!WalkUpFromParenTypeLoc(L))
       return false;
@@ -1391,7 +1391,8 @@ public:
     return WalkUpFromFunctionTypeLoc(L);
   }
 
-  bool TraverseMemberPointerTypeLoc(MemberPointerTypeLoc L) {
+  bool TraverseMemberPointerTypeLoc(MemberPointerTypeLoc L,
+                                    bool TraverseQualifier) {
     // In the source code "void (Y::*mp)()" `MemberPointerTypeLoc` corresponds
     // to "Y::*" but it points to a `ParenTypeLoc` that corresponds to
     // "(Y::*mp)" We thus reverse the order of traversal to get the proper

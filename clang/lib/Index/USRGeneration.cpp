@@ -910,9 +910,14 @@ void USRGenerator::VisitType(QualType T) {
       continue;
     }
     if (const TagType *TT = T->getAs<TagType>()) {
-      Out << '$';
-      VisitTagDecl(TT->getDecl());
-      return;
+      if (const auto *ICNT = dyn_cast<InjectedClassNameType>(TT)) {
+        T = ICNT->getOriginalDecl()->getCanonicalTemplateSpecializationType(
+            Ctx);
+      } else {
+        Out << '$';
+        VisitTagDecl(TT->getOriginalDecl());
+        return;
+      }
     }
     if (const ObjCInterfaceType *OIT = T->getAs<ObjCInterfaceType>()) {
       Out << '$';
@@ -944,10 +949,6 @@ void USRGenerator::VisitType(QualType T) {
       printQualifier(Out, LangOpts, DNT->getQualifier());
       Out << ':' << DNT->getIdentifier()->getName();
       return;
-    }
-    if (const InjectedClassNameType *InjT = T->getAs<InjectedClassNameType>()) {
-      T = InjT->getInjectedSpecializationType();
-      continue;
     }
     if (const auto *VT = T->getAs<VectorType>()) {
       Out << (T->isExtVectorType() ? ']' : '[');

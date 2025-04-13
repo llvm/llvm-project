@@ -3560,7 +3560,9 @@ static void handleFormatArgAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   }
   Ty = getFunctionOrMethodResultType(D);
   // replace instancetype with the class type
-  auto Instancetype = S.Context.getObjCInstanceTypeDecl()->getTypeForDecl();
+  auto *Instancetype = cast<TypedefType>(S.Context.getTypedefType(
+      ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt,
+      S.Context.getObjCInstanceTypeDecl()));
   if (Ty->getAs<TypedefType>() == Instancetype)
     if (auto *OMD = dyn_cast<ObjCMethodDecl>(D))
       if (auto *Interface = OMD->getClassInterface())
@@ -4507,7 +4509,7 @@ void Sema::CheckAlignasUnderalignment(Decl *D) {
   if (const auto *VD = dyn_cast<ValueDecl>(D)) {
     UnderlyingTy = DiagTy = VD->getType();
   } else {
-    UnderlyingTy = DiagTy = Context.getTagDeclType(cast<TagDecl>(D));
+    UnderlyingTy = DiagTy = Context.getCanonicalTagType(cast<TagDecl>(D));
     if (const auto *ED = dyn_cast<EnumDecl>(D))
       UnderlyingTy = ED->getIntegerType();
   }

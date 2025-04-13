@@ -798,7 +798,7 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
     const auto *MPT =
         CalleeBinOp->getRHS()->getType()->castAs<MemberPointerType>();
     CalleeType.This =
-        Context.getTypeDeclType(MPT->getMostRecentCXXRecordDecl());
+        Context.getCanonicalTagType(MPT->getMostRecentCXXRecordDecl());
     CalleeType.Func = MPT->getPointeeType()->castAs<FunctionProtoType>();
     CalleeType.MemberType = FuncType::ft_pointer_to_member;
   } else if (isa<CXXPseudoDestructorExpr>(CalleeExpr)) {
@@ -1254,7 +1254,7 @@ static bool ShouldDiagnoseSwitchCaseNotInEnum(const Sema &S,
           dyn_cast<DeclRefExpr>(CaseExpr->IgnoreParenImpCasts())) {
     if (const VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       QualType VarType = VD->getType();
-      QualType EnumType = S.Context.getTypeDeclType(ED);
+      CanQualType EnumType = S.Context.getCanonicalTagType(ED);
       if (VD->hasGlobalStorage() && VarType.isConstQualified() &&
           S.Context.hasSameUnqualifiedType(EnumType, VarType))
         return false;
@@ -1716,6 +1716,7 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       if (!hasCasesNotInSwitch)
         SS->setAllEnumCasesCovered();
     }
+  enum_out:;
   }
 
   if (BodyStmt)
@@ -4620,7 +4621,8 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   // Build the context parameter
   DeclContext *DC = CapturedDecl::castToDeclContext(CD);
   IdentifierInfo *ParamName = &Context.Idents.get("__context");
-  QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
+  CanQualType ParamType =
+      Context.getPointerType(Context.getCanonicalTagType(RD));
   auto *Param =
       ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                 ImplicitParamKind::CapturedContext);
@@ -4662,9 +4664,10 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
       assert(!ContextIsFound &&
              "null type has been found already for '__context' parameter");
       IdentifierInfo *ParamName = &Context.Idents.get("__context");
-      QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD))
-                               .withConst()
-                               .withRestrict();
+      QualType ParamType =
+          Context.getPointerType(Context.getCanonicalTagType(RD))
+              .withConst()
+              .withRestrict();
       auto *Param =
           ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                     ImplicitParamKind::CapturedContext);
@@ -4684,7 +4687,8 @@ void Sema::ActOnCapturedRegionStart(SourceLocation Loc, Scope *CurScope,
   if (!ContextIsFound) {
     // Add __context implicitly if it is not specified.
     IdentifierInfo *ParamName = &Context.Idents.get("__context");
-    QualType ParamType = Context.getPointerType(Context.getTagDeclType(RD));
+    CanQualType ParamType =
+        Context.getPointerType(Context.getCanonicalTagType(RD));
     auto *Param =
         ImplicitParamDecl::Create(Context, DC, Loc, ParamName, ParamType,
                                   ImplicitParamKind::CapturedContext);

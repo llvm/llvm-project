@@ -32,8 +32,7 @@ static CXXMethodDecl *LookupSpecialMemberFromXValue(Sema &SemaRef,
   RD = RD->getDefinition();
   SourceLocation LookupLoc = RD->getLocation();
 
-  CanQualType CanTy = SemaRef.getASTContext().getCanonicalType(
-      SemaRef.getASTContext().getTagDeclType(RD));
+  CanQualType CanTy = SemaRef.getASTContext().getCanonicalTagType(RD);
   DeclarationName Name;
   Expr *Arg = nullptr;
   unsigned NumArgs;
@@ -599,6 +598,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   if (Decl->isLambda())
     return Decl->isCapturelessLambda();
 
+  CanQualType T = S.Context.getCanonicalTagType(Decl);
   {
     EnterExpressionEvaluationContext UnevaluatedContext(
         S, Sema::ExpressionEvaluationContext::Unevaluated);
@@ -606,10 +606,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
     Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
 
     // const ClassT& obj;
-    OpaqueValueExpr Operand(
-        KeyLoc,
-        Decl->getTypeForDecl()->getCanonicalTypeUnqualified().withConst(),
-        ExprValueKind::VK_LValue);
+    OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
     UnresolvedSet<16> Functions;
     // obj == obj;
     S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
@@ -628,8 +625,7 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
       return false;
     if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
       return false;
-    if (ParamT.getNonReferenceType()->getUnqualifiedDesugaredType() !=
-        Decl->getTypeForDecl())
+    if (!S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T))
       return false;
   }
 

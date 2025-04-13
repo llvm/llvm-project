@@ -2889,7 +2889,7 @@ X86_64ABIInfo::classifyRegCallStructTypeImpl(QualType Ty, unsigned &NeededInt,
   }
 
   // Sum up members
-  for (const auto *FD : RT->getDecl()->fields()) {
+  for (const auto *FD : RD->fields()) {
     QualType MTy = FD->getType();
     if (MTy->isRecordType() && !MTy->isUnionType()) {
       if (classifyRegCallStructTypeImpl(MTy, NeededInt, NeededSSE,

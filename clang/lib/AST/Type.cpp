@@ -4331,15 +4331,9 @@ bool RecordType::hasConstFields() const {
 InjectedClassNameType::InjectedClassNameType(ElaboratedTypeKeyword Keyword,
                                              NestedNameSpecifier Qualifier,
                                              const TagDecl *TD, bool IsInjected,
-                                             CanQualType CanonicalInjectedTST,
                                              const Type *CanonicalType)
     : TagType(TypeClass::InjectedClassName, Keyword, Qualifier, TD,
-              /*OwnsTag=*/false, IsInjected, CanonicalType),
-      CanonicalInjectedTST(CanonicalInjectedTST) {}
-
-CanQualType InjectedClassNameType::getCanonicalInjectedTST() const {
-  return CanQualType::CreateUnsafe(CanonicalInjectedTST);
-}
+              /*OwnsTag=*/false, IsInjected, CanonicalType) {}
 
 AttributedType::AttributedType(QualType canon, const Attr *attr,
                                QualType modified, QualType equivalent)

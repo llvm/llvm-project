@@ -106,21 +106,7 @@ public:
   /// \param TL The TypeLoc that describes the type preceding the '::'.
   ///
   /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
-
-  /// Extend the current nested-name-specifier by another
-  /// nested-name-specifier component of the form 'identifier::'.
-  ///
-  /// \param Context The AST context in which this nested-name-specifier
-  /// resides.
-  ///
-  /// \param Identifier The identifier.
-  ///
-  /// \param IdentifierLoc The location of the identifier.
-  ///
-  /// \param ColonColonLoc The location of the trailing '::'.
-  void Extend(ASTContext &Context, IdentifierInfo *Identifier,
-              SourceLocation IdentifierLoc, SourceLocation ColonColonLoc);
+  void Make(ASTContext &Context, TypeLoc TL, SourceLocation ColonColonLoc);
 
   /// Extend the current nested-name-specifier by another
   /// nested-name-specifier component of the form 'namespace::'.
@@ -189,14 +175,14 @@ public:
   SourceLocation getLastQualifierNameLoc() const;
 
   /// No scope specifier.
-  bool isEmpty() const { return Range.isInvalid() && getScopeRep() == nullptr; }
+  bool isEmpty() const { return Range.isInvalid() && !getScopeRep(); }
   /// A scope specifier is present, but may be valid or invalid.
   bool isNotEmpty() const { return !isEmpty(); }
 
   /// An error occurred during parsing of the scope specifier.
-  bool isInvalid() const { return Range.isValid() && getScopeRep() == nullptr; }
+  bool isInvalid() const { return Range.isValid() && !getScopeRep(); }
   /// A scope specifier is present, and it refers to a real scope.
-  bool isValid() const { return getScopeRep() != nullptr; }
+  bool isValid() const { return bool(getScopeRep()); }
 
   /// Indicate that this nested-name-specifier is invalid.
   void SetInvalid(SourceRange R) {
@@ -209,7 +195,7 @@ public:
 
   /// Deprecated.  Some call sites intend isNotEmpty() while others intend
   /// isValid().
-  bool isSet() const { return getScopeRep() != nullptr; }
+  bool isSet() const { return bool(getScopeRep()); }
 
   void clear() {
     Range = SourceRange();

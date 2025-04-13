@@ -591,12 +591,13 @@ void SemaObjC::ActOnSuperClassOfClassInterface(
       // The previous declaration was not a class decl. Check if we have a
       // typedef. If we do, get the underlying class type.
       if (const TypedefNameDecl *TDecl =
-          dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
+              dyn_cast_or_null<TypedefNameDecl>(PrevDecl)) {
         QualType T = TDecl->getUnderlyingType();
         if (T->isObjCObjectType()) {
           if (NamedDecl *IDecl = T->castAs<ObjCObjectType>()->getInterface()) {
             SuperClassDecl = dyn_cast<ObjCInterfaceDecl>(IDecl);
-            SuperClassType = Context.getTypeDeclType(TDecl);
+            SuperClassType = Context.getTypeDeclType(
+                ElaboratedTypeKeyword::None, /*Qualifier=*/std::nullopt, TDecl);
 
             // This handles the following case:
             // @interface NewI @end
@@ -1389,11 +1390,9 @@ class ObjCTypeArgOrProtocolValidatorCCC final
 
         // Make sure the type is something we would accept as a type
         // argument.
-        auto type = Context.getTypeDeclType(typeDecl);
-        if (type->isObjCObjectPointerType() ||
-            type->isBlockPointerType() ||
+        if (CanQualType type = Context.getCanonicalTypeDeclType(typeDecl);
             type->isDependentType() ||
-            type->isObjCObjectType())
+            isa<ObjCObjectPointerType, BlockPointerType, ObjCObjectType>(type))
           return true;
 
         return false;
@@ -1589,7 +1588,9 @@ void SemaObjC::actOnObjCTypeArgsOrProtocolQualifiers(
     unsigned diagID; // unused
     QualType type;
     if (auto *actualTypeDecl = dyn_cast<TypeDecl *>(typeDecl))
-      type = Context.getTypeDeclType(actualTypeDecl);
+      type =
+          Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, actualTypeDecl);
     else
       type = Context.getObjCInterfaceType(cast<ObjCInterfaceDecl *>(typeDecl));
     TypeSourceInfo *parsedTSInfo = Context.getTrivialTypeSourceInfo(type, loc);

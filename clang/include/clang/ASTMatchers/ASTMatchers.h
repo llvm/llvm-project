@@ -222,6 +222,19 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl, TypedefNameDecl>
 extern const internal::VariadicDynCastAllOfMatcher<Decl, TypeAliasDecl>
     typeAliasDecl;
 
+/// \brief Matches shadow declarations introduced into a scope by a
+///        (resolved) using declaration.
+///
+/// Given
+/// \code
+///   namespace n { int f; }
+///   namespace declToImport { using n::f; }
+/// \endcode
+/// usingShadowDecl()
+///   matches \code f \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Decl, UsingShadowDecl>
+    usingShadowDecl;
+
 /// Matches type alias template declarations.
 ///
 /// typeAliasTemplateDecl() matches
@@ -3740,7 +3753,7 @@ extern const internal::VariadicOperatorMatcherFunc<1, 1> unless;
 ///   Matcher<MemberExpr>, Matcher<QualType>, Matcher<RecordType>,
 ///   Matcher<TagType>, Matcher<TemplateSpecializationType>,
 ///   Matcher<TemplateTypeParmType>, Matcher<TypedefType>,
-///   Matcher<UnresolvedUsingType>
+///   Matcher<UnresolvedUsingType>, Matcher<UsingType>
 inline internal::PolymorphicMatcher<
     internal::HasDeclarationMatcher,
     void(internal::HasDeclarationSupportedTypes), internal::Matcher<Decl>>
@@ -4375,7 +4388,13 @@ AST_POLYMORPHIC_MATCHER_P(throughUsingDecl,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(DeclRefExpr,
                                                           UsingType),
                           internal::Matcher<UsingShadowDecl>, Inner) {
-  const NamedDecl *FoundDecl = Node.getFoundDecl();
+  const NamedDecl *FoundDecl;
+  if constexpr (std::is_same_v<NodeType, UsingType>) {
+    FoundDecl = Node.getDecl();
+  } else {
+    static_assert(std::is_same_v<NodeType, DeclRefExpr>);
+    FoundDecl = Node.getFoundDecl();
+  }
   if (const UsingShadowDecl *UsingDecl = dyn_cast<UsingShadowDecl>(FoundDecl))
     return Inner.matches(*UsingDecl, Finder, Builder);
   return false;
@@ -7004,37 +7023,6 @@ AST_POLYMORPHIC_MATCHER_P2(
          InnerMatcher.matches(Args[Index], Finder, Builder);
 }
 
-/// Matches C or C++ elaborated `TypeLoc`s.
-///
-/// Given
-/// \code
-///   struct s {};
-///   struct s ss;
-/// \endcode
-/// elaboratedTypeLoc()
-///   matches the `TypeLoc` of the variable declaration of `ss`.
-extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ElaboratedTypeLoc>
-    elaboratedTypeLoc;
-
-/// Matches elaborated `TypeLoc`s that have a named `TypeLoc` matching
-/// `InnerMatcher`.
-///
-/// Given
-/// \code
-///   template <typename T>
-///   class C {};
-///   class C<int> c;
-///
-///   class D {};
-///   class D d;
-/// \endcode
-/// elaboratedTypeLoc(hasNamedTypeLoc(templateSpecializationTypeLoc()));
-///   matches the `TypeLoc` of the variable declaration of `c`, but not `d`.
-AST_MATCHER_P(ElaboratedTypeLoc, hasNamedTypeLoc, internal::Matcher<TypeLoc>,
-              InnerMatcher) {
-  return InnerMatcher.matches(Node.getNamedTypeLoc(), Finder, Builder);
-}
-
 /// Matches type \c bool.
 ///
 /// Given
@@ -7301,7 +7289,7 @@ extern const AstTypeMatcher<DecltypeType> decltypeType;
 AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(AutoType));
 
-/// Matches \c DecltypeType or \c UsingType nodes to find the underlying type.
+/// Matches \c QualType nodes to find the underlying type.
 ///
 /// Given
 /// \code
@@ -7311,10 +7299,13 @@ AST_TYPE_TRAVERSE_MATCHER(hasDeducedType, getDeducedType,
 /// decltypeType(hasUnderlyingType(isInteger()))
 ///   matches the type of "a"
 ///
-/// Usable as: Matcher<DecltypeType>, Matcher<UsingType>
-AST_TYPE_TRAVERSE_MATCHER(hasUnderlyingType, getUnderlyingType,
-                          AST_POLYMORPHIC_SUPPORTED_TYPES(DecltypeType,
-                                                          UsingType));
+/// Usable as: Matcher<QualType>
+AST_MATCHER_P(Type, hasUnderlyingType, internal::Matcher<QualType>, Inner) {
+  QualType QT = Node.getLocallyUnqualifiedSingleStepDesugaredType();
+  if (QT == QualType(&Node, 0))
+    return false;
+  return Inner.matches(QT, Finder, Builder);
+}
 
 /// Matches \c FunctionType nodes.
 ///
@@ -7593,27 +7584,7 @@ extern const AstTypeMatcher<RecordType> recordType;
 /// and \c c.
 extern const AstTypeMatcher<TagType> tagType;
 
-/// Matches types specified with an elaborated type keyword or with a
-/// qualified name.
-///
-/// Given
-/// \code
-///   namespace N {
-///     namespace M {
-///       class D {};
-///     }
-///   }
-///   class C {};
-///
-///   class C c;
-///   N::M::D d;
-/// \endcode
-///
-/// \c elaboratedType() matches the type of the variable declarations of both
-/// \c c and \c d.
-extern const AstTypeMatcher<ElaboratedType> elaboratedType;
-
-/// Matches ElaboratedTypes whose qualifier, a NestedNameSpecifier,
+/// Matches Types whose qualifier, a NestedNameSpecifier,
 /// matches \c InnerMatcher if the qualifier exists.
 ///
 /// Given
@@ -7628,32 +7599,12 @@ extern const AstTypeMatcher<ElaboratedType> elaboratedType;
 ///
 /// \c elaboratedType(hasQualifier(hasPrefix(specifiesNamespace(hasName("N"))))
 /// matches the type of the variable declaration of \c d.
-AST_MATCHER_P(ElaboratedType, hasQualifier,
-              internal::Matcher<NestedNameSpecifier>, InnerMatcher) {
-  if (const NestedNameSpecifier *Qualifier = Node.getQualifier())
-    return InnerMatcher.matches(*Qualifier, Finder, Builder);
+AST_MATCHER_P(Type, hasQualifier, internal::Matcher<NestedNameSpecifier>,
+              InnerMatcher) {
+  if (NestedNameSpecifier Qualifier = Node.getPrefix())
+    return InnerMatcher.matches(Qualifier, Finder, Builder);
 
   return false;
-}
-
-/// Matches ElaboratedTypes whose named type matches \c InnerMatcher.
-///
-/// Given
-/// \code
-///   namespace N {
-///     namespace M {
-///       class D {};
-///     }
-///   }
-///   N::M::D d;
-/// \endcode
-///
-/// \c elaboratedType(namesType(recordType(
-/// hasDeclaration(namedDecl(hasName("D")))))) matches the type of the variable
-/// declaration of \c d.
-AST_MATCHER_P(ElaboratedType, namesType, internal::Matcher<QualType>,
-              InnerMatcher) {
-  return InnerMatcher.matches(Node.getNamedType(), Finder, Builder);
 }
 
 /// Matches types specified through a using declaration.

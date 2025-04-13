@@ -113,12 +113,14 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::CXXRecord: // struct/union/class X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
       if (cast<RecordDecl>(D).getDefinition())
-        DI->EmitAndRetainType(getContext().getRecordType(cast<RecordDecl>(&D)));
+        DI->EmitAndRetainType(
+            getContext().getCanonicalTagType(cast<RecordDecl>(&D)));
     return;
   case Decl::Enum:      // enum X;
     if (CGDebugInfo *DI = getDebugInfo())
       if (cast<EnumDecl>(D).getDefinition())
-        DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(&D)));
+        DI->EmitAndRetainType(
+            getContext().getCanonicalTagType(cast<EnumDecl>(&D)));
     return;
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }

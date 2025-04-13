@@ -113,10 +113,6 @@ public:
         auto CastType = Cast->getType();
         if (auto *PtrType = dyn_cast<PointerType>(CastType)) {
           auto PointeeType = PtrType->getPointeeType();
-          while (auto *ET = dyn_cast<ElaboratedType>(PointeeType)) {
-            if (ET->isSugared())
-              PointeeType = ET->desugar();
-          }
           if (auto *ParmType = dyn_cast<TemplateTypeParmType>(PointeeType)) {
             if (ArgList) {
               auto ParmIndex = ParmType->getIndex();

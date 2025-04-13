@@ -446,7 +446,6 @@ class InitListChecker {
                                    unsigned ExpectedNumInits);
   int numArrayElements(QualType DeclType);
   int numStructUnionElements(QualType DeclType);
-  static RecordDecl *getRecordDecl(QualType DeclType);
 
   ExprResult PerformEmptyInit(SourceLocation Loc,
                               const InitializedEntity &Entity);
@@ -1140,14 +1139,6 @@ int InitListChecker::numStructUnionElements(QualType DeclType) {
   return InitializableMembers - structDecl->hasFlexibleArrayMember();
 }
 
-RecordDecl *InitListChecker::getRecordDecl(QualType DeclType) {
-  if (const auto *RT = DeclType->getAs<RecordType>())
-    return RT->getDecl();
-  if (const auto *Inject = DeclType->getAs<InjectedClassNameType>())
-    return Inject->getDecl();
-  return nullptr;
-}
-
 /// Determine whether Entity is an entity for which it is idiomatic to elide
 /// the braces in aggregate initialization.
 static bool isIdiomaticBraceElisionEntity(const InitializedEntity &Entity) {
@@ -1442,7 +1433,7 @@ void InitListChecker::CheckListElementTypes(const InitializedEntity &Entity,
   } else if (DeclType->isVectorType()) {
     CheckVectorType(Entity, IList, DeclType, Index,
                     StructuredList, StructuredIndex);
-  } else if (const RecordDecl *RD = getRecordDecl(DeclType)) {
+  } else if (const RecordDecl *RD = DeclType->getAsRecordDecl()) {
     auto Bases =
         CXXRecordDecl::base_class_const_range(CXXRecordDecl::base_class_const_iterator(),
                                         CXXRecordDecl::base_class_const_iterator());
@@ -2320,7 +2311,7 @@ void InitListChecker::CheckStructUnionTypes(
     bool SubobjectIsDesignatorContext, unsigned &Index,
     InitListExpr *StructuredList, unsigned &StructuredIndex,
     bool TopLevelObject) {
-  const RecordDecl *RD = getRecordDecl(DeclType);
+  const RecordDecl *RD = DeclType->getAsRecordDecl();
 
   // If the record is invalid, some of it's members are invalid. To avoid
   // confusion, we forgo checking the initializer for the entire record.
@@ -2889,7 +2880,7 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     //   then the current object (defined below) shall have
     //   structure or union type and the identifier shall be the
     //   name of a member of that type.
-    RecordDecl *RD = getRecordDecl(CurrentObjectType);
+    RecordDecl *RD = CurrentObjectType->getAsRecordDecl();
     if (!RD) {
       SourceLocation Loc = D->getDotLoc();
       if (Loc.isInvalid())
@@ -4337,8 +4328,8 @@ static bool hasCopyOrMoveCtorParam(ASTContext &Ctx,
 
   QualType ParmT =
       Info.Constructor->getParamDecl(0)->getType().getNonReferenceType();
-  QualType ClassT =
-      Ctx.getRecordType(cast<CXXRecordDecl>(Info.FoundDecl->getDeclContext()));
+  CanQualType ClassT = Ctx.getCanonicalTagType(
+      cast<CXXRecordDecl>(Info.FoundDecl->getDeclContext()));
 
   return Ctx.hasSameUnqualifiedType(ParmT, ClassT);
 }
@@ -8808,8 +8799,8 @@ static void emitBadConversionNotes(Sema &S, const InitializedEntity &entity,
       destPointeeType.getQualifiers().compatiblyIncludes(
           fromPointeeType.getQualifiers(), S.getASTContext()))
     S.Diag(fromDecl->getLocation(), diag::note_forward_class_conversion)
-        << S.getASTContext().getTagDeclType(fromDecl)
-        << S.getASTContext().getTagDeclType(destDecl);
+        << S.getASTContext().getCanonicalTagType(fromDecl)
+        << S.getASTContext().getCanonicalTagType(destDecl);
 }
 
 static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
@@ -9208,32 +9199,33 @@ bool InitializationSequence::Diagnose(Sema &S,
             InheritedFrom = Inherited.getShadowDecl()->getNominatedBaseClass();
           if (Entity.getKind() == InitializedEntity::EK_Base) {
             S.Diag(Kind.getLocation(), diag::err_missing_default_ctor)
-              << (InheritedFrom ? 2 : Constructor->isImplicit() ? 1 : 0)
-              << S.Context.getTypeDeclType(Constructor->getParent())
-              << /*base=*/0
-              << Entity.getType()
-              << InheritedFrom;
+                << (InheritedFrom               ? 2
+                    : Constructor->isImplicit() ? 1
+                                                : 0)
+                << S.Context.getCanonicalTagType(Constructor->getParent())
+                << /*base=*/0 << Entity.getType() << InheritedFrom;
 
-            RecordDecl *BaseDecl
-              = Entity.getBaseSpecifier()->getType()->castAs<RecordType>()
-                                                                  ->getDecl();
+            RecordDecl *BaseDecl = Entity.getBaseSpecifier()
+                                       ->getType()
+                                       ->castAs<RecordType>()
+                                       ->getOriginalDecl()
+                                       ->getDefinitionOrSelf();
             S.Diag(BaseDecl->getLocation(), diag::note_previous_decl)
-              << S.Context.getTagDeclType(BaseDecl);
+                << S.Context.getCanonicalTagType(BaseDecl);
           } else {
             S.Diag(Kind.getLocation(), diag::err_missing_default_ctor)
-              << (InheritedFrom ? 2 : Constructor->isImplicit() ? 1 : 0)
-              << S.Context.getTypeDeclType(Constructor->getParent())
-              << /*member=*/1
-              << Entity.getName()
-              << InheritedFrom;
+                << (InheritedFrom               ? 2
+                    : Constructor->isImplicit() ? 1
+                                                : 0)
+                << S.Context.getCanonicalTagType(Constructor->getParent())
+                << /*member=*/1 << Entity.getName() << InheritedFrom;
             S.Diag(Entity.getDecl()->getLocation(),
                    diag::note_member_declared_at);
 
             if (const RecordType *Record
                                  = Entity.getType()->getAs<RecordType>())
-              S.Diag(Record->getDecl()->getLocation(),
-                     diag::note_previous_decl)
-                << S.Context.getTagDeclType(Record->getDecl());
+              S.Diag(Record->getDecl()->getLocation(), diag::note_previous_decl)
+                  << S.Context.getCanonicalTagType(Record->getOriginalDecl());
           }
           break;
         }
@@ -9300,11 +9292,11 @@ bool InitializationSequence::Diagnose(Sema &S,
       // initialized.
       CXXConstructorDecl *Constructor = cast<CXXConstructorDecl>(S.CurContext);
       S.Diag(Kind.getLocation(), diag::err_uninitialized_member_in_ctor)
-        << (Constructor->getInheritedConstructor() ? 2 :
-            Constructor->isImplicit() ? 1 : 0)
-        << S.Context.getTypeDeclType(Constructor->getParent())
-        << /*const=*/1
-        << Entity.getName();
+          << (Constructor->getInheritedConstructor() ? 2
+              : Constructor->isImplicit()            ? 1
+                                                     : 0)
+          << S.Context.getCanonicalTagType(Constructor->getParent())
+          << /*const=*/1 << Entity.getName();
       S.Diag(Entity.getDecl()->getLocation(), diag::note_previous_decl)
         << Entity.getName();
     } else if (const auto *VD = dyn_cast_if_present<VarDecl>(Entity.getDecl());
@@ -10157,7 +10149,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       auto *RD = cast<CXXRecordDecl>(Pattern->getTemplatedDecl());
       if (!(RD->getDefinition() && RD->isAggregate()))
         return;
-      QualType Ty = Context.getRecordType(RD);
+      QualType Ty = Context.getCanonicalTagType(RD);
       SmallVector<QualType, 8> ElementTypes;
 
       InitListChecker CheckInitList(*this, Entity, ListInit, Ty, ElementTypes);
@@ -10297,8 +10289,8 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
   case OR_No_Viable_Function: {
     CXXRecordDecl *Primary =
         cast<ClassTemplateDecl>(Template)->getTemplatedDecl();
-    bool Complete =
-        isCompleteType(Kind.getLocation(), Context.getTypeDeclType(Primary));
+    bool Complete = isCompleteType(Kind.getLocation(),
+                                   Context.getCanonicalTagType(Primary));
     Candidates.NoteCandidates(
         PartialDiagnosticAt(
             Kind.getLocation(),

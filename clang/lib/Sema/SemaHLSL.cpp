@@ -366,7 +366,7 @@ static bool isInvalidConstantBufferLeafElementType(const Type *Ty) {
 // needs to be created for HLSL Buffer use that will exclude these unwanted
 // declarations (see createHostLayoutStruct function).
 static bool requiresImplicitBufferLayoutStructure(const CXXRecordDecl *RD) {
-  if (RD->getTypeForDecl()->isHLSLIntangibleType() || RD->isEmpty())
+  if (RD->isHLSLIntangible() || RD->isEmpty())
     return true;
   // check fields
   for (const FieldDecl *Field : RD->fields()) {
@@ -451,7 +451,7 @@ static FieldDecl *createFieldForHostLayoutStruct(Sema &S, const Type *Ty,
       RD = createHostLayoutStruct(S, RD);
       if (!RD)
         return nullptr;
-      Ty = RD->getTypeForDecl();
+      Ty = S.Context.getCanonicalTagType(RD)->getTypePtr();
     }
   }
 
@@ -501,8 +501,8 @@ static CXXRecordDecl *createHostLayoutStruct(Sema &S,
     if (requiresImplicitBufferLayoutStructure(BaseDecl)) {
       BaseDecl = createHostLayoutStruct(S, BaseDecl);
       if (BaseDecl) {
-        TypeSourceInfo *TSI = AST.getTrivialTypeSourceInfo(
-            QualType(BaseDecl->getTypeForDecl(), 0));
+        TypeSourceInfo *TSI =
+            AST.getTrivialTypeSourceInfo(AST.getCanonicalTagType(BaseDecl));
         Base = CXXBaseSpecifier(SourceRange(), false, StructDecl->isClass(),
                                 AS_none, TSI, SourceLocation());
       }

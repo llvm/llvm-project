@@ -563,9 +563,8 @@ void LookupResult::resolveKind() {
     // no ambiguity if they all refer to the same type, so unique based on the
     // canonical type.
     if (const auto *TD = dyn_cast<TypeDecl>(D)) {
-      QualType T = getSema().Context.getTypeDeclType(TD);
       auto UniqueResult = UniqueTypes.insert(
-          std::make_pair(getSema().Context.getCanonicalType(T), I));
+          std::make_pair(getSema().Context.getCanonicalTypeDeclType(TD), I));
       if (!UniqueResult.second) {
         // The type is not unique.
         ExistingI = UniqueResult.first->second;
@@ -717,7 +716,7 @@ static QualType getOpenCLEnumType(Sema &S, llvm::StringRef Name) {
   EnumDecl *Decl = Result.getAsSingle<EnumDecl>();
   if (!Decl)
     return diagOpenCLBuiltinTypeError(S, "enum", Name);
-  return S.Context.getEnumType(Decl);
+  return S.Context.getCanonicalTagType(Decl);
 }
 
 /// Lookup an OpenCL typedef type.
@@ -730,7 +729,8 @@ static QualType getOpenCLTypedefType(Sema &S, llvm::StringRef Name) {
   TypedefNameDecl *Decl = Result.getAsSingle<TypedefNameDecl>();
   if (!Decl)
     return diagOpenCLBuiltinTypeError(S, "typedef", Name);
-  return S.Context.getTypedefType(Decl);
+  return S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Decl);
 }
 
 /// Get the QualType instances of the return type and arguments for an OpenCL
@@ -1001,7 +1001,7 @@ static void LookupPredefedObjCSuperType(Sema &Sema, Scope *S) {
   Sema.LookupName(Result, S);
   if (Result.getResultKind() == LookupResultKind::Found)
     if (const TagDecl *TD = Result.getAsSingle<TagDecl>())
-      Context.setObjCSuperType(Context.getTagDeclType(TD));
+      Context.setObjCSuperType(Context.getCanonicalTagType(TD));
 }
 
 void Sema::LookupNecessaryTypesForBuiltin(Scope *S, unsigned ID) {
@@ -2435,12 +2435,12 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
   if (!R.getLookupName())
     return false;
 
+#ifndef NDEBUG
   // Make sure that the declaration context is complete.
-  assert((!isa<TagDecl>(LookupCtx) ||
-          LookupCtx->isDependentContext() ||
-          cast<TagDecl>(LookupCtx)->isCompleteDefinition() ||
-          cast<TagDecl>(LookupCtx)->isBeingDefined()) &&
-         "Declaration context must already be complete!");
+  if (const auto *TD = dyn_cast<TagDecl>(LookupCtx);
+      TD && !TD->isDependentType() && TD->getDefinition() == nullptr)
+    llvm_unreachable("Declaration context must already be complete!");
+#endif
 
   struct QualifiedLookupInScope {
     bool oldVal;
@@ -2596,10 +2596,8 @@ bool Sema::LookupQualifiedName(LookupResult &R, DeclContext *LookupCtx,
         // C++ [class.member.lookup]p3:
         //   type declarations (including injected-class-names) are replaced by
         //   the types they designate
-        if (const TypeDecl *TD = dyn_cast<TypeDecl>(ND->getUnderlyingDecl())) {
-          QualType T = Context.getTypeDeclType(TD);
-          return T.getCanonicalType().getAsOpaquePtr();
-        }
+        if (const TypeDecl *TD = dyn_cast<TypeDecl>(ND->getUnderlyingDecl()))
+          return Context.getCanonicalTypeDeclType(TD).getAsOpaquePtr();
 
         return ND->getUnderlyingDecl()->getCanonicalDecl();
       }
@@ -2731,7 +2729,9 @@ bool Sema::LookupParsedName(LookupResult &R, Scope *S, CXXScopeSpec *SS,
     IsDependent = !DC && ObjectType->isDependentType();
     assert(((!DC && ObjectType->isDependentType()) ||
             !ObjectType->isIncompleteType() || !ObjectType->getAs<TagType>() ||
-            ObjectType->castAs<TagType>()->isBeingDefined()) &&
+            ObjectType->castAs<TagType>()
+                ->getOriginalDecl()
+                ->isEntityBeingDefined()) &&
            "Caller should have completed object type");
   } else if (SS && SS->isNotEmpty()) {
     // This nested-name-specifier occurs after another nested-name-specifier,
@@ -2772,10 +2772,12 @@ bool Sema::LookupInSuper(LookupResult &R, CXXRecordDecl *Class) {
   // members of Class itself.  That is, the naming class is Class, and the
   // access includes the access of the base.
   for (const auto &BaseSpec : Class->bases()) {
-    CXXRecordDecl *RD = cast<CXXRecordDecl>(
-        BaseSpec.getType()->castAs<RecordType>()->getDecl());
+    CXXRecordDecl *RD =
+        cast<CXXRecordDecl>(
+            BaseSpec.getType()->castAs<RecordType>()->getOriginalDecl())
+            ->getDefinitionOrSelf();
     LookupResult Result(*this, R.getLookupNameInfo(), R.getLookupKind());
-    Result.setBaseObjectType(Context.getRecordType(Class));
+    Result.setBaseObjectType(Context.getCanonicalTagType(Class));
     LookupQualifiedName(Result, RD);
 
     // Copy the lookup results into the target, merging the base's access into
@@ -3101,7 +3103,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
   // Only recurse into base classes for complete types.
   if (!Result.S.isCompleteType(Result.InstantiationLoc,
-                               Result.S.Context.getRecordType(Class)))
+                               Result.S.Context.getCanonicalTagType(Class)))
     return;
 
   // Add direct and indirect base classes along with their associated
@@ -3438,7 +3440,7 @@ Sema::LookupSpecialMember(CXXRecordDecl *RD, CXXSpecialMemberKind SM,
 
   // Prepare for overload resolution. Here we construct a synthetic argument
   // if necessary and make sure that implicit functions are declared.
-  CanQualType CanTy = Context.getCanonicalType(Context.getTagDeclType(RD));
+  CanQualType CanTy = Context.getCanonicalTagType(RD);
   DeclarationName Name;
   Expr *Arg = nullptr;
   unsigned NumArgs;
@@ -3645,7 +3647,7 @@ DeclContext::lookup_result Sema::LookupConstructors(CXXRecordDecl *Class) {
     });
   }
 
-  CanQualType T = Context.getCanonicalType(Context.getTypeDeclType(Class));
+  CanQualType T = Context.getCanonicalTagType(Class);
   DeclarationName Name = Context.DeclarationNames.getCXXConstructorName(T);
   return Class->lookup(Name);
 }
@@ -4853,7 +4855,7 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
           std::string NewQualified = TC.getAsString(SemaRef.getLangOpts());
           std::string OldQualified;
           llvm::raw_string_ostream OldOStream(OldQualified);
-          SS->getScopeRep()->print(OldOStream, SemaRef.getPrintingPolicy());
+          SS->getScopeRep().print(OldOStream, SemaRef.getPrintingPolicy());
           OldOStream << Typo->getName();
           // If correction candidate would be an identical written qualified
           // identifier, then the existing CXXScopeSpec probably included a
@@ -4864,8 +4866,7 @@ void TypoCorrectionConsumer::performQualifiedLookups() {
         for (LookupResult::iterator TRD = Result.begin(), TRDEnd = Result.end();
              TRD != TRDEnd; ++TRD) {
           if (SemaRef.CheckMemberAccess(TC.getCorrectionRange().getBegin(),
-                                        NSType ? NSType->getAsCXXRecordDecl()
-                                               : nullptr,
+                                        NamingClass,
                                         TRD.getPair()) == Sema::AR_accessible)
             TC.addCorrectionDecl(*TRD);
         }
@@ -5463,7 +5464,7 @@ std::string TypoCorrection::getAsString(const LangOptions &LO) const {
   if (CorrectionNameSpec) {
     std::string tmpBuffer;
     llvm::raw_string_ostream PrefixOStream(tmpBuffer);
-    CorrectionNameSpec->print(PrefixOStream, PrintingPolicy(LO));
+    CorrectionNameSpec.print(PrefixOStream, PrintingPolicy(LO));
     PrefixOStream << CorrectionName;
     return PrefixOStream.str();
   }
