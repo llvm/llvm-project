@@ -3116,7 +3116,7 @@ let TargetPrefix = "aarch64" in {
           llvm_nxv16i8_ty,
           llvm_i32_ty],
          [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
-          IntrNoMem, IntrHasSideEffects]>;
+          IntrInaccessibleMemOnly]>;
 
   def int_aarch64_sme_tmopa : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_stmopa : SME_OuterProduct_TMOP_Intrinsic;

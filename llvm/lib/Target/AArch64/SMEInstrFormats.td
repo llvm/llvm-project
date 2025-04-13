@@ -3578,24 +3578,28 @@ class sme_int_sparse_outer_product_i32<bits<5> opc, RegisterOperand zn_ty, Regis
   let Constraints = "$ZAda = $_ZAda";
 }
 
-multiclass sme_tmopa_16b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_ty, ValueType vt, string mnemonic, string intrinsic> {
+multiclass sme_tmopa_16b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_ty, ValueType vt, string mnemonic, SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme_int_sparse_outer_product_i16<opc, zn_ty, zm_ty, mnemonic>, SMEPseudo2Instr<NAME, 1> {
-     let Uses = [FPMR, FPCR];
+    let Uses = uses;
   }
 
-  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
+  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0> {
+    let mayStore = 1;
+  }
 
-  def : SME2_ZA_TMOP_Pat<NAME, !cast<SDPatternOperator>(intrinsic), timm32_0_1, vt>;
+  def : SME2_ZA_TMOP_Pat<NAME, intrinsic, timm32_0_1, vt>;
 }
 
-multiclass sme_tmopa_32b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_ty, ValueType vt, string mnemonic, string intrinsic> {
+multiclass sme_tmopa_32b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_ty, ValueType vt, string mnemonic, SDPatternOperator intrinsic, list<Register> uses=[]> {
   def NAME : sme_int_sparse_outer_product_i32<opc, zn_ty, zm_ty, mnemonic>, SMEPseudo2Instr<NAME, 1> {
-     let Uses = [FPMR, FPCR];
+    let Uses = uses;
   }
 
-  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
+  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0> {
+    let mayStore = 1;
+  }
 
-  def : SME2_ZA_TMOP_Pat<NAME, !cast<SDPatternOperator>(intrinsic), timm32_0_3, vt>;
+  def : SME2_ZA_TMOP_Pat<NAME, intrinsic, timm32_0_3, vt>;
 }
 
 //===----------------------------------------------------------------------===///
