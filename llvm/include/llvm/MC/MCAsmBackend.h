@@ -109,11 +109,10 @@ public:
     return false;
   }
 
-  virtual bool evaluateTargetFixup(const MCAssembler &Asm,
-                                   const MCFixup &Fixup, const MCFragment *DF,
-                                   const MCValue &Target,
-                                   const MCSubtargetInfo *STI, uint64_t &Value,
-                                   bool &WasForced) {
+  virtual bool evaluateTargetFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                   const MCFragment *DF, const MCValue &Target,
+                                   const MCSubtargetInfo *STI,
+                                   uint64_t &Value) {
     llvm_unreachable("Need to implement hook if target has custom fixups");
   }
 
@@ -156,8 +155,7 @@ public:
   virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
                                             const MCRelaxableFragment &,
                                             const MCFixup &, const MCValue &,
-                                            uint64_t, bool Resolved,
-                                            bool WasForced) const;
+                                            uint64_t, bool Resolved) const;
 
   /// Simple predicate for targets where !Resolved implies requiring relaxation
   virtual bool fixupNeedsRelaxation(const MCFixup &Fixup,
