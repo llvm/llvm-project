@@ -137,7 +137,6 @@ private:
   ConditionalLibrary WavefrontSize64;
   ConditionalLibrary FiniteOnly;
   ConditionalLibrary UnsafeMath;
-  ConditionalLibrary DenormalsAreZero;
   ConditionalLibrary CorrectlyRoundedSqrt;
 
   // Maps ABI version to library path. The version number is in the format of
@@ -152,8 +151,7 @@ private:
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
            WavefrontSize64.isValid() && FiniteOnly.isValid() &&
-           UnsafeMath.isValid() && DenormalsAreZero.isValid() &&
-           CorrectlyRoundedSqrt.isValid();
+           UnsafeMath.isValid() && CorrectlyRoundedSqrt.isValid();
   }
 
   void scanLibDevicePath(llvm::StringRef Path);
@@ -175,11 +173,12 @@ public:
 
   /// Get file paths of default bitcode libraries common to AMDGPU based
   /// toolchains.
-  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> getCommonBitcodeLibs(
-      const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
-      bool Wave64, bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
-      bool FastRelaxedMath, bool CorrectSqrt, DeviceLibABIVersion ABIVer,
-      bool GPUSan, bool isOpenMP) const;
+  llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
+  getCommonBitcodeLibs(const llvm::opt::ArgList &DriverArgs,
+                       StringRef LibDeviceFile, bool Wave64, bool FiniteOnly,
+                       bool UnsafeMathOpt, bool FastRelaxedMath,
+                       bool CorrectSqrt, DeviceLibABIVersion ABIVer,
+                       bool GPUSan, bool isOpenMP) const;
   /// Check file paths of default bitcode libraries common to AMDGPU based
   /// toolchains. \returns false if there are invalid or missing files.
   bool checkCommonBitcodeLibs(StringRef GPUArch, StringRef LibDeviceFile,
@@ -243,10 +242,6 @@ public:
 
   StringRef getUnsafeMathPath(bool Enabled) const {
     return UnsafeMath.get(Enabled);
-  }
-
-  StringRef getDenormalsAreZeroPath(bool Enabled) const {
-    return DenormalsAreZero.get(Enabled);
   }
 
   StringRef getCorrectlyRoundedSqrtPath(bool Enabled) const {
