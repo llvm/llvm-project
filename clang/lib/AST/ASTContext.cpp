@@ -4272,17 +4272,17 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     result =
         getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
                              /*size*/ nullptr, ArraySizeModifier::Normal,
-                             iat->getIndexTypeCVRQualifiers(), SourceRange());
+                             iat->getIndexTypeCVRQualifiers());
     break;
   }
 
   // Turn VLA types into [*] types.
   case Type::VariableArray: {
     const auto *vat = cast<VariableArrayType>(ty);
-    result = getVariableArrayType(
-        getVariableArrayDecayedType(vat->getElementType()),
-        /*size*/ nullptr, ArraySizeModifier::Star,
-        vat->getIndexTypeCVRQualifiers(), vat->getBracketsRange());
+    result =
+        getVariableArrayType(getVariableArrayDecayedType(vat->getElementType()),
+                             /*size*/ nullptr, ArraySizeModifier::Star,
+                             vat->getIndexTypeCVRQualifiers());
     break;
   }
   }
@@ -4295,8 +4295,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 /// variable array of the specified element type.
 QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
                                           ArraySizeModifier ASM,
-                                          unsigned IndexTypeQuals,
-                                          SourceRange Brackets) const {
+                                          unsigned IndexTypeQuals) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
   // that have an expression provided for their size.
   QualType Canon;
@@ -4306,12 +4305,12 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
   if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers()) {
     SplitQualType canonSplit = getCanonicalType(EltTy).split();
     Canon = getVariableArrayType(QualType(canonSplit.Ty, 0), NumElts, ASM,
-                                 IndexTypeQuals, Brackets);
+                                 IndexTypeQuals);
     Canon = getQualifiedType(Canon, canonSplit.Quals);
   }
 
   auto *New = new (*this, alignof(VariableArrayType))
-      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals, Brackets);
+      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals);
 
   VariableArrayTypes.push_back(New);
   Types.push_back(New);
@@ -6771,11 +6770,9 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
   }
 
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
-    return getVariableArrayType(unqualElementType,
-                                VAT->getSizeExpr(),
+    return getVariableArrayType(unqualElementType, VAT->getSizeExpr(),
                                 VAT->getSizeModifier(),
-                                VAT->getIndexTypeCVRQualifiers(),
-                                VAT->getBracketsRange());
+                                VAT->getIndexTypeCVRQualifiers());
   }
 
   const auto *DSAT = cast<DependentSizedArrayType>(AT);
@@ -7729,11 +7726,9 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
         DSAT->getIndexTypeCVRQualifiers()));
 
   const auto *VAT = cast<VariableArrayType>(ATy);
-  return cast<ArrayType>(getVariableArrayType(NewEltTy,
-                                              VAT->getSizeExpr(),
-                                              VAT->getSizeModifier(),
-                                              VAT->getIndexTypeCVRQualifiers(),
-                                              VAT->getBracketsRange()));
+  return cast<ArrayType>(
+      getVariableArrayType(NewEltTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
+                           VAT->getIndexTypeCVRQualifiers()));
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {

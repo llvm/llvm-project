@@ -1941,8 +1941,6 @@ void TextNodeDumper::VisitConstantArrayType(const ConstantArrayType *T) {
 }
 
 void TextNodeDumper::VisitVariableArrayType(const VariableArrayType *T) {
-  OS << " ";
-  dumpSourceRange(T->getBracketsRange());
   VisitArrayType(T);
 }
 
