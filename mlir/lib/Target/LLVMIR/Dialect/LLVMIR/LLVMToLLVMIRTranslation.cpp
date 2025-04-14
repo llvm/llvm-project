@@ -505,15 +505,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     moduleTranslation.mapBranch(&opInst, switchInst);
     return success();
   }
-  if (auto indBrOp = dyn_cast<LLVM::IndirectBrOp>(opInst)) {
-    llvm::IndirectBrInst *indBr = builder.CreateIndirectBr(
-        moduleTranslation.lookupValue(indBrOp.getAddr()),
-        indBrOp->getNumSuccessors());
-    for (auto *succ : indBrOp.getSuccessors())
-      indBr->addDestination(moduleTranslation.lookupBlock(succ));
-    moduleTranslation.mapBranch(&opInst, indBr);
-    return success();
-  }
 
   // Emit addressof.  We need to look up the global value referenced by the
   // operation and store it in the MLIR-to-LLVM value mapping.  This does not
