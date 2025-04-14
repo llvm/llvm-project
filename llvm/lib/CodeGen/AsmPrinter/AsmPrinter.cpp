@@ -2860,22 +2860,12 @@ void AsmPrinter::emitConstantPool() {
 void AsmPrinter::emitJumpTableInfo() {
   const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
   if (!MJTI) return;
-  if (MJTI->getEntryKind() == MachineJumpTableInfo::EK_Inline) return;
+
   const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
   if (JT.empty()) return;
 
-  // Pick the directive to use to print the jump table entries, and switch to
-  // the appropriate section.
-  const Function &F = MF->getFunction();
-  const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  bool JTInDiffSection = !TLOF.shouldPutJumpTableInFunctionSection(
-      MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-          MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
-      F);
-
   if (!TM.Options.EnableStaticDataPartitioning) {
-    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
-                      JTInDiffSection);
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())));
     return;
   }
 
@@ -2891,33 +2881,40 @@ void AsmPrinter::emitJumpTableInfo() {
     }
   }
 
-  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
-  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices);
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
-                                   ArrayRef<unsigned> JumpTableIndices,
-                                   bool JTInDiffSection) {
-  if (JumpTableIndices.empty())
+                                   ArrayRef<unsigned> JumpTableIndices) {
+  if (MJTI.getEntryKind() == MachineJumpTableInfo::EK_Inline ||
+      JumpTableIndices.empty())
     return;
 
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
   MCSection *JumpTableSection = nullptr;
-  if (TM.Options.EnableStaticDataPartitioning) {
-    JumpTableSection =
-        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
-  } else {
-    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
-  }
 
-  const DataLayout &DL = MF->getDataLayout();
+  const bool UseLabelDifference =
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64;
+  // Pick the directive to use to print the jump table entries, and switch to
+  // the appropriate section.
+  const bool JTInDiffSection =
+      !TLOF.shouldPutJumpTableInFunctionSection(UseLabelDifference, F);
   if (JTInDiffSection) {
+    if (TM.Options.EnableStaticDataPartitioning) {
+      JumpTableSection =
+          TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+    } else {
+      JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+    }
     OutStreamer->switchSection(JumpTableSection);
   }
 
-  emitAlignment(Align(MJTI.getEntryAlignment(MF->getDataLayout())));
+  const DataLayout &DL = MF->getDataLayout();
+  emitAlignment(Align(MJTI.getEntryAlignment(DL)));
 
   // Jump tables in code sections are marked with a data_region directive
   // where that's supported.
