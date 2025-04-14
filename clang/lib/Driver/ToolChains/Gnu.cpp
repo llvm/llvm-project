@@ -2632,6 +2632,27 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     return;
   }
 
+  if (TargetTriple.isWindowsCygwinEnvironment()) {
+    static const char *const CygwinX86Triples[] = {"i686-pc-cygwin",
+                                                   "i686-pc-msys"};
+    static const char *const CygwinX86_64Triples[] = {"x86_64-pc-cygwin",
+                                                      "x86_64-pc-msys"};
+    LibDirs.push_back("/lib");
+    switch (TargetTriple.getArch()) {
+    case llvm::Triple::x86_64:
+      TripleAliases.append(begin(CygwinX86_64Triples),
+                           end(CygwinX86_64Triples));
+      break;
+    case llvm::Triple::x86:
+      TripleAliases.append(begin(CygwinX86Triples), end(CygwinX86Triples));
+      break;
+    default:
+      break;
+    }
+
+    return;
+  }
+
   switch (TargetTriple.getArch()) {
   case llvm::Triple::aarch64:
     LibDirs.append(begin(AArch64LibDirs), end(AArch64LibDirs));
