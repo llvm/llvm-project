@@ -30,8 +30,8 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 
 #include "LogChannelSwift.h"
 #include "ObjCRuntimeSyntheticProvider.h"
@@ -924,7 +924,9 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
       return m_backend.GetName() == name ? 0 : UINT32_MAX;
     }
 
-    lldb::ChildCacheState Update() override { return ChildCacheState::eRefetch; }
+    lldb::ChildCacheState Update() override {
+      return ChildCacheState::eRefetch;
+    }
 
     bool MightHaveChildren() override { return true; }
 
@@ -934,7 +936,7 @@ class ValueObjectWrapperSyntheticChildren : public SyntheticChildren {
   };
 
 public:
-  ValueObjectWrapperSyntheticChildren(ValueObjectSP valobj, const Flags &flags) 
+  ValueObjectWrapperSyntheticChildren(ValueObjectSP valobj, const Flags &flags)
       : SyntheticChildren(flags), m_valobj(valobj) {}
 
   SyntheticChildrenFrontEnd::AutoPointer
@@ -943,7 +945,7 @@ public:
       return nullptr;
     // We ignore the backend parameter here, as we have a more specific one
     // available.
-    return std::make_unique<ValueObjectWrapperFrontEndProvider>(*m_valobj); 
+    return std::make_unique<ValueObjectWrapperFrontEndProvider>(*m_valobj);
   }
 
   bool IsScripted() override { return false; }
@@ -1223,7 +1225,7 @@ SwiftLanguage::GetHardcodedSynthetics() {
 
       CompilerType original_type;
       if (!swift_type_system->IsImportedType(type.GetOpaqueQualType(),
-                                        &original_type))
+                                             &original_type))
         return nullptr;
 
       if (!original_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
@@ -1464,7 +1466,7 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                 if (result_sp && result_sp->GetCompilerType().IsValid()) {
                   CompilerType result_type(result_sp->GetCompilerType());
                   if (Flags(result_type.GetTypeInfo())
-                      .AllSet(eTypeIsSwift | eTypeIsMetatype)) {
+                          .AllSet(eTypeIsSwift | eTypeIsMetatype)) {
                     result_type = TypeSystemSwift::GetInstanceType(result_type,
                                                                    exe_scope);
                     if (auto swift_ast_ctx =
@@ -1848,7 +1850,7 @@ bool SwiftLanguage::GetFunctionDisplayName(
       s.PutCString(close_paren);
     else
       s.PutChar(')');
-    } 
+  }
     return true;
   }
   return false;
@@ -2001,6 +2003,26 @@ SwiftLanguage::AreEqualForFrameComparison(const SymbolContext &sc1,
     return false;
   }
   llvm_unreachable("unhandled enumeration in AreEquivalentFunctions");
+}
+
+std::pair<FunctionNameType, std::optional<ConstString>>
+SwiftLanguage::GetFunctionNameInfo(ConstString name) const {
+  if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef()))
+    return {eFunctionNameTypeFull, std::nullopt};
+
+  SwiftLanguageRuntime::MethodName swift_method(name, true);
+  if (!swift_method.IsValid())
+    return std::pair{lldb::eFunctionNameTypeNone, std::nullopt};
+
+  auto basename = swift_method.GetBasename();
+
+  FunctionNameType func_name_type = eFunctionNameTypeNone;
+  if (basename.empty())
+    func_name_type = eFunctionNameTypeFull;
+  else
+    func_name_type = (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+
+  return {func_name_type, ConstString(basename)};
 }
 
 //------------------------------------------------------------------

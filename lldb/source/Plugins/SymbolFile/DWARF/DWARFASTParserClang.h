@@ -461,7 +461,7 @@ private:
   ///
   /// \returns true on success
   bool
-  ParseObjCMethod(const lldb_private::ObjCLanguage::MethodName &objc_method,
+  ParseObjCMethod(const lldb_private::ObjCLanguage::ObjCMethodName &objc_method,
                   const lldb_private::plugin::dwarf::DWARFDIE &die,
                   lldb_private::CompilerType clang_type,
                   const ParsedDWARFTypeAttributes &attrs, bool is_variadic);
@@ -545,7 +545,6 @@ private:
   /// Swift type.
   bool IsSwiftInteropType(const lldb_private::plugin::dwarf::DWARFDIE &die);
   // END SWIFT
-
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.

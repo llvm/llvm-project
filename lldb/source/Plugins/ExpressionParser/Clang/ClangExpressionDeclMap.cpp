@@ -18,6 +18,7 @@
 #include "NameSearchContext.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Expression/DiagnosticManager.h"
@@ -35,6 +36,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -56,7 +58,6 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -225,8 +226,8 @@ bool ClangExpressionDeclMap::AddPersistentVariable(const NamedDecl *decl,
   // Check if we already declared a persistent variable with the same name.
   if (lldb::ExpressionVariableSP conflicting_var =
           m_parser_vars->m_persistent_vars->GetVariable(name)) {
-    std::string msg = llvm::formatv("redefinition of persistent variable '{0}'",
-                                    name).str();
+    std::string msg =
+        llvm::formatv("redefinition of persistent variable '{0}'", name).str();
     m_parser_vars->m_diagnostics->AddDiagnostic(
         msg, lldb::eSeverityError, DiagnosticOrigin::eDiagnosticOriginLLDB);
     return false;
@@ -1447,18 +1448,16 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
         m_parser_vars->m_sym_ctx.FindBestGlobalDataSymbol(name, error);
 
     if (!error.Success()) {
-      const unsigned diag_id =
-          m_ast_context->getDiagnostics().getCustomDiagID(
-              clang::DiagnosticsEngine::Level::Error, "%0");
+      const unsigned diag_id = m_ast_context->getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Level::Error, "%0");
       m_ast_context->getDiagnostics().Report(diag_id) << error.AsCString();
     }
 
     if (data_symbol) {
       std::string warning("got name from symbols: ");
       warning.append(name.AsCString());
-      const unsigned diag_id =
-          m_ast_context->getDiagnostics().getCustomDiagID(
-              clang::DiagnosticsEngine::Level::Warning, "%0");
+      const unsigned diag_id = m_ast_context->getDiagnostics().getCustomDiagID(
+          clang::DiagnosticsEngine::Level::Warning, "%0");
       m_ast_context->getDiagnostics().Report(diag_id) << warning.c_str();
       AddOneGenericVariable(context, *data_symbol);
       context.m_found_variable = true;
@@ -1810,10 +1809,10 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
 
     const auto lang = function->GetCompileUnit()->GetLanguage();
     const auto name = function->GetMangled().GetMangledName().AsCString();
-    const bool extern_c = (Language::LanguageIsC(lang) &&
-                           !CPlusPlusLanguage::IsCPPMangledName(name)) ||
-                          (Language::LanguageIsObjC(lang) &&
-                           !Language::LanguageIsCPlusPlus(lang));
+    const bool extern_c =
+        (Language::LanguageIsC(lang) && !Mangled::IsMangledName(name)) ||
+        (Language::LanguageIsObjC(lang) &&
+         !Language::LanguageIsCPlusPlus(lang));
 
     if (!extern_c) {
       TypeSystem *type_system = function->GetDeclContext().GetTypeSystem();

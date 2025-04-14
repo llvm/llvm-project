@@ -9,10 +9,10 @@
 #ifndef LLDB_CORE_MANGLED_H
 #define LLDB_CORE_MANGLED_H
 
+#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
-#include "lldb/Utility/ConstString.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstddef>
@@ -68,9 +68,7 @@ public:
            GetDemangledName() == rhs.GetDemangledName();
   }
 
-  bool operator!=(const Mangled &rhs) const {
-    return !(*this == rhs);
-  }
+  bool operator!=(const Mangled &rhs) const { return !(*this == rhs); }
 
   /// Convert to bool operator.
   ///
@@ -246,6 +244,8 @@ public:
   ///     eManglingSchemeNone if no known mangling scheme could be identified
   ///     for s, otherwise the enumerator for the mangling scheme detected.
   static Mangled::ManglingScheme GetManglingScheme(llvm::StringRef const name);
+
+  static bool IsMangledName(llvm::StringRef name);
 
   /// Decode a serialized version of this object from data.
   ///
