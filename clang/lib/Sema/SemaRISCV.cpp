@@ -232,7 +232,8 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
   for (auto &Record : Recs) {
     // Check requirements.
     if (llvm::any_of(FeatureCheckList, [&](const auto &Item) {
-          return Record.RequiredExtensions[Item.second] &&
+          return ((Record.RequiredExtensions[Item.second / 32] &
+                   (1U << (Item.second % 32))) != 0) &&
                  !TI.hasFeature(Item.first);
         }))
       continue;

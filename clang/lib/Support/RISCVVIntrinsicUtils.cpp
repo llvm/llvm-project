@@ -1196,91 +1196,36 @@ SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   return PrototypeDescriptors;
 }
 
-#define STRINGIFY(NAME)                                                        \
-  case NAME:                                                                   \
-    OS << #NAME;                                                               \
-    break;
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum PolicyScheme PS) {
-  switch (PS) {
-    STRINGIFY(SchemeNone)
-    STRINGIFY(HasPassthruOperand)
-    STRINGIFY(HasPolicyOperand)
-  }
-  return OS;
-}
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
-  switch (Require) {
-    STRINGIFY(RVV_REQ_RV64)
-    STRINGIFY(RVV_REQ_Zvfhmin)
-    STRINGIFY(RVV_REQ_Xsfvcp)
-    STRINGIFY(RVV_REQ_Xsfvfnrclipxfqf)
-    STRINGIFY(RVV_REQ_Xsfvfwmaccqqq)
-    STRINGIFY(RVV_REQ_Xsfvqmaccdod)
-    STRINGIFY(RVV_REQ_Xsfvqmaccqoq)
-    STRINGIFY(RVV_REQ_Zvbb)
-    STRINGIFY(RVV_REQ_Zvbc)
-    STRINGIFY(RVV_REQ_Zvkb)
-    STRINGIFY(RVV_REQ_Zvkg)
-    STRINGIFY(RVV_REQ_Zvkned)
-    STRINGIFY(RVV_REQ_Zvknha)
-    STRINGIFY(RVV_REQ_Zvknhb)
-    STRINGIFY(RVV_REQ_Zvksed)
-    STRINGIFY(RVV_REQ_Zvksh)
-    STRINGIFY(RVV_REQ_Zvfbfwma)
-    STRINGIFY(RVV_REQ_Zvfbfmin)
-    STRINGIFY(RVV_REQ_Zvfh)
-    STRINGIFY(RVV_REQ_Experimental)
-  default:
-    llvm_unreachable("Unsupported RVVRequire!");
-    break;
-  }
-  return OS;
-}
-
-#undef STRINGIFY
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const RequiredExtensions &Exts) {
-  OS << "{";
-  ListSeparator LS;
-  for (unsigned I = 0; I < RVV_REQ_NUM; I++)
-    if (Exts[I])
-      OS << LS << static_cast<RVVRequire>(I);
-  OS << "}";
-  return OS;
-}
-
 raw_ostream &operator<<(raw_ostream &OS, const RVVIntrinsicRecord &Record) {
   OS << "{";
-  OS << "/*Name=*/\"" << Record.Name << "\", ";
+  OS << "\"" << Record.Name << "\",";
   if (Record.OverloadedName == nullptr ||
       StringRef(Record.OverloadedName).empty())
-    OS << "/*OverloadedName=*/nullptr, ";
+    OS << "nullptr,";
   else
-    OS << "/*OverloadedName=*/\"" << Record.OverloadedName << "\", ";
-  OS << "/*RequiredExtensions=*/" << Record.RequiredExtensions << ", ";
-  OS << "/*PrototypeIndex=*/" << Record.PrototypeIndex << ", ";
-  OS << "/*SuffixIndex=*/" << Record.SuffixIndex << ", ";
-  OS << "/*OverloadedSuffixIndex=*/" << Record.OverloadedSuffixIndex << ", ";
-  OS << "/*PrototypeLength=*/" << (int)Record.PrototypeLength << ", ";
-  OS << "/*SuffixLength=*/" << (int)Record.SuffixLength << ", ";
-  OS << "/*OverloadedSuffixSize=*/" << (int)Record.OverloadedSuffixSize << ", ";
-  OS << "/*TypeRangeMask=*/" << (int)Record.TypeRangeMask << ", ";
-  OS << "/*Log2LMULMask=*/" << (int)Record.Log2LMULMask << ", ";
-  OS << "/*NF=*/" << (int)Record.NF << ", ";
-  OS << "/*HasMasked=*/" << (int)Record.HasMasked << ", ";
-  OS << "/*HasVL=*/" << (int)Record.HasVL << ", ";
-  OS << "/*HasMaskedOffOperand=*/" << (int)Record.HasMaskedOffOperand << ", ";
-  OS << "/*HasTailPolicy=*/" << (int)Record.HasTailPolicy << ", ";
-  OS << "/*HasMaskPolicy=*/" << (int)Record.HasMaskPolicy << ", ";
-  OS << "/*HasFRMRoundModeOp=*/" << (int)Record.HasFRMRoundModeOp << ", ";
-  OS << "/*IsTuple=*/" << (int)Record.IsTuple << ", ";
-  OS << "/*UnMaskedPolicyScheme=*/" << (PolicyScheme)Record.UnMaskedPolicyScheme
-     << ", ";
-  OS << "/*MaskedPolicyScheme=*/" << (PolicyScheme)Record.MaskedPolicyScheme
-     << ", ";
+    OS << "\"" << Record.OverloadedName << "\",";
+  OS << "{";
+  for (uint32_t Exts : Record.RequiredExtensions)
+    OS << Exts << ',';
+  OS << "},";
+  OS << Record.PrototypeIndex << ",";
+  OS << Record.SuffixIndex << ",";
+  OS << Record.OverloadedSuffixIndex << ",";
+  OS << (int)Record.PrototypeLength << ",";
+  OS << (int)Record.SuffixLength << ",";
+  OS << (int)Record.OverloadedSuffixSize << ",";
+  OS << (int)Record.TypeRangeMask << ",";
+  OS << (int)Record.Log2LMULMask << ",";
+  OS << (int)Record.NF << ",";
+  OS << (int)Record.HasMasked << ",";
+  OS << (int)Record.HasVL << ",";
+  OS << (int)Record.HasMaskedOffOperand << ",";
+  OS << (int)Record.HasTailPolicy << ",";
+  OS << (int)Record.HasMaskPolicy << ",";
+  OS << (int)Record.HasFRMRoundModeOp << ",";
+  OS << (int)Record.IsTuple << ",";
+  OS << (int)Record.UnMaskedPolicyScheme << ",";
+  OS << (int)Record.MaskedPolicyScheme << ",";
   OS << "},\n";
   return OS;
 }
