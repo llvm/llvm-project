@@ -26,7 +26,6 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
-#include <llvm-14/llvm/Support/ErrorHandling.h>
 
 using namespace mlir;
 
