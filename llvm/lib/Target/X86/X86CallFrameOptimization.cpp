@@ -573,7 +573,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
     // For debugging, when using SP-based CFA, we need to adjust the CFA
     // offset after each push.
     // TODO: This is needed only if we require precise CFA.
-    if (!TFL->hasFP(MF))
+    if (TFL->needsDwarfCFI(MF) && !TFL->hasFP(MF))
       TFL->BuildCFI(
           MBB, std::next(Push), DL,
           MCCFIInstruction::createAdjustCfaOffset(nullptr, SlotSize));
