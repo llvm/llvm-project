@@ -1,4 +1,4 @@
-// This file replace gnu properties with aarch64 build attributes.
+// Declare file properties exclusively with aarch64 build attributes.
 
 .aeabi_subsection aeabi_feature_and_bits, optional, uleb128
 .aeabi_attribute Tag_Feature_PAC, 1
