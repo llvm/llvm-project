@@ -62,17 +62,16 @@ using namespace sema;
 ///  is at the top of the stack and has the highest index.
 /// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
 ///
-/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
+/// \returns An UnsignedOrNone Index that if evaluates to 'true'
 /// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
 /// lambda which is capture-ready.  If the return value evaluates to 'false'
 /// then no lambda is capture-ready for \p VarToCapture.
 
-static inline std::optional<unsigned>
-getStackIndexOfNearestEnclosingCaptureReadyLambda(
+static inline UnsignedOrNone getStackIndexOfNearestEnclosingCaptureReadyLambda(
     ArrayRef<const clang::sema::FunctionScopeInfo *> FunctionScopes,
     ValueDecl *VarToCapture) {
   // Label failure to capture.
-  const std::optional<unsigned> NoLambdaIsCaptureReady;
+  const UnsignedOrNone NoLambdaIsCaptureReady = std::nullopt;
 
   // Ignore all inner captured regions.
   unsigned CurScopeIndex = FunctionScopes.size() - 1;
@@ -173,19 +172,18 @@ getStackIndexOfNearestEnclosingCaptureReadyLambda(
 /// \param VarToCapture - the variable to capture.  If NULL, capture 'this'.
 ///
 ///
-/// \returns An std::optional<unsigned> Index that if evaluates to 'true'
+/// \returns An UnsignedOrNone Index that if evaluates to 'true'
 /// contains the index (into Sema's FunctionScopeInfo stack) of the innermost
 /// lambda which is capture-capable.  If the return value evaluates to 'false'
 /// then no lambda is capture-capable for \p VarToCapture.
 
-std::optional<unsigned>
-clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
+UnsignedOrNone clang::getStackIndexOfNearestEnclosingCaptureCapableLambda(
     ArrayRef<const sema::FunctionScopeInfo *> FunctionScopes,
     ValueDecl *VarToCapture, Sema &S) {
 
-  const std::optional<unsigned> NoLambdaIsCaptureCapable;
+  const UnsignedOrNone NoLambdaIsCaptureCapable = std::nullopt;
 
-  const std::optional<unsigned> OptionalStackIndex =
+  const UnsignedOrNone OptionalStackIndex =
       getStackIndexOfNearestEnclosingCaptureReadyLambda(FunctionScopes,
                                                         VarToCapture);
   if (!OptionalStackIndex)
@@ -808,8 +806,8 @@ void Sema::deduceClosureReturnType(CapturingScopeInfo &CSI) {
 
 QualType Sema::buildLambdaInitCaptureInitialization(
     SourceLocation Loc, bool ByRef, SourceLocation EllipsisLoc,
-    std::optional<unsigned> NumExpansions, IdentifierInfo *Id,
-    bool IsDirectInit, Expr *&Init) {
+    UnsignedOrNone NumExpansions, IdentifierInfo *Id, bool IsDirectInit,
+    Expr *&Init) {
   // Create an 'auto' or 'auto&' TypeSourceInfo that we can use to
   // deduce against.
   QualType DeductType = Context.getAutoDeductType();
@@ -1462,9 +1460,8 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CompleteLambdaCallOperator(
       Method, Intro.Range.getBegin(), CallOperatorLoc,
-      AssociatedConstraint(ParamInfo.getTrailingRequiresClause(),
-                           /*ArgumentPackSubstitutionIndex=*/-1),
-      MethodTyInfo, ParamInfo.getDeclSpec().getConstexprSpecifier(),
+      AssociatedConstraint(ParamInfo.getTrailingRequiresClause()), MethodTyInfo,
+      ParamInfo.getDeclSpec().getConstexprSpecifier(),
       IsLambdaStatic ? SC_Static : SC_None, Params, ExplicitResultType);
 
   CheckCXXDefaultArguments(Method);

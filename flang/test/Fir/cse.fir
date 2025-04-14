@@ -55,3 +55,23 @@ func.func @fun(%a : !fir.ref<i64>) -> i64 {
   %5 = arith.subi %4, %4 : i64
   return %5 : i64
 }
+
+// -----
+
+// Check that the redundant ops on volatile operands are PRESERVED.
+func.func @fun(%arg0: !fir.ref<i64, volatile>) -> i64 {
+    %0 = fir.load %arg0 : !fir.ref<i64, volatile>
+    %1 = fir.load %arg0 : !fir.ref<i64, volatile>
+    %2 = arith.addi %0, %1 : i64
+    fir.store %2 to %arg0 : !fir.ref<i64, volatile>
+    fir.store %2 to %arg0 : !fir.ref<i64, volatile>
+    return %2 : i64
+}
+// CHECK-LABEL:   func.func @fun(%arg0: !fir.ref<i64, volatile>) -> i64 {
+// CHECK:           %[[VAL_1:.*]] = fir.load %arg0 : !fir.ref<i64, volatile>
+// CHECK:           %[[VAL_2:.*]] = fir.load %arg0 : !fir.ref<i64, volatile>
+// CHECK:           %[[VAL_3:.*]] = arith.addi %[[VAL_1]], %[[VAL_2]] : i64
+// CHECK:           fir.store %[[VAL_3]] to %arg0 : !fir.ref<i64, volatile>
+// CHECK:           fir.store %[[VAL_3]] to %arg0 : !fir.ref<i64, volatile>
+// CHECK:           return %[[VAL_3]] : i64
+// CHECK:         }

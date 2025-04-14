@@ -252,9 +252,7 @@ TemplateTypeParmDecl *transformTemplateTypeParam(
       SemaRef.Context, DC, TTP->getBeginLoc(), TTP->getLocation(), NewDepth,
       NewIndex, TTP->getIdentifier(), TTP->wasDeclaredWithTypename(),
       TTP->isParameterPack(), TTP->hasTypeConstraint(),
-      TTP->isExpandedParameterPack()
-          ? std::optional<unsigned>(TTP->getNumExpansionParameters())
-          : std::nullopt);
+      TTP->getNumExpansionParameters());
   if (const auto *TC = TTP->getTypeConstraint())
     SemaRef.SubstTypeConstraint(NewTTP, TC, Args,
                                 /*EvaluateConstraint=*/EvaluateConstraint);
@@ -356,8 +354,7 @@ struct ConvertConstructorToDeductionGuideTransform {
     TemplateParameterList *TemplateParams =
         SemaRef.GetTemplateParameterList(Template);
     SmallVector<TemplateArgument, 16> Depth1Args;
-    AssociatedConstraint OuterRC(TemplateParams->getRequiresClause(),
-                                 /*ArgumentPackSubstitutionIndex=*/-1);
+    AssociatedConstraint OuterRC(TemplateParams->getRequiresClause());
     if (FTD) {
       TemplateParameterList *InnerParams = FTD->getTemplateParameters();
       SmallVector<NamedDecl *, 16> AllParams;
@@ -469,8 +466,7 @@ struct ConvertConstructorToDeductionGuideTransform {
           const_cast<Expr *>(RC.ConstraintExpr), Args);
       if (!E.isUsable())
         return nullptr;
-      FunctionTrailingRC =
-          AssociatedConstraint(E.get(), RC.ArgumentPackSubstitutionIndex);
+      FunctionTrailingRC = AssociatedConstraint(E.get(), RC.ArgPackSubstIndex);
     }
 
     // C++ [over.match.class.deduct]p1:
@@ -495,7 +491,7 @@ struct ConvertConstructorToDeductionGuideTransform {
                 /*rhs=*/const_cast<Expr *>(FunctionTrailingRC.ConstraintExpr),
                 BO_LAnd, SemaRef.Context.BoolTy, VK_PRValue, OK_Ordinary,
                 TemplateParams->getTemplateLoc(), FPOptionsOverride()),
-            FunctionTrailingRC.ArgumentPackSubstitutionIndex);
+            FunctionTrailingRC.ArgPackSubstIndex);
     }
 
     return buildDeductionGuide(
@@ -630,7 +626,7 @@ private:
     TypeSourceInfo *NewDI;
     if (auto PackTL = OldDI->getTypeLoc().getAs<PackExpansionTypeLoc>()) {
       // Expand out the one and only element in each inner pack.
-      Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(SemaRef, 0);
+      Sema::ArgPackSubstIndexRAII SubstIndex(SemaRef, 0u);
       NewDI =
           SemaRef.SubstType(PackTL.getPatternLoc(), Args,
                             OldParam->getLocation(), OldParam->getDeclName());
@@ -1247,10 +1243,8 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       // FIXME: Here the synthesized deduction guide is not a templated
       // function. Per [dcl.decl]p4, the requires-clause shall be present only
       // if the declarator declares a templated function, a bug in standard?
-      AssociatedConstraint Constraint(
-          buildIsDeducibleConstraint(SemaRef, AliasTemplate,
-                                     Transformed->getReturnType(), {}),
-          /*ArgumentPackSubstitutionIndex=*/-1);
+      AssociatedConstraint Constraint(buildIsDeducibleConstraint(
+          SemaRef, AliasTemplate, Transformed->getReturnType(), {}));
       if (const AssociatedConstraint &RC = DG->getTrailingRequiresClause()) {
         auto Conjunction = SemaRef.BuildBinOp(
             SemaRef.getCurScope(), SourceLocation{},
@@ -1258,8 +1252,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
             const_cast<Expr *>(Constraint.ConstraintExpr));
         if (!Conjunction.isInvalid()) {
           Constraint.ConstraintExpr = Conjunction.getAs<Expr>();
-          Constraint.ArgumentPackSubstitutionIndex =
-              RC.ArgumentPackSubstitutionIndex;
+          Constraint.ArgPackSubstIndex = RC.ArgPackSubstIndex;
         }
       }
       Transformed->setTrailingRequiresClause(Constraint);
@@ -1355,8 +1348,7 @@ FunctionTemplateDecl *Sema::DeclareAggregateDeductionGuideFromInitList(
 
   // In case we were expanding a pack when we attempted to declare deduction
   // guides, turn off pack expansion for everything we're about to do.
-  ArgumentPackSubstitutionIndexRAII SubstIndex(*this,
-                                               /*NewSubstitutionIndex=*/-1);
+  ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
   // Create a template instantiation record to track the "instantiation" of
   // constructors into deduction guides.
   InstantiatingTemplate BuildingDeductionGuides(
@@ -1405,7 +1397,7 @@ void Sema::DeclareImplicitDeductionGuides(TemplateDecl *Template,
 
   // In case we were expanding a pack when we attempted to declare deduction
   // guides, turn off pack expansion for everything we're about to do.
-  ArgumentPackSubstitutionIndexRAII SubstIndex(*this, -1);
+  ArgPackSubstIndexRAII SubstIndex(*this, std::nullopt);
   // Create a template instantiation record to track the "instantiation" of
   // constructors into deduction guides.
   InstantiatingTemplate BuildingDeductionGuides(

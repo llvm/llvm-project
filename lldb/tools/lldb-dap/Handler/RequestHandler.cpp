@@ -11,6 +11,8 @@
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "Protocol/ProtocolRequests.h"
+#include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "RunInTerminal.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBEnvironment.h"
@@ -19,6 +21,8 @@
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
+
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -170,6 +174,28 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::Error::success();
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  error.GetCString());
+}
+
+void BaseRequestHandler::Run(const Request &request) {
+  // If this request was cancelled, send a cancelled response.
+  if (dap.IsCancelled(request)) {
+    Response cancelled{/*request_seq=*/request.seq,
+                       /*command=*/request.command,
+                       /*success=*/false,
+                       /*message=*/eResponseMessageCancelled,
+                       /*body=*/std::nullopt};
+    dap.Send(cancelled);
+    return;
+  }
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to move this into
+  // RequestHandler<>::operator().
+  operator()(request);
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to check `debugger.InterruptRequest` and
+  // mark the response as cancelled.
 }
 
 llvm::Error BaseRequestHandler::LaunchProcess(

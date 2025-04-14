@@ -17,6 +17,13 @@ using namespace llvm;
 
 namespace lldb_dap::protocol {
 
+bool fromJSON(const llvm::json::Value &Params, CancelArguments &CA,
+              llvm::json::Path P) {
+  llvm::json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("requestId", CA.requestId) &&
+         O.mapOptional("progressId", CA.progressId);
+}
+
 bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
