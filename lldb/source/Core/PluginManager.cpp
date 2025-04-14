@@ -564,11 +564,12 @@ static LanguageInstances &GetLanguageInstances() {
   return g_instances;
 }
 
-bool PluginManager::RegisterPlugin(llvm::StringRef name,
-                                   llvm::StringRef description,
-                                   LanguageCreateInstance create_callback) {
-  return GetLanguageInstances().RegisterPlugin(name, description,
-                                               create_callback);
+bool PluginManager::RegisterPlugin(
+    llvm::StringRef name, llvm::StringRef description,
+    LanguageCreateInstance create_callback,
+    DebuggerInitializeCallback debugger_init_callback) {
+  return GetLanguageInstances().RegisterPlugin(
+      name, description, create_callback, debugger_init_callback);
 }
 
 bool PluginManager::UnregisterPlugin(LanguageCreateInstance create_callback) {
@@ -1682,6 +1683,7 @@ void PluginManager::DebuggerInitialize(Debugger &debugger) {
   GetStructuredDataPluginInstances().PerformDebuggerCallback(debugger);
   GetTracePluginInstances().PerformDebuggerCallback(debugger);
   GetScriptedInterfaceInstances().PerformDebuggerCallback(debugger);
+  GetLanguageInstances().PerformDebuggerCallback(debugger);
 }
 
 // This is the preferred new way to register plugin specific settings.  e.g.
@@ -1810,6 +1812,7 @@ static constexpr llvm::StringLiteral kSymbolLocatorPluginName("symbol-locator");
 static constexpr llvm::StringLiteral kJITLoaderPluginName("jit-loader");
 static constexpr llvm::StringLiteral
     kStructuredDataPluginName("structured-data");
+static constexpr llvm::StringLiteral kCPlusPlusLanguagePlugin("cplusplus");
 
 lldb::OptionValuePropertiesSP
 PluginManager::GetSettingForDynamicLoaderPlugin(Debugger &debugger,
@@ -1965,5 +1968,19 @@ bool PluginManager::CreateSettingForStructuredDataPlugin(
     llvm::StringRef description, bool is_global_property) {
   return CreateSettingForPlugin(debugger, kStructuredDataPluginName,
                                 "Settings for structured data plug-ins",
+                                properties_sp, description, is_global_property);
+}
+
+lldb::OptionValuePropertiesSP
+PluginManager::GetSettingForCPlusPlusLanguagePlugin(
+    Debugger &debugger, llvm::StringRef setting_name) {
+  return GetSettingForPlugin(debugger, setting_name, kCPlusPlusLanguagePlugin);
+}
+
+bool PluginManager::CreateSettingForCPlusPlusLanguagePlugin(
+    Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+    llvm::StringRef description, bool is_global_property) {
+  return CreateSettingForPlugin(debugger, kCPlusPlusLanguagePlugin,
+                                "Settings for CPlusPlus language plug-ins",
                                 properties_sp, description, is_global_property);
 }

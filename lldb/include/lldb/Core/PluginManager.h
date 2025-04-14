@@ -141,8 +141,10 @@ public:
   GetOperatingSystemCreateCallbackForPluginName(llvm::StringRef name);
 
   // Language
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             LanguageCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 LanguageCreateInstance create_callback,
+                 DebuggerInitializeCallback debugger_init_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
@@ -611,6 +613,14 @@ public:
                                     llvm::StringRef setting_name);
 
   static bool CreateSettingForStructuredDataPlugin(
+      Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
+      llvm::StringRef description, bool is_global_property);
+
+  static lldb::OptionValuePropertiesSP
+  GetSettingForCPlusPlusLanguagePlugin(Debugger &debugger,
+                                       llvm::StringRef setting_name);
+
+  static bool CreateSettingForCPlusPlusLanguagePlugin(
       Debugger &debugger, const lldb::OptionValuePropertiesSP &properties_sp,
       llvm::StringRef description, bool is_global_property);
 };

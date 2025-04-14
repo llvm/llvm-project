@@ -27,6 +27,7 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/ConstString.h"
@@ -55,7 +56,7 @@ LLDB_PLUGIN_DEFINE(CPlusPlusLanguage)
 
 void CPlusPlusLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "C++ Language",
-                                CreateInstance);
+                                CreateInstance, &DebuggerInitialize);
 }
 
 void CPlusPlusLanguage::Terminate() {
@@ -1966,5 +1967,49 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
   default:
     return false;
+  }
+}
+
+#define LLDB_PROPERTIES_language_cplusplus
+#include "LanguageCPlusPlusProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_language_cplusplus
+#include "LanguageCPlusPlusPropertiesEnum.inc"
+};
+
+namespace {
+class PluginProperties : public Properties {
+public:
+  static llvm::StringRef GetSettingName() { return "display"; }
+
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_language_cplusplus_properties);
+  }
+
+  const FormatEntity::Entry *GetFunctionNameFormat() const {
+    return GetPropertyAtIndexAs<const FormatEntity::Entry *>(
+        ePropertyFunctionNameFormat);
+  }
+};
+} // namespace
+
+static PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
+const FormatEntity::Entry *CPlusPlusLanguage::GetFunctionNameFormat() const {
+  return GetGlobalPluginProperties().GetFunctionNameFormat();
+}
+
+void CPlusPlusLanguage::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForCPlusPlusLanguagePlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    PluginManager::CreateSettingForCPlusPlusLanguagePlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the CPlusPlus language plug-in.",
+        /*is_global_property=*/true);
   }
 }

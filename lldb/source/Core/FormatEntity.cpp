@@ -1237,6 +1237,35 @@ static bool HandleFunctionNameWithArgs(Stream &s,
   return true;
 }
 
+static bool FormatFunctionNameForLanguage(Stream &s,
+                                          const ExecutionContext *exe_ctx,
+                                          const SymbolContext *sc) {
+  assert(sc);
+
+  Language *language_plugin = nullptr;
+  if (sc->function)
+    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
+  else if (sc->symbol)
+    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+
+  if (!language_plugin)
+    return false;
+
+  const auto *format = language_plugin->GetFunctionNameFormat();
+  if (!format)
+    return false;
+
+  StreamString name_stream;
+  const bool success =
+      FormatEntity::Format(*format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
+                           /*valobj=*/nullptr, /*function_changed=*/false,
+                           /*initial_function=*/false);
+  if (success)
+    s << name_stream.GetString();
+
+  return success;
+}
+
 bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
                                    const SymbolContext *sc,
                                    const ExecutionContext *exe_ctx,
@@ -1795,6 +1824,9 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionNameWithArgs: {
     if (!sc)
       return false;
+
+    if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+      return true;
 
     return HandleFunctionNameWithArgs(s, exe_ctx, *sc);
   }
