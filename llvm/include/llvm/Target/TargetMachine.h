@@ -490,9 +490,7 @@ public:
 
   virtual Expected<std::unique_ptr<MCStreamer>>
   createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                   CodeGenFileType FileType, MCContext &Ctx) {
-    return nullptr;
-  }
+                   CodeGenFileType FileType, MCContext &Ctx);
 
   /// True if the target uses physical regs (as nearly all targets do). False
   /// for stack machines such as WebAssembly and other virtual-register
