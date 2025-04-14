@@ -3287,8 +3287,9 @@ static void computeLiveInValues(DominatorTree &DT, Function &F,
   // Seed the liveness for each individual block
   for (BasicBlock &BB : F) {
     Data.KillSet[&BB] = computeKillSet(&BB, GC);
-    Data.LiveSet[&BB].clear();
-    computeLiveInValues(BB.rbegin(), BB.rend(), Data.LiveSet[&BB], GC);
+    auto &LiveSet = Data.LiveSet[&BB];
+    LiveSet.clear();
+    computeLiveInValues(BB.rbegin(), BB.rend(), LiveSet, GC);
 
 #ifndef NDEBUG
     for (Value *Kill : Data.KillSet[&BB])
