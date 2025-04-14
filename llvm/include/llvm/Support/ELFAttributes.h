@@ -36,7 +36,7 @@ struct BuildAttributeItem {
       : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
 };
 struct BuildAttributeSubSection {
-  StringRef Name;
+  std::string Name;
   unsigned IsOptional;
   unsigned ParameterType;
   SmallVector<BuildAttributeItem, 64> Content;

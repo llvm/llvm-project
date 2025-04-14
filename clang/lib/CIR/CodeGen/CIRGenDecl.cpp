@@ -277,3 +277,11 @@ void CIRGenFunction::emitDecl(const Decl &d) {
     cgm.errorNYI(d.getSourceRange(), "emitDecl: unhandled decl type");
   }
 }
+
+void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
+                                          SourceLocation loc) {
+  if (!sanOpts.has(SanitizerKind::NullabilityAssign))
+    return;
+
+  assert(!cir::MissingFeatures::sanitizers());
+}

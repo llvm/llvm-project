@@ -162,8 +162,7 @@ void WinException::endFunction(const MachineFunction *MF) {
 
   if (!MF->getEHContTargets().empty()) {
     // Copy the function's EH Continuation targets to a module-level list.
-    EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
-                         MF->getEHContTargets().end());
+    llvm::append_range(EHContTargets, MF->getEHContTargets());
   }
 }
 
@@ -292,8 +291,7 @@ void WinException::endFuncletImpl() {
 
     if (!MF->getEHContTargets().empty()) {
       // Copy the function's EH Continuation targets to a module-level list.
-      EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
-                           MF->getEHContTargets().end());
+      llvm::append_range(EHContTargets, MF->getEHContTargets());
     }
 
     // Switch back to the funclet start .text section now that we are done

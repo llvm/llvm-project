@@ -432,11 +432,9 @@ def ACC_Cache : Directive<"cache"> {
 
 // 2.14.1
 def ACC_Init : Directive<"init"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_DeviceNum>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_If>
-  ];
+  let allowedOnceClauses = [VersionedClause<ACCC_DeviceNum>,
+                            VersionedClause<ACCC_If>];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>];
   let association = AS_None;
   let category = CA_Executable;
 }
@@ -480,26 +478,20 @@ def ACC_Set : Directive<"set"> {
 
 // 2.14.2
 def ACC_Shutdown : Directive<"shutdown"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_DeviceNum>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_If>
-  ];
+  let allowedOnceClauses = [VersionedClause<ACCC_DeviceNum>,
+                            VersionedClause<ACCC_If>];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>];
   let association = AS_None;
   let category = CA_Executable;
 }
 
 // 2.14.4
 def ACC_Update : Directive<"update"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_IfPresent>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Async>,
+                            VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_Device>,
     VersionedClause<ACCC_Host>,
@@ -539,14 +531,10 @@ def ACC_EnterData : Directive<"enter data"> {
 
 // 2.14.7
 def ACC_ExitData : Directive<"exit data"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Finalize>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Finalize>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Async>,
+                            VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_Copyout>,
     VersionedClause<ACCC_Delete>,
@@ -558,10 +546,8 @@ def ACC_ExitData : Directive<"exit data"> {
 
 // 2.8
 def ACC_HostData : Directive<"host_data"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_IfPresent>];
+  let allowedOnceClauses = [VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_UseDevice>
   ];

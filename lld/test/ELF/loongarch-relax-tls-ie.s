@@ -3,11 +3,10 @@
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 -mattr=+relax %s -o %t.o
 
-## FIXME: IE relaxation has not yet been implemented.
-## --relax/--no-relax has the same result. Also check --emit-relocs.
+## Also check --emit-relocs.
 # RUN: ld.lld --emit-relocs %t.o -o %t
 # RUN: llvm-readelf -x .got %t 2>&1 | FileCheck --check-prefix=LE-GOT %s
-# RUN: llvm-objdump -dr --no-show-raw-insn %t | FileCheck --check-prefixes=LE %s
+# RUN: llvm-objdump -dr --no-show-raw-insn %t | FileCheck --check-prefixes=LER %s
 
 # RUN: ld.lld --emit-relocs --no-relax %t.o -o %t.norelax
 # RUN: llvm-readelf -x .got %t.norelax 2>&1 | FileCheck --check-prefix=LE-GOT %s
@@ -41,6 +40,29 @@
 # LE-NEXT:          R_LARCH_TLS_IE_PC_LO12 b
 # LE-NEXT:        add.d   $a2, $a2, $tp
 # LE-NEXT:        add.d   $a3, $a3, $tp
+
+# LER:      20158: ori     $a0, $zero, 4095
+# LER-NEXT:          R_LARCH_TLS_IE_PC_HI20 a
+# LER-NEXT:          R_LARCH_RELAX   *ABS*
+# LER-NEXT:          R_LARCH_TLS_IE_PC_LO12 a
+# LER-NEXT:          R_LARCH_RELAX   *ABS*
+# LER-NEXT:        add.d   $a0, $a0, $tp
+# LER-NEXT: 20160: lu12i.w $a1, 1
+# LER-NEXT:          R_LARCH_TLS_IE_PC_HI20 b
+# LER-NEXT:        ori     $a1, $a1, 0
+# LER-NEXT:          R_LARCH_TLS_IE_PC_LO12 b
+# LER-NEXT:        add.d   $a1, $a1, $tp
+# LER-NEXT: 2016c: lu12i.w $a3, 1
+# LER-NEXT:          R_LARCH_TLS_IE_PC_HI20 a
+# LER-NEXT:          R_LARCH_RELAX   *ABS*
+# LER-NEXT:          R_LARCH_TLS_IE_PC_HI20 b
+# LER-NEXT:          R_LARCH_RELAX   *ABS*
+# LER-NEXT:        ori     $a2, $zero, 4095
+# LER-NEXT:          R_LARCH_TLS_IE_PC_LO12 a
+# LER-NEXT:        ori     $a3, $a3, 0
+# LER-NEXT:          R_LARCH_TLS_IE_PC_LO12 b
+# LER-NEXT:        add.d   $a2, $a2, $tp
+# LER-NEXT:        add.d   $a3, $a3, $tp
 
 la.tls.ie $a0, a    # relax
 add.d $a0, $a0, $tp

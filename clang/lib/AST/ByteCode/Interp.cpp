@@ -307,7 +307,7 @@ bool isConstexprUnknown(const Pointer &P) {
   if (P.isDummy())
     return false;
   const VarDecl *VD = P.block()->getDescriptor()->asVarDecl();
-  return VD && VD->hasLocalStorage();
+  return VD && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD);
 }
 
 bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
@@ -1848,7 +1848,23 @@ bool GetTypeidPtr(InterpState &S, CodePtr OpPC, const Type *TypeInfoType) {
   if (!P.isBlockPointer())
     return false;
 
-  S.Stk.push<Pointer>(P.getType().getTypePtr(), TypeInfoType);
+  // Pick the most-derived type.
+  const Type *T = P.getDeclPtr().getType().getTypePtr();
+  // ... unless we're currently constructing this object.
+  // FIXME: We have a similar check to this in more places.
+  if (S.Current->getFunction()) {
+    for (const InterpFrame *Frame = S.Current; Frame; Frame = Frame->Caller) {
+      if (const Function *Func = Frame->getFunction();
+          Func && (Func->isConstructor() || Func->isDestructor()) &&
+          P.block() == Frame->getThis().block()) {
+        T = Func->getParentDecl()->getTypeForDecl();
+        break;
+      }
+    }
+  }
+
+  S.Stk.push<Pointer>(T->getCanonicalTypeUnqualified().getTypePtr(),
+                      TypeInfoType);
   return true;
 }
 

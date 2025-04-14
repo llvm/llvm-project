@@ -338,8 +338,6 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
   MCFixupKind Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   auto Specifier = X86MCExpr::Specifier(Target.getSpecifier());
   switch (Specifier) {
   case X86MCExpr::VK_GOTTPOFF:

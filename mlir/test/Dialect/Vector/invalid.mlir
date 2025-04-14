@@ -1743,13 +1743,11 @@ func.func @invalid_outerproduct(%src : memref<?xf32>) {
 
 // -----
 
-func.func @invalid_outerproduct1(%src : memref<?xf32>) {
+func.func @invalid_outerproduct1(%src : memref<?xf32>, %lhs : vector<[4]x[4]xf32>, %rhs : vector<[4]xf32>) {
   %idx = arith.constant 0 : index
-  %0 = vector.load %src[%idx] : memref<?xf32>, vector<[4]x[4]xf32>
-  %1 = vector.load %src[%idx] : memref<?xf32>, vector<[4]xf32>
 
   // expected-error @+1 {{'vector.outerproduct' op expected 1-d vector for operand #1}}
-  %op = vector.outerproduct %0, %1 : vector<[4]x[4]xf32>, vector<[4]xf32>
+  %op = vector.outerproduct %lhs, %rhs : vector<[4]x[4]xf32>, vector<[4]xf32>
 }
 
 // -----
@@ -1869,4 +1867,30 @@ func.func @flat_transpose_scalable(%arg0: vector<[16]xf32>) -> vector<[16]xf32> 
   %0 = vector.flat_transpose %arg0 { rows = 4: i32, columns = 4: i32 }
      : vector<[16]xf32> -> vector<[16]xf32>
   return %0 : vector<[16]xf32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.load
+//===----------------------------------------------------------------------===//
+
+func.func @vector_load(%src : memref<?xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.load' op destination memref has lower rank than the result vector}}
+  %0 = vector.load %src[%c0] : memref<?xi8>, vector<16x16xi8>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// vector.store
+//===----------------------------------------------------------------------===//
+
+func.func @vector_store(%dest : memref<?xi8>, %vec : vector<16x16xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error @+1 {{'vector.store' op source memref has lower rank than the vector to store}}
+  vector.store %vec, %dest[%c0] : memref<?xi8>, vector<16x16xi8>
+  return
 }

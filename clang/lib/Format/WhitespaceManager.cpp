@@ -1012,13 +1012,8 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [&](Change const &C) {
-        if (Style.AlignConsecutiveDeclarations.AlignFunctionPointers) {
-          for (const auto *Prev = C.Tok->Previous; Prev; Prev = Prev->Previous)
-            if (Prev->is(tok::equal))
-              return false;
-          if (C.Tok->is(TT_FunctionTypeLParen))
-            return true;
-        }
+        if (C.Tok->is(TT_FunctionTypeLParen))
+          return Style.AlignConsecutiveDeclarations.AlignFunctionPointers;
         if (C.Tok->is(TT_FunctionDeclarationName))
           return Style.AlignConsecutiveDeclarations.AlignFunctionDeclarations;
         if (C.Tok->isNot(TT_StartOfName))

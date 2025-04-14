@@ -1209,8 +1209,6 @@ void CodeGenFunction::EmitNewArrayInitializer(
     EmitCXXAggrConstructorCall(Ctor, NumElements, CurPtr, CCE,
                                /*NewPointerIsChecked*/true,
                                CCE->requiresZeroInitialization());
-    if (CGM.getCXXABI().hasVectorDeletingDtors())
-      CGM.requireVectorDestructorDefinition(Ctor->getParent());
     return;
   }
 
@@ -1957,8 +1955,10 @@ static void EmitDestroyingObjectDelete(CodeGenFunction &CGF,
 /// Emit the code for deleting a single object.
 /// \return \c true if we started emitting UnconditionalDeleteBlock, \c false
 /// if not.
-static bool EmitObjectDelete(CodeGenFunction &CGF, const CXXDeleteExpr *DE,
-                             Address Ptr, QualType ElementType,
+static bool EmitObjectDelete(CodeGenFunction &CGF,
+                             const CXXDeleteExpr *DE,
+                             Address Ptr,
+                             QualType ElementType,
                              llvm::BasicBlock *UnconditionalDeleteBlock) {
   // C++11 [expr.delete]p3:
   //   If the static type of the object to be deleted is different from its
@@ -2173,40 +2173,6 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
   }
 
   assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());
-
-  if (E->isArrayForm() && CGM.getCXXABI().hasVectorDeletingDtors()) {
-    if (auto *RD = DeleteTy->getAsCXXRecordDecl()) {
-      auto *Dtor = RD->getDestructor();
-      if (Dtor && Dtor->isVirtual()) {
-        llvm::Value *NumElements = nullptr;
-        llvm::Value *AllocatedPtr = nullptr;
-        CharUnits CookieSize;
-        llvm::BasicBlock *bodyBB = createBasicBlock("vdtor.call");
-        llvm::BasicBlock *doneBB = createBasicBlock("vdtor.nocall");
-        // Check array cookie to see if the array has 0 length. Don't call
-        // the destructor in that case.
-        CGM.getCXXABI().ReadArrayCookie(*this, Ptr, E, DeleteTy, NumElements,
-                                        AllocatedPtr, CookieSize);
-
-        auto *CondTy = cast<llvm::IntegerType>(NumElements->getType());
-        llvm::Value *isEmpty = Builder.CreateICmpEQ(
-            NumElements, llvm::ConstantInt::get(CondTy, 0));
-        Builder.CreateCondBr(isEmpty, doneBB, bodyBB);
-
-        // Delete cookie for empty array.
-        const FunctionDecl *operatorDelete = E->getOperatorDelete();
-        EmitBlock(doneBB);
-        EmitDeleteCall(operatorDelete, AllocatedPtr, DeleteTy, NumElements,
-                       CookieSize);
-        EmitBranch(DeleteEnd);
-
-        EmitBlock(bodyBB);
-        if (!EmitObjectDelete(*this, E, Ptr, DeleteTy, DeleteEnd))
-          EmitBlock(DeleteEnd);
-        return;
-      }
-    }
-  }
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);

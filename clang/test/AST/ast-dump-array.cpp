@@ -22,9 +22,9 @@ class array {
   T data[Size];
 
   using array_T_size = T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'T[Size]' dependent   <col:25, col:30>
+  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'T[Size]' dependent
   using const_array_T_size = const T[Size];
-  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'const T[Size]' dependent   <col:37, col:42>
+  // CHECK: `-DependentSizedArrayType 0x{{[^ ]*}} 'const T[Size]' dependent
 };
 
 struct V {};

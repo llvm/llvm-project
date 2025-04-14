@@ -80,12 +80,6 @@ define void @call_cc10 () {
   ret void
 }
 
-define void @call_spir_kernel() {
-; CHECK: call spir_kernel void @spir_kernel
-  call spir_kernel void @spir_kernel()
-  ret void
-}
-
 define void @call_spir_func() {
 ; CHECK: call spir_func void @spir_func
   call spir_func void @spir_func()

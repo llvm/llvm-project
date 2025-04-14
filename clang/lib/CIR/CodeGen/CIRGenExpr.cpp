@@ -257,6 +257,13 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
+mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
+                                                           LValue dst) {
+  assert(!cir::MissingFeatures::bitfields());
+  cgm.errorNYI("bitfields");
+  return {};
+}
+
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
   // Bool has a different representation in memory than in registers,
   // but in ClangIR, it is simply represented as a cir.bool value.

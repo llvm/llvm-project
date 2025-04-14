@@ -722,6 +722,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
                              case protocol::eResponseMessageNotStopped:
                                return "notStopped";
                              }
+                             llvm_unreachable("unknown response message kind.");
                            }),
                        *resp->message);
       }

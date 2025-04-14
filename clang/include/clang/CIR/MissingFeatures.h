@@ -143,6 +143,7 @@ struct MissingFeatures {
   static bool openMP() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
+  static bool bitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }

@@ -307,6 +307,13 @@ public:
                                SymbolContext &next_frame_sc,
                                Address &inlined_frame_addr) const;
 
+  /// If available, will return the function name according to the specified
+  /// mangling preference. If this object represents an inlined function,
+  /// returns the name of the inlined function. Returns nullptr if no function
+  /// name could be determined.
+  const char *GetPossiblyInlinedFunctionName(
+      Mangled::NamePreference mangling_preference) const;
+
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query
   lldb::ModuleSP module_sp; ///< The Module for a given query

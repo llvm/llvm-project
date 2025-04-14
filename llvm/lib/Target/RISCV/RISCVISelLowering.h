@@ -388,7 +388,8 @@ enum NodeType : unsigned {
   VMSET_VL,
 
   // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
-  // for passthru and VL. Operands are (src, index, mask, passthru, vl).
+  // for passthru and VL, except that out of bound indices result in a poison
+  // result not zero.  Operands are (src, index, mask, passthru, vl).
   VRGATHER_VX_VL,
   VRGATHER_VV_VL,
   VRGATHEREI16_VV_VL,

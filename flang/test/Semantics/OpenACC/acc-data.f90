@@ -86,7 +86,7 @@ program openacc_data_validity
 
   !$acc exit data delete(aa) finalize
 
-  !ERROR: At most one FINALIZE clause can appear on the EXIT DATA directive
+  ! OK
   !$acc exit data delete(aa) finalize finalize
 
   !ERROR: Argument `cc` on the DETACH clause must be a variable or array with the POINTER or ALLOCATABLE attribute

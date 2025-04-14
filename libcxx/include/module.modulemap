@@ -944,7 +944,10 @@ module std [system] {
     module to_chars                   { header "__charconv/to_chars.h" }
     module to_chars_base_10           { header "__charconv/to_chars_base_10.h" }
     module to_chars_floating_point    { header "__charconv/to_chars_floating_point.h" }
-    module to_chars_integral          { header "__charconv/to_chars_integral.h" }
+    module to_chars_integral          {
+      header "__charconv/to_chars_integral.h"
+      export std.charconv.to_chars_result
+    }
     module to_chars_result            { header "__charconv/to_chars_result.h" }
     module traits                     { header "__charconv/traits.h" }
 

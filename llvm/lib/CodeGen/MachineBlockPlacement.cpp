@@ -1132,11 +1132,13 @@ MachineBlockPlacement::getBestTrellisSuccessor(
   for (auto *Succ : ViableSuccs) {
     for (MachineBasicBlock *SuccPred : Succ->predecessors()) {
       // Skip any placed predecessors that are not BB
-      if (SuccPred != BB)
-        if ((BlockFilter && !BlockFilter->count(SuccPred)) ||
-            BlockToChain[SuccPred] == &Chain ||
-            BlockToChain[SuccPred] == BlockToChain[Succ])
+      if (SuccPred != BB) {
+        if (BlockFilter && !BlockFilter->count(SuccPred))
           continue;
+        const BlockChain *SuccPredChain = BlockToChain[SuccPred];
+        if (SuccPredChain == &Chain || SuccPredChain == BlockToChain[Succ])
+          continue;
+      }
       BlockFrequency EdgeFreq = MBFI->getBlockFreq(SuccPred) *
                                 MBPI->getEdgeProbability(SuccPred, Succ);
       Edges[SuccIndex].push_back({EdgeFreq, SuccPred, Succ});

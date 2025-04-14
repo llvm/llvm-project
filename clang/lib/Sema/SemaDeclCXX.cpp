@@ -11058,11 +11058,9 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
     else
       Loc = RD->getLocation();
 
-    DeclarationName Name =
-        Context.DeclarationNames.getCXXOperatorName(OO_Delete);
     // If we have a virtual destructor, look up the deallocation function
     if (FunctionDecl *OperatorDelete =
-            FindDeallocationFunctionForDestructor(Loc, RD, Name)) {
+            FindDeallocationFunctionForDestructor(Loc, RD)) {
       Expr *ThisArg = nullptr;
 
       // If the notional 'delete this' expression requires a non-trivial
@@ -11097,23 +11095,6 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       DiagnoseUseOfDecl(OperatorDelete, Loc);
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
-      if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-        // Lookup delete[] too in case we have to emit a vector deleting dtor;
-        DeclarationName VDeleteName =
-            Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
-        // Diagnose if there is no available operator delete[] found and the
-        // destructor is exported. Vector deleting dtor body emission requires
-        // operator delete[] to be present. Whenever the destructor is exported,
-        // we just always emit vector deleting dtor body, because we don't know
-        // if new[] will be used with the type outside of the library. Otherwise
-        // when the dtor is not exported then new[]/delete[] in the TU will make
-        // sure the operator is referenced and its uses diagnosed.
-        bool Diagnose =
-            Destructor->hasAttr<DLLExportAttr>() && Destructor->isDefined();
-        FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
-            Loc, RD, VDeleteName, Diagnose);
-        Destructor->setOperatorArrayDelete(ArrOperatorDelete);
-      }
     }
   }
 

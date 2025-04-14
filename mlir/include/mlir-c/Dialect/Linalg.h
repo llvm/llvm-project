@@ -24,19 +24,19 @@ mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp);
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsAContractionOp(MlirOperation op);
 
-struct MlirLinalgContractionDimensions {
+typedef struct MlirLinalgContractionDimensions {
   MlirAttribute batch;
   MlirAttribute m;
   MlirAttribute n;
   MlirAttribute k;
-};
+} MlirLinalgContractionDimensions;
 
 MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
 mlirLinalgInferContractionDimensions(MlirOperation op);
 
 MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op);
 
-struct MlirLinalgConvolutionDimensions {
+typedef struct MlirLinalgConvolutionDimensions {
   MlirAttribute batch;
   MlirAttribute outputImage;
   MlirAttribute outputChannel;
@@ -45,7 +45,7 @@ struct MlirLinalgConvolutionDimensions {
   MlirAttribute depth;
   MlirAttribute strides;
   MlirAttribute dilations;
-};
+} MlirLinalgConvolutionDimensions;
 
 MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
 mlirLinalgInferConvolutionDimensions(MlirOperation op);
