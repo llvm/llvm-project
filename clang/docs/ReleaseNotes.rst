@@ -355,6 +355,16 @@ Improvements to Clang's diagnostics
 
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
+- No longer diagnosing idiomatic function pointer casts on Windows under
+  ``-Wcast-function-type-mismatch`` (which is enabled by ``-Wextra``). Clang
+  would previously warn on this construct, but will no longer do so on Windows:
+
+  .. code-block:: c
+
+    typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+    HMODULE Lib = LoadLibrary("kernel32");
+    PGNSI FnPtr = (PGNSI)GetProcAddress(Lib, "GetNativeSystemInfo");
+
 
 Improvements to Clang's time-trace
 ----------------------------------
