@@ -54,5 +54,5 @@ void Test(int (&arr)[10]) {
 
   constexpr const std::type_info* pti = &typeid(int);
   // CHECK:    `-VarDecl {{.*}} <col:{{.*}}, col:{{.*}}> col:{{.*}} pti 'const std::type_info *const' constexpr cinit
-  // CHECK-NEXT:      |-value: LValue Base=TypeInfoLValue, Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
+  // CHECK-NEXT:      |-value: LValue Base=TypeInfoLValue typeid(int), Null=0, Offset=0, HasPath=1, PathLength=0, Path=()
 }
