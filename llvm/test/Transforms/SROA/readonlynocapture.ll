@@ -499,4 +499,84 @@ define i32 @twoalloc_with_lifetimes() {
   ret i32 %r
 }
 
+declare void @use.i32(i32)
+
+define void @load_dyn_offset(ptr %ary) {
+; CHECK-LABEL: @load_dyn_offset(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8
+; CHECK-NEXT:    store i64 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP]], ptr [[ARY:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[A]], align 4
+; CHECK-NEXT:    [[I_NEXT:%.*]] = add i64 [[I]], 1
+; CHECK-NEXT:    store i64 [[I_NEXT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[GEP]], i64 [[I]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP_I]], align 4
+; CHECK-NEXT:    call void @use.i32(i32 [[VAL]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], 6
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %a = alloca {i64, [4 x i32]}
+  store i64 0, ptr %a
+  %gep = getelementptr i8, ptr %a, i64 8
+  call void @llvm.memcpy(ptr %gep, ptr %ary, i64 16, i1 false)
+  br label %loop
+
+loop:
+  %i = load i64, ptr %a
+  %i.next = add i64 %i, 1
+  store i64 %i.next, ptr %a
+  %gep.i = getelementptr i32, ptr %gep, i64 %i
+  %val = load i32, ptr %gep.i
+  call void @use.i32(i32 %val)
+  %cmp = icmp eq i64 %i.next, 6
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @store_dyn_offset(ptr %ary) {
+; CHECK-LABEL: @store_dyn_offset(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i64, [4 x i32] }, align 8
+; CHECK-NEXT:    store i64 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[GEP]], ptr [[ARY:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = load i64, ptr [[A]], align 4
+; CHECK-NEXT:    [[I_NEXT:%.*]] = add i64 [[I]], 1
+; CHECK-NEXT:    store i64 [[I_NEXT]], ptr [[A]], align 4
+; CHECK-NEXT:    [[GEP_I:%.*]] = getelementptr i32, ptr [[GEP]], i64 [[I]]
+; CHECK-NEXT:    [[I_TRUNC:%.*]] = trunc i64 [[I]] to i32
+; CHECK-NEXT:    store i32 [[I_TRUNC]], ptr [[GEP_I]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], 6
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %a = alloca {i64, [4 x i32]}
+  store i64 0, ptr %a
+  %gep = getelementptr i8, ptr %a, i64 8
+  call void @llvm.memcpy(ptr %gep, ptr %ary, i64 16, i1 false)
+  br label %loop
+
+loop:
+  %i = load i64, ptr %a
+  %i.next = add i64 %i, 1
+  store i64 %i.next, ptr %a
+  %gep.i = getelementptr i32, ptr %gep, i64 %i
+  %i.trunc = trunc i64 %i to i32
+  store i32 %i.trunc, ptr %gep.i
+  %cmp = icmp eq i64 %i.next, 6
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
