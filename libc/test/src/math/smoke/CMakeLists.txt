@@ -4014,7 +4014,6 @@ add_fp_unittest(
     asin_test.cpp
   DEPENDS
     libc.src.math.asin
-    libc.src.__support.FPUtil.fp_bits
 )
 
 add_fp_unittest(

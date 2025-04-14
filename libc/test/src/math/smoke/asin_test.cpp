@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hdr/math_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/math/asin.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -14,6 +14,9 @@
 using LlvmLibcAsinTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcAsinTest, SpecialNumbers) {
+  EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asin(sNaN),
+                                           FE_INVALID);
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asin(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::asin(aNaN));
   EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::asin(zero));
   EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::asin(neg_zero));

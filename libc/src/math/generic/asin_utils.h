@@ -205,28 +205,24 @@ LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
 // };
 // > verbosity = 0;
 // > procedure ASIN_APPROX(N, Deg) {
-//   abs_error = 0;
-//   rel_error = 0;
-//     for
-//       i from 1 to N / 4 do {
-//         Q = fpminimax(asin(sqrt(i / N + x)) / sqrt(i / N + x), Deg,
-//                       [| 128... | ], [ -1 / (2 * N), 1 / (2 * N) ]);
-//         abs_err = dirtyinfnorm(asin(sqrt(i / N + x)) - sqrt(i / N + x) * Q,
-//                                [ -1 / (2 * N), 1 / (2 * N) ]);
-//         rel_err = dirtyinfnorm(asin(sqrt(i / N + x)) / sqrt(i / N + x) - Q,
-//                                [ -1 / (2 * N), 1 / (2 * N) ]);
-//         if (abs_err > abs_error)
-//           then abs_error = abs_err;
-//         if (rel_err > rel_error)
-//           then rel_error = rel_err;
-//         write("{");
-//       for
-//         j from 0 to Deg do PRINTF128(coeff(Q, j));
+//     abs_error = 0;
+//     rel_error = 0;
+//     for i from 1 to N / 4 do {
+//       Q = fpminimax(asin(sqrt(i / N + x)) / sqrt(i / N + x), Deg,
+//                     [| 128... | ], [ -1 / (2 * N), 1 / (2 * N) ]);
+//       abs_err = dirtyinfnorm(asin(sqrt(i / N + x)) - sqrt(i / N + x) * Q,
+//                              [ -1 / (2 * N), 1 / (2 * N) ]);
+//       rel_err = dirtyinfnorm(asin(sqrt(i / N + x)) / sqrt(i / N + x) - Q,
+//                              [ -1 / (2 * N), 1 / (2 * N) ]);
+//       if (abs_err > abs_error) then abs_error = abs_err;
+//       if (rel_err > rel_error) then rel_error = rel_err;
+//       write("{");
+//       for j from 0 to Deg do PRINTF128(coeff(Q, j));
 //       print("},");
-//       };
+//     };
 //     print("Absolute Errors:", abs_error);
 //     print("Relative Errors:", rel_error);
-// };
+//   };
 // > ASIN_APPROX(64, 15);
 // ...
 // Absolute Errors: 0x1.0b3...p-129

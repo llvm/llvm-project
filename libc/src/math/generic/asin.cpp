@@ -25,7 +25,7 @@ using DoubleDouble = fputil::DoubleDouble;
 using Float128 = fputil::DyadicFloat<128>;
 
 LLVM_LIBC_FUNCTION(double, asin, (double x)) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
 
   FPBits xbits(x);
   int x_exp = xbits.get_biased_exponent();
@@ -138,6 +138,8 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
     if (xbits.is_finite()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
+    } else if (xbits.is_signaling_nan()) {
+      fputil::raise_except_if_required(FE_INVALID);
     }
     return FPBits::quiet_nan().get_val();
   }
@@ -201,7 +203,7 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   // Polynomial approximation:
   //   p ~ asin(sqrt(u))/sqrt(u)
   unsigned idx;
-  [[maybe_unused]] double err = vh * 0x1.0p-51;
+  double err = vh * 0x1.0p-51;
 
   DoubleDouble p = asin_eval(DoubleDouble{0.0, u}, idx, err);
 
