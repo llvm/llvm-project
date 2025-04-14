@@ -193,9 +193,7 @@ bool isRefOrCheckedPtrType(const clang::QualType T) {
 }
 
 bool isRetainPtrType(const clang::QualType T) {
-  return isPtrOfType(T, [](auto Name) {
-    return Name == "RetainPtr" || Name == "RetainPtrArc";
-  });
+  return isPtrOfType(T, [](auto Name) { return isRetainPtr(Name); });
 }
 
 bool isOwnerPtrType(const clang::QualType T) {
