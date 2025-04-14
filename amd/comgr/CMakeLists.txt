@@ -47,12 +47,6 @@ if (ROCM_CCACHE_BUILD)
   endif() # if (CCACHE_PROGRAM)
 endif() # if (ROCM_CCACHE_BUILD)
 
-find_package(ROCM QUIET)
-if (ROCM_FOUND)
-  include(ROCMSetupVersion)
-  rocm_setup_version(VERSION "${amd_comgr_VERSION}")
-endif()
-
 # BUILD_SHARED_LIBS is a frustratingly global variable common to all
 # projects. LLVM also defines an option for the same varible with the
 # opposite default, which will overwrite our default preference
@@ -143,7 +137,6 @@ message("-----------Clang_DIR: ${Clang_DIR}")
 message("--CLANG_INCLUDE_DIRS: ${CLANG_INCLUDE_DIRS}")
 message("----LLD_INCLUDE_DIRS: ${LLD_INCLUDE_DIRS}")
 message("---AMDDeviceLibs_DIR: ${AMDDeviceLibs_DIR}")
-message("------------ROCM_DIR: ${ROCM_DIR}")
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -249,13 +242,9 @@ set_target_properties(amd_comgr PROPERTIES
   CXX_STANDARD 17
   CXX_STANDARD_REQUIRED Yes
   CXX_EXTENSIONS No)
-if (ROCM_FOUND)
-  rocm_set_soversion(amd_comgr "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}")
-else()
-  set_target_properties(amd_comgr PROPERTIES
-    SOVERSION "${amd_comgr_VERSION_MAJOR}"
-    VERSION "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}.${amd_comgr_VERSION_PATCH}")
-endif()
+set_target_properties(amd_comgr PROPERTIES
+  SOVERSION "${amd_comgr_VERSION_MAJOR}"
+  VERSION "${amd_comgr_VERSION_MAJOR}.${amd_comgr_VERSION_MINOR}.${amd_comgr_VERSION_PATCH}")
 
 if (NOT COMGR_BUILD_SHARED_LIBS)
   set_target_properties(amd_comgr PROPERTIES POSITION_INDEPENDENT_CODE ON)
