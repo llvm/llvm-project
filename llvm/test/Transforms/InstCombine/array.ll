@@ -122,12 +122,11 @@ define ptr @gep_inbounds_nuwaddlike(ptr %ptr, i64 %a, i64 %b) {
   ret ptr %gep
 }
 
-; FIXME: Preserve "inbounds nuw".
 define ptr @gep_inbounds_add_nuw(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nuw(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %add = add nuw i64 %a, %b
@@ -135,12 +134,11 @@ define ptr @gep_inbounds_add_nuw(ptr %ptr, i64 %a, i64 %b) {
   ret ptr %gep
 }
 
-; FIXME: Preserve "nusw nuw".
 define ptr @gep_inbounds_add_nusw_nuw(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_inbounds_add_nusw_nuw(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nusw nuw i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nusw nuw i32, ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %add = add nuw i64 %a, %b
@@ -148,12 +146,11 @@ define ptr @gep_inbounds_add_nusw_nuw(ptr %ptr, i64 %a, i64 %b) {
   ret ptr %gep
 }
 
-; FIXME: Preserve "nuw".
 define ptr @gep_add_nuw(ptr %ptr, i64 %a, i64 %b) {
 ; CHECK-LABEL: define ptr @gep_add_nuw(
 ; CHECK-SAME: ptr [[PTR:%.*]], i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[A]]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[TMP1]], i64 [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i32, ptr [[PTR]], i64 [[A]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr nuw i32, ptr [[TMP1]], i64 [[B]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %add = add nuw i64 %a, %b
