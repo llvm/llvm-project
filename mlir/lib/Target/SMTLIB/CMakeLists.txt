@@ -5,9 +5,10 @@ add_mlir_translation_library(MLIRExportSMTLIB
   Core
 
   LINK_LIBS PUBLIC
-  MLIRSMT
-  MLIRSupport
+  MLIRArithDialect
   MLIRFuncDialect
   MLIRIR
+  MLIRSMT
+  MLIRSupport
   MLIRTranslateLib
 )
