@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Arch/AArch64.h"
 #include "InputFiles.h"
 #include "Config.h"
 #include "DWARF.h"
@@ -209,39 +210,6 @@ static void updateSupportedARMFeatures(Ctx &ctx,
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
-struct AArch64BuildAttrSubsections {
-  struct PauthSubSection {
-    uint64_t tagPlatform = 0;
-    uint64_t tagSchema = 0;
-  } pauth;
-  uint32_t andFeatures = 0;
-};
-
-static AArch64BuildAttrSubsections
-extractBuildAttributesSubsections(const AArch64AttributeParser &attributes) {
-
-  AArch64BuildAttrSubsections subSections;
-  auto getPauthValue = [&](unsigned tag) -> unsigned {
-    return attributes.getAttributeValue("aeabi_pauthabi", tag).value_or(0);
-  };
-  subSections.pauth.tagPlatform =
-      getPauthValue(llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM);
-  subSections.pauth.tagSchema =
-      getPauthValue(llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA);
-
-  auto getFeatureValue = [&](unsigned tag) -> unsigned {
-    return attributes.getAttributeValue("aeabi_feature_and_bits", tag)
-        .value_or(0);
-  };
-  subSections.andFeatures |=
-      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_BTI);
-  subSections.andFeatures |=
-      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_PAC) << 1;
-  subSections.andFeatures |=
-      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_GCS) << 2;
-
-  return subSections;
-}
 
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
     : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
@@ -1258,4 +1259,30 @@ void elf::setAArch64TargetInfo(Ctx &ctx) {
     ctx.target.reset(new AArch64BtiPac(ctx));
   else
     ctx.target.reset(new AArch64(ctx));
+}
+
+AArch64BuildAttrSubsections
+extractBuildAttributesSubsections(const llvm::AArch64AttributeParser &attributes) {
+
+  AArch64BuildAttrSubsections subSections;
+  auto getPauthValue = [&](unsigned tag) -> unsigned {
+    return attributes.getAttributeValue("aeabi_pauthabi", tag).value_or(0);
+  };
+  subSections.pauth.tagPlatform =
+      getPauthValue(llvm::AArch64BuildAttributes::TAG_PAUTH_PLATFORM);
+  subSections.pauth.tagSchema =
+      getPauthValue(llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA);
+
+  auto getFeatureValue = [&](unsigned tag) -> unsigned {
+    return attributes.getAttributeValue("aeabi_feature_and_bits", tag)
+        .value_or(0);
+  };
+  subSections.andFeatures |=
+      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_BTI);
+  subSections.andFeatures |=
+      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_PAC) << 1;
+  subSections.andFeatures |=
+      getFeatureValue(llvm::AArch64BuildAttributes::TAG_FEATURE_GCS) << 2;
+
+  return subSections;
 }
