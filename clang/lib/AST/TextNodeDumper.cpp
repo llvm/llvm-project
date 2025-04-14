@@ -738,9 +738,8 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
-    } else if (B.is<TypeInfoLValue>()) {
+    } else if (const auto BTI = B.dyn_cast<TypeInfoLValue>()) {
       OS << "TypeInfoLValue ";
-      const auto BTI = B.get<TypeInfoLValue>();
       ColorScope Color(OS, ShowColors, TypeColor);
       BTI.print(OS, PrintPolicy);
     } else if (B.is<DynamicAllocLValue>()) {
