@@ -1,4 +1,4 @@
-; Tests that hot callsite threshold is set to 0 artifically for thinlto-prelink pipeline.
+; Tests that hot callsite threshold is set to 0 artifically for thinlto-prelink and lto-pre-link pipeline.
 ;
 ; Function `sum` is annotated with inline cost -1 and function `sum1` is
 ; annotated with inline cost 0, by function attribute `function-inline-cost`.
@@ -12,6 +12,9 @@
 
 ; RUN: opt < %s -pass-remarks=inline -pass-remarks-missed=inline -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/new-pm-thinlto-prelink-samplepgo-inline-threshold.prof -S 2>&1 | FileCheck %s -check-prefix=REMARK
 
+; RUN: opt < %s -pass-remarks=inline -pass-remarks-missed=inline -passes='lto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/new-pm-thinlto-prelink-samplepgo-inline-threshold.prof -S | FileCheck %s
+
+; RUN: opt < %s -pass-remarks=inline -pass-remarks-missed=inline -passes='lto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/new-pm-thinlto-prelink-samplepgo-inline-threshold.prof -S 2>&1 | FileCheck %s -check-prefix=REMARK
 ; Original C++ test case
 ;
 ; #include <stdio.h>
