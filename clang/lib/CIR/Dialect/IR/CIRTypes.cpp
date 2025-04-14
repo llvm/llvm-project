@@ -14,6 +14,7 @@
 
 #include "mlir/IR/DialectImplementation.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -53,9 +54,13 @@ Type CIRDialect::parseType(DialectAsmParser &parser) const {
   if (parseResult.has_value())
     return genType;
 
-  // TODO(CIR) Attempt to parse as a raw C++ type.
-  parser.emitError(typeLoc) << "unknown CIR type: " << mnemonic;
-  return Type();
+  // Type is not tablegen'd: try to parse as a raw C++ type.
+  return StringSwitch<function_ref<Type()>>(mnemonic)
+      .Case("record", [&] { return RecordType::parse(parser); })
+      .Default([&] {
+        parser.emitError(typeLoc) << "unknown CIR type: " << mnemonic;
+        return Type();
+      })();
 }
 
 void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
@@ -65,6 +70,166 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 
   // TODO(CIR) Attempt to print as a raw C++ type.
   llvm::report_fatal_error("printer is missing a handler for this type");
+}
+
+//===----------------------------------------------------------------------===//
+// RecordType Definitions
+//===----------------------------------------------------------------------===//
+
+Type RecordType::parse(mlir::AsmParser &parser) {
+  FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
+  const llvm::SMLoc loc = parser.getCurrentLocation();
+  const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
+  RecordKind kind;
+  mlir::MLIRContext *context = parser.getContext();
+
+  if (parser.parseLess())
+    return {};
+
+  // TODO(cir): in the future we should probably separate types for different
+  // source language declarations such as cir.record and cir.union
+  if (parser.parseOptionalKeyword("struct").succeeded())
+    kind = RecordKind::Struct;
+  else if (parser.parseOptionalKeyword("union").succeeded())
+    kind = RecordKind::Union;
+  else {
+    parser.emitError(loc, "unknown record type");
+    return {};
+  }
+
+  mlir::StringAttr name;
+  parser.parseOptionalAttribute(name);
+
+  // Is a self reference: ensure referenced type was parsed.
+  if (name && parser.parseOptionalGreater().succeeded()) {
+    RecordType type = getChecked(eLoc, context, name, kind);
+    if (succeeded(parser.tryStartCyclicParse(type))) {
+      parser.emitError(loc, "invalid self-reference within record");
+      return {};
+    }
+    return type;
+  }
+
+  // Is a named record definition: ensure name has not been parsed yet.
+  if (name) {
+    RecordType type = getChecked(eLoc, context, name, kind);
+    cyclicParseGuard = parser.tryStartCyclicParse(type);
+    if (failed(cyclicParseGuard)) {
+      parser.emitError(loc, "record already defined");
+      return {};
+    }
+  }
+
+  // Parse record members or lack thereof.
+  bool incomplete = true;
+  llvm::SmallVector<mlir::Type> members;
+  if (parser.parseOptionalKeyword("incomplete").failed()) {
+    incomplete = false;
+    const auto delimiter = AsmParser::Delimiter::Braces;
+    const auto parseElementFn = [&parser, &members]() {
+      return parser.parseType(members.emplace_back());
+    };
+    if (parser.parseCommaSeparatedList(delimiter, parseElementFn).failed())
+      return {};
+  }
+
+  if (parser.parseGreater())
+    return {};
+
+  // Try to create the proper record type.
+  ArrayRef<mlir::Type> membersRef(members); // Needed for template deduction.
+  mlir::Type type = {};
+  if (name && incomplete) { // Identified & incomplete
+    type = getChecked(eLoc, context, name, kind);
+  } else if (!incomplete) { // complete
+    parser.emitError(loc, "complete records are not yet supported");
+  } else { // anonymous & incomplete
+    parser.emitError(loc, "anonymous records must be complete");
+    return {};
+  }
+
+  return type;
+}
+
+void RecordType::print(mlir::AsmPrinter &printer) const {
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
+  printer << '<';
+
+  switch (getKind()) {
+  case RecordKind::Struct:
+    printer << "struct ";
+    break;
+  case RecordKind::Union:
+    printer << "union ";
+    break;
+  }
+
+  if (getName())
+    printer << getName();
+
+  // Current type has already been printed: print as self reference.
+  cyclicPrintGuard = printer.tryStartCyclicPrint(*this);
+  if (failed(cyclicPrintGuard)) {
+    printer << '>';
+    return;
+  }
+
+  // Type not yet printed: continue printing the entire record.
+  printer << ' ';
+
+  if (isIncomplete()) {
+    printer << "incomplete";
+  } else {
+    printer << "{";
+    llvm::interleaveComma(getMembers(), printer);
+    printer << "}";
+  }
+
+  printer << '>';
+}
+
+mlir::LogicalResult
+RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
+                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+                   bool incomplete, bool packed, bool padded,
+                   RecordType::RecordKind kind) {
+  if (name && name.getValue().empty()) {
+    emitError() << "identified records cannot have an empty name";
+    return mlir::failure();
+  }
+  return mlir::success();
+}
+
+::llvm::ArrayRef<mlir::Type> RecordType::getMembers() const {
+  return getImpl()->members;
+}
+
+bool RecordType::isIncomplete() const { return getImpl()->incomplete; }
+
+mlir::StringAttr RecordType::getName() const { return getImpl()->name; }
+
+bool RecordType::getIncomplete() const { return getImpl()->incomplete; }
+
+cir::RecordType::RecordKind RecordType::getKind() const {
+  return getImpl()->kind;
+}
+
+//===----------------------------------------------------------------------===//
+// Data Layout information for types
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+RecordType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
+                              ::mlir::DataLayoutEntryListRef params) const {
+  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
+  return llvm::TypeSize::getFixed(8);
+}
+
+uint64_t
+RecordType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
+                            ::mlir::DataLayoutEntryListRef params) const {
+  assert(!cir::MissingFeatures::recordTypeLayoutInfo());
+  return 4;
 }
 
 //===----------------------------------------------------------------------===//
@@ -432,5 +597,5 @@ void CIRDialect::registerTypes() {
       >();
 
   // Register raw C++ types.
-  // TODO(CIR) addTypes<StructType>();
+  // TODO(CIR) addTypes<RecordType>();
 }

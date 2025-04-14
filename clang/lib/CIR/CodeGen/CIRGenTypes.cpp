@@ -86,9 +86,63 @@ mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.VoidTy);
 }
 
+// This is CIR's version of CodeGenTypes::addRecordTypeName. It isn't shareable
+// because CIR has different uniquing requirements.
+std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
+                                           StringRef suffix) {
+  llvm::SmallString<256> typeName;
+  llvm::raw_svector_ostream outStream(typeName);
+
+  PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
+  policy.SuppressInlineNamespace = false;
+  policy.AlwaysIncludeTypeForTemplateArgument = true;
+  policy.PrintCanonicalTypes = true;
+  policy.SuppressTagKeyword = true;
+
+  if (recordDecl->getIdentifier())
+    astContext.getRecordType(recordDecl).print(outStream, policy);
+  else if (auto *typedefNameDecl = recordDecl->getTypedefNameForAnonDecl())
+    typedefNameDecl->printQualifiedName(outStream, policy);
+  else
+    outStream << builder.getUniqueAnonRecordName();
+
+  if (!suffix.empty())
+    outStream << suffix;
+
+  return builder.getUniqueRecordName(std::string(typeName));
+}
+
+/// Lay out a tagged decl type like struct or union.
+mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
+  // TagDecl's are not necessarily unique, instead use the (clang) type
+  // connected to the decl.
+  const Type *key = astContext.getTagDeclType(rd).getTypePtr();
+  cir::RecordType entry = recordDeclTypes[key];
+
+  // If we don't have an entry for this record yet, create one.
+  // We create an incomplete type initially. If `rd` is complete, we will
+  // add the members below.
+  if (!entry) {
+    auto name = getRecordTypeName(rd, "");
+    entry = builder.getIncompleteRecordTy(name, rd);
+    recordDeclTypes[key] = entry;
+  }
+
+  rd = rd->getDefinition();
+  if (!rd || !rd->isCompleteDefinition() || entry.isComplete())
+    return entry;
+
+  cgm.errorNYI(rd->getSourceRange(), "Complete record type");
+  return entry;
+}
+
 mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
+
+  // Process record types before the type cache lookup.
+  if (const auto *recordType = dyn_cast<RecordType>(type))
+    return convertRecordDeclType(recordType->getDecl());
 
   // Has the type already been processed?
   TypeCacheTy::iterator tci = typeCache.find(ty);
@@ -100,9 +154,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   mlir::Type resultType = nullptr;
   switch (ty->getTypeClass()) {
+  case Type::Record:
+    llvm_unreachable("Should have been handled above");
+
   case Type::Builtin: {
     switch (cast<BuiltinType>(ty)->getKind()) {
-
     // void
     case BuiltinType::Void:
       resultType = cgm.VoidTy;
@@ -236,7 +292,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   }
 
   default:
-    cgm.errorNYI(SourceLocation(), "processing of type", type);
+    cgm.errorNYI(SourceLocation(), "processing of type",
+                 type->getTypeClassName());
     resultType = cgm.SInt32Ty;
     break;
   }
