@@ -67,12 +67,19 @@ std::optional<size_t> CachedCommandAdaptor::searchComgrTmpModel(StringRef S) {
   return Pos;
 }
 
+void CachedCommandAdaptor::addUInt(CachedCommandAdaptor::HashAlgorithm &H,
+                                   uint64_t I) {
+  uint8_t Bytes[sizeof(I)];
+  memcpy(&Bytes, &I, sizeof(I));
+  H.update(Bytes);
+}
+
 void CachedCommandAdaptor::addString(CachedCommandAdaptor::HashAlgorithm &H,
                                      StringRef S) {
   // hash size + contents to avoid collisions
   // for example, we have to ensure that the result of hashing "AA" "BB" is
   // different from "A" "ABB"
-  H.update(S.size());
+  addUInt(H, S.size());
   H.update(S);
 }
 

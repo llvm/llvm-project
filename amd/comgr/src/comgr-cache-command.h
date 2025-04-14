@@ -39,6 +39,7 @@ public:
 
   // helper to work around the comgr-xxxxx string appearing in files
   static void addFileContents(HashAlgorithm &H, llvm::StringRef Buf);
+  static void addUInt(HashAlgorithm &H, uint64_t I);
   static void addString(HashAlgorithm &H, llvm::StringRef S);
   static std::optional<size_t> searchComgrTmpModel(llvm::StringRef S);
 
