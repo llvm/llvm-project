@@ -720,7 +720,8 @@ static void genOutputItemList(
     fir::factory::CharacterExprHelper helper{builder, loc};
     if (mlir::isa<fir::BoxType>(argType)) {
       mlir::Value box = fir::getBase(converter.genExprBox(loc, *expr, stmtCtx));
-      outputFuncArgs.push_back(builder.createConvert(loc, argType, box));
+      outputFuncArgs.push_back(
+          builder.createConvertWithVolatileCast(loc, argType, box));
       if (containsDerivedType(itemTy))
         outputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
     } else if (helper.isCharacterScalar(itemTy)) {
@@ -730,9 +731,9 @@ static void genOutputItemList(
       if (!exv.getCharBox())
         llvm::report_fatal_error(
             "internal error: scalar character not in CharBox");
-      outputFuncArgs.push_back(builder.createConvert(
+      outputFuncArgs.push_back(builder.createConvertWithVolatileCast(
           loc, outputFunc.getFunctionType().getInput(1), fir::getBase(exv)));
-      outputFuncArgs.push_back(builder.createConvert(
+      outputFuncArgs.push_back(builder.createConvertWithVolatileCast(
           loc, outputFunc.getFunctionType().getInput(2), fir::getLen(exv)));
     } else {
       fir::ExtendedValue itemBox = converter.genExprValue(loc, expr, stmtCtx);
@@ -743,7 +744,8 @@ static void genOutputItemList(
         outputFuncArgs.push_back(parts.first);
         outputFuncArgs.push_back(parts.second);
       } else {
-        itemValue = builder.createConvert(loc, argType, itemValue);
+        itemValue =
+            builder.createConvertWithVolatileCast(loc, argType, itemValue);
         outputFuncArgs.push_back(itemValue);
       }
     }
@@ -827,7 +829,8 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
     mlir::Value box = fir::getBase(item);
     auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
     assert(boxTy && "must be previously emboxed");
-    inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
+    auto casted = builder.createConvertWithVolatileCast(loc, argType, box);
+    inputFuncArgs.push_back(casted);
     if (containsDerivedType(boxTy))
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {
