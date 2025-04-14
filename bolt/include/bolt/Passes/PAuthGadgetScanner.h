@@ -217,11 +217,6 @@ struct Report {
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
 
-  // The two methods below are called by Analysis::computeDetailedInfo when
-  // iterating over the reports.
-  virtual ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
-  virtual void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) {}
-
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
 };
@@ -229,27 +224,11 @@ struct Report {
 struct GadgetReport : public Report {
   // The particular kind of gadget that is detected.
   const GadgetKind &Kind;
-  // The set of registers related to this gadget report (possibly empty).
-  SmallVector<MCPhysReg, 1> AffectedRegisters;
-  // The instructions that clobber the affected registers.
-  // There is no one-to-one correspondence with AffectedRegisters: for example,
-  // the same register can be overwritten by different instructions in different
-  // preceding basic blocks.
-  SmallVector<MCInstReference> OverwritingInstrs;
 
-  GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               MCPhysReg AffectedRegister)
-      : Report(Location), Kind(Kind), AffectedRegisters({AffectedRegister}) {}
+  GadgetReport(const GadgetKind &Kind, MCInstReference Location)
+      : Report(Location), Kind(Kind) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
-
-  ArrayRef<MCPhysReg> getAffectedRegisters() const override {
-    return AffectedRegisters;
-  }
-
-  void setOverwritingInstrs(ArrayRef<MCInstReference> Instrs) override {
-    OverwritingInstrs.assign(Instrs.begin(), Instrs.end());
-  }
 };
 
 /// Report with a free-form message attached.
@@ -261,8 +240,75 @@ struct GenericReport : public Report {
                               const BinaryContext &BC) const override;
 };
 
+/// An information about an issue collected on the slower, detailed,
+/// run of an analysis.
+class ExtraInfo {
+public:
+  virtual void print(raw_ostream &OS, const MCInstReference Location) const = 0;
+
+  virtual ~ExtraInfo() {}
+};
+
+class ClobberingInfo : public ExtraInfo {
+  SmallVector<MCInstReference> ClobberingInstrs;
+
+public:
+  ClobberingInfo(const ArrayRef<MCInstReference> Instrs)
+      : ClobberingInstrs(Instrs) {}
+
+  void print(raw_ostream &OS, const MCInstReference Location) const override;
+};
+
+/// A brief version of a report that can be further augmented with the details.
+///
+/// It is common for a particular type of gadget detector to be tied to some
+/// specific kind of analysis. If an issue is returned by that detector, it may
+/// be further augmented with the detailed info in an analysis-specific way,
+/// or just be left as-is (f.e. if a free-form warning was reported).
+template <typename T> struct BriefReport {
+  BriefReport(std::shared_ptr<Report> Issue,
+              const std::optional<T> RequestedDetails)
+      : Issue(Issue), RequestedDetails(RequestedDetails) {}
+
+  std::shared_ptr<Report> Issue;
+  std::optional<T> RequestedDetails;
+};
+
+/// A detailed version of a report.
+struct DetailedReport {
+  DetailedReport(std::shared_ptr<Report> Issue,
+                 std::shared_ptr<ExtraInfo> Details)
+      : Issue(Issue), Details(Details) {}
+
+  std::shared_ptr<Report> Issue;
+  std::shared_ptr<ExtraInfo> Details;
+};
+
 struct FunctionAnalysisResult {
-  std::vector<std::shared_ptr<Report>> Diagnostics;
+  std::vector<DetailedReport> Diagnostics;
+};
+
+/// A helper class storing per-function context to be instantiated by Analysis.
+class FunctionAnalysis {
+  BinaryContext &BC;
+  BinaryFunction &BF;
+  MCPlusBuilder::AllocatorIdTy AllocatorId;
+  FunctionAnalysisResult Result;
+
+  bool PacRetGadgetsOnly;
+
+  void findUnsafeUses(SmallVector<BriefReport<MCPhysReg>> &Reports);
+  void augmentUnsafeUseReports(const ArrayRef<BriefReport<MCPhysReg>> Reports);
+
+public:
+  FunctionAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId,
+                   bool PacRetGadgetsOnly)
+      : BC(BF.getBinaryContext()), BF(BF), AllocatorId(AllocatorId),
+        PacRetGadgetsOnly(PacRetGadgetsOnly) {}
+
+  void run();
+
+  const FunctionAnalysisResult &getResult() const { return Result; }
 };
 
 class Analysis : public BinaryFunctionPass {
@@ -271,12 +317,6 @@ class Analysis : public BinaryFunctionPass {
 
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
-  FunctionAnalysisResult findGadgets(BinaryFunction &BF,
-                                     MCPlusBuilder::AllocatorIdTy AllocatorId);
-
-  void computeDetailedInfo(BinaryFunction &BF,
-                           MCPlusBuilder::AllocatorIdTy AllocatorId,
-                           FunctionAnalysisResult &Result);
 
   std::map<const BinaryFunction *, FunctionAnalysisResult> AnalysisResults;
   std::mutex AnalysisResultsMutex;
