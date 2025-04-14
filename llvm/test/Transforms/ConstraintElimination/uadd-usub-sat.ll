@@ -7,30 +7,40 @@ declare i64 @llvm.usub.sat.i64(i64, i64)
 define i1 @uadd_sat_uge(i64 %a, i64 %b) {
 ; CHECK-LABEL: define i1 @uadd_sat_uge(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ugt i64 [[A]], [[B]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[ADD_SAT:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ADD_SAT:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i64 [[ADD_SAT]], [[A]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[ADD_SAT]], [[B]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %precond = icmp ugt i64 %a, %b
-  call void @llvm.assume(i1 %precond)
-  %add.sat = call i64 @llvm.uadd.sat.i64(i64 %a, i64 1)
-  %cmp = icmp ugt i64 %add.sat, %b
+  %add.sat = call i64 @llvm.uadd.sat.i64(i64 %a, i64 %b)
+  %cmp1 = icmp uge i64 %add.sat, %a
+  %cmp2 = icmp uge i64 %add.sat, %b
+  %cmp = and i1 %cmp1, %cmp2
   ret i1 %cmp
 }
 
-
-define i1 @usub_sat_ule(i64 %a, i64 %b) {
-; CHECK-LABEL: define i1 @usub_sat_ule(
+define i1 @usub_sat_ule_lhs(i64 %a, i64 %b) {
+; CHECK-LABEL: define i1 @usub_sat_ule_lhs(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
-; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ult i64 [[A]], [[B]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[SUB_SAT]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %precond = icmp ult i64 %a, %b
-  call void @llvm.assume(i1 %precond)
-  %sub.sat = call i64 @llvm.usub.sat.i64(i64 %a, i64 1)
-  %cmp = icmp ult i64 %sub.sat, %b
+  %sub.sat = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  %cmp = icmp ule i64 %sub.sat, %a
+  ret i1 %cmp
+}
+
+; Negative test
+define i1 @usub_sat_not_ule_rhs(i64 %a, i64 %b) {
+; CHECK-LABEL: define i1 @usub_sat_not_ule_rhs(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]]) {
+; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[SUB_SAT]], [[B]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sub.sat = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+  %cmp = icmp ule i64 %sub.sat, %b
   ret i1 %cmp
 }
