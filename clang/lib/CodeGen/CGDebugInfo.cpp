@@ -4362,6 +4362,8 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray({}));
 
   if (const auto *Method = dyn_cast<CXXDestructorDecl>(D)) {
+    // Read method type from 'FnType' because 'D.getType()' does not cover
+    // implicit arguments for destructors.
     return getOrCreateMethodTypeForDestructor(Method, F, FnType);
   }
 
