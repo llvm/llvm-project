@@ -79,6 +79,7 @@
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
@@ -1008,7 +1009,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   addPass(StackMapLivenessPass());
   addPass(LiveDebugValuesPass(
       getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues()));
-  addPass(MachineSanitizerBinaryMetadata());
+  addPass(MachineSanitizerBinaryMetadataPass());
 
   if (TM.Options.EnableMachineOutliner &&
       getOptLevel() != CodeGenOptLevel::None &&

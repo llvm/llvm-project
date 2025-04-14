@@ -154,6 +154,7 @@
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/SafeStack.h"
+#include "llvm/CodeGen/SanitizerBinaryMetadata.h"
 #include "llvm/CodeGen/SelectOptimize.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
