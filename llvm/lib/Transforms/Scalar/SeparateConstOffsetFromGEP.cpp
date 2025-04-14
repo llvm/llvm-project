@@ -782,8 +782,8 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
 /// A helper function to check if reassociating through an entry in the user
 /// chain would invalidate the GEP's nuw flag.
-static bool allowsPreservingNUW(User *U) {
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+static bool allowsPreservingNUW(const User *U) {
+  if (const BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
     // Binary operations need to be effectively add nuw.
     auto Opcode = BO->getOpcode();
     if (Opcode == BinaryOperator::Or) {
@@ -798,7 +798,7 @@ static bool allowsPreservingNUW(User *U) {
   // Among the possible CastInsts, only trunc without nuw is a problem: If it
   // is distributed through an add nuw, wrapping may occur:
   // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
-  if (TruncInst *TI = dyn_cast<TruncInst>(U))
+  if (const TruncInst *TI = dyn_cast<TruncInst>(U))
     return TI->hasNoUnsignedWrap();
   return isa<CastInst>(U) || isa<ConstantInt>(U);
 }
