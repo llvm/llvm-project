@@ -118,6 +118,8 @@ public:
 
   llvm::StringRef GetLaunchWorkingDirectory() const;
 
+  bool GetParallelModuleLoad() const;
+
   const char *GetDisassemblyFlavor() const;
 
   const char *GetDisassemblyCPU() const;
@@ -510,9 +512,9 @@ private:
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
 
-  ///< During expression evaluation, any SymbolContext in this list will be
-  ///< used for symbol/function lookup before any other context (except for
-  ///< the module corresponding to the current frame).
+  /// During expression evaluation, any SymbolContext in this list will be
+  /// used for symbol/function lookup before any other context (except for
+  /// the module corresponding to the current frame).
   SymbolContextList m_preferred_lookup_contexts;
 };
 

@@ -22,7 +22,7 @@ void ExceptionAnalyzer::ExceptionInfo::registerExceptions(
   if (Exceptions.empty())
     return;
   Behaviour = State::Throwing;
-  ThrownExceptions.insert(Exceptions.begin(), Exceptions.end());
+  ThrownExceptions.insert_range(Exceptions);
 }
 
 ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
@@ -39,8 +39,7 @@ ExceptionAnalyzer::ExceptionInfo &ExceptionAnalyzer::ExceptionInfo::merge(
     Behaviour = State::Unknown;
 
   ContainsUnknown = ContainsUnknown || Other.ContainsUnknown;
-  ThrownExceptions.insert(Other.ThrownExceptions.begin(),
-                          Other.ThrownExceptions.end());
+  ThrownExceptions.insert_range(Other.ThrownExceptions);
   return *this;
 }
 

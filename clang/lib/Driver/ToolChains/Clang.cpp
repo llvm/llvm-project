@@ -1026,6 +1026,12 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-dependency-file");
       CmdArgs.push_back(DepFile);
     }
+    // Cmake generates dependency files using all compilation options specified
+    // by users. Claim those not used for dependency files.
+    if (JA.isOffloading(Action::OFK_HIP)) {
+      Args.ClaimAllArgs(options::OPT_offload_compress);
+      Args.ClaimAllArgs(options::OPT_no_offload_compress);
+    }
 
     bool HasTarget = false;
     for (const Arg *A : Args.filtered(options::OPT_MT, options::OPT_MQ)) {
@@ -1100,8 +1106,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   if (JA.isDeviceOffloading(Action::OFK_OpenMP) &&
       !Args.hasArg(options::OPT_nostdinc) &&
       !Args.hasArg(options::OPT_nogpuinc) &&
-      (getToolChain().getTriple().isNVPTX() ||
-       getToolChain().getTriple().isAMDGCN())) {
+      getToolChain().getTriple().isGPU()) {
     if (!Args.hasArg(options::OPT_nobuiltininc)) {
       // Add openmp_wrappers/* to our system include path.  This lets us wrap
       // standard library headers.
@@ -1288,8 +1293,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     // Without an offloading language we will include these headers directly.
     // Offloading languages will instead only use the declarations stored in
     // the resource directory at clang/lib/Headers/llvm_libc_wrappers.
-    if ((getToolChain().getTriple().isNVPTX() ||
-         getToolChain().getTriple().isAMDGCN()) &&
+    if (getToolChain().getTriple().isGPU() &&
         C.getActiveOffloadKinds() == Action::OFK_None) {
       SmallString<128> P(llvm::sys::path::parent_path(D.Dir));
       llvm::sys::path::append(P, "include");
@@ -2875,6 +2879,17 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);
   }
+
+  // Those OSes default to enabling VIS on 64-bit SPARC.
+  // See also the corresponding code for external assemblers in
+  // sparc::getSparcAsmModeForCPU().
+  bool IsSparcV9ATarget =
+      (C.getDefaultToolChain().getArch() == llvm::Triple::sparcv9) &&
+      (Triple.isOSLinux() || Triple.isOSFreeBSD() || Triple.isOSOpenBSD());
+  if (IsSparcV9ATarget && SparcTargetFeatures.empty()) {
+    CmdArgs.push_back("-target-feature");
+    CmdArgs.push_back("+vis");
+  }
   for (const char *Feature : SparcTargetFeatures) {
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(Feature);
@@ -3959,6 +3974,7 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
   const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_res_may_alias,
                                          options::OPT_D,
                                          options::OPT_I,
                                          options::OPT_O,
@@ -6388,7 +6404,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
-  addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
+  // NVPTX doesn't support PGO or coverage
+  if (!Triple.isNVPTX())
+    addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
@@ -6906,8 +6924,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
     else if (S.consumeInteger(10, Size) ||
-             (!S.empty() && (!S.consume_front(",") ||
-                             S.consumeInteger(10, Offset) || !S.empty())))
+             (!S.empty() &&
+              (!S.consume_front(",") || S.consumeInteger(10, Offset))) ||
+             (!S.empty() && (!S.consume_front(",") || S.empty())))
       D.Diag(diag::err_drv_invalid_argument_to_option)
           << S0 << A->getOption().getName();
     else if (Size < Offset)
@@ -6916,6 +6935,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(A->getSpelling() + Twine(Size)));
       CmdArgs.push_back(Args.MakeArgString(
           "-fpatchable-function-entry-offset=" + Twine(Offset)));
+      if (!S.empty())
+        CmdArgs.push_back(
+            Args.MakeArgString("-fpatchable-function-entry-section=" + S));
     }
   }
 
@@ -7586,24 +7608,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptOutFlag(CmdArgs, options::OPT_fgnu_inline_asm,
                      options::OPT_fno_gnu_inline_asm);
 
-  // Enable vectorization per default according to the optimization level
-  // selected. For optimization levels that want vectorization we use the alias
-  // option to simplify the hasFlag logic.
-  bool EnableVec = shouldEnableVectorizerAtOLevel(Args, false);
-  OptSpecifier VectorizeAliasOption =
-      EnableVec ? options::OPT_O_Group : options::OPT_fvectorize;
-  if (Args.hasFlag(options::OPT_fvectorize, VectorizeAliasOption,
-                   options::OPT_fno_vectorize, EnableVec))
-    CmdArgs.push_back("-vectorize-loops");
-
-  // -fslp-vectorize is enabled based on the optimization level selected.
-  bool EnableSLPVec = shouldEnableVectorizerAtOLevel(Args, true);
-  OptSpecifier SLPVectAliasOption =
-      EnableSLPVec ? options::OPT_O_Group : options::OPT_fslp_vectorize;
-  if (Args.hasFlag(options::OPT_fslp_vectorize, SLPVectAliasOption,
-                   options::OPT_fno_slp_vectorize, EnableSLPVec))
-    CmdArgs.push_back("-vectorize-slp");
-
+  handleVectorizeLoopsArgs(Args, CmdArgs);
+  handleVectorizeSLPArgs(Args, CmdArgs);
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
   Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);
@@ -7827,7 +7833,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fcuda-include-gpubinary");
     CmdArgs.push_back(CudaDeviceInput->getFilename());
   } else if (!HostOffloadingInputs.empty()) {
-    if ((IsCuda || IsHIP) && !IsRDCMode) {
+    if (IsCuda && !IsRDCMode) {
       assert(HostOffloadingInputs.size() == 1 && "Only one input expected");
       CmdArgs.push_back("-fcuda-include-gpubinary");
       CmdArgs.push_back(HostOffloadingInputs.front().getFilename());
@@ -9222,6 +9228,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_load,
       OPT_fno_lto,
       OPT_flto,
+      OPT_flto_partitions_EQ,
       OPT_flto_EQ};
   const llvm::DenseSet<unsigned> LinkerOptions{OPT_mllvm, OPT_Zlinker_input};
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A) {
@@ -9231,7 +9238,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   };
 
   ArgStringList CmdArgs;
-  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP}) {
+  for (Action::OffloadKind Kind : {Action::OFK_Cuda, Action::OFK_OpenMP,
+                                   Action::OFK_HIP, Action::OFK_SYCL}) {
     auto TCRange = C.getOffloadToolChains(Kind);
     for (auto &I : llvm::make_range(TCRange)) {
       const ToolChain *TC = I.second;
@@ -9326,17 +9334,33 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(
             Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
                                "-lclang_rt.builtins"));
+      bool HasFlangRT = HasCompilerRT && C.getDriver().IsFlangMode();
+      if (HasFlangRT)
+        CmdArgs.push_back(
+            Args.MakeArgString("--device-linker=" + TC.getTripleString() + "=" +
+                               "-lflang_rt.runtime"));
     });
   }
 
   // Add the linker arguments to be forwarded by the wrapper.
   CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
                                        LinkCommand->getExecutable()));
-  for (const char *LinkArg : LinkCommand->getArguments())
-    CmdArgs.push_back(LinkArg);
+
+  // We use action type to differentiate two use cases of the linker wrapper.
+  // TY_Image for normal linker wrapper work.
+  // TY_Object for HIP fno-gpu-rdc embedding device binary in a relocatable
+  // object.
+  assert(JA.getType() == types::TY_Object || JA.getType() == types::TY_Image);
+  if (JA.getType() == types::TY_Object) {
+    CmdArgs.append({"-o", Output.getFilename()});
+    for (auto Input : Inputs)
+      CmdArgs.push_back(Input.getFilename());
+    CmdArgs.push_back("-r");
+  } else
+    for (const char *LinkArg : LinkCommand->getArguments())
+      CmdArgs.push_back(LinkArg);
 
   addOffloadCompressArgs(Args, CmdArgs);
-
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
 

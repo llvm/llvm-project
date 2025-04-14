@@ -258,6 +258,7 @@ IOHandlerEditline::IOHandlerEditline(
     m_editline_up->SetAutoCompleteCallback([this](CompletionRequest &request) {
       this->AutoCompleteCallback(request);
     });
+    m_editline_up->SetRedrawCallback([this]() { this->RedrawCallback(); });
 
     if (debugger.GetUseAutosuggestion()) {
       m_editline_up->SetSuggestionCallback([this](llvm::StringRef line) {
@@ -439,6 +440,11 @@ IOHandlerEditline::SuggestionCallback(llvm::StringRef line) {
 void IOHandlerEditline::AutoCompleteCallback(CompletionRequest &request) {
   m_delegate.IOHandlerComplete(*this, request);
 }
+
+void IOHandlerEditline::RedrawCallback() {
+  m_debugger.RedrawStatusline(/*update=*/false);
+}
+
 #endif
 
 const char *IOHandlerEditline::GetPrompt() {

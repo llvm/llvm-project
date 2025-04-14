@@ -61,6 +61,7 @@
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaBPF.h"
+#include "clang/Sema/SemaDirectX.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaLoongArch.h"
@@ -1930,6 +1931,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case llvm::Triple::bpfeb:
   case llvm::Triple::bpfel:
     return BPF().CheckBPFBuiltinFunctionCall(BuiltinID, TheCall);
+  case llvm::Triple::dxil:
+    return DirectX().CheckDirectXBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::hexagon:
     return Hexagon().CheckHexagonBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::mips:
@@ -2759,6 +2762,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_minnum:
+  case Builtin::BI__builtin_elementwise_maxnum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximum:
   case Builtin::BI__builtin_elementwise_atan2:
@@ -4229,7 +4234,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     if (std::optional<llvm::APSInt> Result =
             Scope->getIntegerConstantExpr(Context)) {
       if (!ScopeModel->isValid(Result->getZExtValue()))
-        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_synch_scope)
+        Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
             << Scope->getSourceRange();
     }
     SubExprs.push_back(Scope);
@@ -14731,9 +14736,8 @@ static bool isLayoutCompatibleStruct(const ASTContext &C, const RecordDecl *RD1,
 /// (C++11 [class.mem] p18)
 static bool isLayoutCompatibleUnion(const ASTContext &C, const RecordDecl *RD1,
                                     const RecordDecl *RD2) {
-  llvm::SmallPtrSet<const FieldDecl *, 8> UnmatchedFields;
-  for (auto *Field2 : RD2->fields())
-    UnmatchedFields.insert(Field2);
+  llvm::SmallPtrSet<const FieldDecl *, 8> UnmatchedFields(llvm::from_range,
+                                                          RD2->fields());
 
   for (auto *Field1 : RD1->fields()) {
     auto I = UnmatchedFields.begin();

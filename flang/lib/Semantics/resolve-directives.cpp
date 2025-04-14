@@ -2301,12 +2301,12 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         if (symbol != found) {
           name.symbol = found; // adjust the symbol within region
         } else if (GetContext().defaultDSA == Symbol::Flag::OmpNone &&
-            !symbol->test(Symbol::Flag::OmpThreadprivate) &&
+            !symbol->GetUltimate().test(Symbol::Flag::OmpThreadprivate) &&
             // Exclude indices of sequential loops that are privatised in
             // the scope of the parallel region, and not in this scope.
             // TODO: check whether this should be caught in IsObjectWithDSA
             !symbol->test(Symbol::Flag::OmpPrivate)) {
-          if (symbol->test(Symbol::Flag::CrayPointee)) {
+          if (symbol->GetUltimate().test(Symbol::Flag::CrayPointee)) {
             std::string crayPtrName{
                 semantics::GetCrayPointer(*symbol).name().ToString()};
             if (!IsObjectWithDSA(*currScope().FindSymbol(crayPtrName)))
@@ -2512,6 +2512,15 @@ void OmpAttributeVisitor::ResolveOmpObject(
                         "with the INSCAN modifier of the parent "
                         "directive"_err_en_US,
                         name->ToString());
+                  }
+                }
+                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+                  if (symbol->IsFuncResult()) {
+                    if (Symbol * func{currScope().symbol()}) {
+                      CHECK(func->IsSubprogram());
+                      func->set(ompFlag);
+                      name->symbol = func;
+                    }
                   }
                 }
                 if (GetContext().directive ==

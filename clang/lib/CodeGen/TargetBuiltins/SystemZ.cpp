@@ -10,12 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsS390.h"
 
 using namespace clang;

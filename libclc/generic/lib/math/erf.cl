@@ -23,7 +23,7 @@
 
 #define erx   8.4506291151e-01f        /* 0x3f58560b */
 
-// Coefficients for approximation to  erf on [00.84375]
+// Coefficients for approximation to  erf on [0, 0.84375]
 
 #define efx   1.2837916613e-01f        /* 0x3e0375d4 */
 #define efx8  1.0270333290e+00f        /* 0x3f8375d4 */
@@ -39,7 +39,7 @@
 #define qq4   1.3249473704e-04f        /* 0x390aee49 */
 #define qq5  -3.9602282413e-06f        /* 0xb684e21a */
 
-// Coefficients for approximation to  erf  in [0.843751.25]
+// Coefficients for approximation to  erf  in [0.84375, 1.25]
 
 #define pa0  -2.3621185683e-03f        /* 0xbb1acdc6 */
 #define pa1   4.1485610604e-01f        /* 0x3ed46805 */
@@ -55,7 +55,7 @@
 #define qa5   1.3637083583e-02f        /* 0x3c5f6e13 */
 #define qa6   1.1984500103e-02f        /* 0x3c445aa3 */
 
-// Coefficients for approximation to  erfc in [1.251/0.35]
+// Coefficients for approximation to  erfc in [1.25, 1/0.35]
 
 #define ra0  -9.8649440333e-03f        /* 0xbc21a093 */
 #define ra1  -6.9385856390e-01f        /* 0xbf31a0b7 */
@@ -74,7 +74,7 @@
 #define sa7   6.5702495575e+00f        /* 0x40d23f7c */
 #define sa8  -6.0424413532e-02f        /* 0xbd777f97 */
 
-// Coefficients for approximation to  erfc in [1/.3528]
+// Coefficients for approximation to  erfc in [1/0.35, 28]
 
 #define rb0  -9.8649431020e-03f        /* 0xbc21a092 */
 #define rb1  -7.9928326607e-01f        /* 0xbf4c9dd4 */
@@ -130,7 +130,8 @@ _CLC_OVERLOAD _CLC_DEF float erf(float x) {
 
     // |x| < 6
     float z = as_float(ix & 0xfffff000);
-    float r = exp(mad(-z, z, -0.5625f)) * exp(mad(z-absx, z+absx, q));
+    float r = exp(-z * z) * exp(mad(z - absx, z + absx, q));
+    r *= 0x1.23ba94p-1f; // exp(-0.5625)
     r = 1.0f - MATH_DIVIDE(r,  absx);
     ret = absx < 6.0f ? r : ret;
 

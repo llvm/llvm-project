@@ -1993,8 +1993,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (Reg.isVirtual())
         Uses.insert(Reg);
       else if (MRI.isAllocatable(Reg))
-        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-          Uses.insert(Unit);
+        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
     }
   }
   for (SUnit *SU : NS)

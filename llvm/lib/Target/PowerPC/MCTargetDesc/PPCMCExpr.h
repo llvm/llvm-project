@@ -17,12 +17,10 @@ namespace llvm {
 
 class PPCMCExpr : public MCTargetExpr {
 public:
-  enum Specifier {
+  enum Specifier : uint8_t {
     VK_None,
 
-    // We currently use both MCSymbolRefExpr::VariantKind and
-    // PPCMCExpr::Specifier. Start at a larger number to avoid conflicts.
-    VK_LO = 200,
+    VK_LO = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_HI,
     VK_HA,
     VK_HIGH,
@@ -133,9 +131,7 @@ public:
   /// @name Accessors
   /// @{
 
-  Specifier getKind() const { return specifier; }
-
-  /// getSubExpr - Get the child of this expression.
+  Specifier getSpecifier() const { return specifier; }
   const MCExpr *getSubExpr() const { return Expr; }
 
   /// @}

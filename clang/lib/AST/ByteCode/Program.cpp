@@ -166,7 +166,7 @@ unsigned Program::getOrCreateDummy(const DeclTy &D) {
 
   Descriptor *Desc;
   if (std::optional<PrimType> T = Ctx.classify(QT))
-    Desc = createDescriptor(D, *T, std::nullopt, /*IsTemporary=*/true,
+    Desc = createDescriptor(D, *T, nullptr, std::nullopt, /*IsTemporary=*/true,
                             /*IsMutable=*/false);
   else
     Desc = createDescriptor(D, QT.getTypePtr(), std::nullopt,
@@ -244,7 +244,8 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
   const bool IsConst = Ty.isConstQualified();
   const bool IsTemporary = D.dyn_cast<const Expr *>();
   if (std::optional<PrimType> T = Ctx.classify(Ty))
-    Desc = createDescriptor(D, *T, Descriptor::GlobalMD, IsConst, IsTemporary);
+    Desc = createDescriptor(D, *T, nullptr, Descriptor::GlobalMD, IsConst,
+                            IsTemporary);
   else
     Desc = createDescriptor(D, Ty.getTypePtr(), Descriptor::GlobalMD, IsConst,
                             IsTemporary);
@@ -365,7 +366,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     const Descriptor *Desc;
     if (std::optional<PrimType> T = Ctx.classify(FT)) {
-      Desc = createDescriptor(FD, *T, std::nullopt, IsConst,
+      Desc = createDescriptor(FD, *T, nullptr, std::nullopt, IsConst,
                               /*isTemporary=*/false, IsMutable);
     } else {
       Desc = createDescriptor(FD, FT.getTypePtr(), std::nullopt, IsConst,

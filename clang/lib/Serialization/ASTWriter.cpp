@@ -1493,42 +1493,45 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
     RecordData::value_type Record[] = {MODULE_NAME};
     Stream.EmitRecordWithBlob(AbbrevCode, Record, WritingModule->Name);
-  }
 
-  if (WritingModule && WritingModule->Directory) {
-    SmallString<128> BaseDir;
-    if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
-      // Use the current working directory as the base path for all inputs.
-      auto CWD = FileMgr.getOptionalDirectoryRef(".");
-      BaseDir.assign(CWD->getName());
-    } else {
-      BaseDir.assign(WritingModule->Directory->getName());
+    auto BaseDir = [&]() -> std::optional<SmallString<128>> {
+      if (PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd) {
+        // Use the current working directory as the base path for all inputs.
+        auto CWD = FileMgr.getOptionalDirectoryRef(".");
+        return CWD->getName();
+      }
+      if (WritingModule->Directory) {
+        return WritingModule->Directory->getName();
+      }
+      return std::nullopt;
+    }();
+    if (BaseDir) {
+      cleanPathForOutput(FileMgr, *BaseDir);
+
+      // If the home of the module is the current working directory, then we
+      // want to pick up the cwd of the build process loading the module, not
+      // our cwd, when we load this module.
+      if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd &&
+          (!PP.getHeaderSearchInfo()
+                .getHeaderSearchOpts()
+                .ModuleMapFileHomeIsCwd ||
+           WritingModule->Directory->getName() != ".")) {
+        // Module directory.
+        auto Abbrev = std::make_shared<BitCodeAbbrev>();
+        Abbrev->Add(BitCodeAbbrevOp(MODULE_DIRECTORY));
+        Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Directory
+        unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
+
+        RecordData::value_type Record[] = {MODULE_DIRECTORY};
+        Stream.EmitRecordWithBlob(AbbrevCode, Record, *BaseDir);
+      }
+
+      // Write out all other paths relative to the base directory if possible.
+      BaseDirectory.assign(BaseDir->begin(), BaseDir->end());
+    } else if (!isysroot.empty()) {
+      // Write out paths relative to the sysroot if possible.
+      BaseDirectory = std::string(isysroot);
     }
-    cleanPathForOutput(FileMgr, BaseDir);
-
-    // If the home of the module is the current working directory, then we
-    // want to pick up the cwd of the build process loading the module, not
-    // our cwd, when we load this module.
-    if (!PP.getHeaderSearchInfo().getHeaderSearchOpts().ModuleFileHomeIsCwd &&
-        (!PP.getHeaderSearchInfo()
-              .getHeaderSearchOpts()
-              .ModuleMapFileHomeIsCwd ||
-         WritingModule->Directory->getName() != ".")) {
-      // Module directory.
-      auto Abbrev = std::make_shared<BitCodeAbbrev>();
-      Abbrev->Add(BitCodeAbbrevOp(MODULE_DIRECTORY));
-      Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Blob)); // Directory
-      unsigned AbbrevCode = Stream.EmitAbbrev(std::move(Abbrev));
-
-      RecordData::value_type Record[] = {MODULE_DIRECTORY};
-      Stream.EmitRecordWithBlob(AbbrevCode, Record, BaseDir);
-    }
-
-    // Write out all other paths relative to the base directory if possible.
-    BaseDirectory.assign(BaseDir.begin(), BaseDir.end());
-  } else if (!isysroot.empty()) {
-    // Write out paths relative to the sysroot if possible.
-    BaseDirectory = std::string(isysroot);
   }
 
   // Module map file
@@ -4267,7 +4270,7 @@ public:
       auto ID = Writer.GetDeclRef(DeclForLocalLookup);
 
       if (isModuleLocalDecl(D)) {
-        if (std::optional<unsigned> PrimaryModuleHash =
+        if (UnsignedOrNone PrimaryModuleHash =
                 getPrimaryModuleHash(D->getOwningModule())) {
           auto Key = std::make_pair(D->getDeclName(), *PrimaryModuleHash);
           auto Iter = ModuleLocalDeclsMap.find(Key);
@@ -4438,7 +4441,7 @@ void ASTWriter::GenerateSpecializationInfoLookupTable(
       Generator;
   LazySpecializationInfoLookupTrait Trait(*this);
 
-  llvm::DenseMap<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
+  llvm::MapVector<unsigned, llvm::SmallVector<const NamedDecl *, 4>>
       SpecializationMaps;
 
   for (auto *Specialization : Specializations) {
@@ -7022,8 +7025,6 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
       break;
 
     case NestedNameSpecifier::TypeSpec:
-    case NestedNameSpecifier::TypeSpecWithTemplate:
-      Record->push_back(Kind == NestedNameSpecifier::TypeSpecWithTemplate);
       AddTypeRef(NNS.getTypeLoc().getType());
       AddTypeLoc(NNS.getTypeLoc());
       AddSourceLocation(NNS.getLocalSourceRange().getEnd());
@@ -8717,6 +8718,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::PresentOrCopy: {
     const auto *CC = cast<OpenACCCopyClause>(C);
     writeSourceLocation(CC->getLParenLoc());
+    writeEnum(CC->getModifierList());
     writeOpenACCVarList(CC);
     return;
   }
@@ -8725,7 +8727,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::PresentOrCopyIn: {
     const auto *CIC = cast<OpenACCCopyInClause>(C);
     writeSourceLocation(CIC->getLParenLoc());
-    writeBool(CIC->isReadOnly());
+    writeEnum(CIC->getModifierList());
     writeOpenACCVarList(CIC);
     return;
   }
@@ -8734,7 +8736,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::PresentOrCopyOut: {
     const auto *COC = cast<OpenACCCopyOutClause>(C);
     writeSourceLocation(COC->getLParenLoc());
-    writeBool(COC->isZero());
+    writeEnum(COC->getModifierList());
     writeOpenACCVarList(COC);
     return;
   }
@@ -8743,7 +8745,7 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
   case OpenACCClauseKind::PresentOrCreate: {
     const auto *CC = cast<OpenACCCreateClause>(C);
     writeSourceLocation(CC->getLParenLoc());
-    writeBool(CC->isZero());
+    writeEnum(CC->getModifierList());
     writeOpenACCVarList(CC);
     return;
   }

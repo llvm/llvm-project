@@ -3210,8 +3210,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     //        X.
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
-      addAssociatedClassesAndNamespaces(
-          Result, MemberPtr->getMostRecentCXXRecordDecl());
+      if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
+        addAssociatedClassesAndNamespaces(Result, Class);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
@@ -3713,7 +3713,8 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         if (StringLit) {
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
-          TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
+          TemplateArgumentLoc Arg(
+              TemplateArgument(StringLit, /*IsCanonical=*/false), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
                   /*ArgumentPackIndex=*/0, CTAI, CTAK_Specified) ||
@@ -4530,7 +4531,6 @@ static void getNestedNameSpecifierIdentifiers(
     II = NNS->getAsNamespaceAlias()->getIdentifier();
     break;
 
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   case NestedNameSpecifier::TypeSpec:
     II = QualType(NNS->getAsType(), 0).getBaseTypeIdentifier();
     break;
@@ -4895,8 +4895,7 @@ TypoCorrectionConsumer::NamespaceSpecifierSet::buildNestedNameSpecifier(
       NNS = NestedNameSpecifier::Create(Context, NNS, ND);
       ++NumSpecifiers;
     } else if (auto *RD = dyn_cast_or_null<RecordDecl>(C)) {
-      NNS = NestedNameSpecifier::Create(Context, NNS, RD->isTemplateDecl(),
-                                        RD->getTypeForDecl());
+      NNS = NestedNameSpecifier::Create(Context, NNS, RD->getTypeForDecl());
       ++NumSpecifiers;
     }
   }

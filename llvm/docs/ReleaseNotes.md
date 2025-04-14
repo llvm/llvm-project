@@ -70,6 +70,8 @@ Changes to LLVM infrastructure
 
 * Removed support for target intrinsics being defined in the target directories
   themselves (i.e., the `TargetIntrinsicInfo` class).
+* Fix Microsoft demangling of string literals to be stricter
+  (#GH129970))
 
 Changes to building LLVM
 ------------------------
@@ -142,11 +144,21 @@ Changes to the RISC-V Backend
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcisync` (Sync Delay)
   extension.
+* Adds experimental assembler support for the Qualcomm uC 'Xqciio` (External Input Output)
+  extension.
 * Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
   extension.
 * Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
   extension.
 * Adds experimental assembler support for Zvqdotq.
+* Adds Support for Qualcomm's `qci-nest` and `qci-nonest` interrupt types, which
+  use instructions from `Xqciint` to save and restore some GPRs during interrupt
+  handlers.
+* When the experimental extension `Xqcili` is enabled, `qc.e.li` and `qc.li` may
+  now be used to materialize immediates.
+* Adds assembler support for ``.option exact``, which disables automatic compression,
+  and branch and linker relaxation. This can be disabled with ``.option noexact``,
+  which is also the default.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -206,6 +218,13 @@ Changes to LLDB
   Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
 * LLDB now steps through C++ thunks. This fixes an issue where previously, it
   wouldn't step into multiple inheritance virtual functions.
+* A statusline was added to command-line LLDB to show progress events and
+  information about the current state of the debugger at the bottom of the
+  terminal. This is on by default and can be configured using the
+  `show-statusline` and `statusline-format` settings.
+* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
+  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
+  handling in LLDB 20, these options have had no effect.
 
 ### Changes to lldb-dap
 

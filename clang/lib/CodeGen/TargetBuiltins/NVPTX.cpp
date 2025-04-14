@@ -10,14 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "CodeGenModule.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 using namespace clang;
@@ -487,21 +481,11 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
                                    AtomicOrdering::SequentiallyConsistent);
   }
 
-  case NVPTX::BI__nvvm_atom_inc_gen_ui: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    Function *FnALI32 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_inc_32, Ptr->getType());
-    return Builder.CreateCall(FnALI32, {Ptr, Val});
-  }
+  case NVPTX::BI__nvvm_atom_inc_gen_ui:
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UIncWrap, E);
 
-  case NVPTX::BI__nvvm_atom_dec_gen_ui: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    Function *FnALD32 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_dec_32, Ptr->getType());
-    return Builder.CreateCall(FnALD32, {Ptr, Val});
-  }
+  case NVPTX::BI__nvvm_atom_dec_gen_ui:
+    return MakeBinaryAtomicValue(*this, llvm::AtomicRMWInst::UDecWrap, E);
 
   case NVPTX::BI__nvvm_ldg_c:
   case NVPTX::BI__nvvm_ldg_sc:

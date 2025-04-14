@@ -85,8 +85,7 @@ bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (Res.isAbsolute() && MaybeInt) {
     Res = MCValue::get(*MaybeInt);
   } else {
-    Res = MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(),
-                       getKind());
+    Res.setSpecifier(specifier);
   }
 
   return true;
