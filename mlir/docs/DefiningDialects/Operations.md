@@ -1397,7 +1397,7 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
+    `CPred<"isa<BoolAttr>($_self)">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
@@ -1409,8 +1409,8 @@ to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
-just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as
-`$_self.isa<IntegerAttr>()`, with `$_self` as the special placeholder to be
+just call `isa<IntegerAttr>(attr)`. The code can be wrapped in a `CPred` as
+`isa<IntegerAttr>($_self)`, with `$_self` as the special placeholder to be
 replaced by the current attribute `attr` at expansion time.
 
 For more complicated predicates, you can wrap it in a single `CPred`, or you can
@@ -1419,10 +1419,10 @@ that an attribute `attr` is a 32-bit or 64-bit integer, you can write it as
 
 ```tablegen
 And<[
-  CPred<"$_self.isa<IntegerAttr>()">,
+  CPred<"$isa<IntegerAttr>(_self)()">,
   Or<[
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(32)">,
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(64)">
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(32)">,
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(64)">
   ]>
 ]>
 ```

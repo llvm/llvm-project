@@ -300,9 +300,9 @@ static Value dynamicallyExtractSubVector(OpBuilder &rewriter, Location loc,
 
   for (int i = 0; i < numElemsToExtract; ++i) {
     Value extractLoc =
-        (i == 0) ? offset.dyn_cast<Value>()
+        (i == 0) ? dyn_cast<Value>(offset)
                  : rewriter.create<arith::AddIOp>(
-                       loc, rewriter.getIndexType(), offset.dyn_cast<Value>(),
+                       loc, rewriter.getIndexType(), dyn_cast<Value>(offset),
                        rewriter.create<arith::ConstantIndexOp>(loc, i));
     auto extractOp = rewriter.create<vector::ExtractOp>(loc, src, extractLoc);
     dest = rewriter.create<vector::InsertOp>(loc, extractOp, dest, i);

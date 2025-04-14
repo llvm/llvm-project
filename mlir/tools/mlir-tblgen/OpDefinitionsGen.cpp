@@ -1802,7 +1802,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
       writePropertiesMethod << tgfmt(writeBytecodeSegmentSizeLegacy, &fmtCtxt);
     }
     if (const auto *namedProperty =
-            attrOrProp.dyn_cast<const NamedProperty *>()) {
+            dyn_cast<const NamedProperty *>(attrOrProp)) {
       StringRef name = namedProperty->name;
       readPropertiesMethod << formatv(
           R"(
