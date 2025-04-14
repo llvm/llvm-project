@@ -113,7 +113,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
-  void emitJumpTableInfo() override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -1290,19 +1291,18 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
-void AArch64AsmPrinter::emitJumpTableInfo() {
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI) return;
-
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty()) return;
-
+void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                          ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
+  if (JumpTableIndices.empty())
+    return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
   OutStreamer->switchSection(ReadOnlySec);
 
+  const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+  for (unsigned JTI : JumpTableIndices) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
     // If this jump table was deleted, ignore it.
