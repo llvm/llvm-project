@@ -387,10 +387,6 @@ protected:
   /// directives, e.g. .word foo(got).
   bool UseParensForSpecifier = false;
 
-  /// True if the target uses parens for symbol names starting with
-  /// '$' character to distinguish them from absolute names.
-  bool UseParensForDollarSignNames = true;
-
   /// True if the target supports flags in ".loc" directive, false if only
   /// location is allowed.
   bool SupportsExtendedDwarfLocDirective = true;

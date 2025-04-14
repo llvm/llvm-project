@@ -202,6 +202,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseOperandWithSpecifier(OperandVector &Operands);
   ParseStatus parseBareSymbol(OperandVector &Operands);
   ParseStatus parseCallSymbol(OperandVector &Operands);
+  ParseStatus parsePseudoQCJumpSymbol(OperandVector &Operands);
   ParseStatus parsePseudoJumpSymbol(OperandVector &Operands);
   ParseStatus parseJALOffset(OperandVector &Operands);
   ParseStatus parseVTypeI(OperandVector &Operands);
@@ -588,6 +589,17 @@ public:
     RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
     return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
            (VK == RISCVMCExpr::VK_CALL || VK == RISCVMCExpr::VK_CALL_PLT);
+  }
+
+  bool isPseudoQCJumpSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    if (!isImm() || evaluateConstantImm(getImm(), Imm))
+      return false;
+
+    RISCVMCExpr::Specifier VK = RISCVMCExpr::VK_None;
+    return RISCVAsmParser::classifySymbolRef(getImm(), VK) &&
+           VK == RISCVMCExpr::VK_QC_E_JUMP_PLT;
   }
 
   bool isPseudoJumpSymbol() const {
@@ -2067,9 +2079,6 @@ ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
 
-  if (Identifier.consume_back("@plt"))
-    return Error(getLoc(), "'@plt' operand not valid for instruction");
-
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
 
   if (Sym->isVariable()) {
@@ -2117,8 +2126,9 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
     Lex();
     Lex();
     StringRef PLT;
+    SMLoc Loc = getLoc();
     if (getParser().parseIdentifier(PLT) || PLT != "plt")
-      return ParseStatus::Failure;
+      return Error(Loc, "@ (except the deprecated/ignored @plt) is disallowed");
   } else if (!getLexer().peekTok().is(AsmToken::EndOfStatement)) {
     // Avoid parsing the register in `call rd, foo` as a call symbol.
     return ParseStatus::NoMatch;
@@ -2128,6 +2138,38 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
   RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_CALL_PLT;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  Res = MCSymbolRefExpr::create(Sym, getContext());
+  Res = RISCVMCExpr::create(Res, Kind, getContext());
+  Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+  return ParseStatus::Success;
+}
+
+ParseStatus RISCVAsmParser::parsePseudoQCJumpSymbol(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const MCExpr *Res;
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return ParseStatus::NoMatch;
+
+  std::string Identifier(getTok().getIdentifier());
+  SMLoc E = getTok().getEndLoc();
+
+  if (getLexer().peekTok().is(AsmToken::At)) {
+    Lex();
+    Lex();
+    SMLoc PLTLoc = getLoc();
+    StringRef PLT;
+    E = getTok().getEndLoc();
+    if (getParser().parseIdentifier(PLT) || PLT != "plt")
+      return Error(PLTLoc,
+                   "'@plt' is the only valid operand for this instruction");
+  } else {
+    Lex();
+  }
+
+  RISCVMCExpr::Specifier Kind = RISCVMCExpr::VK_QC_E_JUMP_PLT;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
