@@ -754,11 +754,18 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
   QualType AddrSpaceElemTy =
       AST.getAddrSpaceQualType(ElemTy, LangAS::hlsl_device);
   QualType ElemPtrTy = AST.getPointerType(AddrSpaceElemTy);
-  // QualType ReturnTy = (IsRef ? AST.getLValueReferenceType(ElemTy) : ElemTy);
-  QualType ReturnTy =
-      (IsRef ? AST.getLValueReferenceType(AddrSpaceElemTy) : ElemTy);
-  if (IsConst)
-    ReturnTy.addConst();
+  QualType ReturnTy;
+
+  if (IsRef) {
+    ReturnTy = AddrSpaceElemTy;
+    if (IsConst)
+      ReturnTy.addConst();
+    ReturnTy = AST.getLValueReferenceType(ReturnTy);
+  } else {
+    ReturnTy = ElemTy;
+    if (IsConst)
+      ReturnTy.addConst();
+  }
 
   return BuiltinTypeMethodBuilder(*this, Name, ReturnTy, IsConst)
       .addParam("Index", AST.UnsignedIntTy)

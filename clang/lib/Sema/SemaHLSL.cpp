@@ -2387,10 +2387,10 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ContainedTy = ResourceTy->getContainedType();
-    auto returnType =
+    auto ReturnType =
         SemaRef.Context.getAddrSpaceQualType(ContainedTy, LangAS::hlsl_device);
-    returnType = SemaRef.Context.getPointerType(returnType);
-    TheCall->setType(returnType);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
     TheCall->setValueKind(VK_LValue);
 
     break;
