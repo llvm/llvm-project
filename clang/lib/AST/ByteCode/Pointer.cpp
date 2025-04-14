@@ -342,7 +342,9 @@ void Pointer::print(llvm::raw_ostream &OS) const {
        << " }";
     break;
   case Storage::Typeid:
-    OS << "(Typeid)";
+    OS << "(Typeid) { " << (const void *)asTypeidPointer().TypePtr << ", "
+       << (const void *)asTypeidPointer().TypeInfoType << " + " << Offset
+       << "}";
   }
 }
 

@@ -258,8 +258,8 @@ protected:
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
   bool HasMinimum3Maximum3PKF16 = false;
-  bool HasPointSampleAccel = false;
   bool HasLshlAddU64Inst = false;
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
 

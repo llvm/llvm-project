@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/CodeGen/CGOps.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -20,7 +20,7 @@ fir::FIRCodeGenDialect::FIRCodeGenDialect(mlir::MLIRContext *ctx)
     : mlir::Dialect("fircg", ctx, mlir::TypeID::get<FIRCodeGenDialect>()) {
   addOperations<
 #define GET_OP_LIST
-#include "flang/Optimizer/CodeGen/CGOps.cpp.inc"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.cpp.inc"
       >();
 }
 
@@ -30,7 +30,7 @@ fir::FIRCodeGenDialect::~FIRCodeGenDialect() {
 }
 
 #define GET_OP_CLASSES
-#include "flang/Optimizer/CodeGen/CGOps.cpp.inc"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.cpp.inc"
 
 unsigned fir::cg::XEmboxOp::getOutRank() {
   if (getSlice().empty())
