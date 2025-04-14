@@ -235,6 +235,42 @@ int llvm_test_dibuilder(void) {
       M, "LargeEnumTest",
       LLVMMetadataAsValue(LLVMGetModuleContext(M), LargeEnumTest));
 
+  LLVMMetadataRef lo = LLVMValueAsMetadata(FooVal1);
+  LLVMMetadataRef hi = LLVMValueAsMetadata(FooVal2);
+  LLVMMetadataRef SubrangeMetadataTy = LLVMDIBuilderCreateSubrangeType(
+      DIB, File, "foo", 3, 42, File, 64, 0, 0, Int64Ty, lo, hi, NULL, NULL);
+  LLVMAddNamedMetadataOperand(
+      M, "SubrangeType",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SubrangeMetadataTy));
+
+  LLVMMetadataRef SetMetadataTy1 = LLVMDIBuilderCreateSetType(
+      DIB, File, "enumset", 7, File, 42, 64, 0, EnumTest);
+  LLVMMetadataRef SetMetadataTy2 = LLVMDIBuilderCreateSetType(
+      DIB, File, "subrangeset", 11, File, 42, 64, 0, SubrangeMetadataTy);
+  LLVMAddNamedMetadataOperand(
+      M, "SetType1",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SetMetadataTy1));
+  LLVMAddNamedMetadataOperand(
+      M, "SetType2",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), SetMetadataTy2));
+
+  LLVMMetadataRef DynSubscripts[] = {
+      LLVMDIBuilderGetOrCreateSubrange(DIB, 0, 10),
+  };
+  LLVMMetadataRef LocExpression = LLVMDIBuilderCreateExpression(DIB, NULL, 0);
+  LLVMMetadataRef DynamicArrayMetadataTy = LLVMDIBuilderCreateDynamicArrayType(
+      DIB, File, "foo", 3, 42, File, 64 * 10, 0, Int64Ty, DynSubscripts, 1,
+      LocExpression, NULL, NULL, NULL, NULL);
+  LLVMAddNamedMetadataOperand(
+      M, "DynType",
+      LLVMMetadataAsValue(LLVMGetModuleContext(M), DynamicArrayMetadataTy));
+
+  LLVMMetadataRef StructElts[] = {Int64Ty, Int64Ty, Int64Ty};
+  LLVMMetadataRef StructDestTy = LLVMDIBuilderCreateStructType(
+      DIB, NameSpace, "ThisStruct", 9, File, 0, 192, 0, 0, NULL, StructElts, 3,
+      LLVMDWARFSourceLanguageC, NULL, "ThisStruct", 9);
+  LLVMReplaceArrays(DIB, &StructDbgTy, &StructDestTy, 1);
+
   // Using the new debug format, debug records get attached to instructions.
   // Insert a `br` and `ret` now to absorb the debug records which are
   // currently "trailing", meaning that they're associated with a block

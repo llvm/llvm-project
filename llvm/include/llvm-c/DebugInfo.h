@@ -703,15 +703,15 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
 
 /**
  * Create debugging information entry for a set.
- * @param Builder        The DIBuilder.
- * \param Scope          The scope this module is imported into.
+ * \param Builder        The DIBuilder.
+ * \param Scope          The scope in which the set is defined.
  * \param Name           A name that uniquely identifies this set.
  * \param NameLen        The length of the C string passed to \c Name.
  * \param File           File where the set is located.
  * \param Line           Line number of the declaration.
  * \param SizeInBits     Set size.
  * \param AlignInBits    Set alignment.
- * @param BaseTy         The base type of the set.
+ * \param BaseTy         The base type of the set.
  */
 LLVMMetadataRef LLVMDIBuilderCreateSetType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
@@ -721,8 +721,8 @@ LLVMMetadataRef LLVMDIBuilderCreateSetType(
 /**
  * Create a descriptor for a subrange with dynamic bounds.
  * \param Builder    The DIBuilder.
- * \param Scope      The scope this module is imported into.
- * \param Name       A name that uniquely identifies this set.
+ * \param Scope      The scope in which the subrange is defined.
+ * \param Name       A name that uniquely identifies this subrange.
  * \param NameLen    The length of the C string passed to \c Name.
  * \param LineNo     Line number.
  * \param File       File where the subrange is located.
@@ -737,9 +737,8 @@ LLVMMetadataRef LLVMDIBuilderCreateSetType(
  */
 LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
-    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
-    uint64_t SizeInBits, uint32_t AlignInBits,
-    LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t SizeInBits,
+    uint32_t AlignInBits, LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
     LLVMMetadataRef LowerBound, LLVMMetadataRef UpperBound,
     LLVMMetadataRef Stride, LLVMMetadataRef Bias);
 
@@ -759,11 +758,11 @@ LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
  */
 LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
-    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
-    uint64_t Size, uint32_t AlignInBits,
-    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
-    LLVMMetadataRef DataLocation, LLVMMetadataRef Associated,
-    LLVMMetadataRef Allocated, LLVMMetadataRef Rank, LLVMMetadataRef BitStride);
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
+    uint32_t AlignInBits, LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts,
+    unsigned NumSubscripts, LLVMMetadataRef DataLocation,
+    LLVMMetadataRef Associated, LLVMMetadataRef Allocated, LLVMMetadataRef Rank,
+    LLVMMetadataRef BitStride);
 
 /**
  * Replace arrays.

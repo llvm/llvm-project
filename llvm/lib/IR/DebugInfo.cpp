@@ -1332,32 +1332,29 @@ LLVMMetadataRef LLVMDIBuilderCreateSetType(
 
 LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
-    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
-    uint64_t SizeInBits, uint32_t AlignInBits,
-    LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t SizeInBits,
+    uint32_t AlignInBits, LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
     LLVMMetadataRef LowerBound, LLVMMetadataRef UpperBound,
-    LLVMMetadataRef Stride, LLVMMetadataRef Bias
-    ) {
+    LLVMMetadataRef Stride, LLVMMetadataRef Bias) {
   return wrap(unwrap(Builder)->createSubrangeType(
-	  {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
-	  unwrapDI<DIScope>(Scope), SizeInBits, AlignInBits,
-	  map_from_llvmDIFlags(Flags), unwrapDI<DIType>(BaseTy),
-          unwrap<DIExpression>(LowerBound), unwrap<DIExpression>(UpperBound),
-          unwrap<DIExpression>(Stride), unwrap<DIExpression>(Bias)));
+      {Name, NameLen}, unwrapDI<DIFile>(File), LineNo, unwrapDI<DIScope>(Scope),
+      SizeInBits, AlignInBits, map_from_llvmDIFlags(Flags),
+      unwrapDI<DIType>(BaseTy), unwrap<DIExpression>(LowerBound),
+      unwrap<DIExpression>(UpperBound), unwrap<DIExpression>(Stride),
+      unwrap<DIExpression>(Bias)));
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
     LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
-    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
-    uint64_t Size, uint32_t AlignInBits,
-    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
-    LLVMMetadataRef DataLocation, LLVMMetadataRef Associated,
-    LLVMMetadataRef Allocated, LLVMMetadataRef Rank, LLVMMetadataRef BitStride) {
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File, uint64_t Size,
+    uint32_t AlignInBits, LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts,
+    unsigned NumSubscripts, LLVMMetadataRef DataLocation,
+    LLVMMetadataRef Associated, LLVMMetadataRef Allocated, LLVMMetadataRef Rank,
+    LLVMMetadataRef BitStride) {
   auto Subs =
       unwrap(Builder)->getOrCreateArray({unwrap(Subscripts), NumSubscripts});
   return wrap(unwrap(Builder)->createArrayType(
-      unwrapDI<DIScope>(Scope),
-      {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
       Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
       unwrap<DIExpression>(DataLocation), unwrap<DIExpression>(Associated),
       unwrap<DIExpression>(Allocated), unwrap<DIExpression>(Rank),
@@ -1367,8 +1364,8 @@ LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
 void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
                        LLVMMetadataRef *Elements, unsigned NumElements) {
   auto Arr = unwrap<DICompositeType>(*T);
-  auto Elts = unwrap(Builder)->getOrCreateArray({unwrap(Elements),
-		                                 NumElements});
+  auto Elts =
+      unwrap(Builder)->getOrCreateArray({unwrap(Elements), NumElements});
   unwrap(Builder)->replaceArrays(Arr, Elts);
 }
 
