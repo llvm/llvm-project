@@ -214,11 +214,7 @@ struct AArch64BuildAttrSubsections {
     uint64_t tagPlatform = 0;
     uint64_t tagSchema = 0;
   } pauth;
-  struct FAndBSubSection {
-    unsigned tagBTI = 0;
-    unsigned tagPAC = 0;
-    unsigned tagGCS = 0;
-  } fAndB;
+  uint32_t andFeatures = 0;
 };
 
 static AArch64BuildAttrSubsections
@@ -235,21 +231,23 @@ extractBuildAttributesSubsections(const AArch64AttributeParser &attributes) {
           .getAttributeValue("aeabi_pauthabi",
                              llvm::AArch64BuildAttributes::TAG_PAUTH_SCHEMA)
           .value_or(0);
-  subSections.fAndB.tagBTI =
+  subSections.andFeatures |=
       attributes
           .getAttributeValue("aeabi_feature_and_bits",
                              llvm::AArch64BuildAttributes::TAG_FEATURE_BTI)
           .value_or(0);
-  subSections.fAndB.tagPAC =
-      attributes
-          .getAttributeValue("aeabi_feature_and_bits",
-                             llvm::AArch64BuildAttributes::TAG_FEATURE_PAC)
-          .value_or(0);
-  subSections.fAndB.tagGCS =
-      attributes
-          .getAttributeValue("aeabi_feature_and_bits",
-                             llvm::AArch64BuildAttributes::TAG_FEATURE_GCS)
-          .value_or(0);
+  subSections.andFeatures |=
+      (attributes
+           .getAttributeValue("aeabi_feature_and_bits",
+                              llvm::AArch64BuildAttributes::TAG_FEATURE_PAC)
+           .value_or(0))
+      << 1;
+  subSections.andFeatures |=
+      (attributes
+           .getAttributeValue("aeabi_feature_and_bits",
+                              llvm::AArch64BuildAttributes::TAG_FEATURE_GCS)
+           .value_or(0))
+      << 2;
 
   return subSections;
 }
@@ -714,9 +712,7 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
             << " Pauth Data mismatch: file contains both GNU properties and "
                "AArch64 build attributes sections with different Pauth data";
     }
-    if (baInfo.fAndB.tagBTI != (gpInfo.andFeatures & 0x01) ||
-        baInfo.fAndB.tagPAC != ((gpInfo.andFeatures >> 1) & 0x01) ||
-        baInfo.fAndB.tagGCS != ((gpInfo.andFeatures >> 2) & 0x01))
+    if (baInfo.andFeatures != gpInfo.andFeatures)
       ErrAlways(ctx) << tPointer
                      << " Features Data mismatch: file contains both GNU "
                         "properties and AArch64 build attributes sections with "
@@ -734,10 +730,7 @@ handleAArch64BAAndGnuProperties(const ELFT &tPointer, Ctx &ctx, bool isBE,
       tPointer->aarch64PauthAbiCoreInfo =
           tPointer->aarch64PauthAbiCoreInfoStorage;
     }
-    tPointer->andFeatures = 0;
-    tPointer->andFeatures |= (baInfo.fAndB.tagBTI) << 0;
-    tPointer->andFeatures |= (baInfo.fAndB.tagPAC) << 1;
-    tPointer->andFeatures |= (baInfo.fAndB.tagGCS) << 2;
+    tPointer->andFeatures = baInfo.andFeatures;
   }
 }
 
