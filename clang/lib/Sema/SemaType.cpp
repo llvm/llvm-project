@@ -4281,8 +4281,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
   // If T is 'decltype(auto)', the only declarators we can have are parens
   // and at most one function declarator if this is a function declaration.
-  // If T is a deduced class template specialization type, we can have no
-  // declarator chunks at all.
+  // If T is a deduced class template specialization type, only parentheses
+  // are allowed.
   if (auto *DT = T->getAs<DeducedType>()) {
     const AutoType *AT = T->getAs<AutoType>();
     bool IsClassTemplateDeduction = isa<DeducedTemplateSpecializationType>(DT);
@@ -4296,11 +4296,6 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         unsigned DiagKind = 0;
         switch (DeclChunk.Kind) {
         case DeclaratorChunk::Paren:
-          // FIXME: Rejecting this is a little silly.
-          if (IsClassTemplateDeduction) {
-            DiagKind = 4;
-            break;
-          }
           continue;
         case DeclaratorChunk::Function: {
           if (IsClassTemplateDeduction) {

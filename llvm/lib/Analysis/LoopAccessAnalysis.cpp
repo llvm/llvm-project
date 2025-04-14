@@ -1756,7 +1756,7 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // Maximum vector factor.
   uint64_t MaxVFWithoutSLForwardIssuesPowerOf2 =
       std::min(VectorizerParams::MaxVectorWidth * TypeByteSize,
-               MaxStoreLoadForwardSafeDistanceInBits);
+               MaxPowerOf2StoreLoadForwardSafeDistanceInBits);
   uint64_t MaxVFWithoutSLForwardIssuesNonPowerOf2 = 0;
 
   // Compute the smallest VF at which the store and load would be misaligned.
@@ -1775,18 +1775,18 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // than 8 (NumItersForStoreLoadThroughMemory).
   if (AllowNonPow2Deps) {
     MaxVFWithoutSLForwardIssuesNonPowerOf2 =
-        std::min(VectorizerParams::MaxScalableVectorWidth * TypeByteSize,
-                 MaxStoreLoadForwardSafeDistanceInBits);
+        std::min(VectorizerParams::MaxNonPowerOf2VectorWidth * TypeByteSize,
+                 MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits);
 
-    for (uint64_t VF = MaxVFWithoutSLForwardIssuesNonPowerOf2,
-                  E = 2 * TypeByteSize;
-         VF >= E; VF -= TypeByteSize) {
+    for (uint64_t VF = MaxVFWithoutSLForwardIssuesNonPowerOf2;
+         VF > MaxVFWithoutSLForwardIssuesPowerOf2; VF -= TypeByteSize) {
       if (Distance % VF == 0 ||
           Distance / VF >= NumItersForStoreLoadThroughMemory) {
         uint64_t GCD =
             isSafeForAnyStoreLoadForwardDistances()
                 ? VF
-                : std::gcd(MaxStoreLoadForwardSafeDistanceInBits, VF);
+                : std::gcd(MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits,
+                           VF);
         MaxVFWithoutSLForwardIssuesNonPowerOf2 = GCD;
         break;
       }
@@ -1805,25 +1805,25 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
   // be calculated.
   if (AllowNonPow2Deps && CommonStride &&
       MaxVFWithoutSLForwardIssuesNonPowerOf2 <
-          MaxStoreLoadForwardSafeDistanceInBits &&
+          MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesNonPowerOf2 !=
-          VectorizerParams::MaxScalableVectorWidth * TypeByteSize) {
+          VectorizerParams::MaxNonPowerOf2VectorWidth * TypeByteSize) {
     uint64_t MaxVF = MaxVFWithoutSLForwardIssuesNonPowerOf2 / CommonStride;
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-    MaxStoreLoadForwardSafeDistanceInBits =
-        std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
-    return false;
+    MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits =
+        std::min(MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits, MaxVFInBits);
   }
 
   if (CommonStride &&
       MaxVFWithoutSLForwardIssuesPowerOf2 <
-          MaxStoreLoadForwardSafeDistanceInBits &&
+          MaxPowerOf2StoreLoadForwardSafeDistanceInBits &&
       MaxVFWithoutSLForwardIssuesPowerOf2 !=
           VectorizerParams::MaxVectorWidth * TypeByteSize) {
-    uint64_t MaxVF = MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride;
+    uint64_t MaxVF =
+        bit_floor(MaxVFWithoutSLForwardIssuesPowerOf2 / CommonStride);
     uint64_t MaxVFInBits = MaxVF * TypeByteSize * 8;
-    MaxStoreLoadForwardSafeDistanceInBits =
-        std::min(MaxStoreLoadForwardSafeDistanceInBits, MaxVFInBits);
+    MaxPowerOf2StoreLoadForwardSafeDistanceInBits =
+        std::min(MaxPowerOf2StoreLoadForwardSafeDistanceInBits, MaxVFInBits);
   }
   return false;
 }
@@ -3039,7 +3039,9 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
       OS << " with a maximum safe vector width of "
          << DC.getMaxSafeVectorWidthInBits() << " bits";
     if (!DC.isSafeForAnyStoreLoadForwardDistances()) {
-      uint64_t SLDist = DC.getStoreLoadForwardSafeDistanceInBits();
+      uint64_t SLDist = DC.getNonPowerOf2StoreLoadForwardSafeDistanceInBits();
+      if (SLDist == std::numeric_limits<uint64_t>::max())
+        SLDist = DC.getPowerOf2StoreLoadForwardSafeDistanceInBits();
       OS << ", with a maximum safe store-load forward width of " << SLDist
          << " bits";
     }

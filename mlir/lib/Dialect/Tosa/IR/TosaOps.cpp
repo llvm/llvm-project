@@ -653,6 +653,13 @@ LogicalResult tosa::ClampOp::verify() {
         (intMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const bool isUnsigned = cast<IntegerType>(inputETy).isUnsigned();
+    const APInt minVal = intMinValAttr.getValue();
+    const APInt maxVal = intMaxValAttr.getValue();
+    if (isUnsigned ? maxVal.ult(minVal) : maxVal.slt(minVal))
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   } else {
     // otherwise, input datatype is float, check that the min_val/max_val
     // attributes share the same type and that their type is the same as the
@@ -664,6 +671,16 @@ LogicalResult tosa::ClampOp::verify() {
         (floatMaxValAttr.getType() != inputETy))
       return emitOpError("min/max attributes types are incompatible with "
                          "input/output element types.");
+
+    const APFloat minVal = floatMinValAttr.getValue();
+    const APFloat maxVal = floatMaxValAttr.getValue();
+    if (minVal.isNaN() || maxVal.isNaN())
+      return emitOpError("min/max attributes should not be 'NaN', got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
+
+    if (maxVal < minVal)
+      return emitOpError("expected min_val <= max_val, got min_val=")
+             << minValAttr << ", max_val=" << maxValAttr;
   }
 
   return success();
@@ -1066,6 +1083,10 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
     hasRankedInput = true;
   }
+
+  if (adaptor.getInput1().empty())
+    return failure();
+
   Type inputType =
       llvm::cast<TensorType>(adaptor.getInput1().getType()[0]).getElementType();
   if (!hasRankedInput) {
@@ -1612,19 +1633,25 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TileOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  DenseIntElementsAttr multiplesAttr;
-  if (!matchPattern(adaptor.getMultiples(), m_Constant(&multiplesAttr)))
-    return failure();
-
-  SmallVector<int64_t> multiples = llvm::to_vector(
-      llvm::map_range(multiplesAttr.getValues<APInt>(),
-                      [](const APInt &val) { return val.getSExtValue(); }));
+  Type inputType = getElementTypeOrSelf(adaptor.getInput1().getType());
+  SmallVector<int64_t> multiples;
+  if (!tosa::getConstShapeValues(adaptor.getMultiples().getDefiningOp(),
+                                 multiples)) {
+    auto rank =
+        cast<tosa::shapeType>(adaptor.getMultiples().getType()).getRank();
+    SmallVector<int64_t> fallback(rank, ShapedType::kDynamic);
+    inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
+    return success();
+  } else {
+    multiples = convertToMlirShape(multiples);
+  }
 
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
     outputShape.resize(multiples.size(), ShapedType::kDynamic);
-    inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+    inferredReturnShapes.push_back(
+        ShapedTypeComponents(outputShape, inputType));
     return success();
   } else if (static_cast<size_t>(inputShape.getRank()) != multiples.size())
     return failure();
@@ -1632,13 +1659,17 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    int64_t dim = inputShape.getDimSize(i);
-    if (dim != ShapedType::kDynamic)
-      dim *= multiples[i];
-    outputShape.push_back(dim);
+    if (multiples[i] == ShapedType::kDynamic) {
+      outputShape.push_back(ShapedType::kDynamic);
+    } else {
+      int64_t dim = inputShape.getDimSize(i);
+      if (dim != ShapedType::kDynamic)
+        dim *= multiples[i];
+      outputShape.push_back(dim);
+    }
   }
 
-  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
+  inferredReturnShapes.push_back(ShapedTypeComponents(outputShape, inputType));
   return success();
 }
 

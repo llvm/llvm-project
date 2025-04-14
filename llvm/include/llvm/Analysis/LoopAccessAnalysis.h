@@ -33,8 +33,8 @@ class TargetTransformInfo;
 struct VectorizerParams {
   /// Maximum SIMD width.
   static const unsigned MaxVectorWidth;
-  /// Maximum scalable vector width.
-  static constexpr unsigned MaxScalableVectorWidth = 512;
+  /// Maximum non-power-of-2 vector width.
+  static constexpr unsigned MaxNonPowerOf2VectorWidth = 512;
 
   /// VF as overridden by the user.
   static unsigned VectorizationFactor;
@@ -221,17 +221,28 @@ public:
 
   /// Return true if there are no store-load forwarding dependencies.
   bool isSafeForAnyStoreLoadForwardDistances() const {
-    return MaxStoreLoadForwardSafeDistanceInBits ==
-           std::numeric_limits<uint64_t>::max();
+    return MaxPowerOf2StoreLoadForwardSafeDistanceInBits ==
+               std::numeric_limits<uint64_t>::max() &&
+           MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits ==
+               std::numeric_limits<uint64_t>::max();
   }
 
   /// Return safe number of elements, which do not prevent store-load
-  /// forwarding, multiplied by the size of the elements in bits.
-  uint64_t getStoreLoadForwardSafeDistanceInBits() const {
+  /// forwarding, multiplied by the size of the elements in bits (power-of-2).
+  uint64_t getPowerOf2StoreLoadForwardSafeDistanceInBits() const {
     assert(!isSafeForAnyStoreLoadForwardDistances() &&
            "Expected the distance, that prevent store-load forwarding, to be "
            "set.");
-    return MaxStoreLoadForwardSafeDistanceInBits;
+    return MaxPowerOf2StoreLoadForwardSafeDistanceInBits;
+  }
+
+  /// Return safe number of elements, which do not prevent store-load
+  /// forwarding, multiplied by the size of the elements in bits (power-of-2).
+  uint64_t getNonPowerOf2StoreLoadForwardSafeDistanceInBits() const {
+    assert(!isSafeForAnyStoreLoadForwardDistances() &&
+           "Expected the distance, that prevent store-load forwarding, to be "
+           "set.");
+    return MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits;
   }
 
   /// In same cases when the dependency check fails we can still
@@ -323,8 +334,13 @@ private:
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
   /// Maximum number of elements, which do not prevent store-load forwarding,
-  /// multiplied by the size of the elements in bits.
-  uint64_t MaxStoreLoadForwardSafeDistanceInBits =
+  /// multiplied by the size of the elements in bits (power-of-2).
+  uint64_t MaxPowerOf2StoreLoadForwardSafeDistanceInBits =
+      std::numeric_limits<uint64_t>::max();
+
+  /// Maximum number of elements, which do not prevent store-load forwarding,
+  /// multiplied by the size of the elements in bits (non-power-of-2).
+  uint64_t MaxNonPowerOf2StoreLoadForwardSafeDistanceInBits =
       std::numeric_limits<uint64_t>::max();
 
   /// If we see a non-constant dependence distance we can still try to

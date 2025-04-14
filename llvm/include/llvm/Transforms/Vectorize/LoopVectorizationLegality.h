@@ -413,8 +413,15 @@ public:
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
   /// forwarding and safe to operate simultaneously.
-  uint64_t getMaxStoreLoadForwardSafeDistanceInBits() const {
-    return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
+  uint64_t getPowerOf2MaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker().getPowerOf2StoreLoadForwardSafeDistanceInBits();
+  }
+
+  /// Return safe non-power-of-2 number of elements, which do not prevent
+  /// store-load forwarding and safe to operate simultaneously.
+  uint64_t getNonPowerOf2MaxStoreLoadForwardSafeDistanceInBits() const {
+    return LAI->getDepChecker()
+        .getNonPowerOf2StoreLoadForwardSafeDistanceInBits();
   }
 
   /// Returns true if vector representation of the instruction \p I

@@ -463,6 +463,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
       if (!this->visit(SubExpr))
         return false;
+      if (CE->getType()->isFunctionPointerType())
+        return true;
       if (FromT == PT_Ptr)
         return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
       return true;
@@ -3378,7 +3380,8 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       // Always invalid.
       return this->emitInvalid(E);
     }
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction())
+  } else if (!OperatorNew
+                  ->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   const Descriptor *Desc;
@@ -3598,7 +3601,7 @@ bool Compiler<Emitter>::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
 
   const FunctionDecl *OperatorDelete = E->getOperatorDelete();
 
-  if (!OperatorDelete->isReplaceableGlobalAllocationFunction())
+  if (!OperatorDelete->isUsableAsGlobalAllocationFunctionInConstantEvaluation())
     return this->emitInvalidNewDeleteExpr(E, E);
 
   // Arg must be an lvalue.
@@ -3626,15 +3629,22 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
   const Type *TypeInfoType = E->getType().getTypePtr();
 
+  auto canonType = [](const Type *T) {
+    return T->getCanonicalTypeUnqualified().getTypePtr();
+  };
+
   if (!E->isPotentiallyEvaluated()) {
     if (DiscardResult)
       return true;
 
     if (E->isTypeOperand())
       return this->emitGetTypeid(
-          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
-    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
-                               TypeInfoType, E);
+          canonType(E->getTypeOperand(Ctx.getASTContext()).getTypePtr()),
+          TypeInfoType, E);
+
+    return this->emitGetTypeid(
+        canonType(E->getExprOperand()->getType().getTypePtr()), TypeInfoType,
+        E);
   }
 
   // Otherwise, we need to evaluate the expression operand.
@@ -4818,9 +4828,9 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
 
   const FunctionDecl *FuncDecl = E->getDirectCallee();
   // Calls to replaceable operator new/operator delete.
-  if (FuncDecl && FuncDecl->isReplaceableGlobalAllocationFunction()) {
-    if (FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_New ||
-        FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+  if (FuncDecl &&
+      FuncDecl->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
+    if (FuncDecl->getDeclName().isAnyOperatorNew()) {
       return VisitBuiltinCallExpr(E, Builtin::BI__builtin_operator_new);
     } else {
       assert(FuncDecl->getDeclName().getCXXOverloadedOperator() == OO_Delete);
@@ -4921,10 +4931,10 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
   } else if (!FuncDecl) {
     const Expr *Callee = E->getCallee();
     CalleeOffset =
-        this->allocateLocalPrimitive(Callee, PT_FnPtr, /*IsConst=*/true);
+        this->allocateLocalPrimitive(Callee, PT_Ptr, /*IsConst=*/true);
     if (!this->visit(Callee))
       return false;
-    if (!this->emitSetLocal(PT_FnPtr, *CalleeOffset, E))
+    if (!this->emitSetLocal(PT_Ptr, *CalleeOffset, E))
       return false;
   }
 
@@ -5011,7 +5021,7 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
       if (!this->emitGetMemberPtrDecl(E))
         return false;
     } else {
-      if (!this->emitGetLocal(PT_FnPtr, *CalleeOffset, E))
+      if (!this->emitGetLocal(PT_Ptr, *CalleeOffset, E))
         return false;
     }
     if (!this->emitCallPtr(ArgSize, E, E))
@@ -5421,39 +5431,39 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
-
-    if (Cond) {
-      if (!this->visitBool(Cond))
-        return false;
-      if (!this->jumpFalse(EndLabel))
-        return false;
-    }
-
-    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+  // Start of loop body.
+  LocalScope<Emitter> CondScope(this);
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
       return false;
 
-    if (Body && !this->visitStmt(Body))
+  if (Cond) {
+    if (!this->visitBool(Cond))
       return false;
-
-    this->fallthrough(IncLabel);
-    this->emitLabel(IncLabel);
-    if (Inc && !this->discard(Inc))
-      return false;
-
-    if (!CondScope.destroyLocals())
+    if (!this->jumpFalse(EndLabel))
       return false;
   }
-  if (!this->jump(CondLabel))
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
     return false;
 
-  this->fallthrough(EndLabel);
+  if (Body && !this->visitStmt(Body))
+    return false;
+
+  this->fallthrough(IncLabel);
+  this->emitLabel(IncLabel);
+  if (Inc && !this->discard(Inc))
+    return false;
+
+  if (!CondScope.destroyLocals())
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+  // End of loop body.
+
   this->emitLabel(EndLabel);
-  return true;
+  // If we jumped out of the loop above, we still need to clean up the condition
+  // scope.
+  return CondScope.destroyLocals();
 }
 
 template <class Emitter>
@@ -6148,7 +6158,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr && !E->getType()->isArrayType())
+
+    if (classifyPrim(SubExpr) == PT_Ptr)
       return this->emitNarrowPtr(E);
     return true;
 
@@ -6800,6 +6811,10 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
   assert(!Desc->isPrimitive());
   assert(!Desc->isPrimitiveArray());
 
+  // Can happen if the decl is invalid.
+  if (Desc->isDummy())
+    return true;
+
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
@@ -6818,15 +6833,17 @@ bool Compiler<Emitter>::emitDestruction(const Descriptor *Desc,
         return true;
     }
 
-    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-      if (!this->emitConstUint64(I, Loc))
-        return false;
-      if (!this->emitArrayElemPtrUint64(Loc))
-        return false;
-      if (!this->emitDestruction(ElemDesc, Loc))
-        return false;
-      if (!this->emitPopPtr(Loc))
-        return false;
+    if (unsigned N = Desc->getNumElems()) {
+      for (ssize_t I = N - 1; I >= 0; --I) {
+        if (!this->emitConstUint64(I, Loc))
+          return false;
+        if (!this->emitArrayElemPtrUint64(Loc))
+          return false;
+        if (!this->emitDestruction(ElemDesc, Loc))
+          return false;
+        if (!this->emitPopPtr(Loc))
+          return false;
+      }
     }
     return true;
   }

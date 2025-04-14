@@ -1162,9 +1162,15 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->getTemplatedDecl()
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        bool IsOCLDeviceStub =
+            ND && isa<FunctionDecl>(ND) && ND->hasAttr<OpenCLKernelAttr>() &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
               (llvm::Twine("__device_stub__") + II->getName()).str());
+        else if (IsOCLDeviceStub)
+          mangleSourceName(
+              (llvm::Twine("__clang_ocl_kern_imp_") + II->getName()).str());
         else
           mangleSourceName(II->getName());
         break;
