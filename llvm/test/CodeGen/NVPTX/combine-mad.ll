@@ -146,7 +146,7 @@ define i32 @test4(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test4_param_3];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.u32 %r1, [test4_param_0];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test4_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r3, [test4_param_2];
@@ -170,7 +170,7 @@ define i32 @test4_rev(i32 %a, i32 %b, i32 %c, i1 %p) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u8 %rs1, [test4_rev_param_3];
 ; CHECK-NEXT:    and.b16 %rs2, %rs1, 1;
-; CHECK-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; CHECK-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; CHECK-NEXT:    ld.param.u32 %r1, [test4_rev_param_0];
 ; CHECK-NEXT:    ld.param.u32 %r2, [test4_rev_param_1];
 ; CHECK-NEXT:    ld.param.u32 %r3, [test4_rev_param_2];

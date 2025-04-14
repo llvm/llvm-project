@@ -705,7 +705,7 @@ define ptx_kernel void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i3
 ; PTX_60-NEXT:  // %bb.0: // %bb
 ; PTX_60-NEXT:    ld.param.u8 %rs1, [test_select_param_3];
 ; PTX_60-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX_60-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX_60-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX_60-NEXT:    ld.param.u64 %rd1, [test_select_param_2];
 ; PTX_60-NEXT:    cvta.to.global.u64 %rd2, %rd1;
 ; PTX_60-NEXT:    ld.param.u32 %r1, [test_select_param_1];
@@ -724,7 +724,7 @@ define ptx_kernel void @test_select(ptr byval(i32) align 4 %input1, ptr byval(i3
 ; PTX_70-NEXT:  // %bb.0: // %bb
 ; PTX_70-NEXT:    ld.param.u8 %rs1, [test_select_param_3];
 ; PTX_70-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX_70-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX_70-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX_70-NEXT:    mov.b64 %rd1, test_select_param_0;
 ; PTX_70-NEXT:    ld.param.u64 %rd2, [test_select_param_2];
 ; PTX_70-NEXT:    cvta.to.global.u64 %rd3, %rd2;
@@ -773,7 +773,7 @@ define ptx_kernel void @test_select_write(ptr byval(i32) align 4 %input1, ptr by
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u8 %rs1, [test_select_write_param_3];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX-NEXT:    ld.param.u32 %r1, [test_select_write_param_1];
 ; PTX-NEXT:    st.u32 [%SP], %r1;
 ; PTX-NEXT:    ld.param.u32 %r2, [test_select_write_param_0];
@@ -865,7 +865,7 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_60-NEXT:  // %bb.0: // %bb
 ; PTX_60-NEXT:    ld.param.u8 %rs1, [test_phi_param_3];
 ; PTX_60-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX_60-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX_60-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX_60-NEXT:    ld.param.u64 %rd2, [test_phi_param_2];
 ; PTX_60-NEXT:    cvta.to.global.u64 %rd1, %rd2;
 ; PTX_60-NEXT:    ld.param.u32 %r4, [test_phi_param_0];
@@ -886,7 +886,7 @@ define ptx_kernel void @test_phi(ptr byval(%struct.S) align 4 %input1, ptr byval
 ; PTX_70-NEXT:  // %bb.0: // %bb
 ; PTX_70-NEXT:    ld.param.u8 %rs1, [test_phi_param_3];
 ; PTX_70-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX_70-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX_70-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX_70-NEXT:    mov.b64 %rd6, test_phi_param_0;
 ; PTX_70-NEXT:    ld.param.u64 %rd7, [test_phi_param_2];
 ; PTX_70-NEXT:    cvta.to.global.u64 %rd1, %rd7;
@@ -957,7 +957,7 @@ define ptx_kernel void @test_phi_write(ptr byval(%struct.S) align 4 %input1, ptr
 ; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
 ; PTX-NEXT:    ld.param.u8 %rs1, [test_phi_write_param_2];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX-NEXT:    add.u64 %rd1, %SPL, 0;
 ; PTX-NEXT:    ld.param.u32 %r1, [test_phi_write_param_1+4];
 ; PTX-NEXT:    st.u32 [%SP], %r1;

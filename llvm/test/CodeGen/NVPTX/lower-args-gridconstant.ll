@@ -30,7 +30,7 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
 ; PTX-NEXT:    ld.param.u8 %rs1, [non_kernel_function_param_1];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
-; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
+; PTX-NEXT:    setp.ne.b16 %p1, %rs2, 0;
 ; PTX-NEXT:    mov.b64 %rd3, gi;
 ; PTX-NEXT:    cvta.global.u64 %rd4, %rd3;
 ; PTX-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p1;
