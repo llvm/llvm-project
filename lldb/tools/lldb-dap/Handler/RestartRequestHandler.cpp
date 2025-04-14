@@ -11,7 +11,6 @@
 #include "JSONUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -109,7 +108,7 @@ void RestartRequestHandler::operator()(
       // Update DAP configuration based on the latest copy of the launch
       // arguments.
       dap.SetConfiguration(updated_arguments.configuration, false);
-      dap.stop_at_entry = updated_arguments.stopOnEntry;
+      dap.stop_at_entry = updated_arguments.stopOnEntry.value_or(false);
       dap.ConfigureSourceMaps();
     }
   }

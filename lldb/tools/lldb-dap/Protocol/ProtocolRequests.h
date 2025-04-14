@@ -241,24 +241,24 @@ struct LaunchRequestArguments {
 
   /// If set, then the client stub should detach rather than killing the debugee
   /// if it loses connection with lldb.
-  bool detachOnError = false;
+  std::optional<bool> detachOnError;
 
   /// Disable ASLR (Address Space Layout Randomization) when launching the
   /// process.
-  bool disableASLR = false;
+  std::optional<bool> disableASLR;
 
   /// Do not set up for terminal I/O to go to running process.
-  bool disableSTDIO = false;
+  std::optional<bool> disableSTDIO;
 
   /// Set whether to shell expand arguments to the process when launching.
-  bool shellExpandArguments = false;
+  std::optional<bool> shellExpandArguments;
 
   /// Stop at the entry point of the program when launching a process.
-  bool stopOnEntry = false;
+  std::optional<bool> stopOnEntry;
 
   /// Launch the program inside an integrated terminal in the IDE. Useful for
   /// debugging interactive command line programs.
-  bool runInTerminal = false;
+  std::optional<bool> runInTerminal;
 
   /// Optional timeout for `runInTerminal` requests.
   std::chrono::seconds timeout = std::chrono::seconds(30);

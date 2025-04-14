@@ -20,7 +20,7 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
     const protocol::LaunchRequestArguments &arguments) const {
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
-  dap.stop_at_entry = arguments.stopOnEntry;
+  dap.stop_at_entry = arguments.stopOnEntry.value_or(false);
 
   PrintWelcomeMessage();
 

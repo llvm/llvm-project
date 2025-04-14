@@ -35,12 +35,15 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   return argv;
 }
 
-static uint32_t SetLaunchFlag(uint32_t flags, bool opt,
+static uint32_t SetLaunchFlag(uint32_t flags, std::optional<bool> flag,
                               lldb::LaunchFlags mask) {
-  if (opt)
-    flags |= mask;
-  else
-    flags &= ~mask;
+  if (flag) {
+    if (*flag)
+      flags |= mask;
+    else
+      flags &= ~mask;
+  }
+
   return flags;
 }
 
@@ -203,7 +206,8 @@ llvm::Error BaseRequestHandler::LaunchProcess(
                         lldb::eLaunchFlagDisableSTDIO);
   flags = SetLaunchFlag(flags, arguments.shellExpandArguments,
                         lldb::eLaunchFlagShellExpandArguments);
-  launch_info.SetDetachOnError(arguments.detachOnError);
+  if (arguments.detachOnError)
+    launch_info.SetDetachOnError(*arguments.detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 
