@@ -55,7 +55,6 @@ public:
                                        uint64_t Value) const;
 
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCRelaxableFragment &,
                                     const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 

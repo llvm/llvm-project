@@ -141,9 +141,11 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCAssembler &, const MCRelaxableFragment &, const MCFixup &Fixup,
-    const MCValue &, uint64_t Value, bool Resolved) const {
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                                   const MCFixup &Fixup,
+                                                   const MCValue &,
+                                                   uint64_t Value,
+                                                   bool Resolved) const {
   if (!RelaxBranches)
     return false;
 

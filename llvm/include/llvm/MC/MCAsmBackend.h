@@ -153,7 +153,6 @@ public:
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
   virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                            const MCRelaxableFragment &,
                                             const MCFixup &, const MCValue &,
                                             uint64_t, bool Resolved) const;
 

@@ -69,7 +69,6 @@ public:
                              const MCSubtargetInfo *STI) override;
 
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                    const MCRelaxableFragment &,
                                     const MCFixup &, const MCValue &, uint64_t,
                                     bool) const override;
 
