@@ -898,6 +898,13 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
 
           // Get a hlfir.elemental_addr op describing the address of the value
           // indexed from the original array.
+          // Note: the hlfir.elemental_addr op verifier requires it to be inside
+          // of a hlfir.region_assign op. This is because the only place in base
+          // Fortran where you need the address of a vector subscript would be
+          // in an assignment operation. We are not doing an assignment here
+          // but we do want the address (without having to duplicate all of
+          // Fortran designation lowering!). This operation is never seen by the
+          // verifier because it is immediately inlined.
           hlfir::ElementalAddrOp addrOp =
               convertVectorSubscriptedExprToElementalAddr(
                   converter.getCurrentLocation(), converter, expr, symMap,
