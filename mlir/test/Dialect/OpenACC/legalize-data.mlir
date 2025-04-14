@@ -102,7 +102,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel dataOperands(%[[CREATE]] : memref<10xf32>) {
@@ -140,7 +140,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
@@ -178,7 +178,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.parallel  {
@@ -216,7 +216,7 @@ func.func @test(%a: memref<10xf32>) {
   return
 }
 
-// CHECK: func.func @test
+// CHECK-LABEL: func.func @test
 // CHECK-SAME: (%[[A:.*]]: memref<10xf32>)
 // CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[A]] : memref<10xf32>) varType(tensor<10xf32>) -> memref<10xf32>
 // CHECK: acc.serial private(@privatization_memref_10_f32 -> %[[PRIVATE]] : memref<10xf32>) {
