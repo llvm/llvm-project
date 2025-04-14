@@ -816,14 +816,14 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         }
       }
       break;
-    case EM_AARCH64: {
+    case EM_AARCH64:
       // At this stage AArch64 Build Attributes does not replace GNU Properties.
       // When both exists, their values must match.
       // When both exists and contain different attributes, they complement each
-      // other. Curently attributes are represented in the linked object file as
-      // GNU properties, which are already supported by the Linux kernel and the
-      // dynamic loader. In the future, when relocatable linking (`-r` flag) is
-      // performed, a single merged AArch64 Build Attributes section will be
+      // other. Currently attributes are represented in the linked object file
+      // as GNU properties, which are already supported by the Linux kernel and
+      // the dynamic loader. In the future, when relocatable linking (`-r` flag)
+      // is performed, a single merged AArch64 Build Attributes section will be
       // emitted.
       if (sec.sh_type == SHT_AARCH64_ATTRIBUTES) {
         ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
@@ -840,12 +840,12 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
-      // medatada, and we don't want them to end up in the output file for
+      // metadata, and we don't want them to end up in the output file for
       // static executables.
       if (sec.sh_type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC &&
           !canHaveMemtagGlobals(ctx))
         sections[i] = &InputSection::discarded;
-    } break;
+      break;
     }
   }
 
