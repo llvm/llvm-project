@@ -1486,7 +1486,7 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
   CGF.EmitBlock(callDeleteBB);
   const CXXDestructorDecl *Dtor = cast<CXXDestructorDecl>(CGF.CurCodeDecl);
   const CXXRecordDecl *ClassDecl = Dtor->getParent();
-  CGF.EmitDeleteCall(Dtor->getArrayOperatorDelete(), allocatedPtr,
+  CGF.EmitDeleteCall(Dtor->getOperatorDelete(), allocatedPtr,
                      CGF.getContext().getTagDeclType(ClassDecl));
 
   CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
