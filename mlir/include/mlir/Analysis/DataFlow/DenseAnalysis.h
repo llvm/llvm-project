@@ -104,8 +104,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice on dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                            LatticeAnchor anchor);
+  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                                    LatticeAnchor anchor) = 0;
 
   /// Set the dense lattice at control flow entry point and propagate an update
   /// if it changed.
@@ -265,6 +265,15 @@ protected:
     return getOrCreate<LatticeT>(anchor);
   }
 
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice on dependent.
+  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                            LatticeAnchor anchor) override {
+    return getOrCreateFor<LatticeT>(dependent, anchor);
+  }
+
   /// Set the dense lattice at control flow entry point and propagate an update
   /// if it changed.
   virtual void setToEntryState(LatticeT *lattice) = 0;
@@ -357,8 +366,8 @@ protected:
   /// dependency. That is, every time the lattice after anchor is updated, the
   /// dependent program point must be visited, and the newly triggered visit
   /// might update the lattice before dependent.
-  const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
-                                            LatticeAnchor anchor);
+  virtual const AbstractDenseLattice *getLatticeFor(ProgramPoint *dependent,
+                                                    LatticeAnchor anchor) = 0;
 
   /// Set the dense lattice before at the control flow exit point and propagate
   /// the update if it changed.
@@ -526,6 +535,15 @@ protected:
   /// Get the dense lattice at the given lattice anchor.
   LatticeT *getLattice(LatticeAnchor anchor) override {
     return getOrCreate<LatticeT>(anchor);
+  }
+
+  /// Get the dense lattice on the given lattice anchor and add dependent as its
+  /// dependency. That is, every time the lattice after anchor is updated, the
+  /// dependent program point must be visited, and the newly triggered visit
+  /// might update the lattice before dependent.
+  virtual const AbstractDenseLattice *
+  getLatticeFor(ProgramPoint *dependent, LatticeAnchor anchor) override {
+    return getOrCreateFor<LatticeT>(dependent, anchor);
   }
 
   /// Set the dense lattice at control flow exit point (after the terminator)
