@@ -2274,9 +2274,9 @@ static unsigned getPaddingDiagFromTagKind(TagTypeKind Tag) {
   }
 }
 
-void ItaniumRecordLayoutBuilder::CheckFieldPadding(
-    uint64_t Offset, uint64_t UnpaddedOffset, uint64_t UnpackedOffset,
-    unsigned UnpackedAlign, bool isPacked, const FieldDecl *D) {
+static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
+                              uint64_t Offset, uint64_t UnpaddedOffset,
+                              const FieldDecl *D) {
   // We let objc ivars without warning, objc interfaces generally are not used
   // for padding tricks.
   if (isa<ObjCIvarDecl>(D))
@@ -2300,7 +2300,8 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
     if (D->getIdentifier()) {
       auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_bitfield
                                         : diag::warn_padded_struct_field;
-      Diag(D->getLocation(), Diagnostic)
+      Context.getDiagnostics().Report(D->getLocation(),
+                                      Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
           << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0) // (byte|bit)
@@ -2308,15 +2309,22 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
     } else {
       auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_anon_bitfield
                                         : diag::warn_padded_struct_anon_field;
-      Diag(D->getLocation(), Diagnostic)
+      Context.getDiagnostics().Report(D->getLocation(),
+                                      Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
           << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
- }
- if (isPacked && Offset != UnpackedOffset) {
-   HasPackedField = true;
- }
+  }
+}
+
+void ItaniumRecordLayoutBuilder::CheckFieldPadding(
+    uint64_t Offset, uint64_t UnpaddedOffset, uint64_t UnpackedOffset,
+    unsigned UnpackedAlign, bool isPacked, const FieldDecl *D) {
+  ::CheckFieldPadding(Context, IsUnion, Offset, UnpaddedOffset, D);
+  if (isPacked && Offset != UnpackedOffset) {
+    HasPackedField = true;
+  }
 }
 
 static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
@@ -2555,7 +2563,8 @@ struct MicrosoftRecordLayoutBuilder {
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
-      : Context(Context), EmptySubobjects(EmptySubobjects) {}
+      : Context(Context), EmptySubobjects(EmptySubobjects),
+        RemainingBitsInField(0) {}
 
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
@@ -2642,8 +2651,6 @@ public:
   /// virtual base classes and their offsets in the record.
   ASTRecordLayout::VBaseOffsetsMapTy VBases;
   /// The number of remaining bits in our last bitfield allocation.
-  /// This value isn't meaningful unless LastFieldIsNonZeroWidthBitfield is
-  /// true.
   unsigned RemainingBitsInField;
   bool IsUnion : 1;
   /// True if the last field laid out was a bitfield and was not 0
@@ -3004,6 +3011,15 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
   } else {
     FieldOffset = Size.alignTo(Info.Alignment);
   }
+
+  uint64_t UnpaddedFielddOffsetInBits =
+      Context.toBits(DataSize) - RemainingBitsInField;
+
+  ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                      UnpaddedFielddOffsetInBits, FD);
+
+  RemainingBitsInField = 0;
+
   placeFieldAtOffset(FieldOffset);
 
   if (!IsOverlappingEmptyField)
@@ -3049,10 +3065,14 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
   } else {
     // Allocate a new block of memory and place the bitfield in it.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);
+    uint64_t UnpaddedFieldOffsetInBits =
+        Context.toBits(DataSize) - RemainingBitsInField;
     placeFieldAtOffset(FieldOffset);
     Size = FieldOffset + Info.Size;
     Alignment = std::max(Alignment, Info.Alignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
+    ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                        UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
@@ -3076,9 +3096,14 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
   } else {
     // Round up the current record size to the field's alignment boundary.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);
+    uint64_t UnpaddedFieldOffsetInBits =
+        Context.toBits(DataSize) - RemainingBitsInField;
     placeFieldAtOffset(FieldOffset);
+    RemainingBitsInField = 0;
     Size = FieldOffset;
     Alignment = std::max(Alignment, Info.Alignment);
+    ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                        UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
@@ -3203,6 +3228,14 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
 }
 
 void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
+  uint64_t UnpaddedSizeInBits = Context.toBits(DataSize);
+  UnpaddedSizeInBits -= RemainingBitsInField;
+
+  // MS ABI allocates 1 byte for empty class
+  // (not padding)
+  if (Size.isZero())
+    UnpaddedSizeInBits += 8;
+
   // Respect required alignment.  Note that in 32-bit mode Required alignment
   // may be 0 and cause size not to be updated.
   DataSize = Size;
@@ -3231,6 +3264,23 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
     Size = Context.toCharUnitsFromBits(External.Size);
     if (External.Align)
       Alignment = Context.toCharUnitsFromBits(External.Align);
+    return;
+  }
+  unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
+  uint64_t SizeInBits = Context.toBits(Size);
+
+  if (SizeInBits > UnpaddedSizeInBits) {
+    unsigned int PadSize = SizeInBits - UnpaddedSizeInBits;
+    bool InBits = true;
+    if (PadSize % CharBitNum == 0) {
+      PadSize = PadSize / CharBitNum;
+      InBits = false;
+    }
+
+    Context.getDiagnostics().Report(RD->getLocation(),
+                                    diag::warn_padded_struct_size)
+        << Context.getTypeDeclType(RD) << PadSize
+        << (InBits ? 1 : 0); // (byte|bit)
   }
 }
 

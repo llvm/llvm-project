@@ -217,6 +217,8 @@ Modified Compiler Flags
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
 
+- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
+
 Removed Compiler Flags
 -------------------------
 
