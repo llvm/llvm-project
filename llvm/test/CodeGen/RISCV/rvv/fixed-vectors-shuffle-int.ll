@@ -1477,3 +1477,17 @@ define <8 x i8> @vmerge_vxm2(<8 x i8> %v, i8 %s) {
   ret <8 x i8> %shuf
 }
 
+define <8 x i8> @vmerge_vxm3(<8 x i8> %v, i8 %s) {
+; CHECK-LABEL: vmerge_vxm3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 25
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
+; CHECK-NEXT:    ret
+  %ins = insertelement <8 x i8> %v, i8 %s, i32 0
+  %splat = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
+  %shuf = shufflevector <8 x i8> %v, <8 x i8> %splat, <8 x i32> <i32 8, i32 1, i32 2, i32 8, i32 8, i32 5, i32 6, i32 7>
+  ret <8 x i8> %shuf
+}
+
