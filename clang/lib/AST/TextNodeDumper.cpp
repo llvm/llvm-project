@@ -742,7 +742,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
       OS << "TypeInfoLValue ";
       const auto BTI = B.get<TypeInfoLValue>();
       ColorScope Color(OS, ShowColors, TypeColor);
-      BTI.print(OS,PrintPolicy);
+      BTI.print(OS, PrintPolicy);
     } else if (B.is<DynamicAllocLValue>()) {
       OS << "DynamicAllocLValue";
       auto BDA = B.getDynamicAllocType();
