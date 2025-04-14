@@ -59,7 +59,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBSYCL_LIBRARY_DIR})
 
 # The change in LIBSYCL_MAJOR_VERSION must be accompanied with the same update in
-# llvm/clang/lib/Driver/CMakeLists.txt.
+# clang/lib/Driver/CMakeLists.txt.
 #
 # See doc/developer/ABIPolicyGuide.md for the meaning when in the middle of
 # development cycle.
