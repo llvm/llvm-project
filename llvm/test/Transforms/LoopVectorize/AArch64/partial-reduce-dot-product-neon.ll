@@ -798,9 +798,9 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP9]]
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 0
-; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
+; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i32 16
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP12]], align 1
-; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP56]], align 1
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD8:%.*]] = load <16 x i8>, ptr [[TMP38]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP13:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP14:%.*]] = sext <16 x i8> [[WIDE_LOAD8]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i32 0
@@ -840,9 +840,9 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD20:%.*]] = load <16 x i8>, ptr [[TMP35]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD21:%.*]] = load <16 x i8>, ptr [[TMP36]], align 1
 ; CHECK-INTERLEAVED-NEXT:    [[TMP37:%.*]] = sext <16 x i8> [[WIDE_LOAD20]] to <16 x i32>
-; CHECK-INTERLEAVED-NEXT:    [[TMP38:%.*]] = sext <16 x i8> [[WIDE_LOAD21]] to <16 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP56:%.*]] = sext <16 x i8> [[WIDE_LOAD21]] to <16 x i32>
 ; CHECK-INTERLEAVED-NEXT:    [[TMP39:%.*]] = mul nsw <16 x i32> [[TMP33]], [[TMP37]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP40:%.*]] = mul nsw <16 x i32> [[TMP34]], [[TMP38]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP40:%.*]] = mul nsw <16 x i32> [[TMP34]], [[TMP56]]
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE7]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI2]], <16 x i32> [[TMP39]])
 ; CHECK-INTERLEAVED-NEXT:    [[PARTIAL_REDUCE]] = call <4 x i32> @llvm.experimental.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI3]], <16 x i32> [[TMP40]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP41:%.*]] = getelementptr inbounds i8, ptr [[TMP10]], i32 0
@@ -946,7 +946,6 @@ define i32 @dotp_unrolled(i32 %num_out, i64 %num_in, ptr %a, ptr %b) {
 ; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[NUM_IN]], [[N_VEC]]
 ; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
-;
 entry:
   br label %for.body
 
