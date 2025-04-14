@@ -1295,7 +1295,7 @@ namespace cwg183 { // cwg183: sup 382
   };
   template<> struct A<int> {
     typename B<int>::X x;
-    // cxx98-error@-1 {{'typename' occurs outside of a template}}
+    // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
   };
 } // namespace cwg183
 

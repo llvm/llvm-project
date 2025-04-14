@@ -6,7 +6,6 @@
 // CHECK: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(float)]]
-// CHECK: HLSLResourceAttr {{.*}} Implicit TypedBuffer
 RWBuffer<float> Buffer1;
 
 // CHECK: ClassTemplateSpecializationDecl {{.*}} class RasterizerOrderedBuffer definition implicit_instantiation
@@ -17,5 +16,4 @@ RWBuffer<float> Buffer1;
 // CHECK-SAME{LITERAL}: [[hlsl::resource_class(UAV)]
 // CHECK-SAME{LITERAL}: [[hlsl::is_rov]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(vector<float, 4>)]]
-// CHECK: HLSLResourceAttr {{.*}} Implicit TypedBuffer
 RasterizerOrderedBuffer<vector<float, 4> > BufferArray3[4];

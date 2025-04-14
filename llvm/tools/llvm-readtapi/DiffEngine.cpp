@@ -449,8 +449,10 @@ template <typename T> void sortTargetValues(std::vector<T> &TargValues) {
 
 template <typename T>
 void printVecVal(std::string Indent, const DiffOutput &Attr, raw_ostream &OS) {
-  if (Attr.Values.empty())
+  if (Attr.Values.empty()) {
+    OS << Indent << "'" << Attr.Name << "' differ by order\n";
     return;
+  }
 
   OS << Indent << Attr.Name << "\n";
 

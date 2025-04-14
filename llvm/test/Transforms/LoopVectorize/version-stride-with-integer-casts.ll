@@ -28,9 +28,7 @@ define void @test_versioned_with_sext_use(i32 %offset, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 0, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 8
@@ -103,9 +101,7 @@ define void @test_versioned_with_zext_use(i32 %offset, ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 0, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP5]], align 8
@@ -249,9 +245,7 @@ define void @test_versioned_with_different_uses(i32 %offset, ptr noalias %dst.1,
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], [[OFFSET_EXT]]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IV_1]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 0, [[OFFSET_EXT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV_1]], [[TMP1]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[OFFSET_IDX2]], 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[OFFSET_IDX2]], 1
@@ -347,7 +341,6 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST_1]], i32 [[TMP11]]
@@ -361,7 +354,7 @@ define void @test_versioned_with_non_ex_use(i32 %offset, ptr noalias %dst.1, ptr
 ; CHECK-NEXT:    store i32 0, ptr [[TMP14]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP18]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[DST_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[TMP20]], i32 0
 ; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[TMP21]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -436,9 +429,7 @@ define void @zext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], [[G_64]]
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 0, [[G_64]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[TMP4]], i32 0
 ; CHECK-NEXT:    store <4 x i16> splat (i16 1), ptr [[TMP5]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -499,9 +490,7 @@ define void @sext_of_i1_stride(i1 %g, ptr %dst) mustprogress {
 ; CHECK-NEXT:    [[IND_END:%.*]] = mul i64 [[N_VEC]], [[G_64]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 0, [[G_64]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i16, ptr [[TMP6]], i32 -3
 ; CHECK-NEXT:    store <4 x i16> splat (i16 -1), ptr [[TMP7]], align 2

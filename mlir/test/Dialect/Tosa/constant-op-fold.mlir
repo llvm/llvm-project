@@ -108,18 +108,18 @@ func.func @transpose_nofold_quantized_types() -> tensor<1x1x2x2x!quant.uniform<i
   return %0: tensor<1x1x2x2x!quant.uniform<i8<-127:127>:f32:3, {1.000000e-01,1.000000e-01}>>
 }
 
-// CHECK-LABEL: @transpose_nofold_dense_resource
-func.func @transpose_nofold_dense_resource() -> tensor<2x2xf32> {
+// CHECK-LABEL: @transpose_fold_dense_resource
+func.func @transpose_fold_dense_resource() -> tensor<2x2xf32> {
   %0 = "tosa.const"() <{values = dense_resource<resource> : tensor<2x2xf32>}> : () -> tensor<2x2xf32>
 
-  // CHECK: tosa.transpose
+  // CHECK-NOT: tosa.transpose
   %2 = tosa.transpose %0 { perms = array<i32: 1, 0> }: (tensor<2x2xf32>) -> tensor<2x2xf32>
   return %2 : tensor<2x2xf32>
 }
 {-#
   dialect_resources: {
     builtin: {
-      resource: "0x08000000010000000000000002000000000000000300000000000000"
+      resource: "0x040000003f800000400000004040000040800000"
     }
   }
 #-}
@@ -194,7 +194,7 @@ func.func @fold_add_splat_f32() -> tensor<10xf32> {
 func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %zero = "tosa.const"() {values = dense<0> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[ZERO:.+]] = "tosa.const"() <{values = dense<0>
-  %div = tosa.int_div %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %zero, %arg0 : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[ZERO]]
   return %div : tensor<i32>
 }
@@ -204,7 +204,7 @@ func.func @fold_div_zero_lhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
 // CHECK-LABEL: @fold_div_one_rhs_i32
 func.func @fold_div_one_rhs_i32(%arg0: tensor<i32>) -> tensor<i32> {
   %one = "tosa.const"() {values = dense<1> : tensor<i32>} : () -> tensor<i32>
-  %div = tosa.int_div %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %arg0, %one : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %arg0
   return %div : tensor<i32>
 }
@@ -216,7 +216,7 @@ func.func @fold_div_splat_i32() -> tensor<i32> {
   %lhs = "tosa.const"() {values = dense<10> : tensor<i32>} : () -> tensor<i32>
   %rhs = "tosa.const"() {values = dense<-3> : tensor<i32>} : () -> tensor<i32>
   // CHECK: %[[SPLAT:.+]] = "tosa.const"() <{values = dense<-3>
-  %div = tosa.int_div %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
+  %div = tosa.intdiv %lhs, %rhs : (tensor<i32>, tensor<i32>) -> tensor<i32>
   // CHECK: return %[[SPLAT]]
   return %div : tensor<i32>
 }
@@ -885,6 +885,18 @@ func.func @reduce_max_constant() -> tensor<1x1x1xi32> {
 
 // -----
 
+func.func @reduce_max_constant_no_overflow() -> tensor<1xi8> {
+  // CHECK-LABEL:   func.func @reduce_max_constant_no_overflow() -> tensor<1xi8> {
+  // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{values = dense<120> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK:           return %[[VAL_0]] : tensor<1xi8>
+  // CHECK:         }
+  %const = "tosa.const"() <{values = dense<[-127, 120, -126]> : tensor<3xi8>}> : () -> tensor<3xi8>
+  %0 = tosa.reduce_max %const {axis = 0 : i32} : (tensor<3xi8>) -> tensor<1xi8>
+  return %0 : tensor<1xi8>
+}
+
+// -----
+
   func.func @reduce_min_constant() -> tensor<1x3xi32> {
     // CHECK-LABEL:   func.func @reduce_min_constant() -> tensor<1x3xi32> {
     // CHECK:    %[[VAL_0:.*]] = "tosa.const"() <{values = dense<{{\[\[}}1, 2, 3]]> : tensor<1x3xi32>}> : () -> tensor<1x3xi32>
@@ -967,6 +979,19 @@ func.func @reduce_min_constant() -> tensor<1x1x1xi32> {
   %0 = tosa.reduce_min %const {axis = 0 : i32} : (tensor<1x1x1xi32>) -> tensor<1x1x1xi32>
   return %0 : tensor<1x1x1xi32>
 }
+
+// -----
+
+func.func @reduce_min_constant_no_overflow() -> tensor<1xi8> {
+  // CHECK-LABEL:   func.func @reduce_min_constant_no_overflow() -> tensor<1xi8> {
+  // CHECK:           %[[VAL_0:.*]] = "tosa.const"() <{values = dense<-127> : tensor<1xi8>}> : () -> tensor<1xi8>
+  // CHECK:           return %[[VAL_0]] : tensor<1xi8>
+  // CHECK:         }
+  %const = "tosa.const"() <{values = dense<[-127, 120, -126]> : tensor<3xi8>}> : () -> tensor<3xi8>
+  %0 = tosa.reduce_min %const {axis = 0 : i32} : (tensor<3xi8>) -> tensor<1xi8>
+  return %0 : tensor<1xi8>
+}
+
 
 // -----
 

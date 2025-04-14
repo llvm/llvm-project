@@ -350,7 +350,7 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX37:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX38:%.*]] = add i32 [[TMP110]], [[BIN_RDX37]]
-; CHECK-NEXT:    br i1 true, label [[DOT_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[DOT_CRIT_EDGE:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[DOTLR_PH:%.*]]
 ; CHECK:       .lr.ph:
@@ -589,7 +589,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul i32 [[TMP112]], [[TMP109]]
 ; CHECK-NEXT:    [[BIN_RDX39:%.*]] = mul i32 [[TMP115]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[BIN_RDX40:%.*]] = mul i32 [[TMP118]], [[BIN_RDX39]]
-; CHECK-NEXT:    br i1 true, label [[FOR_END:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[FOR_END:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:

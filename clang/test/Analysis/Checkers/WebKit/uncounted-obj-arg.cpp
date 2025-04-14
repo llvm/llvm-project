@@ -695,9 +695,13 @@ RefPtr<RefCounted> object();
 void someFunction(const RefCounted&);
 
 void test2() {
-    someFunction(*object());
+  someFunction(*object());
 }
 
 void system_header() {
   callMethod<RefCountable>(object);
+}
+
+void log(RefCountable* obj) {
+  os_log_msg(os_log_create("WebKit", "DOM"), OS_LOG_TYPE_INFO, "obj: %p next: %p", obj, obj->next());
 }

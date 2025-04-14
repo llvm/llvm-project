@@ -352,7 +352,7 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free
     // lanes while spilling special SGPRs like FP, BP, etc. during PEI.
-    auto *RegItr = std::find(SpillPhysVGPRs.begin(), SpillPhysVGPRs.end(), Reg);
+    auto *RegItr = llvm::find(SpillPhysVGPRs, Reg);
     if (RegItr != SpillPhysVGPRs.end()) {
       unsigned Idx = std::distance(SpillPhysVGPRs.begin(), RegItr);
       SpillPhysVGPRs[Idx] = NewReg;
@@ -715,7 +715,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      ScratchReservedForDynamicVGPRs(MFI.getScratchReservedForDynamicVGPRs()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 

@@ -199,8 +199,7 @@ void SampleProfileProber::computeBlocksToIgnore(
   computeEHOnlyBlocks(*F, BlocksAndCallsToIgnore);
   findUnreachableBlocks(BlocksAndCallsToIgnore);
 
-  BlocksToIgnore.insert(BlocksAndCallsToIgnore.begin(),
-                        BlocksAndCallsToIgnore.end());
+  BlocksToIgnore.insert_range(BlocksAndCallsToIgnore);
 
   // Handle the call-to-invoke conversion case: make sure that the probe id and
   // callsite id are consistent before and after the block split. For block

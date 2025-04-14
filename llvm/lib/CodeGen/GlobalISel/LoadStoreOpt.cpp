@@ -431,8 +431,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
     return R;
   });
 
-  for (auto *MI : Stores)
-    InstsToErase.insert(MI);
+  InstsToErase.insert_range(Stores);
   return true;
 }
 
@@ -930,7 +929,7 @@ bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
   // Erase all dead instructions left over by the merging.
   if (Changed) {
     for (auto &BB : MF) {
-      for (auto &I : make_early_inc_range(make_range(BB.rbegin(), BB.rend()))) {
+      for (auto &I : make_early_inc_range(reverse(BB))) {
         if (isTriviallyDead(I, *MRI))
           I.eraseFromParent();
       }

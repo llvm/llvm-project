@@ -1120,8 +1120,8 @@ auto buildTransferMatchSwitch() {
       .Build();
 }
 
-llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
-                                                     const Environment &Env) {
+llvm::SmallVector<UncheckedOptionalAccessDiagnostic>
+diagnoseUnwrapCall(const Expr *ObjectExpr, const Environment &Env) {
   if (auto *OptionalLoc = cast_or_null<RecordStorageLocation>(
           getLocBehindPossiblePointer(*ObjectExpr, Env))) {
     auto *Prop = Env.getValue(locForHasValue(*OptionalLoc));
@@ -1132,9 +1132,9 @@ llvm::SmallVector<SourceLocation> diagnoseUnwrapCall(const Expr *ObjectExpr,
   }
 
   // Record that this unwrap is *not* provably safe.
-  // FIXME: include either the name of the optional (if applicable) or a source
-  // range of the access for easier interpretation of the result.
-  return {ObjectExpr->getBeginLoc()};
+  // FIXME: include the name of the optional (if applicable).
+  auto Range = CharSourceRange::getTokenRange(ObjectExpr->getSourceRange());
+  return {UncheckedOptionalAccessDiagnostic{Range}};
 }
 
 auto buildDiagnoseMatchSwitch(
@@ -1143,8 +1143,9 @@ auto buildDiagnoseMatchSwitch(
   // lot of duplicated work (e.g. string comparisons), consider providing APIs
   // that avoid it through memoization.
   auto IgnorableOptional = ignorableOptional(Options);
-  return CFGMatchSwitchBuilder<const Environment,
-                               llvm::SmallVector<SourceLocation>>()
+  return CFGMatchSwitchBuilder<
+             const Environment,
+             llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>()
       // optional::value
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           valueCall(IgnorableOptional),

@@ -11,7 +11,10 @@ void voidret() { return; }
 
 int intfunc() { return 42; }
 // CHECK: define{{.*}} i32 @intfunc()
-// CHECK:   ret i32 42
+// CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// CHECK:   store i32 42, ptr %[[RV]], align 4
+// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// CHECK:   ret i32 %[[R]]
 
 int scopes() {
   {
@@ -21,34 +24,50 @@ int scopes() {
   }
 }
 // CHECK: define{{.*}} i32 @scopes() {
-// CHECK:     br label %[[LABEL1:.*]]
-// CHECK:     [[LABEL1]]:
-// CHECK:       br label %[[LABEL2:.*]]
-// CHECK:     [[LABEL2]]:
-// CHECK:       ret i32 99
-// CHECK:     [[LABEL3:.*]]:
-// CHECK:       br label %[[LABEL4:.*]]
-// CHECK:     [[LABEL4]]:
-// CHECK:       call void @llvm.trap()
-// CHECK:       unreachable
+// CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// CHECK:   br label %[[LABEL1:.*]]
+// CHECK: [[LABEL1]]:
+// CHECK:   br label %[[LABEL2:.*]]
+// CHECK: [[LABEL2]]:
+// CHECK:   store i32 99, ptr %[[RV]], align 4
+// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// CHECK:   ret i32 %[[R]]
+// CHECK: [[LABEL3:.*]]:
+// CHECK:   br label %[[LABEL4:.*]]
+// CHECK: [[LABEL4]]:
+// CHECK:   call void @llvm.trap()
+// CHECK:   unreachable
 // CHECK: }
 
 long longfunc() { return 42l; }
 // CHECK: define{{.*}} i64 @longfunc() {
-// CHECK:   ret i64 42
+// CHECK:   %[[RV]] = alloca i64, i64 1, align 8
+// CHECK:   store i64 42, ptr %[[RV]], align 4
+// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 4
+// CHECK:   ret i64 %[[R]]
 // CHECK: }
 
 unsigned unsignedfunc() { return 42u; }
 // CHECK: define{{.*}} i32 @unsignedfunc() {
-// CHECK:   ret i32 42
+// CHECK:   %[[RV:.*]] = alloca i32, i64 1, align 4
+// CHECK:   store i32 42, ptr %[[RV]], align 4
+// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
+// CHECK:   ret i32 %[[R]]
 // CHECK: }
 
 unsigned long long ullfunc() { return 42ull; }
 // CHECK: define{{.*}} i64 @ullfunc() {
-// CHECK:   ret i64 42
+// CHECK:   %[[RV:.*]] = alloca i64, i64 1, align 8
+// CHECK:   store i64 42, ptr %[[RV]], align 4
+// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 4
+// CHECK:   ret i64 %[[R]]
 // CHECK: }
 
 bool boolfunc() { return true; }
 // CHECK: define{{.*}} i1 @boolfunc() {
-// CHECK:   ret i1 true
+// CHECK:   %[[RV:.*]] = alloca i8, i64 1, align 1
+// CHECK:   store i8 1, ptr %[[RV]], align 1
+// CHECK:   %[[R8:.*]] = load i8, ptr %[[RV]], align 1
+// CHECK:   %[[R:.*]] = trunc i8 %[[R8]] to i1
+// CHECK:   ret i1 %[[R]]
 // CHECK: }

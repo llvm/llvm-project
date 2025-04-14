@@ -444,7 +444,11 @@ Error RawMemProfReader::setupForSymbolization() {
       ProfiledTextSegmentEnd = Entry.End;
     }
   }
-  assert(NumMatched != 0 && "No matching executable segments in segment info.");
+  if (NumMatched == 0)
+    return make_error<StringError>(
+        Twine("No matching executable segments found in binary ") +
+            Binary.getBinary()->getFileName(),
+        inconvertibleErrorCode());
   assert((PreferredTextSegmentAddress == 0 ||
           (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
          "Expect text segment address to be 0 or equal to profiled text "

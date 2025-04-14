@@ -15,6 +15,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/EphemeralValuesCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -150,6 +151,10 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
   auto GetTLI = [&](Function &F) -> const TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
+  auto GetEphValuesCache =
+      [&](Function &F) -> EphemeralValuesAnalysis::Result & {
+    return FAM.getResult<EphemeralValuesAnalysis>(F);
+  };
 
   Function &Callee = *CB.getCalledFunction();
   auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
@@ -158,7 +163,8 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
+                         GetEphValuesCache);
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,

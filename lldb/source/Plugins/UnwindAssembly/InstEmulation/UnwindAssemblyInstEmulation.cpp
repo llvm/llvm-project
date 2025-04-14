@@ -209,9 +209,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       }
     }
     for (auto &[_, state] : saved_unwind_states) {
-      unwind_plan.InsertRow(
-          std::make_shared<UnwindPlan::Row>(std::move(state.row)),
-          /*replace_existing=*/true);
+      unwind_plan.InsertRow(std::move(state.row),
+                            /*replace_existing=*/true);
     }
   }
 

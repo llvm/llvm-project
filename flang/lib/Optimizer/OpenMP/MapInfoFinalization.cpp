@@ -180,13 +180,13 @@ class MapInfoFinalizationPass
     // Member of the descriptor pointing at the allocated data
     return builder.create<mlir::omp::MapInfoOp>(
         loc, baseAddrAddr.getType(), descriptor,
-        mlir::TypeAttr::get(underlyingVarType), baseAddrAddr,
-        /*members=*/mlir::SmallVector<mlir::Value>{},
-        /*membersIndex=*/mlir::ArrayAttr{}, bounds,
+        mlir::TypeAttr::get(underlyingVarType),
         builder.getIntegerAttr(builder.getIntegerType(64, false), mapType),
-        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
             mlir::omp::VariableCaptureKind::ByRef),
+        baseAddrAddr, /*members=*/mlir::SmallVector<mlir::Value>{},
+        /*membersIndex=*/mlir::ArrayAttr{}, bounds,
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         /*name=*/builder.getStringAttr(""),
         /*partial_map=*/builder.getBoolAttr(false));
   }
@@ -311,8 +311,8 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
-      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
-                                     op.getMapType().value_or(0), builder);
+      auto baseAddr =
+          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
@@ -325,8 +325,8 @@ class MapInfoFinalizationPass
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
     } else if (!IsHasDeviceAddr) {
-      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
-                                     op.getMapType().value_or(0), builder);
+      auto baseAddr =
+          genBaseAddrMap(descriptor, op.getBounds(), op.getMapType(), builder);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
@@ -346,9 +346,9 @@ class MapInfoFinalizationPass
     // one place in the code may differ from that address in another place.
     // The contents of the descriptor (the base address in particular) will
     // remain unchanged though.
-    uint64_t MapType = op.getMapType().value_or(0);
+    uint64_t mapType = op.getMapType();
     if (IsHasDeviceAddr) {
-      MapType |= llvm::to_underlying(
+      mapType |= llvm::to_underlying(
           llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS);
     }
 
@@ -356,12 +356,11 @@ class MapInfoFinalizationPass
         builder.create<mlir::omp::MapInfoOp>(
             op->getLoc(), op.getResult().getType(), descriptor,
             mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
-            /*varPtrPtr=*/mlir::Value{}, newMembers, newMembersAttr,
-            /*bounds=*/mlir::SmallVector<mlir::Value>{},
             builder.getIntegerAttr(builder.getIntegerType(64, false),
-                                   getDescriptorMapType(MapType, target)),
-            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
-            op.getNameAttr(),
+                                   getDescriptorMapType(mapType, target)),
+            op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{}, newMembers,
+            newMembersAttr, /*bounds=*/mlir::SmallVector<mlir::Value>{},
+            /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
     op.replaceAllUsesWith(newDescParentMapOp.getResult());
     op->erase();
@@ -656,13 +655,12 @@ class MapInfoFinalizationPass
                   fieldCoord.getResult(),
                   mlir::TypeAttr::get(
                       fir::unwrapRefType(fieldCoord.getResult().getType())),
-                  /*varPtrPtr=*/mlir::Value{},
-                  /*members=*/mlir::ValueRange{},
-                  /*members_index=*/mlir::ArrayAttr{},
-                  /*bounds=*/bounds, op.getMapTypeAttr(),
-                  /*mapperId*/ mlir::FlatSymbolRefAttr(),
+                  op.getMapTypeAttr(),
                   builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
                       mlir::omp::VariableCaptureKind::ByRef),
+                  /*varPtrPtr=*/mlir::Value{}, /*members=*/mlir::ValueRange{},
+                  /*members_index=*/mlir::ArrayAttr{}, bounds,
+                  /*mapperId=*/mlir::FlatSymbolRefAttr(),
                   builder.getStringAttr(op.getNameAttr().strref() + "." +
                                         field + ".implicit_map"),
                   /*partial_map=*/builder.getBoolAttr(false));

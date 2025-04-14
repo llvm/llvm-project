@@ -173,8 +173,8 @@ public:
 
       auto Dest = TRI.regunits(CopyOperands->Destination->getReg().asMCReg());
       auto Src = TRI.regunits(CopyOperands->Source->getReg().asMCReg());
-      RegUnitsToInvalidate.insert(Dest.begin(), Dest.end());
-      RegUnitsToInvalidate.insert(Src.begin(), Src.end());
+      RegUnitsToInvalidate.insert_range(Dest);
+      RegUnitsToInvalidate.insert_range(Src);
     };
 
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
