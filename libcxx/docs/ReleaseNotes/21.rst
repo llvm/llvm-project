@@ -70,6 +70,9 @@ Deprecations and Removals
 
 - ``std::is_trivial`` and ``std::is_trivial_v`` are deprecated in C++26 and later.
 
+- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` has been removed, making ``std::__libcpp_verbose_abort``
+  unconditionally ``noexcept``.
+
 Potentially breaking changes
 ----------------------------
 
@@ -90,9 +93,6 @@ LLVM 21
 
   If you are using C++03 in your project, you should consider moving to a newer version of the Standard to get the most
   out of libc++.
-
-- The ``_LIBCPP_VERBOSE_ABORT_NOT_NOEXCEPT`` macro will be removed in LLVM 21, making ``std::__libcpp_verbose_abort``
-  unconditionally ``noexcept``.
 
 - Non-conforming extension ``packaged_task::result_type`` will be removed in LLVM 21.
 
