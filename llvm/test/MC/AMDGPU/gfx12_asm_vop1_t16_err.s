@@ -5,6 +5,12 @@
 v_ceil_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_ceil_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
 v_ceil_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -14,6 +20,24 @@ v_ceil_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_ceil_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
 
+v_ceil_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_ceil_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
 v_ceil_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -22,6 +46,24 @@ v_ceil_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_ceil_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_ceil_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
 
 v_cos_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -467,6 +509,12 @@ v_cvt_u32_u16_e32 v5, v199.l quad_perm:[3,2,1,0]
 v_exp_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_exp_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_exp_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -475,6 +523,24 @@ v_exp_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 
 v_exp_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_exp_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
 
 v_exp_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -485,8 +551,32 @@ v_exp_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 v_exp_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
 
+v_exp_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_exp_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_exp_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_exp_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_exp_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_exp_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
 v_floor_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
+
+v_floor_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
 
 v_floor_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -497,6 +587,24 @@ v_floor_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_floor_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
 
+v_floor_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
+v_floor_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:17: error: invalid operand for instruction
+
 v_floor_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -505,6 +613,24 @@ v_floor_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_floor_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
+
+v_floor_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:23: error: invalid operand for instruction
 
 v_fract_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -677,6 +803,12 @@ v_frexp_mant_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 v_log_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_log_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_log_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -686,6 +818,24 @@ v_log_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_log_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
 
+v_log_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_log_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_log_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -694,6 +844,24 @@ v_log_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_log_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_log_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_log_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_log_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_log_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_log_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_log_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_not_b16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
@@ -761,6 +929,12 @@ v_not_b16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 v_rcp_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_rcp_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_rcp_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -770,6 +944,24 @@ v_rcp_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_rcp_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
 
+v_rcp_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rcp_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_rcp_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -778,6 +970,24 @@ v_rcp_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_rcp_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rcp_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_rndne_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -845,6 +1055,12 @@ v_rndne_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 v_rsq_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_rsq_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_rsq_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -854,6 +1070,24 @@ v_rsq_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_rsq_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
 
+v_rsq_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
+v_rsq_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:15: error: invalid operand for instruction
+
 v_rsq_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -862,6 +1096,24 @@ v_rsq_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_rsq_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:24: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
+
+v_rsq_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 v_sat_pk_u8_i16_e32 v199, v5
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
@@ -956,6 +1208,12 @@ v_sin_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
 v_sqrt_f16_e32 v128, 0xfe0b
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
+v_sqrt_f16_e32 v128.h, 0xfe0b
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v128.l, 0xfe0b
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
 v_sqrt_f16_e32 v255, v1
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -965,6 +1223,24 @@ v_sqrt_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 v_sqrt_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
 
+v_sqrt_f16_e32 v255.h, v1.h
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v255.h, v1.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v255.h, v1.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v255.l, v1.l
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v255.l, v1.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v255.l, v1.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:16: error: invalid operand for instruction
+
 v_sqrt_f16_e32 v5, v199
 // GFX12: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 
@@ -973,6 +1249,24 @@ v_sqrt_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 
 v_sqrt_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: :[[@LINE-1]]:25: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.h, v199.h
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.h, v199.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.h, v199.h quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.l, v199.l
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.l, v199.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
+
+v_sqrt_f16_e32 v5.l, v199.l quad_perm:[3,2,1,0]
+// GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
 
 v_swap_b16_e32 v0.l, 0
 // GFX12: :[[@LINE-1]]:22: error: invalid operand for instruction
