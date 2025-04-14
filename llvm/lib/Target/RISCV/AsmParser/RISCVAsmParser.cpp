@@ -2583,8 +2583,7 @@ ParseStatus RISCVAsmParser::parseRegList(OperandVector &Operands,
   bool UsesXRegs;
   MCRegister RegEnd;
   do {
-    if (getTok().isNot(AsmToken::Identifier) ||
-        (RegEnd == RISCV::X18 && isRVE()))
+    if (getTok().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
 
     StringRef RegName = getTok().getIdentifier();
@@ -2617,8 +2616,7 @@ ParseStatus RISCVAsmParser::parseRegList(OperandVector &Operands,
         return Error(MinusLoc, Twine("register '") + (UsesXRegs ? "x1" : "ra") +
                                    "' cannot start a multiple register range");
 
-      if (getTok().isNot(AsmToken::Identifier) ||
-          (RegEnd == RISCV::X18 && isRVE()))
+      if (getTok().isNot(AsmToken::Identifier))
         return Error(getLoc(), "invalid register");
 
       StringRef RegName = getTok().getIdentifier();
