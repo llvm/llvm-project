@@ -216,11 +216,7 @@ template <typename T> struct RetainPtr {
   PtrType get() const { return t; }
   PtrType operator->() const { return t; }
   T &operator*() const { return *t; }
-  RetainPtr &operator=(PtrType t) {
-    RetainPtr o(t);
-    swap(o);
-    return *this;
-  }
+  RetainPtr &operator=(PtrType t);
   PtrType leakRef()
   {
     PtrType s = t;
