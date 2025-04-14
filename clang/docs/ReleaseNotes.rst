@@ -389,6 +389,7 @@ Bug Fixes in This Version
 
     #if 1 ? 1 : 999999999999999999999
     #endif
+
 - Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
