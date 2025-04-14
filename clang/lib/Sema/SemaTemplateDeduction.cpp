@@ -5729,7 +5729,7 @@ static bool isAtLeastAsSpecializedAs(
                       TemplateDeductionInfo &Info,
                       SmallVectorImpl<DeducedTemplateArgument> &Deduced,
                       PartialOrderingKind) {
-                    if (ArgIdx && *ArgIdx >= Args1Offset)
+                    if (ArgIdx && *ArgIdx >= static_cast<unsigned>(Args1Offset))
                       ArgIdx = *ArgIdx - Args1Offset;
                     else
                       ArgIdx = std::nullopt;

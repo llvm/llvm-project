@@ -3629,15 +3629,22 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitCXXTypeidExpr(const CXXTypeidExpr *E) {
   const Type *TypeInfoType = E->getType().getTypePtr();
 
+  auto canonType = [](const Type *T) {
+    return T->getCanonicalTypeUnqualified().getTypePtr();
+  };
+
   if (!E->isPotentiallyEvaluated()) {
     if (DiscardResult)
       return true;
 
     if (E->isTypeOperand())
       return this->emitGetTypeid(
-          E->getTypeOperand(Ctx.getASTContext()).getTypePtr(), TypeInfoType, E);
-    return this->emitGetTypeid(E->getExprOperand()->getType().getTypePtr(),
-                               TypeInfoType, E);
+          canonType(E->getTypeOperand(Ctx.getASTContext()).getTypePtr()),
+          TypeInfoType, E);
+
+    return this->emitGetTypeid(
+        canonType(E->getExprOperand()->getType().getTypePtr()), TypeInfoType,
+        E);
   }
 
   // Otherwise, we need to evaluate the expression operand.
@@ -5424,39 +5431,39 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   this->fallthrough(CondLabel);
   this->emitLabel(CondLabel);
 
-  {
-    LocalScope<Emitter> CondScope(this);
-    if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
-        return false;
-
-    if (Cond) {
-      if (!this->visitBool(Cond))
-        return false;
-      if (!this->jumpFalse(EndLabel))
-        return false;
-    }
-
-    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+  // Start of loop body.
+  LocalScope<Emitter> CondScope(this);
+  if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
+    if (!visitDeclStmt(CondDecl))
       return false;
 
-    if (Body && !this->visitStmt(Body))
+  if (Cond) {
+    if (!this->visitBool(Cond))
       return false;
-
-    this->fallthrough(IncLabel);
-    this->emitLabel(IncLabel);
-    if (Inc && !this->discard(Inc))
-      return false;
-
-    if (!CondScope.destroyLocals())
+    if (!this->jumpFalse(EndLabel))
       return false;
   }
-  if (!this->jump(CondLabel))
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
     return false;
 
-  this->fallthrough(EndLabel);
+  if (Body && !this->visitStmt(Body))
+    return false;
+
+  this->fallthrough(IncLabel);
+  this->emitLabel(IncLabel);
+  if (Inc && !this->discard(Inc))
+    return false;
+
+  if (!CondScope.destroyLocals())
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+  // End of loop body.
+
   this->emitLabel(EndLabel);
-  return true;
+  // If we jumped out of the loop above, we still need to clean up the condition
+  // scope.
+  return CondScope.destroyLocals();
 }
 
 template <class Emitter>

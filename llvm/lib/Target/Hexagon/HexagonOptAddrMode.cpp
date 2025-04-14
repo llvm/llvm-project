@@ -9,6 +9,7 @@
 // load/store instructions.
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "MCTargetDesc/HexagonBaseInfo.h"
@@ -49,13 +50,6 @@ static cl::opt<int> CodeGrowthLimit("hexagon-amode-growth-limit",
   "optimization"));
 
 extern cl::opt<unsigned> RDFFuncBlockLimit;
-
-namespace llvm {
-
-  FunctionPass *createHexagonOptAddrMode();
-  void initializeHexagonOptAddrModePass(PassRegistry&);
-
-} // end namespace llvm
 
 namespace {
 
