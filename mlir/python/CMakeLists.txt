@@ -404,6 +404,15 @@ declare_mlir_dialect_python_bindings(
 )
 
 declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/SMTOps.td
+  GEN_ENUM_BINDINGS
+  SOURCES
+    dialects/smt.py
+  DIALECT_NAME smt)
+
+declare_mlir_dialect_python_bindings(
     ADD_TO_PARENT MLIRPythonSources.Dialects
     ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
     TD_FILE dialects/SPIRVOps.td
