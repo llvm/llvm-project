@@ -4617,7 +4617,8 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
       if (VF.isScalar())
         continue;
 
-      /// Don't consider the VF if it exceeds the number of registers for the target.
+      /// Don't consider the VF if it exceeds the number of registers for the
+      /// target.
       const auto &MLU = RU.MaxLocalUsers;
       if (any_of(MLU, [&](decltype(MLU.front()) &LU) {
             return LU.second > TTI.getNumberOfRegisters(LU.first);
