@@ -281,7 +281,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/2, /*LowerBound=*/0, /*Size=*/1,
         RTI.getHandleTy());
-    RI.setGloballyCoherent(true);
+    RI.GloballyCoherent = true;
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "OutputTexture");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x00005002U, 0x00000204U);
@@ -335,7 +335,7 @@ TEST(DXILResource, AnnotationsAndMetadata) {
     ResourceInfo RI(
         /*RecordID=*/0, /*Space=*/0, /*LowerBound=*/2, /*Size=*/1,
         RTI.getHandleTy());
-    RI.setCounterDirection(ResourceCounterDirection::Increment);
+    RI.CounterDirection = ResourceCounterDirection::Increment;
     GlobalVariable *GV =
         RI.createSymbol(M, RTI.createElementStruct(), "g_OutputBuffer");
     EXPECT_PROPS_EQ(RI.getAnnotateProps(M, RTI), 0x0000920cU, 0x00000014U);

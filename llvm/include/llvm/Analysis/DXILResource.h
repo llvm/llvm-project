@@ -350,8 +350,6 @@ public:
         Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
-  void setGloballyCoherent(bool V) { GloballyCoherent = V; }
-  void setCounterDirection(ResourceCounterDirection V) { CounterDirection = V; }
 
   bool hasCounter() const {
     return CounterDirection != ResourceCounterDirection::Unknown;

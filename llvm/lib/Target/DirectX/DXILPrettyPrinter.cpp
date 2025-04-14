@@ -139,8 +139,7 @@ static StringRef getTextureDimName(dxil::ResourceKind RK) {
 namespace {
 struct FormatResourceDimension
     : public llvm::FormatAdapter<const dxil::ResourceTypeInfo &> {
-  explicit FormatResourceDimension(const dxil::ResourceTypeInfo &RI,
-                                   bool HasCounter)
+  FormatResourceDimension(const dxil::ResourceTypeInfo &RI, bool HasCounter)
       : llvm::FormatAdapter<const dxil::ResourceTypeInfo &>(RI),
         HasCounter(HasCounter) {}
 
