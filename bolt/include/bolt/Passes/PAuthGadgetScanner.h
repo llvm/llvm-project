@@ -12,7 +12,6 @@
 #include "bolt/Core/BinaryContext.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Passes/BinaryPasses.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -197,9 +196,6 @@ raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &);
 
 namespace PAuthGadgetScanner {
 
-class SrcSafetyAnalysis;
-struct SrcState;
-
 /// Description of a gadget kind that can be detected. Intended to be
 /// statically allocated to be attached to reports by reference.
 class GadgetKind {
@@ -208,7 +204,7 @@ class GadgetKind {
 public:
   GadgetKind(const char *Description) : Description(Description) {}
 
-  const StringRef getDescription() const { return Description; }
+  StringRef getDescription() const { return Description; }
 };
 
 /// Base report located at some instruction, without any additional information.
@@ -259,7 +255,7 @@ struct GadgetReport : public Report {
 /// Report with a free-form message attached.
 struct GenericReport : public Report {
   std::string Text;
-  GenericReport(MCInstReference Location, const std::string &Text)
+  GenericReport(MCInstReference Location, StringRef Text)
       : Report(Location), Text(Text) {}
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const override;

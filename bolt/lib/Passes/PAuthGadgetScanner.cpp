@@ -91,14 +91,14 @@ class TrackedRegisters {
   const std::vector<MCPhysReg> Registers;
   std::vector<uint16_t> RegToIndexMapping;
 
-  static size_t getMappingSize(const std::vector<MCPhysReg> &RegsToTrack) {
+  static size_t getMappingSize(const ArrayRef<MCPhysReg> RegsToTrack) {
     if (RegsToTrack.empty())
       return 0;
     return 1 + *llvm::max_element(RegsToTrack);
   }
 
 public:
-  TrackedRegisters(const std::vector<MCPhysReg> &RegsToTrack)
+  TrackedRegisters(const ArrayRef<MCPhysReg> RegsToTrack)
       : Registers(RegsToTrack),
         RegToIndexMapping(getMappingSize(RegsToTrack), NoIndex) {
     for (unsigned I = 0; I < RegsToTrack.size(); ++I)
@@ -234,7 +234,7 @@ struct SrcState {
 
 static void printLastInsts(
     raw_ostream &OS,
-    const std::vector<SmallPtrSet<const MCInst *, 4>> &LastInstWritingReg) {
+    const ArrayRef<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg) {
   OS << "Insts: ";
   for (unsigned I = 0; I < LastInstWritingReg.size(); ++I) {
     auto &Set = LastInstWritingReg[I];
@@ -295,7 +295,7 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
 class SrcSafetyAnalysis {
 public:
   SrcSafetyAnalysis(BinaryFunction &BF,
-                    const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+                    const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
         RegsToTrackInstsFor(RegsToTrackInstsFor) {}
 
@@ -303,11 +303,10 @@ public:
 
   static std::shared_ptr<SrcSafetyAnalysis>
   create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
-         const std::vector<MCPhysReg> &RegsToTrackInstsFor);
+         const ArrayRef<MCPhysReg> RegsToTrackInstsFor);
 
   virtual void run() = 0;
-  virtual ErrorOr<const SrcState &>
-  getStateBefore(const MCInst &Inst) const = 0;
+  virtual const SrcState &getStateBefore(const MCInst &Inst) const = 0;
 
 protected:
   BinaryContext &BC;
@@ -347,7 +346,7 @@ protected:
   }
 
   BitVector getClobberedRegs(const MCInst &Point) const {
-    BitVector Clobbered(NumRegs, false);
+    BitVector Clobbered(NumRegs);
     // Assume a call can clobber all registers, including callee-saved
     // registers. There's a good chance that callee-saved registers will be
     // saved on the stack at some point during execution of the callee.
@@ -409,8 +408,7 @@ protected:
       // FirstCheckerInst should belong to the same basic block (see the
       // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
       // deterministically processed a few steps before this instruction.
-      const SrcState &StateBeforeChecker =
-          getStateBefore(*FirstCheckerInst).get();
+      const SrcState &StateBeforeChecker = getStateBefore(*FirstCheckerInst);
       if (StateBeforeChecker.SafeToDerefRegs[CheckedReg])
         Regs.push_back(CheckedReg);
     }
@@ -523,10 +521,7 @@ public:
                          const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
-    auto MaybeState = getStateBefore(Inst);
-    if (!MaybeState)
-      llvm_unreachable("Expected state to be present");
-    const SrcState &S = *MaybeState;
+    const SrcState &S = getStateBefore(Inst);
     // Due to aliasing registers, multiple registers may have been tracked.
     std::set<const MCInst *> LastWritingInsts;
     for (MCPhysReg TrackedReg : UsedDirtyRegs) {
@@ -537,7 +532,7 @@ public:
     for (const MCInst *Inst : LastWritingInsts) {
       MCInstReference Ref = MCInstReference::get(Inst, BF);
       assert(Ref && "Expected Inst to be found");
-      Result.push_back(MCInstReference(Ref));
+      Result.push_back(Ref);
     }
     return Result;
   }
@@ -557,11 +552,11 @@ class DataflowSrcSafetyAnalysis
 public:
   DataflowSrcSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
-                            const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+                            const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
 
-  ErrorOr<const SrcState &> getStateBefore(const MCInst &Inst) const override {
-    return DFParent::getStateBefore(Inst);
+  const SrcState &getStateBefore(const MCInst &Inst) const override {
+    return DFParent::getStateBefore(Inst).get();
   }
 
   void run() override {
@@ -674,7 +669,7 @@ class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis {
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
-                              const std::vector<MCPhysReg> &RegsToTrackInstsFor)
+                              const ArrayRef<MCPhysReg> RegsToTrackInstsFor)
       : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
     StateAnnotationIndex =
         BC.MIB->getOrCreateAnnotationIndex("CFGUnawareSrcSafetyAnalysis");
@@ -708,7 +703,7 @@ public:
     }
   }
 
-  ErrorOr<const SrcState &> getStateBefore(const MCInst &Inst) const override {
+  const SrcState &getStateBefore(const MCInst &Inst) const override {
     return BC.MIB->getAnnotationAs<SrcState>(Inst, StateAnnotationIndex);
   }
 
@@ -718,7 +713,7 @@ public:
 std::shared_ptr<SrcSafetyAnalysis>
 SrcSafetyAnalysis::create(BinaryFunction &BF,
                           MCPlusBuilder::AllocatorIdTy AllocId,
-                          const std::vector<MCPhysReg> &RegsToTrackInstsFor) {
+                          const ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
   if (BF.hasCFG())
     return std::make_shared<DataflowSrcSafetyAnalysis>(BF, AllocId,
                                                        RegsToTrackInstsFor);
@@ -825,7 +820,7 @@ Analysis::findGadgets(BinaryFunction &BF,
 
   BinaryContext &BC = BF.getBinaryContext();
   iterateOverInstrs(BF, [&](MCInstReference Inst) {
-    const SrcState &S = *Analysis->getStateBefore(Inst);
+    const SrcState &S = Analysis->getStateBefore(Inst);
 
     // If non-empty state was never propagated from the entry basic block
     // to Inst, assume it to be unreachable and report a warning.
