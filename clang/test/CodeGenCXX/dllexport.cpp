@@ -631,7 +631,7 @@ struct __declspec(dllexport) Y {
 
 struct __declspec(dllexport) Z { virtual ~Z() {} };
 // The scalar deleting dtor does not get exported:
-// M32-DAG: define weak dso_local x86_thiscallcc ptr @"??_EZ@@UAEPAXI@Z"
+// M32-DAG: define linkonce_odr dso_local x86_thiscallcc ptr @"??_GZ@@UAEPAXI@Z"
 
 
 // The user-defined dtor does get exported:

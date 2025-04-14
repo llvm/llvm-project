@@ -3064,12 +3064,6 @@ void CXXDestructorDecl::setOperatorDelete(FunctionDecl *OD, Expr *ThisArg) {
   }
 }
 
-void CXXDestructorDecl::setOperatorArrayDelete(FunctionDecl *OD) {
-  auto *First = cast<CXXDestructorDecl>(getFirstDecl());
-  if (OD && !First->OperatorArrayDelete)
-    First->OperatorArrayDelete = OD;
-}
-
 bool CXXDestructorDecl::isCalledByDelete(const FunctionDecl *OpDel) const {
   // C++20 [expr.delete]p6: If the value of the operand of the delete-
   // expression is not a null pointer value and the selected deallocation
