@@ -26,6 +26,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
+#include <llvm-14/llvm/Support/ErrorHandling.h>
 
 using namespace mlir;
 
@@ -370,25 +371,27 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                  gpu::AllReduceOperation mode,
                                  const ClusterInfo &ci,
                                  amdgpu::Chipset chipset) {
-  Value result = input;
   Value dppResult;
+  Value result = input;
   const int allRows = 0xf;
   const int allBanks = 0xf;
   const bool boundCtrl = true;
+  Value lane31 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 31);
+  Value lane63 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 63);
   if (ci.clusterSize >= 2) {
     auto permArg = b.getI32ArrayAttr({1, 0, 3, 2});
-    dppResult =
-        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::quad_perm, permArg, allRows, allBanks, boundCtrl);
+    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                        amdgpu::DPPPerm::quad_perm, permArg,
+                                        allRows, allBanks, boundCtrl);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
 
   if (ci.clusterSize >= 4) {
     auto permArg = b.getI32ArrayAttr({2, 3, 0, 1});
-    dppResult =
-        b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                amdgpu::DPPPerm::quad_perm, permArg, allRows, allBanks, boundCtrl);
+    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
+                                        amdgpu::DPPPerm::quad_perm, permArg,
+                                        allRows, allBanks, boundCtrl);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
   }
@@ -409,19 +412,15 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
                                         result, dppResult);
   }
 
-  Value lane31 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 31);
-  Value lane63 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 63);
   if (ci.clusterSize >= 32) {
     if (chipset.majorVersion <= 9) {
-      auto permArg = b.getI32IntegerAttr(15);
       dppResult = b.create<amdgpu::DPPOp>(
           loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
-          b.getUnitAttr(), 0xa, allBanks, false);
+          b.getUnitAttr(), 0xa, allBanks, /*bound_ctrl*/ false);
     } else if (chipset.majorVersion == 10) {
-      auto uIntMax = llvm::APInt::getMaxValue(32u);
       Value uIntMaxConst =
-          b.create<LLVM::ConstantOp>(loc, b.getI32Type(), uIntMax);
-      Value dppResult = b.create<ROCDL::PermlaneX16Op>(
+          b.create<LLVM::ConstantOp>(loc, b.getI32Type(), -1);
+      dppResult = b.create<ROCDL::PermlaneX16Op>(
           loc, input.getType(), result, result, uIntMaxConst, uIntMaxConst,
           true, false);
     }
@@ -434,10 +433,9 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   }
 
   if (ci.clusterSize == 64) {
-    auto permArg = b.getI32IntegerAttr(31);
-    dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
-                                        amdgpu::DPPPerm::row_bcast_31,
-                                        b.getUnitAttr(), 0xc, allBanks, false);
+    dppResult = b.create<amdgpu::DPPOp>(
+        loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_31,
+        b.getUnitAttr(), 0xc, allBanks, /*bound_ctrl*/ false);
     result = vector::makeArithReduction(b, loc, gpu::convertReductionKind(mode),
                                         result, dppResult);
     result = b.create<ROCDL::ReadlaneOp>(loc, input.getType(), result, lane63);
@@ -447,10 +445,13 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   return result;
 }
 
+/// Collect a set of patterns to lower `gpu.subgroup_reduce` into `amdgpu.dpp`
+/// ops over scalar types. Assumes that the subgroup has
+/// `subgroupSize` lanes. Applicable only to AMD GPUs.
 struct ScalarSubgroupReduceToDPP final
     : OpRewritePattern<gpu::SubgroupReduceOp> {
   ScalarSubgroupReduceToDPP(MLIRContext *ctx, unsigned subgroupSize,
-                            bool matchClustered, Chipset chipset,
+                            bool matchClustered, amdgpu::Chipset chipset,
                             PatternBenefit benefit)
       : OpRewritePattern(ctx, benefit), subgroupSize(subgroupSize),
         matchClustered(matchClustered), chipset(chipset) {}
@@ -467,16 +468,26 @@ struct ScalarSubgroupReduceToDPP final
     auto ci = getAndValidateClusterInfo(op, subgroupSize);
     if (failed(ci))
       return failure();
+
+    if (ci->clusterStride != 1)
+      return failure();
+
+    Type valueTy = op.getType();
+    if (!valueTy.isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          op, "value type is not a compatible scalar");
+
     Location loc = op.getLoc();
-    rewriter.replaceOp(op, createSubgroupDPPReduction(
-                               rewriter, loc, op.getValue(), op.getOp(), *ci));
+    rewriter.replaceOp(op,
+                       createSubgroupDPPReduction(rewriter, loc, op.getValue(),
+                                                  op.getOp(), *ci, chipset));
     return success();
   }
 
 private:
   unsigned subgroupSize = 0;
   bool matchClustered = false;
-  Chipset chipset;
+  amdgpu::Chipset chipset;
 };
 } // namespace
 
@@ -489,7 +500,7 @@ void mlir::populateGpuBreakDownSubgroupReducePatterns(
 }
 
 void mlir::populateGpuLowerSubgroupReduceToDPPPatterns(
-    RewritePatternSet &patterns, unsigned subgroupSize, Chipset chipset,
+    RewritePatternSet &patterns, unsigned subgroupSize, amdgpu::Chipset chipset,
     PatternBenefit benefit) {
   patterns.add<ScalarSubgroupReduceToDPP>(patterns.getContext(), subgroupSize,
                                           /*matchClustered=*/true, chipset,

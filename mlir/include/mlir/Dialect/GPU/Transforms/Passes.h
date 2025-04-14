@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_GPU_TRANSFORMS_PASSES_H_
 
+#include "mlir/Dialect/AMDGPU/Utils/Chipset.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/GPUUtils.h"
 #include "mlir/IR/PatternMatch.h"
@@ -67,6 +68,7 @@ void populateGpuLowerSubgroupReduceToShufflePatterns(
 /// `subgroupSize` lanes. Applicable only to AMD GPUs.
 void populateGpuLowerSubgroupReduceToDPPPatterns(RewritePatternSet &patterns,
                                                  unsigned subgroupSize,
+                                                 amdgpu::Chipset chipset,
                                                  PatternBenefit benefit = 1);
 
 /// Disjoint counterpart of `populateGpuLowerSubgroupReduceToShufflePatterns`
