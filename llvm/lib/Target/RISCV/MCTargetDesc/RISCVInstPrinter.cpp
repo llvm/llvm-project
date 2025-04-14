@@ -58,6 +58,11 @@ bool RISCVInstPrinter::applyTargetSpecificCLOption(StringRef Opt) {
     ArchRegNames = true;
     return true;
   }
+  if (Opt == "emit-x8-as-fp") {
+    if (!ArchRegNames)
+      EmitX8AsFP = true;
+    return true;
+  }
 
   return false;
 }
@@ -315,7 +320,12 @@ void RISCVInstPrinter::printVMaskReg(const MCInst *MI, unsigned OpNo,
 }
 
 const char *RISCVInstPrinter::getRegisterName(MCRegister Reg) {
-  if (EmitX8AsFP && Reg == RISCV::X8)
+  // When PrintAliases is enabled, and EmitX8AsFP is enabled, x8 will be printed
+  // as fp instead of s0. Note that these similar registers are not replaced:
+  // - X8_H: used for f16 register in zhinx
+  // - X8_W: used for f32 register in zfinx
+  // - X8_X9: used for GPR Pair
+  if (!ArchRegNames && EmitX8AsFP && Reg == RISCV::X8)
     return "fp";
   return getRegisterName(Reg, ArchRegNames ? RISCV::NoRegAltName
                                            : RISCV::ABIRegAltName);
