@@ -211,8 +211,8 @@ static void updateSupportedARMFeatures(Ctx &ctx,
 
 struct AArch64BuildAttrSubsections {
   struct PauthSubSection {
-    unsigned tagPlatform = 0;
-    unsigned tagSchema = 0;
+    uint64_t tagPlatform = 0;
+    uint64_t tagSchema = 0;
   } pauth;
   struct FAndBSubSection {
     unsigned tagBTI = 0;
