@@ -223,14 +223,12 @@ BasicBlock::~BasicBlock() {
   // nodes.  There are no other possible uses at this point.
   if (hasAddressTaken()) {
     assert(!use_empty() && "There should be at least one blockaddress!");
-    Constant *Replacement =
-      ConstantInt::get(llvm::Type::getInt32Ty(getContext()), 1);
-    while (!use_empty()) {
-      BlockAddress *BA = cast<BlockAddress>(user_back());
-      BA->replaceAllUsesWith(ConstantExpr::getIntToPtr(Replacement,
-                                                       BA->getType()));
-      BA->destroyConstant();
-    }
+    BlockAddress *BA = cast<BlockAddress>(user_back());
+
+    Constant *Replacement = ConstantInt::get(Type::getInt32Ty(getContext()), 1);
+    BA->replaceAllUsesWith(
+        ConstantExpr::getIntToPtr(Replacement, BA->getType()));
+    BA->destroyConstant();
   }
 
   assert(getParent() == nullptr && "BasicBlock still linked into the program!");

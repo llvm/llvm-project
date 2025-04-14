@@ -654,8 +654,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
 
     case SubobjectAdjustment::MemberPointerAdjustment: {
       llvm::Value *Ptr = EmitScalarExpr(Adjustment.Ptr.RHS);
-      Object = EmitCXXMemberDataPointerAddress(E, Object, Ptr,
-                                               Adjustment.Ptr.MPT);
+      Object = EmitCXXMemberDataPointerAddress(
+          E, Object, Ptr, Adjustment.Ptr.MPT, /*IsInBounds=*/true);
       break;
     }
     }
@@ -1966,7 +1966,7 @@ bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
   SanitizerKind::SanitizerOrdinal Kind =
       NeedsEnumCheck ? SanitizerKind::SO_Enum : SanitizerKind::SO_Bool;
   EmitCheck(std::make_pair(Check, Kind), SanitizerHandler::LoadInvalidValue,
-            StaticArgs, EmitCheckValue(Value));
+            StaticArgs, Value);
   return true;
 }
 
@@ -6295,9 +6295,10 @@ EmitPointerToDataMemberBinaryExpr(const BinaryOperator *E) {
 
   LValueBaseInfo BaseInfo;
   TBAAAccessInfo TBAAInfo;
-  Address MemberAddr =
-    EmitCXXMemberDataPointerAddress(E, BaseAddr, OffsetV, MPT, &BaseInfo,
-                                    &TBAAInfo);
+  bool IsInBounds = !getLangOpts().PointerOverflowDefined &&
+                    !isUnderlyingBasePointerConstantNull(E->getLHS());
+  Address MemberAddr = EmitCXXMemberDataPointerAddress(
+      E, BaseAddr, OffsetV, MPT, IsInBounds, &BaseInfo, &TBAAInfo);
 
   return MakeAddrLValue(MemberAddr, MPT->getPointeeType(), BaseInfo, TBAAInfo);
 }
