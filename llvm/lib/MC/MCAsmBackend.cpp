@@ -116,7 +116,6 @@ bool MCAsmBackend::shouldForceRelocation(const MCAssembler &, const MCFixup &,
 }
 
 bool MCAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                                const MCRelaxableFragment &,
                                                 const MCFixup &Fixup,
                                                 const MCValue &, uint64_t Value,
                                                 bool Resolved) const {
