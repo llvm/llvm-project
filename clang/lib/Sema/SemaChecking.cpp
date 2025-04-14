@@ -2762,6 +2762,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // These builtins restrict the element type to floating point
   // types only, and take in two arguments.
+  case Builtin::BI__builtin_elementwise_minnum:
+  case Builtin::BI__builtin_elementwise_maxnum:
   case Builtin::BI__builtin_elementwise_minimum:
   case Builtin::BI__builtin_elementwise_maximum:
   case Builtin::BI__builtin_elementwise_atan2:
