@@ -286,6 +286,33 @@ class SemaOpenACCClauseVisitor {
     return true;
   }
 
+  // For 'tile' and 'collapse', only allow 1 per 'device_type'.
+  template <typename TheClauseTy>
+  bool DisallowSinceLastDeviceType(SemaOpenACC::OpenACCParsedClause &Clause) {
+    auto LastDeviceTypeItr =
+        std::find_if(ExistingClauses.rbegin(), ExistingClauses.rend(),
+                     llvm::IsaPred<OpenACCDeviceTypeClause>);
+
+    auto Last = std::find_if(ExistingClauses.rbegin(), LastDeviceTypeItr,
+                             llvm::IsaPred<TheClauseTy>);
+
+    if (Last == LastDeviceTypeItr)
+      return false;
+
+    SemaRef.Diag(Clause.getBeginLoc(),
+                 diag::err_acc_clause_since_last_device_type)
+        << Clause.getClauseKind() << Clause.getDirectiveKind()
+        << (LastDeviceTypeItr != ExistingClauses.rend());
+    SemaRef.Diag((*Last)->getBeginLoc(), diag::note_acc_previous_clause_here);
+
+    if (LastDeviceTypeItr != ExistingClauses.rend())
+      SemaRef.Diag((*LastDeviceTypeItr)->getBeginLoc(),
+                   diag::note_acc_previous_clause_here);
+
+    // TODO: DIAG
+    return true;
+  }
+
 public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
@@ -341,6 +368,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitDefaultClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitTileClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+
+  if (DisallowSinceLastDeviceType<OpenACCTileClause>(Clause))
+    return nullptr;
 
   llvm::SmallVector<Expr *> NewSizeExprs;
 
@@ -1502,6 +1532,9 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitReductionClause(
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
     SemaOpenACC::OpenACCParsedClause &Clause) {
+
+  if (DisallowSinceLastDeviceType<OpenACCCollapseClause>(Clause))
+    return nullptr;
 
   ExprResult LoopCount = SemaRef.CheckCollapseLoopCount(Clause.getLoopCount());
 
