@@ -76,7 +76,7 @@ TEST(TypePrinter, TemplateId2) {
   ASSERT_TRUE(PrintedTypeMatches(Code, {}, Matcher, "<int>",
                                  [](PrintingPolicy &Policy) {
                                    Policy.FullyQualifiedName = true;
-                                   Policy.PrintCanonicalTypes = true;
+                                   Policy.PrintAsCanonical = true;
                                  }));
 }
 
