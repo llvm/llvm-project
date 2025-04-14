@@ -293,8 +293,8 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
 #if USING_NATIVE_INT128_T
     auto shft{static_cast<int>(sizeof value - kind)};
     if (!isHostLittleEndian && shft >= 0) {
-      auto l{value << shft};
-      std::memcpy(n, &l, kind);
+      auto shifted{value << (8 * shft)};
+      std::memcpy(n, &shifted, kind);
     } else {
       std::memcpy(n, &value, kind); // a blank field means zero
     }

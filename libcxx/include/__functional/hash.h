@@ -64,10 +64,10 @@ struct __murmur2_or_cityhash<_Size, 32> {
     switch (__len) {
     case 3:
       __h ^= static_cast<_Size>(__data[2] << 16);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 2:
       __h ^= static_cast<_Size>(__data[1] << 8);
-      _LIBCPP_FALLTHROUGH();
+      [[__fallthrough__]];
     case 1:
       __h ^= __data[0];
       __h *= __m;
@@ -504,7 +504,7 @@ struct hash<long double> : public __scalar_hash<long double> {
 template <class _Tp, bool = is_enum<_Tp>::value>
 struct __enum_hash : public __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
-    typedef typename underlying_type<_Tp>::type type;
+    using type = __underlying_type_t<_Tp>;
     return hash<type>()(static_cast<type>(__v));
   }
 };
