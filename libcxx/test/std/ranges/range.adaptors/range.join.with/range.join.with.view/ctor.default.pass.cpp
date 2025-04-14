@@ -29,7 +29,7 @@ struct TrivialView : std::ranges::view_base {
   constexpr auto end() { return view.data() + view.size(); }
 };
 
-static_assert(std::is_trivial_v<TrivialView>);
+static_assert(std::is_trivially_copyable_v<TrivialView> && std::is_trivially_default_constructible_v<TrivialView>);
 
 struct NonDefaultConstructibleView : TrivialView {
   NonDefaultConstructibleView(int);
@@ -42,7 +42,8 @@ struct TrivialPattern : std::ranges::view_base {
   constexpr int* end() { return &val_ + 1; }
 };
 
-static_assert(std::is_trivial_v<TrivialPattern>);
+static_assert(std::is_trivially_copyable_v<TrivialPattern> &&
+              std::is_trivially_default_constructible_v<TrivialPattern>);
 
 struct NonDefaultConstructiblePattern : TrivialPattern {
   NonDefaultConstructiblePattern(int);
