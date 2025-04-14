@@ -376,8 +376,10 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
   const int allRows = 0xf;
   const int allBanks = 0xf;
   const bool boundCtrl = true;
-  Value lane31 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 31);
-  Value lane63 = b.create<LLVM::ConstantOp>(loc, b.getI32Type(), 63);
+  Value lane31 =
+      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(31));
+  Value lane63 =
+      b.create<arith::ConstantOp>(loc, b.getI32Type(), b.getI32IntegerAttr(63));
   if (ci.clusterSize >= 2) {
     auto permArg = b.getI32ArrayAttr({1, 0, 3, 2});
     dppResult = b.create<amdgpu::DPPOp>(loc, result.getType(), result, result,
@@ -417,9 +419,9 @@ Value createSubgroupDPPReduction(OpBuilder &b, Location loc, Value input,
       dppResult = b.create<amdgpu::DPPOp>(
           loc, result.getType(), result, result, amdgpu::DPPPerm::row_bcast_15,
           b.getUnitAttr(), 0xa, allBanks, /*bound_ctrl*/ false);
-    } else if (chipset.majorVersion == 10) {
-      Value uIntMaxConst =
-          b.create<LLVM::ConstantOp>(loc, b.getI32Type(), -1);
+    } else if (chipset.majorVersion >= 10) {
+      Value uIntMaxConst = b.create<arith::ConstantOp>(loc, b.getI32Type(),
+                                                       b.getI32IntegerAttr(-1));
       dppResult = b.create<ROCDL::PermlaneX16Op>(
           loc, input.getType(), result, result, uIntMaxConst, uIntMaxConst,
           true, false);
