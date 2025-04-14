@@ -223,11 +223,6 @@ public:
     return 0;
   }
 
-  /// Check whether a given symbol has been flagged with MICROMIPS flag.
-  virtual bool isMicroMips(const MCSymbol *Sym) const {
-    return false;
-  }
-
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;
 };
 
