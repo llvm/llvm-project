@@ -11100,12 +11100,12 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       // Lookup delete[] too in case we have to emit a vector deleting dtor;
       DeclarationName VDeleteName =
           Context.DeclarationNames.getCXXOperatorName(OO_Array_Delete);
-      FunctionDecl *ArrOperatorDelete = FindDeallocationFunctionForDestructor(
-          Loc, RD, VDeleteName, /*Diagnose=*/false);
+      FunctionDecl *ArrOperatorDelete =
+          FindDeallocationFunctionForDestructor(Loc, RD, VDeleteName);
       // delete[] in the TU will make sure the operator is referenced and its
       // uses diagnosed, otherwise vector deleting dtor won't be called anyway,
       // so just record it in the destructor.
-      Destructor->setOperatorArrayDelete(ArrOperatorDelete);
+      Destructor->setOperatorArrayDelete(ArrOperatorDelete, ThisArg);
     }
   }
 
