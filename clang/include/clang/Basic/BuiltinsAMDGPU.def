@@ -259,6 +259,9 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2bf16, "V2sV2s*3V2s", "t", "atom
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2f16, "V2hV2h*3V2h", "t", "atomic-ds-pk-add-16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_load_lds, "vv*1v*3IUiIiIUi", "t", "vmem-to-lds-load-insts")
 
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_norm_i16_f16, "V2sxx", "nc", "gfx9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_cvt_pk_norm_u16_f16, "V2Usxx", "nc", "gfx9-insts")
+
 //===----------------------------------------------------------------------===//
 // Deep learning builtins.
 //===----------------------------------------------------------------------===//

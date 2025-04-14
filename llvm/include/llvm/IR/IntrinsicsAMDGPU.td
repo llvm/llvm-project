@@ -2644,6 +2644,18 @@ def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
+def int_amdgcn_cvt_pk_norm_i16_f16 :
+  ClangBuiltin<"__builtin_amdgcn_cvt_pk_norm_i16_f16">,
+  DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_half_ty, llvm_half_ty],
+            [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_cvt_pk_norm_u16_f16 :
+  ClangBuiltin<"__builtin_amdgcn_cvt_pk_norm_u16_f16">,
+  DefaultAttrsIntrinsic<[llvm_v2i16_ty], [llvm_half_ty, llvm_half_ty],
+            [IntrNoMem, IntrSpeculatable]
+>;
+
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
