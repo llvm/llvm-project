@@ -1019,6 +1019,14 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
       TypeInfo.inferScalarType(R.getOperand(1)) ==
           TypeInfo.inferScalarType(R.getVPSingleValue()))
     return R.getVPSingleValue()->replaceAllUsesWith(R.getOperand(1));
+
+  if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
+                                                           m_SpecificInt(1)))) {
+    Type *WideStepTy = TypeInfo.inferScalarType(R.getVPSingleValue());
+    if (TypeInfo.inferScalarType(X) != WideStepTy)
+      X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
+    R.getVPSingleValue()->replaceAllUsesWith(X);
+  }
 }
 
 void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
@@ -2367,23 +2375,71 @@ void VPlanTransforms::createInterleaveGroups(
   }
 }
 
-void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
+void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
+                                               Type &CanonicalIVTy) {
+  using namespace llvm::VPlanPatternMatch;
+
+  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
-      if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      if (isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R)) {
+        auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
+        StringRef Name =
+            isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
+        auto *ScalarR = new VPInstruction(
+            Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+            PhiR->getDebugLoc(), Name);
+        ScalarR->insertBefore(PhiR);
+        PhiR->replaceAllUsesWith(ScalarR);
+        ToRemove.push_back(PhiR);
         continue;
-      auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-      StringRef Name =
-          isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR = new VPInstruction(
-          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
-          PhiR->getDebugLoc(), Name);
-      ScalarR->insertBefore(PhiR);
-      PhiR->replaceAllUsesWith(ScalarR);
-      PhiR->eraseFromParent();
+      }
+
+      VPValue *VectorStep;
+      VPValue *ScalarStep;
+      if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
+                         m_VPValue(VectorStep), m_VPValue(ScalarStep))))
+        continue;
+
+      // Expand WideIVStep.
+      auto *VPI = cast<VPInstruction>(&R);
+      VPBuilder Builder(VPI);
+      Type *IVTy = TypeInfo.inferScalarType(VPI);
+      if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
+        Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
+                                          ? Instruction::UIToFP
+                                          : Instruction::Trunc;
+        VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
+      }
+
+      auto *ConstStep =
+          ScalarStep->isLiveIn()
+              ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
+              : nullptr;
+      assert(!ConstStep || ConstStep->getValue() != 1);
+      if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
+        ScalarStep =
+            Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
+      }
+
+      std::optional<FastMathFlags> FMFs;
+      if (IVTy->isFloatingPointTy())
+        FMFs = VPI->getFastMathFlags();
+
+      unsigned MulOpc =
+          IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
+      VPInstruction *Mul = Builder.createNaryOp(
+          MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
+      VectorStep = Mul;
+      VPI->replaceAllUsesWith(VectorStep);
+      ToRemove.push_back(VPI);
     }
   }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
