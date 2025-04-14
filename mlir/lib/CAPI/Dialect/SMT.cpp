@@ -8,8 +8,9 @@
 
 #include "mlir-c/Dialect/SMT.h"
 #include "mlir/CAPI/Registration.h"
+#include "mlir/Dialect/SMT/IR/SMTAttributes.h"
 #include "mlir/Dialect/SMT/IR/SMTDialect.h"
-#include "mlir/Dialect/SMT/IR/SMTOps.h"
+#include "mlir/Dialect/SMT/IR/SMTTypes.h"
 
 using namespace mlir;
 using namespace smt;
