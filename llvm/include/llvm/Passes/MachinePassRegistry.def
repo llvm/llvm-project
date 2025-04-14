@@ -137,6 +137,7 @@ MACHINE_FUNCTION_ANALYSIS("virtregmap", VirtRegMapAnalysis())
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("branch-relaxation", BranchRelaxationPass())
 MACHINE_FUNCTION_PASS("dead-mi-elimination", DeadMachineInstructionElimPass())
 MACHINE_FUNCTION_PASS("detect-dead-lanes", DetectDeadLanesPass())
 MACHINE_FUNCTION_PASS("early-ifcvt", EarlyIfConverterPass())
