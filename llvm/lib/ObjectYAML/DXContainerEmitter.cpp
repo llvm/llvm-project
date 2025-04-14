@@ -267,8 +267,8 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         continue;
 
       mcdxbc::RootSignatureDesc RS;
-      RS.Header.Flags = P.RootSignature->getEncodedFlags();
-      RS.Header.Version = P.RootSignature->Version;
+      RS.Flags = P.RootSignature->getEncodedFlags();
+      RS.Version = P.RootSignature->Version;
       for (const auto &Param : P.RootSignature->Parameters) {
         mcdxbc::RootParameter NewParam;
         NewParam.Header = dxbc::RootParameterHeader{

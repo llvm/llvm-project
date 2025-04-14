@@ -82,8 +82,8 @@ struct RootConstantsYaml {
 };
 
 struct RootParameterYamlDesc {
-  dxbc::RootParameterType Type;
-  dxbc::ShaderVisibility Visibility;
+  uint32_t Type;
+  uint32_t Visibility;
   uint32_t Offset;
 
   union {
@@ -93,15 +93,23 @@ struct RootParameterYamlDesc {
 
 struct RootSignatureYamlDesc {
   RootSignatureYamlDesc() = default;
-  RootSignatureYamlDesc(const object::DirectX::RootSignature &Data);
 
   uint32_t Version;
+  uint32_t NumRootParameters;
+  uint32_t RootParametersOffset;
   uint32_t NumStaticSamplers;
   uint32_t StaticSamplersOffset;
 
   SmallVector<RootParameterYamlDesc> Parameters;
 
   uint32_t getEncodedFlags();
+
+  iterator_range<RootParameterYamlDesc *> params() {
+    return make_range(Parameters.begin(), Parameters.end());
+  }
+
+  static llvm::Expected<DXContainerYAML::RootSignatureYamlDesc>
+  create(const object::DirectX::RootSignature &Data);
 
 #include "llvm/BinaryFormat/DXContainerConstants.def"
 };
@@ -218,8 +226,6 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::PSV::ResourceKind)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::D3DSystemValue)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigComponentType)
 LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::SigMinPrecision)
-LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::RootParameterType)
-LLVM_YAML_DECLARE_ENUM_TRAITS(llvm::dxbc::ShaderVisibility)
 
 namespace llvm {
 

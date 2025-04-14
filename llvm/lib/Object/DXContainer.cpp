@@ -96,8 +96,8 @@ Error DXContainer::parseHash(StringRef Part) {
 Error DXContainer::parseRootSignature(StringRef Part) {
   if (RootSignature)
     return parseFailed("More than one RTS0 part is present in the file");
-  RootSignature = DirectX::RootSignature();
-  if (Error Err = RootSignature->parse(Part))
+  RootSignature = DirectX::RootSignature(Part);
+  if (Error Err = RootSignature->parse())
     return Err;
   return Error::success();
 }
@@ -242,12 +242,11 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
   IteratorState.Offset = Offset;
 }
 
-Error DirectX::RootSignature::parse(StringRef Data) {
-  const char *Begin = Data.begin();
-  const char *Current = Data.begin();
+Error DirectX::RootSignature::parse() {
+  const char *Current = PartData.begin();
 
   // Root Signature headers expects 6 integers to be present.
-  if (Data.size() < 6 * sizeof(uint32_t))
+  if (PartData.size() < 6 * sizeof(uint32_t))
     return parseFailed(
         "Invalid root signature, insufficient space for header.");
 
@@ -273,18 +272,10 @@ Error DirectX::RootSignature::parse(StringRef Data) {
   Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  assert(Current == Begin + RootParametersOffset);
+  assert(Current == PartData.begin() + RootParametersOffset);
 
-  ParametersHeaders.Data = Data.substr(
+  ParametersHeaders.Data = PartData.substr(
       RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
-
-  ParameterSpaceOffset =
-      RootParametersOffset + NumParameters * sizeof(dxbc::RootParameterHeader);
-  size_t ParameterSpaceEnd =
-      (NumStaticSamplers == 0) ? Data.size() : StaticSamplersOffset;
-
-  ParameterSpace = Data.substr(ParameterSpaceOffset,
-                               ParameterSpaceEnd - ParameterSpaceOffset);
 
   return Error::success();
 }

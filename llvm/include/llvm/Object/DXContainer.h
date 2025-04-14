@@ -117,16 +117,6 @@ template <typename T> struct ViewArray {
 };
 
 namespace DirectX {
-
-struct RootParameter {
-  dxbc::RootParameterHeader Header;
-  union {
-    dxbc::RootConstants Constants;
-  };
-
-  RootParameter() = default;
-};
-
 struct RootParameterView {
   const dxbc::RootParameterHeader &Header;
   StringRef ParamData;
@@ -170,31 +160,27 @@ private:
   uint32_t StaticSamplersOffset;
   uint32_t Flags;
   ViewArray<dxbc::RootParameterHeader> ParametersHeaders;
-  uint32_t ParameterSpaceOffset;
-  StringRef ParameterSpace;
+  StringRef PartData;
 
   using param_header_iterator = ViewArray<dxbc::RootParameterHeader>::iterator;
 
 public:
-  RootSignature() {}
+  RootSignature(StringRef PD) : PartData(PD) {}
 
-  Error parse(StringRef Data);
+  Error parse();
   uint32_t getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
-  llvm::iterator_range<param_header_iterator> param_header() const {
+  uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
+  llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
   uint32_t getFlags() const { return Flags; }
 
   llvm::Expected<RootParameterView>
   getParameter(const dxbc::RootParameterHeader &Header) const {
-    assert(ParameterSpaceOffset != 0 &&
-           "This should be initialized before reading parameters");
-    size_t CorrectOffset = Header.ParameterOffset - ParameterSpaceOffset;
-    StringRef Data;
     size_t DataSize;
 
     switch (Header.ParameterType) {
@@ -202,12 +188,15 @@ public:
       DataSize = sizeof(dxbc::RootConstants);
       break;
     }
+    auto EndOfSectionByte = getNumStaticSamplers() == 0
+                                ? PartData.size()
+                                : getStaticSamplersOffset();
 
-    if (CorrectOffset + DataSize > ParameterSpace.size())
+    if (Header.ParameterOffset + DataSize > EndOfSectionByte)
       return parseFailed("Reading structure out of file bounds");
 
-    Data = ParameterSpace.substr(CorrectOffset, DataSize);
-    RootParameterView View = RootParameterView(Header, Data);
+    StringRef Buff = PartData.substr(Header.ParameterOffset, DataSize);
+    RootParameterView View = RootParameterView(Header, Buff);
     return View;
   }
 };

@@ -890,7 +890,7 @@ TEST(RootSignature, ParseRootConstant) {
     ASSERT_EQ(RS.getStaticSamplersOffset(), 44u);
     ASSERT_EQ(RS.getFlags(), 17u);
 
-    auto RootParam = *RS.param_header().begin();
+    auto RootParam = *RS.param_headers().begin();
     ASSERT_EQ((unsigned)RootParam.ParameterType, 1u);
     ASSERT_EQ((unsigned)RootParam.ShaderVisibility, 2u);
     auto ParamView = RS.getParameter(RootParam);
