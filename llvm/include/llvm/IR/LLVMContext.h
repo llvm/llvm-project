@@ -98,8 +98,9 @@ public:
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
     OB_align = 10,                 // "align"
-    OB_LastBundleID = OB_align     // Marker for last bundle ID
-  };
+    OB_fp_control = 11,            // "fp.control"
+    OB_fp_except = 12,             // "fp.except"
+    OB_LastBundleID = OB_fp_except // Marker for last bundle ID  };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
   /// This ID is uniqued across modules in the current LLVMContext.

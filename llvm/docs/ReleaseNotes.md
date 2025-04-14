@@ -67,6 +67,7 @@ Changes to the LLVM IR
   Instead, the `align` attribute should be placed on the pointer (or vector of
   pointers) argument.
 * A `load atomic` may now be used with vector types on x86.
+* Floating-point operand bundles have been added.
 
 Changes to LLVM infrastructure
 ------------------------------
