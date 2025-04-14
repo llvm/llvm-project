@@ -1321,6 +1321,57 @@ return wrap(unwrap(Builder)->createEnumerationType(
     LineNumber, SizeInBits, AlignInBits, Elts, unwrapDI<DIType>(ClassTy)));
 }
 
+LLVMMetadataRef LLVMDIBuilderCreateSetType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef BaseTy) {
+  return wrap(unwrap(Builder)->createSetType(
+      unwrapDI<DIScope>(Scope), {Name, NameLen}, unwrapDI<DIFile>(File),
+      LineNumber, SizeInBits, AlignInBits, unwrapDI<DIType>(BaseTy)));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
+    uint64_t SizeInBits, uint32_t AlignInBits,
+    LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
+    LLVMMetadataRef LowerBound, LLVMMetadataRef UpperBound,
+    LLVMMetadataRef Stride, LLVMMetadataRef Bias
+    ) {
+  return wrap(unwrap(Builder)->createSubrangeType(
+	  {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
+	  unwrapDI<DIScope>(Scope), SizeInBits, AlignInBits,
+	  map_from_llvmDIFlags(Flags), unwrapDI<DIType>(BaseTy),
+          unwrap<DIExpression>(LowerBound), unwrap<DIExpression>(UpperBound),
+          unwrap<DIExpression>(Stride), unwrap<DIExpression>(Bias)));
+}
+
+LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
+    uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMMetadataRef DataLocation, LLVMMetadataRef Associated,
+    LLVMMetadataRef Allocated, LLVMMetadataRef Rank, LLVMMetadataRef BitStride) {
+  auto Subs =
+      unwrap(Builder)->getOrCreateArray({unwrap(Subscripts), NumSubscripts});
+  return wrap(unwrap(Builder)->createArrayType(
+      unwrapDI<DIScope>(Scope),
+      {Name, NameLen}, unwrapDI<DIFile>(File), LineNo,
+      Size, AlignInBits, unwrapDI<DIType>(Ty), Subs,
+      unwrap<DIExpression>(DataLocation), unwrap<DIExpression>(Associated),
+      unwrap<DIExpression>(Allocated), unwrap<DIExpression>(Rank),
+      unwrap(BitStride)));
+}
+
+void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
+                       LLVMMetadataRef *Elements, unsigned NumElements) {
+  auto Arr = unwrap<DICompositeType>(*T);
+  auto Elts = unwrap(Builder)->getOrCreateArray({unwrap(Elements),
+		                                 NumElements});
+  unwrap(Builder)->replaceArrays(Arr, Elts);
+}
+
 LLVMMetadataRef LLVMDIBuilderCreateUnionType(
   LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
   size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,

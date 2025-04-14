@@ -686,7 +686,6 @@ LLVMMetadataRef LLVMDIBuilderCreateUnionType(
     LLVMMetadataRef *Elements, unsigned NumElements, unsigned RunTimeLang,
     const char *UniqueId, size_t UniqueIdLen);
 
-
 /**
  * Create debugging information entry for an array.
  * \param Builder      The DIBuilder.
@@ -701,6 +700,78 @@ LLVMDIBuilderCreateArrayType(LLVMDIBuilderRef Builder, uint64_t Size,
                              uint32_t AlignInBits, LLVMMetadataRef Ty,
                              LLVMMetadataRef *Subscripts,
                              unsigned NumSubscripts);
+
+/**
+ * Create debugging information entry for a set.
+ * @param Builder        The DIBuilder.
+ * \param Scope          The scope this module is imported into.
+ * \param Name           A name that uniquely identifies this set.
+ * \param NameLen        The length of the C string passed to \c Name.
+ * \param File           File where the set is located.
+ * \param Line           Line number of the declaration.
+ * \param SizeInBits     Set size.
+ * \param AlignInBits    Set alignment.
+ * @param BaseTy         The base type of the set.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateSetType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, LLVMMetadataRef File, unsigned LineNumber,
+    uint64_t SizeInBits, uint32_t AlignInBits, LLVMMetadataRef BaseTy);
+
+/**
+ * Create a descriptor for a subrange with dynamic bounds.
+ * \param Builder    The DIBuilder.
+ * \param Scope      The scope this module is imported into.
+ * \param Name       A name that uniquely identifies this set.
+ * \param NameLen    The length of the C string passed to \c Name.
+ * \param LineNo     Line number.
+ * \param File       File where the subrange is located.
+ * \param SizeInBits Member size.
+ * \param AlignInBits Member alignment.
+ * \param Flags      Flags.
+ * \param BaseTy     The base type of the subrange. eg integer or enumeration
+ * \param LowerBound Lower bound of the subrange.
+ * \param UpperBound Upper bound of the subrange.
+ * \param Stride     Stride of the subrange.
+ * \param Bias       Bias of the subrange.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateSubrangeType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
+    uint64_t SizeInBits, uint32_t AlignInBits,
+    LLVMDIFlags Flags, LLVMMetadataRef BaseTy,
+    LLVMMetadataRef LowerBound, LLVMMetadataRef UpperBound,
+    LLVMMetadataRef Stride, LLVMMetadataRef Bias);
+
+/**
+ * Create debugging information entry for a dynamic array.
+ * \param Builder      The DIBuilder.
+ * \param Size         Array size.
+ * \param AlignInBits  Alignment.
+ * \param Ty           Element type.
+ * \param Subscripts   Subscripts.
+ * \param NumSubscripts Number of subscripts.
+ * \param DataLocation DataLocation.
+ * \param Associated   Associated.
+ * \param Allocated    Allocated.
+ * \param Rank         Rank.
+ * \param BitStride    BitStride.
+ */
+LLVMMetadataRef LLVMDIBuilderCreateDynamicArrayType(
+    LLVMDIBuilderRef Builder, LLVMMetadataRef Scope, const char *Name,
+    size_t NameLen, unsigned LineNo, LLVMMetadataRef File,
+    uint64_t Size, uint32_t AlignInBits,
+    LLVMMetadataRef Ty, LLVMMetadataRef *Subscripts, unsigned NumSubscripts,
+    LLVMMetadataRef DataLocation, LLVMMetadataRef Associated,
+    LLVMMetadataRef Allocated, LLVMMetadataRef Rank, LLVMMetadataRef BitStride);
+
+/**
+ * Replace arrays.
+ *
+ * @see DIBuilder::replaceArrays()
+ */
+void LLVMReplaceArrays(LLVMDIBuilderRef Builder, LLVMMetadataRef *T,
+                       LLVMMetadataRef *Elements, unsigned NumElements);
 
 /**
  * Create debugging information entry for a vector type.
