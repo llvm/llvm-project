@@ -160,6 +160,15 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
+  // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
+  // operations.
+  mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
+    assert(!cir::MissingFeatures::fpConstraints());
+
+    return create<cir::CastOp>(v.getLoc(), destType, cir::CastKind::floating,
+                               v);
+  }
+
   mlir::Value createFSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs) {
     assert(!cir::MissingFeatures::metaDataNode());
     assert(!cir::MissingFeatures::fpConstraints());
@@ -189,6 +198,19 @@ public:
 
     return create<cir::BinOp>(loc, cir::BinOpKind::Div, lhs, rhs);
   }
+
+  /// Create a cir.ptr_stride operation to get access to an array element.
+  /// \p idx is the index of the element to access, \p shouldDecay is true if
+  /// the result should decay to a pointer to the element type.
+  mlir::Value getArrayElement(mlir::Location arrayLocBegin,
+                              mlir::Location arrayLocEnd, mlir::Value arrayPtr,
+                              mlir::Type eltTy, mlir::Value idx,
+                              bool shouldDecay);
+
+  /// Returns a decayed pointer to the first element of the array
+  /// pointed to by \p arrayPtr.
+  mlir::Value maybeBuildArrayDecay(mlir::Location loc, mlir::Value arrayPtr,
+                                   mlir::Type eltTy);
 };
 
 } // namespace clang::CIRGen

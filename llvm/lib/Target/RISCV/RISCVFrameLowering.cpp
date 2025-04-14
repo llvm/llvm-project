@@ -962,10 +962,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // stack space. Align the stack size down to a multiple of 16. This is
     // needed for RVE.
     // FIXME: Can we increase the stack size to a multiple of 16 instead?
-    uint64_t Spimm =
+    uint64_t StackAdj =
         std::min(alignDown(StackSize, 16), static_cast<uint64_t>(48));
-    FirstFrameSetup->getOperand(1).setImm(Spimm);
-    StackSize -= Spimm;
+    FirstFrameSetup->getOperand(1).setImm(StackAdj);
+    StackSize -= StackAdj;
 
     unsigned CFIIndex = MF.addFrameInst(
         MCCFIInstruction::cfiDefCfaOffset(nullptr, RealStackSize - StackSize));
@@ -1278,10 +1278,10 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     // space. Align the stack size down to a multiple of 16. This is needed for
     // RVE.
     // FIXME: Can we increase the stack size to a multiple of 16 instead?
-    uint64_t Spimm =
+    uint64_t StackAdj =
         std::min(alignDown(StackSize, 16), static_cast<uint64_t>(48));
-    MBBI->getOperand(1).setImm(Spimm);
-    StackSize -= Spimm;
+    MBBI->getOperand(1).setImm(StackAdj);
+    StackSize -= StackAdj;
 
     if (StackSize != 0)
       deallocateStack(MF, MBB, MBBI, DL, StackSize,
@@ -1984,12 +1984,12 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       MBB.addLiveIn(Reg);
     // TODO: Handle QCI Interrupt + Push/Pop
   } else if (RVFI->isPushable(*MF)) {
-    // Emit CM.PUSH with base SPimm & evaluate Push stack
+    // Emit CM.PUSH with base StackAdj & evaluate Push stack
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       // Use encoded number to represent registers to spill.
       unsigned Opcode = getPushOpcode(RVFI->getPushPopKind(*MF), hasFP(*MF));
-      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
+      unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PushBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameSetup);
@@ -2151,7 +2151,7 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     unsigned PushedRegNum = RVFI->getRVPushRegs();
     if (PushedRegNum > 0) {
       unsigned Opcode = getPopOpcode(RVFI->getPushPopKind(*MF));
-      unsigned RegEnc = RISCVZC::encodeRlistNumRegs(PushedRegNum);
+      unsigned RegEnc = RISCVZC::encodeRegListNumRegs(PushedRegNum);
       MachineInstrBuilder PopBuilder =
           BuildMI(MBB, MI, DL, TII.get(Opcode))
               .setMIFlag(MachineInstr::FrameDestroy);

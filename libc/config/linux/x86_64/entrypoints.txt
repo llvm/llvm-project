@@ -288,6 +288,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
 
+    # sys/utimes.h entrypoints
+    libc.src.sys.time.utimes
+
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
@@ -706,6 +709,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
     libc.src.math.getpayloadf16
+    libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
     libc.src.math.issignalingf16
@@ -775,6 +779,7 @@ endif()
 if(LIBC_TYPES_HAS_FLOAT128)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # math.h C23 _Float128 entrypoints
+    libc.src.math.atan2f128
     libc.src.math.canonicalizef128
     libc.src.math.ceilf128
     libc.src.math.copysignf128

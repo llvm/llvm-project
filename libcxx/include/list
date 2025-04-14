@@ -339,14 +339,14 @@ public:
 };
 
 template <class _Tp, class _Alloc = allocator<_Tp> >
-class _LIBCPP_TEMPLATE_VIS list;
+class list;
 template <class _Tp, class _Alloc>
 class __list_imp;
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_const_iterator;
+class __list_const_iterator;
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_iterator {
+class __list_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -404,7 +404,7 @@ public:
 };
 
 template <class _Tp, class _VoidPtr>
-class _LIBCPP_TEMPLATE_VIS __list_const_iterator {
+class __list_const_iterator {
   typedef __list_node_pointer_traits<_Tp, _VoidPtr> _NodeTraits;
   typedef typename _NodeTraits::__base_pointer __base_pointer;
 
@@ -654,7 +654,7 @@ void __list_imp<_Tp, _Alloc>::swap(__list_imp& __c)
 }
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
-class _LIBCPP_TEMPLATE_VIS list : private __list_imp<_Tp, _Alloc> {
+class list : private __list_imp<_Tp, _Alloc> {
   typedef __list_imp<_Tp, _Alloc> __base;
   typedef typename __base::__node_type __node_type;
   typedef typename __base::__node_allocator __node_allocator;
