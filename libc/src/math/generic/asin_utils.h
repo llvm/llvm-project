@@ -16,6 +16,7 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -27,135 +28,169 @@ using Float128 = fputil::DyadicFloat<128>;
 constexpr DoubleDouble PI_OVER_TWO = {0x1.1a62633145c07p-54,
                                       0x1.921fb54442d18p0};
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+// When correct rounding is not needed, we use a degree-22 minimax polynomial to
+// approximate asin(x)/x on [0, 0.5] using Sollya with:
+// > P = fpminimax(asin(x)/x, [|0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22|],
+//                 [|1, D...|], [0, 0.5]);
+// > dirtyinfnorm(asin(x)/x - P, [0, 0.5]);
+// 0x1.1a71ef0a0f26a9fb7ed7e41dee788b13d1770db3dp-52
+
+constexpr double ASIN_COEFFS[12] = {
+    0x1.0000000000000p0,  0x1.5555555556dcfp-3,  0x1.3333333082e11p-4,
+    0x1.6db6dd14099edp-5, 0x1.f1c69b35bf81fp-6,  0x1.6e97194225a67p-6,
+    0x1.1babddb82ce12p-6, 0x1.d55bd078600d6p-7,  0x1.33328959e63d6p-7,
+    0x1.2b5993bda1d9bp-6, -0x1.806aff270bf25p-7, 0x1.02614e5ed3936p-5,
+};
+
+LIBC_INLINE double asin_eval(double u) {
+  double u2 = u * u;
+  double c0 = fputil::multiply_add(u, ASIN_COEFFS[1], ASIN_COEFFS[0]);
+  double c1 = fputil::multiply_add(u, ASIN_COEFFS[3], ASIN_COEFFS[2]);
+  double c2 = fputil::multiply_add(u, ASIN_COEFFS[5], ASIN_COEFFS[4]);
+  double c3 = fputil::multiply_add(u, ASIN_COEFFS[7], ASIN_COEFFS[6]);
+  double c4 = fputil::multiply_add(u, ASIN_COEFFS[9], ASIN_COEFFS[8]);
+  double c5 = fputil::multiply_add(u, ASIN_COEFFS[11], ASIN_COEFFS[10]);
+
+  double u4 = u2 * u2;
+  double d0 = fputil::multiply_add(u2, c1, c0);
+  double d1 = fputil::multiply_add(u2, c3, c2);
+  double d2 = fputil::multiply_add(u2, c5, c4);
+
+  return fputil::polyeval(u4, d0, d1, d2);
+}
+
+#else
+
 // The Taylor expansion of asin(x) around 0 is:
 //   asin(x) = x + x^3/6 + 3x^5/40 + ...
 //           ~ x * P(x^2).
 // Let u = x^2, then P(x^2) = P(u), and |x| = sqrt(u).  Note that when
 // |x| <= 0.5, we have |u| <= 0.25.
 // We approximate P(u) by breaking it down by performing range reduction mod
-//   2^-6 = 1/64.
+//   2^-5 = 1/32.
 // So for:
-//   k = round(u * 64),
-//   y = u - k/64,
+//   k = round(u * 32),
+//   y = u - k/32,
 // we have that:
-//   x = sqrt(u) = sqrt(k/64 + y),
-//   |y| <= 2^-6 = 1/64,
+//   x = sqrt(u) = sqrt(k/32 + y),
+//   |y| <= 2^-5 = 1/32,
 // and:
-//   P(u) = P(k/64 + y) = Q_k(y).
+//   P(u) = P(k/32 + y) = Q_k(y).
 // Hence :
-//   asin(x) = sqrt(k/64 + y) * Q_k(y),
+//   asin(x) = sqrt(k/32 + y) * Q_k(y),
 // Or equivalently:
-//   Q_k(y) = asin(sqrt(k/64 + y)) / sqrt(k/64 + y).
+//   Q_k(y) = asin(sqrt(k/32 + y)) / sqrt(k/32 + y).
 // We generate the coefficients of Q_k by Sollya as following:
 // > procedure ASIN_APPROX(N, Deg) {
 //     abs_error = 0;
 //     rel_error = 0;
+//     deg = [||];
+//     for i from 2 to Deg do deg = deg :. i;
 //     for i from 1 to N/4 do {
-//       Q = fpminimax(asin(sqrt(i/N + x))/sqrt(i/N + x), Deg, [|DD, D...|],
-//                     [-1/(2*N), 1/(2*N)]);
-//       abs_err = dirtyinfnorm(asin(sqrt(i/N + x)) - sqrt(i/N + x) * Q,
-//                              [-1/(2*N), 1/(2*N)]);
-//       rel_err = dirtyinfnorm(asin(sqrt(i/N + x))/sqrt(i/N + x) - Q,
-//                              [-1/(2*N), 1/(2*N)]);
+//       F = asin(sqrt(i/N + x))/sqrt(i/N + x);
+//       T = taylor(F, 1, 0);
+//       T_DD = roundcoefficients(T, [|DD...|]);
+//       I = [-1/(2*N), 1/(2*N)];
+//       Q = fpminimax(F, deg, [|D...|], I, T_DD);
+//       abs_err = dirtyinfnorm(F - Q, I);
+//       rel_err = dirtyinfnorm((F - Q)/x^2, I);
 //       if (abs_err > abs_error) then abs_error = abs_err;
 //       if (rel_err > rel_error) then rel_error = rel_err;
 //       d0 = D(coeff(Q, 0));
 //       d1 = coeff(Q, 0) - d0;
 //       write("{", d0, ", ", d1);
-//       for j from 1 to Deg do {
+//       d0 = D(coeff(Q, 1)); d1 = coeff(Q, 1) - d0;  write(", ", d0, ", ", d1);
+//       for j from 2 to Deg do {
 //         write(", ", coeff(Q, j));
 //       };
 //       print("},");
 //     };
-//     print("Absolute Errors:", abs_error);
-//     print("Relative Errors:", rel_error);
+//     print("Absolute Errors:", D(abs_error));
+//     print("Relative Errors:", D(rel_error));
 //  };
-// > ASIN_APPROX(64, 7);
-// ...
-// Absolute Errors: 0x1.dc9...p-67
-// Relative Errors: 0x1.da2...p-66
+// > ASIN_APPROX(32, 9);
+// Absolute Errors: 0x1.69837b5183654p-72
+// Relative Errors: 0x1.4d7f82835bf64p-55
+
+// For k = 0, we use the degree-18 Taylor polynomial of asin(x)/x:
 //
-// For k = 0, we use the degree-14 Taylor polynomial of asin(x)/x:
-//
-// > P = 1 + x^2 * D(1/6) + x^4 * D(3/40) + x^6 * D(5/112) + x^8 * D(35/1152) +
-//       x^10 * D(63/2816) + x^12 * D(231/13312) + x^14 * D(143/10240);
-// > dirtyinfnorm(asin(x)/x - P, [-1/128, 1/128]);
-// 0x1.555...p-71
-constexpr double ASIN_COEFFS[17][9] = {
-    {1.0, 0.0, 0x1.5555555555555p-3, 0x1.3333333333333p-4, 0x1.6db6db6db6db7p-5,
-     0x1.f1c71c71c71c7p-6, 0x1.6e8ba2e8ba2e9p-6, 0x1.1c4ec4ec4ec4fp-6,
-     0x1.c99999999999ap-7},
-    {0x1.00abe0c129e1ep0, 0x1.7cdde330a0e08p-57, 0x1.5a3385d5c7ba5p-3,
-     0x1.3bf51056f666bp-4, 0x1.7dba76b165c55p-5, 0x1.07be4afb45142p-5,
-     0x1.8a6a242c27adbp-6, 0x1.36b49e664eb74p-6, 0x1.f1ac022c7a725p-7},
-    {0x1.015a397cf0f1cp0, -0x1.eec12f4a0e23ap-55, 0x1.5f3581be7b08bp-3,
-     0x1.4519ddf1ae56cp-4, 0x1.8eb4b6ee90a1cp-5, 0x1.17bc8538a6a91p-5,
-     0x1.a8e3b76a81de9p-6, 0x1.540067751f362p-6, 0x1.16aa1460b24d5p-6},
-    {0x1.020b1c7df0575p0, -0x1.dd58bfb09878p-55, 0x1.645ce0ab901bap-3,
-     0x1.4ea79c34fc7e8p-4, 0x1.a0b8ac0945946p-5, 0x1.28f9bab33ecacp-5,
-     0x1.ca42e489eb27ep-6, 0x1.7498cf62245cep-6, 0x1.3ecec5d85730ap-6},
-    {0x1.02be9ce0b87cdp0, 0x1.e5c6ec8c73cdcp-56, 0x1.69ab5325bc359p-3,
-     0x1.58a4c3097aaffp-4, 0x1.b3db3606681b5p-5, 0x1.3b94820c270b7p-5,
-     0x1.eedca27fefeebp-6, 0x1.98ed0a672ba3dp-6, 0x1.5a7ba92d7c7c1p-6},
-    {0x1.0374cea0c0c9fp0, -0x1.917ebfad78ac3p-54, 0x1.6f22a497b2ecp-3,
-     0x1.63184d8a79e0bp-4, 0x1.c83339cb8a93bp-5, 0x1.4faef324635b9p-5,
-     0x1.0b87cb9dda2aap-5, 0x1.c17d18cbaf4dcp-6, 0x1.84fd3f338eb99p-6},
-    {0x1.042dc6a65ffbfp0, -0x1.c7f0715ac0a44p-55, 0x1.74c4bd7412f9dp-3,
-     0x1.6e09c6d2b731ep-4, 0x1.ddd9dcdaf4745p-5, 0x1.656f1f5455d0cp-5,
-     0x1.21a427af0979bp-5, 0x1.eedcba062ae41p-6, 0x1.b87984ee94704p-6},
-    {0x1.04e99ad5e4bcdp0, -0x1.e97e02ea4515ep-54, 0x1.7a93a5917200bp-3,
-     0x1.7981584731c74p-4, 0x1.f4eac9278d167p-5, 0x1.7cff9c2ab9587p-5,
-     0x1.3a011aba1743dp-5, 0x1.10db6a3cd6ec6p-5, 0x1.f07578c65197dp-6},
-    {0x1.05a8621feb16bp0, -0x1.e5c3a30dcee94p-56, 0x1.809186c2e57ddp-3,
-     0x1.8587d99442e48p-4, 0x1.06c23d1e73eacp-4, 0x1.969023f0a9dc4p-5,
-     0x1.54e4fab6ced65p-5, 0x1.2d68d296bb8fap-5, 0x1.147275ba8ee51p-5},
-    {0x1.066a34930ec8dp0, -0x1.4813f47576a3bp-54, 0x1.86c0afb447a74p-3,
-     0x1.9226e29948e2ep-4, 0x1.13e44a9bcb9b2p-4, 0x1.b2564fd50970ep-5,
-     0x1.729ff48cf2af5p-5, 0x1.4d89ce192c05p-5, 0x1.3512c77598459p-5},
-    {0x1.072f2b6f1e601p0, -0x1.2dd11b9b8ff5bp-54, 0x1.8d2397127aebap-3,
-     0x1.9f68df88da5c5p-4, 0x1.21ee26a5a71bfp-4, 0x1.d08e7066bd173p-5,
-     0x1.938dc28a4aaa6p-5, 0x1.71c4b7dd0209cp-5, 0x1.62565f1f2e3e9p-5},
-    {0x1.07f76139f761dp0, 0x1.fa0a0b812d6adp-54, 0x1.93bcdf091cca5p-3,
-     0x1.ad59278edc4f1p-4, 0x1.30f46b7321d27p-4, 0x1.f17c89fb484fep-5,
-     0x1.b8185de2f76c3p-5, 0x1.9ab69d8468c1ap-5, 0x1.90072886ff827p-5},
-    {0x1.08c2f1d638e4cp0, 0x1.b45f99af9abb8p-56, 0x1.9a8f592078624p-3,
-     0x1.bc04165b57b91p-4, 0x1.410df5f56d58ep-4, 0x1.0ab6bde40a1bcp-4,
-     0x1.e0b94271c704ep-5, 0x1.c917a3f7796e8p-5, 0x1.c0c88c2ae7f62p-5},
-    {0x1.0991fa9bffbf4p0, -0x1.ca962039f63ap-58, 0x1.a19e0a8823b7fp-3,
-     0x1.cb772900f9d27p-4, 0x1.525431f1adda6p-4, 0x1.1e5c2cf36f96bp-4,
-     0x1.06fe2dfb9c312p-4, 0x1.fdc05eafaa6c3p-5, 0x1.009ef0addbafap-4},
-    {0x1.0a649a73e61f2p0, 0x1.7498b90632cfcp-55, 0x1.a8ec30dc9389p-3,
-     0x1.dbc11ea950752p-4, 0x1.64e371d65cab1p-4, 0x1.33e002230bf5bp-4,
-     0x1.20422879d0f0cp-4, 0x1.1cd81d6b87e76p-4, 0x1.2416928bb770bp-4},
-    {0x1.0b3af1f4880bbp0, 0x1.f42413a8c7254p-56, 0x1.b07d4778263adp-3,
-     0x1.ecf21db7be24ep-4, 0x1.78db54663b978p-4, 0x1.4b7a835d20ad7p-4,
-     0x1.3c86a7e7faf1ap-4, 0x1.3f0ac1d925984p-4, 0x1.4f40eba1e0f8ep-4},
-    {0x1.0c152382d7366p0, -0x1.ee76320a17f23p-54, 0x1.b8550d62bfb6dp-3,
-     0x1.ff1bde0fa3e47p-4, 0x1.8e5f3ab689c0cp-4, 0x1.656be8955f3cap-4,
-     0x1.5c397e8b1cd8fp-4, 0x1.662b982bccd86p-4, 0x1.7d7d96387ebb3p-4},
+// > P = 1 + x^2 * DD(1/6) + x^4 * D(3/40) + x^6 * D(5/112) + x^8 * D(35/1152) +
+//       x^10 * D(63/2816) + x^12 * D(231/13312) + x^14 * D(143/10240) +
+//       x^16 * D(6435/557056) + x^18 * D(12155/1245184);
+// > dirtyinfnorm(asin(x)/x - P, [-1/64, 1/64]);
+// 0x1.999075402cafp-83
+
+constexpr double ASIN_COEFFS[9][12] = {
+    {1.0, 0.0, 0x1.5555555555555p-3, 0x1.5555555555555p-57,
+     0x1.3333333333333p-4, 0x1.6db6db6db6db7p-5, 0x1.f1c71c71c71c7p-6,
+     0x1.6e8ba2e8ba2e9p-6, 0x1.1c4ec4ec4ec4fp-6, 0x1.c99999999999ap-7,
+     0x1.7a87878787878p-7, 0x1.3fde50d79435ep-7},
+    {0x1.015a397cf0f1cp0, -0x1.eebd6ccfe3ee3p-55, 0x1.5f3581be7b08bp-3,
+     -0x1.5df80d0e7237dp-57, 0x1.4519ddf1ae53p-4, 0x1.8eb4b6eeb1696p-5,
+     0x1.17bc85420fec8p-5, 0x1.a8e39b5dcad81p-6, 0x1.53f8df127539bp-6,
+     0x1.1a485a0b0130ap-6, 0x1.e20e6e493002p-7, 0x1.a466a7030f4c9p-7},
+    {0x1.02be9ce0b87cdp0, 0x1.e5d09da2e0f04p-56, 0x1.69ab5325bc359p-3,
+     -0x1.92f480cfede2dp-57, 0x1.58a4c3097aab1p-4, 0x1.b3db36068dd8p-5,
+     0x1.3b9482184625p-5, 0x1.eedc823765d21p-6, 0x1.98e35d756be6bp-6,
+     0x1.5ea4f1b32731ap-6, 0x1.355115764148ep-6, 0x1.16a5853847c91p-6},
+    {0x1.042dc6a65ffbfp0, -0x1.c7ea28dce95d1p-55, 0x1.74c4bd7412f9dp-3,
+     0x1.447024c0a3c87p-58, 0x1.6e09c6d2b72b9p-4, 0x1.ddd9dcdae5315p-5,
+     0x1.656f1f64058b8p-5, 0x1.21a42e4437101p-5, 0x1.eed0350b7edb2p-6,
+     0x1.b6bc877e58c52p-6, 0x1.903a0872eb2a4p-6, 0x1.74da839ddd6d8p-6},
+    {0x1.05a8621feb16bp0, -0x1.e5b33b1407c5fp-56, 0x1.809186c2e57ddp-3,
+     -0x1.3dcb4d6069407p-60, 0x1.8587d99442dc5p-4, 0x1.06c23d1e75be3p-4,
+     0x1.969024051c67dp-5, 0x1.54e4f934aacfdp-5, 0x1.2d60a732dbc9cp-5,
+     0x1.149f0c046eac7p-5, 0x1.053a56dba1fbap-5, 0x1.f7face3343992p-6},
+    {0x1.072f2b6f1e601p0, -0x1.2dcbb0541997p-54, 0x1.8d2397127aebap-3,
+     0x1.ead0c497955fbp-57, 0x1.9f68df88da518p-4, 0x1.21ee26a5900d7p-4,
+     0x1.d08e7081b53a9p-5, 0x1.938dd661713f7p-5, 0x1.71b9f299b72e6p-5,
+     0x1.5fbc7d2450527p-5, 0x1.58573247ec325p-5, 0x1.585a174a6a4cep-5},
+    {0x1.08c2f1d638e4cp0, 0x1.b47c159534a3dp-56, 0x1.9a8f592078624p-3,
+     -0x1.ea339145b65cdp-57, 0x1.bc04165b57aabp-4, 0x1.410df5f58441dp-4,
+     0x1.0ab6bdf5f8f7p-4, 0x1.e0b92eea1fce1p-5, 0x1.c9094e443a971p-5,
+     0x1.c34651d64bc74p-5, 0x1.caa008d1af08p-5, 0x1.dc165bc0c4fc5p-5},
+    {0x1.0a649a73e61f2p0, 0x1.74ac0d817e9c7p-55, 0x1.a8ec30dc9389p-3,
+     -0x1.8ab1c0eef300cp-59, 0x1.dbc11ea95061bp-4, 0x1.64e371d661328p-4,
+     0x1.33e0023b3d895p-4, 0x1.2042269c243cep-4, 0x1.1cce74bda223p-4,
+     0x1.244d425572ce9p-4, 0x1.34d475c7f1e3ep-4, 0x1.4d4e653082ad3p-4},
+    {0x1.0c152382d7366p0, -0x1.ee6913347c2a6p-54, 0x1.b8550d62bfb6dp-3,
+     -0x1.d10aec3f116d5p-57, 0x1.ff1bde0fa3cap-4, 0x1.8e5f3ab69f6a4p-4,
+     0x1.656be8b6527cep-4, 0x1.5c39755dc041ap-4, 0x1.661e6ebd40599p-4,
+     0x1.7ea3dddee2a4fp-4, 0x1.a4f439abb4869p-4, 0x1.d9181c0fda658p-4},
 };
 
 // We calculate the lower part of the approximation P(u).
-LIBC_INLINE double asin_eval(const DoubleDouble &u, unsigned &idx,
-                             double &err) {
+LIBC_INLINE DoubleDouble asin_eval(const DoubleDouble &u, unsigned &idx,
+                                   double &err) {
+  using fputil::multiply_add;
   // k = round(u * 64).
-  double k = fputil::nearest_integer(u.hi * 0x1.0p6);
+  double k = fputil::nearest_integer(u.hi * 0x1.0p5);
   idx = static_cast<unsigned>(k);
   // y = u - k/64.
-  double y = fputil::multiply_add(k, -0x1.0p-6, u.hi); // Exact
-  y += u.lo;
-  err *= y;
-  double y2 = y * y;
-  double c0 = fputil::multiply_add(y, ASIN_COEFFS[idx][2], ASIN_COEFFS[idx][1]);
-  double c1 = fputil::multiply_add(y, ASIN_COEFFS[idx][4], ASIN_COEFFS[idx][3]);
-  double c2 = fputil::multiply_add(y, ASIN_COEFFS[idx][6], ASIN_COEFFS[idx][5]);
-  double c3 = fputil::multiply_add(y, ASIN_COEFFS[idx][8], ASIN_COEFFS[idx][7]);
+  double y_hi = multiply_add(k, -0x1.0p-5, u.hi); // Exact
+  DoubleDouble y = fputil::exact_add(y_hi, u.lo);
+  double y2 = y.hi * y.hi;
+  err *= y2 + 0x1.0p-30;
+  DoubleDouble c0 = fputil::quick_mult(
+      y, DoubleDouble{ASIN_COEFFS[idx][3], ASIN_COEFFS[idx][2]});
+  double c1 = multiply_add(y.hi, ASIN_COEFFS[idx][5], ASIN_COEFFS[idx][4]);
+  double c2 = multiply_add(y.hi, ASIN_COEFFS[idx][7], ASIN_COEFFS[idx][6]);
+  double c3 = multiply_add(y.hi, ASIN_COEFFS[idx][9], ASIN_COEFFS[idx][8]);
+  double c4 = multiply_add(y.hi, ASIN_COEFFS[idx][11], ASIN_COEFFS[idx][10]);
 
   double y4 = y2 * y2;
-  double d0 = fputil::multiply_add(y2, c1, c0);
-  double d1 = fputil::multiply_add(y2, c3, c2);
+  double d0 = multiply_add(y2, c2, c1);
+  double d1 = multiply_add(y2, c4, c3);
 
-  return fputil::multiply_add(y4, d1, d0);
+  DoubleDouble r = fputil::exact_add(ASIN_COEFFS[idx][0], c0.hi);
+
+  double e1 = multiply_add(y4, d1, d0);
+
+  r.lo = multiply_add(y2, e1, ASIN_COEFFS[idx][1] + c0.lo + r.lo);
+
+  return r;
 }
 
 // Follow the discussion above, we generate the coefficients of Q_k by Sollya as
@@ -527,6 +562,8 @@ LIBC_INLINE Float128 asin_eval(const Float128 &u, unsigned idx) {
                           ASIN_COEFFS_F128[idx][12], ASIN_COEFFS_F128[idx][13],
                           ASIN_COEFFS_F128[idx][14], ASIN_COEFFS_F128[idx][15]);
 }
+
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 } // anonymous namespace
 

@@ -69,19 +69,20 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
 
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+    return x * asin_eval(x * x);
+#else
     unsigned idx;
     DoubleDouble x_sq = fputil::exact_mult(x, x);
-    double err = x * 0x1.0p-52;
+    double err = x * 0x1.0p-51;
     // Polynomial approximation:
-    //   p ~ asin(x)/x - ASIN_COEFFS[idx][0]
-    double p = asin_eval(x_sq, idx, err);
-    // asin(x) ~ x * (ASIN_COEFFS[idx][0] + p)
-    DoubleDouble r0 = fputil::exact_mult(x, ASIN_COEFFS[idx][0]);
-    double r_lo = fputil::multiply_add(x, p, r0.lo);
+    //   p ~ asin(x)/x
 
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-    return r0.hi + r_lo;
-#else
+    DoubleDouble p = asin_eval(x_sq, idx, err);
+    // asin(x) ~ x * (ASIN_COEFFS[idx][0] + p)
+    DoubleDouble r0 = fputil::exact_mult(x, p.hi);
+    double r_lo = fputil::multiply_add(x, p.lo, r0.lo);
+
     // Ziv's accuracy test.
 
     double r_upper = r0.hi + (r_lo + err);
@@ -92,7 +93,10 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
     // Ziv's accuracy test failed, perform 128-bit calculation.
 
-    // Get x^2 - idx/64 exactly.  When FMA is available, double-double
+    // Recalculate mod 1/64.
+    idx = static_cast<unsigned>(fputil::nearest_integer(x_sq.hi * 0x1.0p6));
+
+    // Get x^2 - idx/21 exactly.  When FMA is available, double-double
     // multiplication will be correct for all rounding modes.  Otherwise we use
     // Float128 directly.
     Float128 x_f128(x);
@@ -118,11 +122,17 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
 
   double x_abs = xbits.abs().get_val();
 
+  // Maintaining the sign:
+  constexpr double SIGN[2] = {1.0, -1.0};
+  double x_sign = SIGN[xbits.is_neg()];
+
   // |x| >= 1
   if (LIBC_UNLIKELY(x_exp >= FPBits::EXP_BIAS)) {
     // x = +-1, asin(x) = +- pi/2
     if (x_abs == 1.0) {
       // return +- pi/2
+      return fputil::multiply_add(x_sign, PI_OVER_TWO.hi,
+                                  x_sign * PI_OVER_TWO.lo);
     }
     // |x| > 1, return NaN.
     if (xbits.is_finite()) {
@@ -168,6 +178,13 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   // Then,
   //   asin(x) ~ pi/2 - 2*(v_hi + v_lo) * P(u)
   double v_hi = fputil::sqrt<double>(u);
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+  double p = asin_eval(u);
+  double r = x_sign * fputil::multiply_add(-2.0 * v_hi, p, PI_OVER_TWO.hi);
+  return r;
+#else
+
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
   double h = fputil::multiply_add(v_hi, -v_hi, u);
 #else
@@ -182,28 +199,19 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
   double vl = h / v_hi;
 
   // Polynomial approximation:
-  //   p ~ asin(sqrt(u))/sqrt(u) - ASIN_COEFFS[idx][0]
+  //   p ~ asin(sqrt(u))/sqrt(u)
   unsigned idx;
-  [[maybe_unused]] double err = vh * 0x1.0p-52;
-  double p = asin_eval(DoubleDouble{0.0, u}, idx, err);
+  [[maybe_unused]] double err = vh * 0x1.0p-51;
+
+  DoubleDouble p = asin_eval(DoubleDouble{0.0, u}, idx, err);
 
   // Perform computations in double-double arithmetic:
   //   asin(x) = pi/2 - (v_hi + v_lo) * (ASIN_COEFFS[idx][0] + p)
-  DoubleDouble r0 = fputil::exact_mult(vh, ASIN_COEFFS[idx][0]);
+  DoubleDouble r0 = fputil::quick_mult(DoubleDouble{vl, vh}, p);
   DoubleDouble r = fputil::exact_add(PI_OVER_TWO.hi, -r0.hi);
 
-  // Combining all the lower terms.
-  double lo = r.lo - fputil::multiply_add(vl, ASIN_COEFFS[idx][0],
-                                          r0.lo - PI_OVER_TWO.lo);
-  double r_lo = fputil::multiply_add(vh, -p, lo);
+  double r_lo = PI_OVER_TWO.lo - r0.lo + r.lo;
 
-  // Maintaining the sign:
-  constexpr double SIGN[2] = {1.0, -1.0};
-  double x_sign = SIGN[xbits.is_neg()];
-
-#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-  return fputil::multiply_add(x_sign, r.hi, x_sign * r.lo);
-#else
   // Ziv's accuracy test.
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
@@ -222,6 +230,8 @@ LLVM_LIBC_FUNCTION(double, asin, (double x)) {
     return r_upper;
 
   // Ziv's accuracy test failed, we redo the computations in Float128.
+  // Recalculate mod 1/64.
+  idx = static_cast<unsigned>(fputil::nearest_integer(u * 0x1.0p6));
 
   // After the first step of Newton-Raphson approximating v = sqrt(u), we have
   // that:
