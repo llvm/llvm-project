@@ -493,3 +493,30 @@ void intervening_without_force() {
       for(;;);
 }
 
+template<unsigned N>
+void allow_multiple_collapse_templ() {
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(N) collapse(N+1)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(N+1) collapse(N)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+}
+void allow_multiple_collapse() {
+  allow_multiple_collapse_templ<2>(); // expected-note{{in instantiation}}
+
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(2) collapse(3)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+    // expected-error@+2{{'collapse' clause specifies a loop count greater than the number of available loops}}
+    // expected-note@+1{{active 'collapse' clause defined here}}
+#pragma acc loop collapse(3) collapse(2)
+  for(unsigned i = 0; i < 5; ++i)
+    for(unsigned j = 0; j < 5; ++j);
+}

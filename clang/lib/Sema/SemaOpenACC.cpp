@@ -221,6 +221,48 @@ SemaOpenACC::AssociatedStmtRAII::AssociatedStmtRAII(
   }
 }
 
+namespace {
+// Given two collapse clauses, and the uninstanted version of the new one,
+// return the 'best' one for the purposes of setting the collapse checking
+// values.
+const OpenACCCollapseClause *
+getBestCollapseCandidate(const OpenACCCollapseClause *Old,
+                         const OpenACCCollapseClause *New,
+                         const OpenACCCollapseClause *UnInstNew) {
+  // If the loop count is nullptr, it is because instantiation failed, so this
+  // can't be the best one.
+  if (!New->getLoopCount())
+    return Old;
+
+  // If the loop-count had an error, than 'new' isn't a candidate.
+  if (!New->getLoopCount())
+    return Old;
+
+  // Don't consider uninstantiated ones, since we can't really check these.
+  if (New->getLoopCount()->isInstantiationDependent())
+    return Old;
+
+  // If this is an instantiation, and the old version wasn't instantation
+  // dependent, than nothing has changed and we've already done a diagnostic
+  // based on this one, so don't consider it.
+  if (UnInstNew && !UnInstNew->getLoopCount()->isInstantiationDependent())
+    return Old;
+
+  // New is now a valid candidate, so if there isn't an old one at this point,
+  // New is the only valid one.
+  if (!Old)
+    return New;
+
+  // If the 'New' expression has a larger value than 'Old', then it is the new
+  // best candidate.
+  if (cast<ConstantExpr>(Old->getLoopCount())->getResultAsAPSInt() <
+      cast<ConstantExpr>(New->getLoopCount())->getResultAsAPSInt())
+    return New;
+
+  return Old;
+}
+} // namespace
+
 void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
     ArrayRef<const OpenACCClause *> UnInstClauses,
     ArrayRef<OpenACCClause *> Clauses) {
@@ -228,43 +270,57 @@ void SemaOpenACC::AssociatedStmtRAII::SetCollapseInfoBeforeAssociatedStmt(
   // Reset this checking for loops that aren't covered in a RAII object.
   SemaRef.LoopInfo.CurLevelHasLoopAlready = false;
   SemaRef.CollapseInfo.CollapseDepthSatisfied = true;
+  SemaRef.CollapseInfo.CurCollapseCount = 0;
   SemaRef.TileInfo.TileDepthSatisfied = true;
 
   // We make sure to take an optional list of uninstantiated clauses, so that
   // we can check to make sure we don't 'double diagnose' in the event that
-  // the value of 'N' was not dependent in a template. We also ensure during
-  // Sema that there is only 1 collapse on each construct, so we can count on
-  // the fact that if both find a 'collapse', that they are the same one.
-  auto *CollapseClauseItr =
-      llvm::find_if(Clauses, llvm::IsaPred<OpenACCCollapseClause>);
-  auto *UnInstCollapseClauseItr =
+  // the value of 'N' was not dependent in a template. Since we cannot count on
+  // there only being a single collapse clause, we count on the order to make
+  // sure get the matching ones, and we count on TreeTransform not removing
+  // these, even if loop-count instantiation failed. We can check the
+  // non-dependent ones right away, and realize that subsequent instantiation
+  // can only make it more specific.
+
+  auto *UnInstClauseItr =
       llvm::find_if(UnInstClauses, llvm::IsaPred<OpenACCCollapseClause>);
+  auto *ClauseItr =
+      llvm::find_if(Clauses, llvm::IsaPred<OpenACCCollapseClause>);
+  const OpenACCCollapseClause *FoundClause = nullptr;
 
-  if (Clauses.end() == CollapseClauseItr)
+  // Loop through the list of Collapse clauses and find the one that:
+  // 1- Has a non-dependent, non-null loop count (null means error, likely
+  // during instantiation).
+  // 2- If UnInstClauses isn't empty, its corresponding
+  // loop count was dependent.
+  // 3- Has the largest 'loop count' of all.
+  while (ClauseItr != Clauses.end()) {
+    const OpenACCCollapseClause *CurClause =
+        cast<OpenACCCollapseClause>(*ClauseItr);
+    const OpenACCCollapseClause *UnInstCurClause =
+        UnInstClauseItr == UnInstClauses.end()
+            ? nullptr
+            : cast<OpenACCCollapseClause>(*UnInstClauseItr);
+
+    FoundClause =
+        getBestCollapseCandidate(FoundClause, CurClause, UnInstCurClause);
+
+    UnInstClauseItr =
+        UnInstClauseItr == UnInstClauses.end()
+            ? UnInstClauseItr
+            : std::find_if(std::next(UnInstClauseItr), UnInstClauses.end(),
+                           llvm::IsaPred<OpenACCCollapseClause>);
+    ClauseItr = std::find_if(std::next(ClauseItr), Clauses.end(),
+                             llvm::IsaPred<OpenACCCollapseClause>);
+  }
+
+  if (!FoundClause)
     return;
 
-  OpenACCCollapseClause *CollapseClause =
-      cast<OpenACCCollapseClause>(*CollapseClauseItr);
-
-  SemaRef.CollapseInfo.ActiveCollapse = CollapseClause;
-  Expr *LoopCount = CollapseClause->getLoopCount();
-
-  // If the loop count is still instantiation dependent, setting the depth
-  // counter isn't necessary, so return here.
-  if (!LoopCount || LoopCount->isInstantiationDependent())
-    return;
-
-  // Suppress diagnostics if we've done a 'transform' where the previous version
-  // wasn't dependent, meaning we already diagnosed it.
-  if (UnInstCollapseClauseItr != UnInstClauses.end() &&
-      !cast<OpenACCCollapseClause>(*UnInstCollapseClauseItr)
-           ->getLoopCount()
-           ->isInstantiationDependent())
-    return;
-
+  SemaRef.CollapseInfo.ActiveCollapse = FoundClause;
   SemaRef.CollapseInfo.CollapseDepthSatisfied = false;
   SemaRef.CollapseInfo.CurCollapseCount =
-      cast<ConstantExpr>(LoopCount)->getResultAsAPSInt();
+      cast<ConstantExpr>(FoundClause->getLoopCount())->getResultAsAPSInt();
   SemaRef.CollapseInfo.DirectiveKind = DirKind;
 }
 
@@ -283,6 +339,17 @@ void SemaOpenACC::AssociatedStmtRAII::SetTileInfoBeforeAssociatedStmt(
     return;
 
   OpenACCTileClause *TileClause = cast<OpenACCTileClause>(*TileClauseItr);
+
+  // Multiple tile clauses are allowed, so ensure that we use the one with the
+  // largest 'tile count'.
+  while (Clauses.end() !=
+         (TileClauseItr = std::find_if(std::next(TileClauseItr), Clauses.end(),
+                                       llvm::IsaPred<OpenACCTileClause>))) {
+    OpenACCTileClause *NewClause = cast<OpenACCTileClause>(*TileClauseItr);
+    if (NewClause->getSizeExprs().size() > TileClause->getSizeExprs().size())
+      TileClause = NewClause;
+  }
+
   SemaRef.TileInfo.ActiveTile = TileClause;
   SemaRef.TileInfo.TileDepthSatisfied = false;
   SemaRef.TileInfo.CurTileCount =

@@ -12344,9 +12344,6 @@ void OpenACCClauseTransform<Derived>::VisitCollapseClause(
   NewLoopCount =
       Self.getSema().OpenACC().CheckCollapseLoopCount(NewLoopCount.get());
 
-  if (!NewLoopCount.isUsable())
-    return;
-
   ParsedClause.setCollapseDetails(C.hasForce(), NewLoopCount.get());
   NewClause = OpenACCCollapseClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),

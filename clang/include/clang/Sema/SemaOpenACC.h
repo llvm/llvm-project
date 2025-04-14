@@ -81,7 +81,7 @@ private:
   /// Collapse has an 'N' count that makes it apply to a number of loops 'below'
   /// it.
   struct CollapseCheckingInfo {
-    OpenACCCollapseClause *ActiveCollapse = nullptr;
+    const OpenACCCollapseClause *ActiveCollapse = nullptr;
 
     /// This is a value that maintains the current value of the 'N' on the
     /// current collapse, minus the depth that has already been traversed. When
@@ -110,7 +110,7 @@ private:
     /// own counting of elements.
     UnsignedOrNone CurTileCount = std::nullopt;
 
-    /// Records whether we've hit a 'CurTileCount' of '0' on the wya down,
+    /// Records whether we've hit a 'CurTileCount' of '0' on the way down,
     /// which allows us to diagnose if the number of arguments is too large for
     /// the current number of 'for' loops.
     bool TileDepthSatisfied = true;

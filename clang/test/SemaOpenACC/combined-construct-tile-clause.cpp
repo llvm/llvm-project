@@ -143,13 +143,6 @@ void only_for_loops() {
     do{}while(true);
 }
 
-void only_one_on_loop() {
-  // expected-error@+2{{OpenACC 'tile' clause cannot appear more than once on a 'serial loop' directive}}
-  // expected-note@+1{{previous clause is here}}
-#pragma acc serial loop tile(1) tile(1)
-  for(int i = 0; i < 5; ++i);
-}
-
 template<unsigned Val>
 void depth_too_high_templ() {
   // expected-error@+1{{'tile' clause specifies a loop count greater than the number of available loops}}
