@@ -6,4 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOATN fast_normalize(__CLC_FLOATN p);
+#include <clc/internal/clc.h>
+#include <clc/geometric/clc_fast_length.h>
+
+#define __FLOAT_ONLY
+#define __CLC_BODY <clc_fast_distance.inc>
+#include <clc/math/gentype.inc>

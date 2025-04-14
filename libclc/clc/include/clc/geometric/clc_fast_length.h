@@ -6,4 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_FLOAT length(__CLC_FLOATN p0);
+#ifndef __CLC_GEOMETRIC_CLC_FAST_LENGTH_H__
+#define __CLC_GEOMETRIC_CLC_FAST_LENGTH_H__
+
+#define __FLOAT_ONLY
+#define __CLC_FUNCTION __clc_fast_length
+#define __CLC_BODY <clc/geometric/unary_decl.inc>
+
+#include <clc/math/gentype.inc>
+
+#undef __FLOAT_ONLY
+#undef __CLC_FUNCTION
+
+#endif // __CLC_GEOMETRIC_CLC_FAST_LENGTH_H__
