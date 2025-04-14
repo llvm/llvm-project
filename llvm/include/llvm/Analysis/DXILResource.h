@@ -222,19 +222,11 @@ public:
 class ResourceTypeInfo {
 public:
   struct UAVInfo {
-    bool GloballyCoherent;
-    bool HasCounter;
     bool IsROV;
 
-    bool operator==(const UAVInfo &RHS) const {
-      return std::tie(GloballyCoherent, HasCounter, IsROV) ==
-             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
-    }
+    bool operator==(const UAVInfo &RHS) const { return IsROV == RHS.IsROV; }
     bool operator!=(const UAVInfo &RHS) const { return !(*this == RHS); }
-    bool operator<(const UAVInfo &RHS) const {
-      return std::tie(GloballyCoherent, HasCounter, IsROV) <
-             std::tie(RHS.GloballyCoherent, RHS.HasCounter, RHS.IsROV);
-    }
+    bool operator<(const UAVInfo &RHS) const { return IsROV < RHS.IsROV; }
   };
 
   struct StructInfo {
@@ -272,23 +264,14 @@ public:
 private:
   TargetExtType *HandleTy;
 
-  // GloballyCoherent and HasCounter aren't really part of the type and need to
-  // be determined by analysis, so they're just provided directly by the
-  // DXILResourceTypeMap when we construct these.
-  bool GloballyCoherent;
-  bool HasCounter;
-
   dxil::ResourceClass RC;
   dxil::ResourceKind Kind;
 
 public:
   ResourceTypeInfo(TargetExtType *HandleTy, const dxil::ResourceClass RC,
-                   const dxil::ResourceKind Kind, bool GloballyCoherent = false,
-                   bool HasCounter = false);
-  ResourceTypeInfo(TargetExtType *HandleTy, bool GloballyCoherent = false,
-                   bool HasCounter = false)
-      : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid,
-                         GloballyCoherent, HasCounter) {}
+                   const dxil::ResourceKind Kind);
+  ResourceTypeInfo(TargetExtType *HandleTy)
+      : ResourceTypeInfo(HandleTy, {}, dxil::ResourceKind::Invalid) {}
 
   TargetExtType *getHandleTy() const { return HandleTy; }
   StructType *createElementStruct();
@@ -314,9 +297,6 @@ public:
   dxil::ResourceClass getResourceClass() const { return RC; }
   dxil::ResourceKind getResourceKind() const { return Kind; }
 
-  void setGloballyCoherent(bool V) { GloballyCoherent = V; }
-  void setHasCounter(bool V) { HasCounter = V; }
-
   bool operator==(const ResourceTypeInfo &RHS) const;
   bool operator!=(const ResourceTypeInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceTypeInfo &RHS) const;
@@ -325,6 +305,13 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+
+enum class ResourceCounterDirection {
+  Increment,
+  Decrement,
+  Unknown,
+  Invalid,
+};
 
 class ResourceInfo {
 public:
@@ -353,6 +340,9 @@ private:
   GlobalVariable *Symbol = nullptr;
 
 public:
+  bool GloballyCoherent = false;
+  ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+
   ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
                uint32_t Size, TargetExtType *HandleTy,
                GlobalVariable *Symbol = nullptr)
@@ -360,6 +350,10 @@ public:
         Symbol(Symbol) {}
 
   void setBindingID(unsigned ID) { Binding.RecordID = ID; }
+
+  bool hasCounter() const {
+    return CounterDirection != ResourceCounterDirection::Unknown;
+  }
 
   const ResourceBinding &getBinding() const { return Binding; }
   TargetExtType *getHandleTy() const { return HandleTy; }
