@@ -64,8 +64,11 @@ def AlwaysInlineCoroutine :
   DiagGroup<"always-inline-coroutine">;
 def CoroNonAlignedAllocationFunction :
   DiagGroup<"coro-non-aligned-allocation-function">;
+def CoroTypeAwareAllocationFunction :
+  DiagGroup<"coro-type-aware-allocation-function">;
 def Coroutine : DiagGroup<"coroutine", [CoroutineMissingUnhandledException, DeprecatedCoroutine,
-                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction]>;
+                                        AlwaysInlineCoroutine, CoroNonAlignedAllocationFunction,
+                                        CoroTypeAwareAllocationFunction]>;
 def ObjCBoolConstantConversion : DiagGroup<"objc-bool-constant-conversion">;
 def ConstantConversion : DiagGroup<"constant-conversion",
                                    [BitFieldConstantConversion,
@@ -377,12 +380,13 @@ def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
   code Documentation = [{
 Warns when a ``final`` class contains a virtual method (including virtual
-destructors) that does not override anything. Since ``final`` classes cannot be
-subclassed, their methods cannot be overridden, so there is no point to
-introducing new ``virtual`` methods.
+destructors). Since ``final`` classes cannot be subclassed, their methods
+cannot be overridden, and hence the ``virtual`` specifier is useless.
 
 The warning also detects virtual methods in classes whose destructor is
 ``final``, for the same reason.
+
+The warning does not fire on virtual methods which are also marked ``override``.
   }];
 }
 
@@ -496,6 +500,7 @@ def GNUImaginaryConstant : DiagGroup<"gnu-imaginary-constant">;
 def IgnoredGCH : DiagGroup<"ignored-gch">;
 def IgnoredReferenceQualifiers : DiagGroup<"ignored-reference-qualifiers">;
 def IgnoredQualifiers : DiagGroup<"ignored-qualifiers", [IgnoredReferenceQualifiers]>;
+def IgnoredBaseClassQualifiers : DiagGroup<"ignored-base-class-qualifiers", [IgnoredQualifiers]>;
 def : DiagGroup<"import">;
 def GNUIncludeNext : DiagGroup<"gnu-include-next">;
 def IncompatibleMSStruct : DiagGroup<"incompatible-ms-struct">;

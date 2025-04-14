@@ -833,8 +833,7 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "hello(\n"
                "    myparamnameiswaytooloooong) {\n"
                "}",
-               "async function hello(myparamnameiswaytooloooong) {}",
-               Style);
+               "async function hello(myparamnameiswaytooloooong) {}", Style);
   verifyFormat("async function\n"
                "union(\n"
                "    myparamnameiswaytooloooong) {\n"
@@ -1344,7 +1343,7 @@ TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
   // The following statements must not wrap, as otherwise the program meaning
   // would change due to automatic semicolon insertion.
   // See http://www.ecma-international.org/ecma-262/5.1/#sec-7.9.1.
-  auto Style =getGoogleJSStyleWithColumns(10);
+  auto Style = getGoogleJSStyleWithColumns(10);
   verifyFormat("return aaaaa;", Style);
   verifyFormat("yield aaaaa;", Style);
   verifyFormat("return /* hello! */ aaaaa;", Style);

@@ -485,23 +485,27 @@ def DISubprogramFlags : I32BitEnumAttr<
 // IntegerOverflowFlags
 //===----------------------------------------------------------------------===//
 
-def IOFnone : I32BitEnumAttrCaseNone<"none">;
-def IOFnsw  : I32BitEnumAttrCaseBit<"nsw", 0>;
-def IOFnuw  : I32BitEnumAttrCaseBit<"nuw", 1>;
+def IOFnone : I32BitEnumCaseNone<"none">;
+def IOFnsw  : I32BitEnumCaseBit<"nsw", 0>;
+def IOFnuw  : I32BitEnumCaseBit<"nuw", 1>;
 
-def IntegerOverflowFlags : I32BitEnumAttr<
+def IntegerOverflowFlags : I32BitEnum<
     "IntegerOverflowFlags",
     "LLVM integer overflow flags",
     [IOFnone, IOFnsw, IOFnuw]> {
   let separator = ", ";
   let cppNamespace = "::mlir::LLVM";
-  let genSpecializedAttr = 0;
   let printBitEnumPrimaryGroups = 1;
 }
 
 def LLVM_IntegerOverflowFlagsAttr :
     EnumAttr<LLVM_Dialect, IntegerOverflowFlags, "overflow"> {
   let assemblyFormat = "`<` $value `>`";
+}
+
+def LLVM_IntegerOverflowFlagsProp :
+    NamedEnumPropWithAttrForm<IntegerOverflowFlags, "overflow", LLVM_IntegerOverflowFlagsAttr> {
+  let defaultValue = enum.cppType # "::" # "none";
 }
 
 //===----------------------------------------------------------------------===//

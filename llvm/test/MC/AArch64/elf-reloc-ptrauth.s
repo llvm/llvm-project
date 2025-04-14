@@ -1,9 +1,9 @@
-// RUN: llvm-mc -triple=aarch64 %s --defsym=ASMONLY=1 | FileCheck %s --check-prefix=ASM
+// RUN: llvm-mc -triple=aarch64 %s | FileCheck %s --check-prefix=ASM
 
 // RUN: llvm-mc -triple=aarch64 -filetype=obj %s | \
 // RUN:   llvm-readelf -S -r -x .test - | FileCheck %s --check-prefix=RELOC
 
-// RELOC: Relocation section '.rela.test' at offset {{.*}} contains 8 entries:
+// RELOC: Relocation section '.rela.test' at offset {{.*}} contains 9 entries:
 // RELOC-NEXT:  Offset Info Type Symbol's Value Symbol's Name + Addend
 // RELOC-NEXT: 0000000000000000 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 .helper + 0
 // RELOC-NEXT: 0000000000000010 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g1 + 0
@@ -13,6 +13,7 @@
 // RELOC-NEXT: 0000000000000050 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g5 - 3
 // RELOC-NEXT: 0000000000000060 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g 6 + 0
 // RELOC-NEXT: 0000000000000070 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g 7 + 7
+// RELOC-NEXT: 0000000000000080 {{.*}} R_AARCH64_AUTH_ABS64 0000000000000000 _g4 + 7
 
 // RELOC: Hex dump of section '.test':
 //                VVVVVVVV addend, not needed for rela
@@ -41,8 +42,9 @@
 // RELOC-NEXT: 70 00000000 10000000
 //                         ^^^^ discriminator
 //                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
-// RELOC-NEXT: 80 04000000 00000000
-// Folded to constant 4 bytes difference between _g9 and _g8
+// RELOC-NEXT: 80 00000000 00000000
+//                         ^^^^ discriminator
+//                               ^^ 0 no addr diversity 0 reserved 00 ia key 0000 reserved
 
 .section    .helper
 .local "_g 6"
@@ -63,12 +65,12 @@ _g9:
 .quad _g0@AUTH(ia,42)
 .quad 0
 
-// ASM:          .xword _g1@AUTH(ib,0)
-.quad _g1@AUTH(ib,0)
+// ASM:          .xword (+_g1)@AUTH(ib,0)
+.quad +_g1@AUTH(ib,0)
 .quad 0
 
 // ASM:          .xword _g2@AUTH(da,5,addr)
-.quad _g2@AUTH(da,5,addr)
+.quad _g2 @ AUTH(da,5,addr)
 .quad 0
 
 // ASM:          .xword _g3@AUTH(db,65535,addr)
@@ -91,33 +93,13 @@ _g9:
 .quad ("_g 7" + 7)@AUTH(ia,16)
 .quad 0
 
-// ASM:          .xword _g9@AUTH(ia,42)-_g8@AUTH(ia,42)
-.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
+.quad 7 + _g4@AUTH(ia,0)
 .quad 0
 
-.ifdef ASMONLY
-
-// ASM:          .xword _g10@AUTH(ia,42)+1
-.quad _g10@AUTH(ia,42) + 1
-
-// ASM:          .xword 1+_g11@AUTH(ia,42)
-.quad 1 + _g11@AUTH(ia,42)
-
-// ASM:          .xword 1+_g12@AUTH(ia,42)+1
-.quad 1 + _g12@AUTH(ia,42) + 1
-
-// ASM:          .xword _g13@AUTH(ia,42)+_g14@AUTH(ia,42)
-.quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
-
-// ASM:          .xword _g9@AUTH(ia,42)-_g8
-.quad _g9@AUTH(ia,42) - _g8
-.quad 0
-
-.endif // ASMONLY
+// RUN: not llvm-mc -triple=aarch64 --defsym=ERR=1 %s 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 .ifdef ERR
-// RUN: not llvm-mc -triple=aarch64 --defsym=ERR=1 %s 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERR
 
 // ERR: :[[#@LINE+1]]:15: error: expected '('
 .quad sym@AUTH)ia,42)
@@ -143,51 +125,34 @@ _g9:
 // ERR: :[[#@LINE+1]]:21: error: expected ')'
 .quad sym@AUTH(ia,42(
 
-// ERR: :[[#@LINE+1]]:7: error: combination of @AUTH with other modifiers not supported
+// ERR: :[[#@LINE+1]]:14: error: unexpected token
 .quad sym@PLT@AUTH(ia,42)
 
-// ERR: :[[#@LINE+1]]:11: error: invalid variant 'AUTH@GOT'
+// ERR: :[[#@LINE+1]]:15: error: expected '('
 .quad sym@AUTH@GOT(ia,42)
 
-// ERR: :[[#@LINE+1]]:18: error: invalid variant 'TLSDESC@AUTH'
-.quad "long sym"@TLSDESC@AUTH(ia,42)
-
-// ERR: :[[#@LINE+1]]:18: error: invalid variant 'AUTH@PLT'
+// ERR: :[[#@LINE+1]]:22: error: expected '('
 .quad "long sym"@AUTH@PLT(ia,42)
 
-// ERR: :[[#@LINE+1]]:17: error: invalid variant 'GOT@AUTH'
+// ERR: :[[#@LINE+1]]:17: error: invalid relocation specifier
 .quad (sym - 5)@GOT@AUTH(ia,42)
 
-// ERR: :[[#@LINE+1]]:17: error: invalid variant 'AUTH@TLSDESC'
-.quad (sym + 5)@AUTH@TLSDESC(ia,42)
-
-// ERR: :[[#@LINE+1]]:12: error: invalid variant 'AUTH'
-.quad +sym@AUTH(ia,42)
-
-.endif // ERR
-
-.ifdef ERROBJ
-// RUN: not llvm-mc -triple=aarch64 -filetype=obj --defsym=ERROBJ=1 %s -o /dev/null 2>&1 | \
-// RUN:   FileCheck %s --check-prefix=ERROBJ
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+// ERR: :[[#@LINE+1]]:23: error: unexpected token
 .quad sym@AUTH(ia,42) + 1
 
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad 1 + sym@AUTH(ia,42)
-
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+// ERR: :[[#@LINE+1]]:27: error: unexpected token
 .quad 1 + sym@AUTH(ia,42) + 1
 
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
-.quad sym@AUTH(ia,42) + sym@AUTH(ia,42)
-
-// TODO: do we really want to emit an error here? It might not be important
-// whether a symbol has an AUTH modifier or not since the compile-time computed
-// distance remains the same. Leave it in such state as for now since it
-// makes code simpler: subtraction of a non-AUTH symbol and of a constant
-// are handled identically.
-// ERROBJ: :[[#@LINE+1]]:7: error: expected relocatable expression
+/// @AUTH applies to the whole operand instead of an individual term.
+/// Trailing expression parts are not allowed even if the logical subtraction
+/// result might make sense.
+// ERR: :[[#@LINE+1]]:23: error: unexpected token
 .quad _g9@AUTH(ia,42) - _g8
 
-.endif // ERROBJ
+// ERR: :[[#@LINE+1]]:23: error: unexpected token
+.quad _g9@AUTH(ia,42) - _g8@AUTH(ia,42)
+
+// ERR: :[[#@LINE+1]]:24: error: unexpected token
+.quad _g13@AUTH(ia,42) + _g14@AUTH(ia,42)
+
+.endif // ERR

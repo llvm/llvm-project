@@ -117,6 +117,12 @@ unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::SPIR_KERNEL;
 }
 
+void TargetCodeGenInfo::setOCLKernelStubCallingConvention(
+    const FunctionType *&FT) const {
+  FT = getABIInfo().getContext().adjustFunctionType(
+      FT, FT->getExtInfo().withCallingConv(CC_C));
+}
+
 llvm::Constant *TargetCodeGenInfo::getNullPointer(const CodeGen::CodeGenModule &CGM,
     llvm::PointerType *T, QualType QT) const {
   return llvm::ConstantPointerNull::get(T);
