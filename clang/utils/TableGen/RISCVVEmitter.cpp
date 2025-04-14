@@ -45,7 +45,7 @@ struct SemaRecord {
   unsigned Log2LMULMask;
 
   // Required extensions for this intrinsic.
-  RequiredExtensions RequiredExtensions;
+  uint32_t RequiredExtensions[(RVV_REQ_NUM + 31) / 32];
 
   // Prototype for this intrinsic.
   SmallVector<PrototypeDescriptor> Prototype;
@@ -769,6 +769,7 @@ void RVVEmitter::createRVVIntrinsics(
 
     SR.Log2LMULMask = Log2LMULMask;
 
+    memset(SR.RequiredExtensions, 0, sizeof(SR.RequiredExtensions));
     for (auto RequiredFeature : RequiredFeatures) {
       unsigned RequireExt =
           StringSwitch<RVVRequire>(RequiredFeature)
@@ -792,7 +793,7 @@ void RVVEmitter::createRVVIntrinsics(
               .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
               .Case("Zvfh", RVV_REQ_Zvfh)
               .Case("Experimental", RVV_REQ_Experimental);
-      SR.RequiredExtensions.set(RequireExt);
+      SR.RequiredExtensions[RequireExt / 32] |= 1U << (RequireExt % 32);
     }
 
     SR.NF = NF;
@@ -836,7 +837,8 @@ void RVVEmitter::createRVVIntrinsicRecords(std::vector<RVVIntrinsicRecord> &Out,
     R.PrototypeLength = SR.Prototype.size();
     R.SuffixLength = SR.Suffix.size();
     R.OverloadedSuffixSize = SR.OverloadedSuffix.size();
-    R.RequiredExtensions = SR.RequiredExtensions;
+    memcpy(R.RequiredExtensions, SR.RequiredExtensions,
+           sizeof(R.RequiredExtensions));
     R.TypeRangeMask = SR.TypeRangeMask;
     R.Log2LMULMask = SR.Log2LMULMask;
     R.NF = SR.NF;
