@@ -45,9 +45,10 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
 
 TargetMachine::~TargetMachine() = default;
 
-virtual Expected<std::unique_ptr<MCStreamer>>
-createMCStreamer(raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-                 CodeGenFileType FileType, MCContext &Ctx) {
+Expected<std::unique_ptr<MCStreamer>>
+TargetMachine::createMCStreamer(raw_pwrite_stream &Out,
+                                raw_pwrite_stream *DwoOut,
+                                CodeGenFileType FileType, MCContext &Ctx) {
   return nullptr;
 }
 
