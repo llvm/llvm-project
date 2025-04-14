@@ -38,7 +38,7 @@ struct BuildAttributeItem {
 };
 
 struct BuildAttributeSubSection {
-  std::string Name;
+  StringRef Name;
   unsigned IsOptional;
   unsigned ParameterType;
   SmallVector<BuildAttributeItem, 64> Content;
