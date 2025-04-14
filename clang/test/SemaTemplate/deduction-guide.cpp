@@ -475,7 +475,7 @@ A a{.f1 = {1}};
 // CHECK-NEXT: `-RValueReferenceType {{.+}} 'int (&&)[N]' dependent
 // CHECK-NEXT:   `-DependentSizedArrayType {{.+}} 'int[N]' dependent
 // CHECK-NEXT:     |-BuiltinType {{.+}} 'int'
-// CHECK-NEXT:     `-DeclRefExpr {{.+}} <col:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
+// CHECK-NEXT:     `-DeclRefExpr {{.+}} <{{.+}}:10> 'int' NonTypeTemplateParm {{.+}} 'N' 'int'
 
 } // namespace GH83368
 

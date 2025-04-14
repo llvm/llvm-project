@@ -308,8 +308,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_objc_method = false;
           if (cu_language == eLanguageTypeObjC ||
               cu_language == eLanguageTypeObjC_plus_plus) {
-            std::optional<const ObjCLanguage::MethodName> objc_method =
-                ObjCLanguage::MethodName::Create(name, true);
+            std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+                ObjCLanguage::ObjCMethodName::Create(name, true);
             if (objc_method) {
               is_objc_method = true;
               ConstString class_name_with_category(
