@@ -40,8 +40,9 @@ TEST_F(HostTest, GetProcessInfo) {
        triple.getEnvironment() == llvm::Triple::EnvironmentType::Android));
 
   ProcessInstanceInfo Info;
+#ifndef _AIX
   ASSERT_FALSE(Host::GetProcessInfo(0, Info));
-
+#endif /* ifndef _AIX */
   ASSERT_TRUE(Host::GetProcessInfo(getpid(), Info));
 
   ASSERT_TRUE(Info.ProcessIDIsValid());
@@ -90,6 +91,7 @@ TEST_F(HostTest, GetProcessInfo) {
   ASSERT_TRUE(user_time.tv_sec <= next_user_time.tv_sec ||
               user_time.tv_usec <= next_user_time.tv_usec);
 
+#ifndef _AIX
   struct rlimit rlim;
   EXPECT_EQ(getrlimit(RLIMIT_NICE, &rlim), 0);
   // getpriority can return -1 so we zero errno first
@@ -108,4 +110,5 @@ TEST_F(HostTest, GetProcessInfo) {
   }
   ASSERT_TRUE(Info.IsZombie().has_value());
   ASSERT_FALSE(Info.IsZombie().value());
+#endif /* ifndef _AIX */
 }

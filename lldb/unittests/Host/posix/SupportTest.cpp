@@ -7,17 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "llvm/Support/Threading.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 
 TEST(Support, getProcFile_Pid) {
-  auto BufferOrError = getProcFile(getpid(), "maps");
+  auto BufferOrError = getProcFile(getpid(), "status");
   ASSERT_TRUE(BufferOrError);
   ASSERT_TRUE(*BufferOrError);
 }
 
+#ifndef _AIX
 #ifdef LLVM_ENABLE_THREADING
 TEST(Support, getProcFile_Tid) {
   auto BufferOrError = getProcFile(getpid(), llvm::get_threadid(), "comm");
@@ -25,3 +27,4 @@ TEST(Support, getProcFile_Tid) {
   ASSERT_TRUE(*BufferOrError);
 }
 #endif /*ifdef LLVM_ENABLE_THREADING */
+#endif /*ifndef _AIX */

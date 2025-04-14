@@ -87,6 +87,7 @@ else()
     posix/MainLoopPosix.cpp
     posix/PipePosix.cpp
     posix/ProcessLauncherPosixFork.cpp
+    posix/Support.cpp
     )
 
   if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
@@ -141,7 +142,6 @@ else()
     add_host_subdirectory(aix
       aix/Host.cpp
       aix/HostInfoAIX.cpp
-      linux/Support.cpp
       )
   endif()
 endif()

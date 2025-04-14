@@ -8,7 +8,7 @@
 
 #include "Procfs.h"
 
-#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

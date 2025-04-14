@@ -7,12 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Host.h"
-#include "lldb/Host/linux/Support.h"
+#include "lldb/Host/posix/Support.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
 #include "llvm/BinaryFormat/XCOFF.h"
+#include <sys/proc.h>
 #include <sys/procfs.h>
 
 using namespace llvm;
@@ -34,67 +35,53 @@ enum class ProcessState {
 };
 }
 
-static bool GetStatusInfo(::pid_t Pid, ProcessInstanceInfo &ProcessInfo,
-                          ProcessState &State, ::pid_t &TracerPid,
-                          ::pid_t &Tgid) {
-  Log *log = GetLog(LLDBLog::Host);
-  auto BufferOrError = getProcFile(Pid, "status");
+ProcessInstanceInfo::timespec convert(pr_timestruc64_t t) {
+  ProcessInstanceInfo::timespec ts;
+  ts.tv_sec = t.tv_sec;
+  ts.tv_usec = t.tv_nsec / 1000; // nanos to micros
+  return ts;
+}
+
+static bool GetStatusInfo(::pid_t pid, ProcessInstanceInfo &processInfo,
+                          ProcessState &State) {
+  struct pstatus pstatusData;
+  auto BufferOrError = getProcFile(pid, "status");
   if (!BufferOrError)
     return false;
 
-  llvm::StringRef Rest = BufferOrError.get()->getBuffer();
-  while (!Rest.empty()) {
-    llvm::StringRef Line;
-    std::tie(Line, Rest) = Rest.split('\n');
-    if (Line.consume_front("Gid:")) {
-      // Real, effective, saved set, and file system GIDs. Read the first two.
-      Line = Line.ltrim();
-      uint32_t RGid, EGid;
-      Line.consumeInteger(10, RGid);
-      Line = Line.ltrim();
-      Line.consumeInteger(10, EGid);
-      ProcessInfo.SetGroupID(RGid);
-      ProcessInfo.SetEffectiveGroupID(EGid);
-    } else if (Line.consume_front("Uid:")) {
-      // Real, effective, saved set, and file system UIDs. Read the first two.
-      Line = Line.ltrim();
-      uint32_t RUid, EUid;
-      Line.consumeInteger(10, RUid);
-      Line = Line.ltrim();
-      Line.consumeInteger(10, EUid);
-      ProcessInfo.SetUserID(RUid);
-      ProcessInfo.SetEffectiveUserID(EUid);
-    } else if (Line.consume_front("PPid:")) {
-      ::pid_t PPid;
-      Line.ltrim().consumeInteger(10, PPid);
-      ProcessInfo.SetParentProcessID(PPid);
-    } else if (Line.consume_front("State:")) {
-      State = llvm::StringSwitch<ProcessState>(Line.ltrim().take_front(1))
-                  .Case("D", ProcessState::DiskSleep)
-                  .Case("I", ProcessState::Idle)
-                  .Case("R", ProcessState::Running)
-                  .Case("S", ProcessState::Sleeping)
-                  .CaseLower("T", ProcessState::TracedOrStopped)
-                  .Case("W", ProcessState::Paging)
-                  .Case("P", ProcessState::Parked)
-                  .Case("X", ProcessState::Dead)
-                  .Case("Z", ProcessState::Zombie)
-                  .Default(ProcessState::Unknown);
-      if (State == ProcessState::Unknown) {
-        LLDB_LOG(log, "Unknown process state {0}", Line);
-      }
-    } else if (Line.consume_front("TracerPid:")) {
-      Line = Line.ltrim();
-      Line.consumeInteger(10, TracerPid);
-    } else if (Line.consume_front("Tgid:")) {
-      Line = Line.ltrim();
-      Line.consumeInteger(10, Tgid);
-    }
+  std::unique_ptr<llvm::MemoryBuffer> StatusBuffer = std::move(*BufferOrError);
+  // Ensure there's enough data for psinfoData
+  if (StatusBuffer->getBufferSize() < sizeof(pstatusData))
+    return false;
+
+  std::memcpy(&pstatusData, StatusBuffer->getBufferStart(),
+              sizeof(pstatusData));
+  switch (pstatusData.pr_stat) {
+  case SIDL:
+    State = ProcessState::Idle;
+    break;
+  case SACTIVE:
+    State = ProcessState::Running;
+    break;
+  case SSTOP:
+    State = ProcessState::TracedOrStopped;
+    break;
+  case SZOMB:
+    State = ProcessState::Zombie;
+    break;
+  default:
+    State = ProcessState::Unknown;
+    break;
   }
+  processInfo.SetIsZombie(State == ProcessState::Zombie);
+  processInfo.SetUserTime(convert(pstatusData.pr_utime));
+  processInfo.SetSystemTime(convert(pstatusData.pr_stime));
+  processInfo.SetCumulativeUserTime(convert(pstatusData.pr_cutime));
+  processInfo.SetCumulativeSystemTime(convert(pstatusData.pr_cstime));
   return true;
 }
 
-static bool GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
+static bool GetExePathAndIds(::pid_t pid, ProcessInstanceInfo &process_info) {
   struct psinfo psinfoData;
   auto BufferOrError = getProcFile(pid, "psinfo");
   if (!BufferOrError)
@@ -107,29 +94,35 @@ static bool GetExePathAndArch(::pid_t pid, ProcessInstanceInfo &process_info) {
 
   std::memcpy(&psinfoData, PsinfoBuffer->getBufferStart(), sizeof(psinfoData));
   llvm::StringRef PathRef(&(psinfoData.pr_psargs[0]));
-  if (!PathRef.empty()) {
-    process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
-    ArchSpec arch_spec = ArchSpec();
-    arch_spec.SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
-                              LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
-    process_info.SetArchitecture(arch_spec);
-    return true;
-  }
-  return false;
+  if (PathRef.empty())
+    return false;
+
+  process_info.GetExecutableFile().SetFile(PathRef, FileSpec::Style::native);
+  ArchSpec arch_spec = ArchSpec();
+  arch_spec.SetArchitecture(eArchTypeXCOFF, XCOFF::TCPU_PPC64,
+                            LLDB_INVALID_CPUTYPE, llvm::Triple::AIX);
+  process_info.SetArchitecture(arch_spec);
+  process_info.SetParentProcessID(psinfoData.pr_ppid);
+  process_info.SetGroupID(psinfoData.pr_gid);
+  process_info.SetEffectiveGroupID(psinfoData.pr_egid);
+  process_info.SetUserID(psinfoData.pr_uid);
+  process_info.SetEffectiveUserID(psinfoData.pr_euid);
+  process_info.SetProcessGroupID(psinfoData.pr_pgid);
+  process_info.SetProcessSessionID(psinfoData.pr_sid);
+  return true;
 }
 
 static bool GetProcessAndStatInfo(::pid_t pid,
                                   ProcessInstanceInfo &process_info,
-                                  ProcessState &State, ::pid_t &tracerpid) {
-  ::pid_t tgid;
-  tracerpid = 0;
+                                  ProcessState &State) {
   process_info.Clear();
   process_info.SetProcessID(pid);
 
-  if (!GetExePathAndArch(pid, process_info))
+  // Get Executable path/Arch and Get User and Group IDs.
+  if (!GetExePathAndIds(pid, process_info))
     return false;
-  // Get User and Group IDs and get tracer pid.
-  if (!GetStatusInfo(pid, process_info, State, tracerpid, tgid))
+  // Get process status and timing info.
+  if (!GetStatusInfo(pid, process_info, State))
     return false;
 
   return true;
@@ -141,9 +134,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
 }
 
 bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
-  ::pid_t tracerpid;
   ProcessState State;
-  return GetProcessAndStatInfo(pid, process_info, State, tracerpid);
+  return GetProcessAndStatInfo(pid, process_info, State);
 }
 
 Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
