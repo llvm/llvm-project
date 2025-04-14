@@ -1103,7 +1103,7 @@ void VPInstructionWithType::print(raw_ostream &O, const Twine &Indent,
 
   switch (getOpcode()) {
   case VPInstruction::WideIVStep:
-    O << "wide-iv-step";
+    O << "wide-iv-step ";
     printOperands(O, SlotTracker);
     break;
   default:

@@ -865,7 +865,6 @@ public:
     CalculateTripCountMinusVF,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
-    WideIVStep,
     BranchOnCount,
     BranchOnCond,
     Broadcast,
@@ -885,6 +884,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1051,9 +1057,10 @@ public:
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
+    if (R->isScalarCast())
+      return true;
     auto *VPI = dyn_cast<VPInstruction>(R);
-    return R->isScalarCast() ||
-           (VPI && VPI->getOpcode() == VPInstruction::WideIVStep);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
   }
 
   static inline bool classof(const VPUser *R) {

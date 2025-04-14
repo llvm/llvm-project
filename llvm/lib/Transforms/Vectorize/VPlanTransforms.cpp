@@ -1023,10 +1023,8 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
   if (match(&R, m_VPInstruction<VPInstruction::WideIVStep>(m_VPValue(X),
                                                            m_SpecificInt(1)))) {
     Type *WideStepTy = TypeInfo.inferScalarType(R.getVPSingleValue());
-    if (TypeInfo.inferScalarType(X) != WideStepTy) {
-      X = new VPWidenCastRecipe(Instruction::Trunc, X, WideStepTy);
-      X->getDefiningRecipe()->insertBefore(&R);
-    }
+    if (TypeInfo.inferScalarType(X) != WideStepTy)
+      X = VPBuilder(&R).createWidenCast(Instruction::Trunc, X, WideStepTy);
     R.getVPSingleValue()->replaceAllUsesWith(X);
   }
 }
@@ -2381,6 +2379,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
                                                VPTypeAnalysis &TypeInfo) {
   using namespace llvm::VPlanPatternMatch;
 
+  SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -2393,7 +2392,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
             PhiR->getDebugLoc(), Name);
         ScalarR->insertBefore(PhiR);
         PhiR->replaceAllUsesWith(ScalarR);
-        PhiR->eraseFromParent();
+        ToRemove.push_back(PhiR);
         continue;
       }
 
@@ -2402,8 +2401,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
       if (!match(&R, m_VPInstruction<VPInstruction::WideIVStep>(
                          m_VPValue(VectorStep), m_VPValue(ScalarStep))))
         continue;
+
+      // Expand WideIVStep.
       auto *VPI = cast<VPInstruction>(&R);
-      VPBuilder Builder(VPI->getParent(), VPI->getIterator());
+      VPBuilder Builder(VPI);
       Type *IVTy = TypeInfo.inferScalarType(VPI);
       if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
         Instruction::CastOps CastOp = IVTy->isFloatingPointTy()
@@ -2432,9 +2433,12 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
           MulOpc, {VectorStep, ScalarStep}, FMFs, R.getDebugLoc());
       VectorStep = Mul;
       VPI->replaceAllUsesWith(VectorStep);
-      VPI->eraseFromParent();
+      ToRemove.push_back(VPI);
     }
   }
+
+  for (VPRecipeBase *R : ToRemove)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleUncountableEarlyExit(
