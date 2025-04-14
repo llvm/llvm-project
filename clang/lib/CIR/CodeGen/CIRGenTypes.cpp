@@ -96,7 +96,7 @@ std::string CIRGenTypes::getRecordTypeName(const clang::RecordDecl *recordDecl,
   PrintingPolicy policy = recordDecl->getASTContext().getPrintingPolicy();
   policy.SuppressInlineNamespace = false;
   policy.AlwaysIncludeTypeForTemplateArgument = true;
-  policy.PrintCanonicalTypes = true;
+  policy.PrintAsCanonical = true;
   policy.SuppressTagKeyword = true;
 
   if (recordDecl->getIdentifier())
