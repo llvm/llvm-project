@@ -464,7 +464,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace amdgcn
 
 namespace generic {
-Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
+Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
+                          bool HasSYCLOffloadKind = false) {
   llvm::TimeTraceScope TimeScope("Clang");
   // Use `clang` to invoke the appropriate device tools.
   Expected<std::string> ClangPath =
@@ -554,6 +555,17 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   if (Args.hasArg(OPT_embed_bitcode))
     CmdArgs.push_back("-Wl,--lto-emit-llvm");
 
+  // For linking device code with the SYCL offload kind, special handling is
+  // required. Passing --sycl-link to clang results in a call to
+  // clang-sycl-linker. Additional linker flags required by clang-sycl-linker
+  // will be communicated via the -Xlinker option.
+  if (HasSYCLOffloadKind) {
+    CmdArgs.push_back("--sycl-link");
+    CmdArgs.append(
+        {"-Xlinker", Args.MakeArgString("-triple=" + Triple.getTriple())});
+    CmdArgs.append({"-Xlinker", Args.MakeArgString("-arch=" + Arch)});
+  }
+
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
@@ -567,7 +579,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
 } // namespace generic
 
 Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
-                               const ArgList &Args) {
+                               const ArgList &Args,
+                               bool HasSYCLOffloadKind = false) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   switch (Triple.getArch()) {
   case Triple::nvptx:
@@ -582,7 +595,7 @@ Expected<StringRef> linkDevice(ArrayRef<StringRef> InputFiles,
   case Triple::spirv64:
   case Triple::systemz:
   case Triple::loongarch64:
-    return generic::clang(InputFiles, Args);
+    return generic::clang(InputFiles, Args, HasSYCLOffloadKind);
   default:
     return createStringError(Triple.getArchName() +
                              " linking is not supported");
@@ -936,6 +949,38 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       InputFiles.emplace_back(*FileNameOrErr);
     }
 
+    if (ActiveOffloadKindMask & OFK_SYCL) {
+      // Link the remaining device files using the device linker.
+      auto OutputOrErr = linkDevice(InputFiles, LinkerArgs, HasSYCLOffloadKind);
+      if (!OutputOrErr)
+        return OutputOrErr.takeError();
+      // Output is a packaged object of device images. Unpackage the images and
+      // copy them to Images[Kind]
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+          MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
+      if (std::error_code EC = BufferOrErr.getError())
+        return createFileError(*OutputOrErr, EC);
+
+      MemoryBufferRef Buffer = **BufferOrErr;
+      SmallVector<OffloadFile> Binaries;
+      if (Error Err = extractOffloadBinaries(Buffer, Binaries))
+        return std::move(Err);
+      for (auto &OffloadFile : Binaries) {
+        auto TheBinary = OffloadFile.getBinary();
+        OffloadingImage TheImage{};
+        TheImage.TheImageKind = TheBinary->getImageKind();
+        TheImage.TheOffloadKind = TheBinary->getOffloadKind();
+        TheImage.StringData["triple"] = TheBinary->getTriple();
+        TheImage.StringData["arch"] = TheBinary->getArch();
+        TheImage.Image = MemoryBuffer::getMemBufferCopy(TheBinary->getImage());
+        Images[OFK_SYCL].emplace_back(std::move(TheImage));
+      }
+    }
+
+    // Exit early if no other offload kind found (other than OFK_SYCL).
+    if ((ActiveOffloadKindMask ^ OFK_SYCL) == 0) {
+      return Error::success();
+
     // Link the remaining device files using the device linker.
     auto OutputOrErr = linkDevice(InputFiles, LinkerArgs);
     if (!OutputOrErr)
@@ -944,7 +989,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
     // Store the offloading image for each linked output file.
     for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
-      if ((ActiveOffloadKindMask & Kind) == 0)
+      if (((ActiveOffloadKindMask & Kind) == 0) || (Kind == OFK_SYCL))
         continue;
       llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
           llvm::MemoryBuffer::getFileOrSTDIN(*OutputOrErr);
@@ -988,6 +1033,11 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
              A.StringData["arch"] > B.StringData["arch"] ||
              A.TheOffloadKind < B.TheOffloadKind;
     });
+    if (Kind == OFK_SYCL) {
+      // TODO: Update once SYCL offload wrapping logic is available.
+      reportError(
+          createStringError("SYCL offload wrapping logic is not available"));
+    }
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, Kind);
     if (!BundledImagesOrErr)
       return BundledImagesOrErr.takeError();

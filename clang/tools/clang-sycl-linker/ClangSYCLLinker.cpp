@@ -70,6 +70,8 @@ static StringRef OutputFile;
 /// Directory to dump SPIR-V IR if requested by user.
 static SmallString<128> SPIRVDumpDir;
 
+using OffloadingImage = OffloadBinary::OffloadingImage;
+
 static void printVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("clang-sycl-linker") << '\n';
 }
@@ -168,10 +170,10 @@ Expected<SmallVector<std::string>> getInput(const ArgList &Args) {
 /// are LLVM IR bitcode files.
 // TODO: Support SPIR-V IR files.
 Expected<std::unique_ptr<Module>> getBitcodeModule(StringRef File,
-                                                   LLVMContext &C) {
+                                                   LLVMContext &Ctx) {
   SMDiagnostic Err;
 
-  auto M = getLazyIRFileModule(File, Err, C);
+  auto M = getLazyIRFileModule(File, Err, Ctx);
   if (M)
     return std::move(M);
   return createStringError(Err.getMessage());
@@ -211,16 +213,16 @@ Expected<SmallVector<std::string>> getSYCLDeviceLibs(const ArgList &Args) {
 /// 3. Link all the images gathered in Step 2 with the output of Step 1 using
 /// linkInModule API. LinkOnlyNeeded flag is used.
 Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
-                                   const ArgList &Args, LLVMContext &C) {
+                                   const ArgList &Args, LLVMContext &Ctx) {
   llvm::TimeTraceScope TimeScope("SYCL link device code");
 
   assert(InputFiles.size() && "No inputs to link");
 
-  auto LinkerOutput = std::make_unique<Module>("sycl-device-link", C);
+  auto LinkerOutput = std::make_unique<Module>("sycl-device-link", Ctx);
   Linker L(*LinkerOutput);
   // Link SYCL device input files.
   for (auto &File : InputFiles) {
-    auto ModOrErr = getBitcodeModule(File, C);
+    auto ModOrErr = getBitcodeModule(File, Ctx);
     if (!ModOrErr)
       return ModOrErr.takeError();
     if (L.linkInModule(std::move(*ModOrErr)))
@@ -235,7 +237,7 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
   // Link in SYCL device library files.
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
   for (auto &File : *SYCLDeviceLibFiles) {
-    auto LibMod = getBitcodeModule(File, C);
+    auto LibMod = getBitcodeModule(File, Ctx);
     if (!LibMod)
       return LibMod.takeError();
     if ((*LibMod)->getTargetTriple() == Triple) {
@@ -278,18 +280,18 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
 /// Converts 'File' from LLVM bitcode to SPIR-V format using SPIR-V backend.
 /// 'Args' encompasses all arguments required for linking device code and will
 /// be parsed to generate options required to be passed into the backend.
-static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
-                                           LLVMContext &C) {
+static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
+                             StringRef OutputFile, LLVMContext &Ctx) {
   llvm::TimeTraceScope TimeScope("SPIR-V code generation");
 
   // Parse input module.
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseIRFile(File, Err, C);
+  SMDiagnostic E;
+  std::unique_ptr<Module> M = parseIRFile(File, E, Ctx);
   if (!M)
-    return createStringError(Err.getMessage());
+    return createStringError(E.getMessage());
 
   if (Error Err = M->materializeAll())
-    return std::move(Err);
+    return Err;
 
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
@@ -333,7 +335,7 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
     errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
                       OutputFile);
 
-  return OutputFile;
+  return Error::success();
 }
 
 /// Performs the following steps:
@@ -342,17 +344,61 @@ static Expected<StringRef> runSPIRVCodeGen(StringRef File, const ArgList &Args,
 Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("SYCL device linking");
 
-  LLVMContext C;
+  LLVMContext Ctx;
 
   // Link all input bitcode files and SYCL device library files, if any.
-  auto LinkedFile = linkDeviceCode(Files, Args, C);
+  auto LinkedFile = linkDeviceCode(Files, Args, Ctx);
   if (!LinkedFile)
     reportError(LinkedFile.takeError());
 
+  // TODO: SYCL post link functionality involves device code splitting and will
+  // result in multiple bitcode codes.
+  // The following lines are placeholders to represent multiple files and will
+  // be refactored once SYCL post link support is available.
+  SmallVector<std::string> SplitModules;
+  SplitModules.emplace_back(*LinkedFile);
+
   // SPIR-V code generation step.
-  auto SPVFile = runSPIRVCodeGen(*LinkedFile, Args, C);
-  if (!SPVFile)
-    return SPVFile.takeError();
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    auto Stem = OutputFile.rsplit('.').first;
+    std::string SPVFile(Stem);
+    SPVFile.append("_" + utostr(I) + ".spv");
+    auto Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, Ctx);
+    if (Err)
+      return std::move(Err);
+    SplitModules[I] = SPVFile;
+  }
+
+  // Write the final output into file.
+  int FD = -1;
+  if (std::error_code EC = sys::fs::openFileForWrite(OutputFile, FD))
+    return errorCodeToError(EC);
+  llvm::raw_fd_ostream FS(FD, /*shouldClose=*/true);
+
+  for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
+    auto File = SplitModules[I];
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileOrErr =
+        llvm::MemoryBuffer::getFileOrSTDIN(File);
+    if (std::error_code EC = FileOrErr.getError()) {
+      if (DryRun)
+        FileOrErr = MemoryBuffer::getMemBuffer("");
+      else
+        return createFileError(File, EC);
+    }
+    OffloadingImage TheImage{};
+    TheImage.TheImageKind = IMG_Object;
+    TheImage.TheOffloadKind = OFK_SYCL;
+    TheImage.StringData["triple"] =
+        Args.MakeArgString(Args.getLastArgValue(OPT_triple_EQ));
+    TheImage.StringData["arch"] =
+        Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
+    TheImage.Image = std::move(*FileOrErr);
+
+    llvm::SmallString<0> Buffer = OffloadBinary::write(TheImage);
+    if (Buffer.size() % OffloadBinary::getAlignment() != 0)
+      return createStringError("Offload binary has invalid size alignment");
+    FS << Buffer;
+  }
   return Error::success();
 }
 
@@ -394,7 +440,7 @@ int main(int argc, char **argv) {
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
 
-  OutputFile = "a.spv";
+  OutputFile = "a.out";
   if (Args.hasArg(OPT_o))
     OutputFile = Args.getLastArgValue(OPT_o);
 
