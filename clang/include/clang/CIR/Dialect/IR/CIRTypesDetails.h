@@ -65,8 +65,8 @@ struct RecordTypeStorage : public mlir::TypeStorage {
     if (name)
       return (name == key.name) && (kind == key.kind);
     return std::tie(members, name, incomplete, packed, padded, kind) ==
-               std::tie(key.members, key.name, key.incomplete, key.packed,
-                        key.padded, key.kind);
+           std::tie(key.members, key.name, key.incomplete, key.packed,
+                    key.padded, key.kind);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
