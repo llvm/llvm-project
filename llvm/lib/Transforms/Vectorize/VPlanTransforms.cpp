@@ -2419,6 +2419,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
               ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
               : nullptr;
       assert(!ConstStep || ConstStep->getValue() != 1);
+      (void)ConstStep;
       if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
         ScalarStep =
             Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
