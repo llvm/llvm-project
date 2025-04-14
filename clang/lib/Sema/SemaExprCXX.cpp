@@ -3016,19 +3016,8 @@ bool Sema::FindAllocationFunctions(
       return true;
   }
 
-  // new[] will force emission of vector deleting dtor which needs delete[].
-  bool MaybeVectorDeletingDtor = false;
-  if (Context.getTargetInfo().getCXXABI().isMicrosoft()) {
-    if (AllocElemType->isRecordType() && IsArray) {
-      auto *RD =
-          cast<CXXRecordDecl>(AllocElemType->castAs<RecordType>()->getDecl());
-      CXXDestructorDecl *DD = RD->getDestructor();
-      MaybeVectorDeletingDtor = DD && DD->isVirtual() && !DD->isDeleted();
-    }
-  }
-
   // We don't need an operator delete if we're running under -fno-exceptions.
-  if (!getLangOpts().Exceptions && !MaybeVectorDeletingDtor) {
+  if (!getLangOpts().Exceptions) {
     OperatorDelete = nullptr;
     return false;
   }
@@ -3619,11 +3608,8 @@ bool Sema::FindDeallocationFunction(SourceLocation StartLoc, CXXRecordDecl *RD,
   // Try to find operator delete/operator delete[] in class scope.
   LookupQualifiedName(Found, RD);
 
-  if (Found.isAmbiguous()) {
-    if (!Diagnose)
-      Found.suppressDiagnostics();
+  if (Found.isAmbiguous())
     return true;
-  }
 
   Found.suppressDiagnostics();
 
