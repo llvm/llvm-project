@@ -1899,18 +1899,18 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         AddFact(Pred, MinMax, MinMax->getRHS());
         continue;
       }
-      if (auto *SatI = dyn_cast<SaturatingInst>(CB.Inst)) {
-        switch (SatI->getIntrinsicID()) {
+      if (auto *USatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (USatI->getIntrinsicID()) {
         default:
-          continue;
+          llvm_unreachable("Unexpected intrinsic.");
         case Intrinsic::uadd_sat:
-          Pred = ICmpInst::ICMP_UGE;
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getLHS());
+          AddFact(ICmpInst::ICMP_UGE, USatI, USatI->getRHS());
           break;
         case Intrinsic::usub_sat:
-          Pred = ICmpInst::ICMP_ULE;
+          AddFact(ICmpInst::ICMP_ULE, USatI, USatI->getLHS());
           break;
         }
-        AddFact(Pred, SatI, SatI->getLHS());
         continue;
       }
     }
