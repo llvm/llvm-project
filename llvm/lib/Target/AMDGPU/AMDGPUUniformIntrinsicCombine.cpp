@@ -98,12 +98,13 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
   return false;
 }
 
-/// Iterates over the Intrinsics use in the function to optimise.
-static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
-  Module *M = F.getParent();
+/// Iterate over the Intrinsics use in the Module to optimise.
+static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
   bool IsChanged = false;
-  for (Function &Func : M->functions()) {
-    switch (Func.getIntrinsicID()) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    switch (F.getIntrinsicID()) {
     case Intrinsic::amdgcn_permlane64:
     case Intrinsic::amdgcn_readfirstlane:
     case Intrinsic::amdgcn_readlane:
@@ -112,23 +113,25 @@ static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
     default:
       continue;
     }
-    for (User *U : Func.users()) {
-      auto *II = cast<IntrinsicInst>(U);
-      if (II->getFunction() == &F)
-        IsChanged |= optimizeUniformIntrinsic(*II, UI);
+
+    for (User *U : F.users()) {
+      auto *II = dyn_cast<IntrinsicInst>(U);
+      Function *ParentF = II->getFunction();
+      if (ParentF->isDeclaration())
+        continue;
+
+      const auto &UI = FAM.getResult<UniformityInfoAnalysis>(*ParentF);
+      IsChanged |= optimizeUniformIntrinsic(*II, UI);
     }
   }
   return IsChanged;
 }
 
 PreservedAnalyses
-AMDGPUUniformIntrinsicCombinePass::run(Function &F,
-                                       FunctionAnalysisManager &AM) {
-  const auto &UI = AM.getResult<UniformityInfoAnalysis>(F);
-  bool IsChanged = runUniformIntrinsicCombine(F, UI);
-
-  if (!IsChanged)
+AMDGPUUniformIntrinsicCombinePass::run(Module &M, ModuleAnalysisManager &AM) {
+  if (!runUniformIntrinsicCombine(M, AM))
     return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
   PA.preserve<UniformityInfoAnalysis>();
   return PA;

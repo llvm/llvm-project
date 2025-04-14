@@ -493,9 +493,7 @@ extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
 struct AMDGPUUniformIntrinsicCombinePass
     : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
-  const AMDGPUTargetMachine &TM;
-  AMDGPUUniformIntrinsicCombinePass(const AMDGPUTargetMachine &TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 namespace AMDGPU {

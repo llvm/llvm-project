@@ -832,6 +832,9 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
         if (EarlyInlineAll && !EnableFunctionCalls)
           PM.addPass(AMDGPUAlwaysInlinePass());
+
+        if (EnableUniformIntrinsicCombine)
+          PM.addPass(AMDGPUUniformIntrinsicCombinePass());
       });
 
   PB.registerPeepholeEPCallback(
@@ -842,9 +845,6 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify)
           FPM.addPass(AMDGPUSimplifyLibCallsPass());
-
-        if (EnableUniformIntrinsicCombine)
-          FPM.addPass(AMDGPUUniformIntrinsicCombinePass(*this));
       });
 
   PB.registerCGSCCOptimizerLateEPCallback(
