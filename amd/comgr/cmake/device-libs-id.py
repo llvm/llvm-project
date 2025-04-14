@@ -1,3 +1,7 @@
+# Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+# amd/comgr/LICENSE.TXT in this repository for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
 from argparse import ArgumentParser
 from hashlib import sha256
 from functools import reduce

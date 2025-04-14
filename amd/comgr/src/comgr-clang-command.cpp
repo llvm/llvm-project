@@ -1,3 +1,18 @@
+//===- comgr-clang-command.cpp - ClangCommand implementation --------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the CacheCommandAdaptor interface for
+/// clang::driver::Commands that are stored in the cache. These correspond to
+/// "clang -cc1" and "lld" invocations.
+///
+//===----------------------------------------------------------------------===//
+
 #include "comgr-clang-command.h"
 
 #include <clang/Driver/Job.h>

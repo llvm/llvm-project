@@ -1,3 +1,17 @@
+//===- comgr-cache-command.cpp - CacheCommand implementation --------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file implements the CachedCommandAdaptor: the interface and common
+/// operations for commands that save their execution results in the cache.
+///
+//===----------------------------------------------------------------------===//
+
 #include "comgr-cache-command.h"
 #include "comgr-cache.h"
 #include "comgr-device-libs.h"

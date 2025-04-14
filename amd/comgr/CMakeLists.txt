@@ -333,7 +333,6 @@ else()
   install(FILES
     "README.md"
     "LICENSE.txt"
-    "NOTICES.txt"
     COMPONENT amd-comgr
     DESTINATION ${CMAKE_INSTALL_DOCDIR})
 endif()

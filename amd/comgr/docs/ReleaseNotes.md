@@ -25,6 +25,9 @@ behaviors:
   - caching clang driver invocations
   More information about the Comgr Caching infrastructure and how to use it can
   be found in amd/comgr/README.md.
+  - Updated the license used for Comgr from Illinois to Apache 2.0 with LLVM
+Extensions (the same license used by LLVM).
+
 
 Bug Fixes
 ---------

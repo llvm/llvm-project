@@ -1,3 +1,11 @@
+//===- common.h -----------------------------------------------------------===//
+//
+// Part of Comgr, under the Apache License v2.0 with LLVM Exceptions. See
+// amd/comgr/LICENSE.TXT in this repository for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef COMGR_TEST_COMMON_H
 #define COMGR_TEST_COMMON_H
 
