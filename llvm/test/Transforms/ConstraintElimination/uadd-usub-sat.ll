@@ -10,8 +10,7 @@ define i1 @uadd_sat_uge(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ugt i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
 ; CHECK-NEXT:    [[ADD_SAT:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[ADD_SAT]], [[B]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %precond = icmp ugt i64 %a, %b
   call void @llvm.assume(i1 %precond)
@@ -27,8 +26,7 @@ define i1 @usub_sat_ule(i64 %a, i64 %b) {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ult i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
 ; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 1)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[SUB_SAT]], [[B]]
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %precond = icmp ult i64 %a, %b
   call void @llvm.assume(i1 %precond)

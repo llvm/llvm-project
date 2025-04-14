@@ -1141,6 +1141,8 @@ void State::addInfoFor(BasicBlock &BB) {
         break;
       [[fallthrough]];
     case Intrinsic::abs:
+    case Intrinsic::uadd_sat:
+    case Intrinsic::usub_sat:
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
@@ -1891,11 +1893,24 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         AddFact(CmpInst::ICMP_SGE, CB.Inst, X);
         continue;
       }
-
       if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
         Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
         AddFact(Pred, MinMax, MinMax->getLHS());
         AddFact(Pred, MinMax, MinMax->getRHS());
+        continue;
+      }
+      if (auto *SatI = dyn_cast<SaturatingInst>(CB.Inst)) {
+        switch (SatI->getIntrinsicID()) {
+        default:
+          continue;
+        case Intrinsic::uadd_sat:
+          Pred = ICmpInst::ICMP_UGE;
+          break;
+        case Intrinsic::usub_sat:
+          Pred = ICmpInst::ICMP_ULE;
+          break;
+        }
+        AddFact(Pred, SatI, SatI->getLHS());
         continue;
       }
     }
