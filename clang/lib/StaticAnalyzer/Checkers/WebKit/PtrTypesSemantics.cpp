@@ -127,7 +127,7 @@ bool isCheckedPtr(const std::string &Name) {
 
 bool isSmartPtrClass(const std::string &Name) {
   return isRefType(Name) || isCheckedPtr(Name) || isRetainPtr(Name) ||
-         Name == "WeakPtr" || Name == "WeakPtr" || Name == "WeakPtrFactory" ||
+         Name == "WeakPtr" || Name == "WeakPtrFactory" ||
          Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
          Name == "WeakPtrImplBaseSingleThread" || Name == "ThreadSafeWeakPtr" ||
          Name == "ThreadSafeWeakOrStrongPtr" ||
