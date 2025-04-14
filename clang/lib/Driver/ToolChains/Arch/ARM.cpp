@@ -679,21 +679,17 @@ llvm::ARM::FPUKind arm::getARMTargetFeatures(const Driver &D,
         CPUArgFPUKind != llvm::ARM::FK_INVALID ? CPUArgFPUKind : ArchArgFPUKind;
     (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   } else {
-    bool Generic = true;
-    if (!ForAS) {
-      std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
-      if (CPU != "generic")
-        Generic = false;
-      llvm::ARM::ArchKind ArchKind =
-          arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
-      FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
-      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
-    }
+    std::string CPU = arm::getARMTargetCPU(CPUName, ArchName, Triple);
+    bool Generic = CPU == "generic";
     if (Generic && (Triple.isOSWindows() || Triple.isOSDarwin()) &&
         getARMSubArchVersionNumber(Triple) >= 7) {
       FPUKind = llvm::ARM::parseFPU("neon");
-      (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
+    } else {
+      llvm::ARM::ArchKind ArchKind =
+          arm::getLLVMArchKindForARM(CPU, ArchName, Triple);
+      FPUKind = llvm::ARM::getDefaultFPU(CPU, ArchKind);
     }
+    (void)llvm::ARM::getFPUFeatures(FPUKind, Features);
   }
 
   // Now we've finished accumulating features from arch, cpu and fpu,
