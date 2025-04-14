@@ -5309,6 +5309,9 @@ public:
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
 
+  void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
+                               SourceLocation Loc);
+
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|
   // as it's parent convergence instr.

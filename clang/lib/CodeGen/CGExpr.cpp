@@ -1919,6 +1919,20 @@ llvm::MDNode *CodeGenFunction::getRangeForLoadFromType(QualType Ty) {
   return MDHelper.createRange(Min, End);
 }
 
+void CodeGenFunction::maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
+                                              SourceLocation Loc) {
+  if (EmitScalarRangeCheck(Load, Ty, Loc)) {
+    // In order to prevent the optimizer from throwing away the check, don't
+    // attach range metadata to the load.
+  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+    if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
+      Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
+      Load->setMetadata(llvm::LLVMContext::MD_noundef,
+                        llvm::MDNode::get(CGM.getLLVMContext(), {}));
+    }
+  }
+}
+
 bool CodeGenFunction::EmitScalarRangeCheck(llvm::Value *Value, QualType Ty,
                                            SourceLocation Loc) {
   bool HasBoolCheck = SanOpts.has(SanitizerKind::Bool);
@@ -2037,15 +2051,7 @@ llvm::Value *CodeGenFunction::EmitLoadOfScalar(Address Addr, bool Volatile,
 
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
-  if (EmitScalarRangeCheck(Load, Ty, Loc)) {
-    // In order to prevent the optimizer from throwing away the check, don't
-    // attach range metadata to the load.
-  } else if (CGM.getCodeGenOpts().OptimizationLevel > 0)
-    if (llvm::MDNode *RangeInfo = getRangeForLoadFromType(Ty)) {
-      Load->setMetadata(llvm::LLVMContext::MD_range, RangeInfo);
-      Load->setMetadata(llvm::LLVMContext::MD_noundef,
-                        llvm::MDNode::get(getLLVMContext(), {}));
-    }
+  maybeAttachRangeForLoad(Load, Ty, Loc);
 
   return EmitFromMemory(Load, Ty);
 }
