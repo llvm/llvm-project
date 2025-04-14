@@ -14,17 +14,19 @@ Parts:
     Size:            80
     RootSignature:
       Version: 2
+      NumRootParameters: 2
+      RootParametersOffset: 24
       NumStaticSamplers: 0
       StaticSamplersOffset: 64
       Parameters:         
-      - ParameterType: Constants32Bit
-        ShaderVisibility: Hull
+      - ParameterType: 1 # Constants32Bit
+        ShaderVisibility: 2 # Hull
         Constants:
           Num32BitValues: 16
           ShaderRegister: 15
           RegisterSpace: 14
-      - ParameterType: Constants32Bit
-        ShaderVisibility: Geometry
+      - ParameterType: 1 # Constants32Bit
+        ShaderVisibility: 4 # Geometry
         Constants:
           Num32BitValues: 21
           ShaderRegister: 22
@@ -36,17 +38,19 @@ Parts:
 # CHECK-NEXT:    Size:            80
 # CHECK-NEXT:    RootSignature:
 # CHECK-NEXT:      Version:         2
+# CHECK-NEXT:      NumRootParameters: 2
+# CHECK-NEXT:      RootParametersOffset: 24
 # CHECK-NEXT:      NumStaticSamplers: 0
 # CHECK-NEXT:      StaticSamplersOffset: 0
 # CHECK-NEXT:      Parameters:
-# CHECK-NEXT:        - ParameterType:   Constants32Bit
-# CHECK-NEXT:          ShaderVisibility: Hull
+# CHECK-NEXT:        - ParameterType:   1
+# CHECK-NEXT:          ShaderVisibility: 2
 # CHECK-NEXT:          Constants:
 # CHECK-NEXT:            Num32BitValues:  16
 # CHECK-NEXT:            RegisterSpace:   14
 # CHECK-NEXT:            ShaderRegister:  15
-# CHECK-NEXT:        - ParameterType:   Constants32Bit
-# CHECK-NEXT:          ShaderVisibility: Geometry
+# CHECK-NEXT:        - ParameterType:   1
+# CHECK-NEXT:          ShaderVisibility: 4
 # CHECK-NEXT:          Constants:
 # CHECK-NEXT:            Num32BitValues:  21
 # CHECK-NEXT:            RegisterSpace:   23

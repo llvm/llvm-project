@@ -40,6 +40,8 @@ DXContainerYAML::RootSignatureYamlDesc::create(
   RootSigDesc.Version = Data.getVersion();
   RootSigDesc.NumStaticSamplers = Data.getNumStaticSamplers();
   RootSigDesc.StaticSamplersOffset = Data.getStaticSamplersOffset();
+  RootSigDesc.NumRootParameters = Data.getNumRootParameters();
+  RootSigDesc.RootParametersOffset = Data.getRootParametersOffset();
 
   uint32_t Flags = Data.getFlags();
   for (const auto &PH : Data.param_headers()) {
@@ -51,13 +53,13 @@ DXContainerYAML::RootSignatureYamlDesc::create(
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for parameter type");
 
-    NewP.Type = (dxbc::RootParameterType)PH.ParameterType;
+    NewP.Type = PH.ParameterType;
 
     if (!dxbc::isValidShaderVisibility(PH.ShaderVisibility))
       return createStringError(std::errc::invalid_argument,
                                "Invalid value for shader visibility");
 
-    NewP.Visibility = (dxbc::ShaderVisibility)PH.ShaderVisibility;
+    NewP.Visibility = PH.ShaderVisibility;
 
     llvm::Expected<object::DirectX::RootParameterView> ParamViewOrErr =
         Data.getParameter(PH);
@@ -257,6 +259,8 @@ void MappingTraits<DXContainerYAML::Signature>::mapping(
 void MappingTraits<DXContainerYAML::RootSignatureYamlDesc>::mapping(
     IO &IO, DXContainerYAML::RootSignatureYamlDesc &S) {
   IO.mapRequired("Version", S.Version);
+  IO.mapRequired("NumRootParameters", S.NumRootParameters);
+  IO.mapRequired("RootParametersOffset", S.RootParametersOffset);
   IO.mapRequired("NumStaticSamplers", S.NumStaticSamplers);
   IO.mapRequired("StaticSamplersOffset", S.StaticSamplersOffset);
   IO.mapRequired("Parameters", S.Parameters);
@@ -382,18 +386,6 @@ void ScalarEnumerationTraits<dxbc::SigMinPrecision>::enumeration(
 void ScalarEnumerationTraits<dxbc::SigComponentType>::enumeration(
     IO &IO, dxbc::SigComponentType &Value) {
   for (const auto &E : dxbc::getSigComponentTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
-void ScalarEnumerationTraits<dxbc::RootParameterType>::enumeration(
-    IO &IO, dxbc::RootParameterType &Value) {
-  for (const auto &E : dxbc::getRootParameterTypes())
-    IO.enumCase(Value, E.Name.str().c_str(), E.Value);
-}
-
-void ScalarEnumerationTraits<dxbc::ShaderVisibility>::enumeration(
-    IO &IO, dxbc::ShaderVisibility &Value) {
-  for (const auto &E : dxbc::getShaderVisibility())
     IO.enumCase(Value, E.Name.str().c_str(), E.Value);
 }
 

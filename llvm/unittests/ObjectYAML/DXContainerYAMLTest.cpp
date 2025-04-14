@@ -127,6 +127,8 @@ TEST(RootSignature, ParseRootFlags) {
       Size:            24
       RootSignature:
         Version:         2
+        NumRootParameters: 0
+        RootParametersOffset: 24
         NumStaticSamplers: 0
         StaticSamplersOffset: 0
         Parameters: []
@@ -165,11 +167,13 @@ TEST(RootSignature, ParseRootConstants) {
       Size:            89
       RootSignature:
         Version: 2
+        NumRootParameters: 1
+        RootParametersOffset: 24
         NumStaticSamplers: 0
         StaticSamplersOffset: 56
         Parameters:
-          - ParameterType: Constants32Bit
-            ShaderVisibility: Hull
+          - ParameterType: 1
+            ShaderVisibility: 2
             Constants:
               Num32BitValues: 16
               ShaderRegister: 15

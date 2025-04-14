@@ -167,12 +167,13 @@ private:
 public:
   RootSignature(StringRef PD) : PartData(PD) {}
 
-  Error parse(StringRef Data);
+  Error parse();
   uint32_t getVersion() const { return Version; }
   uint32_t getNumParameters() const { return NumParameters; }
   uint32_t getRootParametersOffset() const { return RootParametersOffset; }
   uint32_t getNumStaticSamplers() const { return NumStaticSamplers; }
   uint32_t getStaticSamplersOffset() const { return StaticSamplersOffset; }
+  uint32_t getNumRootParameters() const { return ParametersHeaders.size(); }
   llvm::iterator_range<param_header_iterator> param_headers() const {
     return llvm::make_range(ParametersHeaders.begin(), ParametersHeaders.end());
   }
