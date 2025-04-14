@@ -2240,23 +2240,21 @@ static LogicalResult verifyComdat(Operation *op,
 
 static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   llvm::DenseSet<BlockTagAttr> blockTags;
-  LogicalResult r = success();
   // Note that presence of `BlockTagOp`s currently can't prevent an unrecheable
   // block to be removed by canonicalizer's region simplify pass, which needs to
   // be dialect aware to allow extra constraints to be described.
-  funcOp.walk([&](BlockTagOp blockTagOp) {
+  WalkResult res = funcOp.walk([&](BlockTagOp blockTagOp) {
     if (blockTags.contains(blockTagOp.getTag())) {
       blockTagOp.emitError()
           << "duplicate block tag '" << blockTagOp.getTag().getId()
           << "' in the same function: ";
-      r = failure();
       return WalkResult::interrupt();
     }
     blockTags.insert(blockTagOp.getTag());
     return WalkResult::advance();
   });
 
-  return r;
+  return failure(res.wasInterrupted());
 }
 
 /// Parse common attributes that might show up in the same order in both
