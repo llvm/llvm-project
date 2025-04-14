@@ -46,7 +46,7 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     // Check if the argument use is divergent
     if (UI.isDivergentUse(II.getOperandUse(0)))
       return false;
-    LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << "\n");
+    LLVM_DEBUG(dbgs() << "Replacing " << II << " with " << *Src << '\n');
     II.replaceAllUsesWith(Src);
     II.eraseFromParent();
     return true;
@@ -55,11 +55,10 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
     Value *Src = II.getArgOperand(0);
     if (UI.isDivergentUse(II.getOperandUse(0)))
       return false;
-    LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << "\n");
+    LLVM_DEBUG(dbgs() << "Found uniform ballot intrinsic: " << II << '\n');
 
     // If there are no ICmp users, return early.
-    if (II.user_empty() ||
-        none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); }))
+    if (none_of(II.users(), [](User *U) { return isa<ICmpInst>(U); }))
       return false;
 
     bool Changed = false;
@@ -68,22 +67,20 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
         Value *Op0 = ICmp->getOperand(0);
         Value *Op1 = ICmp->getOperand(1);
         ICmpInst::Predicate Pred = ICmp->getPredicate();
+        Value *OtherOp = Op0 == &II ? Op1 : Op0;
 
-        Value *OtherOp = (Op0 == &II ? Op1 : Op0);
-
-        // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
         if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
+          // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << "\n");
+          LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           ICmp->eraseFromParent();
           Changed = true;
-        }
-        // (icmp ne %ballot, 0)  -->  %ballot_arg
-        else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
+        } else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
+          // (icmp ne %ballot, 0)  -->  %ballot_arg
           LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
-                            << *Src << "\n");
+                            << *Src << '\n');
           ICmp->replaceAllUsesWith(Src);
           ICmp->eraseFromParent();
           Changed = true;
