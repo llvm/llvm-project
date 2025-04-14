@@ -1727,7 +1727,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
@@ -1762,7 +1762,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
           ss);
 
     if (language_plugin_handled) {
@@ -1797,7 +1797,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
     if (language_plugin)
       language_plugin_handled = language_plugin->GetFunctionDisplayName(
-          sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs, ss);
+          *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithArgs,
+          ss);
 
     if (language_plugin_handled) {
       s << ss.GetString();
