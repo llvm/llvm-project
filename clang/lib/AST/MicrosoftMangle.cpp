@@ -3308,7 +3308,7 @@ void MicrosoftCXXNameMangler::mangleArrayType(const ArrayType *T) {
       const DependentSizedArrayType *DSAT =
         getASTContext().getAsDependentSizedArrayType(ElementTy);
       Error(DSAT->getSizeExpr()->getExprLoc(), "dependent-length")
-          << DSAT->getBracketsRange();
+          << DSAT->getSizeExpr()->getSourceRange();
       return;
     } else {
       break;

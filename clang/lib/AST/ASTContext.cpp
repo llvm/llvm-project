@@ -4261,11 +4261,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentSizedArray: {
     const auto *dat = cast<DependentSizedArrayType>(ty);
     result = getDependentSizedArrayType(
-                 getVariableArrayDecayedType(dat->getElementType()),
-                                        dat->getSizeExpr(),
-                                        dat->getSizeModifier(),
-                                        dat->getIndexTypeCVRQualifiers(),
-                                        dat->getBracketsRange());
+        getVariableArrayDecayedType(dat->getElementType()), dat->getSizeExpr(),
+        dat->getSizeModifier(), dat->getIndexTypeCVRQualifiers());
     break;
   }
 
@@ -4275,17 +4272,17 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     result =
         getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
                              /*size*/ nullptr, ArraySizeModifier::Normal,
-                             iat->getIndexTypeCVRQualifiers(), SourceRange());
+                             iat->getIndexTypeCVRQualifiers());
     break;
   }
 
   // Turn VLA types into [*] types.
   case Type::VariableArray: {
     const auto *vat = cast<VariableArrayType>(ty);
-    result = getVariableArrayType(
-        getVariableArrayDecayedType(vat->getElementType()),
-        /*size*/ nullptr, ArraySizeModifier::Star,
-        vat->getIndexTypeCVRQualifiers(), vat->getBracketsRange());
+    result =
+        getVariableArrayType(getVariableArrayDecayedType(vat->getElementType()),
+                             /*size*/ nullptr, ArraySizeModifier::Star,
+                             vat->getIndexTypeCVRQualifiers());
     break;
   }
   }
@@ -4298,8 +4295,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 /// variable array of the specified element type.
 QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
                                           ArraySizeModifier ASM,
-                                          unsigned IndexTypeQuals,
-                                          SourceRange Brackets) const {
+                                          unsigned IndexTypeQuals) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
   // that have an expression provided for their size.
   QualType Canon;
@@ -4309,12 +4305,12 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
   if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers()) {
     SplitQualType canonSplit = getCanonicalType(EltTy).split();
     Canon = getVariableArrayType(QualType(canonSplit.Ty, 0), NumElts, ASM,
-                                 IndexTypeQuals, Brackets);
+                                 IndexTypeQuals);
     Canon = getQualifiedType(Canon, canonSplit.Quals);
   }
 
   auto *New = new (*this, alignof(VariableArrayType))
-      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals, Brackets);
+      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals);
 
   VariableArrayTypes.push_back(New);
   Types.push_back(New);
@@ -4324,11 +4320,10 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
 /// getDependentSizedArrayType - Returns a non-unique reference to
 /// the type for a dependently-sized array of the specified element
 /// type.
-QualType ASTContext::getDependentSizedArrayType(QualType elementType,
-                                                Expr *numElements,
-                                                ArraySizeModifier ASM,
-                                                unsigned elementTypeQuals,
-                                                SourceRange brackets) const {
+QualType
+ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
+                                       ArraySizeModifier ASM,
+                                       unsigned elementTypeQuals) const {
   assert((!numElements || numElements->isTypeDependent() ||
           numElements->isValueDependent()) &&
          "Size must be type- or value-dependent!");
@@ -4354,7 +4349,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 
     auto *newType = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(elementType, QualType(), numElements, ASM,
-                                elementTypeQuals, brackets);
+                                elementTypeQuals);
     DependentSizedArrayTypes.InsertNode(newType, insertPos);
     Types.push_back(newType);
     return QualType(newType, 0);
@@ -4364,7 +4359,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   if (!canonTy) {
     canonTy = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
-                                numElements, ASM, elementTypeQuals, brackets);
+                                numElements, ASM, elementTypeQuals);
     DependentSizedArrayTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4383,7 +4378,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   // of the element type.
   auto *sugaredType = new (*this, alignof(DependentSizedArrayType))
       DependentSizedArrayType(elementType, canon, numElements, ASM,
-                              elementTypeQuals, brackets);
+                              elementTypeQuals);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -6775,17 +6770,14 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
   }
 
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
-    return getVariableArrayType(unqualElementType,
-                                VAT->getSizeExpr(),
+    return getVariableArrayType(unqualElementType, VAT->getSizeExpr(),
                                 VAT->getSizeModifier(),
-                                VAT->getIndexTypeCVRQualifiers(),
-                                VAT->getBracketsRange());
+                                VAT->getIndexTypeCVRQualifiers());
   }
 
   const auto *DSAT = cast<DependentSizedArrayType>(AT);
   return getDependentSizedArrayType(unqualElementType, DSAT->getSizeExpr(),
-                                    DSAT->getSizeModifier(), 0,
-                                    SourceRange());
+                                    DSAT->getSizeModifier(), 0);
 }
 
 /// Attempt to unwrap two types that may both be array types with the same bound
@@ -7729,19 +7721,14 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
                                            IAT->getIndexTypeCVRQualifiers()));
 
   if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(ATy))
-    return cast<ArrayType>(
-                     getDependentSizedArrayType(NewEltTy,
-                                                DSAT->getSizeExpr(),
-                                                DSAT->getSizeModifier(),
-                                              DSAT->getIndexTypeCVRQualifiers(),
-                                                DSAT->getBracketsRange()));
+    return cast<ArrayType>(getDependentSizedArrayType(
+        NewEltTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
+        DSAT->getIndexTypeCVRQualifiers()));
 
   const auto *VAT = cast<VariableArrayType>(ATy);
-  return cast<ArrayType>(getVariableArrayType(NewEltTy,
-                                              VAT->getSizeExpr(),
-                                              VAT->getSizeModifier(),
-                                              VAT->getIndexTypeCVRQualifiers(),
-                                              VAT->getBracketsRange()));
+  return cast<ArrayType>(
+      getVariableArrayType(NewEltTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
+                           VAT->getIndexTypeCVRQualifiers()));
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {
@@ -13846,10 +13833,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getDependentSizedArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY),
         getCommonSizeExpr(Ctx, AX, AY), getCommonSizeModifier(AX, AY),
-        getCommonIndexTypeCVRQualifiers(AX, AY),
-        AX->getBracketsRange() == AY->getBracketsRange()
-            ? AX->getBracketsRange()
-            : SourceRange());
+        getCommonIndexTypeCVRQualifiers(AX, AY));
   }
   case Type::ConstantArray: {
     const auto *AX = cast<ConstantArrayType>(X),
