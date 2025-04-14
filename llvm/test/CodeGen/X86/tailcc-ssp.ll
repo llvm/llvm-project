@@ -15,9 +15,7 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
-; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
-; WINDOWS-NEXT:    jne .LBB0_1
-; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    callq __security_check_cookie
 ; WINDOWS-NEXT:    xorl %ecx, %ecx
 ; WINDOWS-NEXT:    xorl %edx, %edx
 ; WINDOWS-NEXT:    xorl %r8d, %r8d
@@ -25,9 +23,6 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    addq $56, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp h # TAILCALL
-; WINDOWS-NEXT:  .LBB0_1:
-; WINDOWS-NEXT:    callq __security_check_cookie
-; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; LINUX-LABEL: tailcall_frame:
@@ -49,7 +44,6 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; LINUX-NEXT:  .LBB0_2: # %CallStackCheckFailBlk
 ; LINUX-NEXT:    .cfi_def_cfa_offset 32
 ; LINUX-NEXT:    callq __stack_chk_fail@PLT
-
    tail call tailcc void @h(ptr null, i64 0, ptr null)
    ret void
 }
@@ -67,18 +61,13 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    callq bar
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
-; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
-; WINDOWS-NEXT:    jne .LBB1_1
-; WINDOWS-NEXT:  # %bb.2:
-; WINDOWS-NEXT:    .seh_startepilogue
+; WINDOWS-NEXT:    callq __security_check_cookie
+; WINDOWS-NEXT:    nop
 ; WINDOWS-NEXT:    addq $40, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp bar # TAILCALL
-; WINDOWS-NEXT:  .LBB1_1:
-; WINDOWS-NEXT:    callq __security_check_cookie
-; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
-
+;
 ; LINUX-LABEL: tailcall_unrelated_frame:
 ; LINUX:       # %bb.0:
 ; LINUX-NEXT:    pushq %rax
@@ -96,7 +85,6 @@ define void @tailcall_unrelated_frame() sspreq {
 ; LINUX-NEXT:  .LBB1_2: # %CallStackCheckFailBlk
 ; LINUX-NEXT:    .cfi_def_cfa_offset 16
 ; LINUX-NEXT:    callq __stack_chk_fail@PLT
-
   call void @bar()
   tail call void @bar()
   ret void
