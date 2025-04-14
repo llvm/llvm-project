@@ -101,6 +101,13 @@ enum class OffloadArch {
   AMDGCNSPIRV,
   Generic, // A processor model named 'generic' if the target backend defines a
            // public one.
+  // Note: this is an initial list of Intel GPU and GPU offloading
+  // architectures. The list will be expanded later as support for more
+  // architectures is added.
+  // Intel CPUs
+  GRANITERAPIDS,
+  // Intel GPUs
+  BMG_G21,
   LAST,
 
   CudaDefault = OffloadArch::SM_52,
@@ -114,6 +121,18 @@ static inline bool IsNVIDIAOffloadArch(OffloadArch A) {
 static inline bool IsAMDOffloadArch(OffloadArch A) {
   // Generic processor model is for testing only.
   return A >= OffloadArch::GFX600 && A < OffloadArch::Generic;
+}
+
+static inline bool IsIntelCPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::GRANITERAPIDS && Arch < OffloadArch::BMG_G21;
+}
+
+static inline bool IsIntelGPUOffloadArch(OffloadArch Arch) {
+  return Arch >= OffloadArch::BMG_G21 && Arch < OffloadArch::LAST;
+}
+
+static inline bool IsIntelOffloadArch(OffloadArch Arch) {
+  return IsIntelCPUOffloadArch(Arch) || IsIntelGPUOffloadArch(Arch);
 }
 
 const char *OffloadArchToString(OffloadArch A);
