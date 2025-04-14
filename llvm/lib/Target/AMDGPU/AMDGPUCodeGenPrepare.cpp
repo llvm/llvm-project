@@ -1605,9 +1605,15 @@ static bool tryNarrowMathIfNoOverflow(Instruction *I,
   InstructionCost NewCost =
       TTI.getArithmeticInstrCost(Opc, NewType, TTI::TCK_RecipThroughput);
   // New cost of narrowing 2 operands (use trunc)
-  NewCost += 2 * TTI.getCastInstrCost(Instruction::Trunc, NewType, OldType,
-                                      TTI.getCastContextHint(I),
-                                      TTI::TCK_RecipThroughput);
+  int NumOfNonConstOps = 2;
+  if (isa<Constant>(I->getOperand(0)) || isa<Constant>(I->getOperand(1))) {
+    // Cannot be both constant, should be propagated
+    NumOfNonConstOps = 1;
+  }
+  NewCost += NumOfNonConstOps * TTI.getCastInstrCost(Instruction::Trunc,
+                                                     NewType, OldType,
+                                                     TTI.getCastContextHint(I),
+                                                     TTI::TCK_RecipThroughput);
   // New cost of zext narrowed result to original type
   NewCost +=
       TTI.getCastInstrCost(Instruction::ZExt, OldType, NewType,
