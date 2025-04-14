@@ -338,7 +338,7 @@ def FeatureAVX10_1 : SubtargetFeature<"avx10.1-256", "HasAVX10_1", "true",
                                       "Support AVX10.1 up to 256-bit instruction",
                                       [FeatureCDI, FeatureVBMI, FeatureIFMA, FeatureVNNI,
                                        FeatureBF16, FeatureVPOPCNTDQ, FeatureVBMI2, FeatureBITALG,
-                                       FeatureVAES, FeatureVPCLMULQDQ, FeatureFP16]>;
+                                       FeatureFP16]>;
 def FeatureAVX10_1_512 : SubtargetFeature<"avx10.1-512", "HasAVX10_1_512", "true",
                                           "Support AVX10.1 up to 512-bit instruction",
                                           [FeatureAVX10_1, FeatureEVEX512]>;
