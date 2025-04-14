@@ -154,40 +154,22 @@ let Class = IncompleteArrayType in {
 }
 
 let Class = VariableArrayType in {
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
   def : Property<"size", ExprRef> {
     let Read = [{ node->getSizeExpr() }];
   }
 
   def : Creator<[{
     return ctx.getVariableArrayType(elementType, size, sizeModifier,
-                                    indexQualifiers.getCVRQualifiers(),
-                                    SourceRange(leftBracketLoc,
-                                                rightBracketLoc));
+                                    indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
 let Class = DependentSizedArrayType in {
-  def : Property<"size", ExprRef> {
-    let Read = [{ node->getSizeExpr() }];
-  }
-  def : Property<"leftBracketLoc", SourceLocation> {
-    let Read = [{ node->getLBracketLoc() }];
-  }
-  def : Property<"rightBracketLoc", SourceLocation> {
-    let Read = [{ node->getRBracketLoc() }];
-  }
+  def : Property<"size", ExprRef> { let Read = [{ node->getSizeExpr() }]; }
 
   def : Creator<[{
     return ctx.getDependentSizedArrayType(elementType, size, sizeModifier,
-                                          indexQualifiers.getCVRQualifiers(),
-                                          SourceRange(leftBracketLoc,
-                                                      rightBracketLoc));
+                                          indexQualifiers.getCVRQualifiers());
   }]>;
 }
 
