@@ -113,6 +113,67 @@ IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
   return CI;
 }
 
+CallInst *IRBuilderBase::CreateCall(FunctionType *FTy, Value *Callee,
+                                    ArrayRef<Value *> Args,
+                                    ArrayRef<OperandBundleDef> OpBundles,
+                                    const Twine &Name, MDNode *FPMathTag) {
+  assert(std::count_if(OpBundles.begin(), OpBundles.end(),
+                       [](const OperandBundleDef &Item) {
+                         return Item.getTag() == "fp.control";
+                       }) <= 1);
+  assert(std::count_if(OpBundles.begin(), OpBundles.end(),
+                       [](const OperandBundleDef &Item) {
+                         return Item.getTag() == "fp.except";
+                       }) <= 1);
+
+  ArrayRef<OperandBundleDef> ActualBundlesRef = OpBundles;
+  SmallVector<OperandBundleDef, 2> ActualBundles;
+
+  // If the builder is in strictfp mode and has non-default options (like
+  // non-dynamic rounding), add corresponding operand bundle. If such bundle is
+  // already present, assume it overwrites defaults.
+  bool doesTheCallAccessFPEnv = false;
+  if (IsFPConstrained) {
+    if (const auto *Func = dyn_cast<Function>(Callee)) {
+      if (Intrinsic::ID ID = Func->getIntrinsicID()) {
+        if (IntrinsicInst::isFloatingPointOperation(ID)) {
+          doesTheCallAccessFPEnv = true;
+          bool NeedRound = DefaultConstrainedRounding != RoundingMode::Dynamic;
+          bool NeedExcept = DefaultConstrainedExcept != fp::ebStrict;
+          for (const auto &Item : OpBundles) {
+            if (NeedRound && Item.getTag() == "fp.control")
+              NeedRound = false;
+            else if (NeedExcept && Item.getTag() == "fp.except")
+              NeedExcept = false;
+            ActualBundles.push_back(Item);
+          }
+          if (NeedRound)
+            createFPRoundingBundle(ActualBundles, DefaultConstrainedRounding);
+          if (NeedExcept)
+            createFPExceptionBundle(ActualBundles, DefaultConstrainedExcept);
+          ActualBundlesRef = ActualBundles;
+        }
+      }
+    }
+  }
+
+  // If the call accesses FPE, update memory effects accordingly.
+  CallInst *CI = CallInst::Create(FTy, Callee, Args, OpBundles);
+  if (doesTheCallAccessFPEnv) {
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    if (CI->getAttributes().hasFnAttr(Attribute::Memory))
+      ME |= CI->getAttributes().getMemoryEffects();
+    auto A = Attribute::getWithMemoryEffects(getContext(), ME);
+    CI->addFnAttr(A);
+  }
+
+  if (IsFPConstrained)
+    setConstrainedFPCallAttr(CI);
+  if (isa<FPMathOperator>(CI))
+    setFPAttrs(CI, FPMathTag, FMF);
+  return Insert(CI, Name);
+}
+
 static Value *CreateVScaleMultiple(IRBuilderBase &B, Type *Ty, uint64_t Scale) {
   Value *VScale = B.CreateVScale(Ty);
   if (Scale == 1)
@@ -1289,6 +1350,20 @@ CallInst *IRBuilderBase::CreateDereferenceableAssumption(Value *PtrValue,
   OperandBundleDefT<Value *> DereferenceableOpB("dereferenceable", Vals);
   return CreateAssumption(ConstantInt::getTrue(getContext()),
                           {DereferenceableOpB});
+}
+
+void IRBuilderBase::createFPRoundingBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles,
+    std::optional<RoundingMode> Rounding) {
+  addFPRoundingBundle(Context, Bundles,
+                      Rounding.value_or(DefaultConstrainedRounding));
+}
+
+void IRBuilderBase::createFPExceptionBundle(
+    SmallVectorImpl<OperandBundleDef> &Bundles,
+    std::optional<fp::ExceptionBehavior> Except) {
+  addFPExceptionBundle(Context, Bundles,
+                       Except.value_or(DefaultConstrainedExcept));
 }
 
 IRBuilderDefaultInserter::~IRBuilderDefaultInserter() = default;

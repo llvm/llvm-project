@@ -74,6 +74,7 @@ Changes to the LLVM IR
   format string function implementations from statically-linked libc's based on
   the requirements of each call. Currently only `float` is supported; this can
   keep floating point support out of printf if it can be proven unused.
+* Floating-point operand bundles have been added.
 
 Changes to LLVM infrastructure
 ------------------------------

@@ -3252,6 +3252,51 @@ value of its first argument instead of calling the specified function
 or intrinsic. This is achieved with ``PATCHINST`` relocations on the
 target instructions (see the AArch64 psABI for details).
 
+.. _ob_fp:
+
+Floating-point Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These operand bundles are used for calls that involve floating-point
+operations and interact with :ref:`floating-point environment <floatenv>` or
+depend on floating-point options, such as rounding mode, denormal modes, etc.
+There are two kinds of such operand bundles, which represent the value of
+floating-point control modes and the treatment of status bits respectively.
+
+An operand bundle tagged with "fp.control" contains information about the
+control modes used for the operation execution. Operands specified in this
+bundle represent particular options. Currently, only rounding mode is supported.
+It is represented by a metadata string value, which specifies the rounding mode
+to be used for the operation evaluation. Possible values are:
+
+::
+
+    "rtz"  - toward zero
+    "rte"  - to nearest, ties to even
+    "rtp"  - toward positive infinity
+    "rtn"  - toward negative infinity
+    "rmm"  - to nearest, ties away from zero
+    "dyn"  - rounding mode is taken from control register
+
+If "fp.control" is absent, the default rounding rounding mode is taken from the
+control register (dynamic rounding). In the particular case of
+:ref:`default floating-point environment <floatenv>`, it must be rounding to
+nearest, ties to even.
+
+An operand bundle tagged with "fp.except" may be associated with operations
+that can read or write floating-point exception flags. It contains a single
+metadata string value, which can have one of the following values:
+
+::
+
+    "ignore"
+    "strict"
+    "maytrap"
+
+It has the same meaning as the corresponding argument in
+:ref:`constrained intrinsics <constrainedfp>`.
+
+
 .. _moduleasm:
 
 Module-Level Inline Assembly
@@ -4002,9 +4047,9 @@ round-to-nearest rounding mode, and subnormals are assumed to be preserved.
 Running LLVM code in an environment where these assumptions are not met
 typically leads to undefined behavior. The ``strictfp`` and ``denormal-fp-math``
 attributes as well as :ref:`Constrained Floating-Point Intrinsics
-<constrainedfp>` can be used to weaken LLVM's assumptions and ensure defined
-behavior in non-default floating-point environments; see their respective
-documentation for details.
+<constrainedfp>` or :ref:`floating-point operand bundles<ob_fp>` can be used to
+weaken LLVM's assumptions and ensure defined behavior in non-default
+floating-point environments; see their respective documentation for details.
 
 .. _floatnan:
 

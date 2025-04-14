@@ -240,6 +240,11 @@ public:
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
   }
 
+  /// Whether this function accesses inaccessible memory.
+  bool doesAccessInaccessibleMem() const {
+    return isModOrRefSet(getModRef(Location::InaccessibleMem));
+  }
+
   /// Whether this function only (at most) accesses errno memory.
   bool onlyAccessesErrnoMem() const {
     return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
