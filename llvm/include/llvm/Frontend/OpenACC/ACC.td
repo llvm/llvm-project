@@ -487,15 +487,11 @@ def ACC_Shutdown : Directive<"shutdown"> {
 
 // 2.14.4
 def ACC_Update : Directive<"update"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_IfPresent>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Async>,
+                            VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_Device>,
     VersionedClause<ACCC_Host>,
@@ -550,10 +546,8 @@ def ACC_ExitData : Directive<"exit data"> {
 
 // 2.8
 def ACC_HostData : Directive<"host_data"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_IfPresent>];
+  let allowedOnceClauses = [VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_UseDevice>
   ];
