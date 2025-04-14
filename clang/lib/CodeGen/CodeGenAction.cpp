@@ -605,13 +605,11 @@ void BackendConsumer::UnsupportedDiagHandler(
 
   // Context will be nullptr for IR input files, we will construct the diag
   // message from llvm::DiagnosticInfoUnsupported.
-  if (Context != nullptr) {
+  if (Context != nullptr)
     Loc = getBestLocationFromDebugLoc(D, BadDebugInfo, Filename, Line, Column);
-    MsgStream << D.getMessage();
-  } else {
-    DiagnosticPrinterRawOStream DP(MsgStream);
-    D.print(DP);
-  }
+
+  DiagnosticPrinterRawOStream DP(MsgStream);
+  D.print(DP);
 
   auto DiagType = D.getSeverity() == llvm::DS_Error
                       ? diag::err_fe_backend_unsupported
