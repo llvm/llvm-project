@@ -506,6 +506,8 @@ enum RVVRequire {
   RVV_REQ_Zvfbfwma,
   RVV_REQ_Zvfbfmin,
   RVV_REQ_Zvfh,
+  RVV_REQ_Zvbc32e,
+  RVV_REQ_Zvkgs,
   RVV_REQ_Experimental,
   RVV_REQ_NUM,
 };

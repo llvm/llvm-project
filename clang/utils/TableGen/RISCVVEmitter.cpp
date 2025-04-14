@@ -791,6 +791,8 @@ void RVVEmitter::createRVVIntrinsics(
               .Case("Zvfbfwma", RVV_REQ_Zvfbfwma)
               .Case("Zvfbfmin", RVV_REQ_Zvfbfmin)
               .Case("Zvfh", RVV_REQ_Zvfh)
+              .Case("Zvbc32e", RVV_REQ_Zvbc32e)
+              .Case("Zvkgs", RVV_REQ_Zvkgs)
               .Case("Experimental", RVV_REQ_Experimental);
       SR.RequiredExtensions.set(RequireExt);
     }
