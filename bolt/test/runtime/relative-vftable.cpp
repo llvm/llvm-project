@@ -1,7 +1,7 @@
-// Test bolt instrumentation is able to handle relative virtual function table,
-// i.e., when code is compiled with `-fexperimental-relative-c++-abi-vtables`.
+// Test BOLT is able to handle relative virtual function table, i.e., when
+// code is compiled with `-fexperimental-relative-c++-abi-vtables`.
 
-// REQUIRES: system-linux,bolt-runtime
+// REQUIRES: system-linux
 
 // RUN: split-file %s %t
 // RUN: %clang -fuse-ld=lld -o %t/main.so %t/tt.cpp %t/main.cpp -Wl,-q \
