@@ -746,9 +746,12 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     Suffix = IsITANMSVCWindows ? ".lib" : ".a";
     break;
   case ToolChain::FT_Shared:
-    Suffix = TT.isOSWindows()
-                 ? (TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib")
-                 : ".so";
+    if (TT.isOSWindows())
+      Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+    else if (TT.isOSAIX())
+      Suffix = ".a";
+    else
+      Suffix = ".so";
     break;
   }
 
@@ -818,8 +821,7 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       if (AsNeeded)
         addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lflang_rt.runtime");
-    addArchSpecificRPath(*this, Args, CmdArgs);
+    addFlangRTLibPath(Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions
     if (getTriple().isOSFreeBSD() || getTriple().isOSNetBSD() ||
@@ -850,6 +852,20 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + DefaultLibPath));
   else
     CmdArgs.push_back(Args.MakeArgString("-L" + DefaultLibPath));
+}
+
+void ToolChain::addFlangRTLibPath(const ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const {
+  // Link static flang_rt.runtime.a or shared flang_rt.runtime.so.
+  // On AIX, default to static flang-rt.
+  if (Args.hasFlag(options::OPT_static_libflangrt,
+                   options::OPT_shared_libflangrt, getTriple().isOSAIX()))
+    CmdArgs.push_back(
+        getCompilerRTArgString(Args, "runtime", ToolChain::FT_Static, true));
+  else {
+    CmdArgs.push_back("-lflang_rt.runtime");
+    addArchSpecificRPath(*this, Args, CmdArgs);
+  }
 }
 
 // Android target triples contain a target version. If we don't have libraries
