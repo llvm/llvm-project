@@ -10991,45 +10991,30 @@ bool ScalarEvolution::isKnownMultipleOf(
   }
 
   // Basic tests have failed.
-  // Record "S % M == 0" in the runtime Assumptions.
-  auto recordRuntimePredicate = [&](const SCEV *S) -> void {
-    auto *STy = dyn_cast<IntegerType>(S->getType());
-    const SCEV *SmodM =
-        getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
-    const SCEV *Zero = getZero(STy);
+  // Check "S % M == 0" at compile time and record runtime Assumptions.
+  auto *STy = dyn_cast<IntegerType>(S->getType());
+  const SCEV *SmodM =
+      getURemExpr(S, getConstant(ConstantInt::get(STy, M, false)));
+  const SCEV *Zero = getZero(STy);
 
-    // Check whether "S % M == 0" is known at compile time.
-    if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
-      return;
-
-    const SCEVPredicate *P =
-        getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
-
-    // Detect redundant predicates.
-    for (auto *A : Assumptions)
-      if (A->implies(P, *this))
-        return;
-
-    Assumptions.push_back(P);
-    return;
-  };
-
-  // Expressions like "n".
-  if (isa<SCEVUnknown>(S)) {
-    recordRuntimePredicate(S);
+  // Check whether "S % M == 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_EQ, SmodM, Zero))
     return true;
-  }
 
-  // Expressions like "n + 1" and "n * 3".
-  if (isa<SCEVAddExpr>(S) || isa<SCEVMulExpr>(S)) {
-    if (SCEVExprContains(S, [](const SCEV *X) { return isa<SCEVUnknown>(X); }))
-      recordRuntimePredicate(S);
-    return true;
-  }
+  // Check whether "S % M != 0" is known at compile time.
+  if (isKnownPredicate(ICmpInst::ICMP_NE, SmodM, Zero))
+    return false;
 
-  LLVM_DEBUG(dbgs() << "SCEV node not handled yet in isKnownMultipleOf: " << *S
-                    << "\n");
-  return false;
+  const SCEVPredicate *P = getComparePredicate(ICmpInst::ICMP_EQ, SmodM, Zero);
+
+  // Detect redundant predicates.
+  for (auto *A : Assumptions)
+    if (A->implies(P, *this))
+      return true;
+
+  // Only record non-redundant predicates.
+  Assumptions.push_back(P);
+  return true;
 }
 
 std::pair<const SCEV *, const SCEV *>
