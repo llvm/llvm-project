@@ -14,6 +14,7 @@
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -1261,8 +1262,8 @@ void elf::setAArch64TargetInfo(Ctx &ctx) {
     ctx.target.reset(new AArch64(ctx));
 }
 
-AArch64BuildAttrSubsections
-extractBuildAttributesSubsections(const llvm::AArch64AttributeParser &attributes) {
+AArch64BuildAttrSubsections extractBuildAttributesSubsections(
+    const llvm::AArch64AttributeParser &attributes) {
 
   AArch64BuildAttrSubsections subSections;
   auto getPauthValue = [&](unsigned tag) -> unsigned {

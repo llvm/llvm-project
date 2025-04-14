@@ -6,9 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#include <cstdint>
 #include "llvm/Support/AArch64AttributeParser.h"
-#include "llvm/Support/AArch64BuildAttributes.h"
+#include <cstdint>
 
 struct AArch64BuildAttrSubsections {
   struct PauthSubSection {
@@ -19,4 +18,4 @@ struct AArch64BuildAttrSubsections {
 };
 
 AArch64BuildAttrSubsections
-extractBuildAttributesSubsections(const llvm::AArch64AttributeParser&);
+extractBuildAttributesSubsections(const llvm::AArch64AttributeParser &);

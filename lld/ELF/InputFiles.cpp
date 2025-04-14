@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Arch/AArch64.h"
 #include "InputFiles.h"
+#include "Arch/AArch64.h"
 #include "Config.h"
 #include "DWARF.h"
 #include "Driver.h"
@@ -24,7 +24,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/AArch64AttributeParser.h"
-#include "llvm/Support/AArch64BuildAttributes.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
