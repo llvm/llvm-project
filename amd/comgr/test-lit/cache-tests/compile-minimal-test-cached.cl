@@ -24,9 +24,9 @@
 // RUN: llvm-objdump -d %t_a.bin | FileCheck %S/../compile-minimal-test.cl
 // RUN: COUNT_BEFORE=$(ls "%t.cache" | wc -l)
 
-// COM: One element for the tag, one for bc->obj another for obj->exec. No
-// COM:    elements for src->bc since we currently not support it.
-// RUN: [ 3 -eq $COUNT_BEFORE ]
+// COM: One element for the tag, one for cli->bc, one for bc->obj another
+// COM: for obj->exec. No elements for src->cli since this is not supported.
+// RUN: [ 4 -eq $COUNT_BEFORE ]
 //
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache compile-opencl-minimal \
 // RUN:    %S/../compile-minimal-test.cl %t_b.bin 1.2
