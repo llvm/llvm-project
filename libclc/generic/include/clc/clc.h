@@ -239,54 +239,22 @@
 #include <clc/atomic/atomic_xchg.h>
 #include <clc/atomic/atomic_xor.h>
 
-/* cl_khr_global_int32_base_atomics Extension Functions */
-#include <clc/cl_khr_global_int32_base_atomics/atom_add.h>
-#include <clc/cl_khr_global_int32_base_atomics/atom_cmpxchg.h>
-#include <clc/cl_khr_global_int32_base_atomics/atom_dec.h>
-#include <clc/cl_khr_global_int32_base_atomics/atom_inc.h>
-#include <clc/cl_khr_global_int32_base_atomics/atom_sub.h>
-#include <clc/cl_khr_global_int32_base_atomics/atom_xchg.h>
+/* cl_khr_global_int32_base_atomics, cl_khr_local_int32_base_atomics and
+ * cl_khr_int64_base_atomics Extension Functions */
+#include <clc/atomic/atom_add.h>
+#include <clc/atomic/atom_cmpxchg.h>
+#include <clc/atomic/atom_dec.h>
+#include <clc/atomic/atom_inc.h>
+#include <clc/atomic/atom_sub.h>
+#include <clc/atomic/atom_xchg.h>
 
-/* cl_khr_global_int32_extended_atomics Extension Functions */
-#include <clc/cl_khr_global_int32_extended_atomics/atom_and.h>
-#include <clc/cl_khr_global_int32_extended_atomics/atom_max.h>
-#include <clc/cl_khr_global_int32_extended_atomics/atom_min.h>
-#include <clc/cl_khr_global_int32_extended_atomics/atom_or.h>
-#include <clc/cl_khr_global_int32_extended_atomics/atom_xor.h>
-
-/* cl_khr_local_int32_base_atomics Extension Functions */
-#include <clc/cl_khr_local_int32_base_atomics/atom_add.h>
-#include <clc/cl_khr_local_int32_base_atomics/atom_cmpxchg.h>
-#include <clc/cl_khr_local_int32_base_atomics/atom_dec.h>
-#include <clc/cl_khr_local_int32_base_atomics/atom_inc.h>
-#include <clc/cl_khr_local_int32_base_atomics/atom_sub.h>
-#include <clc/cl_khr_local_int32_base_atomics/atom_xchg.h>
-
-/* cl_khr_local_int32_extended_atomics Extension Functions */
-#include <clc/cl_khr_local_int32_extended_atomics/atom_and.h>
-#include <clc/cl_khr_local_int32_extended_atomics/atom_max.h>
-#include <clc/cl_khr_local_int32_extended_atomics/atom_min.h>
-#include <clc/cl_khr_local_int32_extended_atomics/atom_or.h>
-#include <clc/cl_khr_local_int32_extended_atomics/atom_xor.h>
-
-/* cl_khr_int64_base_atomics Extension Functions */
-#ifdef cl_khr_int64_base_atomics
-#include <clc/cl_khr_int64_base_atomics/atom_add.h>
-#include <clc/cl_khr_int64_base_atomics/atom_cmpxchg.h>
-#include <clc/cl_khr_int64_base_atomics/atom_dec.h>
-#include <clc/cl_khr_int64_base_atomics/atom_inc.h>
-#include <clc/cl_khr_int64_base_atomics/atom_sub.h>
-#include <clc/cl_khr_int64_base_atomics/atom_xchg.h>
-#endif
-
-/* cl_khr_int64_extended_atomics Extension Functions */
-#ifdef cl_khr_int64_base_atomics
-#include <clc/cl_khr_int64_extended_atomics/atom_and.h>
-#include <clc/cl_khr_int64_extended_atomics/atom_max.h>
-#include <clc/cl_khr_int64_extended_atomics/atom_min.h>
-#include <clc/cl_khr_int64_extended_atomics/atom_or.h>
-#include <clc/cl_khr_int64_extended_atomics/atom_xor.h>
-#endif
+/* cl_khr_global_int32_extended_atomics, cl_khr_local_int32_extended_atomics and
+ * cl_khr_int64_extended_atomics Extension Functions */
+#include <clc/atomic/atom_and.h>
+#include <clc/atomic/atom_max.h>
+#include <clc/atomic/atom_min.h>
+#include <clc/atomic/atom_or.h>
+#include <clc/atomic/atom_xor.h>
 
 /* 6.12.12 Miscellaneous Vector Functions */
 #include <clc/misc/shuffle.h>
