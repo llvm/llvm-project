@@ -235,3 +235,19 @@ define <3 x i4> @shuf_bitcast_wrong_size(<2 x i8> %v, i8 %x) {
   %r = shufflevector <4 x i4> %b, <4 x i4> undef, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x i4> %r
 }
+
+; Negative test - chain of bitcasts.
+
+define <16 x i8> @shuf_bitcast_chain(<8 x i32> %v) {
+; CHECK-LABEL: @shuf_bitcast_chain(
+; CHECK-NEXT:    [[S_BC:%.*]] = bitcast <8 x i32> [[V:%.*]] to <2 x i128>
+; CHECK-NEXT:    [[S_EXTRACT:%.*]] = extractelement <2 x i128> [[S_BC]], i64 0
+; CHECK-NEXT:    [[C:%.*]] = bitcast i128 [[S_EXTRACT]] to <16 x i8>
+; CHECK-NEXT:    ret <16 x i8> [[C]]
+;
+  %s = shufflevector <8 x i32> %v, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %a = bitcast <4 x i32> %s to <2 x i64>
+  %b = bitcast <2 x i64> %a to i128
+  %c = bitcast i128 %b to <16 x i8>
+  ret <16 x i8> %c
+}
