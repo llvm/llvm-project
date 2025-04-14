@@ -278,13 +278,18 @@ Attribute ConstantRangeAttr::parse(AsmParser &parser, Type odsType) {
 }
 
 void ConstantRangeAttr::print(AsmPrinter &printer) const {
-  printer << "<i" << getLower().getBitWidth() << ", " << getLower() << ", "
-          << getUpper() << ">";
+  printer << "<i" << getWidth() << ", " << getLower() << ", " << getUpper()
+          << ">";
 }
 
 LogicalResult
 ConstantRangeAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
-                          APInt lower, APInt upper) {
+                          uint32_t width, llvm::APInt lower,
+                          llvm::APInt upper) {
+  if (width != lower.getBitWidth())
+    return emitError()
+           << "expected type and value to have matching bitwidths but got "
+           << width << " vs. " << lower.getBitWidth();
   if (lower.getBitWidth() != upper.getBitWidth())
     return emitError()
            << "expected lower and upper to have matching bitwidths but got "

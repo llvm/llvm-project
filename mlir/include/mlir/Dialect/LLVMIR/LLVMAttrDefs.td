@@ -1095,6 +1095,7 @@ def LLVM_TBAATagArrayAttr
 //===----------------------------------------------------------------------===//
 def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
   let parameters = (ins
+    "uint32_t":$width,
     "::llvm::APInt":$lower,
     "::llvm::APInt":$upper
   );
@@ -1110,13 +1111,16 @@ def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
 
     Syntax:
     ```
-    `<` `i`(width($lower)) $lower `,` $upper `>`
+    `<` `i`(width) $lower `,` $upper `>`
     ```
   }];
 
   let builders = [
     AttrBuilder<(ins "uint32_t":$bitWidth, "int64_t":$lower, "int64_t":$upper), [{
-      return $_get($_ctxt, ::llvm::APInt(bitWidth, lower), ::llvm::APInt(bitWidth, upper));
+      return $_get($_ctxt, bitWidth, ::llvm::APInt(bitWidth, lower), ::llvm::APInt(bitWidth, upper));
+    }]>,
+    AttrBuilder<(ins "::llvm::APInt":$lower, "::llvm::APInt":$upper), [{
+      return $_get($_ctxt, lower.getBitWidth(), lower, upper);
     }]>
   ];
 
