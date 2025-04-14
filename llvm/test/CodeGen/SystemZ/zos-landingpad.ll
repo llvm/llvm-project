@@ -39,4 +39,5 @@ lpad:
 ; Check that the exception table is emitted into .lsda section.
 ; CHECK:  stdin#C CSECT
 ; CHECK:  C_WSA64 CATTR ALIGN(2),RMODE(64),PART(.gcc_exception_table.test1)
+; CHECK:  .gcc_exception_table.test1 XATTR LINKAGE(XPLINK),SCOPE(SECTION)
 ; CHECK: GCC_except_table0:

@@ -66,6 +66,37 @@ void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     OS << ",PART(" << PartName << ")";
   OS << '\n';
 }
+
+void emitXATTR(raw_ostream &OS, StringRef Name, GOFF::ESDLinkageType Linkage,
+               GOFF::ESDExecutable Executable,
+               GOFF::ESDBindingScope BindingScope) {
+  OS << Name << " XATTR ";
+  OS << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK") << "),";
+  if (Executable != GOFF::ESD_EXE_Unspecified)
+    OS << "REFERENCE(" << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA")
+       << "),";
+  if (BindingScope != GOFF::ESD_BSC_Unspecified) {
+    OS << "SCOPE(";
+    switch (BindingScope) {
+    case GOFF::ESD_BSC_Section:
+      OS << "SECTION";
+      break;
+    case GOFF::ESD_BSC_Module:
+      OS << "MODULE";
+      break;
+    case GOFF::ESD_BSC_Library:
+      OS << "LIBRARY";
+      break;
+    case GOFF::ESD_BSC_ImportExport:
+      OS << "EXPORT";
+      break;
+    default:
+      break;
+    }
+    OS << ')';
+  }
+  OS << '\n';
+}
 } // namespace
 
 void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
@@ -96,6 +127,8 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                 PRAttributes.Alignment, ED->EDAttributes.LoadBehavior,
                 PRAttributes.Executable, PRAttributes.IsReadOnly,
                 PRAttributes.SortKey, Name);
+      emitXATTR(OS, Name, PRAttributes.Linkage, PRAttributes.Executable,
+                PRAttributes.BindingScope);
       ED->Emitted = true;
       Emitted = true;
     } else
