@@ -1756,6 +1756,23 @@ that it has a value within the valid range of the enum. If their
 wrapper attribute instead of using a bare signless integer attribute
 for storage.
 
+### Enum properties
+
+Enums can be wrapped in properties so that they can be stored inline.
+This causes a value of the enum's C++ class to become a member of the operation's
+property struct and for the operation's verifier to check that the enum's value
+is a valid value for the enum.
+
+The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+
+A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
+the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`
+and a mnemonic string, which becomes part of the property's syntax.
+
+Both of these `EnumProp` types have a `*EnumPropWithAttrForm`, which allows for
+transparently upgrading from `EnumAttr`s and optionally retaining those
+attributes in the generic form.
+
 ## Debugging Tips
 
 ### Run `mlir-tblgen` to see the generated content
