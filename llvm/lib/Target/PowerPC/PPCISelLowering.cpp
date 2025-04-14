@@ -11147,6 +11147,7 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 
   case Intrinsic::ppc_mma_dmxxextfdmr512: {
+    assert(Subtarget.isISAFuture() && "dmxxextfdmr512 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
            "Specify P of 0 or 1 for lower or upper 512 bytes");
@@ -11170,28 +11171,39 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
 
   case Intrinsic::ppc_mma_dmxxextfdmr256: {
+    assert(Subtarget.isISAFuture() && "dmxxextfdmr256 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     assert(Idx && (Idx->getSExtValue() >= 0 || Idx->getSExtValue() <= 3) &&
            "Specify a dmr row pair 0-3");
     unsigned IdxVal = Idx->getSExtValue();
-    unsigned Pairx;
+    unsigned Subx;
     switch (IdxVal) {
-    case 0: Pairx = PPC::sub_dmrrowp0; break;
-    case 1: Pairx = PPC::sub_dmrrowp1; break;
-    case 2: Pairx = PPC::sub_wacc_hi_then_sub_dmrrowp0; break;
-    case 3: Pairx = PPC::sub_wacc_hi_then_sub_dmrrowp1; break;
+    case 0:
+      Subx = PPC::sub_dmrrowp0;
+      break;
+    case 1:
+      Subx = PPC::sub_dmrrowp1;
+      break;
+    case 2:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp0;
+      break;
+    case 3:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp1;
+      break;
     }
-    SDValue Pair(
+    SDValue Subreg(
         DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::v256i1,
                            Op.getOperand(1),
-                           DAG.getTargetConstant(Pairx, dl, MVT::i32)),
+                           DAG.getTargetConstant(Subx, dl, MVT::i32)),
         0);
-    SDValue C = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
+    SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
     return SDValue(
-        DAG.getMachineNode(PPC::DMXXEXTFDMR256, dl, MVT::v256i1, {Pair, C}), 0);
+        DAG.getMachineNode(PPC::DMXXEXTFDMR256, dl, MVT::v256i1, {Subreg, P}),
+        0);
   }
 
   case Intrinsic::ppc_mma_dmxxinstdmr512: {
+    assert(Subtarget.isISAFuture() && "dmxxinstdmr512 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(4));
     assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
            "Specify P of 0 or 1 for lower or upper 512 bytes");
@@ -11205,41 +11217,43 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       Opcode = PPC::DMXXINSTDMR512_HI;
       Subx = PPC::sub_wacc_hi;
     }
-    SDValue Ops[] = { Op.getOperand(2), Op.getOperand(3) };
-    SDValue WideVec =
-        SDValue(DAG.getMachineNode(Opcode, dl, MVT::v512i1, Ops), 0);
+    SDValue Ops[] = {Op.getOperand(2), Op.getOperand(3)};
+    SDValue Wacc = SDValue(DAG.getMachineNode(Opcode, dl, MVT::v512i1, Ops), 0);
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
-    return
-        SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl,
-                                   MVT::v1024i1, Op.getOperand(1), WideVec,
-                                   SubReg),
-                0);
+    return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
+                                      Op.getOperand(1), Wacc, SubReg),
+                   0);
   }
 
   case Intrinsic::ppc_mma_dmxxinstdmr256: {
+    assert(Subtarget.isISAFuture() && "dmxxinstdmr256 requires ISA Future");
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(3));
     assert(Idx && (Idx->getSExtValue() >= 0 || Idx->getSExtValue() <= 3) &&
            "Specify a dmr row pair 0-3");
     unsigned IdxVal = Idx->getSExtValue();
-    unsigned Pairx;
     unsigned Subx;
     switch (IdxVal) {
-    case 0: Subx = PPC::sub_dmrrowp0; break;
-    case 1: Subx = PPC::sub_dmrrowp1; break;
-    case 2: Subx = PPC::sub_wacc_hi_then_sub_dmrrowp0; break;
-    case 3: Subx = PPC::sub_wacc_hi_then_sub_dmrrowp1; break;
+    case 0:
+      Subx = PPC::sub_dmrrowp0;
+      break;
+    case 1:
+      Subx = PPC::sub_dmrrowp1;
+      break;
+    case 2:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp0;
+      break;
+    case 3:
+      Subx = PPC::sub_wacc_hi_then_sub_dmrrowp1;
+      break;
     }
     SDValue SubReg = DAG.getTargetConstant(Subx, dl, MVT::i32);
-    SDValue C = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
-    SDValue Ops[] = { Op.getOperand(2), C };
-    SDValue WideVec =
-        SDValue(DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v512i1, Ops),
-                0);
-    return
-        SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl,
-                                   MVT::v1024i1, Op.getOperand(1), WideVec,
-                                   SubReg),
-                0);
+    SDValue P = DAG.getTargetConstant(IdxVal, dl, MVT::i32);
+    SDValue Ops[] = {Op.getOperand(2), P};
+    SDValue DMRRowp = SDValue(
+        DAG.getMachineNode(PPC::DMXXINSTDMR256, dl, MVT::v256i1, Ops), 0);
+    return SDValue(DAG.getMachineNode(PPC::INSERT_SUBREG, dl, MVT::v1024i1,
+                                      Op.getOperand(1), DMRRowp, SubReg),
+                   0);
   }
 
   case Intrinsic::ppc_mma_xxmfacc:
