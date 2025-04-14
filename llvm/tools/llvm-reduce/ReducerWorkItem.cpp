@@ -779,8 +779,6 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
   const bool ShouldPreserveUseListOrder = true;
 
   if (LTOInfo && LTOInfo->IsThinLTO && LTOInfo->EnableSplitLTOUnit) {
-    // FIXME: This should not depend on the pass manager. There are hidden
-    // transforms that may happen inside ThinLTOBitcodeWriterPass
     PassBuilder PB;
     LoopAnalysisManager LAM;
     FunctionAnalysisManager FAM;
