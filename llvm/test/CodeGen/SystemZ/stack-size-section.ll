@@ -43,7 +43,7 @@ define void @dynalloc(i32 %N) #0 {
 ; CHECK-LABEL: .section .stack_sizes,"o",@progbits,.text{{$}}
 ; CHECK-NEXT: .quad .Lfunc_begin4
 ; CHECK-NEXT: .ascii "\260!"
-define i32 @jump_table(i32 %x) {
+define i32 @linked_section(i32 %x) {
   %arr = alloca [1024 x i32]
   switch i32 %x, label %sw.epilog [
     i32 0, label %sw.bb0
