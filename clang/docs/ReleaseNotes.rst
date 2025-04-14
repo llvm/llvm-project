@@ -391,6 +391,7 @@ Bug Fixes in This Version
     #endif
 
 - Fixed a crash when a ``friend`` function is redefined as deleted. (#GH135506)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
