@@ -125,19 +125,19 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
 
   // remaining vectors 
   while(static_cast<size_t>(__last - __first) >=  __vec_size) {
-      __vec_type __vec = std::__load_vector<__vec_type>(__first + __vec_size);
+      __vec_type __vec = std::__load_vector<__vec_type>(__first);
       auto __block_min_element = __builtin_reduce_min(__vec);
       if (__block_min_element < __min_element) {
         __min_element = __block_min_element;
-        __min_block_start = __first + __i * __vec_size;
-        __min_block_start = __first + (__i + 1) * __vec_size;
+        __min_block_start = __first;
+        __min_block_start = __first + __vec_size;
       }
       // max
       auto __block_max_element = __builtin_reduce_max(__vec);
       if (__block_max_element > __max_element) {
         __max_element = __block_max_element;
-        __max_block_start = __first + __i * __vec_size;
-        __max_block_start = __first + (__i + 1) * __vec_size;
+        __max_block_start = __first;
+        __max_block_start = __first + __vec_size;
       }
       __first += __vec_size;
   }
