@@ -1334,6 +1334,14 @@ unsigned ContinuationIndenter::getNewLineColumn(const LineState &State) {
            Style.IndentWidth;
   }
 
+  if (Style.BraceWrapping.BeforeLambdaBody &&
+      Style.BraceWrapping.IndentBraces && Current.is(TT_LambdaLBrace)) {
+    const auto From = Style.LambdaBodyIndentation == FormatStyle::LBI_Signature
+                          ? CurrentState.Indent
+                          : State.FirstIndent;
+    return From + Style.IndentWidth;
+  }
+
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||
       (Style.isVerilog() && Keywords.isVerilogBegin(*NextNonComment))) {
     if (Current.NestingLevel == 0 ||
@@ -2113,7 +2121,8 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
   if (Style.LambdaBodyIndentation == FormatStyle::LBI_OuterScope &&
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
-    State.Stack.back().NestedBlockIndent = State.FirstIndent;
+    const auto Indent = Style.IndentWidth * Style.BraceWrapping.IndentBraces;
+    State.Stack.back().NestedBlockIndent = State.FirstIndent + Indent;
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.
