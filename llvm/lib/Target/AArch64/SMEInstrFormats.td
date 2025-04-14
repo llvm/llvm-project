@@ -110,6 +110,8 @@ class sme_sparse_outer_product_pseudo<RegisterOperand zn_ty, RegisterOperand zm_
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_quarter_tile_outer_product_pseudo<RegisterOperand zn_ty, RegisterOperand zm_ty, SMEMatrixTypeEnum za_flag>
@@ -3583,10 +3585,7 @@ multiclass sme_tmopa_16b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_
     let Uses = uses;
   }
 
-  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0> {
-    let mayLoad = 1;
-    let mayStore = 1;
-  }
+  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0>;
 
   def : SME2_ZA_TMOP_Pat<NAME, intrinsic, timm32_0_1, vt>;
 }
@@ -3596,10 +3595,7 @@ multiclass sme_tmopa_32b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_
     let Uses = uses;
   }
 
-  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0> {
-    let mayLoad = 1;
-    let mayStore = 1;
-  }
+  def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0>;
 
   def : SME2_ZA_TMOP_Pat<NAME, intrinsic, timm32_0_3, vt>;
 }
