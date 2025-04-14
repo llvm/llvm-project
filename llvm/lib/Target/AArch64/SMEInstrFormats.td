@@ -3584,6 +3584,7 @@ multiclass sme_tmopa_16b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_
   }
 
   def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileH>, SMEPseudo2Instr<NAME, 0> {
+    let mayLoad = 1;
     let mayStore = 1;
   }
 
@@ -3596,6 +3597,7 @@ multiclass sme_tmopa_32b<bits<5> opc, RegisterOperand zn_ty, RegisterOperand zm_
   }
 
   def NAME # _PSEUDO : sme_sparse_outer_product_pseudo<zn_ty, zm_ty, SMEMatrixTileS>, SMEPseudo2Instr<NAME, 0> {
+    let mayLoad = 1;
     let mayStore = 1;
   }
 
