@@ -209,7 +209,6 @@ static void updateSupportedARMFeatures(Ctx &ctx,
   ctx.arg.armHasThumb2ISA |= thumb && *thumb >= ARMBuildAttrs::AllowThumb32;
 }
 
-
 InputFile::InputFile(Ctx &ctx, Kind k, MemoryBufferRef m)
     : ctx(ctx), mb(m), groupId(ctx.driver.nextGroupId), fileKind(k) {
   // All files within the same --{start,end}-group get the same group ID.
