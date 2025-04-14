@@ -8,7 +8,7 @@
 # RUN: llvm-objdump --section-headers %t3 | FileCheck %s --check-prefix=DSO
 
 ## All .rodata.* sections should merge into a single GOT entry
-# EXE: {{.*}}.got 00000008{{.*}}
+# EXE: {{.*}}.got 00000010{{.*}}
 
 ## When symbols are preemptible in DSO mode, GOT entries wouldn't be merged
 # DSO: {{.*}}.got 00000020{{.*}}
