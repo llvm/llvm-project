@@ -102,6 +102,8 @@ class sme_outer_product_pseudo<ZPRRegOp zpr_ty, SMEMatrixTypeEnum za_flag>
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_quarter_tile_outer_product_pseudo<RegisterOperand zn_ty, RegisterOperand zm_ty, SMEMatrixTypeEnum za_flag>
@@ -119,6 +121,8 @@ class sme2_za_array_2op_multi_single_pseudo<string name, Operand index_ty, Regis
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, index_ty:$imm3, multi_vector_ty:$Zn, zpr_ty:$Zm), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_za_array_2op_multi_multi_pseudo<string name, Operand index_ty, RegisterOperand multi_vector_ty,
@@ -127,6 +131,8 @@ class sme2_za_array_2op_multi_multi_pseudo<string name, Operand index_ty, Regist
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, index_ty:$imm3, multi_vector_ty:$Zn, multi_vector_ty:$Zm), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_za_array_2op_multi_index_pseudo<string name, Operand index_ty, RegisterOperand multi_vector_ty,
@@ -135,6 +141,8 @@ class sme2_za_array_2op_multi_index_pseudo<string name, Operand index_ty, Regist
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rv, index_ty:$imm3, multi_vector_ty:$Zn, zpr_ty:$Zm, imm_ty:$i), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_move_to_za_pseudo<string name, Operand imm_ty, RegisterOperand multi_vector_ty, SMEMatrixTypeEnum za_flag>
@@ -142,6 +150,7 @@ class sme2_move_to_za_pseudo<string name, Operand imm_ty, RegisterOperand multi_
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, imm_ty:$imm, multi_vector_ty:$Zn), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayStore = 1;
 }
 
 class sme2_move_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, RegisterOperand multi_vector_ty, SMEMatrixTypeEnum za_flag>
@@ -149,6 +158,7 @@ class sme2_move_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, Re
       Pseudo<(outs), (ins tile_imm:$tile, MatrixIndexGPR32Op12_15:$Rs, imm_ty:$imm, multi_vector_ty:$Zn), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayStore = 1;
 }
 
 class sem2p1_zero_matrix_pseudo<string name, Operand index_ty, SMEMatrixTypeEnum za_flag>
@@ -156,6 +166,7 @@ class sem2p1_zero_matrix_pseudo<string name, Operand index_ty, SMEMatrixTypeEnum
       Pseudo<(outs), (ins MatrixIndexGPR32Op8_11:$Rs, index_ty:$imm), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayStore = 1;
 }
 
 class sme2_movez_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, RegisterOperand vector_ty, SMEMatrixTypeEnum za_flag>
@@ -163,6 +174,8 @@ class sme2_movez_to_tile_pseudo<string name, Operand tile_imm, Operand imm_ty, R
       Pseudo<(outs vector_ty:$Zn), (ins tile_imm:$tile, MatrixIndexGPR32Op12_15:$Rs, imm_ty:$imm), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 class sme2_movaz_array_to_tile_pseudo<string name, Operand index_ty, RegisterOperand multi_vector_ty,
@@ -171,6 +184,8 @@ class sme2_movaz_array_to_tile_pseudo<string name, Operand index_ty, RegisterOpe
       Pseudo<(outs multi_vector_ty:$Zd), (ins MatrixIndexGPR32Op8_11:$Rv, index_ty:$imm3), []> {
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -757,6 +772,8 @@ class sme_add_vector_to_tile_pseudo<ZPRRegOp zpr_ty, SMEMatrixTypeEnum za_flag>
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayLoad = 1;
+  let mayStore = 1;
 }
 
 multiclass sme_add_vector_to_tile_u32<bit V, string mnemonic, SDPatternOperator op> {
@@ -1215,6 +1232,7 @@ class sme_mova_insert_pseudo<SMEMatrixTypeEnum za_flag>
   // Translated to the actual instructions in AArch64ISelLowering.cpp
   let SMEMatrixType = za_flag;
   let usesCustomInserter = 1;
+  let mayStore = 1;
 }
 
 multiclass sme_vector_v_to_tile<string mnemonic, bit is_col> {
@@ -1409,6 +1427,7 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
                                    is_col, sme_elm_idx0_15, mnemonic> {
     bits<4> imm;
     let Inst{8-5} = imm;
+    let mayLoad = 1;
   }
   def _H : sme_tile_to_vector_inst<0b0, 0b01, ZPR16, !if(is_col, TileVectorOpV16,
                                                                  TileVectorOpH16),
@@ -1417,6 +1436,7 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
     bits<3> imm;
     let Inst{8}   = ZAn;
     let Inst{7-5} = imm;
+    let mayLoad = 1;
   }
   def _S : sme_tile_to_vector_inst<0b0, 0b10, ZPR32, !if(is_col, TileVectorOpV32,
                                                                  TileVectorOpH32),
@@ -1425,6 +1445,7 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
     bits<2> imm;
     let Inst{8-7} = ZAn;
     let Inst{6-5} = imm;
+    let mayLoad = 1;
   }
   def _D : sme_tile_to_vector_inst<0b0, 0b11, ZPR64, !if(is_col, TileVectorOpV64,
                                                                  TileVectorOpH64),
@@ -1433,12 +1454,14 @@ multiclass sme_tile_to_vector_v<string mnemonic, bit is_col> {
     bits<1> imm;
     let Inst{8-6} = ZAn;
     let Inst{5}   = imm;
+    let mayLoad = 1;
   }
   def _Q : sme_tile_to_vector_inst<0b1, 0b11, ZPR128, !if(is_col, TileVectorOpV128,
                                                                   TileVectorOpH128),
                                    is_col, sme_elm_idx0_0, mnemonic> {
     bits<4> ZAn;
     let Inst{8-5} = ZAn;
+    let mayLoad = 1;
   }
 
   defm : sme_tile_to_vector_aliases<!cast<Instruction>(NAME # _B), ZPR8,
@@ -1909,7 +1932,9 @@ multiclass sme2_multivec_accum_add_sub_vg2<string mnemonic, bits<4> op,
   def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
   (!cast<Instruction>(NAME) matrix_ty:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, vector_ty:$Zm), 0>;
 
-  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>;
+  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>{
+    let mayLoad = 1;
+  }
   def : SME2_ZA_VG1x2_Multi_Pat<NAME, intrinsic, vty, sme_elm_idx0_7, tileslice16>;
 }
 
@@ -1932,7 +1957,9 @@ multiclass sme2_multivec_accum_add_sub_vg4<string mnemonic, bits<4> op,
   def : InstAlias<mnemonic # "\t$ZAdn[$Rv, $imm3], $Zm",
   (!cast<Instruction>(NAME) matrix_ty:$ZAdn,  MatrixIndexGPR32Op8_11:$Rv, sme_elm_idx0_7:$imm3, vector_ty:$Zm), 0>;
 
-  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>;
+  def _PSEUDO : sme2_move_to_za_pseudo<NAME, sme_elm_idx0_7, vector_ty, SMEMatrixArray>{
+    let mayLoad = 1;
+  }
   def : SME2_ZA_VG1x4_Multi_Pat<NAME, intrinsic, vty, sme_elm_idx0_7, tileslice16>;
 }
 
@@ -4441,6 +4468,7 @@ multiclass sme2_mova_tile_to_vec_vg2_multi_inst<bit v, bits<3> opc, string mnemo
                                                  uimm3s2range, mnemonic>, SMEPseudo2Instr<NAME # _B, 1> {
     bits<3> imm;
     let Inst{7-5} = imm;
+    let mayLoad = 1;
   }
 
   def _H : sme2_mova_tile_to_vec_vg2_multi_base<0b01, v, opc, ZZ_h_mul_r,
@@ -4451,6 +4479,7 @@ multiclass sme2_mova_tile_to_vec_vg2_multi_inst<bit v, bits<3> opc, string mnemo
     bits<2> imm;
     let Inst{7}   = ZAn;
     let Inst{6-5} = imm;
+    let mayLoad = 1;
   }
 
   def _S : sme2_mova_tile_to_vec_vg2_multi_base<0b10, v, opc, ZZ_s_mul_r,
@@ -4461,6 +4490,7 @@ multiclass sme2_mova_tile_to_vec_vg2_multi_inst<bit v, bits<3> opc, string mnemo
     bits<1> imm;
     let Inst{7-6} = ZAn;
     let Inst{5}   = imm;
+    let mayLoad = 1;
   }
 
   def _D : sme2_mova_tile_to_vec_vg2_multi_base<0b11, v, opc, ZZ_d_mul_r,
@@ -4469,6 +4499,7 @@ multiclass sme2_mova_tile_to_vec_vg2_multi_inst<bit v, bits<3> opc, string mnemo
                                                 uimm0s2range, mnemonic>, SMEPseudo2Instr<NAME # _D, 1> {
     bits<3> ZAn;
     let Inst{7-5} = ZAn;
+    let mayLoad = 1;
   }
 
   if !eq(mnemonic, "mova") then {
@@ -4583,6 +4614,7 @@ multiclass sme2_mova_tile_to_vec_vg4_multi_base<bit v, bits<3> opc, string mnemo
                                                 uimm2s4range, mnemonic>, SMEPseudo2Instr<NAME # _B, 1> {
     bits<2> imm;
     let Inst{6-5} = imm;
+    let mayLoad = 1;
   }
 
   def _H : sme2_mova_tile_to_vec_vg4_multi_base<0b01, v, {opc,0,?,?},
@@ -4594,6 +4626,7 @@ multiclass sme2_mova_tile_to_vec_vg4_multi_base<bit v, bits<3> opc, string mnemo
     bits<1> imm;
     let Inst{6}   = ZAn;
     let Inst{5}   = imm;
+    let mayLoad = 1;
   }
 
   def _S : sme2_mova_tile_to_vec_vg4_multi_base<0b10, v, {opc,0,?,?},
@@ -4603,6 +4636,7 @@ multiclass sme2_mova_tile_to_vec_vg4_multi_base<bit v, bits<3> opc, string mnemo
                                                  uimm0s4range, mnemonic>, SMEPseudo2Instr<NAME # _S, 1> {
     bits<2> ZAn;
     let Inst{6-5} = ZAn;
+    let mayLoad = 1;
   }
 
   def _D : sme2_mova_tile_to_vec_vg4_multi_base<0b11, v, {opc,?,?,?},
@@ -4612,6 +4646,7 @@ multiclass sme2_mova_tile_to_vec_vg4_multi_base<bit v, bits<3> opc, string mnemo
                                                 uimm0s4range, mnemonic>, SMEPseudo2Instr<NAME # _D, 1> {
     bits<3> ZAn;
     let Inst{7-5} = ZAn;
+    let mayLoad = 1;
   }
 
   if !eq(mnemonic, "mova") then {
