@@ -64,6 +64,7 @@ Changes to the LLVM IR
 
 * Updated semantics of `llvm.type.checked.load.relative` to match that of
   `llvm.load.relative`.
+* Floating-point operand bundles have been added.
 
 Changes to LLVM infrastructure
 ------------------------------
