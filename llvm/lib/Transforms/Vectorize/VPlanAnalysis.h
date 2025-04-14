@@ -63,6 +63,9 @@ public:
 
   /// Return the LLVMContext used by the analysis.
   LLVMContext &getContext() { return Ctx; }
+
+  /// Remove \p V from the cache. You must call this after a value is erased.
+  void erase(VPValue *V) { CachedTypes.erase(V); }
 };
 
 // Collect a VPlan's ephemeral recipes (those used only by an assume).
