@@ -45,9 +45,10 @@ bool ProcessRunLock::SetRunning() {
 
 bool ProcessRunLock::SetStopped() {
   ::pthread_rwlock_wrlock(&m_rwlock);
+  bool was_running = m_running;
   m_running = false;
   ::pthread_rwlock_unlock(&m_rwlock);
-  return true;
+  return was_running;
 }
 
 } // namespace lldb_private
