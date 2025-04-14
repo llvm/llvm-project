@@ -3214,15 +3214,15 @@ define double @v_fmaximum3_f64(double %a, double %b, double %c) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v7, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double %c)
@@ -3247,15 +3247,15 @@ define double @v_fmaximum3_f64_commute(double %a, double %b, double %c) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v7, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[4:5], v[0:1]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[4:5], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[4:5], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   %max1 = call double @llvm.maximum.f64(double %c, double %max0)
@@ -3279,15 +3279,15 @@ define amdgpu_ps <2 x i32> @s_fmaximum3_f64(double inreg %a, double inreg %b, do
 ; GFX9-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX9-NEXT:    v_max_f64 v[2:3], s[0:1], v[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, s[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], s[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, s[4:5], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, s[4:5], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, v4, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
 ; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
@@ -3326,10 +3326,10 @@ define double @v_fmaximum3_f64_fabs0(double %a, double %b, double %c) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %a.fabs = call double @llvm.fabs.f64(double %a)
   %max0 = call double @llvm.maximum.f64(double %a.fabs, double %b)
@@ -3360,10 +3360,10 @@ define double @v_fmaximum3_f64_fabs1(double %a, double %b, double %c) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %b.fabs = call double @llvm.fabs.f64(double %b)
   %max0 = call double @llvm.maximum.f64(double %a, double %b.fabs)
@@ -3389,10 +3389,10 @@ define double @v_fmaximum3_f64_fabs2(double %a, double %b, double %c) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v7, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], |v[4:5]|
 ; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], |v[4:5]|
 ; GFX9-NEXT:    s_nop 1
@@ -3539,10 +3539,10 @@ define double @v_fmaximum3_f64_fneg0(double %a, double %b, double %c) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %a.fneg = fneg double %a
   %max0 = call double @llvm.maximum.f64(double %a.fneg, double %b)
@@ -3573,10 +3573,10 @@ define double @v_fmaximum3_f64_fneg1(double %a, double %b, double %c) {
 ; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %b.fneg = fneg double %b
   %max0 = call double @llvm.maximum.f64(double %a, double %b.fneg)
@@ -3602,10 +3602,10 @@ define double @v_fmaximum3_f64_fneg2(double %a, double %b, double %c) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v7, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], -v[4:5]
 ; GFX9-NEXT:    v_cmp_u_f64_e64 vcc, v[0:1], -v[4:5]
 ; GFX9-NEXT:    s_nop 1
@@ -3638,15 +3638,15 @@ define double @v_fmaximum3_f64_const0(double %b, double %c) {
 ; GFX9-NEXT:    s_mov_b32 s1, 0x40200000
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], s[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double 8.0, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double %c)
@@ -3671,16 +3671,16 @@ define double @v_fmaximum3_f64__const2(double %a, double %b) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_mov_b32 s1, 0x40200000
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], s[0:1]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v6, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double 8.0)
@@ -3705,15 +3705,15 @@ define double @v_fmaximum3_f64_inlineimm0(double %b, double %c) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], 4.0
 ; GFX9-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double 4.0, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double %c)
@@ -3738,15 +3738,15 @@ define double @v_fmaximum3_f64__inlineimm(double %a, double %b) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[4:5], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], 4.0
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v6, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v6, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double 4.0)
@@ -3773,16 +3773,16 @@ define double @v_fmaximum3_f64_const1_const2(double %a) {
 ; GFX9-NEXT:    s_mov_b32 s1, 0x40200000
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], s[0:1]
 ; GFX9-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_mov_b32 s0, 0
 ; GFX9-NEXT:    s_mov_b32 s1, 0x40300000
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], s[0:1]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[0:1]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[0:1]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v4, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double 8.0)
   %max1 = call double @llvm.maximum.f64(double %max0, double 16.0)
@@ -4052,15 +4052,15 @@ define <2 x double> @v_no_fmaximum3_f64__multi_use(double %a, double %b, double 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    v_max_f64 v[6:7], v[0:1], v[2:3]
 ; GFX9-NEXT:    v_mov_b32_e32 v8, 0x7ff80000
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[2:3]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e32 v1, v7, v8, vcc
-; GFX9-NEXT:    v_cndmask_b32_e64 v0, v6, 0, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v1, v8, v7, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v6, vcc
 ; GFX9-NEXT:    v_max_f64 v[2:3], v[0:1], v[4:5]
-; GFX9-NEXT:    v_cmp_u_f64_e32 vcc, v[0:1], v[4:5]
+; GFX9-NEXT:    v_cmp_o_f64_e32 vcc, v[0:1], v[4:5]
 ; GFX9-NEXT:    s_nop 1
-; GFX9-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, v3, v8, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, v8, v3, vcc
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %max0 = call double @llvm.maximum.f64(double %a, double %b)
   %max1 = call double @llvm.maximum.f64(double %max0, double %c)

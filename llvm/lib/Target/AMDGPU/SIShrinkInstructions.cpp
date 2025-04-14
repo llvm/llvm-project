@@ -53,7 +53,7 @@ class SIShrinkInstructions {
                        unsigned SubReg) const;
   Register trySwapCndOperands(MachineInstr &MI) const;
   bool
-  shouldSwapCndOperands(MachineInstr &MI, const SIInstrInfo &TII,
+  shouldSwapCndOperands(MachineInstr &MI,
                         SmallVector<MachineOperand *, 4> &UsesToProcess) const;
   unsigned getInverseCompareOpcode(MachineInstr &MI) const;
   TargetInstrInfo::RegSubRegPair getSubRegForIndex(Register Reg, unsigned Sub,
@@ -871,12 +871,28 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
     return AMDGPU::V_CMP_EQ_F32_e64;
   case AMDGPU::V_CMP_GE_F32_e64:
     return AMDGPU::V_CMP_NGE_F32_e64;
+  case AMDGPU::V_CMP_NGE_F32_e64:
+    return AMDGPU::V_CMP_GE_F32_e64;
   case AMDGPU::V_CMP_LE_F32_e64:
     return AMDGPU::V_CMP_NLE_F32_e64;
+  case AMDGPU::V_CMP_NLE_F32_e32:
+    return AMDGPU::V_CMP_LE_F32_e32;
   case AMDGPU::V_CMP_GT_F32_e64:
     return AMDGPU::V_CMP_NGT_F32_e64;
+  case AMDGPU::V_CMP_NGT_F32_e64:
+    return AMDGPU::V_CMP_GT_F32_e64;
   case AMDGPU::V_CMP_LT_F32_e64:
     return AMDGPU::V_CMP_NLT_F32_e64;
+  case AMDGPU::V_CMP_NLT_F32_e64:
+    return AMDGPU::V_CMP_LT_F32_e64;
+  case AMDGPU::V_CMP_LG_F32_e64:
+    return AMDGPU::V_CMP_NLG_F32_e64;
+  case AMDGPU::V_CMP_NLG_F32_e64:
+    return AMDGPU::V_CMP_LG_F32_e64;
+  case AMDGPU::V_CMP_O_F32_e64:
+    return AMDGPU::V_CMP_U_F32_e64;
+  case AMDGPU::V_CMP_U_F32_e64:
+    return AMDGPU::V_CMP_O_F32_e64;
   // float 64
   case AMDGPU::V_CMP_EQ_F64_e64:
     return AMDGPU::V_CMP_NEQ_F64_e64;
@@ -884,20 +900,35 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
     return AMDGPU::V_CMP_EQ_F64_e64;
   case AMDGPU::V_CMP_GE_F64_e64:
     return AMDGPU::V_CMP_NGE_F64_e64;
+  case AMDGPU::V_CMP_NGE_F64_e64:
+    return AMDGPU::V_CMP_GE_F64_e64;
   case AMDGPU::V_CMP_LE_F64_e64:
     return AMDGPU::V_CMP_NLE_F64_e64;
+  case AMDGPU::V_CMP_NLE_F64_e32:
+    return AMDGPU::V_CMP_LE_F64_e32;
   case AMDGPU::V_CMP_GT_F64_e64:
     return AMDGPU::V_CMP_NGT_F64_e64;
+  case AMDGPU::V_CMP_NGT_F64_e64:
+    return AMDGPU::V_CMP_GT_F32_e64;
   case AMDGPU::V_CMP_LT_F64_e64:
     return AMDGPU::V_CMP_NLT_F64_e64;
+  case AMDGPU::V_CMP_NLT_F64_e64:
+    return AMDGPU::V_CMP_LT_F64_e64;
+  case AMDGPU::V_CMP_LG_F64_e64:
+    return AMDGPU::V_CMP_NLG_F64_e64;
+  case AMDGPU::V_CMP_NLG_F64_e64:
+    return AMDGPU::V_CMP_LG_F64_e64;
+  case AMDGPU::V_CMP_O_F64_e64:
+    return AMDGPU::V_CMP_U_F64_e64;
+  case AMDGPU::V_CMP_U_F64_e64:
+    return AMDGPU::V_CMP_O_F64_e64;
   default:
     return 0;
   }
 }
 
 bool SIShrinkInstructions::shouldSwapCndOperands(
-    MachineInstr &MI, const SIInstrInfo &TII,
-    SmallVector<MachineOperand *, 4> &UsesToProcess) const {
+    MachineInstr &MI, SmallVector<MachineOperand *, 4> &UsesToProcess) const {
   auto AllUses = MRI->use_nodbg_operands(MI.getOperand(0).getReg());
   bool ShouldSwap = false;
 
@@ -905,11 +936,11 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
     MachineInstr *UseInst = Use.getParent();
     if (UseInst->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
       return false;
-    MachineOperand *Src0 = TII.getNamedOperand(*UseInst, AMDGPU::OpName::src0);
-    MachineOperand *Src1 = TII.getNamedOperand(*UseInst, AMDGPU::OpName::src1);
+    MachineOperand &Src0 = UseInst->getOperand(2);
+    MachineOperand &Src1 = UseInst->getOperand(4);
 
-    auto Src0Imm = Src0->isImm();
-    auto Src1Imm = Src1->isImm();
+    bool Src0Imm = Src0.isImm();
+    bool Src1Imm = Src1.isImm();
 
     if (!Src1Imm && Src0Imm)
       return false;
@@ -922,32 +953,30 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
   return ShouldSwap;
 }
 
-void swapCndOperands(MachineInstr &MI) {
-  MachineOperand Op2 = MI.getOperand(2);
+static void swapCndOperands(MachineInstr &MI) {
+  MachineOperand &Op2 = MI.getOperand(2);
   MachineOperand Op4 = MI.getOperand(4);
 
   if (Op2.isReg()) {
     MI.getOperand(4).ChangeToRegister(
         Op2.getReg(), Op2.isDef(), Op2.isImplicit(), Op2.isKill(), Op2.isDead(),
         Op2.isUndef(), Op2.isDebug());
-    if (Op2.getSubReg() != AMDGPU::NoSubRegister)
-      MI.getOperand(4).setSubReg(Op2.getSubReg());
+    MI.getOperand(4).setSubReg(Op2.getSubReg());
   } else if (Op2.isImm()) {
     MI.getOperand(4).ChangeToImmediate(Op2.getImm());
   }
 
   if (Op4.isReg()) {
-    MI.getOperand(2).setReg(Op4.getReg());
-    if (Op4.getSubReg() != AMDGPU::NoSubRegister)
-      MI.getOperand(2).setSubReg(Op4.getSubReg());
+    Op2.setReg(Op4.getReg());
+    Op2.setSubReg(Op4.getSubReg());
   } else if (Op4.isImm()) {
-    MI.getOperand(2).ChangeToImmediate(Op4.getImm());
+    Op2.ChangeToImmediate(Op4.getImm());
   }
 
-  MachineOperand Op1 = MI.getOperand(1);
-  MachineOperand Op3 = MI.getOperand(3);
-  MI.getOperand(1).setImm(Op3.getImm());
-  MI.getOperand(3).setImm(Op1.getImm());
+  auto Op1Imm = MI.getOperand(1).getImm();
+  auto Op3Imm = MI.getOperand(3).getImm();
+  MI.getOperand(1).setImm(Op3Imm);
+  MI.getOperand(3).setImm(Op1Imm);
 }
 
 Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
@@ -956,8 +985,8 @@ Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
   unsigned Opcode = getInverseCompareOpcode(MI);
   SmallVector<MachineOperand *, 4> UsesToProcess;
   if (!Opcode ||
-      !SIShrinkInstructions::shouldSwapCndOperands(MI, *TII, UsesToProcess))
-    return AMDGPU::NoRegister;
+      !SIShrinkInstructions::shouldSwapCndOperands(MI, UsesToProcess))
+    return Reg;
 
   auto DL = MI.getDebugLoc();
   Register NewVCC = MRI->createVirtualRegister(MRI->getRegClass(Reg));
@@ -967,11 +996,11 @@ Register SIShrinkInstructions::trySwapCndOperands(MachineInstr &MI) const {
   InverseCompare->setFlags(MI.getFlags());
 
   unsigned OpNum = MI.getNumExplicitOperands();
-  for (unsigned i = 1; i < OpNum; i++) {
-    MachineOperand Op = MI.getOperand(i);
+  for (unsigned Idx = 1; Idx < OpNum; Idx++) {
+    MachineOperand Op = MI.getOperand(Idx);
     InverseCompare.add(Op);
     if (Op.isReg() && Op.isKill())
-      InverseCompare->getOperand(i).setIsKill(false);
+      InverseCompare->getOperand(Idx).setIsKill(false);
   }
 
   for (auto &Use : UsesToProcess) {
@@ -995,6 +1024,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
   std::vector<unsigned> I1Defs;
+
   for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
                                                   BI != BE; ++BI) {
 
@@ -1153,6 +1183,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           // dst.
           Register DstReg = Op0.getReg();
           if (DstReg.isVirtual()) {
+            DstReg = trySwapCndOperands(MI);
             // VOPC instructions can only write to the VCC register. We can't
             // force them to use VCC here, because this is only one register and
             // cannot deal with sequences which would require multiple copies of
@@ -1162,9 +1193,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
             // provide a hint to the register allocator to use VCC and then we
             // will run this pass again after RA and shrink it if it outputs to
             // VCC.
-            Register NewVCC = trySwapCndOperands(MI);
-            DstReg = NewVCC == AMDGPU::NoRegister ? DstReg : NewVCC;
-
             MRI->setRegAllocationHint(DstReg, 0, VCCReg);
             continue;
           }
