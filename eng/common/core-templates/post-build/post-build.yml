@@ -60,6 +60,11 @@ parameters:
       artifactNames: ''
       downloadArtifacts: true
 
+  - name: isAssetlessBuild
+    type: boolean
+    displayName: Is Assetless Build
+    default: false
+
   # These parameters let the user customize the call to sdk-task.ps1 for publishing
   # symbols & general artifacts as well as for signing validation
   - name: symbolPublishingAdditionalParameters
@@ -320,3 +325,4 @@ stages:
               -RequireDefaultChannels ${{ parameters.requireDefaultChannels }}
               -ArtifactsPublishingAdditionalParameters '${{ parameters.artifactsPublishingAdditionalParameters }}'
               -SymbolPublishingAdditionalParameters '${{ parameters.symbolPublishingAdditionalParameters }}'
+              -SkipAssetsPublishing '${{ parameters.isAssetlessBuild }}'
