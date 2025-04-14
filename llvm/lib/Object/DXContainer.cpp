@@ -272,8 +272,6 @@ Error DirectX::RootSignature::parse() {
   Flags = support::endian::read<uint32_t, llvm::endianness::little>(Current);
   Current += sizeof(uint32_t);
 
-  assert(Current == PartData.begin() + RootParametersOffset);
-
   ParametersHeaders.Data = PartData.substr(
       RootParametersOffset, NumParameters * sizeof(dxbc::RootParameterHeader));
 
