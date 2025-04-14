@@ -2441,7 +2441,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
     if (!IncomingFromEarlyExit->isLiveIn()) {
       // Limit range to scalar VF only, if the range contains the scalar VF.
       bool IsVectorVF = LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&](ElementCount VF) { return VF.isVector(); }, Range);
+          [](ElementCount VF) { return VF.isVector(); }, Range);
 
       if (IsVectorVF) {
         VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
