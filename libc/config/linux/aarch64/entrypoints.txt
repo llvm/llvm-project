@@ -650,7 +650,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.canonicalizef16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
-    libc.src.math.cospif16
+    #TODO: Aarch64 bug https://github.com/llvm/llvm-project/issues/134917
+    # libc.src.math.cospif16
     # TODO: aarch64 bug
     # Please see https://github.com/llvm/llvm-project/pull/100632#issuecomment-2258772681
     # libc.src.math.expf16
@@ -724,7 +725,8 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.scalbnf16
     libc.src.math.setpayloadf16
     libc.src.math.setpayloadsigf16
-    libc.src.math.sinpif16
+    #TODO: Aarch64 bug https://github.com/llvm/llvm-project/issues/134917
+    # libc.src.math.sinpif16
     libc.src.math.sqrtf16
     libc.src.math.totalorderf16
     libc.src.math.totalordermagf16

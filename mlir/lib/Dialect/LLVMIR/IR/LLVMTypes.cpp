@@ -821,12 +821,6 @@ bool mlir::LLVM::isCompatibleVectorType(Type type) {
   return false;
 }
 
-Type mlir::LLVM::getVectorElementType(Type type) {
-  auto vecTy = dyn_cast<VectorType>(type);
-  assert(vecTy && "incompatible with LLVM vector type");
-  return vecTy.getElementType();
-}
-
 llvm::ElementCount mlir::LLVM::getVectorNumElements(Type type) {
   auto vecTy = dyn_cast<VectorType>(type);
   assert(vecTy && "incompatible with LLVM vector type");
@@ -855,18 +849,6 @@ Type mlir::LLVM::getVectorType(Type elementType,
                          /*isScalable=*/true);
   return getVectorType(elementType, numElements.getFixedValue(),
                        /*isScalable=*/false);
-}
-
-Type mlir::LLVM::getFixedVectorType(Type elementType, unsigned numElements) {
-  assert(VectorType::isValidElementType(elementType) &&
-         "incompatible element type");
-  return VectorType::get(numElements, elementType);
-}
-
-Type mlir::LLVM::getScalableVectorType(Type elementType, unsigned numElements) {
-  // LLVM vectors are always 1-D, hence only 1 bool is required to mark it as
-  // scalable/non-scalable.
-  return VectorType::get(numElements, elementType, /*scalableDims=*/true);
 }
 
 llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {

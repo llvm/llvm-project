@@ -2649,6 +2649,19 @@ llvm.func @always_inline_call() {
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: alwaysinline
 
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @inline_hint_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @inline_hint_call() {
+  llvm.call @f() {inline_hint} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: inlinehint
 
 // -----
 

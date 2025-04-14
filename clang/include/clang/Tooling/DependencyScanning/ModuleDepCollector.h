@@ -33,6 +33,7 @@ namespace dependencies {
 
 class DependencyActionController;
 class DependencyConsumer;
+class PrebuiltModuleASTAttrs;
 
 /// Modular dependency that has already been built prior to the dependency scan.
 struct PrebuiltModuleDep {
@@ -44,6 +45,47 @@ struct PrebuiltModuleDep {
       : ModuleName(M->getTopLevelModuleName()),
         PCMFile(M->getASTFile()->getName()),
         ModuleMapFile(M->PresumedModuleMapFile) {}
+};
+
+/// Attributes loaded from AST files of prebuilt modules collected prior to
+/// ModuleDepCollector creation.
+using PrebuiltModulesAttrsMap = llvm::StringMap<PrebuiltModuleASTAttrs>;
+class PrebuiltModuleASTAttrs {
+public:
+  /// When a module is discovered to not be in stable directories, traverse &
+  /// update all modules that depend on it.
+  void
+  updateDependentsNotInStableDirs(PrebuiltModulesAttrsMap &PrebuiltModulesMap);
+
+  /// Read-only access to whether the module is made up of dependencies in
+  /// stable directories.
+  bool isInStableDir() const { return IsInStableDirs; }
+
+  /// Read-only access to vfs map files.
+  const llvm::StringSet<> &getVFS() const { return VFSMap; }
+
+  /// Update the VFSMap to the one discovered from serializing the AST file.
+  void setVFS(llvm::StringSet<> &&VFS) { VFSMap = std::move(VFS); }
+
+  /// Add a direct dependent module file, so it can be updated if the current
+  /// module is from stable directores.
+  void addDependent(StringRef ModuleFile) {
+    ModuleFileDependents.insert(ModuleFile);
+  }
+
+  /// Update whether the prebuilt module resolves entirely in a stable
+  /// directories.
+  void setInStableDir(bool V = false) {
+    // Cannot reset attribute once it's false.
+    if (!IsInStableDirs)
+      return;
+    IsInStableDirs = V;
+  }
+
+private:
+  llvm::StringSet<> VFSMap;
+  bool IsInStableDirs = true;
+  std::set<StringRef> ModuleFileDependents;
 };
 
 /// This is used to identify a specific module.
@@ -171,8 +213,6 @@ private:
       BuildInfo;
 };
 
-using PrebuiltModuleVFSMapT = llvm::StringMap<llvm::StringSet<>>;
-
 class ModuleDepCollector;
 
 /// Callback that records textual includes and direct modular includes/imports
@@ -242,7 +282,7 @@ public:
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap);
+                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -262,8 +302,9 @@ private:
   DependencyConsumer &Consumer;
   /// Callbacks for computing dependency information.
   DependencyActionController &Controller;
-  /// Mapping from prebuilt AST files to their sorted list of VFS overlay files.
-  PrebuiltModuleVFSMapT PrebuiltModuleVFSMap;
+  /// Mapping from prebuilt AST filepaths to their attributes referenced during
+  /// dependency collecting.
+  const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.
@@ -338,6 +379,14 @@ void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
 /// \param Input Path to evaluate.
 bool isPathInStableDir(const ArrayRef<StringRef> Directories,
                        const StringRef Input);
+
+/// Determine if options collected from a module's
+/// compilation can safely be considered as stable.
+///
+/// \param Directories Paths known to be in a stable location. e.g. Sysroot.
+/// \param HSOpts Header search options derived from the compiler invocation.
+bool areOptionsInStableDir(const ArrayRef<StringRef> Directories,
+                           const HeaderSearchOptions &HSOpts);
 
 } // end namespace dependencies
 } // end namespace tooling
