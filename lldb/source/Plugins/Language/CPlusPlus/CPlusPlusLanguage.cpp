@@ -64,19 +64,19 @@ void CPlusPlusLanguage::Terminate() {
 
 std::unique_ptr<Language::MethodName>
 CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
-  std::unique_ptr<CPlusPlusLanguage::CPPMethodName> cpp_method =
-      std::make_unique<CPlusPlusLanguage::CPPMethodName>(full_name);
+  std::unique_ptr<CxxMethodName> cpp_method =
+      std::make_unique<CxxMethodName>(full_name);
   cpp_method->IsValid();
   return cpp_method;
 }
 
-std::pair<FunctionNameType, llvm::StringRef>
+std::pair<FunctionNameType, std::optional<ConstString>>
 CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
   if (Mangled::IsMangledName(name.GetCString()))
-    return {eFunctionNameTypeFull, llvm::StringRef()};
+    return {eFunctionNameTypeFull, std::nullopt};
 
   FunctionNameType func_name_type = eFunctionNameTypeNone;
-  CPlusPlusLanguage::CPPMethodName method(name);
+  CxxMethodName method(name);
   llvm::StringRef basename = method.GetBasename();
   if (basename.empty()) {
     llvm::StringRef context;
@@ -91,10 +91,13 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
   if (!method.GetQualifiers().empty()) {
     // There is a 'const' or other qualifier following the end of the function
     // parens, this can't be a eFunctionNameTypeBase.
-    func_name_type &= ~eFunctionNameTypeBase;
+    func_name_type &= ~(eFunctionNameTypeBase);
   }
 
-  return {func_name_type, basename};
+  if (basename.empty())
+    return {func_name_type, std::nullopt};
+  else
+    return {func_name_type, ConstString(basename)};
 }
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
@@ -116,7 +119,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CPlusPlusLanguage::CPPMethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name);
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -205,7 +208,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
                                             char const *full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::CPPMethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
 
   if (!cpp_method.IsValid())
     return false;
@@ -232,7 +235,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
-bool CPlusPlusLanguage::CPPMethodName::TrySimplifiedParse() {
+bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // This method tries to parse simple method definitions which are presumably
   // most comman in user programs. Definitions that can be parsed by this
   // function don't have return types and templates in the name.
@@ -275,7 +278,7 @@ bool CPlusPlusLanguage::CPPMethodName::TrySimplifiedParse() {
   return false;
 }
 
-void CPlusPlusLanguage::CPPMethodName::Parse() {
+void CPlusPlusLanguage::CxxMethodName::Parse() {
   if (!m_parsed && m_full) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
@@ -304,7 +307,7 @@ void CPlusPlusLanguage::CPPMethodName::Parse() {
 }
 
 llvm::StringRef
-CPlusPlusLanguage::CPPMethodName::GetBasenameNoTemplateParameters() {
+CPlusPlusLanguage::CxxMethodName::GetBasenameNoTemplateParameters() {
   llvm::StringRef basename = GetBasename();
   size_t arg_start, arg_end;
   llvm::StringRef parens("<>", 2);
@@ -314,7 +317,7 @@ CPlusPlusLanguage::CPPMethodName::GetBasenameNoTemplateParameters() {
   return basename;
 }
 
-bool CPlusPlusLanguage::CPPMethodName::ContainsPath(llvm::StringRef path) {
+bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
   if (!m_parsed)
     Parse();
 
@@ -365,7 +368,7 @@ bool CPlusPlusLanguage::CPPMethodName::ContainsPath(llvm::StringRef path) {
 
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  CPPMethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled);
   return demangled_name.ContainsPath(path);
 }
 
@@ -564,7 +567,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CPlusPlusLanguage::CPPMethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled);
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -587,7 +590,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CPlusPlusLanguage::CPPMethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled);
     if (!cpp_name.IsValid())
       continue;
 
@@ -1673,65 +1676,66 @@ bool CPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.contains("/usr/include/c++/");
 }
 
+static VariableListSP GetFunctionVariableList(const SymbolContext &sc) {
+  assert(sc.function);
+
+  if (sc.block)
+    if (Block *inline_block = sc.block->GetContainingInlinedBlock())
+      return inline_block->GetBlockVariableList(true);
+
+  return sc.function->GetBlock(true).GetBlockVariableList(true);
+}
+
+static bool PrintFunctionNameWithArgs(Stream &s,
+                                      const ExecutionContext *exe_ctx,
+                                      const SymbolContext &sc) {
+  assert(sc.function);
+
+  ExecutionContextScope *exe_scope =
+      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
+
+  const char *cstr = sc.GetPossiblyInlinedFunctionName(
+      Mangled::NamePreference::ePreferDemangled);
+  if (!cstr)
+    return false;
+
+  VariableList args;
+  if (auto variable_list_sp = GetFunctionVariableList(sc))
+    variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
+                                               args);
+
+  if (args.GetSize() > 0)
+    return PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args);
+
+  // FIXME: can we just unconditionally call PrettyPrintFunctionNameWithArgs?
+  // It should be able to handle the "no arguments" case.
+  s.PutCString(cstr);
+
+  return true;
+}
+
 bool CPlusPlusLanguage::GetFunctionDisplayName(
-    const SymbolContext *sc, const ExecutionContext *exe_ctx,
+    const SymbolContext &sc, const ExecutionContext *exe_ctx,
     FunctionNameRepresentation representation, Stream &s) {
   switch (representation) {
   case FunctionNameRepresentation::eNameWithArgs: {
     // Print the function name with arguments in it
-    if (sc->function) {
-      ExecutionContextScope *exe_scope =
-          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-      const char *cstr = sc->function->GetName().AsCString(nullptr);
-      if (cstr) {
-        const InlineFunctionInfo *inline_info = nullptr;
-        VariableListSP variable_list_sp;
-        bool get_function_vars = true;
-        if (sc->block) {
-          Block *inline_block = sc->block->GetContainingInlinedBlock();
+    if (sc.function)
+      return PrintFunctionNameWithArgs(s, exe_ctx, sc);
 
-          if (inline_block) {
-            get_function_vars = false;
-            inline_info = inline_block->GetInlinedFunctionInfo();
-            if (inline_info)
-              variable_list_sp = inline_block->GetBlockVariableList(true);
-          }
-        }
+    if (!sc.symbol)
+      return false;
 
-        if (get_function_vars) {
-          variable_list_sp =
-              sc->function->GetBlock(true).GetBlockVariableList(true);
-        }
+    const char *cstr = sc.symbol->GetName().AsCString(nullptr);
+    if (!cstr)
+      return false;
 
-        if (inline_info) {
-          s.PutCString(cstr);
-          s.PutCString(" [inlined] ");
-          cstr = inline_info->GetName().GetCString();
-        }
+    s.PutCString(cstr);
 
-        VariableList args;
-        if (variable_list_sp)
-          variable_list_sp->AppendVariablesWithScope(eValueTypeVariableArgument,
-                                                     args);
-        if (args.GetSize() > 0) {
-          if (!PrettyPrintFunctionNameWithArgs(s, cstr, exe_scope, args))
-            return false;
-        } else {
-          s.PutCString(cstr);
-        }
-        return true;
-      }
-    } else if (sc->symbol) {
-      const char *cstr = sc->symbol->GetName().AsCString(nullptr);
-      if (cstr) {
-        s.PutCString(cstr);
-        return true;
-      }
-    }
-  } break;
-  default:
+    return true;
+  }
+  case FunctionNameRepresentation::eNameWithNoArgs:
+  case FunctionNameRepresentation::eName:
     return false;
   }
-
-  return false;
 }

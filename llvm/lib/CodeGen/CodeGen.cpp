@@ -23,7 +23,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeBasicBlockPathCloningPass(Registry);
   initializeBasicBlockSectionsPass(Registry);
   initializeBranchFolderLegacyPass(Registry);
-  initializeBranchRelaxationPass(Registry);
+  initializeBranchRelaxationLegacyPass(Registry);
   initializeBreakFalseDepsPass(Registry);
   initializeCallBrPreparePass(Registry);
   initializeCFGuardLongjmpPass(Registry);
@@ -106,7 +106,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
-  initializePostRAHazardRecognizerPass(Registry);
+  initializePostRAHazardRecognizerLegacyPass(Registry);
   initializePostRAMachineSinkingPass(Registry);
   initializePostRASchedulerLegacyPass(Registry);
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
@@ -117,7 +117,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeRegUsageInfoCollectorLegacyPass(Registry);
   initializeRegUsageInfoPropagationLegacyPass(Registry);
   initializeRegisterCoalescerLegacyPass(Registry);
-  initializeRemoveLoadsIntoFakeUsesPass(Registry);
+  initializeRemoveLoadsIntoFakeUsesLegacyPass(Registry);
   initializeRemoveRedundantDebugValuesLegacyPass(Registry);
   initializeRenameIndependentSubregsLegacyPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);

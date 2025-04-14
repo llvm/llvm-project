@@ -974,6 +974,11 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       if (relaxable(relocs, i))
         relaxTlsLe(ctx, sec, i, loc, r, remove);
       break;
+    case R_LARCH_TLS_IE_PC_HI20:
+      if (relaxable(relocs, i) && r.expr == R_RELAX_TLS_IE_TO_LE &&
+          isUInt<12>(r.sym->getVA(ctx, r.addend)))
+        remove = 4;
+      break;
     }
 
     // For all anchors whose offsets are <= r.offset, they are preceded by
@@ -1048,7 +1053,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += s->outSecOff;
   else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
     secAddr += ehIn->getParent()->outSecOff;
-  bool isExtreme = false;
+  bool isExtreme = false, isRelax = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     Relocation &rel = relocs[i];
@@ -1077,6 +1082,9 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
                            bits);
         relocateNoSym(loc, rel.type, val);
       } else {
+        isRelax = relaxable(relocs, i);
+        if (isRelax && rel.type == R_LARCH_TLS_IE_PC_HI20 && isUInt<12>(val))
+          continue;
         tlsIeToLe(loc, rel, val);
       }
       continue;

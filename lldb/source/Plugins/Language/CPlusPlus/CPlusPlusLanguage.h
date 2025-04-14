@@ -25,9 +25,9 @@ class CPlusPlusLanguage : public Language {
   ClangHighlighter m_highlighter;
 
 public:
-  class CPPMethodName : public Language::MethodName {
+  class CxxMethodName : public Language::MethodName {
   public:
-    CPPMethodName(ConstString s) : Language::MethodName(s) {}
+    CxxMethodName(ConstString s) : Language::MethodName(s) {}
 
     bool ContainsPath(llvm::StringRef path);
 
@@ -58,7 +58,7 @@ public:
   virtual std::unique_ptr<Language::MethodName>
   GetMethodName(ConstString name) const override;
 
-  std::pair<lldb::FunctionNameType, llvm::StringRef>
+  std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const override;
 
   lldb::LanguageType GetLanguageType() const override {
@@ -100,15 +100,15 @@ public:
   ConstString
   GetDemangledFunctionNameWithoutArguments(Mangled mangled) const override;
 
-  bool GetFunctionDisplayName(const SymbolContext *sc,
+  bool GetFunctionDisplayName(const SymbolContext &sc,
                               const ExecutionContext *exe_ctx,
                               FunctionNameRepresentation representation,
                               Stream &s) override;
 
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
-  // CPlusPlusLanguage::MethodName which has to have a fully qualified C++ name
-  // with parens and arguments.
+  // CPlusPlusLanguage::CxxMethodName which has to have a fully qualified C++
+  // name with parens and arguments.
   // If the name is a lone C identifier (e.g. C) or a qualified C identifier
   // (e.g. A::B::C) it will return true,
   // and identifier will be the identifier (C and C respectively) and the

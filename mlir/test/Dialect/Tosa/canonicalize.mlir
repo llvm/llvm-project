@@ -1204,11 +1204,26 @@ func.func nested @do_not_fold_reciprocal_int() -> tensor<3x600x1200xi32> {
 
 // -----
 
-// CHECK-LABEL: @do_not_fold_int_div_division_by_0
-func.func @do_not_fold_int_div_division_by_0() -> tensor<1x24x2xi32> {
-  // CHECK: tosa.int_div
+// CHECK-LABEL: @do_not_fold_intdiv_division_by_0
+func.func @do_not_fold_intdiv_division_by_0() -> tensor<1x24x2xi32> {
+  // CHECK: tosa.intdiv
   %1 = "tosa.const"() <{values = dense<0> : tensor<1x24x2xi32>}> : () -> tensor<1x24x2xi32>
   %4 = "tosa.const"() <{values = dense<20> : tensor<1x24x2xi32>}> : () -> tensor<1x24x2xi32>
-  %16 = tosa.int_div %4, %1 : (tensor<1x24x2xi32>, tensor<1x24x2xi32>) -> tensor<1x24x2xi32>
+  %16 = tosa.intdiv %4, %1 : (tensor<1x24x2xi32>, tensor<1x24x2xi32>) -> tensor<1x24x2xi32>
   return %16 : tensor<1x24x2xi32>
 }
+
+
+// -----
+// CHECK-LABEL:   func.func @slice_dynamic_size_static_output_canonicalize(
+// CHECK-SAME:                     %[[ARG0:.*]]: tensor<2x60x59x?xf32>) -> tensor<2x60x58x?xf32> {
+// CHECK:           %[[START:.*]] = tosa.const_shape  {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+// CHECK:           %[[SIZE:.*]] = tosa.const_shape  {values = dense<[2, 60, 58, -1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+// CHECK:           %[[SLICE:.*]] = tosa.slice %[[ARG0]], %[[START]], %[[SIZE]] : (tensor<2x60x59x?xf32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<2x60x58x?xf32>
+// CHECK:           return %[[SLICE]]
+func.func @slice_dynamic_size_static_output_canonicalize(%arg0: tensor<2x60x59x?xf32>) -> tensor<2x60x58x?xf32> {
+    %0 = tosa.const_shape  {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %1 = tosa.const_shape  {values = dense<[-1, 60, 58, -1]> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %2 = tosa.slice %arg0, %0, %1 : (tensor<2x60x59x?xf32>, !tosa.shape<4>, !tosa.shape<4>) -> tensor<2x60x58x?xf32>
+    return %2 : tensor<2x60x58x?xf32>
+  }

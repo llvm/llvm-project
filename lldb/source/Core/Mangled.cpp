@@ -251,7 +251,7 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
       return false;
     } else {
       // Demangled successfully, we can try and parse it with
-      // CPlusPlusLanguage::MethodName.
+      // CPlusPlusLanguage::CxxMethodName.
       return context.FromCxxMethodName(m_demangled);
     }
   }

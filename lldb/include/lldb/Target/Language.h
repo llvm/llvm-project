@@ -307,9 +307,9 @@ public:
     return std::make_unique<Language::MethodName>(name);
   };
 
-  virtual std::pair<lldb::FunctionNameType, llvm::StringRef>
+  virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const {
-    return std::pair{lldb::eFunctionNameTypeNone, llvm::StringRef()};
+    return std::pair{lldb::eFunctionNameTypeNone, std::nullopt};
   };
 
   /// Returns true iff the given symbol name is compatible with the mangling
@@ -366,7 +366,7 @@ public:
   // the reference has never been assigned
   virtual bool IsUninitializedReference(ValueObject &valobj);
 
-  virtual bool GetFunctionDisplayName(const SymbolContext *sc,
+  virtual bool GetFunctionDisplayName(const SymbolContext &sc,
                                       const ExecutionContext *exe_ctx,
                                       FunctionNameRepresentation representation,
                                       Stream &s);

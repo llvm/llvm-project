@@ -893,7 +893,8 @@ ASTNodeImporter::import(const TemplateArgument &From) {
 
   case TemplateArgument::Expression:
     if (ExpectedExpr ToExpr = import(From.getAsExpr()))
-      return TemplateArgument(*ToExpr, From.getIsDefaulted());
+      return TemplateArgument(*ToExpr, From.isCanonicalExpr(),
+                              From.getIsDefaulted());
     else
       return ToExpr.takeError();
 
@@ -1660,18 +1661,12 @@ ExpectedType ASTNodeImporter::VisitTemplateSpecializationType(
           ImportTemplateArguments(T->template_arguments(), ToTemplateArgs))
     return std::move(Err);
 
-  QualType ToCanonType;
-  if (!T->isCanonicalUnqualified()) {
-    QualType FromCanonType
-      = Importer.getFromContext().getCanonicalType(QualType(T, 0));
-    if (ExpectedType TyOrErr = import(FromCanonType))
-      ToCanonType = *TyOrErr;
-    else
-      return TyOrErr.takeError();
-  }
-  return Importer.getToContext().getTemplateSpecializationType(*ToTemplateOrErr,
-                                                               ToTemplateArgs,
-                                                               ToCanonType);
+  ExpectedType ToUnderlyingOrErr =
+      T->isCanonicalUnqualified() ? QualType() : import(T->desugar());
+  if (!ToUnderlyingOrErr)
+    return ToUnderlyingOrErr.takeError();
+  return Importer.getToContext().getTemplateSpecializationType(
+      *ToTemplateOrErr, ToTemplateArgs, std::nullopt, *ToUnderlyingOrErr);
 }
 
 ExpectedType ASTNodeImporter::VisitElaboratedType(const ElaboratedType *T) {
@@ -4044,6 +4039,9 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setDeletedAsWritten(D->isDeletedAsWritten());
   ToFunction->setFriendConstraintRefersToEnclosingTemplate(
       D->FriendConstraintRefersToEnclosingTemplate());
+  ToFunction->setIsDestroyingOperatorDelete(D->isDestroyingOperatorDelete());
+  ToFunction->setIsTypeAwareOperatorNewOrDelete(
+      D->isTypeAwareOperatorNewOrDelete());
   ToFunction->setRangeEnd(ToEndLoc);
   ToFunction->setDefaultLoc(ToDefaultLoc);
 
@@ -6015,6 +6013,12 @@ ASTNodeImporter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 ExpectedDecl
 ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
+  bool IsCanonical = false;
+  if (auto *CanonD = Importer.getFromContext()
+                         .findCanonicalTemplateTemplateParmDeclInternal(D);
+      CanonD == D)
+    IsCanonical = true;
+
   // Import the name of this declaration.
   auto NameOrErr = import(D->getDeclName());
   if (!NameOrErr)
@@ -6041,6 +6045,10 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
 
   if (Error Err = importTemplateParameterDefaultArgument(D, ToD))
     return Err;
+
+  if (IsCanonical)
+    return Importer.getToContext()
+        .insertCanonicalTemplateTemplateParmDeclInternal(ToD);
 
   return ToD;
 }
@@ -8330,10 +8338,10 @@ ExpectedStmt ASTNodeImporter::VisitCXXNewExpr(CXXNewExpr *E) {
 
   return CXXNewExpr::Create(
       Importer.getToContext(), E->isGlobalNew(), ToOperatorNew,
-      ToOperatorDelete, E->passAlignment(), E->doesUsualArrayDeleteWantSize(),
-      ToPlacementArgs, ToTypeIdParens, ToArraySize, E->getInitializationStyle(),
-      ToInitializer, ToType, ToAllocatedTypeSourceInfo, ToSourceRange,
-      ToDirectInitRange);
+      ToOperatorDelete, E->implicitAllocationParameters(),
+      E->doesUsualArrayDeleteWantSize(), ToPlacementArgs, ToTypeIdParens,
+      ToArraySize, E->getInitializationStyle(), ToInitializer, ToType,
+      ToAllocatedTypeSourceInfo, ToSourceRange, ToDirectInitRange);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXDeleteExpr(CXXDeleteExpr *E) {
@@ -8928,14 +8936,14 @@ ExpectedStmt ASTNodeImporter::VisitSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
   Error Err = Error::success();
   auto ToType = importChecked(Err, E->getType());
-  auto ToExprLoc = importChecked(Err, E->getExprLoc());
+  auto ToNameLoc = importChecked(Err, E->getNameLoc());
   auto ToAssociatedDecl = importChecked(Err, E->getAssociatedDecl());
   auto ToReplacement = importChecked(Err, E->getReplacement());
   if (Err)
     return std::move(Err);
 
   return new (Importer.getToContext()) SubstNonTypeTemplateParmExpr(
-      ToType, E->getValueKind(), ToExprLoc, ToReplacement, ToAssociatedDecl,
+      ToType, E->getValueKind(), ToNameLoc, ToReplacement, ToAssociatedDecl,
       E->getIndex(), E->getPackIndex(), E->isReferenceParameter(),
       E->getFinal());
 }
