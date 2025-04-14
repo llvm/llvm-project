@@ -749,26 +749,20 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
 
-    // Collect GNU properties data.
-    // GNU properties might be processed in this loop, or only later on (e.g. in
-    // initializeSections) Therefore there is no guarantee that the GNU
-    // properties data will be ready after this loop end, so it has to be
-    // collected here.
+    // Object files that use processor features such as Intel Control-Flow
+    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
+    // .note.gnu.property section containing a bitfield of feature bits like the
+    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
     if (check(obj.getSectionName(sec, shstrtab)) == ".note.gnu.property") {
-      if (0 == this->andFeatures && this->aarch64PauthAbiCoreInfo.empty()) {
-        gnuPropertiesInformation = readGnuProperty(
-            ctx,
-            InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
-            *this);
-        // Restore state
-        this->andFeatures = 0;
-        this->aarch64PauthAbiCoreInfo = {};
-      } else {
-        gnuPropertiesInformation.andFeatures = this->andFeatures;
-        gnuPropertiesInformation.aarch64PauthAbiCoreInfo =
-            this->aarch64PauthAbiCoreInfo;
-      }
+      gnuPropertiesInformation = readGnuProperty(
+          ctx,
+          InputSection(*this, sec, check(obj.getSectionName(sec, shstrtab))),
+          *this);
       hasGNUProperties = true;
+      // Since we merge bitmaps from multiple object files to create a new
+      // .note.gnu.property containing a single AND'ed bitmap, we discard an
+      // input file's .note.gnu.property section.
+      sections[i] = &InputSection::discarded;
     }
 
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
@@ -1204,19 +1198,6 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
                  << ": requires an executable stack, but -z execstack is not "
                     "specified";
       }
-      return &InputSection::discarded;
-    }
-
-    // Object files that use processor features such as Intel Control-Flow
-    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-    // .note.gnu.property section containing a bitfield of feature bits like the
-    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
-    //
-    // Since we merge bitmaps from multiple object files to create a new
-    // .note.gnu.property containing a single AND'ed bitmap, we discard an input
-    // file's .note.gnu.property section.
-    if (name == ".note.gnu.property") {
-      readGnuProperty<ELFT>(ctx, InputSection(*this, sec, name), *this);
       return &InputSection::discarded;
     }
 
