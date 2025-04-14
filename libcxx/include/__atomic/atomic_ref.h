@@ -322,20 +322,28 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   atomic_ref& operator=(const atomic_ref&) = delete;
 
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_add(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#  ifdef _LIBCPP_COMPILER_CLANG_BASED
+    return __atomic_fetch_add(this->__ptr_, __arg, std::__to_gcc_order(__order));
+#  else
     _Tp __old = this->load(memory_order_relaxed);
     _Tp __new = __old + __arg;
     while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
       __new = __old + __arg;
     }
     return __old;
+#  endif
   }
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_sub(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+#  ifdef _LIBCPP_COMPILER_CLANG_BASED
+    return __atomic_fetch_sub(this->__ptr_, __arg, std::__to_gcc_order(__order));
+#  else
     _Tp __old = this->load(memory_order_relaxed);
     _Tp __new = __old - __arg;
     while (!this->compare_exchange_weak(__old, __new, __order, memory_order_relaxed)) {
       __new = __old - __arg;
     }
     return __old;
+#  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator+=(_Tp __arg) const noexcept { return fetch_add(__arg) + __arg; }
