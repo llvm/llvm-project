@@ -3819,10 +3819,15 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
   LLDB_SCOPED_TIMER();
   auto impl = [&]() -> std::optional<uint32_t> {
     if (exe_ctx)
-      if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP()))
-        if (auto num_fields =
-                runtime->GetNumFields(GetCanonicalType(type), exe_ctx))
-          return num_fields;
+      if (auto *runtime = SwiftLanguageRuntime::Get(exe_ctx->GetProcessSP())) {
+        auto num_fields_or_err =
+            runtime->GetNumFields(GetCanonicalType(type), exe_ctx);
+        if (num_fields_or_err)
+          return *num_fields_or_err;
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), num_fields_or_err.takeError(),
+                       "GetNumFields failed for type {1}: {0}",
+                       AsMangledName(type));
+      }
 
     bool is_imported = false;
     if (auto clang_type = GetAsClangTypeOrNull(type, &is_imported)) {
@@ -5020,6 +5025,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
             is_base_class);
       return false;
     }
+    case Node::Kind::ProtocolList:
+      return false;
     default:
       assert(false && "Unhandled node kind");
       LLDB_LOGF(GetLog(LLDBLog::Types),
