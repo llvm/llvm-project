@@ -13,61 +13,11 @@
 using namespace llvm;
 
 namespace {
-void emitRMode(raw_ostream &OS, GOFF::ESDRmode Rmode, bool UseParenthesis) {
-  if (Rmode != GOFF::ESD_RMODE_None) {
-    OS << "RMODE" << (UseParenthesis ? '(' : ' ');
-    switch (Rmode) {
-    case GOFF::ESD_RMODE_24:
-      OS << "24";
-      break;
-    case GOFF::ESD_RMODE_31:
-      OS << "31";
-      break;
-    case GOFF::ESD_RMODE_64:
-      OS << "64";
-      break;
-    case GOFF::ESD_RMODE_None:
-      break;
-    }
-    if (UseParenthesis)
-      OS << ')';
-  }
-}
-
-void emitCATTR(raw_ostream &OS, StringRef Name, StringRef ParentName,
-               bool EmitAmodeAndRmode, GOFF::ESDAmode Amode,
-               GOFF::ESDRmode Rmode, GOFF::ESDAlignment Alignment,
+void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
+               GOFF::ESDAlignment Alignment,
                GOFF::ESDLoadingBehavior LoadBehavior,
                GOFF::ESDExecutable Executable, bool IsReadOnly,
-               StringRef PartName) {
-  if (EmitAmodeAndRmode && Amode != GOFF::ESD_AMODE_None) {
-    OS << ParentName << " AMODE ";
-    switch (Amode) {
-    case GOFF::ESD_AMODE_24:
-      OS << "24";
-      break;
-    case GOFF::ESD_AMODE_31:
-      OS << "31";
-      break;
-    case GOFF::ESD_AMODE_ANY:
-      OS << "ANY";
-      break;
-    case GOFF::ESD_AMODE_64:
-      OS << "64";
-      break;
-    case GOFF::ESD_AMODE_MIN:
-      OS << "ANY64";
-      break;
-    case GOFF::ESD_AMODE_None:
-      break;
-    }
-    OS << "\n";
-  }
-  if (EmitAmodeAndRmode && Rmode != GOFF::ESD_RMODE_None) {
-    OS << ParentName << ' ';
-    emitRMode(OS, Rmode, /*UseParenthesis=*/false);
-    OS << "\n";
-  }
+               uint32_t SortKey, StringRef PartName) {
   OS << Name << " CATTR ";
   OS << "ALIGN(" << static_cast<unsigned>(Alignment) << ")";
   switch (LoadBehavior) {
@@ -94,8 +44,24 @@ void emitCATTR(raw_ostream &OS, StringRef Name, StringRef ParentName,
     OS << ",READONLY";
   if (Rmode != GOFF::ESD_RMODE_None) {
     OS << ',';
-    emitRMode(OS, Rmode, /*UseParenthesis=*/true);
+    OS << "RMODE(";
+    switch (Rmode) {
+    case GOFF::ESD_RMODE_24:
+      OS << "24";
+      break;
+    case GOFF::ESD_RMODE_31:
+      OS << "31";
+      break;
+    case GOFF::ESD_RMODE_64:
+      OS << "64";
+      break;
+    case GOFF::ESD_RMODE_None:
+      break;
+    }
+    OS << ')';
   }
+  if (SortKey)
+    OS << ",PRIORITY(" << SortKey << ")";
   if (!PartName.empty())
     OS << ",PART(" << PartName << ")";
   OS << '\n';
@@ -112,13 +78,11 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
     break;
   }
   case GOFF::ESD_ST_ElementDefinition: {
-    bool ParentEmitted = getParent()->Emitted;
     getParent()->printSwitchToSection(MAI, T, OS, Subsection);
     if (!Emitted) {
-      emitCATTR(OS, Name, getParent()->getName(), !ParentEmitted,
-                EDAttributes.Amode, EDAttributes.Rmode, EDAttributes.Alignment,
+      emitCATTR(OS, Name, EDAttributes.Rmode, EDAttributes.Alignment,
                 EDAttributes.LoadBehavior, EDAttributes.Executable,
-                EDAttributes.IsReadOnly, StringRef());
+                EDAttributes.IsReadOnly, 0, StringRef());
       Emitted = true;
     } else
       OS << Name << " CATTR ,\n";
@@ -126,13 +90,12 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
   }
   case GOFF::ESD_ST_PartReference: {
     MCSectionGOFF *ED = getParent();
-    bool SDEmitted = ED->getParent()->Emitted;
     ED->getParent()->printSwitchToSection(MAI, T, OS, Subsection);
     if (!Emitted) {
-      emitCATTR(OS, ED->getName(), ED->getParent()->getName(), !SDEmitted,
-                PRAttributes.Amode, getParent()->EDAttributes.Rmode,
-                PRAttributes.Alignment, getParent()->EDAttributes.LoadBehavior,
-                PRAttributes.Executable, PRAttributes.IsReadOnly, Name);
+      emitCATTR(OS, ED->getName(), ED->getEDAttributes().Rmode,
+                PRAttributes.Alignment, ED->EDAttributes.LoadBehavior,
+                PRAttributes.Executable, PRAttributes.IsReadOnly,
+                PRAttributes.SortKey, Name);
       ED->Emitted = true;
       Emitted = true;
     } else

@@ -52,7 +52,6 @@ struct SDAttr {
 struct EDAttr {
   bool IsReadOnly = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
-  GOFF::ESDAmode Amode;
   GOFF::ESDRmode Rmode;
   GOFF::ESDNameSpaceId NameSpace = GOFF::ESD_NS_NormalName;
   GOFF::ESDTextStyle TextStyle = GOFF::ESD_TS_ByteOriented;
@@ -78,7 +77,6 @@ struct PRAttr {
   bool IsReadOnly = false; // ???? Not documented.
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
-  GOFF::ESDAmode Amode;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
   GOFF::ESDDuplicateSymbolSeverity DuplicateSymbolSeverity =
       GOFF::ESD_DSS_NoWarning;

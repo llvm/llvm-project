@@ -6,8 +6,6 @@
 
 define signext i32 @main() {
 ; CHECK: stdin#C CSECT
-; CHECK: stdin#C AMODE 64
-; CHECK: stdin#C RMODE 64
 ; CHECK: C_CODE64 CATTR ALIGN(3),EXECUTABLE,READONLY,RMODE(64)
 ; CHECK: main:
 ; CHECK: stdin#C CSECT

@@ -239,7 +239,6 @@ public:
     // TODO Do we need/should set the "mangled" flag?
     BehavAttrs.setReadOnly(Attr.IsReadOnly);
     BehavAttrs.setExecutable(Attr.Executable);
-    BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setRmode(Attr.Rmode);
     BehavAttrs.setTextStyle(Attr.TextStyle);
     BehavAttrs.setBindingAlgorithm(Attr.BindAlgorithm);
@@ -266,7 +265,6 @@ public:
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setAlignment(Attr.Alignment);
-    BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setDuplicateSymbolSeverity(Attr.DuplicateSymbolSeverity);
