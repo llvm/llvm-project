@@ -2,6 +2,31 @@
 
 // This file contains some canonicalizations tests involving vector.transpose.
 
+// CHECK-LABEL: func @transpose_scalar_broadcast1
+//  CHECK-SAME: (%[[ARG:.+]]: vector<1xf32>)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : vector<1xf32> to vector<1x8xf32>
+//       CHECK:   return %[[V]] : vector<1x8xf32>
+func.func @transpose_scalar_broadcast1(%value: vector<1xf32>) -> vector<1x8xf32> {
+  %bcast = vector.broadcast %value : vector<1xf32> to vector<8x1xf32>
+  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
+  return %t : vector<1x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose_scalar_broadcast2
+//  CHECK-SAME: (%[[ARG:.+]]: f32)
+//       CHECK:   %[[V:.+]] = vector.broadcast %[[ARG]] : f32 to vector<1x8xf32>
+//       CHECK:   return %[[V]] : vector<1x8xf32>
+func.func @transpose_scalar_broadcast2(%value: f32) -> vector<1x8xf32> {
+  %bcast = vector.broadcast %value : f32 to vector<8x1xf32>
+  %t = vector.transpose %bcast, [1, 0] : vector<8x1xf32> to vector<1x8xf32>
+  return %t : vector<1x8xf32>
+}
+
+// -----
+
+
 // CHECK-LABEL: broadcast_transpose_scalar_to_broadcast
 //  CHECK-SAME:  %[[ARG:.*]]: i8) -> vector<2x3x4xi8> {
 func.func @broadcast_transpose_scalar_to_broadcast(%arg0 : i8) -> vector<2x3x4xi8> {
