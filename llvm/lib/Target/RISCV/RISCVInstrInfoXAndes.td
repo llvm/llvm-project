@@ -176,6 +176,7 @@ class NDSRVInstLHGP<bits<3> funct3, string opcodestr>
   let mayStore = 0;
 }
 
+// GP: LW, LWU
 class NDSRVInstLWGP<bits<3> funct3, string opcodestr>
     : RVInst<(outs GPR:$rd), (ins simm19_lsb00:$imm17),
              opcodestr, "$rd, ${imm17}", [], InstFormatOther> {
