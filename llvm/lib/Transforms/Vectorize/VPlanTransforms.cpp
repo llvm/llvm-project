@@ -2389,11 +2389,6 @@ void VPlanTransforms::handleUncountableEarlyExit(
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPValue *IsEarlyExitTaken = nullptr;
 
-  // Clamp the range that make sure we insert extractElement for incoming value
-  // correctly.
-  bool IsScalarVF = LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) { return VF.isScalar(); }, Range);
-
   // Process the uncountable exiting block. Update IsEarlyExitTaken, which
   // tracks if the uncountable early exit has been taken. Also split the middle
   // block and have it conditionally branch to the early exit block if
@@ -2443,13 +2438,20 @@ void VPlanTransforms::handleUncountableEarlyExit(
       ExitIRI->extractLastLaneOfOperand(MiddleBuilder);
     }
     // Add the incoming value from the early exit.
-    if (!IncomingFromEarlyExit->isLiveIn() && !IsScalarVF) {
-      VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
-          VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
-          "first.active.lane");
-      IncomingFromEarlyExit = EarlyExitB.createNaryOp(
-          Instruction::ExtractElement, {IncomingFromEarlyExit, FirstActiveLane},
-          nullptr, "early.exit.value");
+    if (!IncomingFromEarlyExit->isLiveIn()) {
+      // Limit range to scalar VF only, if the range contains the scalar VF.
+      bool IsVectorVF = LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) { return VF.isVector(); }, Range);
+
+      if (IsVectorVF) {
+        VPValue *FirstActiveLane = EarlyExitB.createNaryOp(
+            VPInstruction::FirstActiveLane, {EarlyExitTakenCond}, nullptr,
+            "first.active.lane");
+        IncomingFromEarlyExit =
+            EarlyExitB.createNaryOp(Instruction::ExtractElement,
+                                    {IncomingFromEarlyExit, FirstActiveLane},
+                                    nullptr, "early.exit.value");
+      }
     }
     ExitIRI->addOperand(IncomingFromEarlyExit);
   }
