@@ -4027,7 +4027,7 @@ bool AArch64FrameLowering::assignCalleeSavedSpillSlots(
       }
 
     if (!InsertBeforeLR)
-      CSI.insert(CSI.end(), VGSaves.begin(), VGSaves.end());
+      llvm::append_range(CSI, VGSaves);
   }
 
   Register LastReg = 0;
