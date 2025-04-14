@@ -211,15 +211,14 @@ def DereferenceModeling : Checker<"DereferenceModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>,
+      Dependencies<[DereferenceModeling]>;
+
 def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "SuppressAddressSpaces",
-                  "Suppresses warning when pointer dereferences an address space",
-                  "true",
-                  Released>
-  ]>,
   Documentation<HasDocumentation>,
   Dependencies<[DereferenceModeling]>;
 
@@ -386,7 +385,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -398,6 +397,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
@@ -691,15 +694,11 @@ def MoveChecker: Checker<"Move">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallModeling : Checker<"VirtualCallModeling">,
-  HelpText<"Auxiliary modeling for the virtual method call checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def PureVirtualCallChecker : Checker<"PureVirtualCall">,
-  HelpText<"Check pure virtual function calls during construction/destruction">,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def PureVirtualCallChecker
+    : Checker<"PureVirtualCall">,
+      HelpText<
+          "Check pure virtual function calls during construction/destruction">,
+      Documentation<HasDocumentation>;
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
@@ -747,24 +746,13 @@ def UninitializedObjectChecker: Checker<"UninitializedObject">,
   ]>,
   Documentation<HasDocumentation>;
 
-def VirtualCallChecker : Checker<"VirtualCall">,
-  HelpText<"Check virtual function calls during construction/destruction">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "ShowFixIts",
-                  "Enable fix-it hints for this checker",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "PureOnly",
-                  "Disables the checker. Keeps cplusplus.PureVirtualCall "
-                  "enabled. This option is only provided for backwards "
-                  "compatibility.",
-                  "false",
-                  InAlpha>
-  ]>,
-  Dependencies<[VirtualCallModeling]>,
-  Documentation<HasDocumentation>;
+def VirtualCallChecker
+    : Checker<"VirtualCall">,
+      HelpText<"Check virtual function calls during construction/destruction">,
+      CheckerOptions<[CmdLineOption<Boolean, "ShowFixIts",
+                                    "Enable fix-it hints for this checker",
+                                    "false", InAlpha>]>,
+      Documentation<HasDocumentation>;
 
 } // end: "optin.cplusplus"
 
@@ -989,30 +977,41 @@ def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
 
 let ParentPackage = Security in {
 
-def FloatLoopCounter : Checker<"FloatLoopCounter">,
-  HelpText<"Warn on using a floating point value as a loop counter (CERT: "
-           "FLP30-C, FLP30-CPP)">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+  def ArrayBoundChecker : Checker<"ArrayBound">,
+                          HelpText<"Warn about out of bounds access to memory">,
+                          Documentation<HasDocumentation>;
 
-def MmapWriteExecChecker : Checker<"MmapWriteExec">,
-  HelpText<"Warn on mmap() calls with both writable and executable access">,
-  Documentation<HasDocumentation>;
+  def FloatLoopCounter
+      : Checker<"FloatLoopCounter">,
+        HelpText<
+            "Warn on using a floating point value as a loop counter (CERT: "
+            "FLP30-C, FLP30-CPP)">,
+        Dependencies<[SecuritySyntaxChecker]>,
+        Documentation<HasDocumentation>;
 
-def PointerSubChecker : Checker<"PointerSub">,
-  HelpText<"Check for pointer subtractions on two pointers pointing to "
-           "different memory chunks">,
-  Documentation<HasDocumentation>;
+  def MmapWriteExecChecker
+      : Checker<"MmapWriteExec">,
+        HelpText<
+            "Warn on mmap() calls with both writable and executable access">,
+        Documentation<HasDocumentation>;
 
-def PutenvStackArray : Checker<"PutenvStackArray">,
-  HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
-           "an automatic (stack-allocated) array as the argument.">,
-  Documentation<HasDocumentation>;
+  def PointerSubChecker
+      : Checker<"PointerSub">,
+        HelpText<"Check for pointer subtractions on two pointers pointing to "
+                 "different memory chunks">,
+        Documentation<HasDocumentation>;
 
-def SetgidSetuidOrderChecker : Checker<"SetgidSetuidOrder">,
-  HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
-           "'setuid(getuid())' (CERT: POS36-C)">,
-  Documentation<HasDocumentation>;
+  def PutenvStackArray
+      : Checker<"PutenvStackArray">,
+        HelpText<"Finds calls to the function 'putenv' which pass a pointer to "
+                 "an automatic (stack-allocated) array as the argument.">,
+        Documentation<HasDocumentation>;
+
+  def SetgidSetuidOrderChecker
+      : Checker<"SetgidSetuidOrder">,
+        HelpText<"Warn on possible reversed order of 'setgid(getgid()))' and "
+                 "'setuid(getuid())' (CERT: POS36-C)">,
+        Documentation<HasDocumentation>;
 
 } // end "security"
 
@@ -1034,14 +1033,6 @@ let ParentPackage = ENV in {
 } // end "security.cert.env"
 
 let ParentPackage = SecurityAlpha in {
-
-def ArrayBoundChecker : Checker<"ArrayBound">,
-  HelpText<"Warn about buffer overflows (older checker)">,
-  Documentation<HasDocumentation>;
-
-def ArrayBoundCheckerV2 : Checker<"ArrayBoundV2">,
-  HelpText<"Warn about buffer overflows (newer checker)">,
-  Documentation<HasDocumentation>;
 
 def ReturnPointerRangeChecker : Checker<"ReturnPtrRange">,
   HelpText<"Check for an out-of-bound pointer being returned to callers">,
@@ -1755,12 +1746,24 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 
 let ParentPackage = WebKitAlpha in {
 
+def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
+  HelpText<"Check for forward declared local or member variables and function arguments">,
+  Documentation<HasDocumentation>;
+
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
   Documentation<HasDocumentation>;
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
+  Documentation<HasDocumentation>;
+
+def NoUnretainedMemberChecker : Checker<"NoUnretainedMemberChecker">,
+  HelpText<"Check for no unretained member variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLambdaCapturesChecker : Checker<"UnretainedLambdaCapturesChecker">,
+  HelpText<"Check unretained lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
@@ -1771,12 +1774,24 @@ def UncheckedCallArgsChecker : Checker<"UncheckedCallArgsChecker">,
   HelpText<"Check unchecked call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
+  HelpText<"Check unretained call arguments.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
 
 def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
   HelpText<"Check unchecked local variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
+  HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
+  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

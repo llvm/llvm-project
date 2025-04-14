@@ -32,6 +32,7 @@ namespace PR16225 {
     f<LocalStruct>();
 #if __cplusplus <= 199711L
     // expected-warning@-2 {{template argument uses local type 'LocalStruct'}}
+    // expected-note@-3 {{while substituting explicitly-specified template arguments}}
 #endif
     struct LocalStruct2 : UnknownBase<C> { };  // expected-error {{no template named 'UnknownBase'}}
   }

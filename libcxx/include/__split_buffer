@@ -233,7 +233,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __split_buffer<_Tp, _Allocator>::__invariants
 //  Postcondition:  size() == size() + __n
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n) {
-  _ConstructTransaction __tx(&this->__end_, __n);
+  _ConstructTransaction __tx(std::addressof(this->__end_), __n);
   for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
     __alloc_traits::construct(__alloc_, std::__to_address(__tx.__pos_));
   }
@@ -248,7 +248,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __split_buffer<_Tp, _Allocator>::__construct_
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __split_buffer<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
-  _ConstructTransaction __tx(&this->__end_, __n);
+  _ConstructTransaction __tx(std::addressof(this->__end_), __n);
   for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_) {
     __alloc_traits::construct(__alloc_, std::__to_address(__tx.__pos_), __x);
   }
@@ -283,7 +283,7 @@ template <class _Tp, class _Allocator>
 template <class _ForwardIterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __split_buffer<_Tp, _Allocator>::__construct_at_end_with_size(_ForwardIterator __first, size_type __n) {
-  _ConstructTransaction __tx(&this->__end_, __n);
+  _ConstructTransaction __tx(std::addressof(this->__end_), __n);
   for (; __tx.__pos_ != __tx.__end_; ++__tx.__pos_, (void)++__first) {
     __alloc_traits::construct(__alloc_, std::__to_address(__tx.__pos_), *__first);
   }

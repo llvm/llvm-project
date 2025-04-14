@@ -83,12 +83,12 @@ public:
   typename Collection::const_iterator begin() const { return Ranges.begin(); }
   typename Collection::const_iterator end() const { return Ranges.end(); }
 
-  const T &operator[](size_t i) const {
-    assert(i < Ranges.size());
-    return Ranges[i];
+  const T &operator[](size_t I) const {
+    assert(I < Ranges.size());
+    return Ranges[I];
   }
 
-  bool operator==(const AddressRangesBase<T> &RHS) const {
+  bool operator==(const AddressRangesBase &RHS) const {
     return Ranges == RHS.Ranges;
   }
 
@@ -124,7 +124,7 @@ public:
     if (Range.empty())
       return Ranges.end();
 
-    auto It = llvm::upper_bound(Ranges, Range);
+    auto It = upper_bound(Ranges, Range);
     auto It2 = It;
     while (It2 != Ranges.end() && It2->start() <= Range.end())
       ++It2;
@@ -144,7 +144,7 @@ public:
 
 class AddressRangeValuePair {
 public:
-  operator AddressRange() const { return Range; }
+  explicit operator AddressRange() const { return Range; }
 
   AddressRange Range;
   int64_t Value = 0;

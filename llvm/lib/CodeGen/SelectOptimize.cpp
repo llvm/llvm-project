@@ -451,8 +451,7 @@ void SelectOptimizeImpl::optimizeSelectsInnerLoops(Function &F,
   SmallVector<Loop *, 4> Loops(LI->begin(), LI->end());
   // Need to check size on each iteration as we accumulate child loops.
   for (unsigned long i = 0; i < Loops.size(); ++i)
-    for (Loop *ChildL : Loops[i]->getSubLoops())
-      Loops.push_back(ChildL);
+    llvm::append_range(Loops, Loops[i]->getSubLoops());
 
   for (Loop *L : Loops) {
     if (!L->isInnermost())
@@ -978,8 +977,9 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
     // cost of the most expensive instruction of the group.
     Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
     for (SelectLike &SI : ASI.Selects) {
-      SelectCost = std::max(SelectCost, InstCostMap[SI.getI()].PredCost);
-      BranchCost = std::max(BranchCost, InstCostMap[SI.getI()].NonPredCost);
+      const auto &ICM = InstCostMap[SI.getI()];
+      SelectCost = std::max(SelectCost, ICM.PredCost);
+      BranchCost = std::max(BranchCost, ICM.NonPredCost);
     }
     if (BranchCost < SelectCost) {
       OptimizationRemark OR(DEBUG_TYPE, "SelectOpti",
@@ -1327,8 +1327,8 @@ bool SelectOptimizeImpl::computeLoopCosts(
         // BranchCost = PredictedPathCost + MispredictCost
         // PredictedPathCost = TrueOpCost * TrueProb + FalseOpCost * FalseProb
         // MispredictCost = max(MispredictPenalty, CondCost) * MispredictRate
-        if (SImap.contains(&I)) {
-          auto SI = SImap.at(&I);
+        if (auto It = SImap.find(&I); It != SImap.end()) {
+          auto SI = It->second;
           const auto *SG = SGmap.at(&I);
           Scaled64 TrueOpCost = SI.getOpCostOnBranch(true, InstCostMap, TTI);
           Scaled64 FalseOpCost = SI.getOpCostOnBranch(false, InstCostMap, TTI);

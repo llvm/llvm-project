@@ -342,8 +342,7 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(
-        Triple(F.getParent()->getTargetTriple()));
+    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:
@@ -600,12 +599,12 @@ class MemLocFragmentFill {
         break;
     }
 
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
     // If there's no LiveIn entry for the block yet, add it.
-    if (CurrentLiveInEntry == LiveIn.end()) {
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
+    if (Inserted) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      LiveIn[&BB] = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -898,8 +897,8 @@ public:
         Worklist.push(RPONumber);
         ++RPONumber;
       }
-      LiveIn.init(RPONumber);
-      LiveOut.init(RPONumber);
+      LiveIn.reserve(RPONumber);
+      LiveOut.reserve(RPONumber);
     }
 
     // Perform the traversal.
@@ -2054,17 +2053,17 @@ bool AssignmentTrackingLowering::join(
   // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
   if (VisitedPreds.size() == 1) {
     const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
-    if (CurrentLiveInEntry == LiveIn.end())
-      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
-    else if (PredLiveOut != CurrentLiveInEntry->second)
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
+    if (Inserted)
+      return /*Changed*/ true;
+    if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
-    else
-      return /*Changed*/ false;
-    return /*Changed*/ true;
+      return /*Changed*/ true;
+    }
+    return /*Changed*/ false;
   }
 
   // More than one pred. Join LiveOuts of blocks 1 and 2.
@@ -2319,8 +2318,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       Worklist.push(RPONumber);
       ++RPONumber;
     }
-    LiveIn.init(RPONumber);
-    LiveOut.init(RPONumber);
+    LiveIn.reserve(RPONumber);
+    LiveOut.reserve(RPONumber);
   }
 
   // Perform the traversal.
@@ -2613,13 +2612,13 @@ removeRedundantDbgLocsUsingForwardScan(const BasicBlock *BB,
         NumDefsScanned++;
         DebugVariable Key(FnVarLocs.getVariable(Loc.VariableID).getVariable(),
                           std::nullopt, Loc.DL.getInlinedAt());
-        auto VMI = VariableMap.find(Key);
+        auto [VMI, Inserted] = VariableMap.try_emplace(Key);
 
         // Update the map if we found a new value/expression describing the
         // variable, or if the variable wasn't mapped already.
-        if (VMI == VariableMap.end() || VMI->second.first != Loc.Values ||
+        if (Inserted || VMI->second.first != Loc.Values ||
             VMI->second.second != Loc.Expr) {
-          VariableMap[Key] = {Loc.Values, Loc.Expr};
+          VMI->second = {Loc.Values, Loc.Expr};
           NewDefs.push_back(Loc);
           continue;
         }

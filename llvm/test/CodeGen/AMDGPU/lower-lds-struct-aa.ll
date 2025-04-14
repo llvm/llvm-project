@@ -2,9 +2,9 @@
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-module-lds < %s | FileCheck %s
 ; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
-@a = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
-@b = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
-@c = internal unnamed_addr addrspace(3) global [64 x i32] undef, align 4
+@a = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
+@b = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
+@c = internal unnamed_addr addrspace(3) global [64 x i32] poison, align 4
 
 ; FIXME: Should combine the DS instructions into ds_write2 and ds_read2. This
 ; does not happen because when SILoadStoreOptimizer is run, the reads and writes

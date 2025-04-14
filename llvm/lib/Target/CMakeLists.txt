@@ -4,7 +4,6 @@ list(APPEND LLVM_TABLEGEN_FLAGS -I ${LLVM_MAIN_SRC_DIR}/lib/Target)
 
 add_llvm_component_library(LLVMTarget
   Target.cpp
-  TargetIntrinsicInfo.cpp
   TargetLoweringObjectFile.cpp
   TargetMachine.cpp
   TargetMachineC.cpp

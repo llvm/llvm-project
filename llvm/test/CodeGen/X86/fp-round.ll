@@ -59,8 +59,6 @@ define half @round_f16(half %h) {
 ; AVX512F-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512FP16-LABEL: round_f16:

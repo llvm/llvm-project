@@ -75,6 +75,15 @@ TEST_CONSTEXPR_CXX20 void test_string() {
     test<S>(100, 50, 1000);
     test<S>(100, 50, S::npos);
   }
+
+  { // Check that growing twice works as expected
+    S str;
+    str.reserve(50);
+    assert(str.capacity() >= 50);
+    size_t old_cap = str.capacity();
+    str.reserve(str.capacity() + 1);
+    assert(str.capacity() > old_cap);
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {

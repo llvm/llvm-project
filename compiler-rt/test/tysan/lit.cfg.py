@@ -144,4 +144,4 @@ if config.host_os not in [
     "Linux",
     "Darwin",
 ]:
-    config.unsupported = Tr
+    config.unsupported = True

@@ -13,14 +13,14 @@ entry:
   br i1 %c0, label %if.then.i.i, label %if.else.i
 
 if.then.i.i:                                      ; preds = %entry
-  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 16 %alloca, ptr addrspace(5) align 4 undef, i64 128, i1 false)
+  call void @llvm.memcpy.p5.p5.i64(ptr addrspace(5) align 16 %alloca, ptr addrspace(5) align 4 poison, i64 128, i1 false)
   br label %if.then.i62.i
 
 if.else.i:                                        ; preds = %entry
   br label %if.then.i62.i
 
 if.then.i62.i:                                    ; preds = %if.else.i, %if.then.i.i
-  call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) align 4 undef, ptr addrspace(5) align 16 %alloca, i64 128, i1 false)
+  call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) align 4 poison, ptr addrspace(5) align 16 %alloca, i64 128, i1 false)
   ret void
 }
 

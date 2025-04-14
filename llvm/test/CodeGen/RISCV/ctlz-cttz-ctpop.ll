@@ -32,7 +32,7 @@ declare i64 @llvm.ctpop.i64(i64)
 define i8 @test_cttz_i8(i8 %a) nounwind {
 ; RV32_NOZBB-LABEL: test_cttz_i8:
 ; RV32_NOZBB:       # %bb.0:
-; RV32_NOZBB-NEXT:    andi a1, a0, 255
+; RV32_NOZBB-NEXT:    zext.b a1, a0
 ; RV32_NOZBB-NEXT:    beqz a1, .LBB0_2
 ; RV32_NOZBB-NEXT:  # %bb.1: # %cond.false
 ; RV32_NOZBB-NEXT:    addi a1, a0, -1
@@ -55,7 +55,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ;
 ; RV64NOZBB-LABEL: test_cttz_i8:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    andi a1, a0, 255
+; RV64NOZBB-NEXT:    zext.b a1, a0
 ; RV64NOZBB-NEXT:    beqz a1, .LBB0_2
 ; RV64NOZBB-NEXT:  # %bb.1: # %cond.false
 ; RV64NOZBB-NEXT:    addi a1, a0, -1
@@ -90,7 +90,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ;
 ; RV32XTHEADBB-LABEL: test_cttz_i8:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    andi a1, a0, 255
+; RV32XTHEADBB-NEXT:    zext.b a1, a0
 ; RV32XTHEADBB-NEXT:    beqz a1, .LBB0_2
 ; RV32XTHEADBB-NEXT:  # %bb.1: # %cond.false
 ; RV32XTHEADBB-NEXT:    addi a1, a0, -1
@@ -106,7 +106,7 @@ define i8 @test_cttz_i8(i8 %a) nounwind {
 ;
 ; RV64XTHEADBB-LABEL: test_cttz_i8:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    andi a1, a0, 255
+; RV64XTHEADBB-NEXT:    zext.b a1, a0
 ; RV64XTHEADBB-NEXT:    beqz a1, .LBB0_2
 ; RV64XTHEADBB-NEXT:  # %bb.1: # %cond.false
 ; RV64XTHEADBB-NEXT:    addi a1, a0, -1
@@ -956,7 +956,7 @@ define i64 @test_cttz_i64_zero_undef(i64 %a) nounwind {
 define i8 @test_ctlz_i8(i8 %a) nounwind {
 ; RV32_NOZBB-LABEL: test_ctlz_i8:
 ; RV32_NOZBB:       # %bb.0:
-; RV32_NOZBB-NEXT:    andi a1, a0, 255
+; RV32_NOZBB-NEXT:    zext.b a1, a0
 ; RV32_NOZBB-NEXT:    beqz a1, .LBB8_2
 ; RV32_NOZBB-NEXT:  # %bb.1: # %cond.false
 ; RV32_NOZBB-NEXT:    slli a1, a0, 24
@@ -986,7 +986,7 @@ define i8 @test_ctlz_i8(i8 %a) nounwind {
 ;
 ; RV64NOZBB-LABEL: test_ctlz_i8:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    andi a1, a0, 255
+; RV64NOZBB-NEXT:    zext.b a1, a0
 ; RV64NOZBB-NEXT:    beqz a1, .LBB8_2
 ; RV64NOZBB-NEXT:  # %bb.1: # %cond.false
 ; RV64NOZBB-NEXT:    slli a1, a0, 56
@@ -1016,28 +1016,28 @@ define i8 @test_ctlz_i8(i8 %a) nounwind {
 ;
 ; RV32ZBB-LABEL: test_ctlz_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    clz a0, a0
 ; RV32ZBB-NEXT:    addi a0, a0, -24
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_ctlz_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    clz a0, a0
 ; RV64ZBB-NEXT:    addi a0, a0, -56
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV32XTHEADBB-LABEL: test_ctlz_i8:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    andi a0, a0, 255
+; RV32XTHEADBB-NEXT:    zext.b a0, a0
 ; RV32XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV32XTHEADBB-NEXT:    addi a0, a0, -24
 ; RV32XTHEADBB-NEXT:    ret
 ;
 ; RV64XTHEADBB-LABEL: test_ctlz_i8:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    andi a0, a0, 255
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
 ; RV64XTHEADBB-NEXT:    th.ff1 a0, a0
 ; RV64XTHEADBB-NEXT:    addi a0, a0, -56
 ; RV64XTHEADBB-NEXT:    ret
@@ -2256,13 +2256,13 @@ define i8 @test_ctpop_i8(i8 %a) nounwind {
 ;
 ; RV32ZBB-LABEL: test_ctpop_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    cpop a0, a0
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_ctpop_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    ret
 ;
@@ -2797,7 +2797,7 @@ define i64 @test_ctpop_i64(i64 %a) nounwind {
 define i8 @test_parity_i8(i8 %a) {
 ; RV32_NOZBB-LABEL: test_parity_i8:
 ; RV32_NOZBB:       # %bb.0:
-; RV32_NOZBB-NEXT:    andi a0, a0, 255
+; RV32_NOZBB-NEXT:    zext.b a0, a0
 ; RV32_NOZBB-NEXT:    srli a1, a0, 4
 ; RV32_NOZBB-NEXT:    xor a0, a0, a1
 ; RV32_NOZBB-NEXT:    srli a1, a0, 2
@@ -2809,7 +2809,7 @@ define i8 @test_parity_i8(i8 %a) {
 ;
 ; RV64NOZBB-LABEL: test_parity_i8:
 ; RV64NOZBB:       # %bb.0:
-; RV64NOZBB-NEXT:    andi a0, a0, 255
+; RV64NOZBB-NEXT:    zext.b a0, a0
 ; RV64NOZBB-NEXT:    srli a1, a0, 4
 ; RV64NOZBB-NEXT:    xor a0, a0, a1
 ; RV64NOZBB-NEXT:    srli a1, a0, 2
@@ -2821,21 +2821,21 @@ define i8 @test_parity_i8(i8 %a) {
 ;
 ; RV32ZBB-LABEL: test_parity_i8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a0, a0, 255
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    cpop a0, a0
 ; RV32ZBB-NEXT:    andi a0, a0, 1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_parity_i8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a0, a0, 255
+; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    cpopw a0, a0
 ; RV64ZBB-NEXT:    andi a0, a0, 1
 ; RV64ZBB-NEXT:    ret
 ;
 ; RV32XTHEADBB-LABEL: test_parity_i8:
 ; RV32XTHEADBB:       # %bb.0:
-; RV32XTHEADBB-NEXT:    andi a0, a0, 255
+; RV32XTHEADBB-NEXT:    zext.b a0, a0
 ; RV32XTHEADBB-NEXT:    srli a1, a0, 4
 ; RV32XTHEADBB-NEXT:    xor a0, a0, a1
 ; RV32XTHEADBB-NEXT:    srli a1, a0, 2
@@ -2847,7 +2847,7 @@ define i8 @test_parity_i8(i8 %a) {
 ;
 ; RV64XTHEADBB-LABEL: test_parity_i8:
 ; RV64XTHEADBB:       # %bb.0:
-; RV64XTHEADBB-NEXT:    andi a0, a0, 255
+; RV64XTHEADBB-NEXT:    zext.b a0, a0
 ; RV64XTHEADBB-NEXT:    srli a1, a0, 4
 ; RV64XTHEADBB-NEXT:    xor a0, a0, a1
 ; RV64XTHEADBB-NEXT:    srli a1, a0, 2

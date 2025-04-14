@@ -13,7 +13,6 @@ define void @test_s_sleep_var1(i32 %arg) {
 ; GCN-NEXT:    s_wait_bvhcnt 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    s_sleep_var s0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   call void @llvm.amdgcn.s.sleep.var(i32 %arg)

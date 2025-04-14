@@ -21,12 +21,6 @@ def simm12_lsb00000 : RISCVOp,
   let ParserMatchClass = SImmAsmOperand<12, "Lsb00000">;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<12>";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (MCOp.evaluateAsConstantImm(Imm))
-      return isShiftedInt<7, 5>(Imm);
-    return MCOp.isBareSymbolRef();
-  }];
   let OperandType = "OPERAND_SIMM12_LSB00000";
 }
 

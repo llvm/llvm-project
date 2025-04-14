@@ -5,15 +5,17 @@ add_flang_library(FIRTestOpenACCInterfaces
   FIRDialect
   FIROpenACCSupport
   FIRSupport
-  MLIRIR
-  MLIROpenACCDialect
-  MLIRPass
-  MLIRSupport
 
   LINK_LIBS
   FIRDialect
   FIROpenACCSupport
   FIRSupport
+
+  MLIR_DEPS
+  MLIRIR
+  MLIROpenACCDialect
+  MLIRPass
+  MLIRSupport
 
   MLIR_LIBS
   MLIRIR

@@ -3,7 +3,7 @@
 
 module m
 
-  ! Testing ASSOCATED
+  ! Testing ASSOCIATED and ALLOCATED
   integer, pointer :: int_pointer
   integer, allocatable :: int_allocatable
   logical, parameter :: test_Assoc1 = .not.(associated(null()))
@@ -11,13 +11,10 @@ module m
   !WARN: because: 'NULL()' is a null pointer
   logical, parameter :: test_Assoc2 = .not.(associated(null(), null()))
   logical, parameter :: test_Assoc3 = .not.(associated(null(int_pointer)))
-  logical, parameter :: test_Assoc4 = .not.(associated(null(int_allocatable)))
+  logical, parameter :: test_Alloc1 = .not.(allocated(null(int_allocatable)))
   !WARN: portability: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
   !WARN: because: 'NULL()' is a null pointer
-  logical, parameter :: test_Assoc5 = .not.(associated(null(), null(int_pointer)))
-  !WARN: portability: POINTER= argument of ASSOCIATED() is required by some other compilers to be a valid left-hand side of a pointer assignment statement
-  !WARN: because: 'NULL()' is a null pointer
-  logical, parameter :: test_Assoc6 = .not.(associated(null(), null(int_allocatable)))
+  logical, parameter :: test_Assoc5 = .not. associated(null(), null(int_pointer))
 
   type A
     real(4) x

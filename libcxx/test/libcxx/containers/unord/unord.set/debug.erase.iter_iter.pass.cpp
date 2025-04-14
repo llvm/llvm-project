@@ -18,43 +18,43 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    // With first iterator from another container
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_set<int> l1(a1, a1+3);
-        std::unordered_set<int> l2(a1, a1+3);
-        TEST_LIBCPP_ASSERT_FAILURE(
-            l1.erase(l2.cbegin(), std::next(l1.cbegin())),
-            "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
-    }
+  // With first iterator from another container
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_set<int> l1(a1, a1 + 3);
+    std::unordered_set<int> l2(a1, a1 + 3);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l2.cbegin(), std::next(l1.cbegin())),
+        "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
+  }
 
-    // With second iterator from another container
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_set<int> l1(a1, a1+3);
-        std::unordered_set<int> l2(a1, a1+3);
-        TEST_LIBCPP_ASSERT_FAILURE(
-            l1.erase(l1.cbegin(), std::next(l2.cbegin())),
-            "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
-    }
+  // With second iterator from another container
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_set<int> l1(a1, a1 + 3);
+    std::unordered_set<int> l2(a1, a1 + 3);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l1.cbegin(), std::next(l2.cbegin())),
+        "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
+  }
 
-    // With both iterators from another container
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_set<int> l1(a1, a1+3);
-        std::unordered_set<int> l2(a1, a1+3);
-        TEST_LIBCPP_ASSERT_FAILURE(
-            l1.erase(l2.cbegin(), std::next(l2.cbegin())),
-            "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
-    }
+  // With both iterators from another container
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_set<int> l1(a1, a1 + 3);
+    std::unordered_set<int> l2(a1, a1 + 3);
+    TEST_LIBCPP_ASSERT_FAILURE(
+        l1.erase(l2.cbegin(), std::next(l2.cbegin())),
+        "unordered container::erase(iterator, iterator) called with an iterator not referring to this container");
+  }
 
-    // With an invalid range
-    {
-        int a1[] = {1, 2, 3};
-        std::unordered_set<int> l1(a1, a1+3);
-        TEST_LIBCPP_ASSERT_FAILURE(l1.erase(std::next(l1.cbegin()), l1.cbegin()),
-                                "Attempted to increment a non-incrementable unordered container const_iterator");
-    }
+  // With an invalid range
+  {
+    int a1[] = {1, 2, 3};
+    std::unordered_set<int> l1(a1, a1 + 3);
+    TEST_LIBCPP_ASSERT_FAILURE(l1.erase(std::next(l1.cbegin()), l1.cbegin()),
+                               "Attempted to increment a non-incrementable unordered container const_iterator");
+  }
 
-    return 0;
+  return 0;
 }

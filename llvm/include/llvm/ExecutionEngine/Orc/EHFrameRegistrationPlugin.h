@@ -19,37 +19,37 @@
 #include <mutex>
 #include <vector>
 
-namespace llvm {
+namespace llvm::orc {
 
-namespace jitlink {
-class EHFrameRegistrar;
-} // namespace jitlink
-
-namespace orc {
-
+/// Adds AllocationActions to register and deregister eh-frame sections in the
+/// absence of native Platform support.
 class EHFrameRegistrationPlugin : public LinkGraphLinkingLayer::Plugin {
 public:
-  EHFrameRegistrationPlugin(
-      ExecutionSession &ES,
-      std::unique_ptr<jitlink::EHFrameRegistrar> Registrar);
+  static Expected<std::unique_ptr<EHFrameRegistrationPlugin>>
+  Create(ExecutionSession &ES);
+
+  EHFrameRegistrationPlugin(ExecutorAddr RegisterEHFrame,
+                            ExecutorAddr DeregisterEHFrame)
+      : RegisterEHFrame(RegisterEHFrame), DeregisterEHFrame(DeregisterEHFrame) {
+  }
+
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
                         jitlink::PassConfiguration &PassConfig) override;
-  Error notifyEmitted(MaterializationResponsibility &MR) override;
-  Error notifyFailed(MaterializationResponsibility &MR) override;
-  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
+  Error notifyFailed(MaterializationResponsibility &MR) override {
+    return Error::success();
+  }
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+    return Error::success();
+  }
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
-                                   ResourceKey SrcKey) override;
+                                   ResourceKey SrcKey) override {}
 
 private:
-  std::mutex EHFramePluginMutex;
-  ExecutionSession &ES;
-  std::unique_ptr<jitlink::EHFrameRegistrar> Registrar;
-  DenseMap<MaterializationResponsibility *, ExecutorAddrRange> InProcessLinks;
-  DenseMap<ResourceKey, std::vector<ExecutorAddrRange>> EHFrameRanges;
+  ExecutorAddr RegisterEHFrame;
+  ExecutorAddr DeregisterEHFrame;
 };
 
-} // end namespace orc
-} // end namespace llvm
+} // namespace llvm::orc
 
 #endif // LLVM_EXECUTIONENGINE_ORC_EHFRAMEREGISTRATIONPLUGIN_H
