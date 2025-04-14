@@ -237,16 +237,16 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
           CommandInterpreter::eBroadcastBitResetPrompt, bytes.release());
       GetCommandInterpreter().BroadcastEvent(prompt_change_event_sp);
     } else if (property_path == g_debugger_properties[ePropertyUseColor].name) {
-      // use-color changed. Ping the prompt so it can reset the ansi terminal
-      // codes.
-      SetPrompt(GetPrompt());
+      // use-color changed. set use-color, this also pings the prompt so it can
+      // reset the ansi terminal codes.
+      SetUseColor(GetUseColor());
     } else if (property_path ==
                    g_debugger_properties[ePropertyPromptAnsiPrefix].name ||
                property_path ==
                    g_debugger_properties[ePropertyPromptAnsiSuffix].name) {
-      // Prompt colors changed. Ping the prompt so it can reset the ansi
-      // terminal codes.
-      SetPrompt(GetPrompt());
+      // Prompt color changed. set use-color, this also pings the prompt so it
+      // can reset the ansi terminal codes.
+      SetUseColor(GetUseColor());
     } else if (property_path ==
                g_debugger_properties[ePropertyShowStatusline].name) {
       // Statusline setting changed. If we have a statusline instance, update it
@@ -455,6 +455,8 @@ bool Debugger::GetUseColor() const {
 bool Debugger::SetUseColor(bool b) {
   const uint32_t idx = ePropertyUseColor;
   bool ret = SetPropertyAtIndex(idx, b);
+
+  GetCommandInterpreter().UpdateUseColor(b);
   SetPrompt(GetPrompt());
   return ret;
 }
