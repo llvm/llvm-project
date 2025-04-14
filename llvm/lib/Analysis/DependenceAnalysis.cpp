@@ -269,9 +269,10 @@ bool Dependence::isScalar(unsigned level) const {
 // FullDependence methods
 
 FullDependence::FullDependence(Instruction *Source, Instruction *Destination,
+                               const SCEVUnionPredicate &Assumes,
                                bool PossiblyLoopIndependent,
                                unsigned CommonLevels)
-    : Dependence(Source, Destination), Levels(CommonLevels),
+    : Dependence(Source, Destination, Assumes), Levels(CommonLevels),
       LoopIndependent(PossiblyLoopIndependent) {
   Consistent = true;
   if (CommonLevels)
@@ -711,6 +712,12 @@ void Dependence::dump(raw_ostream &OS) const {
       OS << " splitable";
   }
   OS << "!\n";
+
+  SCEVUnionPredicate Assumptions = getRuntimeAssumptions();
+  if (!Assumptions.isAlwaysTrue()) {
+    OS << "  Runtime Assumptions:\n";
+    Assumptions.print(OS, 2);
+  }
 }
 
 // Returns NoAlias/MayAliass/MustAlias for two memory locations based upon their
@@ -3574,7 +3581,7 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
          Inv.invalidate<LoopAnalysis>(F, PA);
 }
 
-SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() {
+SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() const {
   return SCEVUnionPredicate(Assumptions, *SE);
 }
 
@@ -3590,7 +3597,9 @@ SCEVUnionPredicate DependenceInfo::getRuntimeAssumptions() {
 // Care is required to keep the routine below, getSplitIteration(),
 // up to date with respect to this routine.
 std::unique_ptr<Dependence>
-DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
+DependenceInfo::depends(Instruction *Src, Instruction *Dst,
+                        bool UnderRuntimeAssumptions) {
+  SmallVector<const SCEVPredicate *, 4> Assume;
   bool PossiblyLoopIndependent = true;
   if (Src == Dst)
     PossiblyLoopIndependent = false;
@@ -3602,7 +3611,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
   if (!isLoadOrStore(Src) || !isLoadOrStore(Dst)) {
     // can only analyze simple loads and stores, i.e., no calls, invokes, etc.
     LLVM_DEBUG(dbgs() << "can only handle simple loads and stores\n");
-    return std::make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   const MemoryLocation &DstLoc = MemoryLocation::get(Dst);
@@ -3613,7 +3623,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
   case AliasResult::PartialAlias:
     // cannot analyse objects if we don't understand their aliasing.
     LLVM_DEBUG(dbgs() << "can't analyze may or partial alias\n");
-    return std::make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   case AliasResult::NoAlias:
     // If the objects noalias, they are distinct, accesses are independent.
     LLVM_DEBUG(dbgs() << "no alias\n");
@@ -3626,7 +3637,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
     // The dependence test gets confused if the size of the memory accesses
     // differ.
     LLVM_DEBUG(dbgs() << "can't analyze must alias with different sizes\n");
-    return std::make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   Value *SrcPtr = getLoadStorePointerOperand(Src);
@@ -3645,7 +3657,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
     // We check this upfront so we don't crash in cases where getMinusSCEV()
     // returns a SCEVCouldNotCompute.
     LLVM_DEBUG(dbgs() << "can't analyze SCEV with different pointer base\n");
-    return std::make_unique<Dependence>(Src, Dst);
+    return std::make_unique<Dependence>(Src, Dst,
+                                        SCEVUnionPredicate(Assume, *SE));
   }
 
   uint64_t EltSize = SrcLoc.Size.toRaw();
@@ -3656,10 +3669,31 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
 
   if (Src != Dst) {
     // Check that memory access offsets are multiples of element sizes.
-    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assumptions) ||
-        !SE->isKnownMultipleOf(DstEv, EltSize, Assumptions)) {
+    if (!SE->isKnownMultipleOf(SrcEv, EltSize, Assume) ||
+        !SE->isKnownMultipleOf(DstEv, EltSize, Assume)) {
       LLVM_DEBUG(dbgs() << "can't analyze SCEV with different offsets\n");
-      return std::make_unique<Dependence>(Src, Dst);
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
+    }
+  }
+
+  if (!Assume.empty()) {
+    if (!UnderRuntimeAssumptions)
+      return std::make_unique<Dependence>(Src, Dst,
+                                          SCEVUnionPredicate(Assume, *SE));
+    if (Assumptions.empty()) {
+      Assumptions.append(Assume.begin(), Assume.end());
+    } else {
+      // Add non-redundant assumptions.
+      unsigned N = Assumptions.size();
+      for (const SCEVPredicate *P : Assume) {
+        bool Implied = false;
+        for (unsigned I = 0; I != N && !Implied; I++)
+          if (Assumptions[I]->implies(P, *SE))
+            Implied = true;
+        if (!Implied)
+          Assumptions.push_back(P);
+      }
     }
   }
 
@@ -3667,7 +3701,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
   LLVM_DEBUG(dbgs() << "    common nesting levels = " << CommonLevels << "\n");
   LLVM_DEBUG(dbgs() << "    maximum nesting levels = " << MaxLevels << "\n");
 
-  FullDependence Result(Src, Dst, PossiblyLoopIndependent, CommonLevels);
+  FullDependence Result(Src, Dst, SCEVUnionPredicate(Assume, *SE),
+                        PossiblyLoopIndependent, CommonLevels);
   ++TotalArrayPairs;
 
   unsigned Pairs = 1;
@@ -4065,7 +4100,7 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   // establish loop nesting levels
   establishNestingLevels(Src, Dst);
 
-  FullDependence Result(Src, Dst, false, CommonLevels);
+  FullDependence Result(Src, Dst, Dep.Assumptions, false, CommonLevels);
 
   unsigned Pairs = 1;
   SmallVector<Subscript, 2> Pair(Pairs);
