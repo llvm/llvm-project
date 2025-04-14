@@ -1782,6 +1782,92 @@ static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
   return Call;
 }
 
+static ExprResult VirtualMemberAddress(Sema &S, CallExpr *Call) {
+  if (S.checkArgCount(Call, 2))
+    return ExprError();
+
+  for (int i = 0; i < 2; ++i) {
+    ExprResult ArgRValue =
+        S.DefaultFunctionArrayLvalueConversion(Call->getArg(1));
+    if (ArgRValue.isInvalid())
+      return ExprError();
+    Call->setArg(1, ArgRValue.get());
+  }
+
+  if (Call->getArg(0)->isTypeDependent() || Call->getArg(1)->isValueDependent())
+    return Call;
+
+  const Expr *ThisArg = Call->getArg(0);
+  QualType ThisTy = ThisArg->getType();
+  if (ThisTy->isPointerOrReferenceType())
+    ThisTy = ThisTy->getPointeeType();
+  if (!ThisTy->getAsCXXRecordDecl()) {
+    S.Diag(ThisArg->getExprLoc(), diag::err_virtual_member_lhs_cxxrec);
+    return ExprError();
+  }
+
+  const Expr *MemFunArg = Call->getArg(1);
+  APValue Result;
+  if (!MemFunArg->isCXX11ConstantExpr(S.getASTContext(), &Result, nullptr)) {
+    S.Diag(MemFunArg->getExprLoc(), diag::err_virtual_member_addrof);
+    return ExprError();
+  }
+
+  if (!Result.isMemberPointer() ||
+      !isa<CXXMethodDecl>(Result.getMemberPointerDecl())) {
+    S.Diag(MemFunArg->getExprLoc(), diag::err_virtual_member_addrof);
+    return ExprError();
+  }
+
+  const CXXMethodDecl *CXXMethod =
+      cast<CXXMethodDecl>(Result.getMemberPointerDecl());
+  if (!CXXMethod->isVirtual()) {
+    S.Diag(MemFunArg->getExprLoc(), diag::err_virtual_member_addrof);
+    return ExprError();
+  }
+
+  if (ThisTy->getAsCXXRecordDecl() != CXXMethod->getParent() &&
+      !S.IsDerivedFrom(Call->getBeginLoc(), ThisTy,
+                       CXXMethod->getFunctionObjectParameterType())) {
+    S.Diag(ThisArg->getExprLoc(), diag::err_virtual_member_inherit);
+    return ExprError();
+  }
+  return Call;
+}
+
+static ExprResult GetVTablePointer(Sema &S, CallExpr *Call) {
+  if (S.checkArgCount(Call, 1))
+    return ExprError();
+  ExprResult ThisArg = S.DefaultFunctionArrayLvalueConversion(Call->getArg(0));
+  if (ThisArg.isInvalid())
+    return ExprError();
+  Call->setArg(0, ThisArg.get());
+  const Expr *Subject = Call->getArg(0);
+  QualType SubjectType = Subject->getType();
+  if (SubjectType->isPointerOrReferenceType())
+    SubjectType = SubjectType->getPointeeType();
+  const CXXRecordDecl *SubjectRecord = SubjectType->getAsCXXRecordDecl();
+  if (!SubjectRecord) {
+    S.Diag(Subject->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << 0 << Subject->getType();
+    return ExprError();
+  }
+  if (S.RequireCompleteType(
+          Subject->getBeginLoc(), SubjectType,
+          diag::err_get_vtable_pointer_requires_complete_type)) {
+    return ExprError();
+  }
+
+  if (!SubjectRecord->isPolymorphic()) {
+    S.Diag(Subject->getBeginLoc(), diag::err_get_vtable_pointer_incorrect_type)
+        << 1 << SubjectType;
+    return ExprError();
+  }
+  QualType ReturnType = S.Context.getPointerType(S.Context.VoidTy.withConst());
+  Call->setType(ReturnType);
+  return Call;
+}
+
 static ExprResult BuiltinLaunder(Sema &S, CallExpr *TheCall) {
   if (S.checkArgCount(TheCall, 1))
     return ExprError();
@@ -2625,6 +2711,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthAuthAndResign(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     return PointerAuthStringDiscriminator(*this, TheCall);
+
+  case Builtin::BI__builtin_get_vtable_pointer:
+    return GetVTablePointer(*this, TheCall);
+  case Builtin::BI__builtin_virtual_member_address:
+    return VirtualMemberAddress(*this, TheCall);
+
   // OpenCL v2.0, s6.13.16 - Pipe functions
   case Builtin::BIread_pipe:
   case Builtin::BIwrite_pipe:

@@ -3031,6 +3031,72 @@ following way:
 
 Query for this feature with ``__has_builtin(__builtin_offsetof)``.
 
+``__builtin_get_vtable_pointer``
+--------------------------------
+
+``__builtin_get_vtable_pointer`` loads and authenticates the primary vtable
+pointer from an instance of a polymorphic C++ class.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_get_vtable_pointer(PolymorphicClass*)
+
+**Example of Use**:
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+  };
+
+  PolymorphicClass anInstance;
+  const void* vtablePointer = __builtin_get_vtable_pointer(&anInstance);
+
+**Description**:
+
+The ``__builtin_get_vtable_pointer`` builtin loads the primary vtable
+pointer from a polymorphic C++ type. If the target platform authenticates
+vtable pointers, this builtin will perform the authentication and produce
+the underlying raw pointer. The object being queried must be polymorphic,
+and so must also be a complete type.
+
+Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
+
+``__builtin_virtual_member_address``
+------------------------------------
+
+``__builtin_virtual_member_address`` loads the function pointer that would
+be called by a virtual method.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  __builtin_virtual_member_address(PolymorphicClass&, Member function pointer)
+
+**Exampe of Use**
+
+.. code-block:: c++
+
+  struct PolymorphicClass {
+    virtual ~PolymorphicClass();
+    virtual void SomeMethod();
+  };
+
+  PolymorphicClass anInstance;
+  const void* MethodAddress =
+    __builtin_virtual_member_address(anInstance, &PolymorphicClass::SomeMethod);
+
+**Description**
+
+This builtin returns the dynamic target for virtual dispatch of the requested virtual
+method. If the target platform supports pointer authentication, it emits the code to
+authenticates the vtable pointer and the virtual function pointer being loaded. The returned
+value is an untyped pointer as it cannot reasonably be proved that any given use of the returned
+function pointer is correct, so we want to discourage any attempt to do such.
+
 ``__builtin_call_with_static_chain``
 ------------------------------------
 
