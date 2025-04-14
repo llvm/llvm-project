@@ -510,7 +510,7 @@ MetadataStreamerMsgPackV4::getHSAKernelProps(const MachineFunction &MF,
 
   if (CodeObjectVersion >= AMDGPU::AMDHSA_COV5 && STM.supportsWGP())
     Kern[".workgroup_processor_mode"] =
-        Kern.getDocument()->getNode(ProgramInfo.WgpMode);
+        Kern.getDocument()->getNode((bool)ProgramInfo.WgpMode);
 
   // FIXME: The metadata treats the minimum as 16?
   Kern[".kernarg_segment_align"] =

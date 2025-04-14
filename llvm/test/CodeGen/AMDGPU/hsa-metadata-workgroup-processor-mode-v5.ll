@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX10-CU %s
 
 ; GFX10:    .amdhsa_workgroup_processor_mode 0
-; GFX10:    .workgroup_processor_mode: 0
+; GFX10:    .workgroup_processor_mode: false
 ; GFX10-CU: .amdhsa_workgroup_processor_mode 1
-; GFX10-CU: .workgroup_processor_mode: 1
+; GFX10-CU: .workgroup_processor_mode: true
 
 define amdgpu_kernel void @wavefrontsize() {
 entry:
