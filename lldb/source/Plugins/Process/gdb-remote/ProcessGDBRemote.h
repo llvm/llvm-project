@@ -45,9 +45,6 @@ struct ld_xinfo;
 #include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
-namespace repro {
-class Loader;
-}
 namespace process_gdb_remote {
 
 class ThreadGDBRemote;
@@ -443,6 +440,9 @@ private:
                                            StoppointCallbackContext *context,
                                            lldb::user_id_t break_id,
                                            lldb::user_id_t break_loc_id);
+
+  /// Remove the breakpoints associated with thread creation from the Target.
+  void RemoveNewThreadBreakpoints();
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;

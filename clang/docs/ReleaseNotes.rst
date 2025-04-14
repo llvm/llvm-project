@@ -170,6 +170,8 @@ C23 Feature Support
   scope.
 - Fixed a bug where you could not cast a null pointer constant to type
   ``nullptr_t``. Fixes #GH133644.
+- Fixed a failed assertion with an invalid parameter to the ``#embed``
+  directive. Fixes #GH126940.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -334,6 +336,7 @@ Improvements to Clang's diagnostics
 - Fixed an assertion when referencing an out-of-bounds parameter via a function
   attribute whose argument list refers to parameters by index and the function
   is variadic. e.g.,
+
   .. code-block:: c
 
     __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
