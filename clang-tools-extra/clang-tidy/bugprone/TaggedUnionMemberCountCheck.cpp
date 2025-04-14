@@ -106,11 +106,15 @@ void TaggedUnionMemberCountCheck::storeOptions(
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
 
-  auto UnionField = fieldDecl(hasType(qualType(
-      hasCanonicalType(recordType(hasDeclaration(recordDecl(isUnion())))))));
+  auto NotFromSystemHeaderOrStdNamespace =
+      unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto EnumField = fieldDecl(hasType(
-      qualType(hasCanonicalType(enumType(hasDeclaration(enumDecl()))))));
+  auto UnionField =
+      fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
+          recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
+
+  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+      enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
   auto hasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
   auto hasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
