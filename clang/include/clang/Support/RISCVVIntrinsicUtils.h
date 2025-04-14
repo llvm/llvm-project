@@ -512,10 +512,10 @@ enum RVVRequire {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require);
 
-struct RequiredExtensions {
+struct RequiredExtensionBits {
   llvm::Bitset<RVV_REQ_NUM> Bits;
-  RequiredExtensions() {}
-  RequiredExtensions(std::initializer_list<RVVRequire> Init) {
+  RequiredExtensionBits() {}
+  RequiredExtensionBits(std::initializer_list<RVVRequire> Init) {
     for (auto I : Init)
       Bits.set(I);
   }
@@ -525,7 +525,7 @@ struct RequiredExtensions {
 };
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const RequiredExtensions &Exts);
+                              const RequiredExtensionBits &Exts);
 
 // Raw RVV intrinsic info, used to expand later.
 // This struct is highly compact for minimized code size.
@@ -538,7 +538,7 @@ struct RVVIntrinsicRecord {
   const char *OverloadedName;
 
   // Required target features for this intrinsic.
-  RequiredExtensions RequiredExtensions;
+  RequiredExtensionBits RequiredExtensions;
 
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;
