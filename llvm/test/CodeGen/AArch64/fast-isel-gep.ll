@@ -56,7 +56,7 @@ define ptr @test_array5(ptr %a, i32 %i) {
 ; CHECK-NEXT:    ; kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    mov x9, #4 ; =0x4
-; CHECK-NEXT:    madd x0, x8, x9, x0
+; CHECK-NEXT:    smaddl x0, w8, w9, x0
 ; CHECK-NEXT:    ret
   %1 = getelementptr inbounds i32, ptr %a, i32 %i
   ret ptr %1
