@@ -67,6 +67,11 @@ stages:
           displayName: Initialize CodeQL (manually-injected)
 
         - bash: |
+            echo 'print("Hello world")' > hello.py
+            python3 hello.py
+          displayName: 'Run python helloworld'
+
+        - bash: |
             ./build.sh --ci --restore --build --pack $(archflag) --configuration $(_BuildConfig) $(_InternalBuildArgs) $(ClangBinDirArg) $(ClangTargetArg) $(ExtraArgs)
           displayName: 'Build and package'
           env:
