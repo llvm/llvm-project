@@ -1875,12 +1875,9 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       FastIS->recomputeInsertPt();
     }
 
-    if (SP->shouldEmitSDCheck(*LLVMBB)) {
-      bool FunctionBasedInstrumentation =
-          TLI->getSSPStackGuardCheck(*Fn.getParent());
+    if (SP->shouldEmitSDCheck(*LLVMBB))
       SDB->SPDescriptor.initialize(LLVMBB, FuncInfo->getMBB(LLVMBB),
-                                   FunctionBasedInstrumentation);
-    }
+                                   false);
 
     if (Begin != BI)
       ++NumDAGBlocks;
@@ -1942,24 +1939,7 @@ SelectionDAGISel::FinishBasicBlock() {
     PHI.addReg(FuncInfo->PHINodesToUpdate[i].second).addMBB(FuncInfo->MBB);
   }
 
-  // Handle stack protector.
-  if (SDB->SPDescriptor.shouldEmitFunctionBasedCheckStackProtector()) {
-    // The target provides a guard check function. There is no need to
-    // generate error handling code or to split current basic block.
-    MachineBasicBlock *ParentMBB = SDB->SPDescriptor.getParentMBB();
-
-    // Add load and check to the basicblock.
-    FuncInfo->MBB = ParentMBB;
-    FuncInfo->InsertPt =
-        findSplitPointForStackProtector(ParentMBB, *TII);
-    SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
-    CurDAG->setRoot(SDB->getRoot());
-    SDB->clear();
-    CodeGenAndEmitDAG();
-
-    // Clear the Per-BB State.
-    SDB->SPDescriptor.resetPerBBState();
-  } else if (SDB->SPDescriptor.shouldEmitStackProtector()) {
+  if (SDB->SPDescriptor.shouldEmitStackProtector()) {
     MachineBasicBlock *ParentMBB = SDB->SPDescriptor.getParentMBB();
     MachineBasicBlock *SuccessMBB = SDB->SPDescriptor.getSuccessMBB();
 
@@ -1973,8 +1953,7 @@ SelectionDAGISel::FinishBasicBlock() {
         findSplitPointForStackProtector(ParentMBB, *TII);
 
     // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB,
-                       SplitPoint,
+    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
                        ParentMBB->end());
 
     // Add compare/jump on neq/jump to the parent BB.
