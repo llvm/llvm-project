@@ -1466,7 +1466,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       (Ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
 
   AutoVarEmission emission(D);
-
+  
+  if (Ty->isDependentType())
+    return emission;
+  
   bool isEscapingByRef = D.isEscapingByref();
   emission.IsEscapingByRef = isEscapingByRef;
 
