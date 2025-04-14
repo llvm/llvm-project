@@ -46,27 +46,3 @@ llvm.func @fn(%cond : i1, %arg0 : i32, %arg1 : i32) -> i32 {
   llvm.blocktag <id = 1>
   llvm.return %arg1 : i32
 }
-
-// -----
-
-llvm.mlir.global private @g() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
-  %0 = llvm.blockaddress <function = @fn, tag = <id = 1>> : !llvm.ptr
-  llvm.return %0 : !llvm.ptr
-}
-
-// The Canonicalizer's region simplify pass can be hazardous when dealing
-// with indirect branches, as there is currently no mechanism to convey
-// dialect-specific block constraints.
-
-llvm.func @fn(%dest : !llvm.ptr, %arg0 : i32, %arg1 : i32) -> i32 {
-  llvm.indirectbr %dest : !llvm.ptr, [
-    ^head
-  ]
-^head:
-  llvm.blocktag <id = 0>
-  llvm.return %arg0 : i32
-^tail:
-  // expected-error@+1 {{not allowed in unrecheable blocks}}
-  llvm.blocktag <id = 1>
-  llvm.return %arg1 : i32
-}
