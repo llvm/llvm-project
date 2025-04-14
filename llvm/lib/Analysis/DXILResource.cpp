@@ -697,6 +697,9 @@ bool DXILResourceTypeMap::invalidate(Module &M, const PreservedAnalyses &PA,
 }
 
 //===----------------------------------------------------------------------===//
+static bool isUpdateCounterIntrinsic(Function &F) {
+  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
+}
 
 void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
@@ -775,6 +778,42 @@ void DXILResourceMap::populate(Module &M, DXILResourceTypeMap &DRTM) {
     // Adjust the resource binding to use the next ID.
     RI.setBindingID(NextID++);
   }
+
+  for (Function &F : M.functions()) {
+    if (!isUpdateCounterIntrinsic(F))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Update Counter Function: " << F.getName() << "\n");
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
+      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
+
+      // Determine if the use is an increment or decrement
+      Value *CountArg = CI->getArgOperand(1);
+      ConstantInt *CountValue = cast<ConstantInt>(CountArg);
+      int64_t CountLiteral = CountValue->getSExtValue();
+
+      // 0 is an unknown direction and shouldn't result in an insert
+      if (CountLiteral == 0)
+        continue;
+
+      ResourceCounterDirection Direction = ResourceCounterDirection::Decrement;
+      if (CountLiteral > 0)
+        Direction = ResourceCounterDirection::Increment;
+
+      // Collect all potential creation points for the handle arg
+      Value *HandleArg = CI->getArgOperand(0);
+      SmallVector<ResourceInfo *> RBInfos = findByUse(HandleArg);
+      for (ResourceInfo *RBInfo : RBInfos) {
+        if (RBInfo->CounterDirection == ResourceCounterDirection::Unknown ||
+            RBInfo->CounterDirection == Direction)
+          RBInfo->CounterDirection = Direction;
+        else
+          RBInfo->CounterDirection = ResourceCounterDirection::Invalid;
+      }
+    }
+  }
 }
 
 void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
@@ -793,10 +832,9 @@ void DXILResourceMap::print(raw_ostream &OS, DXILResourceTypeMap &DRTM,
   }
 }
 
-SmallVector<dxil::ResourceInfo>
-DXILResourceMap::findByUse(const Value *Key) const {
+SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
   if (const PHINode *Phi = dyn_cast<PHINode>(Key)) {
-    SmallVector<dxil::ResourceInfo> Children;
+    SmallVector<dxil::ResourceInfo *> Children;
     for (const Value *V : Phi->operands()) {
       Children.append(findByUse(V));
     }
@@ -810,9 +848,10 @@ DXILResourceMap::findByUse(const Value *Key) const {
   switch (CI->getIntrinsicID()) {
   // Found the create, return the binding
   case Intrinsic::dx_resource_handlefrombinding: {
-    const auto *It = find(CI);
+    auto Pos = CallMap.find(CI);
+    ResourceInfo *It = &Infos[Pos->second];
     assert(It != Infos.end() && "HandleFromBinding must be in resource map");
-    return {*It};
+    return {It};
   }
   default:
     break;
@@ -821,7 +860,7 @@ DXILResourceMap::findByUse(const Value *Key) const {
   // Check if any of the parameters are the resource we are following. If so
   // keep searching. If none of them are return an empty list
   const Type *UseType = CI->getType();
-  SmallVector<dxil::ResourceInfo> Children;
+  SmallVector<dxil::ResourceInfo *> Children;
   for (const Value *V : CI->args()) {
     if (V->getType() != UseType)
       continue;

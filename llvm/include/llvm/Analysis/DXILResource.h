@@ -463,7 +463,7 @@ public:
   /// ambiguous so multiple creation instructions may be returned. The resulting
   /// ResourceInfo can be used to depuplicate unique handles that
   /// reference the same resource
-  SmallVector<dxil::ResourceInfo> findByUse(const Value *Key) const;
+  SmallVector<dxil::ResourceInfo *> findByUse(const Value *Key);
 
   const_iterator find(const CallInst *Key) const {
     auto Pos = CallMap.find(Key);

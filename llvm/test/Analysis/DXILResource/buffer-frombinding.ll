@@ -69,6 +69,7 @@ define void @test_typedbuffer() {
   %uav1 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 3, i32 5, i32 1, i32 0, i1 false)
+  call i32 @llvm.dx.resource.updatecounter(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %uav1, i8 -1)
   ; CHECK: Resource [[UAV1:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 1
@@ -76,7 +77,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 5
   ; CHECK:     Size: 1
   ; CHECK:   Globally Coherent: 0
-  ; CHECK:   Counter Direction: Unknown
+  ; CHECK:   Counter Direction: Decrement
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
   ; CHECK:   IsROV: 0
@@ -92,6 +93,7 @@ define void @test_typedbuffer() {
   %uav2_2 = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
               @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f32_1_0(
                   i32 4, i32 0, i32 10, i32 5, i1 false)
+  call i32 @llvm.dx.resource.updatecounter(target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %uav2_2, i8 1)
   ; CHECK: Resource [[UAV2:[0-9]+]]:
   ; CHECK:   Binding:
   ; CHECK:     Record ID: 2
@@ -99,7 +101,7 @@ define void @test_typedbuffer() {
   ; CHECK:     Lower Bound: 0
   ; CHECK:     Size: 10
   ; CHECK:   Globally Coherent: 0
-  ; CHECK:   Counter Direction: Unknown
+  ; CHECK:   Counter Direction: Increment
   ; CHECK:   Class: UAV
   ; CHECK:   Kind: TypedBuffer
   ; CHECK:   IsROV: 0
