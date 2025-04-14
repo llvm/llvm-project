@@ -485,7 +485,6 @@ for.body:
 exit:
   %tmp1 = add <vscale x 4 x i32> %z0, %z1
   %res = add <vscale x 4 x i32> %tmp1, %z2
-  tail call void @use(<vscale x 4 x i32> %z0, <vscale x 4 x i32> %z1, <vscale x 4 x i32> %z2)
   ret <vscale x 4 x i32> %res
 }
 
