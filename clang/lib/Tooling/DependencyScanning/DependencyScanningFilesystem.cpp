@@ -108,6 +108,32 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
   return CacheShards[Hash % NumShards];
 }
 
+void DependencyScanningFilesystemSharedCache::diagnoseNegativeStatCachedPaths(
+    llvm::raw_ostream &OS, llvm::vfs::FileSystem &UnderlyingFS) const {
+  // Iterate through all shards and look for cached stat errors.
+  for (unsigned i = 0; i < NumShards; i++) {
+    const CacheShard &Shard = CacheShards[i];
+    for (const auto &Path : Shard.CacheByFilename.keys()) {
+      auto CachedPairIt = Shard.CacheByFilename.find(Path);
+      auto CachedPair = CachedPairIt->getValue();
+      const CachedFileSystemEntry *Entry = CachedPair.first;
+
+      if (Entry->getError()) {
+        // Only examine cached errors.
+        llvm::ErrorOr<llvm::vfs::Status> Stat = UnderlyingFS.status(Path);
+        if (Stat) {
+          // This is the case where we have negatively cached the non-existence
+          // of the file at Path, but the cache is later invalidated. Report
+          // diagnostics.
+          OS << Path << " did not exist when it was first searched "
+             << "but was created later. This may have led to a build failure "
+                "due to missing files.\n";
+        }
+      }
+    }
+  }
+}
+
 const CachedFileSystemEntry *
 DependencyScanningFilesystemSharedCache::CacheShard::findEntryByFilename(
     StringRef Filename) const {

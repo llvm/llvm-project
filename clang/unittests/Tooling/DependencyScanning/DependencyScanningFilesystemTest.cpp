@@ -178,3 +178,31 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
   DepFS.exists("/cache/a.pcm");
   EXPECT_EQ(InstrumentingFS->NumStatusCalls, 5u);
 }
+
+TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  InMemoryFS->setCurrentWorkingDirectory("/");
+  InMemoryFS->addFile("/dir", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  DependencyScanningFilesystemSharedCache SharedCache;
+  DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
+
+  bool Path1Exists = DepFS.exists("/path1");
+  EXPECT_EQ(Path1Exists, false);
+
+  // Adding a file that has been stat-ed,
+  InMemoryFS->addFile("/path1", 0, llvm::MemoryBuffer::getMemBuffer(""));
+  Path1Exists = DepFS.exists("/path1");
+  // Due to caching in SharedCache, path1 should not exist in
+  // DepFS's eyes.
+  EXPECT_EQ(Path1Exists, false);
+
+  std::string Diags;
+  llvm::raw_string_ostream DiagsStream(Diags);
+  SharedCache.diagnoseNegativeStatCachedPaths(DiagsStream, *InMemoryFS.get());
+
+  ASSERT_STREQ(
+      "/path1 did not exist when it was first searched but was created later. "
+      "This may have led to a build failure due to missing files.\n",
+      Diags.c_str());
+}
