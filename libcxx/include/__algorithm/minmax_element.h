@@ -88,7 +88,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
   using __value_type              = __iter_value_type<_Iter>;
   constexpr size_t __unroll_count = 4;
   constexpr size_t __vec_size     = __native_vector_size<__value_type>;
-  using __vec_type                    = __simd_vector<__value_type, __vec_size>;
+  using __vec_type                = __simd_vector<__value_type, __vec_size>;
   if (__last == __first) [[__unlikely__]] {
     return {__first, __first};
   }
@@ -105,19 +105,19 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
     __vec_type __vec[__unroll_count];
     for(size_t __i = 0; __i < __unroll_count; ++__i) {
       __vec[__i] = std::__load_vector<__vec_type>(__first + __i * __vec_size);
-      // min
+      // block min
       auto __block_min_element = __builtin_reduce_min(__vec[__i]);
       if (__block_min_element < __min_element) {
         __min_element = __block_min_element;
         __min_block_start = __first + __i * __vec_size;
-        __min_block_start = __first + (__i + 1) * __vec_size;
+        __min_block_end = __first + (__i + 1) * __vec_size;
       }
-      // max
+      // block max
       auto __block_max_element = __builtin_reduce_max(__vec[__i]);
       if (__block_max_element > __max_element) {
         __max_element = __block_max_element;
         __max_block_start = __first + __i * __vec_size;
-        __max_block_start = __first + (__i + 1) * __vec_size;
+        __max_block_end = __first + (__i + 1) * __vec_size;
       }
     }
     __first += __unroll_count * __vec_size;
@@ -130,22 +130,22 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       if (__block_min_element < __min_element) {
         __min_element = __block_min_element;
         __min_block_start = __first;
-        __min_block_start = __first + __vec_size;
+        __min_block_end = __first + __vec_size;
       }
       // max
       auto __block_max_element = __builtin_reduce_max(__vec);
       if (__block_max_element > __max_element) {
         __max_element = __block_max_element;
         __max_block_start = __first;
-        __max_block_start = __first + __vec_size;
+        __max_block_end = __first + __vec_size;
       }
       __first += __vec_size;
   }
 
   if (__last > __first) {
-    __less_tag __pred;
-    __identity __proj;
-    auto __epilogue = std::__minmax_element_loop(__first, __last, __pred, __proj);
+    auto __comp = std::__less<>{};
+    std::__identity __proj;
+    auto __epilogue = std::__minmax_element_loop(__first, __last, __comp, __proj);
     auto __epilogue_min_element = *__epilogue.first;
     auto __epilogue_max_element = *__epilogue.second;
     if (__epilogue_min_element < __min_element && __epilogue_max_element > __max_element) {
@@ -154,7 +154,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       __min_element = __epilogue_min_element;
       __min_block_start = __first;
       __min_block_end = __first;  // this is global min_element
-    } else {
+    } else {  // __epilogue_max_element > __max_element 
       __max_element = __epilogue_max_element;
       __max_block_start = __first;
       __max_block_end = __first;  // this is global max_element 
@@ -173,6 +173,7 @@ __minmax_element_vectorized(_Iter __first, _Iter __last) {
       break;
   }
 
+  
   return {__min_block_start, __max_block_start};
 }
 
