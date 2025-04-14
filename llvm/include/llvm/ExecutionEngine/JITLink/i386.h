@@ -16,6 +16,8 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
 
+#undef i386
+
 namespace llvm::jitlink::i386 {
 /// Represets i386 fixups
 enum EdgeKind_i386 : Edge::Kind {
