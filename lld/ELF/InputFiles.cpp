@@ -701,6 +701,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     initializeSymbols(obj);
     return;
   }
+
   // Handle dependent libraries and selection of section groups as these are not
   // done in parallel.
   ArrayRef<Elf_Shdr> objSections = getELFShdrs<ELFT>();
