@@ -419,9 +419,6 @@ Bug Fixes to Attribute Support
 - No longer crashing on ``__attribute__((align_value(N)))`` during template
   instantiation when the function parameter type is not a pointer or reference.
   (#GH26612)
-- The ``+nosimd`` attribute is now fully supported for AArch32. Previously, this had no effect when being used with
-  AArch32 targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
-  also now printed when the ``--print-supported-extensions`` option is used.
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -519,6 +516,9 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
+- The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
+  ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
+  also now printed when the ``--print-supported-extensions`` option is used.
 
 Android Support
 ^^^^^^^^^^^^^^^
