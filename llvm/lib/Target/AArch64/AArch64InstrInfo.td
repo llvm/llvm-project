@@ -385,6 +385,8 @@ def UseScalarIncVL : Predicate<"Subtarget->useScalarIncVL()">;
 
 def NoUseScalarIncVL : Predicate<"!Subtarget->useScalarIncVL()">;
 
+def HasFastIncVL : Predicate<"!Subtarget->hasDisableFastIncVL()">;
+
 def UseSVEFPLD1R : Predicate<"!Subtarget->noSVEFPLD1R()">;
 
 def UseLDAPUR : Predicate<"!Subtarget->avoidLDAPUR()">;
