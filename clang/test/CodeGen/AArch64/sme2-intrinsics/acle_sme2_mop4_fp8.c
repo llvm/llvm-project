@@ -2,17 +2,17 @@
 // REQUIRES: aarch64-registered-target
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s
+// RUN: %clang_cc1 -DSME_OVERLOADED_FORMS -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -disable-O0-optnone -Werror -Wall -emit-llvm -o - -x c++ %s | opt -S -p mem2reg,instcombine,tailcallelim | FileCheck %s -check-prefix=CPP-CHECK
 // RUN: %clang_cc1 -triple aarch64 -target-feature +sme-f8f32 -target-feature +sme-f8f16 -target-feature +sme-mop4 -target-feature +sme -target-feature +sme2 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 
 #include <arm_sme.h>
 
 #ifdef SME_OVERLOADED_FORMS
-#define SME_ACLE_FUNC(A1,A2_UNUSED,A3) A1##A3
+#define SME_ACLE_FUNC(A1,A2_UNUSED,A3,A4_UNUSED,A5) A1##A3##A5
 #else
-#define SME_ACLE_FUNC(A1,A2,A3) A1##A2##A3
+#define SME_ACLE_FUNC(A1,A2,A3,A4,A5) A1##A2##A3##A4##A5
 #endif
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_1x1_za16_mf8_mf8_fpm(
@@ -30,7 +30,7 @@
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za16_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_1x1_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_1x1,_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_1x2_za16_mf8_mf8_fpm(
@@ -48,7 +48,7 @@ void test_svmop4a_1x1_za16_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x2_za16_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8x2_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_1x2_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_1x2,_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_2x1_za16_mf8_mf8_fpm(
@@ -66,7 +66,7 @@ void test_svmop4a_1x2_za16_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8x2_t zm, fpm_t f
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_2x1_za16_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_2x1_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_2x1,_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_2x2_za16_mf8_mf8_fpm(
@@ -84,7 +84,7 @@ void test_svmop4a_2x1_za16_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, fpm_t f
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_2x2_za16_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8x2_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_2x2_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_2x2,_za16,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_1x1_za32_mf8_mf8_fpm(
@@ -102,7 +102,7 @@ void test_svmop4a_2x2_za16_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8x2_t zm, fpm_t
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x1_za32_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_1x1_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_1x1,_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_1x2_za32_mf8_mf8_fpm(
@@ -120,7 +120,7 @@ void test_svmop4a_1x1_za32_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8_t zm, fpm_t fpm
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_1x2_za32_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8x2_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_1x2_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_1x2,_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_2x1_za32_mf8_mf8_fpm(
@@ -138,7 +138,7 @@ void test_svmop4a_1x2_za32_mf8_mf8_fpm(svmfloat8_t zn, svmfloat8x2_t zm, fpm_t f
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_2x1_za32_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_2x1_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_2x1,_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
 
 // CHECK-LABEL: define dso_local void @test_svmop4a_2x2_za32_mf8_mf8_fpm(
@@ -156,5 +156,5 @@ void test_svmop4a_2x1_za32_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8_t zm, fpm_t f
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svmop4a_2x2_za32_mf8_mf8_fpm(svmfloat8x2_t zn, svmfloat8x2_t zm, fpm_t fpmr) __arm_streaming __arm_inout("za") {
-    SME_ACLE_FUNC(svmop4a_2x2_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
+    SME_ACLE_FUNC(svmop4a,_2x2,_za32,_mf8_mf8,_fpm)(1, zn, zm, fpmr);
 }
