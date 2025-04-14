@@ -19,6 +19,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Types.h"
@@ -28,6 +29,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "clang/CIR/LoweringHelpers.h"
@@ -1318,8 +1320,7 @@ mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
   // be already be enforced at CIRGen.
   if (cirAmtTy)
     amt = getLLVMIntCast(rewriter, amt, mlir::cast<mlir::IntegerType>(llvmTy),
-                         !cirAmtTy.isSigned(), cirAmtTy.getWidth(),
-                         cirValTy.getWidth());
+                         true, cirAmtTy.getWidth(), cirValTy.getWidth());
 
   // Lower to the proper LLVM shift operation.
   if (op.getIsShiftleft()) {
@@ -1339,32 +1340,32 @@ mlir::LogicalResult CIRToLLVMShiftOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
     cir::SelectOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  auto getConstantBool = [](mlir::Value value) -> std::optional<bool> {
+  auto getConstantBool = [](mlir::Value value) -> cir::BoolAttr {
     auto definingOp =
         mlir::dyn_cast_if_present<cir::ConstantOp>(value.getDefiningOp());
     if (!definingOp)
-      return std::nullopt;
+      return {};
 
     auto constValue = mlir::dyn_cast<cir::BoolAttr>(definingOp.getValue());
     if (!constValue)
-      return std::nullopt;
+      return {};
 
-    return constValue.getValue();
+    return constValue;
   };
 
   // Two special cases in the LLVMIR codegen of select op:
   // - select %0, %1, false => and %0, %1
   // - select %0, true, %1 => or %0, %1
   if (mlir::isa<cir::BoolType>(op.getTrueValue().getType())) {
-    std::optional<bool> trueValue = getConstantBool(op.getTrueValue());
-    std::optional<bool> falseValue = getConstantBool(op.getFalseValue());
-    if (falseValue.has_value() && !*falseValue) {
+    cir::BoolAttr trueValue = getConstantBool(op.getTrueValue());
+    cir::BoolAttr falseValue = getConstantBool(op.getFalseValue());
+    if (falseValue && !falseValue.getValue()) {
       // select %0, %1, false => and %0, %1
       rewriter.replaceOpWithNewOp<mlir::LLVM::AndOp>(op, adaptor.getCondition(),
                                                      adaptor.getTrueValue());
       return mlir::success();
     }
-    if (trueValue.has_value() && *trueValue) {
+    if (trueValue && trueValue.getValue()) {
       // select %0, true, %1 => or %0, %1
       rewriter.replaceOpWithNewOp<mlir::LLVM::OrOp>(op, adaptor.getCondition(),
                                                     adaptor.getFalseValue());

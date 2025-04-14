@@ -1183,9 +1183,11 @@ def BinOp : CIR_Op<"binop", [Pure,
 def ShiftOp : CIR_Op<"shift", [Pure]> {
   let summary = "Shift";
   let description = [{
-    Shift `left` or `right`, according to the first operand. Second operand is
-    the shift target and the third the amount. Second and the thrid operand are
-    integers.
+    The `cir.shift` operation performs a bitwise shift, either to the left or to
+    the right, based on the first operand. The second operand specifies the
+    value to be shifted, and the third operand determines the number of
+    positions by which the shift is applied. Both the second and third operands
+    are required to be integers.
 
     ```mlir
     %7 = cir.shift(left, %1 : !u64i, %4 : !s32i) -> !u64i
@@ -1245,8 +1247,6 @@ def SelectOp : CIR_Op<"select", [Pure,
       qualified(type($false_value))
     `)` `->` qualified(type($result)) attr-dict
   }];
-
-  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

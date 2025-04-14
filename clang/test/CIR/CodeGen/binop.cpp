@@ -320,3 +320,223 @@ void unsigned_shift(unsigned a, unsigned b) {
 // OGCG:         store i32 %[[SHL]], ptr %[[X]]
 
 // OGCG:         ret void
+
+void zext_shift_example(int a, unsigned char b) {
+  int x = a >> b;
+  x = a << b;
+}
+
+// CIR-LABEL: cir.func @zext_shift_example(
+// CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !u8i{{.*}})
+// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B_PTR:.*]] = cir.alloca !u8i, !cir.ptr<!u8i>, ["b", init]
+// CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+
+// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !u8i, !cir.ptr<!u8i>
+
+// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !u8i), !s32i
+// CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
+// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!u8i>, !u8i
+// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !u8i), !s32i
+// CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
+// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// CIR: cir.return
+
+// LLVM-LABEL: define void @zext_shift_example
+// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM:         %[[A_ADDR:.*]] = alloca i32
+// LLVM:         %[[B_ADDR:.*]] = alloca i8
+// LLVM:         %[[X:.*]] = alloca i32
+// LLVM:         store i32 %[[A]], ptr %[[A_ADDR]]
+// LLVM:         store i8 %[[B]], ptr %[[B_ADDR]]
+
+// LLVM:         %[[A1:.*]] = load i32, ptr %[[A_ADDR]]
+// LLVM:         %[[B1:.*]] = load i8, ptr %[[B_ADDR]]
+// LLVM:         %[[B1_EXT:.*]] = zext i8 %[[B1]] to i32
+// LLVM:         %[[ASHR:.*]] = ashr i32 %[[A1]], %[[B1_EXT]]
+// LLVM:         store i32 %[[ASHR]], ptr %[[X]]
+
+// LLVM:         %[[A2:.*]] = load i32, ptr %[[A_ADDR]]
+// LLVM:         %[[B2:.*]] = load i8, ptr %[[B_ADDR]]
+// LLVM:         %[[B2_EXT:.*]] = zext i8 %[[B2]] to i32
+// LLVM:         %[[SHL:.*]] = shl i32 %[[A2]], %[[B2_EXT]]
+// LLVM:         store i32 %[[SHL]], ptr %[[X]]
+
+// LLVM:         ret void
+
+// OGCG-LABEL: define dso_local void @_Z18zext_shift_exampleih
+// OGCG-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
+// OGCG:         %[[A_ADDR:.*]] = alloca i32
+// OGCG:         %[[B_ADDR:.*]] = alloca i8
+// OGCG:         %[[X:.*]] = alloca i32
+// OGCG:         store i32 %[[A]], ptr %[[A_ADDR]]
+// OGCG:         store i8 %[[B]], ptr %[[B_ADDR]]
+
+// OGCG:         %[[A1:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG:         %[[B1:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG:         %[[B1_EXT:.*]] = zext i8 %[[B1]] to i32
+// OGCG:         %[[ASHR:.*]] = ashr i32 %[[A1]], %[[B1_EXT]]
+// OGCG:         store i32 %[[ASHR]], ptr %[[X]]
+
+// OGCG:         %[[A2:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG:         %[[B2:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG:         %[[B2_EXT:.*]] = zext i8 %[[B2]] to i32
+// OGCG:         %[[SHL:.*]] = shl i32 %[[A2]], %[[B2_EXT]]
+// OGCG:         store i32 %[[SHL]], ptr %[[X]]
+
+// OGCG:         ret void
+
+void sext_shift_example(int a, signed char b) {
+  int x = a >> b;
+  x = a << b;
+}
+
+// CIR-LABEL: cir.func @sext_shift_example(
+// CIR-SAME: %[[ARG0:.*]]: !s32i{{.*}}, %[[ARG1:.*]]: !s8i{{.*}})
+// CIR: %[[A_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+// CIR: %[[B_PTR:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, ["b", init]
+// CIR: %[[X_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["x", init]
+
+// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s32i, !cir.ptr<!s32i>
+// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s8i, !cir.ptr<!s8i>
+
+// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s8i), !s32i
+// CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s32i, %[[B1_EXT]] : !s32i) -> !s32i
+// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s32i>, !s32i
+// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s8i>, !s8i
+// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s8i), !s32i
+// CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s32i, %[[B2_EXT]] : !s32i) -> !s32i
+// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// CIR: cir.return
+
+// LLVM-LABEL: define void @sext_shift_example
+// LLVM-SAME: (i32 %[[A:.*]], i8 %[[B:.*]])
+// LLVM:         %[[A_ADDR:.*]] = alloca i32
+// LLVM:         %[[B_ADDR:.*]] = alloca i8
+// LLVM:         %[[X:.*]] = alloca i32
+// LLVM:         store i32 %[[A]], ptr %[[A_ADDR]]
+// LLVM:         store i8 %[[B]], ptr %[[B_ADDR]]
+
+// LLVM:         %[[A1:.*]] = load i32, ptr %[[A_ADDR]]
+// LLVM:         %[[B1:.*]] = load i8, ptr %[[B_ADDR]]
+// LLVM:         %[[B1_EXT:.*]] = sext i8 %[[B1]] to i32
+// LLVM:         %[[ASHR:.*]] = ashr i32 %[[A1]], %[[B1_EXT]]
+// LLVM:         store i32 %[[ASHR]], ptr %[[X]]
+
+// LLVM:         %[[A2:.*]] = load i32, ptr %[[A_ADDR]]
+// LLVM:         %[[B2:.*]] = load i8, ptr %[[B_ADDR]]
+// LLVM:         %[[B2_EXT:.*]] = sext i8 %[[B2]] to i32
+// LLVM:         %[[SHL:.*]] = shl i32 %[[A2]], %[[B2_EXT]]
+// LLVM:         store i32 %[[SHL]], ptr %[[X]]
+
+// LLVM:         ret void
+
+// OGCG-LABEL: define dso_local void @_Z18sext_shift_exampleia
+// OGCG-SAME: (i32 {{.*}} %[[A:.*]], i8 {{.*}} %[[B:.*]])
+// OGCG:         %[[A_ADDR:.*]] = alloca i32
+// OGCG:         %[[B_ADDR:.*]] = alloca i8
+// OGCG:         %[[X:.*]] = alloca i32
+// OGCG:         store i32 %[[A]], ptr %[[A_ADDR]]
+// OGCG:         store i8 %[[B]], ptr %[[B_ADDR]]
+
+// OGCG:         %[[A1:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG:         %[[B1:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG:         %[[B1_EXT:.*]] = sext i8 %[[B1]] to i32
+// OGCG:         %[[ASHR:.*]] = ashr i32 %[[A1]], %[[B1_EXT]]
+// OGCG:         store i32 %[[ASHR]], ptr %[[X]]
+
+// OGCG:         %[[A2:.*]] = load i32, ptr %[[A_ADDR]]
+// OGCG:         %[[B2:.*]] = load i8, ptr %[[B_ADDR]]
+// OGCG:         %[[B2_EXT:.*]] = sext i8 %[[B2]] to i32
+// OGCG:         %[[SHL:.*]] = shl i32 %[[A2]], %[[B2_EXT]]
+// OGCG:         store i32 %[[SHL]], ptr %[[X]]
+
+// OGCG:         ret void
+
+void long_shift_example(long long a, short b) {
+  long long x = a >> b;
+  x = a << b;
+}
+
+// CIR-LABEL: cir.func @long_shift_example(
+// CIR-SAME: %[[ARG0:.*]]: !s64i{{.*}}, %[[ARG1:.*]]: !s16i{{.*}})
+// CIR: %[[A_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["a", init]
+// CIR: %[[B_PTR:.*]] = cir.alloca !s16i, !cir.ptr<!s16i>, ["b", init]
+// CIR: %[[X_PTR:.*]] = cir.alloca !s64i, !cir.ptr<!s64i>, ["x", init]
+
+// CIR: cir.store %[[ARG0]], %[[A_PTR]] : !s64i, !cir.ptr<!s64i>
+// CIR: cir.store %[[ARG1]], %[[B_PTR]] : !s16i, !cir.ptr<!s16i>
+
+// CIR: %[[A1:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B1:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[B1_EXT:.*]] = cir.cast(integral, %[[B1]] : !s16i), !s32i
+// CIR: %[[ASHR:.*]] = cir.shift(right, %[[A1]] : !s64i, %[[B1_EXT]] : !s32i) -> !s64i
+// CIR: cir.store %[[ASHR]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+
+// CIR: %[[A2:.*]] = cir.load %[[A_PTR]] : !cir.ptr<!s64i>, !s64i
+// CIR: %[[B2:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s16i>, !s16i
+// CIR: %[[B2_EXT:.*]] = cir.cast(integral, %[[B2]] : !s16i), !s32i
+// CIR: %[[SHL:.*]] = cir.shift(left, %[[A2]] : !s64i, %[[B2_EXT]] : !s32i) -> !s64i
+// CIR: cir.store %[[SHL]], %[[X_PTR]] : !s64i, !cir.ptr<!s64i>
+
+// CIR: cir.return
+
+// LLVM-LABEL: define void @long_shift_example
+// LLVM-SAME: (i64 %[[A:.*]], i16 %[[B:.*]])
+// LLVM:         %[[A_ADDR:.*]] = alloca i64
+// LLVM:         %[[B_ADDR:.*]] = alloca i16
+// LLVM:         %[[X:.*]] = alloca i64
+// LLVM:         store i64 %[[A]], ptr %[[A_ADDR]]
+// LLVM:         store i16 %[[B]], ptr %[[B_ADDR]]
+
+// LLVM:         %[[A1:.*]] = load i64, ptr %[[A_ADDR]]
+// LLVM:         %[[B1:.*]] = load i16, ptr %[[B_ADDR]]
+// LLVM:         %[[B1_SEXT:.*]] = sext i16 %[[B1]] to i32
+// LLVM:         %[[B1_ZEXT:.*]] = zext i32 %[[B1_SEXT]] to i64
+// LLVM:         %[[ASHR:.*]] = ashr i64 %[[A1]], %[[B1_ZEXT]]
+// LLVM:         store i64 %[[ASHR]], ptr %[[X]]
+
+// LLVM:         %[[A2:.*]] = load i64, ptr %[[A_ADDR]]
+// LLVM:         %[[B2:.*]] = load i16, ptr %[[B_ADDR]]
+// LLVM:         %[[B2_SEXT:.*]] = sext i16 %[[B2]] to i32
+// LLVM:         %[[B2_ZEXT:.*]] = zext i32 %[[B2_SEXT]] to i64
+// LLVM:         %[[SHL:.*]] = shl i64 %[[A2]], %[[B2_ZEXT]]
+// LLVM:         store i64 %[[SHL]], ptr %[[X]]
+
+// LLVM:         ret void
+
+// OGCG-LABEL: define dso_local void @_Z18long_shift_examplexs
+// OGCG-SAME: (i64 {{.*}} %[[A:.*]], i16 {{.*}} %[[B:.*]])
+// OGCG:         %[[A_ADDR:.*]] = alloca i64
+// OGCG:         %[[B_ADDR:.*]] = alloca i16
+// OGCG:         %[[X:.*]] = alloca i64
+// OGCG:         store i64 %[[A]], ptr %[[A_ADDR]]
+// OGCG:         store i16 %[[B]], ptr %[[B_ADDR]]
+
+// OGCG:         %[[A1:.*]] = load i64, ptr %[[A_ADDR]]
+// OGCG:         %[[B1:.*]] = load i16, ptr %[[B_ADDR]]
+// OGCG:         %[[B1_SEXT:.*]] = sext i16 %[[B1]] to i32
+// OGCG:         %[[B1_ZEXT:.*]] = zext i32 %[[B1_SEXT]] to i64
+// OGCG:         %[[ASHR:.*]] = ashr i64 %[[A1]], %[[B1_ZEXT]]
+// OGCG:         store i64 %[[ASHR]], ptr %[[X]]
+
+// OGCG:         %[[A2:.*]] = load i64, ptr %[[A_ADDR]]
+// OGCG:         %[[B2:.*]] = load i16, ptr %[[B_ADDR]]
+// OGCG:         %[[B2_SEXT:.*]] = sext i16 %[[B2]] to i32
+// OGCG:         %[[B2_ZEXT:.*]] = zext i32 %[[B2_SEXT]] to i64
+// OGCG:         %[[SHL:.*]] = shl i64 %[[A2]], %[[B2_ZEXT]]
+// OGCG:         store i64 %[[SHL]], ptr %[[X]]
+
+// OGCG:         ret void

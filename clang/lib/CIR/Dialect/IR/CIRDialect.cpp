@@ -1050,28 +1050,6 @@ LogicalResult cir::ShiftOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// SelectOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult cir::SelectOp::fold(FoldAdaptor adaptor) {
-  mlir::Attribute condition = adaptor.getCondition();
-  if (condition) {
-    bool conditionValue = mlir::cast<cir::BoolAttr>(condition).getValue();
-    return conditionValue ? getTrueValue() : getFalseValue();
-  }
-
-  // cir.select if %0 then x else x -> x
-  mlir::Attribute trueValue = adaptor.getTrueValue();
-  mlir::Attribute falseValue = adaptor.getFalseValue();
-  if (trueValue && trueValue == falseValue)
-    return trueValue;
-  if (getTrueValue() == getFalseValue())
-    return getTrueValue();
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
 // UnaryOp
 //===----------------------------------------------------------------------===//
 
