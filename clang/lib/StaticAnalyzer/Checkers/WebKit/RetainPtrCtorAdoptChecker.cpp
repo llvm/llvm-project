@@ -197,7 +197,7 @@ public:
       return;
 
     // Ignore RetainPtr construction inside adoptNS, adoptCF, and retainPtr.
-    if (isAdoptFn(DeclWithIssue) || isRetainPtr(safeGetName(DeclWithIssue)))
+    if (isAdoptFn(DeclWithIssue) || safeGetName(DeclWithIssue) == "retainPtr")
       return;
 
     std::string Name = "RetainPtr constructor";
