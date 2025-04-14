@@ -3002,7 +3002,7 @@ bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
     APInt UndefLHS, UndefRHS;
     SDValue LHS = V.getOperand(0);
     SDValue RHS = V.getOperand(1);
-    // Ensure common demanded undef elts for both operands, otherwise we might
+    // Only propagate common undef elts for both operands, otherwise we might
     // fail to handle binop-specific undef handling.
     // e.g. (and undef, 0) -> 0 etc.
     if (isSplatValue(LHS, DemandedElts, UndefLHS, Depth + 1) &&
