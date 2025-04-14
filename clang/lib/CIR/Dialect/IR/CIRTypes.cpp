@@ -78,10 +78,10 @@ void CIRDialect::printType(Type type, DialectAsmPrinter &os) const {
 
 Type RecordType::parse(mlir::AsmParser &parser) {
   FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
-  const auto loc = parser.getCurrentLocation();
-  const auto eLoc = parser.getEncodedSourceLoc(loc);
+  const llvm::SMLoc loc = parser.getCurrentLocation();
+  const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
   RecordKind kind;
-  auto *context = parser.getContext();
+  mlir::MLIRContext *context = parser.getContext();
 
   if (parser.parseLess())
     return {};
@@ -102,7 +102,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
 
   // Is a self reference: ensure referenced type was parsed.
   if (name && parser.parseOptionalGreater().succeeded()) {
-    auto type = getChecked(eLoc, context, name, kind);
+    RecordType type = getChecked(eLoc, context, name, kind);
     if (succeeded(parser.tryStartCyclicParse(type))) {
       parser.emitError(loc, "invalid self-reference within record");
       return {};
@@ -112,7 +112,7 @@ Type RecordType::parse(mlir::AsmParser &parser) {
 
   // Is a named record definition: ensure name has not been parsed yet.
   if (name) {
-    auto type = getChecked(eLoc, context, name, kind);
+    RecordType type = getChecked(eLoc, context, name, kind);
     cyclicParseGuard = parser.tryStartCyclicParse(type);
     if (failed(cyclicParseGuard)) {
       parser.emitError(loc, "record already defined");
