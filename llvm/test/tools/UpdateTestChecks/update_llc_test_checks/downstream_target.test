@@ -1,0 +1,7 @@
+# REQUIRES: x86-registered-target
+## Tests that the downstream module support works
+
+# RUN: cp -f %S/Inputs/downstream_target.ll %t.ll && %update_llc_test_checks %t.ll --downstream-target-handler-path=%S/Inputs/downstream_target.py
+# RUN: grep -v '^; NOTE:' %t.ll > %t.ll.expected
+# RUN: diff -b -u %S/Inputs/downstream_target.ll.expected %t.ll.expected
+
