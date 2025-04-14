@@ -2414,7 +2414,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan,
         VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
       }
 
-      auto *ConstStep =
+      [[maybe_unused]] auto *ConstStep =
           ScalarStep->isLiveIn()
               ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
               : nullptr;
