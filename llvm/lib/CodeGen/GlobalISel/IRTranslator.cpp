@@ -3037,16 +3037,10 @@ bool IRTranslator::translateCallBr(const User &U,
     if (!translateInlineAsm(I, MIRBuilder))
       return false;
   } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
-    switch (I.getIntrinsicID()) {
-    default:
-      report_fatal_error("Unsupported intrinsic for callbr");
-    case Intrinsic::amdgcn_kill:
-      if (!translateTargetIntrinsic(I, Intrinsic::amdgcn_kill, MIRBuilder))
-        return false;
-      break;
-    }
+    if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
+      return false;
   } else {
-    report_fatal_error("Only know how to handle inlineasm/intrinsic callbr");
+    return false;
   }
 
   // Retrieve successors.
