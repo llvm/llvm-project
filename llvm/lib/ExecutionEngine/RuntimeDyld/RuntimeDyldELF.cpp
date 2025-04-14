@@ -1306,6 +1306,11 @@ void RuntimeDyldELF::resolveRISCVRelocation(const SectionEntry &Section,
     Ref = Value + Addend;
     break;
   }
+  case ELF::R_RISCV_ADD8: {
+    auto Ref = support::ulittle8_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref + Value + Addend;
+    break;
+  }
   case ELF::R_RISCV_ADD16: {
     auto Ref = support::ulittle16_t::ref(Section.getAddressWithOffset(Offset));
     Ref = Ref + Value + Addend;
@@ -1321,6 +1326,11 @@ void RuntimeDyldELF::resolveRISCVRelocation(const SectionEntry &Section,
     Ref = Ref + Value + Addend;
     break;
   }
+  case ELF::R_RISCV_SUB8: {
+    auto Ref = support::ulittle8_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Ref - Value - Addend;
+    break;
+  }
   case ELF::R_RISCV_SUB16: {
     auto Ref = support::ulittle16_t::ref(Section.getAddressWithOffset(Offset));
     Ref = Ref - Value - Addend;
@@ -1334,6 +1344,21 @@ void RuntimeDyldELF::resolveRISCVRelocation(const SectionEntry &Section,
   case ELF::R_RISCV_SUB64: {
     auto Ref = support::ulittle64_t::ref(Section.getAddressWithOffset(Offset));
     Ref = Ref - Value - Addend;
+    break;
+  }
+  case ELF::R_RISCV_SET8: {
+    auto Ref = support::ulittle8_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_SET16: {
+    auto Ref = support::ulittle16_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Value + Addend;
+    break;
+  }
+  case ELF::R_RISCV_SET32: {
+    auto Ref = support::ulittle32_t::ref(Section.getAddressWithOffset(Offset));
+    Ref = Value + Addend;
     break;
   }
   }
