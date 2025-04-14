@@ -806,15 +806,14 @@ getDebugOperandsForRegHelper(Instruction *MI, Register Reg) {
 iterator_range<filter_iterator<const MachineOperand *,
                                std::function<bool(const MachineOperand &Op)>>>
 MachineInstr::getDebugOperandsForReg(Register Reg) const {
-  return getDebugOperandsForRegHelper<const MachineOperand,
-                                              const MachineInstr>(this, Reg);
+  return getDebugOperandsForRegHelper<const MachineOperand, const MachineInstr>(
+      this, Reg);
 }
 
-iterator_range<filter_iterator<MachineOperand *,
-                               std::function<bool(MachineOperand &Op)>>>
+iterator_range<
+    filter_iterator<MachineOperand *, std::function<bool(MachineOperand &Op)>>>
 MachineInstr::getDebugOperandsForReg(Register Reg) {
-  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(
-      this, Reg);
+  return getDebugOperandsForRegHelper<MachineOperand, MachineInstr>(this, Reg);
 }
 
 unsigned MachineInstr::getNumExplicitOperands() const {
