@@ -115,7 +115,7 @@ static bool runUniformIntrinsicCombine(Module &M, ModuleAnalysisManager &AM) {
     }
 
     for (User *U : F.users()) {
-      auto *II = dyn_cast<IntrinsicInst>(U);
+      auto *II = cast<IntrinsicInst>(U);
       Function *ParentF = II->getFunction();
       if (ParentF->isDeclaration())
         continue;
