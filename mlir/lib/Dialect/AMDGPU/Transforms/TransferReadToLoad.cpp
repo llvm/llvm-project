@@ -24,7 +24,7 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/WalkPatternRewriteDriver.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir::amdgpu {
 #define GEN_PASS_DEF_AMDGPUTRANSFERREADTOLOADPASS
@@ -75,6 +75,9 @@ static LogicalResult transferPreconditions(
   // Non-unit strides are handled by VectorToSCF.
   if (!memRefType.isLastDimUnitStride())
     return rewriter.notifyMatchFailure(xferOp, "!= 1 stride needs VectorToSCF");
+
+  if (memRefType.getElementTypeBitWidth() < 8)
+    return rewriter.notifyMatchFailure(xferOp, "unsupported sub-byte type");
 
   // If there is broadcasting involved then we first load the unbroadcasted
   // vector, and then broadcast it with `vector.broadcast`.
@@ -127,6 +130,9 @@ static Value createVectorLoadForMaskedLoad(OpBuilder &builder, Location loc,
   return res;
 }
 
+static constexpr char kTransferReadNeedsMask[] =
+    "amdgpu.buffer_transfer_read_needs_mask";
+
 namespace {
 
 struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
@@ -134,7 +140,7 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
-    if (readOp->hasAttr("amdgpu.buffer_transfer_read_needs_mask"))
+    if (readOp->hasAttr(kTransferReadNeedsMask))
       return failure();
 
     bool requiresBroadcasting = false;
@@ -154,38 +160,56 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, src);
+    SmallVector<OpFoldResult> strides =
+        stridedMetadata.getConstifiedMixedStrides();
+    SmallVector<OpFoldResult> sizes = stridedMetadata.getConstifiedMixedSizes();
+    OpFoldResult offset = stridedMetadata.getConstifiedMixedOffset();
     OpFoldResult linearizedIndices;
     std::tie(std::ignore, linearizedIndices) =
-        memref::getLinearizedMemRefOffsetAndSize(
-            rewriter, loc, elementBitWidth, elementBitWidth,
-            stridedMetadata.getConstifiedMixedOffset(),
-            stridedMetadata.getConstifiedMixedSizes(),
-            stridedMetadata.getConstifiedMixedStrides(), indices);
-    Value linearIndex =
-        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
+        memref::getLinearizedMemRefOffsetAndSize(rewriter, loc, elementBitWidth,
+                                                 elementBitWidth, offset, sizes,
+                                                 strides, indices);
 
     // TODO(jerryyin): Fix the getLinearizedMemRefOffsetAndSize() function
     // Note below doesn't give the correct result for the linearized size.
     // Value totalSize = getValueOrCreateConstantIndexOp(
     //    rewriter, loc, linearizedInfo.linearizedSize);
-    // It compute the mutiplied sizes of all dimensions instead of taking
+    // It computes the multiplied sizes of all dimensions instead of taking
     // the maximum of each dimension size * stride.
     SmallVector<AffineExpr> productExpressions;
     SmallVector<Value> productResults;
     unsigned sourceRank = cast<ShapedType>(src.getType()).getRank();
 
     SmallVector<AffineExpr> symbols(2 * sourceRank);
-    SmallVector<Value> offsetValues(2 * sourceRank);
+    SmallVector<Value> offsetValues;
     bindSymbolsList(rewriter.getContext(), MutableArrayRef{symbols});
+
+    size_t symbolIndex = 0;
     for (size_t i = 0; i < sourceRank; ++i) {
-      unsigned offsetIdx = 2 * i;
-      productExpressions.push_back(symbols[offsetIdx] * symbols[offsetIdx + 1]);
-      offsetValues[offsetIdx] = stridedMetadata.getStrides()[i];
-      offsetValues[offsetIdx + 1] = stridedMetadata.getSizes()[i];
+      AffineExpr strideExpr, sizeExpr;
+      OpFoldResult stride = strides[i];
+      OpFoldResult size = sizes[i];
+      if (auto constantStride = getConstantIntValue(stride)) {
+        strideExpr = rewriter.getAffineConstantExpr(*constantStride);
+      } else {
+        strideExpr = symbols[symbolIndex++];
+        offsetValues.push_back(
+            getValueOrCreateConstantIndexOp(rewriter, loc, stride));
+      }
+
+      if (auto constantSize = getConstantIntValue(size)) {
+        sizeExpr = rewriter.getAffineConstantExpr(*constantSize);
+      } else {
+        sizeExpr = symbols[symbolIndex++];
+        offsetValues.push_back(
+            getValueOrCreateConstantIndexOp(rewriter, loc, size));
+      }
+
+      productExpressions.push_back(strideExpr * sizeExpr);
     }
 
     AffineMap maxMap = AffineMap::get(
-        /*dimCount=*/0, /*symbolCount=*/symbols.size(), productExpressions,
+        /*dimCount=*/0, /*symbolCount=*/symbolIndex, productExpressions,
         rewriter.getContext());
     Value totalSize =
         rewriter.create<affine::AffineMaxOp>(loc, maxMap, offsetValues);
@@ -193,32 +217,35 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
     // delta = bufferSize - linearizedOffset
     Value vectorSizeOffset =
         rewriter.create<arith::ConstantIndexOp>(loc, vectorSize);
+    Value linearIndex =
+        getValueOrCreateConstantIndexOp(rewriter, loc, linearizedIndices);
     Value delta = rewriter.create<arith::SubIOp>(loc, totalSize, linearIndex);
 
     // 1) check if delta < vectorSize
     Value isOutofBounds = rewriter.create<arith::CmpIOp>(
-        loc, arith::CmpIPredicate::ule, delta, vectorSizeOffset);
+        loc, arith::CmpIPredicate::ult, delta, vectorSizeOffset);
 
     // 2) check if (detla_bytes % (32 / elementBitwidth) != 0)
     Value deltaBytes = rewriter.create<arith::MulIOp>(
         loc, delta,
         rewriter.create<arith::ConstantIndexOp>(loc, elementBitWidth / 8));
     Value elementsPerWord = rewriter.create<arith::ConstantIndexOp>(
-        loc, elementBitWidth < 32 ? 32 / elementBitWidth : 1);
+        loc, llvm::divideCeil(32, elementBitWidth));
     Value isNotWordAligned = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ne,
         rewriter.create<arith::RemUIOp>(loc, deltaBytes, elementsPerWord),
         rewriter.create<arith::ConstantIndexOp>(loc, 0));
 
     // We take the fallback of transfer_read default lowering only it is both
-    // out-of-bounds and not word aligned.
+    // out-of-bounds and not word aligned. The fallback ensures correct results
+    // when loading at the boundary of the buffer since buffer load returns
+    // inconsistent zeros for the whole word when boundary is crossed.
     Value ifCondition =
         rewriter.create<arith::AndIOp>(loc, isOutofBounds, isNotWordAligned);
 
     auto thenBuilder = [&](OpBuilder &builder, Location loc) {
       Operation *read = builder.clone(*readOp.getOperation());
-      read->setAttr("amdgpu.buffer_transfer_read_needs_mask",
-                    builder.getUnitAttr());
+      read->setAttr(kTransferReadNeedsMask, builder.getUnitAttr());
       Value readResult = read->getResult(0);
       builder.create<scf::YieldOp>(loc, readResult);
     };
@@ -243,7 +270,6 @@ struct TransferReadLowering final : OpRewritePattern<vector::TransferReadOp> {
 void mlir::amdgpu::populateAmdgpuTransferReadToLoadPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering>(patterns.getContext());
-  vector::populateVectorTransferLoweringPatterns(patterns);
 }
 
 struct AmdgpuTransferReadToLoadPass final
