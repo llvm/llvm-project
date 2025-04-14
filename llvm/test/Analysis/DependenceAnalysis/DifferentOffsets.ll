@@ -65,3 +65,25 @@ entry:
   %0 = load i32, ptr %arrayidx1, align 1
   ret i32 %0
 }
+
+define i32 @gep_i8_vs_i32(ptr nocapture %A, i64 %n, i64 %m) {
+; CHECK-LABEL: 'gep_i8_vs_i32'
+; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx0, align 1
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx0, align 1 --> Dst: store i32 42, ptr %arrayidx1, align 4
+; CHECK-NEXT:    da analyze - output [|<]!
+; CHECK-NEXT:    Runtime Assumptions:
+; CHECK-NEXT:    Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
+; CHECK-NEXT:  Src: store i32 42, ptr %arrayidx1, align 4 --> Dst: store i32 42, ptr %arrayidx1, align 4
+; CHECK-NEXT:    da analyze - none!
+; CHECK-NEXT:  Runtime Assumptions:
+; CHECK-NEXT:  Equal predicate: (zext i2 (trunc i64 %n to i2) to i64) == 0
+;
+entry:
+  %arrayidx0 = getelementptr inbounds i8, ptr %A, i64 %n
+  store i32 42, ptr %arrayidx0, align 1
+
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %m
+  store i32 42, ptr %arrayidx1, align 4
+  ret i32 0
+}
