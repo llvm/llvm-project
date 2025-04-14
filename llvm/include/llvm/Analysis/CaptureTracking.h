@@ -41,6 +41,9 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   bool PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
                             unsigned MaxUsesToExplore = 0);
 
@@ -48,6 +51,9 @@ namespace llvm {
   /// components that are part of \p Mask. Once \p StopFn on the accumulated
   /// components returns true, the traversal is aborted early. By default, this
   /// happens when *any* of the components in \p Mask are captured.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   CaptureComponents PointerMayBeCaptured(
       const Value *V, bool ReturnCaptures, CaptureComponents Mask,
       function_ref<bool(CaptureComponents)> StopFn = capturesAnything,
@@ -64,6 +70,9 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   bool PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
                                   const Instruction *I, const DominatorTree *DT,
                                   bool IncludeI = false,
@@ -75,6 +84,9 @@ namespace llvm {
   /// on the accumulated components returns true, the traversal is aborted
   /// early. By default, this happens when *any* of the components in \p Mask
   /// are captured.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   CaptureComponents PointerMayBeCapturedBefore(
       const Value *V, bool ReturnCaptures, const Instruction *I,
       const DominatorTree *DT, bool IncludeI, CaptureComponents Mask,
@@ -184,6 +196,9 @@ namespace llvm {
   /// MaxUsesToExplore specifies how many uses the analysis should explore for
   /// one value before giving up due too "too many uses". If MaxUsesToExplore
   /// is zero, a default value is assumed.
+  /// This function only considers captures of the passed value via its def-use
+  /// chain, without considering captures of values it may be based on, or
+  /// implicit captures such as for external globals.
   void PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker,
                             unsigned MaxUsesToExplore = 0);
 
