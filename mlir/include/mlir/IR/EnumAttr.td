@@ -588,7 +588,7 @@ class EnumProp<EnumInfo enumInfo> : Property<enumInfo.cppType, enumInfo.summary>
     uint64_t rawValue;
     if (::mlir::failed($_reader.readVarInt(rawValue)))
       return ::mlir::failure();
-    if (rawValue >= std::numeric_limits<uint}] # enum.bitwidth # [{_t>::max())
+    if (rawValue > std::numeric_limits<}] # enum.underlyingType # [{>::max())
       return ::mlir::failure();
     $_storage = static_cast<}] # enum.cppType # [{>(rawValue);
   }];
