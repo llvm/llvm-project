@@ -6242,7 +6242,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getNode(OpOpcode, DL, VT, N1.getOperand(0), Flags);
     }
 
-    if (N1.isPoison())
+    if (OpOpcode == ISD::POISON)
       return getPOISON(VT);
 
     if (N1.isUndef())
@@ -6266,7 +6266,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       return getNode(ISD::ZERO_EXTEND, DL, VT, N1.getOperand(0), Flags);
     }
 
-    if (N1.isPoison())
+    if (OpOpcode == ISD::POISON)
       return getPOISON(VT);
 
     if (N1.isUndef())
