@@ -192,9 +192,8 @@ static bool validate(LLVMContext *Ctx, const mcdxbc::RootSignatureDesc &RSD) {
       return reportValueError(Ctx, "ShaderVisibility",
                               (uint32_t)P.Header.ShaderVisibility);
 
-    if (!verifyParameterType(P.Header.ParameterType))
-      return reportValueError(Ctx, "ParameterType",
-                              (uint32_t)P.Header.ParameterType);
+    assert(verifyParameterType(P.Header.ParameterType) &&
+           "Invalid value for ParameterType");
   }
 
   return false;
