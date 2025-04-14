@@ -113,28 +113,34 @@ Sections:
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x1
+               Hash:          0x1
              - ID:            1
                AddressOffset: 0x0
                Size:          0x6
                Metadata:      0x0
+               Hash:          0x2
              - ID:            2
                AddressOffset: 0x1
                Size:          0x4
                Metadata:      0x0
+               Hash:          0x3
              - ID:            4
                AddressOffset: 0x0
                Size:          0x6
                Metadata:      0x1
+               Hash:          0x4
              - ID:            5
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x2
+               Hash:          0x5
           - BaseAddress: 0x6000
             BBEntries:
              - ID:            6
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x2
+               Hash:          0x6
   - Name:   .llvm_bb_addr_map.bar
     Type:   SHT_LLVM_BB_ADDR_MAP
     Link:   .text.bar
@@ -146,12 +152,15 @@ Sections:
             - AddressOffset: 0x0
               Size:          0x1
               Metadata:      0x1
+              Hash:          0x7
             - AddressOffset: 0x4
               Size:          0x2
               Metadata:      0x0
+              Hash:          0x8
             - AddressOffset: 0x0
               Size:          0x6
               Metadata:      0x0
+              Hash:          0x9
 
 Symbols:
   - Name:    foo
@@ -208,28 +217,34 @@ Sections:
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x1
+               Hash:          0x1
              - ID:            1
                AddressOffset: 0x0
                Size:          0x6
                Metadata:      0x0
+               Hash:          0x2
              - ID:            2
                AddressOffset: 0x1
                Size:          0x4
                Metadata:      0x0
+               Hash:          0x3
              - ID:            4
                AddressOffset: 0x0
                Size:          0x6
                Metadata:      0x1
+               Hash:          0x4
              - ID:            5
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x2
+               Hash:          0x5
           - BaseAddress: 0x6000
             BBEntries:
              - ID:            6
                AddressOffset: 0x0
                Size:          0x1
                Metadata:      0x2
+               Hash:          0x6
       - Version: 1
         BBRanges:
          - BaseAddress: 0x5000
@@ -237,12 +252,15 @@ Sections:
             - AddressOffset: 0x0
               Size:          0x1
               Metadata:      0x1
+              Hash:          0x7
             - AddressOffset: 0x4
               Size:          0x2
               Metadata:      0x0
+              Hash:          0x8
             - AddressOffset: 0x0
               Size:          0x6
               Metadata:      0x0
+              Hash:          0x9
 
 Symbols:
   - Name:    foo

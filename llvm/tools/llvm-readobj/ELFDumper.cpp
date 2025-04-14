@@ -7899,6 +7899,7 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             W.printBoolean("IsEHPad", BBE.isEHPad());
             W.printBoolean("CanFallThrough", BBE.canFallThrough());
             W.printBoolean("HasIndirectBranch", BBE.hasIndirectBranch());
+            W.printHex("Hash", BBE.Hash);
           }
         }
       }

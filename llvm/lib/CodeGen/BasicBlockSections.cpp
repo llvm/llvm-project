@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/MachineBlockHashInfo.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -134,6 +135,7 @@ INITIALIZE_PASS_BEGIN(
     "Prepares for basic block sections, by splitting functions "
     "into clusters of basic blocks.",
     false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockHashInfo)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(BasicBlockSections, "bbsections-prepare",
                     "Prepares for basic block sections, by splitting functions "
@@ -400,6 +402,7 @@ bool BasicBlockSections::runOnMachineFunction(MachineFunction &MF) {
 
 void BasicBlockSections::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
+  AU.addRequired<MachineBlockHashInfo>();
   AU.addRequired<BasicBlockSectionsProfileReaderWrapperPass>();
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();
   AU.addUsedIfAvailable<MachinePostDominatorTreeWrapperPass>();

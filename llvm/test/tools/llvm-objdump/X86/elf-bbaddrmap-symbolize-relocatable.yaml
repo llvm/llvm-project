@@ -30,6 +30,7 @@ Sections:
                AddressOffset:   0x0
                Size:            0x1
                Metadata:        0xa
+               Hash:            0x1
       - Version: 2
         BBRanges:
           - BBEntries:
@@ -37,6 +38,7 @@ Sections:
               AddressOffset:   0x0
               Size:            0x1
               Metadata:        0xb
+              Hash:            0x2
       - Version: 2
         Feature: 0x8
         BBRanges:
@@ -45,11 +47,13 @@ Sections:
               AddressOffset:   0x0
               Size:            0x1
               Metadata:        0xc
+              Hash:            0x3
           - BBEntries:
             - ID:              1
               AddressOffset:   0x0
               Size:            0x1
               Metadata:        0xd
+              Hash:            0x4
   - Name:  .rela.llvm_bb_addr_map
     Type:  SHT_RELA
     Flags: [ SHF_INFO_LINK ]
@@ -59,15 +63,15 @@ Sections:
       - Offset: 0x2
         Symbol: .text
         Type:   R_X86_64_64
-      - Offset: 0x11
+      - Offset: 0x12
         Symbol: .text
         Type:   R_X86_64_64
         Addend: 1
-      - Offset: 0x21
+      - Offset: 0x23
         Symbol: .text
         Type:   R_X86_64_64
         Addend: 0x2
-      - Offset: 0x2e
+      - Offset: 0x31
         Symbol: .text
         Type:   R_X86_64_64
         Addend: 0x3
