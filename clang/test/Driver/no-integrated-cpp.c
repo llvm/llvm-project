@@ -33,10 +33,13 @@
 //
 // RUN: %clang -O2 %t.i  -c -o a.o -no-integrated-cpp -save-temps -### 2>&1 | FileCheck %s --check-prefixes=PRE-SAVE
 // PRE-SAVE-NOT: "-E"
-// PRE-SAVE-NOT: "-emit-llvm-bc"
-// PRE-SAVE: "-S"
-// PRE-SAVE-SAME: "-o" "[[ASM:.*.s]]"
+// PRE-SAVE: "-emit-llvm-bc"
+// PRE-SAVE-SAME: "-o" "[[BITCODE:.*.bc]]"
 // PRE-SAVE-SAME: "-x" "cpp-output" "{{.*}}no-integrated-cpp.c.tmp.i"
+//
+// PRE-SAVE-NEXT: "-S"
+// PRE-SAVE-SAME: "-o" "[[ASM:.*.s]]"
+// PRE-SAVE-SAME: "-x" "ir" "[[BITCODE]]"
 //
 // PRE-SAVE-NEXT: "-cc1as"
 // PRE-SAVE-SAME: "-o" "a.o" "[[ASM]]"
@@ -47,12 +50,8 @@
 // LLVM-SAME: "-x" "c" "{{.*}}no-integrated-cpp.c"
 //
 // LLVM-NEXT: "-emit-llvm-bc"
-// LLVM-SAME: "-o" "[[BITCODE:.*.bc]]"
-// LLVM-SAME: "-x" "cpp-output" "[[PREPROC]]"
-//
-// LLVM-NEXT: "-emit-llvm-bc"
 // LLVM-SAME: "-o" "a.bc"
-// LLVM-SAME: "-x" "ir" "[[BITCODE]]"
+// LLVM-SAME: "-x" "cpp-output" "[[PREPROC]]"
 //
 // RUN: %clang -O2 %s -c -emit-llvm -o a.bc -no-integrated-cpp -save-temps -### 2>&1 | FileCheck %s --check-prefixes=LLVM-SAVE
 // LLVM-SAVE: "-E"
@@ -76,5 +75,9 @@
 // RUN: %clang -O2 %t.i -c -emit-llvm -o a.bc -no-integrated-cpp -save-temps -### 2>&1 | FileCheck %s --check-prefixes=PRE-LLVM-SAVE
 // PRE-LLVM-SAVE-NOT: "-E"
 // PRE-LLVM-SAVE: "-emit-llvm-bc"
-// PRE-LLVM-SAVE-SAME: "-o" "a.bc"
+// PRE-LLVM-SAVE-SAME: "-o" "[[BITCODE:.*.bc]]"
 // PRE-LLVM-SAVE-SAME: "-x" "cpp-output" "{{.*}}no-integrated-cpp.c.tmp.i"
+
+// PRE-LLVM-SAVE-NEXT: "-emit-llvm-bc"
+// PRE-LLVM-SAVE-SAME: "-o" "a.bc"
+// PRE-LLVM-SAVE-SAME: "-x" "ir" "[[BITCODE]]"
