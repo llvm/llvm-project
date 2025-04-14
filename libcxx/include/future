@@ -440,7 +440,7 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(launch)
 
 #    ifndef _LIBCPP_CXX03_LANG
 
-typedef underlying_type<launch>::type __launch_underlying_type;
+using __launch_underlying_type _LIBCPP_NODEBUG = __underlying_type_t<launch>;
 
 inline _LIBCPP_HIDE_FROM_ABI constexpr launch operator&(launch __x, launch __y) {
   return static_cast<launch>(static_cast<__launch_underlying_type>(__x) & static_cast<__launch_underlying_type>(__y));
