@@ -139,8 +139,8 @@ void Inst() {
   DependentT<HasFuncs> T;// expected-note{{in instantiation of}}
 }
 
-#pragma acc routine(Func) gang device_type(Inst)
-#pragma acc routine(Func) gang dtype(Inst)
+#pragma acc routine(Func) gang device_type(host)
+#pragma acc routine(Func) gang dtype(multicore)
 #pragma acc routine(Func) device_type(*) worker
 #pragma acc routine(Func) dtype(*) worker
 

@@ -223,20 +223,20 @@ void SetInstructionBreakpointsRequestHandler::operator()(
     // Read instruction breakpoint request.
     InstructionBreakpoint inst_bp(dap, *bp_obj);
     const auto [iv, inserted] = dap.instruction_breakpoints.try_emplace(
-        inst_bp.instructionAddressReference, dap, *bp_obj);
+        inst_bp.GetInstructionAddressReference(), dap, *bp_obj);
     if (inserted)
       iv->second.SetBreakpoint();
     else
       iv->second.UpdateBreakpoint(inst_bp);
     AppendBreakpoint(&iv->second, response_breakpoints);
-    seen.erase(inst_bp.instructionAddressReference);
+    seen.erase(inst_bp.GetInstructionAddressReference());
   }
 
   for (const auto &addr : seen) {
     auto inst_bp = dap.instruction_breakpoints.find(addr);
     if (inst_bp == dap.instruction_breakpoints.end())
       continue;
-    dap.target.BreakpointDelete(inst_bp->second.bp.GetID());
+    dap.target.BreakpointDelete(inst_bp->second.GetID());
     dap.instruction_breakpoints.erase(addr);
   }
 

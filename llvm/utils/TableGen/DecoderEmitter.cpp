@@ -1430,16 +1430,12 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
     unsigned NumBits = Islands[I - 1].NumBits;
     assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
     TableInfo.Table.push_back(MCD::OPC_CheckField);
-    uint8_t Buffer[16], *P;
-    encodeULEB128(Islands[I - 1].StartBit, Buffer);
-    for (P = Buffer; *P >= 128; ++P)
-      TableInfo.Table.push_back(*P);
-    TableInfo.Table.push_back(*P);
+    uint8_t Buffer[16];
+    unsigned Len = encodeULEB128(Islands[I - 1].StartBit, Buffer);
+    TableInfo.Table.insert(TableInfo.Table.end(), Buffer, Buffer + Len);
     TableInfo.Table.push_back(NumBits);
-    encodeULEB128(Islands[I - 1].FieldVal, Buffer);
-    for (P = Buffer; *P >= 128; ++P)
-      TableInfo.Table.push_back(*P);
-    TableInfo.Table.push_back(*P);
+    Len = encodeULEB128(Islands[I - 1].FieldVal, Buffer);
+    TableInfo.Table.insert(TableInfo.Table.end(), Buffer, Buffer + Len);
     // Push location for NumToSkip backpatching.
     TableInfo.FixupStack.back().push_back(TableInfo.Table.size());
     // The fixup is always 24-bits, so go ahead and allocate the space
@@ -1469,11 +1465,9 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   TableInfo.Table.push_back(HasCompleteDecoder ? MCD::OPC_Decode
                                                : MCD::OPC_TryDecode);
   NumEncodingsSupported++;
-  uint8_t Buffer[16], *p;
-  encodeULEB128(Opc.Opcode, Buffer);
-  for (p = Buffer; *p >= 128; ++p)
-    TableInfo.Table.push_back(*p);
-  TableInfo.Table.push_back(*p);
+  uint8_t Buffer[16];
+  unsigned Len = encodeULEB128(Opc.Opcode, Buffer);
+  TableInfo.Table.insert(TableInfo.Table.end(), Buffer, Buffer + Len);
 
   SmallString<16> Bytes;
   raw_svector_ostream S(Bytes);

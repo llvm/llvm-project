@@ -63,6 +63,10 @@ static cl::opt<unsigned> NumJobs(
 unsigned NumJobs = 1;
 #endif
 
+static StringLiteral SeparatorLine =
+    "--------------------------------------------------------------------------"
+    "------\n";
+
 /// Splits Chunks in half and prints them.
 /// If unable to split (when chunk size is 1) returns false.
 static bool increaseGranularity(std::vector<Chunk> &Chunks) {
@@ -210,20 +214,22 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
     }
 
 #ifndef NDEBUG
-    // Make sure that the number of chunks does not change as we reduce.
-    std::vector<Chunk> NoChunks = {{0, INT_MAX}};
-    Oracle NoChunksCounter(NoChunks);
-    std::unique_ptr<ReducerWorkItem> Clone =
-      Test.getProgram().clone(Test.getTargetMachine());
-    Pass.Func(NoChunksCounter, *Clone);
-    assert(Targets == NoChunksCounter.count() &&
-           "number of chunks changes when reducing");
+    {
+      // Make sure that the number of chunks does not change as we reduce.
+      std::vector<Chunk> NoChunks = {{0, INT_MAX}};
+      Oracle NoChunksCounter(NoChunks);
+      std::unique_ptr<ReducerWorkItem> Clone =
+          Test.getProgram().clone(Test.getTargetMachine());
+      Pass.Func(NoChunksCounter, *Clone);
+      assert(Targets == NoChunksCounter.count() &&
+             "number of chunks changes when reducing");
+    }
 #endif
   }
   if (!Targets) {
     if (Verbose)
       errs() << "\nNothing to reduce\n";
-    errs() << "----------------------------\n";
+    errs() << SeparatorLine;
     return;
   }
 
@@ -240,16 +246,20 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
     ChunkThreadPoolPtr =
         std::make_unique<DefaultThreadPool>(hardware_concurrency(NumJobs));
 
+  SmallString<0> OriginalBC;
+  DenseSet<Chunk> UninterestingChunks;
+  UninterestingChunks.reserve(Targets);
+
   bool FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity;
   do {
     FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = false;
 
-    DenseSet<Chunk> UninterestingChunks;
+    UninterestingChunks.clear();
 
     // When running with more than one thread, serialize the original bitcode
     // to OriginalBC.
-    SmallString<0> OriginalBC;
     if (NumJobs > 1) {
+      OriginalBC.clear();
       raw_svector_ostream BCOS(OriginalBC);
       Test.getProgram().writeBitcode(BCOS);
     }
@@ -359,5 +369,5 @@ void llvm::runDeltaPass(TestRunner &Test, const DeltaPass &Pass) {
   }
   if (Verbose)
     errs() << "Couldn't increase anymore.\n";
-  errs() << "----------------------------\n";
+  errs() << SeparatorLine;
 }
