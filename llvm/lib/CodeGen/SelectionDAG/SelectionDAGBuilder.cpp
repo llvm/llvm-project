@@ -3401,15 +3401,9 @@ void SelectionDAGBuilder::visitCallBr(const CallBrInst &I) {
   if (I.isInlineAsm()) {
     visitInlineAsm(I);
   } else if (I.getIntrinsicID() != Intrinsic::not_intrinsic) {
-    switch (I.getIntrinsicID()) {
-    default:
-      report_fatal_error("Unsupported intrinsic for callbr");
-    case Intrinsic::amdgcn_kill:
-      visitCallBrIntrinsic(I);
-      break;
-    }
+    visitCallBrIntrinsic(I);
   } else {
-    report_fatal_error("Only know how to handle inlineasm/intrinsic callbr");
+    report_fatal_error("only know how to handle inlineasm/intrinsic callbr");
   }
   CopyToExportRegsIfNeeded(&I);
 
