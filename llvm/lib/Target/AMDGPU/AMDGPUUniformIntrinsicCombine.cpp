@@ -101,17 +101,17 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II,
 /// Iterates over the Intrinsics use in the function to optimise.
 static bool runUniformIntrinsicCombine(Function &F, const UniformityInfo &UI) {
   Module *M = F.getParent();
-  // List of AMDGPU intrinsics to optimize if their arguments are uniform.
-  constexpr Intrinsic::ID Intrinsics[] = {
-      Intrinsic::amdgcn_permlane64, Intrinsic::amdgcn_readfirstlane,
-      Intrinsic::amdgcn_readlane, Intrinsic::amdgcn_ballot};
-
   bool IsChanged = false;
   for (Function &Func : M->functions()) {
-    // Continue if intrinsic doesn't exists or not in the intrinsic list.
-    Intrinsic::ID IID = Func.getIntrinsicID();
-    if (!llvm::is_contained(Intrinsics, IID))
+    switch (Func.getIntrinsicID()) {
+    case Intrinsic::amdgcn_permlane64:
+    case Intrinsic::amdgcn_readfirstlane:
+    case Intrinsic::amdgcn_readlane:
+    case Intrinsic::amdgcn_ballot:
+      break;
+    default:
       continue;
+    }
     for (User *U : Func.users()) {
       auto *II = cast<IntrinsicInst>(U);
       if (II->getFunction() == &F)
