@@ -1519,12 +1519,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   SmallSet<Instruction *, 4> AAMetadataInstrs;
   bool SrcNotDom = false;
 
-  // Recursively track the user and check whether modified alias exist.
-  auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
-    bool CanBeNull, CanBeFreed;
-    return V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-  };
-
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI,
           function_ref<bool(Instruction *)> ModRefCallback) -> bool {
@@ -1551,8 +1545,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
         }
         if (!Visited.insert(&U).second)
           continue;
-        UseCaptureInfo CI =
-            DetermineUseCaptureKind(U, AI, IsDereferenceableOrNull);
+        UseCaptureInfo CI = DetermineUseCaptureKind(U, AI);
         // TODO(captures): Make this more precise.
         if (capturesAnything(CI.UseCC))
           return false;
