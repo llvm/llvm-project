@@ -1242,7 +1242,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require) {
 #undef STRINGIFY
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const RequiredExtensions &Exts) {
+                              const RequiredExtensionBits &Exts) {
   OS << "{";
   ListSeparator LS;
   for (unsigned I = 0; I < RVV_REQ_NUM; I++)
