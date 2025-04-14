@@ -6171,12 +6171,13 @@ public:
     }
 
     auto inputType = dyn_cast<VectorType>(broadcast.getSourceType());
+    VectorType outputType = transpose.getResultVectorType();
 
     // transpose(broadcast(scalar)) -> broadcast(scalar) is always valid
     bool inputIsScalar = !inputType;
     if (inputIsScalar) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          transpose, transpose.getResultVectorType(), transpose.getVector());
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+                                                       transpose.getVector());
       return success();
     }
 
@@ -6210,11 +6211,13 @@ public:
     // the check (impossible to have just 1 non-locally bound group).
 
     // The preceding logic also ensures that at this point, the output of the
-    // transpose is definitely broadcastable from the input shape, so we don't
-    // need to check vector::isBroadcastableTo now.
+    // transpose is definitely broadcastable from the input shape, assert so:
+    assert(vector::isBroadcastableTo(inputType, outputType) ==
+               vector::BroadcastableToResult::Success &&
+           "not broadcastable directly to transpose output");
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        transpose, transpose.getResultVectorType(), transpose.getVector());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(transpose, outputType,
+                                                     transpose.getVector());
 
     return success();
   }
