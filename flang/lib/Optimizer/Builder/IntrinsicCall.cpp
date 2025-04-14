@@ -7593,12 +7593,46 @@ IntrinsicLibrary::genSameTypeAs(mlir::Type resultType,
 mlir::Value IntrinsicLibrary::genScale(mlir::Type resultType,
                                        llvm::ArrayRef<mlir::Value> args) {
   assert(args.size() == 2);
+  mlir::FloatType floatTy = mlir::dyn_cast<mlir::FloatType>(resultType);
+  if (!floatTy.isF16() && !floatTy.isBF16()) // kind=4,8,10,16
+    return builder.createConvert(
+        loc, resultType,
+        fir::runtime::genScale(builder, loc, args[0], args[1]));
 
-  mlir::Value realX = fir::getBase(args[0]);
-  mlir::Value intI = fir::getBase(args[1]);
+  // Convert kind=2,3 arg X to kind=4. Convert kind=4 result back to kind=2,3.
+  mlir::Type i1Ty = builder.getI1Type();
+  mlir::Type f32Ty = mlir::Float32Type::get(builder.getContext());
+  mlir::Value result = builder.createConvert(
+      loc, resultType,
+      fir::runtime::genScale(
+          builder, loc, builder.createConvert(loc, f32Ty, args[0]), args[1]));
 
-  return builder.createConvert(
-      loc, resultType, fir::runtime::genScale(builder, loc, realX, intI));
+  // kind=4 runtime::genScale call may not signal kind=2,3 exceptions.
+  // If X is finite and result is infinite, signal IEEE_OVERFLOW
+  // If X is finite and scale(result, -I) != X, signal IEEE_UNDERFLOW
+  fir::IfOp outerIfOp =
+      builder.create<fir::IfOp>(loc, genIsFPClass(i1Ty, args[0], finiteTest),
+                                /*withElseRegion=*/false);
+  builder.setInsertionPointToStart(&outerIfOp.getThenRegion().front());
+  fir::IfOp innerIfOp =
+      builder.create<fir::IfOp>(loc, genIsFPClass(i1Ty, result, infiniteTest),
+                                /*withElseRegion=*/true);
+  builder.setInsertionPointToStart(&innerIfOp.getThenRegion().front());
+  genRaiseExcept(_FORTRAN_RUNTIME_IEEE_OVERFLOW |
+                 _FORTRAN_RUNTIME_IEEE_INEXACT);
+  builder.setInsertionPointToStart(&innerIfOp.getElseRegion().front());
+  mlir::Value minusI = builder.create<mlir::arith::MulIOp>(
+      loc, args[1], builder.createAllOnesInteger(loc, args[1].getType()));
+  mlir::Value reverseResult = builder.createConvert(
+      loc, resultType,
+      fir::runtime::genScale(
+          builder, loc, builder.createConvert(loc, f32Ty, result), minusI));
+  genRaiseExcept(
+      _FORTRAN_RUNTIME_IEEE_UNDERFLOW | _FORTRAN_RUNTIME_IEEE_INEXACT,
+      builder.create<mlir::arith::CmpFOp>(loc, mlir::arith::CmpFPredicate::ONE,
+                                          args[0], reverseResult));
+  builder.setInsertionPointAfter(outerIfOp);
+  return result;
 }
 
 // SCAN

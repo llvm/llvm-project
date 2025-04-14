@@ -156,8 +156,6 @@ unsigned SystemZELFObjectWriter::getRelocType(MCContext &Ctx,
                                               bool IsPCRel) const {
   SMLoc Loc = Fixup.getLoc();
   unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return Kind - FirstLiteralRelocationKind;
   auto Specifier = SystemZMCExpr::Specifier(Target.getSpecifier());
   switch (Specifier) {
   case SystemZMCExpr::VK_INDNTPOFF:
