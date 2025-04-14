@@ -5896,30 +5896,30 @@ define void @sink_vp_splat(ptr nocapture %out, ptr nocapture %in) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    li a3, 1024
-; CHECK-NEXT:    lui a4, 1
+; CHECK-NEXT:    li a4, 3
+; CHECK-NEXT:    lui a5, 1
 ; CHECK-NEXT:  .LBB129_1: # %vector.body
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB129_2 Depth 2
-; CHECK-NEXT:    vsetvli a5, a3, e32, m4, ta, ma
-; CHECK-NEXT:    slli a6, a2, 2
+; CHECK-NEXT:    vsetvli a6, a3, e32, m4, ta, ma
+; CHECK-NEXT:    slli a7, a2, 2
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vmv.v.i v12, 3
-; CHECK-NEXT:    add a7, a1, a6
-; CHECK-NEXT:    li t0, 1024
+; CHECK-NEXT:    add t0, a1, a7
+; CHECK-NEXT:    li t1, 1024
 ; CHECK-NEXT:  .LBB129_2: # %for.body424
 ; CHECK-NEXT:    # Parent Loop BB129_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vle32.v v16, (a7)
-; CHECK-NEXT:    addi t0, t0, -1
-; CHECK-NEXT:    vmacc.vv v8, v16, v12
-; CHECK-NEXT:    add a7, a7, a4
-; CHECK-NEXT:    bnez t0, .LBB129_2
+; CHECK-NEXT:    vle32.v v12, (t0)
+; CHECK-NEXT:    addi t1, t1, -1
+; CHECK-NEXT:    vmacc.vx v8, a4, v12
+; CHECK-NEXT:    add t0, t0, a5
+; CHECK-NEXT:    bnez t1, .LBB129_2
 ; CHECK-NEXT:  # %bb.3: # %vector.latch
 ; CHECK-NEXT:    # in Loop: Header=BB129_1 Depth=1
-; CHECK-NEXT:    add a6, a0, a6
-; CHECK-NEXT:    sub a3, a3, a5
-; CHECK-NEXT:    vse32.v v8, (a6)
-; CHECK-NEXT:    add a2, a2, a5
+; CHECK-NEXT:    add a7, a0, a7
+; CHECK-NEXT:    sub a3, a3, a6
+; CHECK-NEXT:    vse32.v v8, (a7)
+; CHECK-NEXT:    add a2, a2, a6
 ; CHECK-NEXT:    bnez a3, .LBB129_1
 ; CHECK-NEXT:  # %bb.4: # %for.cond.cleanup
 ; CHECK-NEXT:    ret
@@ -5962,24 +5962,23 @@ define void @sink_vp_splat_vfwadd_wf(ptr nocapture %in, float %f) {
 ; CHECK-LABEL: sink_vp_splat_vfwadd_wf:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    fcvt.d.s fa5, fa0
 ; CHECK-NEXT:    li a2, 1024
 ; CHECK-NEXT:    lui a3, 2
 ; CHECK-NEXT:  .LBB130_1: # %vector.body
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB130_2 Depth 2
-; CHECK-NEXT:    vsetvli a4, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a4, a2, e8, m1, ta, ma
 ; CHECK-NEXT:    slli a5, a1, 3
-; CHECK-NEXT:    vfmv.v.f v8, fa5
 ; CHECK-NEXT:    add a5, a0, a5
 ; CHECK-NEXT:    li a6, 1024
 ; CHECK-NEXT:  .LBB130_2: # %for.body419
 ; CHECK-NEXT:    # Parent Loop BB130_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vle64.v v16, (a5)
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vle64.v v8, (a5)
 ; CHECK-NEXT:    addi a6, a6, -1
-; CHECK-NEXT:    vfadd.vv v16, v16, v8
-; CHECK-NEXT:    vse64.v v16, (a5)
+; CHECK-NEXT:    vfwadd.wf v8, v8, fa0
+; CHECK-NEXT:    vse64.v v8, (a5)
 ; CHECK-NEXT:    add a5, a5, a3
 ; CHECK-NEXT:    bnez a6, .LBB130_2
 ; CHECK-NEXT:  # %bb.3: # %vector.latch

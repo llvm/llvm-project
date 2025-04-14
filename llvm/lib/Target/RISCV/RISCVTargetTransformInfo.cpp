@@ -2838,17 +2838,17 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
   if (!ST->sinkSplatOperands())
     return false;
 
-  for (auto OpIdx : enumerate(I->operands())) {
-    if (!canSplatOperand(I, OpIdx.index()))
-      continue;
-
-    Instruction *Op = dyn_cast<Instruction>(OpIdx.value().get());
+  for (auto &U : I->operands()) {
+    auto *Op = dyn_cast<Instruction>(U.get());
     // Make sure we are not already sinking this operand
     if (!Op || any_of(Ops, [&](Use *U) { return U->get() == Op; }))
       continue;
 
-    // We are looking for a splat that can be sunk.
-    if (!match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
+    // We are looking for a splat/vp.splat that can be sunk.
+    bool IsVPSplat = match(Op, m_Intrinsic<Intrinsic::experimental_vp_splat>(
+                                   m_Value(), m_Value(), m_Value()));
+    if (!IsVPSplat &&
+        !match(Op, m_Shuffle(m_InsertElt(m_Undef(), m_Value(), m_ZeroInt()),
                              m_Undef(), m_ZeroMask())))
       continue;
 
@@ -2856,23 +2856,28 @@ bool RISCVTTIImpl::isProfitableToSinkOperands(
     if (cast<VectorType>(Op->getType())->getElementType()->isIntegerTy(1))
       continue;
 
-    // All uses of the shuffle should be sunk to avoid duplicating it across gpr
-    // and vector registers
-    for (Use &U : Op->uses()) {
-      Instruction *Insn = cast<Instruction>(U.getUser());
-      if (!canSplatOperand(Insn, U.getOperandNo()))
-        return false;
-    }
+    // All uses of the splat/vp.splat should be sunk to avoid duplicating it
+    // across gpr and vector registers
+    if (any_of(Op->uses(), [this](Use &U) {
+          return !canSplatOperand(cast<Instruction>(U.getUser()),
+                                  U.getOperandNo());
+        }))
+      continue;
 
-    Use *InsertEltUse = &Op->getOperandUse(0);
     // Sink any fpexts since they might be used in a widening fp pattern.
-    auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
-    if (isa<FPExtInst>(InsertElt->getOperand(1)))
-      Ops.push_back(&InsertElt->getOperandUse(1));
-    Ops.push_back(InsertEltUse);
-    Ops.push_back(&OpIdx.value());
+    if (IsVPSplat) {
+      if (isa<FPExtInst>(Op->getOperand(0)))
+        Ops.push_back(&Op->getOperandUse(0));
+    } else {
+      Use *InsertEltUse = &Op->getOperandUse(0);
+      auto *InsertElt = cast<InsertElementInst>(InsertEltUse);
+      if (isa<FPExtInst>(InsertElt->getOperand(1)))
+        Ops.push_back(&InsertElt->getOperandUse(1));
+      Ops.push_back(InsertEltUse);
+    }
+    Ops.push_back(&U);
   }
-  return true;
+  return !Ops.empty();
 }
 
 RISCVTTIImpl::TTI::MemCmpExpansionOptions
