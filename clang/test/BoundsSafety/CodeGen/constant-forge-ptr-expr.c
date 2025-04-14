@@ -40,7 +40,7 @@ int *__bidi_indexable ptrBidiIndexable =
     __unsafe_forge_bidi_indexable(int *, arr + 2, 14);
 // CHECKBS-LABEL: ptrBidiIndexable:
 // CHECKBS:   .quad   arr+8
-// CHECKBS:   .quad   (arr+8)+14
+// CHECKBS:   .quad   arr+8+14
 // CHECKBS:   .quad   arr+8
 
 int *__bidi_indexable ptrBidiIndexable2 = __unsafe_forge_single(int *, &arr[0]);
@@ -65,7 +65,7 @@ int *__bidi_indexable ptrBidiIndexable4 = __unsafe_forge_bidi_indexable(int *, 8
 int *__bidi_indexable ptrBidiIndexable5 = __unsafe_forge_bidi_indexable(int *, &foo[4].buf[9], 16);
 // CHECKBS-LABEL: ptrBidiIndexable5:
 // CHECKBS:   .quad   foo+364
-// CHECKBS:   .quad   (foo+364)+16
+// CHECKBS:   .quad   foo+364+16
 // CHECKBS:   .quad   foo+364
 // CHECKBS:   .size   ptrBidiIndexable5, 24
 
@@ -75,8 +75,8 @@ int *__bidi_indexable ptrBidiIndexable5 = __unsafe_forge_bidi_indexable(int *, &
 int *__bidi_indexable ptrBidiIndexable6 =
   __unsafe_forge_bidi_indexable(int *, FOO_PLUS_380_LEN_0, 8) + 4;
 // CHECKBS-LABEL: ptrBidiIndexable6:
-// CHECKBS:   .quad   (foo+380)+16
-// CHECKBS:   .quad   (foo+380)+8
+// CHECKBS:   .quad   foo+380+16
+// CHECKBS:   .quad   foo+380+8
 // CHECKBS:   .quad   foo+380
 // CHECKBS:   .size   ptrBidiIndexable6, 24
 
