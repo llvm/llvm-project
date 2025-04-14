@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
@@ -377,8 +376,6 @@ enum PolicyScheme : uint8_t {
   HasPolicyOperand,
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum PolicyScheme PS);
-
 // TODO refactor RVVIntrinsic class design after support all intrinsic
 // combination. This represents an instantiation of an intrinsic with a
 // particular type and prototype
@@ -510,23 +507,6 @@ enum RVVRequire {
   RVV_REQ_NUM,
 };
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, enum RVVRequire Require);
-
-struct RequiredExtensions {
-  llvm::Bitset<RVV_REQ_NUM> Bits;
-  RequiredExtensions() {}
-  RequiredExtensions(std::initializer_list<RVVRequire> Init) {
-    for (auto I : Init)
-      Bits.set(I);
-  }
-
-  void set(unsigned I) { Bits.set(I); }
-  bool operator[](unsigned I) const { return Bits[I]; }
-};
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                              const RequiredExtensions &Exts);
-
 // Raw RVV intrinsic info, used to expand later.
 // This struct is highly compact for minimized code size.
 struct RVVIntrinsicRecord {
@@ -538,7 +518,7 @@ struct RVVIntrinsicRecord {
   const char *OverloadedName;
 
   // Required target features for this intrinsic.
-  RequiredExtensions RequiredExtensions;
+  uint32_t RequiredExtensions[(RVV_REQ_NUM + 31) / 32];
 
   // Prototype for this intrinsic, index of RVVSignatureTable.
   uint16_t PrototypeIndex;
