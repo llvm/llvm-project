@@ -2241,6 +2241,9 @@ static LogicalResult verifyComdat(Operation *op,
 static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   llvm::DenseSet<BlockTagAttr> blockTags;
   LogicalResult r = success();
+  // Note that presence of `BlockTagOp`s currently can't prevent an unrecheable
+  // block to be removed by canonicalizer's region simplify pass, which needs to
+  // be dialect aware to allow extra constraints to be described.
   funcOp.walk([&](BlockTagOp blockTagOp) {
     if (blockTags.contains(blockTagOp.getTag())) {
       blockTagOp.emitError()
