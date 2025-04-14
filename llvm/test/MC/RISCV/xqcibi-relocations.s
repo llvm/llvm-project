@@ -28,7 +28,7 @@ qc.e.bgeui x8, 12, foo
 .option exact
 qc.e.bgeui x8, 12, foo
 # RELOC: R_RISCV_VENDOR QUALCOMM 0x0
-# RELOC: R_RISCV_CUSTOM193 foo 0x0
+# RELOC-NEXT: R_RISCV_CUSTOM193 foo 0x0
 # INSTR: qc.e.bgeui s0, 12, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_branch
 .option noexact
@@ -47,6 +47,7 @@ qc.e.beqi x7, 8, .L1
 
 # Check that there is only one vendor symbol created and that it is local and NOTYPE
 # VENDORSYM-COUNT-1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 QUALCOMM
+# VENDORSYM-NOT: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 QUALCOMM
 
 .L1:
   ret

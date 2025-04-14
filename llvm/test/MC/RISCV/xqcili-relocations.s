@@ -14,26 +14,26 @@
 
 qc.li x4, %qc.abs20(foo)
 # RELOC: R_RISCV_VENDOR QUALCOMM 0x0
-# RELOC: R_RISCV_CUSTOM192 foo 0x0
+# RELOC-NEXT: R_RISCV_CUSTOM192 foo 0x0
 # INSTR: qc.li tp, %qc.abs20(foo)
 # FIXUP: fixup A - offset: 0, value: %qc.abs20(foo), kind: fixup_riscv_qc_abs20_u
 
 qc.e.li x5, foo
 # RELOC: R_RISCV_VENDOR QUALCOMM 0x0
-# RELOC: R_RISCV_CUSTOM194 foo 0x0
+# RELOC-NEXT: R_RISCV_CUSTOM194 foo 0x0
 # INSTR: qc.e.li t0, foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_32
 
 # Check that a label in a different section is handled similar to an undefined symbol
 qc.li x9, %qc.abs20(.bar)
 # RELOC: R_RISCV_VENDOR QUALCOMM 0x0
-# RELOC: R_RISCV_CUSTOM192 .bar 0x0
+# RELOC-NEXT: R_RISCV_CUSTOM192 .bar 0x0
 # INSTR: qc.li s1, %qc.abs20(.bar)
 # FIXUP: fixup A - offset: 0, value: %qc.abs20(.bar), kind: fixup_riscv_qc_abs20_u
 
 qc.e.li x8, .bar
 # RELOC: R_RISCV_VENDOR QUALCOMM 0x0
-# RELOC: R_RISCV_CUSTOM194 .bar 0x0
+# RELOC-NEXT: R_RISCV_CUSTOM194 .bar 0x0
 # INSTR: qc.e.li s0, .bar
 # FIXUP: fixup A - offset: 0, value: .bar, kind: fixup_riscv_qc_e_32
 
@@ -48,6 +48,7 @@ qc.e.li x6, .L1
 
 # Check that there is only one vendor symbol created and that it is local and NOTYPE
 # VENDORSYM-COUNT-1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 QUALCOMM
+# VENDORSYM-NOT: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 QUALCOMM
 
 .L1:
   ret
