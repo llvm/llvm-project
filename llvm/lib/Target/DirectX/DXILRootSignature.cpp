@@ -47,21 +47,9 @@ static bool reportValueError(LLVMContext *Ctx, Twine ParamName, uint32_t Value,
   return true;
 }
 
-static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
-                           MDNode *RootFlagNode) {
-
-  if (RootFlagNode->getNumOperands() != 2)
-    return reportError(Ctx, "Invalid format for RootFlag Element");
-
-  auto *Flag = mdconst::extract<ConstantInt>(RootFlagNode->getOperand(1));
-  RSD.Flags = Flag->getZExtValue();
-
-  return false;
-}
-
-static bool extractMdValue(uint32_t &Value, MDNode *Node, unsigned int OpId) {
-
-  auto *CI = mdconst::extract<ConstantInt>(Node->getOperand(OpId));
+static bool extractMdIntValue(uint32_t &Value, MDNode *Node,
+                              unsigned int OpId) {
+  auto *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(OpId).get());
   if (CI == nullptr)
     return true;
 
@@ -69,28 +57,43 @@ static bool extractMdValue(uint32_t &Value, MDNode *Node, unsigned int OpId) {
   return false;
 }
 
-static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
-                               MDNode *RootFlagNode) {
+static bool parseRootFlags(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                           MDNode *RootFlagNode) {
 
-  if (RootFlagNode->getNumOperands() != 5)
+  if (RootFlagNode->getNumOperands() != 2)
+    return reportError(Ctx, "Invalid format for RootFlag Element");
+
+  if (extractMdIntValue(RSD.Flags, RootFlagNode, 1))
+    return reportError(Ctx, "Invalid value for RootFlag");
+
+  return false;
+}
+
+static bool parseRootConstants(LLVMContext *Ctx, mcdxbc::RootSignatureDesc &RSD,
+                               MDNode *RootConstantNode) {
+
+  if (RootConstantNode->getNumOperands() != 5)
     return reportError(Ctx, "Invalid format for RootConstants Element");
 
   mcdxbc::RootParameter NewParameter;
   NewParameter.Header.ParameterType = dxbc::RootParameterType::Constants32Bit;
 
   uint32_t SV;
-  if (extractMdValue(SV, RootFlagNode, 1))
+  if (extractMdIntValue(SV, RootConstantNode, 1))
     return reportError(Ctx, "Invalid value for ShaderVisibility");
 
   NewParameter.Header.ShaderVisibility = (dxbc::ShaderVisibility)SV;
 
-  if (extractMdValue(NewParameter.Constants.ShaderRegister, RootFlagNode, 2))
+  if (extractMdIntValue(NewParameter.Constants.ShaderRegister, RootConstantNode,
+                        2))
     return reportError(Ctx, "Invalid value for ShaderRegister");
 
-  if (extractMdValue(NewParameter.Constants.RegisterSpace, RootFlagNode, 3))
+  if (extractMdIntValue(NewParameter.Constants.RegisterSpace, RootConstantNode,
+                        3))
     return reportError(Ctx, "Invalid value for RegisterSpace");
 
-  if (extractMdValue(NewParameter.Constants.Num32BitValues, RootFlagNode, 4))
+  if (extractMdIntValue(NewParameter.Constants.Num32BitValues, RootConstantNode,
+                        4))
     return reportError(Ctx, "Invalid value for Num32BitValues");
 
   RSD.Parameters.push_back(NewParameter);
