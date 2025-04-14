@@ -2897,8 +2897,8 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   MCSection *JumpTableSection = nullptr;
 
   const bool UseLabelDifference =
-      (MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
-       MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64);
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference32 ||
+      MJTI.getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64;
   // Pick the directive to use to print the jump table entries, and switch to
   // the appropriate section.
   const bool JTInDiffSection =
