@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(llvm.func(canonicalize{region-simplify=aggressive}))' -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(llvm.func(canonicalize{region-simplify=aggressive}))' -verify-diagnostics -split-input-file | FileCheck %s
 
 llvm.mlir.global private @x() {addr_space = 0 : i32, dso_local} : !llvm.ptr {
   %0 = llvm.blockaddress <function = @ba, tag = <id = 2>> : !llvm.ptr
