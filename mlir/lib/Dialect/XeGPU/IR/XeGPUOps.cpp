@@ -676,12 +676,12 @@ void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
 // XeGPU_DpasOp
 //===----------------------------------------------------------------------===//
 LogicalResult DpasOp::verify() {
-  // int64_t lhsRank = getLhsType().getRank();
-  // int64_t rhsRank = getRhsType().getRank();
-  // int64_t resRank = getResultType().getRank();
-  // auto lhsShape = getLhsType().getShape();
-  // auto rhsShape = getRhsType().getShape();
-  // auto resShape = getResultType().getShape();
+  int64_t lhsRank = getLhsType().getRank();
+  int64_t rhsRank = getRhsType().getRank();
+  int64_t resRank = getResultType().getRank();
+  auto lhsShape = getLhsType().getShape();
+  auto rhsShape = getRhsType().getShape();
+  auto resShape = getResultType().getShape();
 
   if (getAcc()) {
     if (getAcc().getType() != getResultType())

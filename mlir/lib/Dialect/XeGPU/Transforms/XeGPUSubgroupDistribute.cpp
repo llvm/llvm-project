@@ -21,6 +21,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -679,17 +680,7 @@ void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
     unsigned operandNumber = user.getOperandNumber();
-    /// If the user is a DpasOp, set A, B or C layout attributes.
-    if (auto dpasOp = dyn_cast<xegpu::DpasOp>(owner)) {
-      if (operandNumber == 0)
-        dpasOp.setALayoutAttr(layout);
-      else if (operandNumber == 1)
-        dpasOp.setBLayoutAttr(layout);
-      else if (operandNumber == 2)
-        dpasOp.setCLayoutAttr(layout);
-      continue;
-    }
-    /// For every other user, use a generic attribute name.
+    /// Use a generic name for ease of querying the layout attribute later.
     std::string attrName =
         operandLayoutNamePrefix + std::to_string(operandNumber);
     owner->setAttr(attrName, layout);
@@ -824,17 +815,65 @@ static VectorType getDistributedVectorType(xegpu::LayoutAttr layout,
   return distVecTyOrFailure.value();
 }
 
-static Value reshapeDistributedVecType(Value orig, VectorType expected,
-                                       PatternRewriter &rewriter) {
-  assert(isa<VectorType>(orig.getType()) && "expecting vector type");
-  auto origVecType = cast<VectorType>(orig.getType());
-  /// No need to reconcile if the types are the same.
-  if (origVecType == expected)
-    return orig;
-  auto castOp =
-      rewriter.create<vector::ShapeCastOp>(orig.getLoc(), expected, orig);
-  return castOp.getResult();
+static xegpu::TensorDescType dropLayouts(xegpu::TensorDescType tensorDesc) {
+  return xegpu::TensorDescType::get(
+      tensorDesc.getContext(), tensorDesc.getShape(),
+      tensorDesc.getElementType(), tensorDesc.getEncoding(),
+      xegpu::LayoutAttr());
 }
+
+template <typename T>
+static Value resolveDistributedTy(Value orig, T expected,
+                                  PatternRewriter &rewriter) {
+  /// If orig and expected types are the same, return orig.
+  if (orig.getType() == expected)
+    return orig;
+  /// If orig is a vector type, create a shape cast op to reconcile the types.
+  if (auto origVecType = isa<VectorType>(orig.getType())) {
+    auto castOp =
+        rewriter.create<vector::ShapeCastOp>(orig.getLoc(), expected, orig);
+    return castOp.getResult();
+  }
+  /// If orig is a tensor descriptor type, create an unrealized conversion cast
+  /// op to reconcile the types.
+  if (auto origTensorDescTy = isa<xegpu::TensorDescType>(orig.getType())) {
+    auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
+                                                              expected, orig);
+    return castOp.getResult(0);
+  }
+  llvm_unreachable("Unsupported type for reconciliation");
+  return orig;
+}
+
+// static Value reconcileDistributedTensorDescTy(Value orig,
+//                                               xegpu::TensorDescType expected,
+//                                               PatternRewriter &rewriter) {
+//   assert(isa<xegpu::TensorDescType>(orig.getType()) &&
+//          "expecting tensor descriptor type");
+//   auto origTensorDescTy = cast<xegpu::TensorDescType>(orig.getType());
+//   /// No need to reconcile if the types are the same.
+//   if (origTensorDescTy == expected)
+//     return orig;
+//   auto castOp = rewriter.create<UnrealizedConversionCastOp>(orig.getLoc(),
+//                                                             expected, orig);
+//   return castOp.getResult(0);
+// }
+
+// // unify above 2 functions with a template
+// template <typename T>
+// static Value reconcileDistributedType(Value orig, T expected,
+//                                        PatternRewriter &rewriter) {
+//   if constexpr (std::is_same_v<T, VectorType>) {
+//     return reconcileDistributedVecType(orig, expected, rewriter);
+//   } else if constexpr (std::is_same_v<T, xegpu::TensorDescType>) {
+//     return reconcileDistributedTensorDescTy(orig, expected, rewriter);
+//   } else {
+//     static_assert(llvm::is_one_of<T, VectorType,
+//     xegpu::TensorDescType>::value,
+//                   "Unsupported type for reconciliation");
+//   }
+//   return orig;
+// }
 
 static SmallVector<NamedAttribute>
 filterTemporaryLayoutAttributes(ArrayRef<NamedAttribute> attrs) {
@@ -951,7 +990,7 @@ struct MoveFuncBodyToWarpExecuteOnLane0
 ///                                 -> !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
-struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
+struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override {
@@ -993,8 +1032,11 @@ struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
       newDescOperands.push_back(newWarpOp.getResult(i));
     }
     rewriter.setInsertionPointAfter(newWarpOp);
+    auto distributedTensorDescTy =
+        dropLayouts(descOp.getType()); /// Distributed tensor descriptor type
+                                       /// does not contain layout info.
     auto newDescOp = rewriter.create<xegpu::CreateNdDescOp>(
-        newWarpOp.getLoc(), descOp.getType(), newDescOperands,
+        newWarpOp.getLoc(), distributedTensorDescTy, newDescOperands,
         descOp->getAttrs());
 
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -1027,7 +1069,7 @@ struct SubgroupOpTensorDescOp final : public gpu::WarpDistributionPattern {
 ///     !xegpu.tensor_desc<4x8xf32>
 ///
 /// ```
-struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
+struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override {
@@ -1065,19 +1107,24 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newStoreOperands;
 
-    /// For the value operand, there can be a conflict between the vector type
+    /// For the value operand, there can be a mismatch between the vector type
     /// distributed by the warp op and (xegpu-specific) distributed type
-    /// supported by the store op. We reconcile these mismatches by inserting
-    /// a cast. These gets cancelled out later.
+    /// supported by the store op. Type mismatch must be resolved using
+    /// appropriate cast op.
     auto storeNdDistributedValueTyOrFailure =
         storeOp.getTensorDescType().getDistributedVectorType();
     if (failed(storeNdDistributedValueTyOrFailure))
       return rewriter.notifyMatchFailure(
           storeOp, "Failed to get distributed vector type for the store op");
-    newStoreOperands.push_back(reshapeDistributedVecType(
+    newStoreOperands.push_back(resolveDistributedTy(
         newWarpOp.getResult(newRetIndices[0]),
         storeNdDistributedValueTyOrFailure.value(), rewriter));
-    newStoreOperands.push_back(newWarpOp.getResult(newRetIndices[1]));
+    /// For the tensor descriptor operand, the layout attibute is dropped after
+    /// distribution. Types needs to be resolved in this case also.
+    auto distributedTensorDescTy = dropLayouts(storeOp.getTensorDescType());
+    newStoreOperands.push_back(
+        resolveDistributedTy(newWarpOp.getResult(newRetIndices[1]),
+                             distributedTensorDescTy, rewriter));
 
     rewriter.create<xegpu::StoreNdOp>(
         newWarpOp.getLoc(), TypeRange{}, newStoreOperands,
@@ -1117,7 +1164,7 @@ struct SubgroupOpStoreNd final : public gpu::WarpDistributionPattern {
 ///   %ld = xegpu.load_nd %r#0: !xegpu.tensor_desc<4x8xf32> -> vector<4x1xf32>
 ///
 /// ```
-struct SubgroupOpLoadNd final : public gpu::WarpDistributionPattern {
+struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override {
@@ -1161,13 +1208,13 @@ struct SubgroupOpLoadNd final : public gpu::WarpDistributionPattern {
     /// warp op and (xegpu-specific) distributed type supported by the load
     /// op. We reconcile these mismatches by inserting a cast.
     newLoadOp =
-        reshapeDistributedVecType(newLoadOp, distributedTypeByWarpOp, rewriter);
+        resolveDistributedTy(newLoadOp, distributedTypeByWarpOp, rewriter);
     rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
     return success();
   }
 };
 
-struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
+struct DpasDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op subgroupOp,
                                 PatternRewriter &rewriter) const override {
@@ -1179,15 +1226,21 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
 
     auto dpasOp = operand->get().getDefiningOp<xegpu::DpasOp>();
     unsigned operandIdx = operand->getOperandNumber();
-    xegpu::LayoutAttr layoutA = dpasOp.getALayoutAttr();
-    xegpu::LayoutAttr layoutB = dpasOp.getBLayoutAttr();
+    auto layoutAName =
+        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 0).str();
+    auto layoutBName =
+        llvm::formatv("{0}{1}", operandLayoutNamePrefix, 1).str();
     auto layoutCName = llvm::formatv("{0}{1}", resultLayoutNamePrefix, 0).str();
+    xegpu::LayoutAttr layoutA =
+        dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutAName);
+    xegpu::LayoutAttr layoutB =
+        dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutBName);
     xegpu::LayoutAttr layoutOut =
         dpasOp->getAttrOfType<xegpu::LayoutAttr>(layoutCName);
     if (!layoutA || !layoutB || !layoutOut)
       return rewriter.notifyMatchFailure(
           dpasOp,
-          "the xegpu::Dpas op lacks sg_map attribute for A, B or output");
+          "the xegpu::Dpas op lacks layout attribute for A, B or output");
 
     auto distLhsTypeByWarpOpOrFailure =
         getDistVecTypeBasedOnLaneLayout(layoutA, dpasOp.getLhsType());
@@ -1232,7 +1285,7 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
     }
 
     for (auto i : newRetIndices) {
-      newDpasOperands.push_back(reshapeDistributedVecType(
+      newDpasOperands.push_back(resolveDistributedTy(
           newWarpOp.getResult(i),
           newDpasOperandExpectedTypes[newDpasOperands.size()], rewriter));
     }
@@ -1241,7 +1294,7 @@ struct SubgroupOpDpas final : public gpu::WarpDistributionPattern {
         newDpasOperands, dpasOp->getAttrs());
     Value disributedVal = newWarpOp.getResult(operandIdx);
     /// Reconile the output type.
-    disributedVal = reshapeDistributedVecType(
+    disributedVal = resolveDistributedTy(
         disributedVal,
         getDistributedVectorType(layoutOut, dpasOp.getResultType()), rewriter);
     rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
@@ -1266,8 +1319,8 @@ struct XeGPUSubgroupDistributePass final
 
 void xegpu::populateXeGPUSubgroupDistributePatterns(
     RewritePatternSet &patterns) {
-  patterns.add<SubgroupOpTensorDescOp, SubgroupOpStoreNd, SubgroupOpLoadNd,
-               SubgroupOpDpas>(patterns.getContext());
+  patterns.add<CreateNdDescDistribution, StoreNdDistribution,
+               LoadNdDistribution, DpasDistribution>(patterns.getContext());
 }
 
 void XeGPUSubgroupDistributePass::runOnOperation() {
