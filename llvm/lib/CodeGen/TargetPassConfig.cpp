@@ -745,7 +745,9 @@ void TargetPassConfig::addPass(Pass *P) {
 ///
 /// addPass cannot return a pointer to the pass instance because is internal the
 /// PassManager and the instance we create here may already be freed.
-AnalysisID TargetPassConfig::addPass(AnalysisID PassID) {
+AnalysisID TargetPassConfig::addPass(IdentifyingPassPtr PassPtr) {
+  AnalysisID PassID = PassPtr.isInstance() ? PassPtr.getInstance()->getPassID()
+                                           : PassPtr.getID();
   IdentifyingPassPtr TargetID = getPassSubstitution(PassID);
   IdentifyingPassPtr FinalPtr = overridePass(PassID, TargetID);
   if (!FinalPtr.isValid())
@@ -1513,8 +1515,7 @@ void TargetPassConfig::addMachineLateOptimization() {
   // Cleanup of redundant immediate/address loads.
   addPass(&MachineLateInstrsCleanupID);
 
-  // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(createBranchFolderPass(getEnableTailMerge()));
+  addPass(IdentifyingPassPtr(createBranchFolderPass(getEnableTailMerge())));
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
