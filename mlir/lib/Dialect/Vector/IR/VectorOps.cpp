@@ -6009,7 +6009,6 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     if (attr.isSplat())
       return attr.reshape(getResultVectorType());
 
-
   // Eliminate poison transpose ops.
   if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
     return ub::PoisonAttr::get(getContext());
