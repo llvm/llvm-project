@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
@@ -45,6 +44,7 @@ class MCAsmInfo;
 class MCContext;
 class MCInstrInfo;
 class MCRegisterInfo;
+class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
 class raw_pwrite_stream;
