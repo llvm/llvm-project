@@ -928,9 +928,9 @@ Value DecomposePadOpPattern::createFillOrGenerateOp(
     const SmallVector<Value> &dynSizes) const {
   auto padValue = padOp.getConstantPaddingValue();
   if (padValue) {
-    // Clone the padding value defined inside the PadOp block to outside.
+    // Move the padding value defined inside the PadOp block to outside.
     if (padValue.getParentBlock() == &padOp.getRegion().front())
-      padValue = rewriter.clone(*padValue.getDefiningOp())->getResult(0);
+      rewriter.moveOpBefore(padValue.getDefiningOp(), padOp);
     return rewriter.create<FillOp>(padOp.getLoc(), padValue, dest).result();
   }
 
