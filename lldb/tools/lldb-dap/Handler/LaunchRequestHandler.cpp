@@ -61,11 +61,8 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
 
 void LaunchRequestHandler::PostRun() const {
   if (dap.target.GetProcess().IsValid()) {
-    if (dap.is_attach)
-      // this happens when doing runInTerminal
-      SendProcessEvent(dap, Attach);
-    else
-      SendProcessEvent(dap, Launch);
+    // Attach happens when launching with runInTerminal.
+    SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
   }
 
   dap.SendJSON(CreateEventObject("initialized"));
