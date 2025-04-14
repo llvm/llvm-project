@@ -62,6 +62,7 @@ Changes to the LLVM IR
 * Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
+* Floating-point operand bundles have been added.
 
 * "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
   migrated to first-class denormal_fpenv attribute.
