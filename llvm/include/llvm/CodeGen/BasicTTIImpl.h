@@ -2788,7 +2788,7 @@ public:
       //        Finally, we will remove FMAXNUM_IEEE and FMINNUM_IEEE.
       int IeeeISD =
           IID == Intrinsic::maximumnum ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
-      if (TLI->isOperationLegalOrPromote(IeeeISD, LT.second)) {
+      if (TLI->isOperationLegal(IeeeISD, LT.second)) {
         IntrinsicCostAttributes FCanonicalizeAttrs(Intrinsic::canonicalize,
                                                    RetTy, Tys[0]);
         InstructionCost FCanonicalizeCost =
