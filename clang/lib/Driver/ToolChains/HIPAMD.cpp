@@ -103,8 +103,10 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   // ToDo: Remove this option after AMDGPU backend supports ISA-level linking.
   // Since AMDGPU backend currently does not support ISA-level linking, all
   // called functions need to be imported.
-  if (IsThinLTO)
+  if (IsThinLTO) {
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
+    LldArgs.push_back(Args.MakeArgString("-plugin-opt=-avail-extern-to-local"));
+  }
 
   for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
     LldArgs.push_back(
@@ -391,9 +393,6 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
     }
     StringRef GpuArch = getGPUArch(DriverArgs);
     assert(!GpuArch.empty() && "Must have an explicit GPU arch.");
-
-    // Add the HIP specific bitcode library.
-    BCLibs.emplace_back(RocmInstallation->getHIPPath());
 
     // Add common device libraries like ocml etc.
     for (auto N : getCommonDeviceLibNames(DriverArgs, GpuArch.str()))

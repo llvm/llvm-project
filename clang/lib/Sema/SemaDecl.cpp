@@ -7977,6 +7977,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
+
   if (getLangOpts().OpenACC)
     OpenACC().ActOnVariableDeclarator(NewVD);
 
@@ -10168,10 +10169,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // deallocation function shall not be declared with the consteval
       // specifier.
       if (ConstexprKind == ConstexprSpecKind::Consteval &&
-          (NewFD->getOverloadedOperator() == OO_New ||
-           NewFD->getOverloadedOperator() == OO_Array_New ||
-           NewFD->getOverloadedOperator() == OO_Delete ||
-           NewFD->getOverloadedOperator() == OO_Array_Delete)) {
+          NewFD->getDeclName().isAnyOperatorNewOrDelete()) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(),
              diag::err_invalid_consteval_decl_kind)
             << NewFD;
@@ -10275,9 +10273,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //   A deallocation function with no exception-specification is treated
     //   as if it were specified with noexcept(true).
     const FunctionProtoType *FPT = R->getAs<FunctionProtoType>();
-    if ((Name.getCXXOverloadedOperator() == OO_Delete ||
-         Name.getCXXOverloadedOperator() == OO_Array_Delete) &&
-        getLangOpts().CPlusPlus11 && FPT && !FPT->hasExceptionSpec())
+    if (Name.isAnyOperatorDelete() && getLangOpts().CPlusPlus11 && FPT &&
+        !FPT->hasExceptionSpec())
       NewFD->setType(Context.getFunctionType(
           FPT->getReturnType(), FPT->getParamTypes(),
           FPT->getExtProtoInfo().withExceptionSpec(EST_BasicNoexcept)));
@@ -13130,6 +13127,9 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
 
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(VDecl);
+
+  if (getLangOpts().HLSL)
+    HLSL().deduceAddressSpace(VDecl);
 
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.
