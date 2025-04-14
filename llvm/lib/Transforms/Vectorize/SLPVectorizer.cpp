@@ -20902,20 +20902,15 @@ public:
 
   /// Remove all stores that have been vectorized from this group.
   void clearVectorizedStores(const BoUpSLP::ValueSet &VectorizedStores) {
-    const auto Begin = Instrs.begin();
-    auto NonVectorizedStore = Instrs.end();
+    DistToInstMap::reverse_iterator LastVectorizedStore = find_if(
+        reverse(Instrs), [&](const std::pair<int, unsigned> &DistAndIdx) {
+          return VectorizedStores.contains(AllStores[DistAndIdx.second]);
+        });
 
-    while (NonVectorizedStore != Begin) {
-      const auto Prev = std::prev(NonVectorizedStore);
-      unsigned InstrIdx = Prev->second;
-      if (VectorizedStores.contains(AllStores[InstrIdx])) {
-        // NonVectorizedStore is the last scalar instruction.
-        // Erase all stores before it so we don't try to vectorize them again.
-        Instrs.erase(Begin, NonVectorizedStore);
-        return;
-      }
-      NonVectorizedStore = Prev;
-    }
+    // Get a forward iterator pointing after the last vectorized store and erase
+    // all stores before it so we don't try to vectorize them again.
+    DistToInstMap::iterator VectorizedStoresEnd = LastVectorizedStore.base();
+    Instrs.erase(Instrs.begin(), VectorizedStoresEnd);
   }
 
 private:
