@@ -545,6 +545,8 @@ public:
         !IsAllocatable(ultimate) && object &&
         (ultimate.test(Symbol::Flag::InDataStmt) ||
             object->init().has_value())};
+    bool hasHostAssociation{
+        &symbol.owner() != &scope_ || &ultimate.owner() != &scope_};
     if (const auto *assoc{
             ultimate.detailsIf<semantics::AssocEntityDetails>()}) {
       return (*this)(assoc->expr());
@@ -563,16 +565,30 @@ public:
       } else if (ultimate.attrs().test(semantics::Attr::OPTIONAL)) {
         return "reference to OPTIONAL dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (!inInquiry_ &&
+      } else if (!inInquiry_ && !hasHostAssociation &&
           ultimate.attrs().test(semantics::Attr::INTENT_OUT)) {
         return "reference to INTENT(OUT) dummy argument '"s +
             ultimate.name().ToString() + "'";
-      } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
-        return std::nullopt;
-      } else {
+      } else if (!ultimate.has<semantics::ObjectEntityDetails>()) {
         return "dummy procedure argument";
+      } else {
+        // Sketchy case: some compilers allow an INTENT(OUT) dummy argument
+        // to be used in a specification expression if it is host-associated.
+        // The arguments raised in support this usage, however, depend on
+        // a reading of the standard that would also accept an OPTIONAL
+        // host-associated dummy argument, and that doesn't seem like a
+        // good idea.
+        if (!inInquiry_ && hasHostAssociation &&
+            ultimate.attrs().test(semantics::Attr::INTENT_OUT) &&
+            context_.languageFeatures().ShouldWarn(
+                common::UsageWarning::HostAssociatedIntentOutInSpecExpr)) {
+          context_.messages().Say(
+              "specification expression refers to host-associated INTENT(OUT) dummy argument '%s'"_port_en_US,
+              ultimate.name());
+        }
+        return std::nullopt;
       }
-    } else if (&symbol.owner() != &scope_ || &ultimate.owner() != &scope_) {
+    } else if (hasHostAssociation) {
       return std::nullopt; // host association is in play
     } else if (isInitialized &&
         context_.languageFeatures().IsEnabled(
@@ -582,7 +598,7 @@ public:
               common::LanguageFeature::SavedLocalInSpecExpr)) {
         context_.messages().Say(common::LanguageFeature::SavedLocalInSpecExpr,
             "specification expression refers to local object '%s' (initialized and saved)"_port_en_US,
-            ultimate.name().ToString());
+            ultimate.name());
       }
       return std::nullopt;
     } else if (const auto *object{
@@ -831,9 +847,9 @@ bool CheckSpecificationExprHelper::IsPermissibleInquiry(
 template <typename A>
 void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
     FoldingContext &context, bool forElementalFunctionResult) {
-  CheckSpecificationExprHelper helper{
+  CheckSpecificationExprHelper errors{
       scope, context, forElementalFunctionResult};
-  if (auto why{helper(x)}) {
+  if (auto why{errors(x)}) {
     context.messages().Say("Invalid specification expression%s: %s"_err_en_US,
         forElementalFunctionResult ? " for elemental function result" : "",
         *why);
