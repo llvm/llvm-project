@@ -594,6 +594,67 @@ SampleProfileReaderBinary::readSampleContextFromTable() {
   return std::make_pair(Context, Hash);
 }
 
+std::error_code SampleProfileReaderExtBinary::readTypeMap(TypeMap &M) {
+  auto NumVTableTypes = readNumber<uint32_t>();
+  if (std::error_code EC = NumVTableTypes.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
+    auto VTableType(readStringFromTable());
+    if (std::error_code EC = VTableType.getError())
+      return EC;
+
+    auto VTableSamples = readNumber<uint64_t>();
+    if (std::error_code EC = VTableSamples.getError())
+      return EC;
+
+    M.insert(std::make_pair(*VTableType, *VTableSamples));
+  }
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderExtBinary::readVTableProf(const LineLocation &Loc,
+                                             FunctionSamples &FProfile) {
+  if (!ReadVTableProf)
+    return sampleprof_error::success;
+
+  return readTypeMap(FProfile.getTypeSamplesAt(Loc));
+}
+
+std::error_code SampleProfileReaderExtBinary::readCallsiteVTableProf(
+    FunctionSamples &FProfile) {
+  if (!ReadVTableProf)
+    return sampleprof_error::success;
+
+  // Read the vtable type profile for the callsite.
+  auto NumCallsites = readNumber<uint32_t>();
+  if (std::error_code EC = NumCallsites.getError())
+    return EC;
+
+  for (uint32_t I = 0; I < *NumCallsites; ++I) {
+    auto LineOffset = readNumber<uint64_t>();
+    if (std::error_code EC = LineOffset.getError())
+      return EC;
+
+    auto Discriminator = readNumber<uint64_t>();
+    if (std::error_code EC = Discriminator.getError())
+      return EC;
+
+    // Here we handle FS discriminators:
+    uint32_t DiscriminatorVal = (*Discriminator) & getDiscriminatorMask();
+
+    if (!isOffsetLegal(*LineOffset)) {
+      return std::error_code();
+    }
+
+    if (std::error_code EC = readVTableProf(
+            LineLocation(*LineOffset, DiscriminatorVal), FProfile))
+      return EC;
+  }
+  return sampleprof_error::success;
+}
+
 std::error_code
 SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   auto NumSamples = readNumber<uint64_t>();
@@ -643,6 +704,11 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
                                       *CalledFunction, *CalledFunctionSamples);
     }
 
+    // read vtable type profiles.
+    if (std::error_code EC = readVTableProf(
+            LineLocation(*LineOffset, DiscriminatorVal), FProfile))
+      return EC;
+
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
 
@@ -674,7 +740,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
   }
 
-  return sampleprof_error::success;
+  return readCallsiteVTableProf(FProfile);
 }
 
 std::error_code
@@ -736,6 +802,8 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
       FunctionSamples::ProfileIsPreInlined = ProfileIsPreInlined = true;
     if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagFSDiscriminator))
       FunctionSamples::ProfileIsFS = ProfileIsFS = true;
+    if (hasSecFlag(Entry, SecProfSummaryFlags::SecFlagHasVTableTypeProf))
+      ReadVTableProf = true;
     break;
   case SecNameTable: {
     bool FixedLengthMD5 =
