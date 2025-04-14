@@ -192,7 +192,7 @@ template <WriteMode write_mode> class FloatWriter {
         RET_IF_RESULT_NEGATIVE(writer->write({block_buffer, digits_to_write}));
       }
       RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-      if (buffered_digits - digits_to_write > 0) {
+      if (buffered_digits > digits_to_write) {
         // Write the digits after the decimal point.
         RET_IF_RESULT_NEGATIVE(
             writer->write({block_buffer + digits_to_write,
@@ -222,7 +222,7 @@ template <WriteMode write_mode> class FloatWriter {
         RET_IF_RESULT_NEGATIVE(writer->write(MAX_BLOCK_DIGIT, digits_to_write));
       }
       RET_IF_RESULT_NEGATIVE(writer->write(DECIMAL_POINT));
-      if ((BLOCK_SIZE * max_block_count) - digits_to_write > 0) {
+      if ((BLOCK_SIZE * max_block_count) > digits_to_write) {
         RET_IF_RESULT_NEGATIVE(writer->write(
             MAX_BLOCK_DIGIT, (BLOCK_SIZE * max_block_count) - digits_to_write));
       }
