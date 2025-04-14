@@ -2240,21 +2240,24 @@ static LogicalResult verifyComdat(Operation *op,
 
 static LogicalResult verifyBlockTags(LLVMFuncOp funcOp) {
   llvm::DenseSet<BlockTagAttr> blockTags;
-  // Note that presence of `BlockTagOp`s currently can't prevent an unrecheable
-  // block to be removed by canonicalizer's region simplify pass, which needs to
-  // be dialect aware to allow extra constraints to be described.
-  WalkResult res = funcOp.walk([&](BlockTagOp blockTagOp) {
-    if (blockTags.contains(blockTagOp.getTag())) {
-      blockTagOp.emitError()
-          << "duplicate block tag '" << blockTagOp.getTag().getId()
-          << "' in the same function: ";
-      return WalkResult::interrupt();
-    }
-    blockTags.insert(blockTagOp.getTag());
-    return WalkResult::advance();
-  });
+  BlockTagOp badBlockTagOp;
+  if (funcOp
+          .walk([&](BlockTagOp blockTagOp) {
+            if (blockTags.contains(blockTagOp.getTag())) {
+              badBlockTagOp = blockTagOp;
+              return WalkResult::interrupt();
+            }
+            blockTags.insert(blockTagOp.getTag());
+            return WalkResult::advance();
+          })
+          .wasInterrupted()) {
+    badBlockTagOp.emitError()
+        << "duplicate block tag '" << badBlockTagOp.getTag().getId()
+        << "' in the same function: ";
+    return failure();
+  }
 
-  return failure(res.wasInterrupted());
+  return success();
 }
 
 /// Parse common attributes that might show up in the same order in both
@@ -3814,78 +3817,6 @@ LogicalResult BlockAddressOp::verify() {
 /// Fold a blockaddress operation to a dedicated blockaddress
 /// attribute.
 OpFoldResult BlockAddressOp::fold(FoldAdaptor) { return getBlockAddr(); }
-
-//===----------------------------------------------------------------------===//
-// LLVM::IndirectBrOp
-//===----------------------------------------------------------------------===//
-
-SuccessorOperands IndirectBrOp::getSuccessorOperands(unsigned index) {
-  assert(index < getNumSuccessors() && "invalid successor index");
-  return SuccessorOperands(getSuccOperandsMutable()[index]);
-}
-
-void IndirectBrOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                         Value addr, ArrayRef<ValueRange> succOperands,
-                         BlockRange successors) {
-  odsState.addOperands(addr);
-  for (ValueRange range : succOperands)
-    odsState.addOperands(range);
-  SmallVector<int32_t> rangeSegments;
-  for (ValueRange range : succOperands)
-    rangeSegments.push_back(range.size());
-  odsState.getOrAddProperties<Properties>().indbr_operand_segments =
-      odsBuilder.getDenseI32ArrayAttr(rangeSegments);
-  odsState.addSuccessors(successors);
-}
-
-static ParseResult parseIndirectBrOpSucessors(
-    OpAsmParser &parser, Type &flagType,
-    SmallVectorImpl<Block *> &succOperandBlocks,
-    SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
-    SmallVectorImpl<SmallVector<Type>> &succOperandsTypes) {
-  if (failed(parser.parseCommaSeparatedList(
-          OpAsmParser::Delimiter::Square,
-          [&]() {
-            Block *destination = nullptr;
-            SmallVector<OpAsmParser::UnresolvedOperand> operands;
-            SmallVector<Type> operandTypes;
-
-            if (parser.parseSuccessor(destination).failed())
-              return failure();
-
-            if (succeeded(parser.parseOptionalLParen())) {
-              if (failed(parser.parseOperandList(
-                      operands, OpAsmParser::Delimiter::None)) ||
-                  failed(parser.parseColonTypeList(operandTypes)) ||
-                  failed(parser.parseRParen()))
-                return failure();
-            }
-            succOperandBlocks.push_back(destination);
-            succOperands.emplace_back(operands);
-            succOperandsTypes.emplace_back(operandTypes);
-            return success();
-          },
-          "successor blocks")))
-    return failure();
-  return success();
-}
-
-static void
-printIndirectBrOpSucessors(OpAsmPrinter &p, IndirectBrOp op, Type flagType,
-                           SuccessorRange succs, OperandRangeRange succOperands,
-                           const TypeRangeRange &succOperandsTypes) {
-  p << "[";
-  llvm::interleave(
-      llvm::zip(succs, succOperands),
-      [&](auto i) {
-        p.printNewline();
-        p.printSuccessorAndUseList(std::get<0>(i), std::get<1>(i));
-      },
-      [&] { p << ','; });
-  if (!succOperands.empty())
-    p.printNewline();
-  p << "]";
-}
 
 //===----------------------------------------------------------------------===//
 // AssumeOp (intrinsic)
