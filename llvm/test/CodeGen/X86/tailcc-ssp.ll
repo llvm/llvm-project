@@ -15,9 +15,7 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    movq %rax, {{[0-9]+}}(%rsp)
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
-; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
-; WINDOWS-NEXT:    jne .LBB0_1
-; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    callq __security_check_cookie
 ; WINDOWS-NEXT:    xorl %ecx, %ecx
 ; WINDOWS-NEXT:    xorl %edx, %edx
 ; WINDOWS-NEXT:    xorl %r8d, %r8d
@@ -25,9 +23,6 @@ define tailcc void @tailcall_frame(ptr %0, i64 %1) sspreq {
 ; WINDOWS-NEXT:    addq $56, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp h # TAILCALL
-; WINDOWS-NEXT:  .LBB0_1:
-; WINDOWS-NEXT:    callq __security_check_cookie
-; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; LINUX-LABEL: tailcall_frame:
@@ -67,16 +62,12 @@ define void @tailcall_unrelated_frame() sspreq {
 ; WINDOWS-NEXT:    callq bar
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
-; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
-; WINDOWS-NEXT:    jne .LBB1_1
-; WINDOWS-NEXT:  # %bb.2:
+; WINDOWS-NEXT:    callq __security_check_cookie
+; WINDOWS-NEXT:    nop
 ; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $40, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    jmp bar # TAILCALL
-; WINDOWS-NEXT:  .LBB1_1:
-; WINDOWS-NEXT:    callq __security_check_cookie
-; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; LINUX-LABEL: tailcall_unrelated_frame:
@@ -117,16 +108,12 @@ define void @caller() sspreq {
 ; WINDOWS-NEXT:    callq callee
 ; WINDOWS-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; WINDOWS-NEXT:    xorq %rsp, %rcx
-; WINDOWS-NEXT:    cmpq __security_cookie(%rip), %rcx
-; WINDOWS-NEXT:    jne .LBB2_2
-; WINDOWS-NEXT:  # %bb.1:
+; WINDOWS-NEXT:    callq __security_check_cookie
+; WINDOWS-NEXT:    nop
 ; WINDOWS-NEXT:    .seh_startepilogue
 ; WINDOWS-NEXT:    addq $40, %rsp
 ; WINDOWS-NEXT:    .seh_endepilogue
 ; WINDOWS-NEXT:    retq
-; WINDOWS-NEXT:  .LBB2_2:
-; WINDOWS-NEXT:    callq __security_check_cookie
-; WINDOWS-NEXT:    int3
 ; WINDOWS-NEXT:    .seh_endproc
 ;
 ; LINUX-LABEL: caller:
