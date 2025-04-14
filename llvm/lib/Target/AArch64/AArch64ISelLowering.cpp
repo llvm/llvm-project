@@ -885,6 +885,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
   // AArch64 has implementations of a lot of rounding-like FP operations.
   // clang-format off
+  for (auto Op : {ISD::FMINNUM_IEEE,    ISD::FMAXNUM_IEEE})
+    setOperationAction(Op, MVT::f16, Promote);
   for (auto Op :
        {ISD::FFLOOR,          ISD::FNEARBYINT,      ISD::FCEIL,
         ISD::FRINT,           ISD::FTRUNC,          ISD::FROUND,

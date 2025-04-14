@@ -8645,6 +8645,17 @@ SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
     return DAG.getNode(NewOp, DL, VT, LHS, RHS, Flags);
   }
 
+  if (getOperationAction(NewOp, VT) == Promote) {
+    MVT PromoteVT = getTypeToPromoteTo(NewOp, VT.getSimpleVT());
+    if (isOperationLegal(NewOp, PromoteVT)) {
+      LHS = DAG.getNode(ISD::FP_EXTEND, DL, PromoteVT, LHS);
+      RHS = DAG.getNode(ISD::FP_EXTEND, DL, PromoteVT, RHS);
+      SDValue Result = DAG.getNode(NewOp, DL, PromoteVT, LHS, RHS, Flags);
+      return DAG.getNode(ISD::FP_ROUND, DL, VT, Result,
+                         DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
+    }
+  }
+
   // We can use FMINIMUM/FMAXIMUM if there is no NaN, since it has
   // same behaviors for all of other cases: +0.0 vs -0.0 included.
   if (Flags.hasNoNaNs() ||
