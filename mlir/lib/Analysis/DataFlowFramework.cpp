@@ -44,9 +44,9 @@ void AnalysisState::addDependency(ProgramPoint *dependent,
   (void)inserted;
   DATAFLOW_DEBUG({
     if (inserted) {
-      llvm::dbgs() << "Creating dependency between " << debugName << " of "
-                   << anchor << "\nand " << debugName << " on " << dependent
-                   << "\n";
+      llvm::dbgs() << "Creating dependency between \t" << debugName << " of "
+                   << anchor << "\n                      and\t" << debugName
+                   << " of " << *dependent << "\n";
     }
   });
 }
@@ -125,7 +125,7 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
     worklist.pop();
 
     DATAFLOW_DEBUG(llvm::dbgs() << "Invoking '" << analysis->debugName
-                                << "' on: " << point << "\n");
+                                << "' on: " << *point << "\n");
     if (failed(analysis->visit(point)))
       return failure();
   }

@@ -341,15 +341,20 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 /// constant value lattices are uninitialized, return std::nullopt to indicate
 /// the analysis should bail out.
 static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
-    Operation *op,
+    Operation *op, bool failIfAnyNull,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {
   SmallVector<Attribute> operands;
   operands.reserve(op->getNumOperands());
   for (Value operand : op->getOperands()) {
     const Lattice<ConstantValue> *cv = getLattice(operand);
     // If any of the operands' values are uninitialized, bail out.
-    if (cv->getValue().isUninitialized())
-      return {};
+    if (cv->getValue().isUninitialized()) {
+      if (failIfAnyNull)
+        return {};
+      operands.emplace_back();
+      continue;
+    }
+
     operands.push_back(cv->getValue().getConstantValue());
   }
   return operands;
@@ -357,7 +362,16 @@ static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
 
 std::optional<SmallVector<Attribute>>
 DeadCodeAnalysis::getOperandValues(Operation *op) {
-  return getOperandValuesImpl(op, [&](Value value) {
+  return getOperandValuesImpl(op, true, [&](Value value) {
+    auto *lattice = getOrCreate<Lattice<ConstantValue>>(value);
+    lattice->useDefSubscribe(this);
+    return lattice;
+  });
+}
+
+SmallVector<Attribute>
+DeadCodeAnalysis::getOperandValuesBestEffort(Operation *op) {
+  return *getOperandValuesImpl(op, false, [&](Value value) {
     auto *lattice = getOrCreate<Lattice<ConstantValue>>(value);
     lattice->useDefSubscribe(this);
     return lattice;
@@ -366,11 +380,9 @@ DeadCodeAnalysis::getOperandValues(Operation *op) {
 
 void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
   // Try to deduce a single successor for the branch.
-  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
-  if (!operands)
-    return;
+  SmallVector<Attribute> operands = getOperandValuesBestEffort(branch);
 
-  if (Block *successor = branch.getSuccessorForOperands(*operands)) {
+  if (Block *successor = branch.getSuccessorForOperands(operands)) {
     markEdgeLive(branch->getBlock(), successor);
   } else {
     // Otherwise, mark all successors as executable and outgoing edges.
@@ -382,12 +394,10 @@ void DeadCodeAnalysis::visitBranchOperation(BranchOpInterface branch) {
 void DeadCodeAnalysis::visitRegionBranchOperation(
     RegionBranchOpInterface branch) {
   // Try to deduce which regions are executable.
-  std::optional<SmallVector<Attribute>> operands = getOperandValues(branch);
-  if (!operands)
-    return;
+  SmallVector<Attribute> operands = getOperandValuesBestEffort(branch);
 
   SmallVector<RegionSuccessor> successors;
-  branch.getEntrySuccessorRegions(*operands, successors);
+  branch.getEntrySuccessorRegions(operands, successors);
   for (const RegionSuccessor &successor : successors) {
     // The successor can be either an entry block or the parent operation.
     ProgramPoint *point =
