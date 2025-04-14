@@ -300,7 +300,10 @@ class ReverseTestBase(GDBProxyTestBase):
             for index in sorted(self.general_purpose_register_info.keys()):
                 reply = self.pass_through(f"p{index:x};thread:{thread_id:x};")
                 if reply == "" or reply[0] == "E":
-                    raise ValueError("Can't read register")
+                    # Mac debugserver tells us about registers that it won't let
+                    # us actually read. Ignore those registers.
+                    self.logger.debug(f"Failed to read register {index:x}")
+                    continue
                 registers[index] = reply
             thread_snapshot = ThreadSnapshot(thread_id, registers)
             thread_sp = self.get_register(

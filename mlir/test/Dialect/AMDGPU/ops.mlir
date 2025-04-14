@@ -4,11 +4,18 @@
 // Verify the generic form can be parsed.
 // RUN: mlir-opt -allow-unregistered-dialect -mlir-print-op-generic %s | mlir-opt -allow-unregistered-dialect | FileCheck %s
 
-// CHECK-LABEL: func @ext_packed_fp8
-// CHECK: amdgpu.ext_packed_fp8
-func.func @ext_packed_fp8(%v: vector<4xf8E4M3FNUZ>) -> f32 {
+// CHECK-LABEL: func @ext_packed_fp8_s
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to f32
+func.func @ext_packed_fp8_s(%v: vector<4xf8E4M3FNUZ>) -> f32 {
   %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to f32
   func.return %ret : f32
+}
+
+// CHECK-LABEL: func @ext_packed_fp8_v
+// CHECK: amdgpu.ext_packed_fp8 {{.*}} vector<4xf8E4M3FNUZ> to vector<2xf32
+func.func @ext_packed_fp8_v(%v: vector<4xf8E4M3FNUZ>) -> vector<2xf32> {
+  %ret = amdgpu.ext_packed_fp8 %v[0] : vector<4xf8E4M3FNUZ> to vector<2xf32>
+  func.return %ret : vector<2xf32>
 }
 
 // CHECK-LABEL: func @packed_trunc_2xfp8

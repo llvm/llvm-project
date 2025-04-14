@@ -593,10 +593,18 @@ def Shr : Opcode {
 def Inv: Opcode;
 
 // Increment and decrement.
-def Inc: AluOpcode;
-def IncPop : AluOpcode;
-def Dec: AluOpcode;
-def DecPop: AluOpcode;
+class OverflowOpcode : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [ArgBool];
+  let HasGroup = 1;
+}
+
+def Inc : OverflowOpcode;
+def IncPop : OverflowOpcode;
+def PreInc : OverflowOpcode;
+def Dec : OverflowOpcode;
+def DecPop : OverflowOpcode;
+def PreDec : OverflowOpcode;
 
 // Float increment and decrement.
 def Incf: FloatOpcode;

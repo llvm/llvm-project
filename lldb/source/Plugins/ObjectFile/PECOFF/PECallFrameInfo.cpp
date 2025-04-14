@@ -495,9 +495,9 @@ bool PECallFrameInfo::GetUnwindPlan(const AddressRange &range,
   for (auto it = rows.rbegin(); it != rows.rend(); ++it)
     unwind_plan.AppendRow(std::move(*it));
 
-  unwind_plan.SetPlanValidAddressRange(AddressRange(
+  unwind_plan.SetPlanValidAddressRanges({AddressRange(
       m_object_file.GetAddress(runtime_function->StartAddress),
-      runtime_function->EndAddress - runtime_function->StartAddress));
+      runtime_function->EndAddress - runtime_function->StartAddress)});
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
 
   return true;

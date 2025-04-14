@@ -9,8 +9,8 @@ llvm.func @ctor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of ctors and the number of priorities}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = []}
+// expected-error@+1{{ctors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [], data = [#llvm.zero]
 
 // -----
 
@@ -18,20 +18,29 @@ llvm.func @dtor() {
   llvm.return
 }
 
-// expected-error@+1{{mismatch between the number of dtors and the number of priorities}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32, 32767 : i32]}
+// expected-error@+1{{dtors, priorities, and data must have the same number of elements}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32, 32767 : i32], data = [#llvm.zero]
 
 // -----
 
 // expected-error@+1{{'ctor' does not reference a valid LLVM function}}
-llvm.mlir.global_ctors {ctors = [@ctor], priorities = [0 : i32]}
+llvm.mlir.global_ctors ctors = [@ctor], priorities = [0 : i32], data = [#llvm.zero]
 
 // -----
 
 llvm.func @dtor()
 
 // expected-error@+1{{'dtor' does not have a definition}}
-llvm.mlir.global_dtors {dtors = [@dtor], priorities = [0 : i32]}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [#llvm.zero]
+
+// -----
+
+llvm.func @dtor() {
+  llvm.return
+}
+
+// expected-error@+1{{data element must be symbol or #llvm.zero}}
+llvm.mlir.global_dtors dtors = [@dtor], priorities = [0 : i32], data = [0 : i32]
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -112,7 +121,7 @@ func.func @gep_missing_result_type(%pos : i64, %base : !llvm.ptr) {
 // -----
 
 func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr) {
-  // expected-error@+1 {{invalid kind of type specified}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.function, but found '!llvm.ptr'}}
   llvm.getelementptr %base[%pos] : !llvm.ptr
 }
 
@@ -506,21 +515,21 @@ func.func @extractvalue_wrong_nesting() {
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  // expected-error@+1 {{invalid kind of type specified: expected builtin.vector, but found 'f32'}}
   %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
@@ -1328,16 +1337,16 @@ func.func @invalid_bitcast_i64_to_ptr() {
 
 // -----
 
-func.func @invalid_bitcast_vec_to_ptr(%arg : !llvm.vec<4 x ptr>) {
+func.func @invalid_bitcast_vec_to_ptr(%arg : vector<4x!llvm.ptr>) {
   // expected-error@+1 {{cannot cast vector of pointers to pointer}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr> to !llvm.ptr
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr> to !llvm.ptr
 }
 
 // -----
 
 func.func @invalid_bitcast_ptr_to_vec(%arg : !llvm.ptr) {
   // expected-error@+1 {{cannot cast pointer to vector of pointers}}
-  %0 = llvm.bitcast %arg : !llvm.ptr to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : !llvm.ptr to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1349,9 +1358,9 @@ func.func @invalid_bitcast_addr_cast(%arg : !llvm.ptr<1>) {
 
 // -----
 
-func.func @invalid_bitcast_addr_cast_vec(%arg : !llvm.vec<4 x ptr<1>>) {
+func.func @invalid_bitcast_addr_cast_vec(%arg : vector<4x!llvm.ptr<1>>) {
   // expected-error@+1 {{cannot cast pointers of different address spaces, use 'llvm.addrspacecast' instead}}
-  %0 = llvm.bitcast %arg : !llvm.vec<4 x ptr<1>> to !llvm.vec<4 x ptr>
+  %0 = llvm.bitcast %arg : vector<4x!llvm.ptr<1>> to vector<4x!llvm.ptr>
 }
 
 // -----
@@ -1770,4 +1779,26 @@ module {
   // expected-error@+2 {{expected integer value}}
   // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
   llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
+}
+
+// -----
+
+llvm.func @t0() -> !llvm.ptr {
+  %0 = llvm.blockaddress <function = @t0, tag = <id = 1>> : !llvm.ptr
+  llvm.blocktag <id = 1>
+  llvm.br ^bb1
+^bb1:
+  // expected-error@+1 {{duplicate block tag '1' in the same function}}
+  llvm.blocktag <id = 1>
+  llvm.return %0 : !llvm.ptr
+}
+
+// -----
+
+llvm.func @t1() -> !llvm.ptr {
+  // expected-error@+1 {{expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @t1, tag = <id = 1>> : !llvm.ptr
+  llvm.br ^bb1
+^bb1:
+  llvm.return %0 : !llvm.ptr
 }

@@ -1873,21 +1873,20 @@ Sema::AccessResult Sema::CheckAddressOfMemberAccess(Expr *OvlExpr,
   return CheckAccess(*this, Ovl->getNameLoc(), Entity);
 }
 
-Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
-                                              QualType Base, QualType Derived,
-                                              const CXXBasePath &Path,
-                                              unsigned DiagID, bool ForceCheck,
-                                              bool ForceUnprivileged) {
+Sema::AccessResult Sema::CheckBaseClassAccess(
+    SourceLocation AccessLoc, CXXRecordDecl *Base, CXXRecordDecl *Derived,
+    const CXXBasePath &Path, unsigned DiagID,
+    llvm::function_ref<void(PartialDiagnostic &)> SetupPDiag, bool ForceCheck,
+    bool ForceUnprivileged) {
   if (!ForceCheck && !getLangOpts().AccessControl)
     return AR_accessible;
 
   if (Path.Access == AS_public)
     return AR_accessible;
 
-  AccessTarget Entity(Context, AccessTarget::Base, Base->getAsCXXRecordDecl(),
-                      Derived->getAsCXXRecordDecl(), Path.Access);
+  AccessTarget Entity(Context, AccessTarget::Base, Base, Derived, Path.Access);
   if (DiagID)
-    Entity.setDiag(DiagID) << Derived << Base;
+    SetupPDiag(Entity.setDiag(DiagID));
 
   if (ForceUnprivileged) {
     switch (
@@ -1902,6 +1901,17 @@ Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
     llvm_unreachable("unexpected result from CheckEffectiveAccess");
   }
   return CheckAccess(*this, AccessLoc, Entity);
+}
+
+Sema::AccessResult Sema::CheckBaseClassAccess(SourceLocation AccessLoc,
+                                              QualType Base, QualType Derived,
+                                              const CXXBasePath &Path,
+                                              unsigned DiagID, bool ForceCheck,
+                                              bool ForceUnprivileged) {
+  return CheckBaseClassAccess(
+      AccessLoc, Base->getAsCXXRecordDecl(), Derived->getAsCXXRecordDecl(),
+      Path, DiagID, [&](PartialDiagnostic &PD) { PD << Derived << Base; },
+      ForceCheck, ForceUnprivileged);
 }
 
 void Sema::CheckLookupAccess(const LookupResult &R) {

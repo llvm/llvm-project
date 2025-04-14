@@ -211,6 +211,12 @@ def DereferenceModeling : Checker<"DereferenceModeling">,
   Documentation<NotDocumented>,
   Hidden;
 
+def FixedAddressDereferenceChecker
+    : Checker<"FixedAddressDereference">,
+      HelpText<"Check for dereferences of fixed addresses">,
+      Documentation<HasDocumentation>,
+      Dependencies<[DereferenceModeling]>;
+
 def NullDereferenceChecker : Checker<"NullDereference">,
   HelpText<"Check for dereferences of null pointers">,
   Documentation<HasDocumentation>,
@@ -277,12 +283,6 @@ def ConversionChecker : Checker<"Conversion">,
 def FixedAddressChecker : Checker<"FixedAddr">,
   HelpText<"Check for assignment of a fixed address to a pointer">,
   Documentation<HasDocumentation>;
-
-def FixedAddressDereferenceChecker
-    : Checker<"FixedAddressDereference">,
-      HelpText<"Check for dereferences of fixed addresses">,
-      Documentation<HasDocumentation>,
-      Dependencies<[DereferenceModeling]>;
 
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "

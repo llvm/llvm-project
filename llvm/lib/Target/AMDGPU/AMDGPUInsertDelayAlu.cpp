@@ -466,7 +466,7 @@ public:
       auto &MBB = *WorkList.pop_back_val();
       bool Changed = runOnMachineBasicBlock(MBB, false);
       if (Changed)
-        WorkList.insert(MBB.succ_begin(), MBB.succ_end());
+        WorkList.insert_range(MBB.successors());
     }
 
     LLVM_DEBUG(dbgs() << "Final pass over all BBs\n");

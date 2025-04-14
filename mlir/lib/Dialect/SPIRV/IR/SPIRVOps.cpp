@@ -1021,6 +1021,24 @@ LogicalResult spirv::FuncOp::verifyType() {
 
 LogicalResult spirv::FuncOp::verifyBody() {
   FunctionType fnType = getFunctionType();
+  if (!isExternal()) {
+    Block &entryBlock = front();
+
+    unsigned numArguments = this->getNumArguments();
+    if (entryBlock.getNumArguments() != numArguments)
+      return emitOpError("entry block must have ")
+             << numArguments << " arguments to match function signature";
+
+    for (auto [index, fnArgType, blockArgType] :
+         llvm::enumerate(getArgumentTypes(), entryBlock.getArgumentTypes())) {
+      if (blockArgType != fnArgType) {
+        return emitOpError("type of entry block argument #")
+               << index << '(' << blockArgType
+               << ") must match the type of the corresponding argument in "
+               << "function signature(" << fnArgType << ')';
+      }
+    }
+  }
 
   auto walkResult = walk([fnType](Operation *op) -> WalkResult {
     if (auto retOp = dyn_cast<spirv::ReturnOp>(op)) {

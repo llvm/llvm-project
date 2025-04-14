@@ -215,20 +215,19 @@ void Value::dropDroppableUsesIn(User &Usr) {
 }
 
 void Value::dropDroppableUse(Use &U) {
-  U.removeFromList();
   if (auto *Assume = dyn_cast<AssumeInst>(U.getUser())) {
     unsigned OpNo = U.getOperandNo();
     if (OpNo == 0)
       U.set(ConstantInt::getTrue(Assume->getContext()));
     else {
-      U.set(UndefValue::get(U.get()->getType()));
+      U.set(PoisonValue::get(U.get()->getType()));
       CallInst::BundleOpInfo &BOI = Assume->getBundleOpInfoForOperand(OpNo);
       BOI.Tag = Assume->getContext().pImpl->getOrInsertBundleTag("ignore");
     }
     return;
   }
 
-  llvm_unreachable("unkown droppable use");
+  llvm_unreachable("unknown droppable use");
 }
 
 bool Value::isUsedInBasicBlock(const BasicBlock *BB) const {

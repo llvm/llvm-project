@@ -73,7 +73,7 @@ class FastISel;
 class FunctionLoweringInfo;
 class GlobalValue;
 class Loop;
-class GISelKnownBits;
+class GISelValueTracking;
 class IntrinsicInst;
 class IRBuilderBase;
 struct KnownBits;
@@ -3464,6 +3464,34 @@ public:
     return false;
   }
 
+  // Get the preferred opcode for FP_TO_XINT nodes.
+  // By default, this checks if the provded operation is an illegal FP_TO_UINT
+  // and if so, checks if FP_TO_SINT is legal or custom for use as a
+  // replacement. If both UINT and SINT conversions are Custom, we choose SINT
+  // by default because that's the right thing on PPC.
+  virtual unsigned getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                             EVT ToVT) const {
+    if (isOperationLegal(Op, ToVT))
+      return Op;
+    switch (Op) {
+    case ISD::FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::FP_TO_SINT, ToVT))
+        return ISD::FP_TO_SINT;
+      break;
+    case ISD::STRICT_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, ToVT))
+        return ISD::STRICT_FP_TO_SINT;
+      break;
+    case ISD::VP_FP_TO_UINT:
+      if (isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, ToVT))
+        return ISD::VP_FP_TO_SINT;
+      break;
+    default:
+      break;
+    }
+    return Op;
+  }
+
   /// Create the IR node for the given complex deinterleaving operation.
   /// If one cannot be created using all the given inputs, nullptr should be
   /// returned.
@@ -3519,6 +3547,10 @@ public:
   /// the set of reserved registers.
   /// The default implementation just freezes the set of reserved registers.
   virtual void finalizeLowering(MachineFunction &MF) const;
+
+  /// Returns true if it's profitable to allow merging store of loads when there
+  /// are functions calls between the load and the store.
+  virtual bool shouldMergeStoreOfLoadsOverCall(EVT, EVT) const { return true; }
 
   //===----------------------------------------------------------------------===//
   //  GlobalISel Hooks
@@ -4155,7 +4187,7 @@ public:
   /// or one and return them in the KnownZero/KnownOne bitsets. The DemandedElts
   /// argument allows us to only collect the known bits that are shared by the
   /// requested vector elements. This is for GISel.
-  virtual void computeKnownBitsForTargetInstr(GISelKnownBits &Analysis,
+  virtual void computeKnownBitsForTargetInstr(GISelValueTracking &Analysis,
                                               Register R, KnownBits &Known,
                                               const APInt &DemandedElts,
                                               const MachineRegisterInfo &MRI,
@@ -4165,7 +4197,7 @@ public:
   /// typically be inferred from the number of low known 0 bits. However, for a
   /// pointer with a non-integral address space, the alignment value may be
   /// independent from the known low bits.
-  virtual Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis,
+  virtual Align computeKnownAlignForTargetInstr(GISelValueTracking &Analysis,
                                                 Register R,
                                                 const MachineRegisterInfo &MRI,
                                                 unsigned Depth = 0) const;
@@ -4190,11 +4222,9 @@ public:
   /// information about sign bits to GlobalISel combiners. The DemandedElts
   /// argument allows us to only collect the minimum sign bits that are shared
   /// by the requested vector elements.
-  virtual unsigned computeNumSignBitsForTargetInstr(GISelKnownBits &Analysis,
-                                                    Register R,
-                                                    const APInt &DemandedElts,
-                                                    const MachineRegisterInfo &MRI,
-                                                    unsigned Depth = 0) const;
+  virtual unsigned computeNumSignBitsForTargetInstr(
+      GISelValueTracking &Analysis, Register R, const APInt &DemandedElts,
+      const MachineRegisterInfo &MRI, unsigned Depth = 0) const;
 
   /// Attempt to simplify any target nodes based on the demanded vector
   /// elements, returning true on success. Otherwise, analyze the expression and
@@ -4986,11 +5016,6 @@ public:
 
   bool verifyReturnAddressArgumentIsConstant(SDValue Op,
                                              SelectionDAG &DAG) const;
-
-#ifndef NDEBUG
-  /// Check the given SDNode.  Aborts if it is invalid.
-  virtual void verifyTargetSDNode(const SDNode *N) const {};
-#endif
 
   //===--------------------------------------------------------------------===//
   // Inline Asm Support hooks

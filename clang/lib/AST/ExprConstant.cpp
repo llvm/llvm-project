@@ -8385,9 +8385,8 @@ public:
           FD = CorrespondingCallOpSpecialization;
         } else
           FD = LambdaCallOp;
-      } else if (FD->isReplaceableGlobalAllocationFunction()) {
-        if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
-            FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+      } else if (FD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
+        if (FD->getDeclName().isAnyOperatorNew()) {
           LValue Ptr;
           if (!HandleOperatorNewCall(Info, E, Ptr))
             return false;
@@ -10319,7 +10318,8 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     Info.FFDiag(E, diag::note_constexpr_new_placement)
         << /*Unsupported*/ 0 << E->getSourceRange();
     return false;
-  } else if (!OperatorNew->isReplaceableGlobalAllocationFunction()) {
+  } else if (!OperatorNew
+                  ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorNew) << OperatorNew;
     return false;
@@ -10420,7 +10420,16 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
       typedef bool result_type;
       bool failed() { return false; }
+      bool checkConst(QualType QT) {
+        if (QT.isConstQualified()) {
+          Info.FFDiag(E, diag::note_constexpr_modify_const_type) << QT;
+          return false;
+        }
+        return true;
+      }
       bool found(APValue &Subobj, QualType SubobjType) {
+        if (!checkConst(SubobjType))
+          return false;
         // FIXME: Reject the cases where [basic.life]p8 would not permit the
         // old name of the object to be used to name the new object.
         unsigned SubobjectSize = 1;
@@ -10556,8 +10565,9 @@ bool MemberPointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
       if (!Result.castToDerived(Derived))
         return Error(E);
     }
-    const Type *FinalTy = E->getType()->castAs<MemberPointerType>()->getClass();
-    if (!Result.castToDerived(FinalTy->getAsCXXRecordDecl()))
+    if (!Result.castToDerived(E->getType()
+                                  ->castAs<MemberPointerType>()
+                                  ->getMostRecentCXXRecordDecl()))
       return Error(E);
     return true;
   }
@@ -14916,6 +14926,42 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 
     return false;
   }
+  case UETT_CountOf: {
+    QualType Ty = E->getTypeOfArgument();
+    assert(Ty->isArrayType());
+
+    // We don't need to worry about array element qualifiers, so getting the
+    // unsafe array type is fine.
+    if (const auto *CAT =
+            dyn_cast<ConstantArrayType>(Ty->getAsArrayTypeUnsafe())) {
+      return Success(CAT->getSize(), E);
+    }
+
+    assert(!Ty->isConstantSizeType());
+
+    // If it's a variable-length array type, we need to check whether it is a
+    // multidimensional array. If so, we need to check the size expression of
+    // the VLA to see if it's a constant size. If so, we can return that value.
+    const auto *VAT = Info.Ctx.getAsVariableArrayType(Ty);
+    assert(VAT);
+    if (VAT->getElementType()->isArrayType()) {
+      std::optional<APSInt> Res =
+          VAT->getSizeExpr()->getIntegerConstantExpr(Info.Ctx);
+      if (Res) {
+        // The resulting value always has type size_t, so we need to make the
+        // returned APInt have the correct sign and bit-width.
+        APInt Val{
+            static_cast<unsigned>(Info.Ctx.getTypeSize(Info.Ctx.getSizeType())),
+            Res->getZExtValue()};
+        return Success(Val, E);
+      }
+    }
+
+    // Definitely a variable-length type, which is not an ICE.
+    // FIXME: Better diagnostic.
+    Info.FFDiag(E->getBeginLoc());
+    return false;
+  }
   }
 
   llvm_unreachable("unknown expr/type trait");
@@ -16478,7 +16524,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return false;
 
   FunctionDecl *OperatorDelete = E->getOperatorDelete();
-  if (!OperatorDelete->isReplaceableGlobalAllocationFunction()) {
+  if (!OperatorDelete
+           ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
     Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
         << isa<CXXMethodDecl>(OperatorDelete) << OperatorDelete;
     return false;
@@ -16522,7 +16569,8 @@ bool VoidExprEvaluator::VisitCXXDeleteExpr(const CXXDeleteExpr *E) {
   if (!E->isArrayForm() && !E->isGlobalDelete()) {
     const FunctionDecl *VirtualDelete = getVirtualOperatorDelete(AllocType);
     if (VirtualDelete &&
-        !VirtualDelete->isReplaceableGlobalAllocationFunction()) {
+        !VirtualDelete
+             ->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
       Info.FFDiag(E, diag::note_constexpr_new_non_replaceable)
           << isa<CXXMethodDecl>(VirtualDelete) << VirtualDelete;
       return false;
@@ -17418,6 +17466,20 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     if ((Exp->getKind() ==  UETT_SizeOf) &&
         Exp->getTypeOfArgument()->isVariableArrayType())
       return ICEDiag(IK_NotICE, E->getBeginLoc());
+    if (Exp->getKind() == UETT_CountOf) {
+      QualType ArgTy = Exp->getTypeOfArgument();
+      if (ArgTy->isVariableArrayType()) {
+        // We need to look whether the array is multidimensional. If it is,
+        // then we want to check the size expression manually to see whether
+        // it is an ICE or not.
+        const auto *VAT = Ctx.getAsVariableArrayType(ArgTy);
+        if (VAT->getElementType()->isArrayType())
+          return CheckICE(VAT->getSizeExpr(), Ctx);
+
+        // Otherwise, this is a regular VLA, which is definitely not an ICE.
+        return ICEDiag(IK_NotICE, E->getBeginLoc());
+      }
+    }
     return NoDiag();
   }
   case Expr::BinaryOperatorClass: {

@@ -58,6 +58,7 @@ add_llvm_tool(llvm-reduce
   deltas/ReduceRegisterMasks.cpp
   deltas/ReduceRegisterDefs.cpp
   deltas/ReduceRegisterUses.cpp
+  deltas/ReduceTargetFeaturesAttr.cpp
   deltas/ReduceUsingSimplifyCFG.cpp
   deltas/RunIRPasses.cpp
   deltas/SimplifyInstructions.cpp

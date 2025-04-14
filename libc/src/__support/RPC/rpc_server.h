@@ -20,6 +20,11 @@
 #define __has_builtin(x) 0
 #endif
 
+// Workaround for missing __builtin_is_constant_evaluated in < GCC 10.
+#ifndef __builtin_is_constant_evaluated
+#define __builtin_is_constant_evaluated(x) 0
+#endif
+
 // Configs for using the LLVM libc writer interface.
 #define LIBC_COPT_USE_C_ASSERT
 #define LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY
@@ -28,7 +33,7 @@
 #define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 #define LIBC_COPT_PRINTF_DISABLE_STRERROR
 
-// The 'long double' type is 8 byte
+// The 'long double' type is 8 bytes.
 #define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
 
 #include "shared/rpc.h"

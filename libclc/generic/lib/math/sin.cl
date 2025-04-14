@@ -8,33 +8,18 @@
 
 #include "sincos_helpers.h"
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
+#include <clc/math/clc_fabs.h>
+#include <clc/math/clc_sincos_helpers.h>
 #include <clc/math/math.h>
+#include <clc/relational/clc_isinf.h>
+#include <clc/relational/clc_isnan.h>
+#include <clc/relational/clc_select.h>
 
-_CLC_OVERLOAD _CLC_DEF float sin(float x)
-{
-    int ix = as_int(x);
-    int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
-
-    float r0, r1;
-    int regn = __clc_argReductionS(&r0, &r1, dx);
-
-    float ss = __clc_sinf_piby4(r0, r1);
-    float cc = __clc_cosf_piby4(r0, r1);
-
-    float s = (regn & 1) != 0 ? cc : ss;
-    s = as_float(as_int(s) ^ ((regn > 1) << 31) ^ (ix ^ ax));
-
-    s = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : s;
-
-    //Subnormals
-    s = x == 0.0f ? x : s;
-
-    return s;
-}
-
-_CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, float, sin, float);
+// FP32 and FP16 versions.
+#define __CLC_BODY <sin.inc>
+#include <clc/math/gentype.inc>
 
 #ifdef cl_khr_fp64
 
@@ -60,13 +45,5 @@ _CLC_OVERLOAD _CLC_DEF double sin(double x) {
 }
 
 _CLC_UNARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, double, sin, double);
-
-#endif
-
-#ifdef cl_khr_fp16
-
-#pragma OPENCL EXTENSION cl_khr_fp16 : enable
-
-_CLC_DEFINE_UNARY_BUILTIN_FP16(sin)
 
 #endif

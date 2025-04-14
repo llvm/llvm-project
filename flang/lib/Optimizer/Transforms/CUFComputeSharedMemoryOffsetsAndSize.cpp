@@ -111,6 +111,10 @@ struct CUFComputeSharedMemoryOffsetsAndSize
             llvm::alignTo(sharedMemSize, align) + llvm::alignTo(size, align);
         alignment = std::max(alignment, align);
       }
+
+      if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
+        continue;
+
       if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
         mlir::emitError(
             funcOp.getLoc(),

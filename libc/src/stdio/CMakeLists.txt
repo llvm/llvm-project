@@ -21,10 +21,7 @@ endfunction(add_stdio_entrypoint_object)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
-
-if(NOT LIBC_TARGET_OS_IS_BAREMETAL AND NOT LIBC_TARGET_OS_IS_GPU)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
-endif()
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 
 if(NOT LLVM_LIBC_FULL_BUILD)
   list(APPEND use_system_file "COMPILE_OPTIONS" "-DLIBC_COPT_STDIO_USE_SYSTEM_FILE")

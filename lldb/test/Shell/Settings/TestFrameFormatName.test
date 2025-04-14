@@ -30,7 +30,7 @@ c
 c
 # NAME_WITH_ARGS: frame Foo::returns_func_ptr<int>(this={{.*}}, (null)={{.*}})
 c
-# NAME_WITH_ARGS: frame main [inlined] inlined_foo(str="bar")
+# NAME_WITH_ARGS: frame inlined_foo(str="bar")
 q
 
 #--- name.input
@@ -38,18 +38,18 @@ q
 settings set -f frame-format "frame ${function.name}\n"
 break set -n inlined_foo
 run
-# NAME: frame main [inlined] inlined_foo(char const*)
+# NAME: frame inlined_foo(char const*)
 
 #--- name_without_args.input
 # RUN: %lldb -b -s %t/name_without_args.input %t.out | FileCheck %s --check-prefix=NAME_WITHOUT_ARGS
 settings set -f frame-format "frame ${function.name-without-args}\n"
 break set -n inlined_foo
 run
-# NAME_WITHOUT_ARGS: frame main [inlined] inlined_foo(char const*)
+# NAME_WITHOUT_ARGS: frame inlined_foo
 
 #--- mangled_name.input
 # RUN: %lldb -b -s %t/mangled_name.input %t.out | FileCheck %s --check-prefix=MANGLED_NAME
 settings set -f frame-format "frame ${function.mangled-name}\n"
 break set -n inlined_foo
 run
-# MANGLED_NAME: frame main [inlined] inlined_foo(char const*)
+# MANGLED_NAME: frame _Z11inlined_fooPKc

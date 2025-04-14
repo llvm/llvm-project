@@ -8,6 +8,7 @@ target triple = "aarch64-none-unknown-elf"
 
 define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK:      VPlan 'Initial VPlan for VF={8,16},UF>=1' {
+; CHECK-NEXT: Live-in vp<[[VF:%.]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; CHECK-NEXT: Live-in ir<1024> = original trip-count
@@ -22,7 +23,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: vector.body:
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION ir<0>, vp<[[CAN_IV_NEXT:%.+]]>
 ; CHECK-NEXT:   WIDEN-REDUCTION-PHI ir<[[ACC:%.+]]> = phi ir<0>, ir<[[REDUCE:%.+]]> (VF scaled by 1/4)
-; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
+; CHECK-NEXT:   vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
 ; CHECK-NEXT:   WIDEN ir<%load.a> = load vp<[[PTR_A]]>
@@ -42,7 +43,7 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT: middle.block:
 ; CHECK-NEXT:   EMIT vp<[[RED_RESULT:%.+]]> = compute-reduction-result ir<[[ACC]]>, ir<[[REDUCE]]>
 ; CHECK-NEXT:   EMIT vp<[[EXTRACT:%.+]]> = extract-from-end vp<[[RED_RESULT]]>, ir<1>
-; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<%1>
+; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1024>, vp<[[VEC_TC]]>
 ; CHECK-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -88,12 +89,11 @@ define i32 @print_partial_reduction(ptr %a, ptr %b) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[EP_IV:%.+]]> = phi ir<0>, vp<%index.next>
 ; CHECK-NEXT:     WIDEN-REDUCTION-PHI ir<%accum> = phi ir<0>, ir<%add> (VF scaled by 1/4)
-; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[EP_IV]]>, ir<1>
-; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.a> = getelementptr ir<%a>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_A:%.+]]> = vector-pointer ir<%gep.a>
 ; CHECK-NEXT:     WIDEN ir<%load.a> = load vp<[[PTR_A]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.a> = zext ir<%load.a> to i32
-; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[STEPS]]>
+; CHECK-NEXT:     CLONE ir<%gep.b> = getelementptr ir<%b>, vp<[[EP_IV]]>
 ; CHECK-NEXT:     vp<[[PTR_B:%.+]]> = vector-pointer ir<%gep.b>
 ; CHECK-NEXT:     WIDEN ir<%load.b> = load vp<[[PTR_B]]>
 ; CHECK-NEXT:     WIDEN-CAST ir<%ext.b> = zext ir<%load.b> to i32

@@ -226,6 +226,7 @@ struct Config {
   llvm::StringRef thinLTOCacheDir;
   llvm::StringRef thinLTOIndexOnlyArg;
   llvm::StringRef whyExtract;
+  llvm::SmallVector<llvm::GlobPattern, 0> whyLive;
   llvm::StringRef cmseInputLib;
   llvm::StringRef cmseOutputLib;
   ReportPolicy zBtiReport = ReportPolicy::None;
@@ -340,6 +341,7 @@ struct Config {
   llvm::DenseSet<llvm::StringRef> saveTempsArgs;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint32_t>, 0> shuffleSections;
   bool singleRoRx;
+  bool singleXoRx;
   bool shared;
   bool symbolic;
   bool isStatic = false;

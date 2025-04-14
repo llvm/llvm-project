@@ -486,8 +486,9 @@ public:
       if (PI.getSrc() != FirstNode || !PI.isOrderDep() ||
           !DAG->isLoopCarriedDep(PI))
         continue;
-      SUnitToDistance[FirstNode] =
-          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
+      unsigned &First = SUnitToDistance[FirstNode];
+      unsigned Last = SUnitToDistance[LastNode];
+      First = std::max(First, Last + 1);
     }
 
     // The latency is the distance from the source node to itself.

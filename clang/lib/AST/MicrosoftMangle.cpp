@@ -695,7 +695,7 @@ void MicrosoftCXXNameMangler::mangleVariableEncoding(const VarDecl *VD) {
       mangleQualifiers(MPT->getPointeeType().getQualifiers(), true);
       // Member pointers are suffixed with a back reference to the member
       // pointer's class name.
-      mangleName(MPT->getClass()->getAsCXXRecordDecl());
+      mangleName(MPT->getMostRecentCXXRecordDecl());
     } else
       mangleQualifiers(Ty->getPointeeType().getQualifiers(), false);
   } else if (const ArrayType *AT = getASTContext().getAsArrayType(Ty)) {
@@ -1162,9 +1162,15 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
                   ->getTemplatedDecl()
                   ->hasAttr<CUDAGlobalAttr>())) &&
             GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
+        bool IsOCLDeviceStub =
+            ND && isa<FunctionDecl>(ND) && ND->hasAttr<OpenCLKernelAttr>() &&
+            GD.getKernelReferenceKind() == KernelReferenceKind::Stub;
         if (IsDeviceStub)
           mangleSourceName(
               (llvm::Twine("__device_stub__") + II->getName()).str());
+        else if (IsOCLDeviceStub)
+          mangleSourceName(
+              (llvm::Twine("__clang_ocl_kern_imp_") + II->getName()).str());
         else
           mangleSourceName(II->getName());
         break;
@@ -3331,11 +3337,11 @@ void MicrosoftCXXNameMangler::mangleType(const MemberPointerType *T,
   manglePointerExtQualifiers(Quals, PointeeType);
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleFunctionType(FPT, nullptr, true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleType(PointeeType, Range, QMM_Drop);
   }
 }
@@ -4309,11 +4315,11 @@ void MicrosoftCXXNameMangler::mangleAutoReturnType(const MemberPointerType *T,
   manglePointerExtQualifiers(Quals, PointeeType);
   if (const FunctionProtoType *FPT = PointeeType->getAs<FunctionProtoType>()) {
     Out << '8';
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleFunctionType(FPT, nullptr, true);
   } else {
     mangleQualifiers(PointeeType.getQualifiers(), true);
-    mangleName(T->getClass()->castAs<RecordType>()->getDecl());
+    mangleName(T->getMostRecentCXXRecordDecl());
     mangleAutoReturnType(PointeeType, QMM_Drop);
   }
 }

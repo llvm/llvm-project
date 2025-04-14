@@ -29,6 +29,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/Local.h"
 
@@ -335,9 +336,7 @@ public:
 class AMDGPUCodeGenPrepare : public FunctionPass {
 public:
   static char ID;
-  AMDGPUCodeGenPrepare() : FunctionPass(ID) {
-    initializeAMDGPUCodeGenPreparePass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
@@ -1033,7 +1032,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
   if (!HasFP32DenormalFlush && !NumIsOne)
     return nullptr;
 
-  return Builder.CreateIntrinsic(Intrinsic::amdgcn_fdiv_fast, {}, {Num, Den});
+  return Builder.CreateIntrinsic(Intrinsic::amdgcn_fdiv_fast, {Num, Den});
 }
 
 Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(

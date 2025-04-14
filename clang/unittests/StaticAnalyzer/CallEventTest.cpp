@@ -61,7 +61,7 @@ void addCXXDeallocatorChecker(AnalysisASTConsumer &AnalysisConsumer,
 }
 
 // TODO: What we should really be testing here is all the different varieties
-// of delete operators, and wether the retrieval of their arguments works as
+// of delete operators, and whether the retrieval of their arguments works as
 // intended. At the time of writing this file, CXXDeallocatorCall doesn't pick
 // up on much of those due to the AST not containing CXXDeleteExpr for most of
 // the standard/custom deletes.

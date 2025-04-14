@@ -709,22 +709,40 @@ let isCall = 1, Defs = [A0] in {
   }
 }
 
+// Windowed call patterns. Currently rotation
+// window by 8 is implemented.
+def : Pat<(Xtensa_callw8 (i32 tglobaladdr:$dst)),
+          (CALL8 tglobaladdr:$dst)>;
+def : Pat<(Xtensa_callw8 (i32 texternalsym:$dst)),
+          (CALL8 texternalsym:$dst)>;
+def : Pat<(Xtensa_callw8 AR:$dst),
+          (CALLX8 AR:$dst)>;
+
 def MOVSP : RRR_Inst<0x00, 0x00, 0x00, (outs AR:$t), (ins AR:$s),
                     "movsp\t$t, $s", []>, Requires<[HasWindowed]> {
   let r = 0x01;
 }
 
+// Use this pseudo operation instead of getCopyToReg function to
+// update SP register.
+let usesCustomInserter = 1, Defs = [SP], Predicates = [HasWindowed] in {
+  def MOVSP_P : Pseudo<(outs), (ins AR:$s),
+                      "!movsp_p\tsp, $s", [(Xtensa_movsp AR:$s)]>;
+}
+
 let isReturn = 1, isTerminator = 1,
     isBarrier = 1, Uses = [A0] in {
   def RETW_N : RRRN_Inst<0x0D, (outs), (ins),
-                        "retw.n", []>, Requires<[HasWindowed, HasDensity]> {
+                        "retw.n", [(Xtensa_retw)]>,
+                        Requires<[HasWindowed, HasDensity]> {
     let r = 0x0F;
     let s = 0;
     let t = 1;
   }
 
   def RETW : CALLX_Inst<0x00, 0x00, 0x00, (outs), (ins),
-                       "retw", []>, Requires<[HasWindowed]> {
+                       "retw", [(Xtensa_retw)]>,
+                       Requires<[HasWindowed]> {
     let m = 0x2;
     let n = 0x1;
     let s = 0;

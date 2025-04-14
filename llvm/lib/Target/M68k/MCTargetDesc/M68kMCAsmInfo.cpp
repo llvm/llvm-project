@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "M68kMCAsmInfo.h"
+#include "MCTargetDesc/M68kMCExpr.h"
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
@@ -19,14 +20,14 @@
 using namespace llvm;
 
 const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
-    {MCSymbolRefExpr::VK_GOTOFF, "GOTOFF"},
-    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
-    {MCSymbolRefExpr::VK_GOTTPOFF, "GOTTPOFF"},
-    {MCSymbolRefExpr::VK_PLT, "PLT"},
-    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
-    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
-    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
-    {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
+    {M68kMCExpr::VK_GOTOFF, "GOTOFF"},
+    {M68kMCExpr::VK_GOTPCREL, "GOTPCREL"},
+    {M68kMCExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {M68kMCExpr::VK_PLT, "PLT"},
+    {M68kMCExpr::VK_TLSGD, "TLSGD"},
+    {M68kMCExpr::VK_TLSLD, "TLSLD"},
+    {M68kMCExpr::VK_TLSLDM, "TLSLDM"},
+    {M68kMCExpr::VK_TPOFF, "TPOFF"},
 };
 
 void M68kELFMCAsmInfo::anchor() {}

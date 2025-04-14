@@ -204,7 +204,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*af2)() throw() = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (cwg1330::A::*)() throw(T)': different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (A::*)() throw(T)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(A().g()), "");
@@ -252,7 +252,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   void (B<P>::*bpf3)() = &B<P>::f;
   void (B<P>::*bpf4)() throw() = &B<P>::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (B<P>::*)() throw()' with an rvalue of type 'void (cwg1330::B<cwg1330::P>::*)() throw(T, typename P::type)': different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (B<P>::*)() throw()' with an rvalue of type 'void (B<P>::*)() throw(T, typename P::type)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(B<P>().g()), "");
