@@ -586,6 +586,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // FIXME - use subtarget debug flags
   if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
       !Subtarget.isTargetCygMing() && !Subtarget.isTargetWin64() &&
+      !Subtarget.isTargetUEFI64() &&
       TM.Options.ExceptionModel != ExceptionHandling::SjLj) {
     setOperationAction(ISD::EH_LABEL, MVT::Other, Expand);
   }
@@ -28109,7 +28110,6 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
                      .Case("r14", X86::R14)
                      .Case("r15", X86::R15)
                      .Default(0);
-
   if (Reg == X86::EBP || Reg == X86::RBP) {
     if (!TFI.hasFP(MF))
       report_fatal_error("register " + StringRef(RegName) +
@@ -28153,7 +28153,7 @@ Register X86TargetLowering::getExceptionSelectorRegister(
 }
 
 bool X86TargetLowering::needsFixedCatchObjects() const {
-  return Subtarget.isTargetWin64();
+  return Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64();
 }
 
 SDValue X86TargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
@@ -61837,8 +61837,8 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 /// Returns true if stack probing through inline assembly is requested.
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
-  // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() ||
+  // No inline stack probe for Windows and UEFI, they have their own mechanism.
+  if (Subtarget.isOSWindowsOrUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -61862,9 +61862,9 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute("probe-stack"))
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
 
-  // Generally, if we aren't on Windows, the platform ABI does not include
-  // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO() ||
+  // Generally, if we aren't on Windows or UEFI, the platform ABI does not
+  // include support for stack probes, so don't emit them.
+  if (!(Subtarget.isOSWindowsOrUEFI()) || Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 
