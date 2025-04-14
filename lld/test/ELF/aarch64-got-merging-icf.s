@@ -18,20 +18,7 @@
 callee:
 ret
 
-.section .rodata.dummy1,"a",@progbits
-sym1:
-.long 111
-.long 122
-.byte 123
-
-.section .rodata.dummy2,"a",@progbits
-sym2:
-.long 111
-.long 122
-sym3:
-.byte 123
-
-.macro f, index
+.macro f, index, isglobal
 
 # (Kept unique) first instruction of the GOT code sequence
 .section .text.f1_\index,"ax",@progbits
@@ -47,7 +34,9 @@ ldr x0, [x0, :got_lo12:g\index]
 b callee
 
 # Folded
+.ifnb \isglobal
 .globl g\index
+.endif
 .section .rodata.g\index,"a",@progbits
 g_\index:
 .long 111
@@ -65,7 +54,7 @@ bl f1_\index
 .globl _start
 _start:
 
-f 0
-f 1
-f 2
+f 0 1
+f 1 1
+f 2 1
 f 3
