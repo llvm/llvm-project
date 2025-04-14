@@ -717,6 +717,11 @@ static LogicalResult attachLayoutAttributes(
     /// If no results, move on.
     if (op->getNumResults() == 0)
       return WalkResult::advance();
+    /// If all the results are scalars, move on.
+    if (llvm::all_of(op->getResultTypes(),
+                     [](Type t) { return t.isIntOrIndexOrFloat(); }))
+      return WalkResult::advance();
+
     if (auto tensorDescTy =
             dyn_cast<xegpu::TensorDescType>(op->getResult(0).getType())) {
       auto layoutInfo = getLayoutInfoForResult(op->getResult(0));
@@ -738,7 +743,7 @@ static LogicalResult attachLayoutAttributes(
       op->erase();
       return WalkResult::advance();
     }
-    /// Otherwise simply attach the sg_map to the op itself.
+    /// Otherwise simply attach the layout to the op itself.
     for (auto [i, r] : llvm::enumerate(op->getResults())) {
       auto layoutInfo = getLayoutInfoForResult(r);
       if (layoutInfo) {
@@ -1199,14 +1204,19 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
     if (failed(loadNdDistValueTyOrFailure))
       return rewriter.notifyMatchFailure(
           loadOp, "Failed to get distributed vector type for the load op");
+    auto distributedTensorDescTy =
+        dropLayouts(loadOp.getTensorDescType()); /// Distributed tensor
+                                                 /// descriptor type does not
+                                                 /// contain layout info.
     Value newLoadOp = rewriter.create<xegpu::LoadNdOp>(
         newWarpOp.getLoc(), loadNdDistValueTyOrFailure.value(),
-        newWarpOp->getResult(newRetIndices[0]),
+        resolveDistributedTy(newWarpOp->getResult(newRetIndices[0]),
+                             distributedTensorDescTy, rewriter),
         filterTemporaryLayoutAttributes(loadOp->getAttrs()));
     Value distributedVal = newWarpOp.getResult(operandIdx);
     /// There can be a conflict between the vector type distributed by the
     /// warp op and (xegpu-specific) distributed type supported by the load
-    /// op. We reconcile these mismatches by inserting a cast.
+    /// op. Resolve these mismatches by inserting a cast.
     newLoadOp =
         resolveDistributedTy(newLoadOp, distributedTypeByWarpOp, rewriter);
     rewriter.replaceAllUsesWith(distributedVal, newLoadOp);
@@ -1274,29 +1284,28 @@ struct DpasDistribution final : public gpu::WarpDistributionPattern {
     rewriter.setInsertionPointAfter(newWarpOp);
     SmallVector<Value> newDpasOperands;
     SmallVector<VectorType> newDpasOperandExpectedTypes;
-    /// Reconcile the distributed types with the original types.
+    /// Resolve the distributed types with the original types.
     newDpasOperandExpectedTypes.push_back(
         getDistributedVectorType(layoutA, dpasOp.getLhsType()));
     newDpasOperandExpectedTypes.push_back(
         getDistributedVectorType(layoutB, dpasOp.getRhsType()));
-    if (dpasOp.getAcc()) {
-      newDpasOperandExpectedTypes.push_back(
-          getDistributedVectorType(layoutOut, dpasOp.getResultType()));
-    }
+    auto distributedResultTy =
+        getDistributedVectorType(layoutOut, dpasOp.getResultType());
+    if (dpasOp.getAcc())
+      newDpasOperandExpectedTypes.push_back(distributedResultTy);
 
-    for (auto i : newRetIndices) {
-      newDpasOperands.push_back(resolveDistributedTy(
-          newWarpOp.getResult(i),
-          newDpasOperandExpectedTypes[newDpasOperands.size()], rewriter));
+    for (unsigned i = 0; i < newRetIndices.size(); i++) {
+      newDpasOperands.push_back(
+          resolveDistributedTy(newWarpOp.getResult(newRetIndices[i]),
+                               newDpasOperandExpectedTypes[i], rewriter));
     }
-    auto newDpasOp = rewriter.create<xegpu::DpasOp>(
-        newWarpOp->getLoc(), distResultTypeByWarpOpOrFailure.value(),
-        newDpasOperands, dpasOp->getAttrs());
+    Value newDpasOp = rewriter.create<xegpu::DpasOp>(
+        newWarpOp->getLoc(), distributedResultTy, newDpasOperands,
+        filterTemporaryLayoutAttributes(dpasOp->getAttrs()));
     Value disributedVal = newWarpOp.getResult(operandIdx);
-    /// Reconile the output type.
-    disributedVal = resolveDistributedTy(
-        disributedVal,
-        getDistributedVectorType(layoutOut, dpasOp.getResultType()), rewriter);
+    /// Resolve the output type.
+    newDpasOp = resolveDistributedTy(
+        newDpasOp, distResultTypeByWarpOpOrFailure.value(), rewriter);
     rewriter.replaceAllUsesWith(disributedVal, newDpasOp);
     return success();
   }
