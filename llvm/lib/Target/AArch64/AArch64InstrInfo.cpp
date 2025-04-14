@@ -2760,6 +2760,9 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   case AArch64::LDRXpre:
   case AArch64::LDURSWi:
   case AArch64::LDRSWpre:
+  // SVE instructions.
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
     return true;
   }
 }
@@ -2909,6 +2912,18 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
     Register BaseReg = MI.getOperand(1).getReg();
     const TargetRegisterInfo *TRI = &getRegisterInfo();
     if (MI.modifiesRegister(BaseReg, TRI))
+      return false;
+  }
+
+  // Pairing SVE fills/spills is only valid for little-endian targets that
+  // implement VLS 128.
+  switch (MI.getOpcode()) {
+  default:
+    break;
+  case AArch64::LDR_ZXI:
+  case AArch64::STR_ZXI:
+    if (!Subtarget.isLittleEndian() ||
+        Subtarget.getSVEVectorSizeInBits() != 128)
       return false;
   }
 
