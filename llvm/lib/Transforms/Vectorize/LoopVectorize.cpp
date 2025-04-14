@@ -4626,6 +4626,16 @@ bool LoopVectorizationPlanner::isCandidateForEpilogueVectorization(
         return false;
   }
 
+  // Don't vectorize the epilogue, if there are FindLastIV recurrences with a
+  // start value may be undef or poison. Such start values would need freezing.
+  if (any_of(Legal->getReductionVars(), [](const auto &P) {
+        return RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+                   P.second.getRecurrenceKind()) &&
+               !isGuaranteedNotToBeUndefOrPoison(
+                   P.second.getRecurrenceStartValue());
+      }))
+    return false;
+
   // Epilogue vectorization code has not been auditted to ensure it handles
   // non-latch exits properly.  It may be fine, but it needs auditted and
   // tested.
