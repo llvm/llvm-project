@@ -180,7 +180,7 @@ define dllexport amdgpu_ps void @ps_shader() #1 {
 
 @LDS.GS = external addrspace(3) global [1 x i32], align 4
 
-define dllexport amdgpu_gs void @gs_shader() #2 {
+define dllexport amdgpu_gs void @gs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.GS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -188,7 +188,7 @@ define dllexport amdgpu_gs void @gs_shader() #2 {
 
 @LDS.HS = external addrspace(3) global [1024 x i32], align 4
 
-define dllexport amdgpu_hs void @hs_shader() #2 {
+define dllexport amdgpu_hs void @hs_shader() {
   %ptr = getelementptr i32, ptr addrspace(3) @LDS.HS, i32 0
   store i32 0, ptr addrspace(3) %ptr, align 4
   ret void
@@ -196,16 +196,11 @@ define dllexport amdgpu_hs void @hs_shader() #2 {
 
 !amdgpu.pal.metadata.msgpack = !{!0}
 
-; Function Attrs: nounwind willreturn memory(none)
 declare ptr addrspace(7) @lgc.buffer.desc.to.ptr(<4 x i32>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare i64 @llvm.amdgcn.s.getpc() #2
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(write)
+declare i64 @llvm.amdgcn.s.getpc()
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32 immarg) #3
 
-attributes #0 = { nounwind memory(readwrite) "amdgpu-flat-work-group-size"="1024,1024" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "amdgpu-work-group-info-arg-no"="4" "denormal-fp-math-f32"="preserve-sign" "target-features"=",+wavefrontsize64,+cumode" }
+attributes #0 = { nounwind memory(readwrite) "target-features"=",+wavefrontsize64,+cumode" }
 
 attributes #1 = { nounwind memory(readwrite) "InitialPSInputAddr"="36983" }
 

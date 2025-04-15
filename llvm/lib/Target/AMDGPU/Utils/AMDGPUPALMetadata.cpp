@@ -23,6 +23,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/VersionTuple.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -260,8 +261,7 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
       MsgPackDoc.getNode(Name, /*Copy=*/true);
 
   // For pal version 3.6 and above, entry_point is no longer required
-  if (getPALMajorVersion() < 3 ||
-      (getPALMajorVersion() == 3 && getPALMinorVersion() < 6)) {
+  if (getPALVersion() < VersionTuple(3, 6)) {
     // Set .entry_point which is defined
     // to be _amdgpu_<stage>_main and _amdgpu_cs_main for non-shader functions
     SmallString<16> EPName("_amdgpu_");
@@ -1055,6 +1055,10 @@ unsigned AMDGPUPALMetadata::getPALVersion(unsigned idx) {
 unsigned AMDGPUPALMetadata::getPALMajorVersion() { return getPALVersion(0); }
 
 unsigned AMDGPUPALMetadata::getPALMinorVersion() { return getPALVersion(1); }
+
+VersionTuple AMDGPUPALMetadata::getPALVersion() {
+  return VersionTuple(getPALVersion(0), getPALVersion(1));
+}
 
 // Set the field in a given .hardware_stages entry
 void AMDGPUPALMetadata::setHwStage(unsigned CC, StringRef field, unsigned Val) {
