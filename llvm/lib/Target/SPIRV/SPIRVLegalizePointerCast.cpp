@@ -56,10 +56,7 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeSPIRVLegalizePointerCastPass(PassRegistry &);
-}
-
+namespace {
 class SPIRVLegalizePointerCast : public FunctionPass {
 
   // Builds the `spv_assign_type` assigning |Ty| to |Value| at the current
@@ -173,6 +170,12 @@ class SPIRVLegalizePointerCast : public FunctionPass {
           DeadInstructions.push_back(Intrin);
           continue;
         }
+
+        if (Intrin->getIntrinsicID() == Intrinsic::spv_gep) {
+          GR->replaceAllUsesWith(CastedOperand, OriginalOperand,
+                                 /* DeleteOld= */ false);
+          continue;
+        }
       }
 
       llvm_unreachable("Unsupported ptrcast user. Please fix.");
@@ -182,9 +185,7 @@ class SPIRVLegalizePointerCast : public FunctionPass {
   }
 
 public:
-  SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {
-    initializeSPIRVLegalizePointerCastPass(*PassRegistry::getPassRegistry());
-  };
+  SPIRVLegalizePointerCast(SPIRVTargetMachine *TM) : FunctionPass(ID), TM(TM) {}
 
   virtual bool runOnFunction(Function &F) override {
     const SPIRVSubtarget &ST = TM->getSubtarget<SPIRVSubtarget>(F);
@@ -217,6 +218,7 @@ private:
 public:
   static char ID;
 };
+} // namespace
 
 char SPIRVLegalizePointerCast::ID = 0;
 INITIALIZE_PASS(SPIRVLegalizePointerCast, "spirv-legalize-bitcast",

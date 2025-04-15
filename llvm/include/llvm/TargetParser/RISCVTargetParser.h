@@ -24,14 +24,6 @@ class Triple;
 
 namespace RISCV {
 
-namespace RISCVExtensionBitmaskTable {
-struct RISCVExtensionBitmask {
-  const char *Name;
-  unsigned GroupID;
-  unsigned BitPosition;
-};
-} // namespace RISCVExtensionBitmaskTable
-
 struct CPUModel {
   uint32_t MVendorID;
   uint64_t MArchID;

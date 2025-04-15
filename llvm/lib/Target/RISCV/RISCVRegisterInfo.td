@@ -302,6 +302,11 @@ def GPRX1X5 :  GPRRegisterClass<(add X1, X5)> {
   let DiagnosticString = "register must be ra or t0 (x1 or x5)";
 }
 
+def GPRNoX31 : GPRRegisterClass<(sub GPR, X31)> {
+  let DiagnosticType = "InvalidRegClassGPRX31";
+  let DiagnosticString = "register must be a GPR excluding t6 (x31)";
+}
+
 //===----------------------------------------------------------------------===//
 // Even-Odd GPR Pairs
 //===----------------------------------------------------------------------===//

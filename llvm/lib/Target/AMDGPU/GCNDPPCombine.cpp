@@ -215,6 +215,11 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
 
   bool HasVOP3DPP = ST->hasVOP3DPP();
   auto OrigOp = OrigMI.getOpcode();
+  if (ST->useRealTrue16Insts() && AMDGPU::isTrue16Inst(OrigOp)) {
+    LLVM_DEBUG(
+        dbgs() << "  failed: Did not expect any 16-bit uses of dpp values\n");
+    return nullptr;
+  }
   auto DPPOp = getDPPOp(OrigOp, IsShrinkable);
   if (DPPOp == -1) {
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");

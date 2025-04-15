@@ -287,7 +287,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 
   PP.SuppressInlineNamespace =
       PrintingPolicy::SuppressInlineNamespaceMode::None;
-  PP.PrintCanonicalTypes = true;
+  PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;
@@ -1059,8 +1059,23 @@ llvm::DIType *CGDebugInfo::CreateQualifiedType(QualType Ty,
   // additional ones.
   llvm::dwarf::Tag Tag = getNextQualifier(Qc);
   if (!Tag) {
-    assert(Qc.empty() && "Unknown type qualifier for debug info");
-    return getOrCreateType(QualType(T, 0), Unit);
+    if (Qc.getPointerAuth()) {
+      unsigned Key = Qc.getPointerAuth().getKey();
+      bool IsDiscr = Qc.getPointerAuth().isAddressDiscriminated();
+      unsigned ExtraDiscr = Qc.getPointerAuth().getExtraDiscriminator();
+      bool IsaPointer = Qc.getPointerAuth().isIsaPointer();
+      bool AuthenticatesNullValues =
+          Qc.getPointerAuth().authenticatesNullValues();
+      Qc.removePointerAuth();
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      llvm::DIType *FromTy = getOrCreateType(QualType(T, 0), Unit);
+      return DBuilder.createPtrAuthQualifiedType(FromTy, Key, IsDiscr,
+                                                 ExtraDiscr, IsaPointer,
+                                                 AuthenticatesNullValues);
+    } else {
+      assert(Qc.empty() && "Unknown type qualifier for debug info");
+      return getOrCreateType(QualType(T, 0), Unit);
+    }
   }
 
   auto *FromTy = getOrCreateType(Qc.apply(CGM.getContext(), T), Unit);
@@ -1786,8 +1801,8 @@ llvm::DIType *CGDebugInfo::createFieldType(
 }
 
 llvm::DISubprogram *
-CGDebugInfo::createInlinedTrapSubprogram(StringRef FuncName,
-                                         llvm::DIFile *FileScope) {
+CGDebugInfo::createInlinedSubprogram(StringRef FuncName,
+                                     llvm::DIFile *FileScope) {
   // We are caching the subprogram because we don't want to duplicate
   // subprograms with the same message. Note that `SPFlagDefinition` prevents
   // subprograms from being uniqued.
@@ -3614,6 +3629,14 @@ llvm::DIMacroFile *CGDebugInfo::CreateTempMacroFile(llvm::DIMacroFile *Parent,
   return DBuilder.createTempMacroFile(Parent, Line, FName);
 }
 
+llvm::DILocation *CGDebugInfo::CreateSyntheticInlineAt(llvm::DebugLoc Location,
+                                                       StringRef FuncName) {
+  llvm::DISubprogram *SP =
+      createInlinedSubprogram(FuncName, Location->getFile());
+  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
+                               /*Scope=*/SP, /*InlinedAt=*/Location);
+}
+
 llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
     llvm::DebugLoc TrapLocation, StringRef Category, StringRef FailureMsg) {
   // Create a debug location from `TrapLocation` that adds an artificial inline
@@ -3625,10 +3648,7 @@ llvm::DILocation *CGDebugInfo::CreateTrapFailureMessageFor(
   FuncName += "$";
   FuncName += FailureMsg;
 
-  llvm::DISubprogram *TrapSP =
-      createInlinedTrapSubprogram(FuncName, TrapLocation->getFile());
-  return llvm::DILocation::get(CGM.getLLVMContext(), /*Line=*/0, /*Column=*/0,
-                               /*Scope=*/TrapSP, /*InlinedAt=*/TrapLocation);
+  return CreateSyntheticInlineAt(TrapLocation, FuncName);
 }
 
 static QualType UnwrapTypeForDebugInfo(QualType T, const ASTContext &C) {
@@ -6216,4 +6236,24 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
     return DBuilder.createConstantValueExpression(ValIntOpt.value());
 
   return nullptr;
+}
+
+CodeGenFunction::LexicalScope::LexicalScope(CodeGenFunction &CGF,
+                                            SourceRange Range)
+    : RunCleanupsScope(CGF), Range(Range), ParentScope(CGF.CurLexicalScope) {
+  CGF.CurLexicalScope = this;
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockStart(CGF.Builder, Range.getBegin());
+}
+
+CodeGenFunction::LexicalScope::~LexicalScope() {
+  if (CGDebugInfo *DI = CGF.getDebugInfo())
+    DI->EmitLexicalBlockEnd(CGF.Builder, Range.getEnd());
+
+  // If we should perform a cleanup, force them now.  Note that
+  // this ends the cleanup scope before rescoping any labels.
+  if (PerformCleanup) {
+    ApplyDebugLocation DL(CGF, Range.getEnd());
+    ForceCleanup();
+  }
 }

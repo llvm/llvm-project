@@ -650,10 +650,12 @@ def AMDGPU_MFMAPermBAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_MFMAPermB,
 // mfma
 def MFMAInTypes : AnyTypeOf<[F32, F64, I32, I64,
                              VectorOfLengthAndType<[2], [F32]>,
-                             VectorOfLengthAndType<[4], [F16]>,
-                             VectorOfLengthAndType<[2, 4], [BF16]>,
-                             VectorOfLengthAndType<[4, 8], [I8]>,
-                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ, F8E5M2, F8E4M3FN]>]>;
+                             VectorOfLengthAndType<[4, 8], [F16]>,
+                             VectorOfLengthAndType<[2, 4, 8], [BF16]>,
+                             VectorOfLengthAndType<[4, 8, 16], [I8]>,
+                             VectorOfLengthAndType<[8], [F8E5M2FNUZ, F8E4M3FNUZ]>,
+                             VectorOfLengthAndType<[8, 32], [F8E5M2, F8E4M3FN]>,
+                             VectorOfLengthAndType<[32], [F6E2M3FN, F6E3M2FN, F4E2M1FN]>]>;
 def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
@@ -761,6 +763,42 @@ def AMDGPU_WMMAOp :
     $sourceA `*` $sourceB `+` $destC
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_GatherToLDSOp :
+    AMDGPU_Op<"gather_to_lds", [SameVariadicOperandSize]>,
+    Arguments<(ins
+                   Arg<AnyMemRef, "buffer to gather from", [MemRead]>:$src,
+                   Variadic<Index>:$srcIndices,
+                   Arg<AnyMemRef, "buffer to write to", [MemWrite]>:$dst,
+                   Variadic<Index>:$dstIndices,
+                   TypeAttr:$transferType
+                   )>,
+    Results<(outs)> {
+  let summary = "MLIR wrapper for CDNA mfma instructions";
+  let description = [{
+    The `amdgpu.global_load` op is a wrapper around the `global_load_lds` instructions.
+
+    Operands:
+    * `$src`: global memory memref to read from.
+    * `$srcIndices`: indices into `$src` to read from for this thread.
+    * `$dst`: LDS memory memref to write to.
+    * `$dstIndices`: base indices into `$dst` to write to for the subgroup of this thread.
+      The elements gathered by the subgroup will be written in order of lane ID will be written
+      into contiguously starting at `$dst[$dstIndices]`.
+    * `$transferType`: type of the data to be transferred by each thread. This is used to determine
+      the size of the data to be transferred and the number of threads in the subgroup.
+      The transfer type must be a scalar type or a vector type with a single element type.
+
+    The `$dst`, along with its indices, points to the memory location the subgroup of this thread
+    will write to.
+  
+    Note: only enabled for gfx942 and later.
+  }];
+  let assemblyFormat = [{
+    $src `[` $srcIndices `]` `,` $dst `[` $dstIndices `]` attr-dict `:` $transferType `,` type($src) `,` type($dst)
   }];
   let hasVerifier = 1;
 }

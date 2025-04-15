@@ -348,5 +348,49 @@ TEST(SmartPointerAccessorCachingTest, MatchesWithTypeAliases) {
       isSmartPointerLikeGetMethodCall()));
 }
 
+TEST(SmartPointerAccessorCachingTest, Renamed) {
+  llvm::StringRef Decls(R"cc(
+    namespace std {
+    template <class T>
+    struct unique_ptr {
+      T* operator->() const;
+      T& operator*() const;
+      T* Get() const;
+      T& Value() const;
+    };
+    }  // namespace std
+
+    template <class T>
+    using UniquePtrAlias = std::unique_ptr<T>;
+
+    struct S { int i; };
+  )cc");
+
+  EXPECT_TRUE(matches(Decls,
+                      "int target(std::unique_ptr<S> P) { return (*P).i; }",
+                      isPointerLikeOperatorStar()));
+
+  EXPECT_TRUE(matches(Decls,
+                      "int target(std::unique_ptr<S> P) { return P->i; }",
+                      isPointerLikeOperatorArrow()));
+
+  EXPECT_TRUE(matches(Decls,
+                      "int target(std::unique_ptr<S> P) { return P.Get()->i; }",
+                      isSmartPointerLikeGetMethodCall("Get")));
+  EXPECT_TRUE(matches(Decls,
+                      "int target(UniquePtrAlias<S> P) { return P.Get()->i; }",
+                      isSmartPointerLikeGetMethodCall("Get")));
+
+  EXPECT_TRUE(
+      matches(Decls, "int target(std::unique_ptr<S> P) { return P.Value().i; }",
+              isSmartPointerLikeValueMethodCall("Value")));
+  EXPECT_TRUE(matches(Decls,
+                      "int target(UniquePtrAlias<S> P) { return P.Value().i; }",
+                      isSmartPointerLikeValueMethodCall("Value")));
+
+  EXPECT_TRUE(matches(Decls, "int target(UniquePtrAlias<S> P) { return P->i; }",
+                      isPointerLikeOperatorArrow()));
+}
+
 } // namespace
 } // namespace clang::dataflow

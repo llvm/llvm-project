@@ -282,6 +282,13 @@ def github_get_metrics(
     queued_count = collections.Counter()
     running_count = collections.Counter()
 
+    # Initialize all the counters to 0 so we report 0 when no job is queued
+    # or running.
+    for wf_name, wf_metric_name in GITHUB_WORKFLOW_TO_TRACK.items():
+        for job_name, job_metric_name in GITHUB_JOB_TO_TRACK[wf_metric_name].items():
+            queued_count[wf_metric_name + "_" + job_metric_name] = 0
+            running_count[wf_metric_name + "_" + job_metric_name] = 0
+
     # The list of workflows this iteration will process.
     # MaxSize = GITHUB_WORKFLOWS_MAX_PROCESS_COUNT
     workflow_seen_as_completed = set()

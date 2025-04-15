@@ -47,6 +47,8 @@ public:
 
   virtual ~BaseRequestHandler() = default;
 
+  void Run(const protocol::Request &);
+
   virtual void operator()(const protocol::Request &request) const = 0;
 
   using FeatureSet = llvm::SmallDenseSet<AdapterFeature, 1>;
@@ -118,11 +120,13 @@ class RequestHandler : public BaseRequestHandler {
     }
 
     Args arguments;
-    llvm::json::Path::Root root;
-    if (request.arguments && !fromJSON(request.arguments, arguments, root)) {
+    llvm::json::Path::Root root("arguments");
+    if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
       std::string parse_failure;
       llvm::raw_string_ostream OS(parse_failure);
-      root.printErrorContext(request.arguments, OS);
+      OS << "invalid arguments for request '" << request.command
+         << "': " << llvm::toString(root.getError()) << "\n";
+      root.printErrorContext(*request.arguments, OS);
 
       protocol::ErrorMessage error_message;
       error_message.format = parse_failure;
@@ -159,6 +163,15 @@ class RequestHandler : public BaseRequestHandler {
       response.success = true;
       if constexpr (!std::is_same_v<Body, std::monostate>)
         response.body = std::move(*body);
+    }
+
+    // Mark the request as 'cancelled' if the debugger was interrupted while
+    // evaluating this handler.
+    if (dap.debugger.InterruptRequested()) {
+      dap.debugger.CancelInterruptRequest();
+      response.success = false;
+      response.message = protocol::eResponseMessageCancelled;
+      response.body = std::nullopt;
     }
 
     dap.Send(response);
@@ -462,6 +475,19 @@ public:
     return {protocol::eAdapterFeatureReadMemoryRequest};
   }
   void operator()(const llvm::json::Object &request) const override;
+};
+
+class CancelRequestHandler
+    : public RequestHandler<protocol::CancelArguments,
+                            protocol::CancelResponseBody> {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral GetCommand() { return "cancel"; }
+  FeatureSet GetSupportedFeatures() const override {
+    return {protocol::eAdapterFeatureCancelRequest};
+  }
+  llvm::Expected<protocol::CancelResponseBody>
+  Run(const protocol::CancelArguments &args) const override;
 };
 
 /// A request used in testing to get the details on all breakpoints that are
