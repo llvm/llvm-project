@@ -411,6 +411,8 @@ Bug Fixes in This Version
 - ``#embed`` directive now diagnoses use of a non-character file (device file)
   such as ``/dev/urandom`` as an error. This restriction may be relaxed in the
   future. See (#GH126629).
+- Fixed a clang 20 regression where diagnostics attached to some calls to member functions
+  using C++23 "deducing this" did not have a diagnostic location (#GH135522)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
