@@ -2422,9 +2422,10 @@ namespace {
       // declarations it needs.
       ++NumIdentifierLookupHits;
       Found = *Pos;
-      if (Trait.hasMoreInformationInDependencies())
+      if (Trait.hasMoreInformationInDependencies()) {
         // Look for the identifier in extra modules as they contain more info.
         return false;
+      }
       return true;
     }
 
