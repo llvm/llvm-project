@@ -120,11 +120,13 @@ class RequestHandler : public BaseRequestHandler {
     }
 
     Args arguments;
-    llvm::json::Path::Root root;
-    if (request.arguments && !fromJSON(request.arguments, arguments, root)) {
+    llvm::json::Path::Root root("arguments");
+    if (request.arguments && !fromJSON(*request.arguments, arguments, root)) {
       std::string parse_failure;
       llvm::raw_string_ostream OS(parse_failure);
-      root.printErrorContext(request.arguments, OS);
+      OS << "invalid arguments for request '" << request.command
+         << "': " << llvm::toString(root.getError()) << "\n";
+      root.printErrorContext(*request.arguments, OS);
 
       protocol::ErrorMessage error_message;
       error_message.format = parse_failure;
