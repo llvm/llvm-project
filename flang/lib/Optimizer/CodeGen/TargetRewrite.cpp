@@ -542,6 +542,7 @@ public:
             mlir::TypeRange{newInTypes}.drop_front(dropFront), newResTys));
         newCall = rewriter->create<fir::CallOp>(loc, newResTys, newOpers);
       }
+      newCall.setFastmathAttr(callOp.getFastmathAttr());
       // Always set ABI argument attributes on call operations, even when
       // direct, as required by
       // https://llvm.org/docs/LangRef.html#parameter-attributes.

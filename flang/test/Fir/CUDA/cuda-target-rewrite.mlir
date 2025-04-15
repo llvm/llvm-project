@@ -14,7 +14,7 @@ gpu.module @testmod {
 }
 
 // CHECK-LABEL: gpu.func @_QPvcpowdk
-// CHECK: %{{.*}} = fir.call @_FortranAzpowk(%{{.*}}, %{{.*}}, %{{.*}}) : (f64, f64, i64) -> tuple<f64, f64>
+// CHECK: %{{.*}} = fir.call @_FortranAzpowk(%{{.*}}, %{{.*}}, %{{.*}}) fastmath<contract> : (f64, f64, i64) -> tuple<f64, f64>
 // CHECK: func.func private @_FortranAzpowk(f64, f64, i64) -> tuple<f64, f64> attributes {fir.bindc_name = "_FortranAzpowk", fir.runtime}
 }
 
