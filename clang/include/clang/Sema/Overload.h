@@ -407,6 +407,8 @@ class Sema;
              Third == ICK_Identity;
     }
 
+    /// A conversion sequence is perfect if it is an identity conversion and
+    /// the type of the source is the same as the type of the target.
     bool isPerfect(const ASTContext &C) const {
       if (!isIdentityConversion())
         return false;
@@ -759,8 +761,7 @@ class Sema;
       Standard.setAllToTypes(T);
     }
 
-    /// A conversion sequence is perfect if
-    /// it is an identity conversion and
+    /// A conversion sequence is perfect if it is an identity conversion and
     /// the type of the source is the same as the type of the target.
     bool isPerfect(const ASTContext &C) const {
       return isStandard() && Standard.isPerfect(C);
@@ -1008,9 +1009,7 @@ class Sema;
       if (!Viable)
         return false;
       for (const auto &C : Conversions) {
-        if (!C.isInitialized())
-          return false;
-        if (!C.isPerfect(Ctx))
+        if (!C.isInitialized() || !C.isPerfect(Ctx))
           return false;
       }
       if (isa_and_nonnull<CXXConversionDecl>(Function))
@@ -1142,6 +1141,9 @@ class Sema;
       /// Resolve a call through the address of an overload set.
       CSK_AddressOfOverloadSet,
 
+      /// When doing overload resolution during code completion,
+      /// we want to show all viable candidates, including otherwise
+      /// deferred template candidates.
       CSK_CodeCompletion,
     };
 
@@ -1217,7 +1219,7 @@ class Sema;
     SmallVector<OverloadCandidate, 16> Candidates;
     llvm::SmallPtrSet<uintptr_t, 16> Functions;
 
-    DeferredTemplateOverloadCandidate *FirstDeferredCandidate;
+    DeferredTemplateOverloadCandidate *FirstDeferredCandidate = nullptr;
     unsigned DeferredCandidatesCount : 8 * sizeof(unsigned) - 2;
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasDeferredTemplateConstructors : 1;
