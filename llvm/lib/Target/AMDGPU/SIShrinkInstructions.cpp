@@ -838,6 +838,32 @@ bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
 
 unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
   switch (MI.getOpcode()) {
+  // int 32
+  case AMDGPU::V_CMP_EQ_I32_e64:
+    return AMDGPU::V_CMP_NE_I32_e64;
+  case AMDGPU::V_CMP_NE_I32_e64:
+    return AMDGPU::V_CMP_EQ_I32_e64;
+  case AMDGPU::V_CMP_GE_I32_e64:
+    return AMDGPU::V_CMP_LT_I32_e64;
+  case AMDGPU::V_CMP_LE_I32_e64:
+    return AMDGPU::V_CMP_GT_I32_e64;
+  case AMDGPU::V_CMP_GT_I32_e64:
+    return AMDGPU::V_CMP_LE_I32_e64;
+  case AMDGPU::V_CMP_LT_I32_e64:
+    return AMDGPU::V_CMP_GE_I32_e64;
+  // int 64
+  case AMDGPU::V_CMP_EQ_I64_e64:
+    return AMDGPU::V_CMP_NE_I64_e64;
+  case AMDGPU::V_CMP_NE_I64_e64:
+    return AMDGPU::V_CMP_EQ_I64_e64;
+  case AMDGPU::V_CMP_GE_I64_e64:
+    return AMDGPU::V_CMP_LT_I64_e64;
+  case AMDGPU::V_CMP_LE_I64_e64:
+    return AMDGPU::V_CMP_GT_I64_e64;
+  case AMDGPU::V_CMP_GT_I64_e64:
+    return AMDGPU::V_CMP_LE_I64_e64;
+  case AMDGPU::V_CMP_LT_I64_e64:
+    return AMDGPU::V_CMP_GE_I64_e64;
   // unsigned 32
   case AMDGPU::V_CMP_EQ_U32_e64:
     return AMDGPU::V_CMP_NE_U32_e64;
@@ -875,8 +901,8 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
     return AMDGPU::V_CMP_GE_F32_e64;
   case AMDGPU::V_CMP_LE_F32_e64:
     return AMDGPU::V_CMP_NLE_F32_e64;
-  case AMDGPU::V_CMP_NLE_F32_e32:
-    return AMDGPU::V_CMP_LE_F32_e32;
+  case AMDGPU::V_CMP_NLE_F32_e64:
+    return AMDGPU::V_CMP_LE_F32_e64;
   case AMDGPU::V_CMP_GT_F32_e64:
     return AMDGPU::V_CMP_NGT_F32_e64;
   case AMDGPU::V_CMP_NGT_F32_e64:
@@ -904,8 +930,8 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
     return AMDGPU::V_CMP_GE_F64_e64;
   case AMDGPU::V_CMP_LE_F64_e64:
     return AMDGPU::V_CMP_NLE_F64_e64;
-  case AMDGPU::V_CMP_NLE_F64_e32:
-    return AMDGPU::V_CMP_LE_F64_e32;
+  case AMDGPU::V_CMP_NLE_F64_e64:
+    return AMDGPU::V_CMP_LE_F64_e64;
   case AMDGPU::V_CMP_GT_F64_e64:
     return AMDGPU::V_CMP_NGT_F64_e64;
   case AMDGPU::V_CMP_NGT_F64_e64:
@@ -930,12 +956,15 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
 bool SIShrinkInstructions::shouldSwapCndOperands(
     MachineInstr &MI, SmallVector<MachineOperand *, 4> &UsesToProcess) const {
   auto AllUses = MRI->use_nodbg_operands(MI.getOperand(0).getReg());
-  bool ShouldSwap = false;
+  unsigned Swap = 0, SwapNot = 0;
 
   for (auto &Use : AllUses) {
     MachineInstr *UseInst = Use.getParent();
     if (UseInst->getOpcode() != AMDGPU::V_CNDMASK_B32_e64)
       return false;
+
+    UsesToProcess.push_back(&Use);
+
     MachineOperand &Src0 = UseInst->getOperand(2);
     MachineOperand &Src1 = UseInst->getOperand(4);
 
@@ -943,14 +972,12 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
     bool Src1Imm = Src1.isImm();
 
     if (!Src1Imm && Src0Imm)
-      return false;
-
-    UsesToProcess.push_back(&Use);
-
-    if (Src1Imm && !Src0Imm && !UseInst->getOperand(1).getImm())
-      ShouldSwap = true;
+      SwapNot++;
+    else if (Src1Imm && !Src0Imm &&
+             UseInst->getOperand(1).getImm() == SISrcMods::NONE)
+      Swap++;
   }
-  return ShouldSwap;
+  return (Swap > SwapNot);
 }
 
 static void swapCndOperands(MachineInstr &MI) {

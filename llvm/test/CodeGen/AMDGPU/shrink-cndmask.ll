@@ -2,6 +2,149 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck %s -check-prefix=GCN
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s -check-prefix=GCN
 
+;tests for integer 32
+define amdgpu_cs void @test_i32_sge(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i32_sge:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 1, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sge i32 %a, 2
+  %val1 = select i1 %vcc, i32 %p, i32 0
+  %val2 = select i1 %vcc, i32 %q, i32 0
+  %ret0 = insertelement <2 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %val2, i32 1
+  store <2 x i32> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i32_sle(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i32_sle:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_gt_i32_e32 vcc_lo, 3, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sle i32 %a, 2
+  %val1 = select i1 %vcc, i32 %p, i32 0
+  %val2 = select i1 %vcc, i32 %q, i32 0
+  %ret0 = insertelement <2 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %val2, i32 1
+  store <2 x i32> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i32_sgt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i32_sgt:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_le_i32_e32 vcc_lo, 2, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sgt i32 2, %a
+  %val1 = select i1 %vcc, i32 0, i32 %p
+  %val2 = select i1 %vcc, i32 0, i32 %q
+  %ret0 = insertelement <2 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %val2, i32 1
+  store <2 x i32> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i32_slt(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i32_slt:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_ge_i32_e32 vcc_lo, 2, v0
+; GCN-NEXT:    v_dual_cndmask_b32 v0, 0, v1 :: v_dual_cndmask_b32 v1, 0, v2
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp slt i32 2, %a
+  %val1 = select i1 %vcc, i32 0, i32 %p
+  %val2 = select i1 %vcc, i32 0, i32 %q
+  %ret0 = insertelement <2 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %val2, i32 1
+  store <2 x i32> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+;tests for integer 64
+define amdgpu_cs void @test_i64_sge(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i64_sge:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_lt_i64_e32 vcc_lo, 1, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
+; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sge i64 %a, 2
+  %val1 = select i1 %vcc, i64 %p, i64 0
+  %val2 = select i1 %vcc, i64 %q, i64 0
+  %ret0 = insertelement <2 x i64> poison, i64 %val1, i64 0
+  %ret1 = insertelement <2 x i64> %ret0, i64 %val2, i64 1
+  store <2 x i64> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i64_sle(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i64_sle:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_gt_i64_e32 vcc_lo, 3, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
+; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sle i64 %a, 2
+  %val1 = select i1 %vcc, i64 %p, i64 0
+  %val2 = select i1 %vcc, i64 %q, i64 0
+  %ret0 = insertelement <2 x i64> poison, i64 %val1, i64 0
+  %ret1 = insertelement <2 x i64> %ret0, i64 %val2, i64 1
+  store <2 x i64> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i64_sgt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i64_sgt:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_le_i64_e32 vcc_lo, 2, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
+; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp sgt i64 2, %a
+  %val1 = select i1 %vcc, i64 0, i64 %p
+  %val2 = select i1 %vcc, i64 0, i64 %q
+  %ret0 = insertelement <2 x i64> poison, i64 %val1, i64 0
+  %ret1 = insertelement <2 x i64> %ret0, i64 %val2, i64 1
+  store <2 x i64> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_i64_slt(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_i64_slt:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_ge_i64_e32 vcc_lo, 2, v[0:1]
+; GCN-NEXT:    v_dual_cndmask_b32 v1, 0, v3 :: v_dual_cndmask_b32 v0, 0, v2
+; GCN-NEXT:    v_dual_cndmask_b32 v3, 0, v5 :: v_dual_cndmask_b32 v2, 0, v4
+; GCN-NEXT:    global_store_b128 v[6:7], v[0:3], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp slt i64 2, %a
+  %val1 = select i1 %vcc, i64 0, i64 %p
+  %val2 = select i1 %vcc, i64 0, i64 %q
+  %ret0 = insertelement <2 x i64> poison, i64 %val1, i64 0
+  %ret1 = insertelement <2 x i64> %ret0, i64 %val2, i64 1
+  store <2 x i64> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+;tests for unsigned 32
 define amdgpu_cs void @test_u32_eq(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_eq:
 ; GCN:       ; %bb.0: ; %.entry
@@ -104,6 +247,7 @@ define amdgpu_cs void @test_u32_ult(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %ou
   ret void
 }
 
+;tests for unsigned 64
 define amdgpu_cs void @test_u64_eq(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u64_eq:
 ; GCN:       ; %bb.0: ; %.entry
@@ -212,6 +356,7 @@ define amdgpu_cs void @test_u64_ult(i64 %a, i64 %p, i64 %q, ptr addrspace(1) %ou
   ret void
 }
 
+;tests for float 32
 define amdgpu_cs void @test_f32_oeq(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_oeq:
 ; GCN:       ; %bb.0: ; %.entry
@@ -349,6 +494,7 @@ define amdgpu_cs void @test_f32_olt(float %a, float %p, float %q, ptr addrspace(
   ret void
 }
 
+;tests for float64
 define amdgpu_cs void @test_f64_oeq(double %a, double %p, double %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f64_oeq:
 ; GCN:       ; %bb.0: ; %.entry
