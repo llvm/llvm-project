@@ -417,7 +417,6 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; AVX512F-NEXT:    vucomiss %xmm3, %xmm2
 ; AVX512F-NEXT:    seta %al
-; AVX512F-NEXT:    negb %al
 ; AVX512F-NEXT:    kmovd %eax, %k1
 ; AVX512F-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0

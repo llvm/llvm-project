@@ -96,6 +96,7 @@ static bool isSupportedAArch64(uint32_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2:
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
@@ -203,6 +204,7 @@ static size_t getSizeForTypeAArch64(uint32_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_PLT32:
     return 4;
   case ELF::R_AARCH64_ABS64:
   case ELF::R_AARCH64_PREL64:
@@ -273,6 +275,16 @@ static uint64_t encodeValueX86(uint32_t Type, uint64_t Value, uint64_t PC) {
   return Value;
 }
 
+static bool canEncodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
+  switch (Type) {
+  default:
+    llvm_unreachable("unsupported relocation");
+  case ELF::R_AARCH64_CALL26:
+  case ELF::R_AARCH64_JUMP26:
+    return isInt<28>(Value - PC);
+  }
+}
+
 static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
   switch (Type) {
   default:
@@ -303,6 +315,16 @@ static uint64_t encodeValueAArch64(uint32_t Type, uint64_t Value, uint64_t PC) {
     break;
   }
   return Value;
+}
+
+static uint64_t canEncodeValueRISCV(uint32_t Type, uint64_t Value,
+                                    uint64_t PC) {
+  switch (Type) {
+  default:
+    llvm_unreachable("unsupported relocation");
+  case ELF::R_RISCV_64:
+    return true;
+  }
 }
 
 static uint64_t encodeValueRISCV(uint32_t Type, uint64_t Value, uint64_t PC) {
@@ -336,6 +358,7 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
   case ELF::R_AARCH64_PREL16:
     return static_cast<int64_t>(PC) + SignExtend64<16>(Contents & 0xffff);
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PLT32:
     return static_cast<int64_t>(PC) + SignExtend64<32>(Contents & 0xffffffff);
   case ELF::R_AARCH64_PREL64:
     return static_cast<int64_t>(PC) + Contents;
@@ -659,6 +682,7 @@ static bool isPCRelativeAArch64(uint32_t Type) {
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
@@ -740,6 +764,19 @@ uint64_t Relocation::encodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
     return encodeValueRISCV(Type, Value, PC);
   case Triple::x86_64:
     return encodeValueX86(Type, Value, PC);
+  }
+}
+
+bool Relocation::canEncodeValue(uint32_t Type, uint64_t Value, uint64_t PC) {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return canEncodeValueAArch64(Type, Value, PC);
+  case Triple::riscv64:
+    return canEncodeValueRISCV(Type, Value, PC);
+  case Triple::x86_64:
+    return true;
   }
 }
 

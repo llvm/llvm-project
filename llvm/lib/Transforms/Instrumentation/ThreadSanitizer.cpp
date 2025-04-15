@@ -573,7 +573,7 @@ bool ThreadSanitizer::sanitizeFunction(Function &F,
     InstrumentationIRBuilder IRB(&F.getEntryBlock(),
                                  F.getEntryBlock().getFirstNonPHIIt());
     Value *ReturnAddress =
-        IRB.CreateIntrinsic(Intrinsic::returnaddress, {}, IRB.getInt32(0));
+        IRB.CreateIntrinsic(Intrinsic::returnaddress, IRB.getInt32(0));
     IRB.CreateCall(TsanFuncEntry, ReturnAddress);
 
     EscapeEnumerator EE(F, "tsan_cleanup", ClHandleCxxExceptions);

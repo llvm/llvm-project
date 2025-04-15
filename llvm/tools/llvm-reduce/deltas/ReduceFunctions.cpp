@@ -42,7 +42,7 @@ void llvm::reduceFunctionsDeltaPass(Oracle &O, ReducerWorkItem &WorkItem) {
   });
 
   // Then, drop body of each of them. We want to batch this and do nothing else
-  // here so that minimal number of remaining exteranal uses will remain.
+  // here so that minimal number of remaining external uses will remain.
   for (Constant *F : FuncsToRemove)
     F->dropAllReferences();
 

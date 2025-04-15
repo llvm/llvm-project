@@ -70,6 +70,8 @@ Changes to LLVM infrastructure
 
 * Removed support for target intrinsics being defined in the target directories
   themselves (i.e., the `TargetIntrinsicInfo` class).
+* Fix Microsoft demangling of string literals to be stricter
+  (#GH129970))
 
 Changes to building LLVM
 ------------------------
@@ -220,6 +222,9 @@ Changes to LLDB
   information about the current state of the debugger at the bottom of the
   terminal. This is on by default and can be configured using the
   `show-statusline` and `statusline-format` settings.
+* The `min-gdbserver-port` and `max-gdbserver-port` options have been removed
+  from `lldb-server`'s platform mode. Since the changes to `lldb-server`'s port
+  handling in LLDB 20, these options have had no effect.
 
 ### Changes to lldb-dap
 

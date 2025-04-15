@@ -35,6 +35,7 @@ using llvm::StringMap;
 
 //===----------------------------------------------------------------------===//
 // VariableElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents an instance of an op variable element. A variable
@@ -140,6 +141,7 @@ struct AttributeLikeVariable : public VariableElement {
 
 //===----------------------------------------------------------------------===//
 // DirectiveElement
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This class represents the `operands` directive. This directive represents
@@ -424,6 +426,7 @@ struct OperationFormat {
 
 //===----------------------------------------------------------------------===//
 // Parser Gen
+//===----------------------------------------------------------------------===//
 
 /// Returns true if we can format the given attribute as an enum in the
 /// parser format.
@@ -1951,6 +1954,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
 //===----------------------------------------------------------------------===//
 // PrinterGen
+//===----------------------------------------------------------------------===//
 
 /// The code snippet used to generate a printer call for a region of an
 // operation that has the SingleBlockImplicitTerminator trait.

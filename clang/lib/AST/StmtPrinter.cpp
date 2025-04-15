@@ -1258,6 +1258,7 @@ void StmtPrinter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   if (S->getAtomicKind() != OpenACCAtomicKind::None)
     OS << " " << S->getAtomicKind();
 
+  PrintOpenACCClauseList(S);
   OS << '\n';
   PrintStmt(S->getAssociatedStmt());
 }
@@ -1304,9 +1305,13 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
     Qualifier->print(OS, Policy);
   if (Node->hasTemplateKeyword())
     OS << "template ";
+
+  bool ForceAnonymous =
+      Policy.PrintAsCanonical && VD->getKind() == Decl::NonTypeTemplateParm;
   DeclarationNameInfo NameInfo = Node->getNameInfo();
   if (IdentifierInfo *ID = NameInfo.getName().getAsIdentifierInfo();
-      ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier) {
+      !ForceAnonymous &&
+      (ID || NameInfo.getName().getNameKind() != DeclarationName::Identifier)) {
     if (Policy.CleanUglifiedParameters &&
         isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD) && ID)
       OS << ID->deuglifiedName();
