@@ -7577,6 +7577,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Res.takeVector();
           };
           auto GetNumOperands = [](const TreeEntry *TE) {
+            if (TE->State == TreeEntry::SplitVectorize)
+              return TE->getNumOperands();
             if (auto *CI = dyn_cast<CallInst>(TE->getMainOp()); CI)
               return CI->arg_size();
             return TE->getNumOperands();
