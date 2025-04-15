@@ -94,7 +94,7 @@ class BranchFolderLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  explicit BranchFolderLegacy(bool EnableTailMerge)
+  explicit BranchFolderLegacy(bool EnableTailMerge = true)
       : MachineFunctionPass(ID), EnableTailMerge(EnableTailMerge) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -2088,6 +2088,6 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   return true;
 }
 
-MachineFunctionPass *llvm::createBranchFolderPass(bool EnableTailMerge) {
+MachineFunctionPass *llvm::createBranchFolderPass(bool EnableTailMerge = true) {
   return new BranchFolderLegacy(EnableTailMerge);
 }
