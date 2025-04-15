@@ -544,6 +544,9 @@ def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
     %V = arm_sve.dupq_lane %U[1] : vector<[8]xf16>
     // %V = [A B C D E F H A B C D E F H]
     ```
+
+    Note: The semantics of the operation match those of the `svdupq_lane` instrinsics.
+    [Source](https://developer.arm.com/architectures/instruction-sets/intrinsics/#q=svdupq_lane)
   }];
 
   let arguments = (ins SVEVector:$src,
