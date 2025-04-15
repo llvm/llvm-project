@@ -273,13 +273,4 @@ let Uses = [FRM], mayRaiseFPException = true in {
 }
 } // Predicates = [HasVendorXSfmm32a8f]
 
-let Predicates = [HasVendorXSfmm32a4i] in {
-  foreach a = I8Encodes in
-    foreach b = I8Encodes in
-      def SF_P2MM_#!toupper(a.Name)#_#!toupper(b.Name)
-          : RVInstMatmulI8<1, a.Encoding, b.Encoding,
-                           (outs), (ins TRM4:$rd, VR:$vs2, VR:$vs1),
-                           "sf.p2mm."#a.Name#"."#b.Name, "$rd, $vs2, $vs1">;
-} // Predicates = [HasVendorXSfmm32a4i]
-
 } // DecoderNamespace = "XSfmm"

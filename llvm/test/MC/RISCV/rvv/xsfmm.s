@@ -1,28 +1,28 @@
 # RUN: llvm-mc -triple=riscv32 -show-encoding --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -show-encoding --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: not llvm-mc -triple=riscv32 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: not llvm-mc -triple=riscv64 -show-encoding %s 2>&1 \
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | llvm-objdump -d  --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f --no-print-imm-hex - \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | llvm-objdump -d  --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f --no-print-imm-hex - \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f --no-print-imm-hex - \
 # RUN:        | FileCheck %s --check-prefix=CHECK-INST
 # RUN: llvm-mc -triple=riscv32 -filetype=obj --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 # RUN: llvm-mc -triple=riscv64 -filetype=obj --mattr=+xsfmmbase, \
-# RUN:     --mattr=+xsfmm32a,+xsfmm32a8f,+xsfmm32a4i,+xsfmm64a64f %s \
+# RUN:     --mattr=+xsfmm32a32f,+xsfmm32a8i,+xsfmm32a8f,+xsfmm64a64f %s \
 # RUN:        | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 # CHECK-INST: sf.vsettnt a0, a1, e8, w1
@@ -180,30 +180,6 @@ sf.mm.u.s mt8, v8, v9
 # CHECK-ERROR: instruction requires the following: 'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b){{$}}
 # CHECK-UNKNOWN: f6848cf7 <unknown>
 sf.mm.s.s mt12, v8, v9
-
-# CHECK-INST: sf.p2mm.u.u mt0, v8, v9
-# CHECK-ENCODING: [0x77,0x80,0x84,0xfa]
-# CHECK-ERROR: instruction requires the following: 'XSfmm32a4i' (TEW=32-bit accumulation, operands - int: 4b (packed)){{$}}
-# CHECK-UNKNOWN: fa848077 <unknown>
-sf.p2mm.u.u mt0, v8, v9
-
-# CHECK-INST: sf.p2mm.s.u mt4, v8, v9
-# CHECK-ENCODING: [0x77,0x84,0x84,0xfe]
-# CHECK-ERROR: instruction requires the following: 'XSfmm32a4i' (TEW=32-bit accumulation, operands - int: 4b (packed)){{$}}
-# CHECK-UNKNOWN: fe848477 <unknown>
-sf.p2mm.s.u mt4, v8, v9
-
-# CHECK-INST: sf.p2mm.u.s mt8, v8, v9
-# CHECK-ENCODING: [0xf7,0x88,0x84,0xfa]
-# CHECK-ERROR: instruction requires the following: 'XSfmm32a4i' (TEW=32-bit accumulation, operands - int: 4b (packed)){{$}}
-# CHECK-UNKNOWN: fa8488f7 <unknown>
-sf.p2mm.u.s mt8, v8, v9
-
-# CHECK-INST: sf.p2mm.s.s mt12, v8, v9
-# CHECK-ENCODING: [0xf7,0x8c,0x84,0xfe]
-# CHECK-ERROR: instruction requires the following: 'XSfmm32a4i' (TEW=32-bit accumulation, operands - int: 4b (packed)){{$}}
-# CHECK-UNKNOWN: fe848cf7 <unknown>
-sf.p2mm.s.s mt12, v8, v9
 
 # CHECK-INST: sf.vtzero.t mt15
 # CHECK-ENCODING: [0x57,0x6f,0xe0,0x43]

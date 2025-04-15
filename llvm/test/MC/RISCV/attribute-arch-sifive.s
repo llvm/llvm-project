@@ -9,12 +9,6 @@
 .attribute arch, "rv32i_xsfmm16t"
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_zvl64b1p0_xsfmm16t0p6_xsfmmbase0p6"
 
-.attribute arch, "rv32i_xsfmm32a"
-# CHECK: attribute      5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvl32b1p0_xsfmm32a0p6_xsfmm32a16f0p6_xsfmm32a32f0p6_xsfmm32a8i0p6_xsfmmbase0p6" 
-
-.attribute arch, "rv32i_xsfmm32a4i"
-# CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmm32a4i0p6_xsfmmbase0p6"
-
 .attribute arch, "rv32i_xsfmm32a8i"
 # CHECK: attribute      5, "rv32i2p1_zicsr2p0_zve32x1p0_zvl32b1p0_xsfmm32a8i0p6_xsfmmbase0p6"
 

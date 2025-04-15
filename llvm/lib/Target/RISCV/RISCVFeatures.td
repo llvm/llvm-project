@@ -1214,14 +1214,6 @@ def FeatureVendorXSfmm32a32f
                      "TEW=32-bit accumulation, operands - float: 32b",
                      [FeatureVendorXSfmmbase, FeatureStdExtZve32f]>;
 
-def FeatureVendorXSfmm32a4i
-    : RISCVExtension<0, 6,
-                     "TEW=32-bit accumulation, operands - int: 4b (packed)",
-                     [FeatureVendorXSfmmbase]>;
-def HasVendorXSfmm32a4i : Predicate<"Subtarget->hasVendorXSfmm32a4i()">,
-                          AssemblerPredicate<(all_of FeatureVendorXSfmm32a4i),
-                              "'XSfmm32a4i' (TEW=32-bit accumulation, operands - int: 4b (packed))">;
-
 def FeatureVendorXSfmm32a8i
     : RISCVExtension<0, 6,
                      "TEW=32-bit accumulation, operands - int: 8b",
@@ -1229,11 +1221,6 @@ def FeatureVendorXSfmm32a8i
 def HasVendorXSfmm32a8i : Predicate<"Subtarget->hasVendorXSfmm32a8i()">,
                           AssemblerPredicate<(all_of FeatureVendorXSfmm32a8i),
                               "'XSfmm32a8i' (TEW=32-bit accumulation, operands - int: 8b)">;
-
-def FeatureVendorXSfmm32a
-    : RISCVExtension<0, 6,
-                     "TEW=32-bit accumulation, operands - int: 8b; float: fp16, bf16, fp32",
-                     [FeatureVendorXSfmm32a8i, FeatureVendorXSfmm32a16f, FeatureVendorXSfmm32a32f]>;
 
 def FeatureVendorXSfmm64a64f
     : RISCVExtension<0, 6,
