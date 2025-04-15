@@ -9,7 +9,7 @@
 # RUN: link_fdata %s %t %t.pa3 PREAGG3
 # RUN: link_fdata %s %t %t.pat PREAGGT1
 # RUN: link_fdata %s %t %t.pat2 PREAGGT2
-# RUN: link_fdata %s %t %t.patplt PREAGGPLT --nmtool llvm-nm
+# RUN: link_fdata %s %t %t.patplt PREAGGPLT --synthetic
 
 ## Check normal case: fallthrough is not LP or secondary entry.
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip

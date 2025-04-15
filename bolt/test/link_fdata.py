@@ -21,6 +21,7 @@ parser.add_argument("prefix", nargs="?", default="FDATA", help="Custom FDATA pre
 parser.add_argument("--nmtool", default="nm", help="Path to nm tool")
 parser.add_argument("--no-lbr", action="store_true")
 parser.add_argument("--no-redefine", action="store_true")
+parser.add_argument("--synthetic", action="store_true")
 
 args = parser.parse_args()
 
@@ -85,17 +86,10 @@ with open(args.input, "r") as f:
             exit("ERROR: unexpected input:\n%s" % line)
 
 # Read nm output: <symbol value> <symbol type> <symbol name>
-is_llvm_nm = os.path.basename(args.nmtool) == "llvm-nm"
-nm_output = subprocess.run(
-    [
-        args.nmtool,
-        "--defined-only",
-        "--special-syms" if is_llvm_nm else "--synthetic",
-        args.objfile,
-    ],
-    text=True,
-    capture_output=True,
-).stdout
+nm_args = [args.nmtool, "--defined-only", args.objfile]
+if args.synthetic:
+    nm_args += ["--synthetic"]
+nm_output = subprocess.run(nm_args, text=True, capture_output=True).stdout
 # Populate symbol map
 symbols = {}
 for symline in nm_output.splitlines():
