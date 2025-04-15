@@ -12,12 +12,11 @@
 
 using namespace llvm;
 
-namespace {
-void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
-               GOFF::ESDAlignment Alignment,
-               GOFF::ESDLoadingBehavior LoadBehavior,
-               GOFF::ESDExecutable Executable, bool IsReadOnly,
-               uint32_t SortKey, StringRef PartName) {
+static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
+                      GOFF::ESDAlignment Alignment,
+                      GOFF::ESDLoadingBehavior LoadBehavior,
+                      GOFF::ESDExecutable Executable, bool IsReadOnly,
+                      uint32_t SortKey, StringRef PartName) {
   OS << Name << " CATTR ";
   OS << "ALIGN(" << static_cast<unsigned>(Alignment) << ")";
   switch (LoadBehavior) {
@@ -67,9 +66,10 @@ void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
   OS << '\n';
 }
 
-void emitXATTR(raw_ostream &OS, StringRef Name, GOFF::ESDLinkageType Linkage,
-               GOFF::ESDExecutable Executable,
-               GOFF::ESDBindingScope BindingScope) {
+static void emitXATTR(raw_ostream &OS, StringRef Name,
+                      GOFF::ESDLinkageType Linkage,
+                      GOFF::ESDExecutable Executable,
+                      GOFF::ESDBindingScope BindingScope) {
   OS << Name << " XATTR ";
   OS << "LINKAGE(" << (Linkage == GOFF::ESD_LT_OS ? "OS" : "XPLINK") << "),";
   if (Executable != GOFF::ESD_EXE_Unspecified)
@@ -97,7 +97,6 @@ void emitXATTR(raw_ostream &OS, StringRef Name, GOFF::ESDLinkageType Linkage,
   }
   OS << '\n';
 }
-} // namespace
 
 void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                          raw_ostream &OS,

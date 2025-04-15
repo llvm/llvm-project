@@ -27,16 +27,14 @@ GOFFObjectWriter &MCGOFFStreamer::getWriter() {
   return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
 }
 
-namespace {
 // Make sure that all section are registered in the correct order.
-void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
+static void registerSectionHierarchy(MCAssembler &Asm, MCSectionGOFF *Section) {
   if (Section->isRegistered())
     return;
   if (Section->getParent())
     registerSectionHierarchy(Asm, Section->getParent());
   Asm.registerSection(*Section);
 }
-} // namespace
 
 void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   registerSectionHierarchy(getAssembler(),

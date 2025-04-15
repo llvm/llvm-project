@@ -357,6 +357,10 @@ private:
   MCSymbolXCOFF *createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
                                        bool IsTemporary);
 
+  template <typename TAttr>
+  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
+                                TAttr SDAttributes, MCSection *Parent);
+
   /// Map of currently defined macros.
   StringMap<MCAsmMacro> MacroMap;
 
@@ -607,12 +611,6 @@ public:
   getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                            unsigned EntrySize);
 
-private:
-  template <typename TAttr>
-  MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
-                                TAttr SDAttributes, MCSection *Parent);
-
-public:
   MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
                                 GOFF::SDAttr SDAttributes);
   MCSectionGOFF *getGOFFSection(SectionKind Kind, StringRef Name,
