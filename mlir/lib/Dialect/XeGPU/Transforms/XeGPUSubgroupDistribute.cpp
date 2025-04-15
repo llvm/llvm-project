@@ -678,7 +678,7 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
   }
 }
 
-void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
+static void attachLayoutAttributeToUsers(Value v, xegpu::LayoutAttr layout) {
   for (OpOperand &user : v.getUses()) {
     Operation *owner = user.getOwner();
     unsigned operandNumber = user.getOperandNumber();
