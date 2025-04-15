@@ -2090,41 +2090,6 @@ static void addNoRecurseAttrs(const SCCNodeSet &SCCNodes,
   Changed.insert(F);
 }
 
-static bool instructionDoesNotReturn(Instruction &I) {
-  if (auto *CB = dyn_cast<CallBase>(&I))
-    return CB->hasFnAttr(Attribute::NoReturn);
-  return false;
-}
-
-// A basic block can only return if it terminates with a ReturnInst and does not
-// contain calls to noreturn functions.
-static bool basicBlockCanReturn(BasicBlock &BB) {
-  if (!isa<ReturnInst>(BB.getTerminator()))
-    return false;
-  return none_of(BB, instructionDoesNotReturn);
-}
-
-// FIXME: this doesn't handle recursion.
-static bool canReturn(Function &F) {
-  SmallVector<BasicBlock *, 16> Worklist;
-  SmallPtrSet<BasicBlock *, 16> Visited;
-
-  Visited.insert(&F.front());
-  Worklist.push_back(&F.front());
-
-  do {
-    BasicBlock *BB = Worklist.pop_back_val();
-    if (basicBlockCanReturn(*BB))
-      return true;
-    for (BasicBlock *Succ : successors(BB))
-      if (Visited.insert(Succ).second)
-        Worklist.push_back(Succ);
-  } while (!Worklist.empty());
-
-  return false;
-}
-
-
 // Set the noreturn function attribute if possible.
 static void addNoReturnAttrs(const SCCNodeSet &SCCNodes,
                              SmallSet<Function *, 8> &Changed) {

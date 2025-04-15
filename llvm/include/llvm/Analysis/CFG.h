@@ -174,6 +174,7 @@ bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
 
   return false;
 }
+bool canReturn(const Function &F);
 } // End llvm namespace
 
 #endif
