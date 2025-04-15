@@ -750,7 +750,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
   const RISCVRegisterInfo *RI = STI.getRegisterInfo();
-  const RISCVInstrInfo *TII = STI.getInstrInfo();
   MachineBasicBlock::iterator MBBI = MBB.begin();
 
   Register BPReg = RISCVABI::getBPReg();
@@ -931,11 +930,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
     if (!hasFP(MF)) {
       // Emit .cfi_def_cfa_expression "sp + StackSize + RVVStackSize * vlenb".
-      unsigned CFIIndex = MF.addFrameInst(createDefCFAExpression(
+      CFIHelper.emitCFIInst(createDefCFAExpression(
           *RI, SPReg, getStackSizeWithRVVPadding(MF), RVVStackSize / 8));
-      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
     }
 
     std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
@@ -1909,9 +1905,7 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
-  const TargetInstrInfo &TII = *STI.getInstrInfo();
   const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
-  DebugLoc DL = MBB.findDebugLoc(MI);
 
   const auto &RVVCSI = getRVVCalleeSavedInfo(*MF, MFI.getCalleeSavedInfo());
   if (RVVCSI.empty())
@@ -1925,17 +1919,15 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
     FixedSize -= ScalarLocalVarSize;
   }
 
+  CFIInstEmitterHelper CFIHelper(MBB, MI, MachineInstr::FrameSetup);
   for (auto &CS : RVVCSI) {
     // Insert the spill to the stack frame.
     int FI = CS.getFrameIdx();
     MCRegister BaseReg = getRVVBaseRegister(TRI, CS.getReg());
     unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i) {
-      unsigned CFIIndex = MF->addFrameInst(createDefCFAOffset(
+      CFIHelper.emitCFIInst(createDefCFAOffset(
           TRI, BaseReg + i, -FixedSize, MFI.getObjectOffset(FI) / 8 + i));
-      BuildMI(MBB, MI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlag(MachineInstr::FrameSetup);
     }
   }
 }

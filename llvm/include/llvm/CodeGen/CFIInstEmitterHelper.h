@@ -35,12 +35,6 @@ class CFIInstEmitterHelper {
   const MCInstrDesc &CFIID;
   const MIMetadata MIMD; // Default-initialized, no debug location desired.
 
-  void emitCFIInstr(const MCCFIInstruction &CFIInst) const {
-    BuildMI(MBB, InsertPt, MIMD, CFIID)
-        .addCFIIndex(MF.addFrameInst(CFIInst))
-        .setMIFlag(MIFlag);
-  }
-
 public:
   CFIInstEmitterHelper(MachineBasicBlock &MBB,
                        MachineBasicBlock::iterator InsertPt,
@@ -54,32 +48,38 @@ public:
 
   void setInsertPoint(MachineBasicBlock::iterator IP) { InsertPt = IP; }
 
+  void emitCFIInst(const MCCFIInstruction &CFIInst) const {
+    BuildMI(MBB, InsertPt, MIMD, CFIID)
+        .addCFIIndex(MF.addFrameInst(CFIInst))
+        .setMIFlag(MIFlag);
+  }
+
   void emitDefCFA(MCRegister Reg, int64_t Offset) const {
-    emitCFIInstr(MCCFIInstruction::cfiDefCfa(
+    emitCFIInst(MCCFIInstruction::cfiDefCfa(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
   void emitDefCFARegister(MCRegister Reg) const {
-    emitCFIInstr(MCCFIInstruction::createDefCfaRegister(
+    emitCFIInst(MCCFIInstruction::createDefCfaRegister(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
   void emitDefCFAOffset(int64_t Offset) const {
-    emitCFIInstr(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
+    emitCFIInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
   }
 
   void emitOffset(MCRegister Reg, int64_t Offset) const {
-    emitCFIInstr(MCCFIInstruction::createOffset(
+    emitCFIInst(MCCFIInstruction::createOffset(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
   void emitRestore(MCRegister Reg) const {
-    emitCFIInstr(MCCFIInstruction::createRestore(
-        nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
+    emitCFIInst(MCCFIInstruction::createRestore(nullptr,
+                                                TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
   void emitEscape(StringRef Bytes) const {
-    emitCFIInstr(MCCFIInstruction::createEscape(nullptr, Bytes));
+    emitCFIInst(MCCFIInstruction::createEscape(nullptr, Bytes));
   }
 };
 
