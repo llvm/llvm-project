@@ -1,0 +1,17 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=machine-scheduler -verify-machineinstrs %s -o - | FileCheck -check-prefix=GFX900 %s
+
+---
+name:            test_undef_reorder
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body:             |
+  bb.0:
+    liveins: $vgpr2
+    $vgpr5 = COPY $vgpr2
+    $vgpr4 = COPY $vgpr2
+    undef %18.sub1:vreg_64 = COPY killed $vgpr4
+    %18.sub0:vreg_64 = COPY killed $vgpr5
+    %19: vreg_64 = COPY %18
+    S_ENDPGM 0
+...
