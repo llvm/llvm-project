@@ -334,18 +334,6 @@ CString libc_make_test_file_path_func(const char *file_name);
     return "[ParamType = " #TYPE "]";                                          \
   }
 
-#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(x) _Pragma(#x)
-
-#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                  \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(GCC diagnostic push)
-
-#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BODY                                   \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(GCC diagnostic ignored                       \
-                                  "-Wglobal-constructors")
-
-#define LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_END                                    \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA(GCC diagnostic pop)
-
 #define TYPED_TEST(SuiteName, TestName, TypeList)                              \
   static_assert(                                                               \
       LIBC_NAMESPACE::testing::internal::valid_prefix(#SuiteName),             \
@@ -363,11 +351,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
   };                                                                           \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                        \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BODY                                         \
   TypeList::Tests<SuiteName##_##TestName>::type                                \
       SuiteName##_##TestName##_Instance;                                       \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_END                                          \
   template <typename T> void SuiteName##_##TestName<T>::Run()
 
 #define TYPED_TEST_F(SuiteClass, TestName, TypeList)                           \
@@ -386,11 +371,8 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return name; }                      \
   };                                                                           \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                        \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BODY                                         \
   TypeList::Tests<SuiteClass##_##TestName>::type                               \
       SuiteClass##_##TestName##_Instance;                                      \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_END                                          \
   template <typename T> void SuiteClass##_##TestName<T>::Run()
 
 #define TEST(SuiteName, TestName)                                              \
@@ -402,10 +384,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteName "." #TestName; }  \
   };                                                                           \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                        \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BODY                                         \
   SuiteName##_##TestName SuiteName##_##TestName##_Instance;                    \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_END                                          \
   void SuiteName##_##TestName::Run()
 
 #define TEST_F(SuiteClass, TestName)                                           \
@@ -418,10 +397,7 @@ CString libc_make_test_file_path_func(const char *file_name);
     void Run() override;                                                       \
     const char *getName() const override { return #SuiteClass "." #TestName; } \
   };                                                                           \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BEGIN                                        \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_BODY                                         \
   SuiteClass##_##TestName SuiteClass##_##TestName##_Instance;                  \
-  LIBC_TEST_GLOBAL_CTOR_DO_PRAGMA_END                                          \
   void SuiteClass##_##TestName::Run()
 
 // Helper to trick the compiler into ignoring lack of braces on the else

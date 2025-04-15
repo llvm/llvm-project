@@ -31,10 +31,7 @@ public:
 int GLOBAL_INDEX = 512;
 int INITVAL_INITIALIZER = 0x600D;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wglobal-constructors"
 A global(GLOBAL_INDEX, INITVAL_INITIALIZER);
-#pragma GCC diagnostic pop
 
 int initval = 0;
 int preinitval = 0;
