@@ -355,17 +355,17 @@ std::string llvm::getUniqueModuleId(Module *M) {
     Md5.update(ArrayRef<uint8_t>{0});
   };
 
-  for (auto &F : *M)
-    AddGlobal(F);
-  for (auto &GV : M->globals())
-    AddGlobal(GV);
-  for (auto &GA : M->aliases())
-    AddGlobal(GA);
-  for (auto &IF : M->ifuncs())
-    AddGlobal(IF);
+  auto *UniqueSourceFileNames = mdconst::extract_or_null<ConstantInt>(
+          M->getModuleFlag("Unique Source File Names"));
+  if (UniqueSourceFileNames && UniqueSourceFileNames->getZExtValue()) {
+    Md5.update(M->getSourceFileName());
+  } else {
+    for (auto &GV : M->global_values())
+      AddGlobal(GV);
 
-  if (!ExportsSymbols)
-    return "";
+    if (!ExportsSymbols)
+      return "";
+  }
 
   MD5::MD5Result R;
   Md5.final(R);
