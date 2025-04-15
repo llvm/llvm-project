@@ -838,7 +838,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       });
 
   PB.registerPeepholeEPCallback(
-      [this](FunctionPassManager &FPM, OptimizationLevel Level) {
+      [](FunctionPassManager &FPM, OptimizationLevel Level) {
         if (Level == OptimizationLevel::O0)
           return;
 
