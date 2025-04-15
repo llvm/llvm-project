@@ -307,3 +307,17 @@ void test4() {
 }
 
 }; // namespace structured_binding_tests
+
+namespace GH62588 {
+class Outer {
+public:
+  char *foo();          // expected-note {{previous declaration is here}} \
+                        // expected-note {{previous definition is here}}
+  enum Outer_E { foo }; // expected-error {{redefinition of 'foo'}} \
+                        // expected-warning {{declaration shadows a static data member of 'GH62588::Outer'}}
+  class Inner {
+  public:
+    enum Inner_E { foo }; // ok
+  };
+};
+} // namespace GH62588

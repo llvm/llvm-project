@@ -22,16 +22,18 @@ FileHeader:
   Type:            ET_REL
   Machine:         EM_X86_64
 
-# CHECK:      Notes [
+# CHECK:      NoteSections [
 # CHECK-NEXT:   NoteSection {
 # CHECK-NEXT:     Name: .note.gnu.build-id
 # CHECK-NEXT:     Offset:
 # CHECK-NEXT:     Size:
-# CHECK-NEXT:     Note {
+# CHECK-NEXT:     Notes [
+# CHECK-NEXT:     {
 # CHECK-NEXT:       Owner: GNU
 # CHECK-NEXT:       Data size: 0x10
 # CHECK-NEXT:       Type: NT_GNU_BUILD_ID
 # CHECK-NEXT:       Build ID: 000102030405060708090a0b0c0d0e0f
 # CHECK-NEXT:     }
+# CHECK-NEXT:   ]
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]

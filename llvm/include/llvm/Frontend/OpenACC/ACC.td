@@ -229,6 +229,9 @@ def ACCC_Self : Clause<"self"> {
 // 2.9.5
 def ACCC_Seq : Clause<"seq"> {}
 
+// Non-standard extension
+def ACCC_ShortLoop : Clause<"shortloop"> {}
+
 // 2.9.4
 def ACCC_Vector : Clause<"vector"> {
   let flangClass = "ScalarIntExpr";
@@ -407,6 +410,7 @@ def ACC_Loop : Directive<"loop"> {
     VersionedClause<ACCC_Reduction>,
     VersionedClause<ACCC_Collapse>,
     VersionedClause<ACCC_Gang>,
+    VersionedClause<ACCC_ShortLoop>,
     VersionedClause<ACCC_Tile>,
     VersionedClause<ACCC_Vector>,
     VersionedClause<ACCC_Worker>
@@ -428,11 +432,9 @@ def ACC_Cache : Directive<"cache"> {
 
 // 2.14.1
 def ACC_Init : Directive<"init"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_DeviceNum>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_If>
-  ];
+  let allowedOnceClauses = [VersionedClause<ACCC_DeviceNum>,
+                            VersionedClause<ACCC_If>];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>];
   let association = AS_None;
   let category = CA_Executable;
 }
@@ -476,26 +478,20 @@ def ACC_Set : Directive<"set"> {
 
 // 2.14.2
 def ACC_Shutdown : Directive<"shutdown"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_DeviceNum>,
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_If>
-  ];
+  let allowedOnceClauses = [VersionedClause<ACCC_DeviceNum>,
+                            VersionedClause<ACCC_If>];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>];
   let association = AS_None;
   let category = CA_Executable;
 }
 
 // 2.14.4
 def ACC_Update : Directive<"update"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_DeviceType>,
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_DeviceType>,
+                        VersionedClause<ACCC_IfPresent>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Async>,
+                            VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_Device>,
     VersionedClause<ACCC_Host>,
@@ -535,14 +531,10 @@ def ACC_EnterData : Directive<"enter data"> {
 
 // 2.14.7
 def ACC_ExitData : Directive<"exit data"> {
-  let allowedClauses = [
-    VersionedClause<ACCC_Wait>
-  ];
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_Async>,
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_Finalize>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_Finalize>,
+                        VersionedClause<ACCC_Wait>];
+  let allowedOnceClauses = [VersionedClause<ACCC_Async>,
+                            VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_Copyout>,
     VersionedClause<ACCC_Delete>,
@@ -554,10 +546,8 @@ def ACC_ExitData : Directive<"exit data"> {
 
 // 2.8
 def ACC_HostData : Directive<"host_data"> {
-  let allowedOnceClauses = [
-    VersionedClause<ACCC_If>,
-    VersionedClause<ACCC_IfPresent>
-  ];
+  let allowedClauses = [VersionedClause<ACCC_IfPresent>];
+  let allowedOnceClauses = [VersionedClause<ACCC_If>];
   let requiredClauses = [
     VersionedClause<ACCC_UseDevice>
   ];
@@ -583,6 +573,7 @@ def ACC_KernelsLoop : Directive<"kernels loop"> {
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
     VersionedClause<ACCC_Reduction>,
+    VersionedClause<ACCC_ShortLoop>,
     VersionedClause<ACCC_Tile>,
     VersionedClause<ACCC_Vector>,
     VersionedClause<ACCC_VectorLength>,
@@ -623,6 +614,7 @@ def ACC_ParallelLoop : Directive<"parallel loop"> {
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
     VersionedClause<ACCC_Reduction>,
+    VersionedClause<ACCC_ShortLoop>,
     VersionedClause<ACCC_Tile>,
     VersionedClause<ACCC_Vector>,
     VersionedClause<ACCC_VectorLength>,
@@ -661,6 +653,7 @@ def ACC_SerialLoop : Directive<"serial loop"> {
     VersionedClause<ACCC_Present>,
     VersionedClause<ACCC_Private>,
     VersionedClause<ACCC_Reduction>,
+    VersionedClause<ACCC_ShortLoop>,
     VersionedClause<ACCC_Tile>,
     VersionedClause<ACCC_Vector>,
     VersionedClause<ACCC_Wait>,

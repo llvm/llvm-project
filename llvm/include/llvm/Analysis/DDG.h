@@ -453,7 +453,7 @@ bool DependenceGraphInfo<NodeType>::getDependencies(
   for (auto *SrcI : SrcIList)
     for (auto *DstI : DstIList)
       if (auto Dep =
-              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI, true))
+              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI))
         Deps.push_back(std::move(Dep));
 
   return !Deps.empty();
@@ -467,16 +467,16 @@ DependenceGraphInfo<NodeType>::getDependenceString(const NodeType &Src,
   raw_string_ostream OS(Str);
   DependenceList Deps;
   if (!getDependencies(Src, Dst, Deps))
-    return OS.str();
+    return Str;
   interleaveComma(Deps, OS, [&](const std::unique_ptr<Dependence> &D) {
     D->dump(OS);
     // Remove the extra new-line character printed by the dump
     // method
-    if (OS.str().back() == '\n')
-      OS.str().pop_back();
+    if (Str.back() == '\n')
+      Str.pop_back();
   });
 
-  return OS.str();
+  return Str;
 }
 
 //===--------------------------------------------------------------------===//

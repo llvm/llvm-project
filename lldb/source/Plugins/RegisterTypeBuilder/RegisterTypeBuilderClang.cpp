@@ -71,8 +71,13 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
       if (const FieldEnum *enum_type = field.GetEnum()) {
         const FieldEnum::Enumerators &enumerators = enum_type->GetEnumerators();
         if (!enumerators.empty()) {
-          std::string enum_type_name =
-              "__lldb_register_fields_enum_" + enum_type->GetID();
+          // Enums can be used by many registers and the size of each register
+          // may be different. The register size is used as the underlying size
+          // of the enumerators, so we must make one enum type per register size
+          // it is used with.
+          std::string enum_type_name = "__lldb_register_fields_enum_" +
+                                       enum_type->GetID() + "_" +
+                                       std::to_string(byte_size);
 
           // Enums can be used by mutiple fields and multiple registers, so we
           // may have built this one already.
@@ -111,7 +116,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
     type_system->SetIsPacked(fields_type);
 
     // This should be true if RegisterFlags padded correctly.
-    assert(*fields_type.GetByteSize(nullptr) == flags.GetSize());
+    assert(llvm::expectedToOptional(fields_type.GetByteSize(nullptr))
+               .value_or(0) == flags.GetSize());
   }
 
   return fields_type;

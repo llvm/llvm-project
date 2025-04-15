@@ -66,6 +66,9 @@ public:
                                 MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MI) const override;
 
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
+
 private:
   void emitEntryFunctionFlatScratchInit(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
@@ -82,9 +85,11 @@ private:
       Register ScratchWaveOffsetReg) const;
 
 public:
-  bool hasFP(const MachineFunction &MF) const override;
-
   bool requiresStackPointerReference(const MachineFunction &MF) const;
+
+  // Returns true if the function may need to reserve space on the stack for the
+  // CWSR trap handler.
+  bool mayReserveScratchForCWSR(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

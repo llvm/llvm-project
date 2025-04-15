@@ -13,6 +13,7 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/different_from.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__fwd/array.h>
 #include <__fwd/pair.h>
 #include <__fwd/tuple.h>
@@ -22,7 +23,7 @@
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/conditional.h>
-#include <__type_traits/decay.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_assignable.h>
 #include <__type_traits/is_constructible.h>
@@ -30,17 +31,14 @@
 #include <__type_traits/is_implicitly_default_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/nat.h>
-#include <__type_traits/remove_cvref.h>
 #include <__type_traits/unwrap_ref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/piecewise_construct.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,7 +57,7 @@ struct __non_trivially_copyable_base {
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS pair
+struct pair
 #if defined(_LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR)
     : private __non_trivially_copyable_base<_T1, _T2>
 #endif
@@ -70,7 +68,7 @@ struct _LIBCPP_TEMPLATE_VIS pair
   _T1 first;
   _T2 second;
 
-  using __trivially_relocatable =
+  using __trivially_relocatable _LIBCPP_NODEBUG =
       __conditional_t<__libcpp_is_trivially_relocatable<_T1>::value && __libcpp_is_trivially_relocatable<_T2>::value,
                       pair,
                       void>;
@@ -128,15 +126,18 @@ struct _LIBCPP_TEMPLATE_VIS pair
     }
   };
 
-  template <bool _Dummy = true, __enable_if_t<_Dummy && _CheckArgs::__enable_default(), int> = 0>
-  explicit(!_CheckArgs::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(
+  template <bool _MaybeEnable>
+  using _CheckArgsDep _LIBCPP_NODEBUG = __conditional_t<_MaybeEnable, _CheckArgs, void>;
+
+  template <bool _Dummy = true, __enable_if_t<_CheckArgsDep<_Dummy>::__enable_default(), int> = 0>
+  explicit(!_CheckArgsDep<_Dummy>::__enable_implicit_default()) _LIBCPP_HIDE_FROM_ABI constexpr pair() noexcept(
       is_nothrow_default_constructible<first_type>::value && is_nothrow_default_constructible<second_type>::value)
       : first(), second() {}
 
-  template <bool _Dummy                                                                                          = true,
-            __enable_if_t<_Dummy && _CheckArgs::template __is_pair_constructible<_T1 const&, _T2 const&>(), int> = 0>
+  template <bool _Dummy = true,
+            __enable_if_t<_CheckArgsDep<_Dummy>::template __is_pair_constructible<_T1 const&, _T2 const&>(), int> = 0>
   _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgs::template __is_implicit<_T1 const&, _T2 const&>())
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(!_CheckArgsDep<_Dummy>::template __is_implicit<_T1 const&, _T2 const&>())
       pair(_T1 const& __t1, _T2 const& __t2) noexcept(is_nothrow_copy_constructible<first_type>::value &&
                                                       is_nothrow_copy_constructible<second_type>::value)
       : first(__t1), second(__t2) {}
@@ -502,13 +503,14 @@ template <class _T1, class _T2, class _U1, class _U2, template <class> class _TQ
     typename pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
   }
 struct basic_common_reference<pair<_T1, _T2>, pair<_U1, _U2>, _TQual, _UQual> {
-  using type = pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
+  using type _LIBCPP_NODEBUG =
+      pair<common_reference_t<_TQual<_T1>, _UQual<_U1>>, common_reference_t<_TQual<_T2>, _UQual<_U2>>>;
 };
 
 template <class _T1, class _T2, class _U1, class _U2>
   requires requires { typename pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>; }
 struct common_type<pair<_T1, _T2>, pair<_U1, _U2>> {
-  using type = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
+  using type _LIBCPP_NODEBUG = pair<common_type_t<_T1, _U1>, common_type_t<_T2, _U2>>;
 };
 #endif // _LIBCPP_STD_VER >= 23
 
@@ -528,28 +530,26 @@ swap(const pair<_T1, _T2>& __x, const pair<_T1, _T2>& __y) noexcept(noexcept(__x
 #endif
 
 template <class _T1, class _T2>
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<__unwrap_ref_decay_t<_T1>, __unwrap_ref_decay_t<_T2> >
 make_pair(_T1&& __t1, _T2&& __t2) {
-  return pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>(
-      std::forward<_T1>(__t1), std::forward<_T2>(__t2));
+  return pair<__unwrap_ref_decay_t<_T1>, __unwrap_ref_decay_t<_T2> >(std::forward<_T1>(__t1), std::forward<_T2>(__t2));
 }
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_size<pair<_T1, _T2> > : public integral_constant<size_t, 2> {};
+struct tuple_size<pair<_T1, _T2> > : public integral_constant<size_t, 2> {};
 
 template <size_t _Ip, class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<_Ip, pair<_T1, _T2> > {
+struct tuple_element<_Ip, pair<_T1, _T2> > {
   static_assert(_Ip < 2, "Index out of bounds in std::tuple_element<std::pair<T1, T2>>");
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<0, pair<_T1, _T2> > {
+struct tuple_element<0, pair<_T1, _T2> > {
   using type _LIBCPP_NODEBUG = _T1;
 };
 
 template <class _T1, class _T2>
-struct _LIBCPP_TEMPLATE_VIS tuple_element<1, pair<_T1, _T2> > {
+struct tuple_element<1, pair<_T1, _T2> > {
   using type _LIBCPP_NODEBUG = _T2;
 };
 

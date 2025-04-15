@@ -17,5 +17,6 @@ static_library("portability") {
     "RestrictSystemIncludesCheck.cpp",
     "SIMDIntrinsicsCheck.cpp",
     "StdAllocatorConstCheck.cpp",
+    "TemplateVirtualMemberFunctionCheck.cpp",
   ]
 }

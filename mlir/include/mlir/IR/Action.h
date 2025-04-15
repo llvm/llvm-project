@@ -16,7 +16,6 @@
 #define MLIR_IR_ACTION_H
 
 #include "mlir/IR/Unit.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Sequence.h"

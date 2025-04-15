@@ -176,7 +176,7 @@ TEST_F(SerializationTest, SignlessVsSignedIntegerConstantBitExtension) {
       IntegerType::get(&context, 16, IntegerType::Signless);
   auto signedInt16Type = IntegerType::get(&context, 16, IntegerType::Signed);
   // Check the bit extension of same value under different signedness semantics.
-  APInt signlessIntConstVal(signlessInt16Type.getWidth(), -1,
+  APInt signlessIntConstVal(signlessInt16Type.getWidth(), 0xffff,
                             signlessInt16Type.getSignedness());
   APInt signedIntConstVal(signedInt16Type.getWidth(), -1,
                           signedInt16Type.getSignedness());

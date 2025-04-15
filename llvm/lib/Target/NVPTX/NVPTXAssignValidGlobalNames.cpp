@@ -17,13 +17,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTX.h"
-#include "llvm/ADT/StringExtras.h"
+#include "NVPTXUtilities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
-#include <string>
 
 using namespace llvm;
 
@@ -35,17 +33,10 @@ public:
   NVPTXAssignValidGlobalNames() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
-
-  /// Clean up the name to remove symbols invalid in PTX.
-  std::string cleanUpName(StringRef Name);
 };
-}
+} // namespace
 
 char NVPTXAssignValidGlobalNames::ID = 0;
-
-namespace llvm {
-void initializeNVPTXAssignValidGlobalNamesPass(PassRegistry &);
-}
 
 INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
                 "Assign valid PTX names to globals", false, false)
@@ -58,32 +49,16 @@ bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
       // Note: this does not create collisions - if setName is asked to set the
       // name to something that already exists, it adds a proper postfix to
       // avoid collisions.
-      GV.setName(cleanUpName(GV.getName()));
+      GV.setName(NVPTX::getValidPTXIdentifier(GV.getName()));
     }
   }
 
   // Do the same for local functions.
   for (Function &F : M.functions())
     if (F.hasLocalLinkage())
-      F.setName(cleanUpName(F.getName()));
+      F.setName(NVPTX::getValidPTXIdentifier(F.getName()));
 
   return true;
-}
-
-std::string NVPTXAssignValidGlobalNames::cleanUpName(StringRef Name) {
-  std::string ValidName;
-  raw_string_ostream ValidNameStream(ValidName);
-  for (char C : Name) {
-    // While PTX also allows '%' at the start of identifiers, LLVM will throw a
-    // fatal error for '%' in symbol names in MCSymbol::print. Exclude for now.
-    if (isAlnum(C) || C == '_' || C == '$') {
-      ValidNameStream << C;
-    } else {
-      ValidNameStream << "_$_";
-    }
-  }
-
-  return ValidNameStream.str();
 }
 
 ModulePass *llvm::createNVPTXAssignValidGlobalNamesPass() {

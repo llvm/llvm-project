@@ -25,14 +25,14 @@ constexpr int FT(T N) {
 class NonLiteral { // expected-note {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors}}
 public:
   NonLiteral() {}
-  ~NonLiteral() {}
+  ~NonLiteral() {} // expected-note {{declared here}}
 };
 
 constexpr NonLiteral F1() {
   return NonLiteral{};
 }
 
-constexpr int F2(NonLiteral N) {
+constexpr int F2(NonLiteral N) { // expected-note {{non-constexpr function '~NonLiteral' cannot be used in a constant expression}}
   return 8;
 }
 
@@ -46,7 +46,7 @@ class Derived1 : public NonLiteral {
 
 
 struct X {
-  X();
+  X(); // expected-note 2{{declared here}}
   X(const X&);
   X(X&&);
   X& operator=(X&);
@@ -80,7 +80,7 @@ struct WrapperNonT {
 };
 
 struct NonDefaultMembers {
-  constexpr NonDefaultMembers() {}; // expected-note {{non-literal type 'X' cannot be used in a constant expression}}
+  constexpr NonDefaultMembers() {}; // expected-note 2{{non-constexpr constructor 'X' cannot be used in a constant expression}}
   constexpr NonDefaultMembers(NonDefaultMembers const&) {};
   constexpr NonDefaultMembers(NonDefaultMembers &&) {};
   constexpr NonDefaultMembers& operator=(NonDefaultMembers &other) {this->t = other.t; return *this;}
@@ -109,7 +109,6 @@ void test() {
   F1();
   NonLiteral L;
   constexpr auto D = F2(L); // expected-error {{constexpr variable 'D' must be initialized by a constant expression}}
-                            // expected-note@-1 {{non-literal type 'NonLiteral' cannot be used in a constant expression}}
 
   constexpr auto E = FT(1); // expected-error {{constexpr variable 'E' must be initialized by a constant expression}}
                             // expected-note@-1 {{in call}}
@@ -125,8 +124,8 @@ void test() {
 
   static_assert((NonDefaultMembers(), true),""); // expected-error{{expression is not an integral constant expression}} \
                                                  // expected-note {{in call to}}
-  constexpr bool FFF = (NonDefaultMembers() == NonDefaultMembers()); // expected-error{{must be initialized by a constant expression}} \
-                                                                     // expected-note{{non-literal}}
+  constexpr bool FFF = (NonDefaultMembers() == NonDefaultMembers()); // expected-error {{must be initialized by a constant expression}} \
+								     // expected-note {{in call to 'NonDefaultMembers()'}}
 }
 
 struct A {

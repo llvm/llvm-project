@@ -7,8 +7,8 @@
 
 # CHECK:      DynamicSection [
 # CHECK-NEXT: Tag                Type          Name/Value
-# CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: aaa
-# CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: bbb
+# CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: [aaa]
+# CHECK-NEXT: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: [bbb]
 
 # RUN: not ld.lld %t.o -f aaa --auxiliary bbb -o /dev/null 2>&1 \
 # RUN:    | FileCheck -check-prefix=ERR %s

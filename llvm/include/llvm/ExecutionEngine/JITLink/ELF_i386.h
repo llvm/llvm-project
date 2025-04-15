@@ -26,7 +26,8 @@ namespace jitlink {
 /// its contents. The caller is responsible for ensuring that the object buffer
 /// outlives the graph.
 Expected<std::unique_ptr<LinkGraph>>
-createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer);
+createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer,
+                                  std::shared_ptr<orc::SymbolStringPool> SSP);
 
 /// jit-link the given object buffer, which must be a ELF i386 relocatable
 /// object file.

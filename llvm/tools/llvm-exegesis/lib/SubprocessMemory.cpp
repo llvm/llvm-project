@@ -126,7 +126,7 @@ Expected<int> SubprocessMemory::setupAuxiliaryMemoryInSubprocess(
   int *AuxiliaryMemoryMapping =
       (int *)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED,
                   AuxiliaryMemoryFileDescriptor, 0);
-  if ((intptr_t)AuxiliaryMemoryMapping == -1)
+  if (reinterpret_cast<intptr_t>(AuxiliaryMemoryMapping) == -1)
     return make_error<Failure>("Mapping auxiliary memory failed");
   AuxiliaryMemoryMapping[0] = CounterFileDescriptor;
   for (auto &[Name, MemVal] : MemoryDefinitions) {

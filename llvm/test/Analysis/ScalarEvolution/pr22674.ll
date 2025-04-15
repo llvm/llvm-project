@@ -11,12 +11,12 @@ target triple = "x86_64-pc-linux-gnux32"
 %"class.llvm::AttributeImpl.2.1802.3601.5914.6685.7456.8227.9255.9769.10026.18508" = type <{ ptr, %"class.llvm::FoldingSetImpl::Node.1.1801.3600.5913.6684.7455.8226.9254.9768.10025.18505", i8, [3 x i8] }>
 
 ; Function Attrs: nounwind uwtable
-define void @_ZNK4llvm11AttrBuilder13hasAttributesENS_12AttributeSetEy() #0 align 2 {
+define void @_ZNK4llvm11AttrBuilder13hasAttributesENS_12AttributeSetEy(i1 %arg) #0 align 2 {
 entry:
-  br i1 undef, label %cond.false, label %_ZNK4llvm12AttributeSet11getNumSlotsEv.exit
+  br i1 %arg, label %cond.false, label %_ZNK4llvm12AttributeSet11getNumSlotsEv.exit
 
 _ZNK4llvm12AttributeSet11getNumSlotsEv.exit:      ; preds = %entry
-  br i1 undef, label %cond.false, label %for.body.lr.ph.for.body.lr.ph.split_crit_edge
+  br i1 %arg, label %cond.false, label %for.body.lr.ph.for.body.lr.ph.split_crit_edge
 
 for.body.lr.ph.for.body.lr.ph.split_crit_edge:    ; preds = %_ZNK4llvm12AttributeSet11getNumSlotsEv.exit
   br label %land.lhs.true.i
@@ -30,15 +30,15 @@ cond.false.i.split:                               ; preds = %land.lhs.true.i
   unreachable
 
 _ZNK4llvm12AttributeSet12getSlotIndexEj.exit:     ; preds = %land.lhs.true.i
-  br i1 undef, label %for.end, label %for.inc
+  br i1 %arg, label %for.end, label %for.inc
 
 for.inc:                                          ; preds = %_ZNK4llvm12AttributeSet12getSlotIndexEj.exit
   %inc = add i32 %I.099, 1
-  br i1 undef, label %cond.false, label %land.lhs.true.i
+  br i1 %arg, label %cond.false, label %land.lhs.true.i
 
 for.end:                                          ; preds = %_ZNK4llvm12AttributeSet12getSlotIndexEj.exit
   %I.099.lcssa129 = phi i32 [ %I.099, %_ZNK4llvm12AttributeSet12getSlotIndexEj.exit ]
-  br i1 undef, label %cond.false, label %_ZNK4llvm12AttributeSet3endEj.exit
+  br i1 %arg, label %cond.false, label %_ZNK4llvm12AttributeSet3endEj.exit
 
 cond.false:                                       ; preds = %for.end, %for.inc, %_ZNK4llvm12AttributeSet11getNumSlotsEv.exit, %entry
   unreachable
@@ -49,7 +49,7 @@ _ZNK4llvm12AttributeSet3endEj.exit:               ; preds = %for.end
   %NumAttrs.i.i.i = getelementptr inbounds %"class.llvm::AttributeSetNode.230.2029.3828.6141.6912.7683.8454.9482.9996.10253.18506", ptr %0, i32 0, i32 1
   %1 = load i32, ptr %NumAttrs.i.i.i, align 4, !tbaa !8
   %add.ptr.i.i.i55 = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", ptr undef, i32 %1
-  br i1 undef, label %return, label %for.body11
+  br i1 %arg, label %return, label %for.body11
 
 for.cond9:                                        ; preds = %_ZNK4llvm9Attribute13getKindAsEnumEv.exit
   %cmp10 = icmp eq ptr %incdec.ptr, %add.ptr.i.i.i55
@@ -70,7 +70,7 @@ _ZNK4llvm9Attribute15isEnumAttributeEv.exit:      ; preds = %for.body11
 
 _ZNK4llvm9Attribute13getKindAsEnumEv.exit:        ; preds = %_ZNK4llvm9Attribute15isEnumAttributeEv.exit, %_ZNK4llvm9Attribute15isEnumAttributeEv.exit
   %incdec.ptr = getelementptr inbounds %"class.llvm::Attribute.222.2021.3820.6133.6904.7675.8446.9474.9988.10245.18509", ptr %I5.096, i32 1
-  br i1 undef, label %for.cond9, label %return
+  br i1 %arg, label %for.cond9, label %return
 
 cond.false21:                                     ; preds = %_ZNK4llvm9Attribute15isEnumAttributeEv.exit, %for.body11
   unreachable

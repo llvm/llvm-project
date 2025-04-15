@@ -12,10 +12,10 @@ define void @PR33747(ptr nocapture) {
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    testb %cl, %al
 ; CHECK-NEXT:    je .LBB0_2
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_1
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp .LBB0_2
   %2 = getelementptr inbounds i32, ptr %0, i64 6

@@ -28,7 +28,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -97,12 +96,11 @@ Error DWARFYAML::emitDebugStr(raw_ostream &OS, const DWARFYAML::Data &DI) {
 StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
   assert(Index < DebugAbbrev.size() &&
          "Index should be less than the size of DebugAbbrev array");
-  auto It = AbbrevTableContents.find(Index);
-  if (It != AbbrevTableContents.cend())
+  auto [It, Inserted] = AbbrevTableContents.try_emplace(Index);
+  if (!Inserted)
     return It->second;
 
-  std::string AbbrevTableBuffer;
-  raw_string_ostream OS(AbbrevTableBuffer);
+  raw_string_ostream OS(It->second);
 
   uint64_t AbbrevCode = 0;
   for (const DWARFYAML::Abbrev &AbbrevDecl : DebugAbbrev[Index].Table) {
@@ -124,9 +122,7 @@ StringRef DWARFYAML::Data::getAbbrevTableContentByIndex(uint64_t Index) const {
   // consisting of a 0 byte for the abbreviation code.
   OS.write_zeros(1);
 
-  AbbrevTableContents.insert({Index, AbbrevTableBuffer});
-
-  return AbbrevTableContents[Index];
+  return It->second;
 }
 
 Error DWARFYAML::emitDebugAbbrev(raw_ostream &OS, const DWARFYAML::Data &DI) {
@@ -405,8 +401,8 @@ static Expected<uint64_t> writeDIE(const DWARFYAML::Data &DI, uint64_t CUIndex,
 }
 
 Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
-  for (uint64_t I = 0; I < DI.CompileUnits.size(); ++I) {
-    const DWARFYAML::Unit &Unit = DI.CompileUnits[I];
+  for (uint64_t I = 0; I < DI.Units.size(); ++I) {
+    const DWARFYAML::Unit &Unit = DI.Units[I];
     uint8_t AddrSize;
     if (Unit.AddrSize)
       AddrSize = *Unit.AddrSize;
@@ -414,8 +410,24 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
       AddrSize = DI.Is64BitAddrSize ? 8 : 4;
     dwarf::FormParams Params = {Unit.Version, AddrSize, Unit.Format};
     uint64_t Length = 3; // sizeof(version) + sizeof(address_size)
-    Length += Unit.Version >= 5 ? 1 : 0;       // sizeof(unit_type)
     Length += Params.getDwarfOffsetByteSize(); // sizeof(debug_abbrev_offset)
+    if (Unit.Version >= 5) {
+      ++Length; // sizeof(unit_type)
+      switch (Unit.Type) {
+      case dwarf::DW_UT_compile:
+      case dwarf::DW_UT_partial:
+      default:
+        break;
+      case dwarf::DW_UT_type:
+      case dwarf::DW_UT_split_type:
+        // sizeof(type_signature) + sizeof(type_offset)
+        Length += 8 + Params.getDwarfOffsetByteSize();
+        break;
+      case dwarf::DW_UT_skeleton:
+      case dwarf::DW_UT_split_compile:
+        Length += 8; // sizeof(dwo_id)
+      }
+    }
 
     // Since the length of the current compilation unit is undetermined yet, we
     // firstly write the content of the compilation unit to a buffer to
@@ -461,6 +473,21 @@ Error DWARFYAML::emitDebugInfo(raw_ostream &OS, const DWARFYAML::Data &DI) {
       writeInteger((uint8_t)Unit.Type, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
       writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
+      switch (Unit.Type) {
+      case dwarf::DW_UT_compile:
+      case dwarf::DW_UT_partial:
+      default:
+        break;
+      case dwarf::DW_UT_type:
+      case dwarf::DW_UT_split_type:
+        writeInteger(Unit.TypeSignatureOrDwoID, OS, DI.IsLittleEndian);
+        writeDWARFOffset(Unit.TypeOffset, Unit.Format, OS, DI.IsLittleEndian);
+        break;
+      case dwarf::DW_UT_skeleton:
+      case dwarf::DW_UT_split_compile:
+        writeInteger(Unit.TypeSignatureOrDwoID, OS, DI.IsLittleEndian);
+        break;
+      }
     } else {
       writeDWARFOffset(AbbrevTableOffset, Unit.Format, OS, DI.IsLittleEndian);
       writeInteger((uint8_t)AddrSize, OS, DI.IsLittleEndian);
@@ -714,7 +741,6 @@ void emitDebugNamesHeader(raw_ostream &OS, bool IsLittleEndian,
   writeInteger(AbbrevSize, OS, IsLittleEndian);
   writeInteger(uint32_t(AugmentationString.size()), OS, IsLittleEndian);
   OS.write(AugmentationString.data(), AugmentationString.size());
-  return;
 }
 
 /// Emits the abbreviations for a DebugNames section.

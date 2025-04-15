@@ -1,8 +1,6 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt -passes=slp-vectorizer -S -o - %s \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=slp-vectorizer -S -o - %s \
-; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; float get();
@@ -24,11 +22,11 @@
 ;; Test that dbg.assigns linked to the the scalar stores to quad get linked to
 ;; the vector store that replaces them.
 
-; CHECK: #dbg_assign(float undef, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID:[0-9]+]], ptr %arrayidx, !DIExpression(),
-; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 4),
-; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 8),
+; CHECK: #dbg_assign(float poison, ![[VAR:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 32), ![[ID:[0-9]+]], ptr %arrayidx, !DIExpression(),
+; CHECK: #dbg_assign(float poison, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 32, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 4),
+; CHECK: #dbg_assign(float poison, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 64, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 8),
 ; CHECK: store <4 x float> {{.*}} !DIAssignID ![[ID]]
-; CHECK: #dbg_assign(float undef, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 12),
+; CHECK: #dbg_assign(float poison, ![[VAR]], !DIExpression(DW_OP_LLVM_fragment, 96, 32), ![[ID]], ptr %quad, !DIExpression(DW_OP_plus_uconst, 12),
 
 target triple = "x86_64-unknown-unknown"
 

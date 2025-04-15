@@ -22,3 +22,8 @@ kernel void builtins_amdgcn_s_barrier_signal_isfirst_err(global int* in, global 
   __builtin_amdgcn_s_barrier_wait(-1);
   *out = *in;
 }
+
+void test_s_buffer_prefetch_data(__amdgpu_buffer_rsrc_t rsrc, unsigned int off)
+{
+  __builtin_amdgcn_s_buffer_prefetch_data(rsrc, off, 31); // expected-error {{'__builtin_amdgcn_s_buffer_prefetch_data' must be a constant integer}}
+}

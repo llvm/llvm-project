@@ -18,6 +18,7 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/TargetParser/Triple.h"
@@ -170,7 +171,7 @@ public:
 
 void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");
@@ -199,7 +200,7 @@ void CFGuardImpl::insertCFGuardCheck(CallBase *CB) {
 
 void CFGuardImpl::insertCFGuardDispatch(CallBase *CB) {
 
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
   assert(CB->isIndirectCall() &&
          "Control Flow Guard checks can only be added to indirect calls");
@@ -246,7 +247,7 @@ bool CFGuardImpl::doInitialization(Module &M) {
   GuardFnType =
       FunctionType::get(Type::getVoidTy(M.getContext()),
                         {PointerType::getUnqual(M.getContext())}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M.getContext(), 0);
 
   GuardFnGlobal = M.getOrInsertGlobal(GuardFnName, GuardFnPtrType, [&] {
     auto *Var = new GlobalVariable(M, GuardFnPtrType, false,

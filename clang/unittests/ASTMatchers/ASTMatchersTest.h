@@ -28,7 +28,6 @@ using clang::tooling::runToolOnCodeWithArgs;
 class BoundNodesCallback {
 public:
   virtual ~BoundNodesCallback() {}
-  virtual bool run(const BoundNodes *BoundNodes) = 0;
   virtual bool run(const BoundNodes *BoundNodes, ASTContext *Context) = 0;
   virtual void onEndOfTranslationUnit() {}
 };
@@ -291,6 +290,20 @@ testing::AssertionResult notMatchesWithOpenMP51(const Twine &Code,
 }
 
 template <typename T>
+testing::AssertionResult matchesWithFixedpoint(const std::string &Code,
+                                               const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, true, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
+testing::AssertionResult notMatchesWithFixedpoint(const std::string &Code,
+                                                  const T &AMatcher) {
+  return matchesConditionally(Code, AMatcher, false, {"-ffixed-point"},
+                              FileContentMappings(), "input.c");
+}
+
+template <typename T>
 testing::AssertionResult matchAndVerifyResultConditionally(
     const Twine &Code, const T &AMatcher,
     std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult,
@@ -403,7 +416,7 @@ public:
     EXPECT_EQ("", Name);
   }
 
-  bool run(const BoundNodes *Nodes) override {
+  bool run(const BoundNodes *Nodes, ASTContext * /*Context*/) override {
     const BoundNodes::IDToNodeMap &M = Nodes->getMap();
     if (Nodes->getNodeAs<T>(Id)) {
       ++Count;
@@ -424,10 +437,6 @@ public:
     EXPECT_TRUE(M.count(Id) == 0 ||
                 M.find(Id)->second.template get<T>() == nullptr);
     return false;
-  }
-
-  bool run(const BoundNodes *Nodes, ASTContext *Context) override {
-    return run(Nodes);
   }
 
 private:

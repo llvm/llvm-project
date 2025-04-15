@@ -43,6 +43,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinpif_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    sinpif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.sinpif
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   cosf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -53,6 +69,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.cosf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cospif_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cospif_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cospif
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -170,6 +202,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  exp10m1f_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    exp10m1f_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.exp10m1f
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   expm1f_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -258,10 +305,28 @@ add_fp_unittest(
   SRCS
     hypotf_test.cpp
   COMPILE_OPTIONS
-    -O3
+    ${libc_opt_high_flag}
   DEPENDS
     .exhaustive_test
     libc.src.math.hypotf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  hypotf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    hypotf16_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.hypotf16
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
@@ -451,6 +516,22 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.f16sqrtf
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
+  cbrtf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    cbrtf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.cbrtf
+    libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
 )

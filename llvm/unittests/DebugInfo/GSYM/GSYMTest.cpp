@@ -214,10 +214,10 @@ TEST(GSYMTest, TestFunctionInfoDecodeErrors) {
   FW.writeU32(1); // InfoType::LineTableInfo.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
       "0x0000000c: missing FunctionInfo InfoType length");
-  FW.fixup32(4, FixupOffset); // Write an invalid InfoType enumeration value
+  FW.fixup32(7, FixupOffset); // Write an invalid InfoType enumeration value
   FW.writeU32(0); // LineTableInfo InfoType data length.
   TestFunctionInfoDecodeError(ByteOrder, OutStrm.str(), BaseAddr,
-      "0x00000008: unsupported InfoType 4");
+                              "0x00000008: unsupported InfoType 7");
 }
 
 static void TestFunctionInfoEncodeError(llvm::endianness ByteOrder,
@@ -3802,7 +3802,6 @@ TEST(GSYMTest, TestRangeWarnings) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4005,7 +4004,6 @@ TEST(GSYMTest, TestEmptyRangeWarnings) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4158,7 +4156,6 @@ TEST(GSYMTest, TestEmptyLinkageName) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4320,7 +4317,6 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4641,7 +4637,6 @@ TEST(GSYMTest, TestHandlingOfInvalidFileIndexes) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;
@@ -4857,7 +4852,6 @@ TEST(GSYMTest, TestLookupsOfOverlappingAndUnequalRanges) {
   const uint32_t ThreadCount = 1;
   ASSERT_THAT_ERROR(DT.convert(ThreadCount, OSAgg), Succeeded());
   ASSERT_THAT_ERROR(GC.finalize(OSAgg), Succeeded());
-  OS.flush();
   SmallString<512> Str;
   raw_svector_ostream OutStrm(Str);
   const auto ByteOrder = llvm::endianness::native;

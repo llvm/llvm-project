@@ -16,13 +16,13 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:  ## %bb.1: ## %entry
 ; CHECK-NEXT:    cmpl $1, %edx
 ; CHECK-NEXT:    jne LBB0_10
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %bb2898.us
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:  LBB0_3: ## %bb13086.preheader
 ; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_4: ## %bb13088
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    testb %al, %al
@@ -31,7 +31,7 @@ define void @t(ptr %depth, ptr %bop, i32 %mode) nounwind  {
 ; CHECK-NEXT:    ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    jmp LBB0_7
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_5: ## in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    movl $65535, %ecx ## imm = 0xFFFF
 ; CHECK-NEXT:  LBB0_7: ## %bb13107

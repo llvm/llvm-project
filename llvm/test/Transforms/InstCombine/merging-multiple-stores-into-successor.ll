@@ -34,9 +34,9 @@ define void @_Z4testv() {
 ; CHECK-NEXT:    store i16 [[I4]], ptr @arr_4, align 2
 ; CHECK-NEXT:    [[I8:%.*]] = sext i16 [[I4]] to i32
 ; CHECK-NEXT:    store i32 [[I8]], ptr @arr_3, align 4
-; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr getelementptr inbounds (i8, ptr @arr_2, i64 4), align 4
-; CHECK-NEXT:    store i16 [[I4]], ptr getelementptr inbounds (i8, ptr @arr_4, i64 2), align 2
-; CHECK-NEXT:    store i32 [[I8]], ptr getelementptr inbounds (i8, ptr @arr_3, i64 4), align 4
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr getelementptr inbounds nuw (i8, ptr @arr_2, i64 4), align 4
+; CHECK-NEXT:    store i16 [[I4]], ptr getelementptr inbounds nuw (i8, ptr @arr_4, i64 2), align 2
+; CHECK-NEXT:    store i32 [[I8]], ptr getelementptr inbounds nuw (i8, ptr @arr_3, i64 4), align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -166,14 +166,13 @@ define %struct.half @one_elem_struct_merge(i1 %cond, %struct.half %a, half %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BB0:%.*]], label [[BB1:%.*]]
 ; CHECK:       BB0:
-; CHECK-NEXT:    [[TMP0:%.*]] = extractvalue [[STRUCT_HALF:%.*]] [[A:%.*]], 0
 ; CHECK-NEXT:    br label [[SINK:%.*]]
 ; CHECK:       BB1:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue [[STRUCT_HALF:%.*]] poison, half [[B:%.*]], 0
 ; CHECK-NEXT:    br label [[SINK]]
 ; CHECK:       sink:
-; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi half [ [[TMP0]], [[BB0]] ], [ [[B:%.*]], [[BB1]] ]
-; CHECK-NEXT:    [[VAL1:%.*]] = insertvalue [[STRUCT_HALF]] poison, half [[STOREMERGE]], 0
-; CHECK-NEXT:    ret [[STRUCT_HALF]] [[VAL1]]
+; CHECK-NEXT:    [[VAL1_MERGED:%.*]] = phi [[STRUCT_HALF]] [ [[A:%.*]], [[BB0]] ], [ [[TMP0]], [[BB1]] ]
+; CHECK-NEXT:    ret [[STRUCT_HALF]] [[VAL1_MERGED]]
 ;
 entry:
   %alloca = alloca i64

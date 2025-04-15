@@ -1,4 +1,4 @@
-; RUN: llc -march=mips -regalloc=pbqp <%s > %t
+; RUN: llc -mtriple=mips -regalloc=pbqp <%s > %t
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 
 ; Function Attrs: nounwind

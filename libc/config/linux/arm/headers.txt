@@ -1,9 +1,11 @@
 set(TARGET_PUBLIC_HEADERS
+    libc.include.complex
     libc.include.ctype
     libc.include.errno
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.malloc
     libc.include.math
     libc.include.search
     libc.include.setjmp

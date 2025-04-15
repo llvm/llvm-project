@@ -17,11 +17,24 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
 
+// Maximum warp size
 constexpr int kWarpSize = 32;
+
+// Maximum number of threads in a block and block in a grid
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/#features-and-technical-specifications-technical-specifications-per-compute-capability
+constexpr int kMaxTotalBlockdim = 1024;
+constexpr int kMaxBlockdimx = 1024;
+constexpr int kMaxBlockdimy = 1024;
+constexpr int kMaxBlockdimz = 64;
+constexpr int kMaxTotalGriddim = 2147483647;
+constexpr int kMaxGriddimx = 2147483647;
+constexpr int kMaxGriddimy = 65535;
+constexpr int kMaxGriddimz = 65535;
 
 /// M size of wgmma.mma_async instruction
 constexpr int kWgmmaSizeM = 64;
@@ -40,11 +53,11 @@ constexpr unsigned kMaxTMALastdimByte = 128;
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
 
 #define GET_TYPEDEF_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.h.inc"
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/NVGPU/IR/NVGPU.h.inc"
+#include "mlir/Dialect/NVGPU/IR/NVGPUOps.h.inc"
 
 #endif // MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_

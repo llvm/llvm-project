@@ -9,6 +9,7 @@ void sme_arm_streaming_compatible(void) __arm_streaming_compatible;
 __arm_new("za") void sme_arm_new_za(void) {}
 void sme_arm_shared_za(void) __arm_inout("za");
 void sme_arm_preserves_za(void) __arm_preserves("za");
+void sme_arm_agnostic(void) __arm_agnostic("sme_za_state");
 
 __arm_new("za") void sme_arm_streaming_new_za(void) __arm_streaming {}
 void sme_arm_streaming_shared_za(void) __arm_streaming __arm_inout("za");
@@ -87,6 +88,26 @@ fptrty7 invalid_streaming_func() { return streaming_ptr_invalid; }
 // expected-warning@+2 {{'__arm_streaming' only applies to non-K&R-style functions}}
 // expected-error@+1 {{'__arm_streaming' only applies to function types; type here is 'void ()'}}
 void function_no_prototype() __arm_streaming;
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_zt0(void) __arm_agnostic("sme_za_state") __arm_inout("zt0") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_za(void) __arm_agnostic("sme_za_state") __arm_inout("za") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") cannot share ZA state with its caller}}
+void sme_arm_agnostic_shared_za_za_rev(void) __arm_inout("za") __arm_agnostic("sme_za_state") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+__arm_new("zt0") void sme_arm_agnostic_arm_new_zt0(void) __arm_agnostic("sme_za_state") {}
+
+// expected-cpp-error@+2 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+// expected-error@+1 {{__arm_agnostic("sme_za_state") is not supported together with __arm_new("za") or __arm_new("zt0")}}
+__arm_new("za") void sme_arm_agnostic_arm_new_za(void) __arm_agnostic("sme_za_state") {}
 
 //
 // Check for incorrect conversions of function pointers with the attributes
@@ -453,48 +474,6 @@ void unimplemented_spill_fill_za(void (*share_zt0_only)(void) __arm_inout("zt0")
   // expected-error@+2 {{call to a function that shares state other than 'za' from a function that has live 'za' state requires a spill/fill of ZA, which is not yet implemented}}
   // expected-note@+1 {{add '__arm_preserves("za")' to the callee if it preserves ZA}}
   share_zt0_only();
-}
-
-// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
-// expected-error@+1 {{streaming function cannot be multi-versioned}}
-__attribute__((target_version("sme2")))
-void cannot_work_version(void) __arm_streaming {}
-// expected-cpp-error@+5 {{function declared 'void ()' was previously declared 'void () __arm_streaming', which has different SME function attributes}}
-// expected-cpp-note@-2 {{previous declaration is here}}
-// expected-error@+3 {{function declared 'void (void)' was previously declared 'void (void) __arm_streaming', which has different SME function attributes}}
-// expected-note@-4 {{previous declaration is here}}
-__attribute__((target_version("default")))
-void cannot_work_version(void) {}
-
-
-// expected-cpp-error@+2 {{streaming function cannot be multi-versioned}}
-// expected-error@+1 {{streaming function cannot be multi-versioned}}
-__attribute__((target_clones("sme2")))
-void cannot_work_clones(void) __arm_streaming {}
-
-
-__attribute__((target("sme2")))
-void just_fine_streaming(void) __arm_streaming {}
-__attribute__((target_version("sme2")))
-void just_fine(void) { just_fine_streaming(); }
-__attribute__((target_version("default")))
-void just_fine(void) {}
-
-
-__arm_locally_streaming
-__attribute__((target_version("sme2")))
-void incompatible_locally_streaming(void) {}
-// expected-error@-1 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
-// expected-cpp-error@-2 {{attribute 'target_version' multiversioning cannot be combined with attribute '__arm_locally_streaming'}}
-__attribute__((target_version("default")))
-void incompatible_locally_streaming(void) {}
-
-
-void fmv_caller() {
-    cannot_work_version();
-    cannot_work_clones();
-    just_fine();
-    incompatible_locally_streaming();
 }
 
 void sme_streaming_with_vl_arg(__SVInt8_t a) __arm_streaming { }

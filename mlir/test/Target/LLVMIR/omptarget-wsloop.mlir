@@ -14,7 +14,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
           llvm.store %loop_cnt, %gep : i32, !llvm.ptr
           omp.yield
         }
-        omp.terminator
       }
     llvm.return
   }
@@ -27,7 +26,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
         omp.loop_nest (%loop_cnt) : i32 = (%loop_lb) to (%loop_ub) inclusive step (%loop_step) {
           omp.yield
         }
-        omp.terminator
       }
     llvm.return
   }

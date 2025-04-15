@@ -22,7 +22,7 @@
 
 /// Map between the host entry begin and the translation table. Each
 /// registered library gets one TranslationTable. Use the map from
-/// __tgt_offload_entry so that we may quickly determine whether we
+/// llvm::offloading::EntryTy so that we may quickly determine whether we
 /// are trying to (re)register an existing lib or really have a new one.
 struct TranslationTable {
   __tgt_target_table HostTable;
@@ -33,14 +33,14 @@ struct TranslationTable {
       TargetsImages; // One image per device ID.
 
   // Arrays of entries active on the device.
-  llvm::SmallVector<llvm::SmallVector<__tgt_offload_entry>>
+  llvm::SmallVector<llvm::SmallVector<llvm::offloading::EntryTy>>
       TargetsEntries; // One table per device ID.
 
   // Table of entry points or NULL if it was not already computed.
   llvm::SmallVector<__tgt_target_table *>
       TargetsTable; // One table per device ID.
 };
-typedef std::map<__tgt_offload_entry *, TranslationTable>
+typedef std::map<llvm::offloading::EntryTy *, TranslationTable>
     HostEntriesBeginToTransTableTy;
 
 /// Map between the host ptr and a table index

@@ -152,8 +152,9 @@ public:
     MOTargetFlag1 = 1u << 6,
     MOTargetFlag2 = 1u << 7,
     MOTargetFlag3 = 1u << 8,
+    MOTargetFlag4 = 1u << 9,
 
-    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag3)
+    LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ MOTargetFlag4)
   };
 
 private:
@@ -330,6 +331,9 @@ public:
   void setType(LLT NewTy) {
     MemoryType = NewTy;
   }
+
+  /// Unset the tracked range metadata.
+  void clearRanges() { Ranges = nullptr; }
 
   /// Support for operator<<.
   /// @{

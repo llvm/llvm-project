@@ -157,3 +157,21 @@ void f5() {
   // expected-error@-1 {{no member named 'non_existent' in 'typeid_::X<true>'}}
 }
 } // namespace typeid_
+
+namespace GH97453 {
+
+struct UnconstrainedCtor {
+  int value_;
+
+  template <typename T>
+  constexpr UnconstrainedCtor(T value) noexcept(noexcept(value_ = value))
+      : value_(static_cast<int>(value)) {}
+};
+
+UnconstrainedCtor U(42);
+
+struct X {
+  void ICE(int that) noexcept(noexcept([that]() {}));
+};
+
+} // namespace GH97453

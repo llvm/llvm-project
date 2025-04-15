@@ -1,4 +1,5 @@
 //===----------------------------------------------------------------------===//
+//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -120,8 +121,8 @@ constexpr bool test() {
   }
 
   {
-    // TODO(LLVM 20): Remove once we drop support for Clang 17
-#if defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 1800
+    // TODO: Drop this once AppleClang is upgraded
+#ifndef TEST_COMPILER_APPLE_CLANG
     // https://github.com/llvm/llvm-project/issues/92676
     std::expected<Any, int> e1;
     auto e2 = e1;

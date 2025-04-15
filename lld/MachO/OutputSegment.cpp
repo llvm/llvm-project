@@ -9,6 +9,7 @@
 #include "OutputSegment.h"
 #include "ConcatOutputSection.h"
 #include "InputSection.h"
+#include "Sections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 
@@ -41,6 +42,12 @@ static uint32_t initProt(StringRef name) {
 static uint32_t maxProt(StringRef name) {
   assert(config->arch() != AK_i386 &&
          "TODO: i386 has different maxProt requirements");
+  auto it = find_if(
+      config->segmentProtections,
+      [&](const SegmentProtection &segprot) { return segprot.name == name; });
+  if (it != config->segmentProtections.end())
+    return it->maxProt;
+
   return initProt(name);
 }
 
@@ -89,16 +96,39 @@ static int sectionOrder(OutputSection *osec) {
   StringRef segname = osec->parent->name;
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
-    return StringSwitch<int>(osec->name)
-        .Case(section_names::header, -6)
-        .Case(section_names::text, -5)
-        .Case(section_names::stubs, -4)
-        .Case(section_names::stubHelper, -3)
-        .Case(section_names::objcStubs, -2)
-        .Case(section_names::initOffsets, -1)
-        .Case(section_names::unwindInfo, std::numeric_limits<int>::max() - 1)
-        .Case(section_names::ehFrame, std::numeric_limits<int>::max())
-        .Default(osec->inputOrder);
+    if (osec->name == section_names::header)
+      return -7;
+    // `__text` needs to precede the other code sections since its
+    // expected to be the largest. This means in effect that it will
+    // be the section that determines whether we need thunks or not.
+    if (osec->name == section_names::text)
+      return -6;
+
+    // Prioritize specific section ordering based on our knowledge. This ensures
+    // that certain sections are placed in a particular order, even if they
+    // are also categorized as code sections. This explicit ordering takes
+    // precedence over the general code section ordering.
+    int knownPriority =
+        StringSwitch<int>(osec->name)
+            .Case(section_names::stubs, -4)
+            .Case(section_names::stubHelper, -3)
+            .Case(section_names::objcStubs, -2)
+            .Case(section_names::initOffsets, -1)
+            .Case(section_names::unwindInfo,
+                  std::numeric_limits<int>::max() - 1)
+            .Case(section_names::ehFrame, std::numeric_limits<int>::max())
+            .Default(0);
+
+    if (knownPriority != 0)
+      return knownPriority;
+
+    // Ensure all code sections are contiguous with `__text` for thunk
+    // calculations.
+    if (sections::isCodeSection(osec->name, segment_names::text, osec->flags)) {
+      return -5;
+    }
+
+    return osec->inputOrder;
   } else if (segname == segment_names::data ||
              segname == segment_names::dataConst) {
     // For each thread spawned, dyld will initialize its TLVs by copying the

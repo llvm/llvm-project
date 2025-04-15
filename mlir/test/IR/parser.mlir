@@ -730,6 +730,10 @@ func.func @densetensorattr() -> () {
   "complex_attr"(){bar = dense<(1.000000e+00,0.000000e+00)> : tensor<complex<f32>>} : () -> ()
   // CHECK: dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>
   "complex_attr"(){bar = dense<[(1.000000e+00,0.000000e+00), (2.000000e+00,2.000000e+00)]> : tensor<2xcomplex<f32>>} : () -> ()
+  // CHECK: dense<> : tensor<0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<0xcomplex<i64>>} : () -> ()
+  // CHECK: dense<> : tensor<2x0xcomplex<i64>>
+  "complex_attr"(){bar = dense<> : tensor<2x0xcomplex<i64>>} : () -> ()
   return
 }
 
@@ -1464,15 +1468,3 @@ test.dialect_custom_format_fallback custom_format_fallback
 // Check that an op with an optional result parses f80 as type.
 // CHECK: test.format_optional_result_d_op : f80
 test.format_optional_result_d_op : f80
-
-
-// -----
-
-// This is a testing that a non-qualified attribute in a custom format
-// correctly preload the dialect before creating the attribute.
-#attr = #test.nested_polynomial<<1 + x**2>>
-// CHECK-lABLE: @parse_correctly
-llvm.func @parse_correctly() {
-  test.containing_int_polynomial_attr #attr
-  llvm.return
-}

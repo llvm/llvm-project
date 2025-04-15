@@ -58,7 +58,7 @@ TrivialBig testTrivialBig(void) {
 // CHECK: call void @__destructor_8_s0(ptr %[[RETVAL]])
 // CHECK: br
 
-// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
+// CHECK: %[[COERCE_DIVE:.*]] = getelementptr inbounds nuw %[[STRUCT_STRONG]], ptr %[[RETVAL]], i32 0, i32 0
 // CHECK: %[[V2:.*]] = load ptr, ptr %[[COERCE_DIVE]], align 8
 // CHECK: ret ptr %[[V2]]
 

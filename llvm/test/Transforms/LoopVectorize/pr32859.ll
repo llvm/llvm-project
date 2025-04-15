@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -S | FileCheck %s
 
 ; Out of the LCSSA form we could have 'phi i32 [ loop-invariant, %for.inc.2.i ]'
 ; but the IR Verifier requires for PHI one entry for each predecessor of

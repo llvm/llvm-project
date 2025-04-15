@@ -38,7 +38,7 @@ class AssignOpConversion : public mlir::OpRewritePattern<hlfir::AssignOp> {
 public:
   explicit AssignOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assignOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = assignOp->getLoc();
@@ -231,7 +231,7 @@ public:
     return {res[0], res[1]};
   }
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyInOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyInOp.getLoc();
@@ -249,7 +249,7 @@ public:
   explicit CopyOutOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::CopyOutOp copyOutOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = copyOutOp.getLoc();
@@ -290,7 +290,7 @@ public:
   explicit DeclareOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DeclareOp declareOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = declareOp->getLoc();
@@ -411,13 +411,16 @@ class DesignateOpConversion
     llvm::SmallVector<mlir::Value> firstElementIndices;
     auto indices = designate.getIndices();
     int i = 0;
-    for (auto isTriplet : designate.getIsTripletAttr().asArrayRef()) {
+    auto attrs = designate.getIsTripletAttr();
+    for (auto isTriplet : attrs.asArrayRef()) {
       // Coordinate of the first element are the index and triplets lower
       // bounds
       firstElementIndices.push_back(indices[i]);
       i = i + (isTriplet ? 3 : 1);
     }
-    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy);
+    mlir::Type originalDesignateType = designate.getResult().getType();
+    const bool isVolatile = fir::isa_volatile_type(originalDesignateType);
+    mlir::Type arrayCoorType = fir::ReferenceType::get(baseEleTy, isVolatile);
     base = builder.create<fir::ArrayCoorOp>(
         loc, arrayCoorType, base, shape,
         /*slice=*/mlir::Value{}, firstElementIndices, firBaseTypeParameters);
@@ -428,7 +431,7 @@ public:
   explicit DesignateOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::DesignateOp designate,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = designate.getLoc();
@@ -440,6 +443,7 @@ public:
       TODO(loc, "hlfir::designate load of pointer or allocatable");
 
     mlir::Type designateResultType = designate.getResult().getType();
+    const bool isVolatile = fir::isa_volatile_type(designateResultType);
     llvm::SmallVector<mlir::Value> firBaseTypeParameters;
     auto [base, shape] = hlfir::genVariableFirBaseShapeAndParams(
         loc, builder, baseEntity, firBaseTypeParameters);
@@ -463,7 +467,7 @@ public:
         mlir::Type componentType =
             mlir::cast<fir::RecordType>(baseEleTy).getType(
                 designate.getComponent().value());
-        mlir::Type coorTy = fir::ReferenceType::get(componentType);
+        mlir::Type coorTy = fir::ReferenceType::get(componentType, isVolatile);
         base = builder.create<fir::CoordinateOp>(loc, coorTy, base, fieldIndex);
         if (mlir::isa<fir::BaseBoxType>(componentType)) {
           auto variableInterface = mlir::cast<fir::FortranVariableOpInterface>(
@@ -648,7 +652,7 @@ public:
   explicit ParentComponentOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::ParentComponentOp parentComponent,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Location loc = parentComponent.getLoc();
@@ -696,7 +700,7 @@ public:
   explicit NoReassocOpConversion(mlir::MLIRContext *ctx)
       : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NoReassocOp noreassoc,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::NoReassocOp>(noreassoc,
@@ -709,7 +713,7 @@ class NullOpConversion : public mlir::OpRewritePattern<hlfir::NullOp> {
 public:
   explicit NullOpConversion(mlir::MLIRContext *ctx) : OpRewritePattern{ctx} {}
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::NullOp nullop,
                   mlir::PatternRewriter &rewriter) const override {
     rewriter.replaceOpWithNewOp<fir::ZeroOp>(nullop, nullop.getType());
@@ -722,7 +726,7 @@ class GetExtentOpConversion
 public:
   using mlir::OpRewritePattern<hlfir::GetExtentOp>::OpRewritePattern;
 
-  mlir::LogicalResult
+  llvm::LogicalResult
   matchAndRewrite(hlfir::GetExtentOp getExtentOp,
                   mlir::PatternRewriter &rewriter) const override {
     mlir::Value shape = getExtentOp.getShape();
@@ -734,6 +738,9 @@ public:
       llvm::APInt dim = getExtentOp.getDim();
       uint64_t dimVal = dim.getLimitedValue(shapeTy.getRank());
       mlir::Value extent = s.getExtents()[dimVal];
+      fir::FirOpBuilder builder(rewriter, getExtentOp.getOperation());
+      extent = builder.createConvert(getExtentOp.getLoc(),
+                                     builder.getIndexType(), extent);
       rewriter.replaceOp(getExtentOp, extent);
       return mlir::success();
     }

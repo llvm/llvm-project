@@ -57,8 +57,8 @@ define <2 x i32> @trunc_packus_v2i64_v2i32(<2 x i64> %a0) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovsxdq {{.*#+}} xmm4 = [2147483647,2147483647]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -175,8 +175,8 @@ define void @trunc_packus_v2i64_v2i32_store(<2 x i64> %a0, ptr %p1) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovsxdq {{.*#+}} xmm4 = [2147483647,2147483647]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -317,12 +317,12 @@ define <4 x i32> @trunc_packus_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [4294967295,4294967295]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    pmovsxdq {{.*#+}} xmm6 = [2147483647,2147483647]
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm7, %xmm0
@@ -330,8 +330,8 @@ define <4 x i32> @trunc_packus_v4i64_v4i32(<4 x i64> %a0) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
@@ -584,35 +584,32 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [4294967295,4294967295]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm5, %xmm0
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm5, %xmm4
+; SSE41-NEXT:    pxor %xmm3, %xmm4
 ; SSE41-NEXT:    pmovsxdq {{.*#+}} xmm6 = [2147483647,2147483647]
-; SSE41-NEXT:    movdqa %xmm6, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm4, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm4
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm4
-; SSE41-NEXT:    movdqa %xmm8, %xmm0
-; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm8, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm5
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm5
-; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm8
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm8
+; SSE41-NEXT:    movdqa %xmm7, %xmm8
+; SSE41-NEXT:    pxor %xmm3, %xmm8
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm8
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm8, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
@@ -620,8 +617,8 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm8
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    movdqa %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm7
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm7, %xmm0
@@ -679,26 +676,26 @@ define <8 x i32> @trunc_packus_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="25
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm2
 ; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
 ; AVX1-NEXT:    vpmovsxbd {{.*#+}} xmm4 = [4294967295,0,4294967295,0]
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm5
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm4, %xmm5
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm5
-; AVX1-NEXT:    vpand %xmm2, %xmm5, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm5
+; AVX1-NEXT:    vpand %xmm1, %xmm5, %xmm1
 ; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm5
 ; AVX1-NEXT:    vpand %xmm0, %xmm5, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vpand %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm4
-; AVX1-NEXT:    vpand %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm1
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm3
+; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[0,2],xmm1[0,2]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc_packus_v8i64_v8i32:
@@ -828,8 +825,8 @@ define <2 x i16> @trunc_packus_v2i64_v2i16(<2 x i64> %a0) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = [2147549183,2147549183]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -971,8 +968,8 @@ define void @trunc_packus_v2i64_v2i16_store(<2 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = [2147549183,2147549183]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -1143,12 +1140,12 @@ define <4 x i16> @trunc_packus_v4i64_v4i16(<4 x i64> %a0) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [65535,65535]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147549183,2147549183]
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm7, %xmm0
@@ -1156,8 +1153,8 @@ define <4 x i16> @trunc_packus_v4i64_v4i16(<4 x i64> %a0) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
@@ -1333,12 +1330,12 @@ define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [65535,65535]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147549183,2147549183]
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm7, %xmm0
@@ -1346,8 +1343,8 @@ define void @trunc_packus_v4i64_v4i16_store(<4 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
@@ -1583,35 +1580,32 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="25
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [65535,65535]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
+; SSE41-NEXT:    pxor %xmm2, %xmm3
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147549183,2147549183]
-; SSE41-NEXT:    movdqa %xmm6, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm3, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm3
-; SSE41-NEXT:    movdqa %xmm8, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    movdqa %xmm8, %xmm4
+; SSE41-NEXT:    pxor %xmm2, %xmm4
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm4, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm4
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
-; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm8
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm8
+; SSE41-NEXT:    movdqa %xmm7, %xmm8
+; SSE41-NEXT:    pxor %xmm2, %xmm8
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm8
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm8, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
@@ -1619,8 +1613,8 @@ define <8 x i16> @trunc_packus_v8i64_v8i16(ptr %p0) "min-legal-vector-width"="25
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm8
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    movdqa %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm7
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm7, %xmm0
@@ -2239,8 +2233,8 @@ define <2 x i8> @trunc_packus_v2i64_v2i8(<2 x i64> %a0) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -2393,8 +2387,8 @@ define void @trunc_packus_v2i64_v2i8_store(<2 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm4 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pcmpeqd %xmm4, %xmm5
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
@@ -2539,12 +2533,12 @@ define <4 x i8> @trunc_packus_v4i64_v4i8(<4 x i64> %a0) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [255,255]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm7, %xmm0
@@ -2552,8 +2546,8 @@ define <4 x i8> @trunc_packus_v4i64_v4i8(<4 x i64> %a0) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
@@ -2733,12 +2727,12 @@ define void @trunc_packus_v4i64_v4i8_store(<4 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm2
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [255,255]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm3 = [2147483648,2147483648]
-; SSE41-NEXT:    pxor %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm5
+; SSE41-NEXT:    pxor %xmm3, %xmm5
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm6, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
 ; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm7
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm7, %xmm0
@@ -2746,8 +2740,8 @@ define void @trunc_packus_v4i64_v4i8_store(<4 x i64> %a0, ptr%p1) {
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    pxor %xmm3, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
@@ -2987,35 +2981,32 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(ptr %p0) "min-legal-vector-width"="256"
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [255,255]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
+; SSE41-NEXT:    pxor %xmm2, %xmm3
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm6, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm3, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm3
-; SSE41-NEXT:    movdqa %xmm8, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    movdqa %xmm8, %xmm4
+; SSE41-NEXT:    pxor %xmm2, %xmm4
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm4, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm4
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm4
-; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm8
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm8
+; SSE41-NEXT:    movdqa %xmm7, %xmm8
+; SSE41-NEXT:    pxor %xmm2, %xmm8
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm8
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm8, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
@@ -3023,8 +3014,8 @@ define <8 x i8> @trunc_packus_v8i64_v8i8(ptr %p0) "min-legal-vector-width"="256"
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm8
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    movdqa %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm7
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm7, %xmm0
@@ -3277,35 +3268,32 @@ define void @trunc_packus_v8i64_v8i8_store(ptr %p0, ptr%p1) "min-legal-vector-wi
 ; SSE41-NEXT:    movdqa 48(%rdi), %xmm8
 ; SSE41-NEXT:    movapd {{.*#+}} xmm4 = [255,255]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm1 = [2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm3, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    movdqa %xmm3, %xmm2
+; SSE41-NEXT:    pxor %xmm1, %xmm2
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm6 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm6, %xmm2
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm2, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm2
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm2, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm4, %xmm2
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm3, %xmm2
-; SSE41-NEXT:    movdqa %xmm8, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE41-NEXT:    movdqa %xmm8, %xmm3
+; SSE41-NEXT:    pxor %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm3, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
 ; SSE41-NEXT:    movapd %xmm4, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm3
-; SSE41-NEXT:    movdqa %xmm7, %xmm0
-; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm8
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm8
+; SSE41-NEXT:    movdqa %xmm7, %xmm8
+; SSE41-NEXT:    pxor %xmm1, %xmm8
 ; SSE41-NEXT:    movdqa %xmm6, %xmm9
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
+; SSE41-NEXT:    pcmpgtd %xmm8, %xmm9
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm8
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm8, %xmm0
 ; SSE41-NEXT:    por %xmm9, %xmm0
@@ -3313,8 +3301,8 @@ define void @trunc_packus_v8i64_v8i8_store(ptr %p0, ptr%p1) "min-legal-vector-wi
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm7, %xmm8
 ; SSE41-NEXT:    movdqa %xmm5, %xmm0
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
-; SSE41-NEXT:    movdqa %xmm6, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm7
+; SSE41-NEXT:    movdqa %xmm0, %xmm7
+; SSE41-NEXT:    pcmpeqd %xmm6, %xmm7
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm7, %xmm0
@@ -3677,79 +3665,72 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(ptr %p0) "min-legal-vector-width"="2
 ; SSE41-NEXT:    movdqa 96(%rdi), %xmm4
 ; SSE41-NEXT:    movapd {{.*#+}} xmm1 = [255,255]
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = [2147483648,2147483648]
-; SSE41-NEXT:    movdqa %xmm4, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm4, %xmm3
+; SSE41-NEXT:    pxor %xmm2, %xmm3
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm9 = [2147483903,2147483903]
-; SSE41-NEXT:    movdqa %xmm9, %xmm3
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm3, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm3, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm3
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm4, %xmm3
-; SSE41-NEXT:    movdqa %xmm5, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm4
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    movdqa %xmm5, %xmm4
+; SSE41-NEXT:    pxor %xmm2, %xmm4
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm4, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm4
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm4
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm5, %xmm4
-; SSE41-NEXT:    movdqa %xmm6, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm5
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    movdqa %xmm6, %xmm5
+; SSE41-NEXT:    pxor %xmm2, %xmm5
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm5, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm5
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm5, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm5
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm6, %xmm5
-; SSE41-NEXT:    movdqa %xmm10, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm6
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm6
+; SSE41-NEXT:    movdqa %xmm10, %xmm6
+; SSE41-NEXT:    pxor %xmm2, %xmm6
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm6, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm6
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm6, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm6
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm10, %xmm6
-; SSE41-NEXT:    movdqa %xmm12, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm10
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm10
+; SSE41-NEXT:    movdqa %xmm12, %xmm10
+; SSE41-NEXT:    pxor %xmm2, %xmm10
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm10, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm10
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm10, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm10
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm12, %xmm10
-; SSE41-NEXT:    movdqa %xmm11, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm12
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm12
+; SSE41-NEXT:    movdqa %xmm11, %xmm12
+; SSE41-NEXT:    pxor %xmm2, %xmm12
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm12, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm12
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm12, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
 ; SSE41-NEXT:    movapd %xmm1, %xmm12
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm11, %xmm12
-; SSE41-NEXT:    movdqa %xmm8, %xmm0
-; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm11
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm11
+; SSE41-NEXT:    movdqa %xmm8, %xmm11
+; SSE41-NEXT:    pxor %xmm2, %xmm11
 ; SSE41-NEXT:    movdqa %xmm9, %xmm13
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm13
+; SSE41-NEXT:    pcmpgtd %xmm11, %xmm13
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm11
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm13[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm11, %xmm0
 ; SSE41-NEXT:    por %xmm13, %xmm0
@@ -3757,8 +3738,8 @@ define <16 x i8> @trunc_packus_v16i64_v16i8(ptr %p0) "min-legal-vector-width"="2
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm8, %xmm11
 ; SSE41-NEXT:    movdqa %xmm7, %xmm0
 ; SSE41-NEXT:    pxor %xmm2, %xmm0
-; SSE41-NEXT:    movdqa %xmm9, %xmm8
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm8
+; SSE41-NEXT:    movdqa %xmm0, %xmm8
+; SSE41-NEXT:    pcmpeqd %xmm9, %xmm8
 ; SSE41-NEXT:    pcmpgtd %xmm0, %xmm9
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[0,0,2,2]
 ; SSE41-NEXT:    pand %xmm8, %xmm0

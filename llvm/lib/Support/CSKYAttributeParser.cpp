@@ -16,19 +16,19 @@ const CSKYAttributeParser::DisplayHandler
     CSKYAttributeParser::displayRoutines[] = {
         {
             CSKYAttrs::CSKY_ARCH_NAME,
-            &ELFAttributeParser::stringAttribute,
+            &ELFCompactAttrParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_CPU_NAME,
-            &ELFAttributeParser::stringAttribute,
+            &ELFCompactAttrParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_ISA_FLAGS,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             CSKYAttrs::CSKY_ISA_EXT_FLAGS,
-            &ELFAttributeParser::integerAttribute,
+            &ELFCompactAttrParser::integerAttribute,
         },
         {
             CSKYAttrs::CSKY_DSP_VERSION,
@@ -60,7 +60,7 @@ const CSKYAttributeParser::DisplayHandler
         },
         {
             CSKYAttrs::CSKY_FPU_NUMBER_MODULE,
-            &ELFAttributeParser::stringAttribute,
+            &ELFCompactAttrParser::stringAttribute,
         },
         {
             CSKYAttrs::CSKY_FPU_HARDFP,
@@ -82,38 +82,39 @@ Error CSKYAttributeParser::handler(uint64_t tag, bool &handled) {
 }
 
 Error CSKYAttributeParser::dspVersion(unsigned tag) {
-  static const char *strings[] = {"Error", "DSP Extension", "DSP 2.0"};
+  static const char *const strings[] = {"Error", "DSP Extension", "DSP 2.0"};
   return parseStringAttribute("Tag_CSKY_DSP_VERSION", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::vdspVersion(unsigned tag) {
-  static const char *strings[] = {"Error", "VDSP Version 1", "VDSP Version 2"};
+  static const char *const strings[] = {"Error", "VDSP Version 1",
+                                        "VDSP Version 2"};
   return parseStringAttribute("Tag_CSKY_VDSP_VERSION", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::fpuVersion(unsigned tag) {
-  static const char *strings[] = {"Error", "FPU Version 1", "FPU Version 2",
-                                  "FPU Version 3"};
+  static const char *const strings[] = {"Error", "FPU Version 1",
+                                        "FPU Version 2", "FPU Version 3"};
   return parseStringAttribute("Tag_CSKY_FPU_VERSION", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::fpuABI(unsigned tag) {
-  static const char *strings[] = {"Error", "Soft", "SoftFP", "Hard"};
+  static const char *const strings[] = {"Error", "Soft", "SoftFP", "Hard"};
   return parseStringAttribute("Tag_CSKY_FPU_ABI", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::fpuRounding(unsigned tag) {
-  static const char *strings[] = {"None", "Needed"};
+  static const char *const strings[] = {"None", "Needed"};
   return parseStringAttribute("Tag_CSKY_FPU_ROUNDING", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::fpuDenormal(unsigned tag) {
-  static const char *strings[] = {"None", "Needed"};
+  static const char *const strings[] = {"None", "Needed"};
   return parseStringAttribute("Tag_CSKY_FPU_DENORMAL", tag, ArrayRef(strings));
 }
 
 Error CSKYAttributeParser::fpuException(unsigned tag) {
-  static const char *strings[] = {"None", "Needed"};
+  static const char *const strings[] = {"None", "Needed"};
   return parseStringAttribute("Tag_CSKY_FPU_EXCEPTION", tag, ArrayRef(strings));
 }
 

@@ -98,7 +98,7 @@ define internal i32 @internal_load(ptr) norecurse nounwind uwtable {
 define i32 @first_block_no_return(i32 %a, ptr nonnull %ptr1, ptr %ptr2) #0 {
 ; TUNIT: Function Attrs: nofree noreturn nosync nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@first_block_no_return
-; TUNIT-SAME: (i32 [[A:%.*]], ptr nocapture nofree nonnull readnone [[PTR1:%.*]], ptr nocapture nofree readnone [[PTR2:%.*]]) #[[ATTR0:[0-9]+]] {
+; TUNIT-SAME: (i32 [[A:%.*]], ptr nofree nonnull readnone captures(none) [[PTR1:%.*]], ptr nofree readnone captures(none) [[PTR2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    call void @no_return_call() #[[ATTR15:[0-9]+]]
 ; TUNIT-NEXT:    unreachable
@@ -111,7 +111,7 @@ define i32 @first_block_no_return(i32 %a, ptr nonnull %ptr1, ptr %ptr2) #0 {
 ;
 ; CGSCC: Function Attrs: nofree noreturn nosync nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@first_block_no_return
-; CGSCC-SAME: (i32 [[A:%.*]], ptr nocapture nofree nonnull readnone [[PTR1:%.*]], ptr nocapture nofree readnone [[PTR2:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (i32 [[A:%.*]], ptr nofree nonnull readnone captures(none) [[PTR1:%.*]], ptr nofree readnone captures(none) [[PTR2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    call void @no_return_call() #[[ATTR17:[0-9]+]]
 ; CGSCC-NEXT:    unreachable
@@ -543,7 +543,7 @@ cleanup:
 define void @ub(ptr %0) {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; TUNIT-LABEL: define {{[^@]+}}@ub
-; TUNIT-SAME: (ptr nocapture nofree writeonly [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
+; TUNIT-SAME: (ptr nofree writeonly captures(none) [[TMP0:%.*]]) #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:    [[POISON:%.*]] = sub nuw i32 0, 1
 ; TUNIT-NEXT:    [[STILL_POISON:%.*]] = and i32 [[POISON]], 0
 ; TUNIT-NEXT:    [[POISON_YET_AGAIN:%.*]] = getelementptr i32, ptr [[TMP0]], i32 [[STILL_POISON]]
@@ -552,7 +552,7 @@ define void @ub(ptr %0) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write)
 ; CGSCC-LABEL: define {{[^@]+}}@ub
-; CGSCC-SAME: (ptr nocapture nofree writeonly [[TMP0:%.*]]) #[[ATTR9:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree writeonly captures(none) [[TMP0:%.*]]) #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    [[POISON:%.*]] = sub nuw i32 0, 1
 ; CGSCC-NEXT:    [[STILL_POISON:%.*]] = and i32 [[POISON]], 0
 ; CGSCC-NEXT:    [[POISON_YET_AGAIN:%.*]] = getelementptr i32, ptr [[TMP0]], i32 [[STILL_POISON]]
@@ -2348,7 +2348,7 @@ define i32 @switch_default_dead_caller() {
 
 define void @call_via_pointer_with_dead_args(ptr %a, ptr %b, ptr %fp) {
 ; CHECK-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args
-; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], ptr nocapture nofree noundef nonnull [[FP:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], ptr nofree noundef nonnull captures(none) [[FP:%.*]]) {
 ; CHECK-NEXT:    call void [[FP]](ptr [[A]], ptr [[B]], ptr [[A]], i64 -1, ptr null)
 ; CHECK-NEXT:    ret void
 ;
@@ -2364,7 +2364,7 @@ define internal void @call_via_pointer_with_dead_args_internal_a(ptr %a, ptr %b,
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@call_via_pointer_with_dead_args_internal_a
 ; CGSCC-SAME: (ptr [[A:%.*]], ptr noundef nonnull align 128 dereferenceable(4) [[B:%.*]]) {
-; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nocapture nofree noundef nonnull align 128 dereferenceable(4) [[B]], ptr nocapture nofree [[A]], i64 noundef -1, ptr nofree noundef null)
+; CGSCC-NEXT:    call void @called_via_pointer(ptr [[A]], ptr nofree noundef nonnull align 128 captures(none) dereferenceable(4) [[B]], ptr nofree captures(none) [[A]], i64 noundef -1, ptr nofree noundef null)
 ; CGSCC-NEXT:    ret void
 ;
   call void %fp(ptr %a, ptr %b, ptr %a, i64 -1, ptr null)
@@ -2391,8 +2391,8 @@ define void @call_via_pointer_with_dead_args_caller(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[PTR2:%.*]] = alloca i32, align 128
 ; CHECK-NEXT:    [[PTR3:%.*]] = alloca i32, align 128
 ; CHECK-NEXT:    [[PTR4:%.*]] = alloca i32, align 128
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR1]], ptr nocapture nofree noundef nonnull @called_via_pointer)
-; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR2]], ptr nocapture nofree noundef nonnull @called_via_pointer_internal_1)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR1]], ptr nofree noundef nonnull captures(none) @called_via_pointer)
+; CHECK-NEXT:    call void @call_via_pointer_with_dead_args(ptr [[A]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR2]], ptr nofree noundef nonnull captures(none) @called_via_pointer_internal_1)
 ; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_a(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR3]])
 ; CHECK-NEXT:    call void @call_via_pointer_with_dead_args_internal_b(ptr [[B]], ptr noundef nonnull align 128 dereferenceable(4) [[PTR4]])
 ; CHECK-NEXT:    ret void
@@ -2409,7 +2409,7 @@ define void @call_via_pointer_with_dead_args_caller(ptr %a, ptr %b) {
 }
 define void @called_via_pointer(ptr %a, ptr %b, ptr %c, i64 %d, ptr %e) {
 ; CHECK-LABEL: define {{[^@]+}}@called_via_pointer
-; CHECK-SAME: (ptr [[A:%.*]], ptr nocapture nofree readnone [[B:%.*]], ptr nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], ptr nocapture nofree readnone [[E:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr nofree readnone captures(none) [[B:%.*]], ptr nofree readnone captures(none) [[C:%.*]], i64 [[D:%.*]], ptr nofree readnone captures(none) [[E:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @use_i32p(ptr [[A]])
 ; CHECK-NEXT:    tail call void @use_i32p(ptr [[A]])
@@ -2422,7 +2422,7 @@ entry:
 }
 define internal void @called_via_pointer_internal_1(ptr %a, ptr %b, ptr %c, i64 %d, ptr %e) {
 ; CHECK-LABEL: define {{[^@]+}}@called_via_pointer_internal_1
-; CHECK-SAME: (ptr [[A:%.*]], ptr nocapture nofree readnone [[B:%.*]], ptr nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], ptr nocapture nofree readnone [[E:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr nofree readnone captures(none) [[B:%.*]], ptr nofree readnone captures(none) [[C:%.*]], i64 [[D:%.*]], ptr nofree readnone captures(none) [[E:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @use_i32p(ptr [[A]])
 ; CHECK-NEXT:    tail call void @use_i32p(ptr [[A]])
@@ -2436,7 +2436,7 @@ entry:
 ; FIXME: Figure out why the MODULE has the unused arguments still
 define internal void @called_via_pointer_internal_2(ptr %a, ptr %b, ptr %c, i64 %d, ptr %e) {
 ; TUNIT-LABEL: define {{[^@]+}}@called_via_pointer_internal_2
-; TUNIT-SAME: (ptr [[A:%.*]], ptr nocapture nofree readnone [[B:%.*]], ptr nocapture nofree readnone [[C:%.*]], i64 [[D:%.*]], ptr nocapture nofree readnone [[E:%.*]]) {
+; TUNIT-SAME: (ptr [[A:%.*]], ptr nofree readnone captures(none) [[B:%.*]], ptr nofree readnone captures(none) [[C:%.*]], i64 [[D:%.*]], ptr nofree readnone captures(none) [[E:%.*]]) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    tail call void @use_i32p(ptr [[A]])
 ; TUNIT-NEXT:    tail call void @use_i32p(ptr [[A]])
@@ -2460,7 +2460,7 @@ declare void @use_i32p(ptr)
 define internal void @dead_with_blockaddress_users(ptr nocapture %pc) nounwind readonly {
 ; CGSCC: Function Attrs: nounwind memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@dead_with_blockaddress_users
-; CGSCC-SAME: (ptr nocapture [[PC:%.*]]) #[[ATTR15:[0-9]+]] {
+; CGSCC-SAME: (ptr captures(none) [[PC:%.*]]) #[[ATTR15:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    br label [[INDIRECTGOTO:%.*]]
 ; CGSCC:       lab0:
@@ -2589,7 +2589,7 @@ define void @bad_gep() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; TUNIT-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
+; TUNIT-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18:[0-9]+]]
 ; TUNIT-NEXT:    br label [[EXIT:%.*]]
 ; TUNIT:       while.body:
 ; TUNIT-NEXT:    unreachable
@@ -2598,7 +2598,7 @@ define void @bad_gep() {
 ; TUNIT:       if.end:
 ; TUNIT-NEXT:    unreachable
 ; TUNIT:       exit:
-; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR18]]
+; TUNIT-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR18]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
@@ -2607,7 +2607,7 @@ define void @bad_gep() {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[N1:%.*]] = alloca i8, i32 0, align 1
 ; CGSCC-NEXT:    [[M2:%.*]] = alloca i8, i32 0, align 1
-; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
+; CGSCC-NEXT:    call void @llvm.lifetime.start.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    br label [[EXIT:%.*]]
 ; CGSCC:       while.body:
 ; CGSCC-NEXT:    unreachable
@@ -2616,7 +2616,7 @@ define void @bad_gep() {
 ; CGSCC:       if.end:
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       exit:
-; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nocapture nofree noundef nonnull dereferenceable(1) [[N1]]) #[[ATTR21]]
+; CGSCC-NEXT:    call void @llvm.lifetime.end.p0(i64 noundef 1, ptr noalias nofree noundef nonnull captures(none) dereferenceable(1) [[N1]]) #[[ATTR21]]
 ; CGSCC-NEXT:    ret void
 ;
 entry:

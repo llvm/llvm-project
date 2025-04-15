@@ -20,7 +20,12 @@ set(LIBUNWIND_C_SOURCES
     )
 set_source_files_properties(${LIBUNWIND_C_SOURCES}
                             PROPERTIES
-                              COMPILE_FLAGS "-std=c99")
+                              # We need to set `-fexceptions` here so that key
+                              # unwinding functions, like
+                              # _UNWIND_RaiseException, are not marked as
+                              # `nounwind`, which breaks LTO builds of
+                              # libunwind.  See #56825 and #120657 for context.
+                              COMPILE_FLAGS "-std=c99 -fexceptions")
 
 set(LIBUNWIND_ASM_SOURCES
     UnwindRegistersRestore.S
@@ -31,7 +36,6 @@ set(LIBUNWIND_HEADERS
     AddressSpace.hpp
     assembly.h
     CompactUnwinder.hpp
-    cet_unwind.h
     config.h
     dwarf2.h
     DwarfInstructions.hpp
@@ -41,6 +45,7 @@ set(LIBUNWIND_HEADERS
     libunwind_ext.h
     Registers.hpp
     RWMutex.hpp
+    shadow_stack_unwind.h
     Unwind-EHABI.h
     UnwindCursor.hpp
     ../include/libunwind.h
@@ -105,15 +110,6 @@ if (LIBUNWIND_ENABLE_SHARED AND
           "on C++ ABI library is not supported.")
 endif()
 
-if (APPLE)
-  add_compile_flags("-U__STRICT_ANSI__")
-  add_link_flags("-compatibility_version 1" "-install_name /usr/lib/libunwind.1.dylib")
-
-  if (CMAKE_OSX_DEPLOYMENT_TARGET STREQUAL "10.6")
-    add_link_flags("-current_version ${LIBUNWIND_VERSION}" "/usr/lib/libSystem.B.dylib")
-  endif ()
-endif ()
-
 if (HAIKU)
   add_library_flags_if(LIBUNWIND_HAS_ROOT_LIB root)
 
@@ -122,6 +118,22 @@ if (HAIKU)
 
   add_compile_flags("-D_DEFAULT_SOURCE")
   add_compile_flags("-DPT_GNU_EH_FRAME=PT_EH_FRAME")
+
+  find_path(LIBUNWIND_HAIKU_PRIVATE_HEADERS
+            "commpage_defs.h"
+            PATHS ${CMAKE_SYSTEM_INCLUDE_PATH}
+            PATH_SUFFIXES "/private/system"
+            NO_DEFAULT_PATH
+            REQUIRED)
+
+  include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}")
+  if (LIBUNWIND_TARGET_TRIPLE)
+    if (${LIBUNWIND_TARGET_TRIPLE} MATCHES "^x86_64")
+      include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/x86_64")
+    endif()
+  else()
+    include_directories(SYSTEM "${LIBUNWIND_HAIKU_PRIVATE_HEADERS}/arch/${CMAKE_SYSTEM_PROCESSOR}")
+  endif()
 endif ()
 
 string(REPLACE ";" " " LIBUNWIND_COMPILE_FLAGS "${LIBUNWIND_COMPILE_FLAGS}")
@@ -162,22 +174,23 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
   set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
 
-if (LIBUNWIND_ENABLE_SHARED)
-  add_library(unwind_shared SHARED)
-  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
-  set_target_properties(unwind_shared
-    PROPERTIES
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-      VERSION "1.0"
-      SOVERSION "1"
-  )
+add_library(unwind_shared SHARED)
+target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+set_target_properties(unwind_shared
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_SHARED}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+    VERSION     "${LIBUNWIND_LIBRARY_VERSION}"
+    SOVERSION   "1"
+)
 
+if (LIBUNWIND_ENABLE_SHARED)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
-  if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
-    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
-  endif()
+endif()
+if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
 endif()
 
 # Build the static library.
@@ -208,20 +221,21 @@ if(LIBUNWIND_HIDE_SYMBOLS)
   target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
-if (LIBUNWIND_ENABLE_STATIC)
-  add_library(unwind_static STATIC)
-  target_link_libraries(unwind_static PUBLIC unwind_static_objects)
-  set_target_properties(unwind_static
-    PROPERTIES
-      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-      LINKER_LANGUAGE C
-      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
-  )
+add_library(unwind_static STATIC)
+target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+set_target_properties(unwind_static
+  PROPERTIES
+    EXCLUDE_FROM_ALL "$<IF:$<BOOL:${LIBUNWIND_ENABLE_STATIC}>,FALSE,TRUE>"
+    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+    LINKER_LANGUAGE C
+    OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
+)
 
+if (LIBUNWIND_ENABLE_STATIC)
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")
-  if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
-    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
-  endif()
+endif()
+if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
+  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
 endif()
 
 # Add a meta-target for both libraries.

@@ -66,6 +66,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
@@ -76,6 +77,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -86,7 +88,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -565,7 +566,6 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return IsStructurallyEquivalent(Context, NNS1->getAsNamespaceAlias(),
                                     NNS2->getAsNamespaceAlias());
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
     return IsStructurallyEquivalent(Context, QualType(NNS1->getAsType(), 0),
                                     QualType(NNS2->getAsType(), 0));
   case NestedNameSpecifier::Global:
@@ -575,6 +575,21 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                     NNS2->getAsRecordDecl());
   }
   return false;
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     const DependentTemplateStorage &S1,
+                                     const DependentTemplateStorage &S2) {
+  if (NestedNameSpecifier *NNS1 = S1.getQualifier(), *NNS2 = S2.getQualifier();
+      !NNS1 != !NNS2 ||
+      (NNS1 && !IsStructurallyEquivalent(Context, NNS1, NNS2)))
+    return false;
+
+  IdentifierOrOverloadedOperator IO1 = S1.getName(), IO2 = S2.getName();
+  const IdentifierInfo *II1 = IO1.getIdentifier(), *II2 = IO2.getIdentifier();
+  if (!II1 || !II2)
+    return IO1.getOperator() == IO2.getOperator();
+  return IsStructurallyEquivalent(II1, II2);
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
@@ -613,19 +628,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return TN1->getDeclName() == TN2->getDeclName();
   }
 
-  case TemplateName::DependentTemplate: {
-    DependentTemplateName *DN1 = N1.getAsDependentTemplateName(),
-                          *DN2 = N2.getAsDependentTemplateName();
-    if (!IsStructurallyEquivalent(Context, DN1->getQualifier(),
-                                  DN2->getQualifier()))
-      return false;
-    if (DN1->isIdentifier() && DN2->isIdentifier())
-      return IsStructurallyEquivalent(DN1->getIdentifier(),
-                                      DN2->getIdentifier());
-    else if (DN1->isOverloadedOperator() && DN2->isOverloadedOperator())
-      return DN1->getOperator() == DN2->getOperator();
-    return false;
-  }
+  case TemplateName::DependentTemplate:
+    return IsStructurallyEquivalent(Context, *N1.getAsDependentTemplateName(),
+                                    *N2.getAsDependentTemplateName());
 
   case TemplateName::SubstTemplateTemplateParmPack: {
     SubstTemplateTemplateParmPackStorage
@@ -645,6 +650,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
      // It is sufficient to check value of getAsTemplateDecl.
      break;
 
+   case TemplateName::DeducedTemplate:
+     // FIXME: We can't reach here.
+     llvm_unreachable("unimplemented");
   }
 
   return true;
@@ -890,8 +898,14 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, MemPtr1->getPointeeType(),
                                   MemPtr2->getPointeeType()))
       return false;
-    if (!IsStructurallyEquivalent(Context, QualType(MemPtr1->getClass(), 0),
-                                  QualType(MemPtr2->getClass(), 0)))
+    if (!IsStructurallyEquivalent(Context, MemPtr1->getQualifier(),
+                                  MemPtr2->getQualifier()))
+      return false;
+    CXXRecordDecl *D1 = MemPtr1->getMostRecentCXXRecordDecl(),
+                  *D2 = MemPtr2->getMostRecentCXXRecordDecl();
+    if (D1 == D2)
+      break;
+    if (!D1 || !D2 || !IsStructurallyEquivalent(Context, D1, D2))
       return false;
     break;
   }
@@ -1093,6 +1107,20 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       return false;
     break;
 
+  case Type::HLSLAttributedResource:
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getWrappedType(),
+            cast<HLSLAttributedResourceType>(T2)->getWrappedType()))
+      return false;
+    if (!IsStructurallyEquivalent(
+            Context, cast<HLSLAttributedResourceType>(T1)->getContainedType(),
+            cast<HLSLAttributedResourceType>(T2)->getContainedType()))
+      return false;
+    if (cast<HLSLAttributedResourceType>(T1)->getAttrs() !=
+        cast<HLSLAttributedResourceType>(T2)->getAttrs())
+      return false;
+    break;
+
   case Type::Paren:
     if (!IsStructurallyEquivalent(Context, cast<ParenType>(T1)->getInnerType(),
                                   cast<ParenType>(T2)->getInnerType()))
@@ -1291,11 +1319,10 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   case Type::DependentTemplateSpecialization: {
     const auto *Spec1 = cast<DependentTemplateSpecializationType>(T1);
     const auto *Spec2 = cast<DependentTemplateSpecializationType>(T2);
-    if (!IsStructurallyEquivalent(Context, Spec1->getQualifier(),
-                                  Spec2->getQualifier()))
+    if (Spec1->getKeyword() != Spec2->getKeyword())
       return false;
-    if (!IsStructurallyEquivalent(Spec1->getIdentifier(),
-                                  Spec2->getIdentifier()))
+    if (!IsStructurallyEquivalent(Context, Spec1->getDependentTemplateName(),
+                                  Spec2->getDependentTemplateName()))
       return false;
     if (!IsStructurallyEquivalent(Context, Spec1->template_arguments(),
                                   Spec2->template_arguments()))
@@ -1631,9 +1658,9 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (!D1->getDeclName() && !D2->getDeclName()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
-    if (std::optional<unsigned> Index1 =
+    if (UnsignedOrNone Index1 =
             StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(D1)) {
-      if (std::optional<unsigned> Index2 =
+      if (UnsignedOrNone Index2 =
               StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(
                   D2)) {
         if (*Index1 != *Index2)
@@ -2286,7 +2313,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 
   // Check whether we already know that these two declarations are not
   // structurally equivalent.
-  if (Context.NonEquivalentDecls.count(P))
+  if (Context.NonEquivalentDecls.count(
+          std::make_tuple(D1, D2, Context.IgnoreTemplateParmDepth)))
     return false;
 
   // Check if a check for these declarations is already pending.
@@ -2319,7 +2347,7 @@ DiagnosticBuilder StructuralEquivalenceContext::Diag2(SourceLocation Loc,
   return ToCtx.getDiagnostics().Report(Loc, DiagID);
 }
 
-std::optional<unsigned>
+UnsignedOrNone
 StructuralEquivalenceContext::findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   ASTContext &Context = Anon->getASTContext();
   QualType AnonTy = Context.getRecordType(Anon);
@@ -2494,7 +2522,8 @@ bool StructuralEquivalenceContext::Finish() {
     if (!Equivalent) {
       // Note that these two declarations are not equivalent (and we already
       // know about it).
-      NonEquivalentDecls.insert(P);
+      NonEquivalentDecls.insert(
+          std::make_tuple(D1, D2, IgnoreTemplateParmDepth));
 
       return true;
     }

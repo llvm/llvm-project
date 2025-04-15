@@ -13,9 +13,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK-NEXT: for.body:
 ; CHECK-NEXT:   Report: unsafe dependent memory operations in loop
 ; CHECK-NOT:    Report: cannot identify array bounds
-; CHECK-NEXT:   Unknown data dependence.
+; CHECK-NEXT:   Unsafe indirect dependence.
 ; CHECK-NEXT:     Dependences:
-; CHECK-NEXT:       Unknown:
+; CHECK-NEXT:       IndirectUnsafe:
 ; CHECK-NEXT:         %loadA = load i16, ptr %arrayidxA, align 2 ->
 ; CHECK-NEXT:         store i16 %mul, ptr %arrayidxA, align 2
 

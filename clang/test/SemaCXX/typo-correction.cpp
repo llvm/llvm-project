@@ -173,6 +173,7 @@ class Parent {
 };
 class Child: public Parent {};
 void Child::add_types(int value) {} // expected-error{{out-of-line definition of 'add_types' does not match any declaration in 'Child'}}
+                                    // expected-note@-2{{defined here}}
 
 // Fix the callback based filtering of typo corrections within
 // Sema::ActOnIdExpression by Parser::ParseCastExpression to allow type names as

@@ -80,7 +80,7 @@ template <class _NodeType, class _Alloc>
 struct __generic_container_node_destructor;
 
 template <class _NodeType, class _Alloc, template <class, class> class _MapOrSetSpecifics>
-class _LIBCPP_TEMPLATE_VIS __basic_node_handle
+class __basic_node_handle
     : public _MapOrSetSpecifics< _NodeType, __basic_node_handle<_NodeType, _Alloc, _MapOrSetSpecifics>> {
   template <class _Tp, class _Compare, class _Allocator>
   friend class __tree;
@@ -188,13 +188,13 @@ struct __map_node_handle_specifics {
 };
 
 template <class _NodeType, class _Alloc>
-using __set_node_handle = __basic_node_handle< _NodeType, _Alloc, __set_node_handle_specifics>;
+using __set_node_handle _LIBCPP_NODEBUG = __basic_node_handle< _NodeType, _Alloc, __set_node_handle_specifics>;
 
 template <class _NodeType, class _Alloc>
-using __map_node_handle = __basic_node_handle< _NodeType, _Alloc, __map_node_handle_specifics>;
+using __map_node_handle _LIBCPP_NODEBUG = __basic_node_handle< _NodeType, _Alloc, __map_node_handle_specifics>;
 
 template <class _Iterator, class _NodeType>
-struct _LIBCPP_TEMPLATE_VIS __insert_return_type {
+struct __insert_return_type {
   _Iterator position;
   bool inserted;
   _NodeType node;

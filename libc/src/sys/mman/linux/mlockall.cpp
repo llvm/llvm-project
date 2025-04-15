@@ -10,10 +10,11 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, mlockall, (int flags)) {
   long ret = syscall_impl(SYS_mlockall, flags);
@@ -24,4 +25,4 @@ LLVM_LIBC_FUNCTION(int, mlockall, (int flags)) {
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

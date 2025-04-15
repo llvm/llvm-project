@@ -21,6 +21,7 @@ using namespace test;
 
 //===----------------------------------------------------------------------===//
 // Parsing
+//===----------------------------------------------------------------------===//
 
 static ParseResult parseCustomOptionalOperand(
     OpAsmParser &parser,
@@ -155,6 +156,7 @@ static ParseResult parseCustomDirectiveOptionalOperandRef(
 
 //===----------------------------------------------------------------------===//
 // Printing
+//===----------------------------------------------------------------------===//
 
 static void printCustomOptionalOperand(OpAsmPrinter &printer, Operation *,
                                        Value optOperand) {
@@ -280,7 +282,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
   p << " \"" << llvm::encodeBase64(getB64()) << "\"";
 }
 
-::mlir::LogicalResult FormatInferType2Op::inferReturnTypes(
+::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
     OpaqueProperties properties, ::mlir::RegionRange regions,
@@ -291,6 +293,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 
 //===----------------------------------------------------------------------===//
 // Test WrapRegionOp - wrapping op exercising `parseGenericOperation()`.
+//===----------------------------------------------------------------------===//
 
 ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
                                     OperationState &result) {

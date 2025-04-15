@@ -17,8 +17,11 @@ add_llvm_library(LLVMBOLTCore
   BinaryData.cpp
   BinaryEmitter.cpp
   BinaryFunction.cpp
+  BinaryFunctionCallGraph.cpp
   BinaryFunctionProfile.cpp
   BinarySection.cpp
+  CallGraph.cpp
+  CallGraphWalker.cpp
   DebugData.cpp
   DebugNames.cpp
   DIEBuilder.cpp
@@ -32,6 +35,7 @@ add_llvm_library(LLVMBOLTCore
   ParallelUtilities.cpp
   Relocation.cpp
 
+  NO_EXPORT
   DISABLE_LLVM_LINK_LLVM_DYLIB
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}

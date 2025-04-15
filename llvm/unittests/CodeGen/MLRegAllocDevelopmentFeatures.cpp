@@ -8,6 +8,7 @@
 
 #include "../../lib/CodeGen/MLRegAllocEvictAdvisor.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -16,11 +17,11 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/Triple.h"
 #include "gmock/gmock.h"
@@ -29,6 +30,7 @@
 #include <string>
 #include <vector>
 
+using namespace llvm;
 using testing::ContainerEq;
 using testing::Test;
 

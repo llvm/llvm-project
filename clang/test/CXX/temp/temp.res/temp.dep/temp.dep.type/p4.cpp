@@ -574,3 +574,34 @@ namespace N4 {
     }
   };
 } // namespace N4
+
+namespace N5 {
+  struct A {
+    int x;
+  };
+
+  template<typename T>
+  void f() {
+    A y = T::x; // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+    y.x;
+  }
+
+  template void f<int>(); // expected-note {{in instantiation of}}
+
+  struct B {
+    template<typename T>
+    B(T&&);
+
+    int x;
+  };
+
+  template<typename T>
+  void g(T y) {
+    B z([&]() { // expected-note {{while substituting into a lambda expression here}}
+      h(&y); // expected-error {{use of undeclared identifier 'h'}}
+    });
+    z.x;
+  }
+
+  template void g(int); // expected-note {{in instantiation of}}
+} // namespace N5

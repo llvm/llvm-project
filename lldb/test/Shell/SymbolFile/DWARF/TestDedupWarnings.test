@@ -1,0 +1,22 @@
+# REQUIRES: system-darwin
+# Test the rate-limiting of module not found warnings.
+# RUN: rm -rf %t
+# RUN: mkdir -p %t
+
+# RUN: echo 'module "C" { header "c.h" }' >%t/module.modulemap
+# RUN: echo 'struct c {};' >>%t/c.h
+# RUN: echo '@import C;'                  >%t/a.m
+# RUN: echo 'struct a { struct c c; } a;' >>%t/a.m
+# RUN: echo '@import C;'                  >%t/b.m
+# RUN: echo 'struct b { struct c c; } b;' >>%t/b.m
+# RUN: echo 'int main() {}'               >>%t/b.m
+
+# RUN: %clang_host -fmodules -Xclang -fmodules-cache-path=%t/cache -I%t -g -gmodules %t/a.m -o %t/a.o -c
+# RUN: %clang_host -fmodules -Xclang -fmodules-cache-path=%t/cache -I%t -g -gmodules %t/b.m -o %t/b.o -c
+# RUN: %clang_host %t/a.o %t/b.o -o %t/a.out
+# RUN: rm -rf %t/cache
+# RUN: %lldb %t/a.out -o "b main" -o run -o "p a" -o "p b" -o q 2>&1 | FileCheck %s
+# CHECK: {{[ab]}}.o{{.*}}/cache/{{.*}}/C-{{.*}}.pcm' does not exist
+# CHECK-NOT: /cache/{{.*}}/C-{.*}.pcm' does not exist
+# CHECK: {{[ab]}}.o{{.*}}/cache/{{.*}}/C-{{.*}}.pcm' does not exist
+# CHECK-NOT: /cache/{{.*}}/C-{.*}.pcm' does not exist

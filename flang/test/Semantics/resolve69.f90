@@ -16,7 +16,7 @@ subroutine s1()
   !
   integer, parameter :: constVal = 1
   integer :: nonConstVal = 1
-!ERROR: Invalid specification expression: reference to local entity 'nonconstval'
+!PORTABILITY: specification expression refers to local object 'nonconstval' (initialized and saved)
   character(nonConstVal) :: colonString1
   character(len=20, kind=constVal + 1) :: constKindString
   character(len=:, kind=constVal + 1), pointer :: constKindString1
@@ -53,13 +53,13 @@ subroutine s1()
 
   type (derived(constVal, 3)) :: constDerivedKind
 !ERROR: Value of KIND type parameter 'typekind' must be constant
-!ERROR: Invalid specification expression: reference to local entity 'nonconstval'
+!PORTABILITY: specification expression refers to local object 'nonconstval' (initialized and saved)
   type (derived(nonConstVal, 3)) :: nonConstDerivedKind
 
   !OK because all type-params are constants
   type (derived(3, constVal)) :: constDerivedLen
 
-!ERROR: Invalid specification expression: reference to local entity 'nonconstval'
+!PORTABILITY: specification expression refers to local object 'nonconstval' (initialized and saved)
   type (derived(3, nonConstVal)) :: nonConstDerivedLen
 !ERROR: 'colonderivedlen' has a type derived(typekind=3_4,typelen=:) with a deferred type parameter but is neither an allocatable nor an object pointer
   type (derived(3, :)) :: colonDerivedLen

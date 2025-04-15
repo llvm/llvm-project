@@ -7,7 +7,7 @@ void Fn(half2 H);
 // CHECK: CallExpr {{.*}}'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(double2)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}}'void (double2)' lvalue Function {{.*}} 'Fn' 'void (double2)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'double2':'vector<double, 2>' <FloatingCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 2>' <FloatingCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'vector<float, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'vector<float, 2>' lvalue ParmVar {{.*}} 'F' 'float2':'vector<float, 2>'
 
@@ -22,7 +22,7 @@ void Fn2(int16_t2 S);
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int64_t2)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (int64_t2)' lvalue Function {{.*}} 'Fn2' 'void (int64_t2)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <IntegralCast>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int64_t, 2>' <IntegralCast>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'int2':'vector<int, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'int2':'vector<int, 2>' lvalue ParmVar {{.*}} 'I' 'int2':'vector<int, 2>'
 
@@ -36,7 +36,7 @@ void Fn3( int64_t2 p0);
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int64_t2)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (int64_t2)' lvalue Function {{.*}} 'Fn3' 'void (int64_t2)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int64_t, 2>' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'half2':'vector<half, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'half2':'vector<half, 2>' lvalue ParmVar {{.*}} 'p0' 'half2':'vector<half, 2>'
 // CHECKIR-LABEL: Call3
@@ -49,7 +49,7 @@ void Call3(half2 p0) {
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(int64_t2)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (int64_t2)' lvalue Function {{.*}} 'Fn3' 'void (int64_t2)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <FloatingToIntegral>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<int64_t, 2>' <FloatingToIntegral>
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'vector<float, 2>' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'float2':'vector<float, 2>' lvalue ParmVar {{.*}} 'p0' 'float2':'vector<float, 2>'
 // CHECKIR-LABEL: Call4
@@ -64,9 +64,9 @@ void Fn4( float2 p0);
 // CHECK: CallExpr {{.*}} 'void'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(float2)' <FunctionToPointerDecay>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void (float2)' lvalue Function {{.*}} 'Fn4' 'void (float2)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2':'vector<float, 2>' <IntegralToFloating>
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<long, 2>' <LValueToRValue>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'vector<long, 2>' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'vector<long, 2>'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<float, 2>' <IntegralToFloating>
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int64_t2':'vector<int64_t, 2>' lvalue ParmVar {{.*}} 'p0' 'int64_t2':'vector<int64_t, 2>'
 // CHECKIR-LABEL: Call5
 // CHECKIR: {{.*}} = sitofp <2 x i64> {{.*}} to <2 x float>
 void Call5(int64_t2 p0) {

@@ -30,6 +30,7 @@
 // in the paths that are explicitly included by the user.
 
 #include "CompileCommands.h"
+#include "Config.h"
 #include "GlobalCompilationDatabase.h"
 #include "support/Logger.h"
 #include "support/Threading.h"
@@ -401,22 +402,30 @@ extractSystemIncludesAndTarget(const DriverArgs &InputArgs,
   if (!Info)
     return std::nullopt;
 
-  // The built-in headers are tightly coupled to parser builtins.
-  // (These are clang's "resource dir", GCC's GCC_INCLUDE_DIR.)
-  // We should keep using clangd's versions, so exclude the queried builtins.
-  // They're not specially marked in the -v output, but we can get the path
-  // with `$DRIVER -print-file-name=include`.
-  if (auto BuiltinHeaders =
-          run({Driver, "-print-file-name=include"}, /*OutputIsStderr=*/false)) {
-    auto Path = llvm::StringRef(*BuiltinHeaders).trim();
-    if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
-      auto Size = Info->SystemIncludes.size();
-      llvm::erase(Info->SystemIncludes, Path);
-      vlog("System includes extractor: builtin headers {0} {1}", Path,
-           (Info->SystemIncludes.size() != Size)
-               ? "excluded"
-               : "not found in driver's response");
+  switch (Config::current().CompileFlags.BuiltinHeaders) {
+  case Config::BuiltinHeaderPolicy::Clangd: {
+    // The built-in headers are tightly coupled to parser builtins.
+    // (These are clang's "resource dir", GCC's GCC_INCLUDE_DIR.)
+    // We should keep using clangd's versions, so exclude the queried
+    // builtins. They're not specially marked in the -v output, but we can
+    // get the path with `$DRIVER -print-file-name=include`.
+    if (auto BuiltinHeaders = run({Driver, "-print-file-name=include"},
+                                  /*OutputIsStderr=*/false)) {
+      auto Path = llvm::StringRef(*BuiltinHeaders).trim();
+      if (!Path.empty() && llvm::sys::path::is_absolute(Path)) {
+        auto Size = Info->SystemIncludes.size();
+        llvm::erase(Info->SystemIncludes, Path);
+        vlog("System includes extractor: builtin headers {0} {1}", Path,
+             (Info->SystemIncludes.size() != Size)
+                 ? "excluded"
+                 : "not found in driver's response");
+      }
     }
+    break;
+  }
+  case Config::BuiltinHeaderPolicy::QueryDriver:
+    vlog("System includes extractor: Using builtin headers from query driver.");
+    break;
   }
 
   log("System includes extractor: successfully executed {0}\n\tgot includes: "
@@ -483,7 +492,6 @@ std::string convertGlobToRegex(llvm::StringRef Glob) {
     }
   }
   RegStream << '$';
-  RegStream.flush();
   return RegText;
 }
 

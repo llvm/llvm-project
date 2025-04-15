@@ -17,6 +17,9 @@
 #include "clang/Basic/ParsedAttrInfo.h"
 #include "clang/Basic/TargetInfo.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
+
 using namespace clang;
 
 static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
@@ -30,7 +33,8 @@ static int hasAttributeImpl(AttributeCommonInfo::Syntax Syntax, StringRef Name,
 
 int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
                         const IdentifierInfo *Scope, const IdentifierInfo *Attr,
-                        const TargetInfo &Target, const LangOptions &LangOpts) {
+                        const TargetInfo &Target, const LangOptions &LangOpts,
+                        bool CheckPlugins) {
   StringRef Name = Attr->getName();
   // Normalize the attribute name, __foo__ becomes foo.
   if (Name.size() >= 4 && Name.starts_with("__") && Name.ends_with("__"))
@@ -58,12 +62,21 @@ int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
   if (res)
     return res;
 
-  // Check if any plugin provides this attribute.
-  for (auto &Ptr : getAttributePluginInstances())
-    if (Ptr->hasSpelling(Syntax, Name))
-      return 1;
+  if (CheckPlugins) {
+    // Check if any plugin provides this attribute.
+    for (auto &Ptr : getAttributePluginInstances())
+      if (Ptr->hasSpelling(Syntax, Name))
+        return 1;
+  }
 
   return 0;
+}
+
+int clang::hasAttribute(AttributeCommonInfo::Syntax Syntax,
+                        const IdentifierInfo *Scope, const IdentifierInfo *Attr,
+                        const TargetInfo &Target, const LangOptions &LangOpts) {
+  return hasAttribute(Syntax, Scope, Attr, Target, LangOpts,
+                      /*CheckPlugins=*/true);
 }
 
 const char *attr::getSubjectMatchRuleSpelling(attr::SubjectMatchRule Rule) {
@@ -130,13 +143,17 @@ static SmallString<64> normalizeName(const IdentifierInfo *Name,
   StringRef ScopeName = normalizeAttrScopeName(Scope, SyntaxUsed);
   StringRef AttrName = normalizeAttrName(Name, ScopeName, SyntaxUsed);
 
+  std::string StrAttrName = AttrName.str();
+  if (SyntaxUsed == AttributeCommonInfo::AS_HLSLAnnotation)
+    StrAttrName = AttrName.lower();
+
   SmallString<64> FullName = ScopeName;
   if (!ScopeName.empty()) {
     assert(SyntaxUsed == AttributeCommonInfo::AS_CXX11 ||
            SyntaxUsed == AttributeCommonInfo::AS_C23);
     FullName += "::";
   }
-  FullName += AttrName;
+  FullName += StrAttrName;
 
   return FullName;
 }
@@ -148,17 +165,44 @@ AttributeCommonInfo::getParsedKind(const IdentifierInfo *Name,
   return ::getAttrKind(normalizeName(Name, ScopeName, SyntaxUsed), SyntaxUsed);
 }
 
+AttributeCommonInfo::AttrArgsInfo
+AttributeCommonInfo::getCXX11AttrArgsInfo(const IdentifierInfo *Name) {
+  StringRef AttrName =
+      normalizeAttrName(Name, /*NormalizedScopeName*/ "", Syntax::AS_CXX11);
+#define CXX11_ATTR_ARGS_INFO
+  return llvm::StringSwitch<AttributeCommonInfo::AttrArgsInfo>(AttrName)
+#include "clang/Basic/CXX11AttributeInfo.inc"
+      .Default(AttributeCommonInfo::AttrArgsInfo::None);
+#undef CXX11_ATTR_ARGS_INFO
+}
+
 std::string AttributeCommonInfo::getNormalizedFullName() const {
   return static_cast<std::string>(
       normalizeName(getAttrName(), getScopeName(), getSyntax()));
+}
+
+static AttributeCommonInfo::Scope
+getScopeFromNormalizedScopeName(StringRef ScopeName) {
+  return llvm::StringSwitch<AttributeCommonInfo::Scope>(ScopeName)
+      .Case("", AttributeCommonInfo::Scope::NONE)
+      .Case("clang", AttributeCommonInfo::Scope::CLANG)
+      .Case("gnu", AttributeCommonInfo::Scope::GNU)
+      .Case("gsl", AttributeCommonInfo::Scope::GSL)
+      .Case("hlsl", AttributeCommonInfo::Scope::HLSL)
+      .Case("msvc", AttributeCommonInfo::Scope::MSVC)
+      .Case("omp", AttributeCommonInfo::Scope::OMP)
+      .Case("riscv", AttributeCommonInfo::Scope::RISCV);
 }
 
 unsigned AttributeCommonInfo::calculateAttributeSpellingListIndex() const {
   // Both variables will be used in tablegen generated
   // attribute spell list index matching code.
   auto Syntax = static_cast<AttributeCommonInfo::Syntax>(getSyntax());
-  StringRef Scope = normalizeAttrScopeName(getScopeName(), Syntax);
-  StringRef Name = normalizeAttrName(getAttrName(), Scope, Syntax);
+  StringRef ScopeName = normalizeAttrScopeName(getScopeName(), Syntax);
+  StringRef Name = normalizeAttrName(getAttrName(), ScopeName, Syntax);
+
+  AttributeCommonInfo::Scope ComputedScope =
+      getScopeFromNormalizedScopeName(ScopeName);
 
 #include "clang/Sema/AttrSpellingListIndex.inc"
 }

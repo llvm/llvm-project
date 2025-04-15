@@ -60,6 +60,25 @@ void dispatchIndexOpFoldResults(ArrayRef<OpFoldResult> ofrs,
                                 SmallVectorImpl<Value> &dynamicVec,
                                 SmallVectorImpl<int64_t> &staticVec);
 
+/// Given OpFoldResult representing dim size value (*), generates a pair of
+/// sizes:
+///   * 1st result, static value, contains an int64_t dim size that can be used
+///   to build ShapedType (ShapedType::kDynamic is used for truly dynamic dims),
+///   * 2nd result, dynamic value, contains OpFoldResult encapsulating the
+///   actual dim size (either original or updated input value).
+/// For input sizes for which it is possible to extract a constant Attribute,
+/// replaces the original size value with an integer attribute (unless it's
+/// already a constant Attribute). The 1st return value also becomes the actual
+/// integer size (as opposed ShapedType::kDynamic).
+///
+/// (*) This hook is usually used when, given input sizes as OpFoldResult,
+/// it's required to generate two vectors:
+///   * sizes as int64_t to generate a shape,
+///   * sizes as OpFoldResult for sizes-like attribute.
+/// Please update this comment if you identify other use cases.
+std::pair<int64_t, OpFoldResult>
+getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
+
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
@@ -92,6 +111,12 @@ getConstantIntValues(ArrayRef<OpFoldResult> ofrs);
 
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value);
+/// Return true if all of `ofrs` are constant integers equal to `value`.
+bool areAllConstantIntValue(ArrayRef<OpFoldResult> ofrs, int64_t value);
+/// Return true if all of `ofrs` are constant integers equal to the
+/// corresponding value in `values`.
+bool areConstantIntValues(ArrayRef<OpFoldResult> ofrs,
+                          ArrayRef<int64_t> values);
 
 /// Return true if ofr1 and ofr2 are the same integer constant attribute
 /// values or the same SSA value. Ignore integer bitwitdh and type mismatch
@@ -119,6 +144,9 @@ bool isEqualConstantIntOrValueArray(ArrayRef<OpFoldResult> ofrs1,
 /// Return a vector of OpFoldResults with the same size a staticValues, but
 /// all elements for which ShapedType::isDynamic is true, will be replaced by
 /// dynamicValues.
+SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
+                                         ValueRange dynamicValues,
+                                         MLIRContext *context);
 SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
                                          ValueRange dynamicValues, Builder &b);
 

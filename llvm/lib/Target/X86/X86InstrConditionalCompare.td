@@ -36,7 +36,7 @@ class Ctest<bits<8> o, Format f, X86TypeInfo t, DAGOperand op1, DAGOperand op2>:
 //===----------------------------------------------------------------------===//
 // CCMP Instructions
 //
-let SchedRW = [WriteALU] in {
+let SchedRW = [WriteALU], isCompare = 1 in {
   def CCMP8rr : Ccmp<0x38, MRMDestReg, Xi8,  GR8,  GR8>;
   def CCMP16rr: Ccmp<0x39, MRMDestReg, Xi16, GR16, GR16>, PD;
   def CCMP32rr: Ccmp<0x39, MRMDestReg, Xi32, GR32, GR32>;
@@ -55,7 +55,7 @@ let SchedRW = [WriteALU] in {
   def CCMP64ri32: Ccmp<0x81, MRM7r, Xi64, GR64, i64i32imm>;
 }
 
-let mayLoad = 1 in {
+let mayLoad = 1, isCompare = 1 in {
   let SchedRW = [WriteALU.Folded] in {
     def CCMP16mi8: Ccmp<0x83, MRM7m, Xi16, i16mem, i16i8imm>, PD;
     def CCMP32mi8: Ccmp<0x83, MRM7m, Xi32, i32mem, i32i8imm>;
@@ -93,8 +93,8 @@ def : Pat<(X86ccmp GR16:$src1, (i16 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
           (CCMP16ri GR16:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
 def : Pat<(X86ccmp GR32:$src1, (i32 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
           (CCMP32ri GR32:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ccmp GR64:$src1, (i64 imm:$src2), timm:$dcf, timm:$cond, EFLAGS),
-          (CCMP64ri32 GR64:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
+def : Pat<(X86ccmp GR64:$src1, i64immSExt32_su:$src2, timm:$dcf, timm:$cond, EFLAGS),
+          (CCMP64ri32 GR64:$src1, i64immSExt32_su:$src2, timm:$dcf, timm:$cond)>;
 
 def : Pat<(X86ccmp GR8:$src1, (loadi8 addr:$src2), timm:$dcf, timm:$cond, EFLAGS),
           (CCMP8rm GR8:$src1, addr:$src2, timm:$dcf, timm:$cond)>;
@@ -152,5 +152,5 @@ def : Pat<(X86ctestpat GR16:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST16ri GR16:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
 def : Pat<(X86ctestpat GR32:$src1, imm:$src2, timm:$dcf, timm:$cond),
           (CTEST32ri GR32:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
-def : Pat<(X86ctestpat GR64:$src1, imm:$src2, timm:$dcf, timm:$cond),
-          (CTEST64ri32 GR64:$src1, imm:$src2, timm:$dcf, timm:$cond)>;
+def : Pat<(X86ctestpat GR64:$src1, i64immSExt32_su:$src2, timm:$dcf, timm:$cond),
+          (CTEST64ri32 GR64:$src1, i64immSExt32_su:$src2, timm:$dcf, timm:$cond)>;

@@ -150,7 +150,6 @@ std::string printDefinition(const Decl *D, PrintingPolicy PP,
   std::string Definition;
   llvm::raw_string_ostream OS(Definition);
   D->print(OS, PP);
-  OS.flush();
   return Definition;
 }
 
@@ -179,7 +178,6 @@ HoverInfo::PrintedType printType(QualType QT, ASTContext &ASTCtx,
       OS << TT->getDecl()->getKindName() << " ";
   }
   QT.print(OS, PP);
-  OS.flush();
 
   const Config &Cfg = Config::current();
   if (!QT.isNull() && Cfg.Hover.ShowAKA) {
@@ -229,7 +227,6 @@ HoverInfo::PrintedType printType(const TemplateTemplateParmDecl *TTP,
   // FIXME: TemplateTemplateParameter doesn't store the info on whether this
   // param was a "typename" or "class".
   OS << "> class";
-  OS.flush();
   return Result;
 }
 
@@ -821,7 +818,6 @@ std::string typeAsDefinition(const HoverInfo::PrintedType &PType) {
   OS << PType.Type;
   if (PType.AKA)
     OS << " // aka: " << *PType.AKA;
-  OS.flush();
   return Result;
 }
 
@@ -1022,7 +1018,7 @@ void addLayoutInfo(const NamedDecl &ND, HoverInfo &HI) {
       const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Record);
       HI.Offset = Layout.getFieldOffset(FD->getFieldIndex());
       if (FD->isBitField())
-        HI.Size = FD->getBitWidthValue(Ctx);
+        HI.Size = FD->getBitWidthValue();
       else if (auto Size = Ctx.getTypeSizeInCharsIfKnown(FD->getType()))
         HI.Size = FD->isZeroSize(Ctx) ? 0 : Size->getQuantity() * 8;
       if (HI.Size) {
@@ -1197,12 +1193,13 @@ void maybeAddSymbolProviders(ParsedAST &AST, HoverInfo &HI,
                              include_cleaner::Symbol Sym) {
   trace::Span Tracer("Hover::maybeAddSymbolProviders");
 
-  const SourceManager &SM = AST.getSourceManager();
   llvm::SmallVector<include_cleaner::Header> RankedProviders =
-      include_cleaner::headersForSymbol(Sym, SM, &AST.getPragmaIncludes());
+      include_cleaner::headersForSymbol(Sym, AST.getPreprocessor(),
+                                        &AST.getPragmaIncludes());
   if (RankedProviders.empty())
     return;
 
+  const SourceManager &SM = AST.getSourceManager();
   std::string Result;
   include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   for (const auto &P : RankedProviders) {

@@ -43,7 +43,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -86,7 +85,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
+    if (!TheTriple.isOSWindowsOrUEFI())
       report_fatal_error(
           "Cannot initialize MC for non-Windows COFF object files.");
 
@@ -201,7 +200,8 @@ MCDataFragment *MCContext::allocInitialFragment(MCSection &Sec) {
   assert(!Sec.curFragList()->Head);
   auto *F = allocFragment<MCDataFragment>();
   F->setParent(&Sec);
-  Sec.addFragment(*F);
+  Sec.curFragList()->Head = F;
+  Sec.curFragList()->Tail = F;
   return F;
 }
 
@@ -346,6 +346,11 @@ MCSymbol *MCContext::createTempSymbol() { return createTempSymbol("tmp"); }
 
 MCSymbol *MCContext::createNamedTempSymbol() {
   return createNamedTempSymbol("tmp");
+}
+
+MCSymbol *MCContext::createLocalSymbol(StringRef Name) {
+  MCSymbolTableEntry &NameEntry = getSymbolTableEntry(Name);
+  return createSymbolImpl(&NameEntry, /*IsTemporary=*/false);
 }
 
 unsigned MCContext::NextInstance(unsigned LocalLabelVal) {
@@ -631,7 +636,7 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
   bool IsMergeable = Flags & ELF::SHF_MERGE;
-  if (UniqueID == GenericSectionID) {
+  if (UniqueID == MCSection::NonUniqueID) {
     ELFSeenGenericMergeableSections.insert(SectionName);
     // Minor performance optimization: avoid hash map lookup in
     // isELFGenericMergeableSection, which will return true for SectionName.
@@ -691,10 +696,11 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
   MCSymbol *COMDATSymbol = nullptr;
   if (!COMDATSymName.empty()) {
     COMDATSymbol = getOrCreateSymbol(COMDATSymName);
+    assert(COMDATSymbol && "COMDATSymbol is null");
     COMDATSymName = COMDATSymbol->getName();
     // A non-associative COMDAT is considered to define the COMDAT symbol. Check
     // the redefinition error.
-    if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE && COMDATSymbol &&
+    if (Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE &&
         COMDATSymbol->isDefined() &&
         (!COMDATSymbol->isInSection() ||
          cast<MCSectionCOFF>(COMDATSymbol->getSection()).getCOMDATSymbol() !=
@@ -721,14 +727,15 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
                                          unsigned Characteristics) {
-  return getCOFFSection(Section, Characteristics, "", 0, GenericSectionID);
+  return getCOFFSection(Section, Characteristics, "", 0,
+                        MCSection::NonUniqueID);
 }
 
 MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
                                                     const MCSymbol *KeySym,
                                                     unsigned UniqueID) {
   // Return the normal section if we don't have to be associative or unique.
-  if (!KeySym && UniqueID == GenericSectionID)
+  if (!KeySym && UniqueID == MCSection::NonUniqueID)
     return Sec;
 
   // If we have a key symbol, make an associative section with the same name and
@@ -745,22 +752,25 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
                                          unsigned Flags, const Twine &Group,
-                                         unsigned UniqueID,
-                                         const char *BeginSymName) {
+                                         unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
     GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
+    if (K.isMetadata() && !GroupSym->getType().has_value()) {
+      // Comdat group symbol associated with a custom section is a section
+      // symbol (not a data symbol).
+      GroupSym->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
+    }
   }
 
-  return getWasmSection(Section, K, Flags, GroupSym, UniqueID, BeginSymName);
+  return getWasmSection(Section, K, Flags, GroupSym, UniqueID);
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
                                          unsigned Flags,
                                          const MCSymbolWasm *GroupSym,
-                                         unsigned UniqueID,
-                                         const char *BeginSymName) {
+                                         unsigned UniqueID) {
   StringRef Group = "";
   if (GroupSym)
     Group = GroupSym->getName();
@@ -796,7 +806,6 @@ bool MCContext::hasXCOFFSection(StringRef Section,
 MCSectionXCOFF *MCContext::getXCOFFSection(
     StringRef Section, SectionKind Kind,
     std::optional<XCOFF::CsectProperties> CsectProp, bool MultiSymbolsAllowed,
-    const char *BeginSymName,
     std::optional<XCOFF::DwarfSectionSubtypeFlags> DwarfSectionSubtypeFlags) {
   bool IsDwarfSec = DwarfSectionSubtypeFlags.has_value();
   assert((IsDwarfSec != CsectProp.has_value()) && "Invalid XCOFF section!");
@@ -826,35 +835,29 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
         CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 
-  MCSymbol *Begin = nullptr;
-  if (BeginSymName)
-    Begin = createTempSymbol(BeginSymName, false);
-
   // QualName->getUnqualifiedName() and CachedName are the same except when
   // CachedName contains invalid character(s) such as '$' for an XCOFF symbol.
   MCSectionXCOFF *Result = nullptr;
   if (IsDwarfSec)
     Result = new (XCOFFAllocator.Allocate()) MCSectionXCOFF(
         QualName->getUnqualifiedName(), Kind, QualName,
-        *DwarfSectionSubtypeFlags, Begin, CachedName, MultiSymbolsAllowed);
+        *DwarfSectionSubtypeFlags, QualName, CachedName, MultiSymbolsAllowed);
   else
     Result = new (XCOFFAllocator.Allocate())
         MCSectionXCOFF(QualName->getUnqualifiedName(), CsectProp->MappingClass,
-                       CsectProp->Type, Kind, QualName, Begin, CachedName,
+                       CsectProp->Type, Kind, QualName, nullptr, CachedName,
                        MultiSymbolsAllowed);
 
   Entry.second = Result;
 
   auto *F = allocInitialFragment(*Result);
-  if (Begin)
-    Begin->setFragment(F);
 
   // We might miss calculating the symbols difference as absolute value before
   // adding fixups when symbol_A without the fragment set is the csect itself
   // and symbol_B is in it.
-  // TODO: Currently we only set the fragment for XMC_PR csects because we don't
-  // have other cases that hit this problem yet.
-  if (!IsDwarfSec && CsectProp->MappingClass == XCOFF::XMC_PR)
+  // TODO: Currently we only set the fragment for XMC_PR csects and DWARF
+  // sections because we don't have other cases that hit this problem yet.
+  if (IsDwarfSec || CsectProp->MappingClass == XCOFF::XMC_PR)
     QualName->setFragment(F);
 
   return Result;

@@ -111,12 +111,12 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
   ; CHECK: [[A01:%.*]] = or i8 [[A0]], [[A1]]
-  ; CHECK: [[V0:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[V0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
   ; CHECK: store i8 [[B01]], ptr [[V0]], align 1
-  ; CHECK: [[V:%.*]] = getelementptr inbounds [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[V:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
   ; CHECK: call void ({ i32, i1 }, i8, ptr, ...) @__dfsw_custom_varg({ i32, i1 } %a, i8 zeroext [[A01]], ptr [[V]], [2 x i7] %b)
 
   call void ({i32, i1}, ...) @custom_varg({i32, i1} %a, [2 x i7] %b)

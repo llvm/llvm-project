@@ -111,12 +111,12 @@ define void @test6(ptr nocapture readonly %A, ptr nocapture %B, i64 %n) {
 ; CHECK-NEXT:    slli a4, a3, 2
 ; CHECK-NEXT:    add a5, a0, a4
 ; CHECK-NEXT:    vle32.v v8, (a5)
+; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    vmsle.vi v9, v8, -3
 ; CHECK-NEXT:    vmsgt.vi v10, v8, 2
 ; CHECK-NEXT:    vmor.mm v0, v9, v10
 ; CHECK-NEXT:    add a4, a4, a1
 ; CHECK-NEXT:    vse32.v v8, (a4), v0.t
-; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    vsetvli a2, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    bnez a2, .LBB5_2
 ; CHECK-NEXT:  .LBB5_3: # %for.cond.cleanup
@@ -377,8 +377,8 @@ entry:
 define <vscale x 1 x double> @test19(<vscale x 1 x double> %a, double %b) nounwind {
 ; CHECK-LABEL: test19:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v9, v8
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmv.s.f v9, fa0
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v9, v8

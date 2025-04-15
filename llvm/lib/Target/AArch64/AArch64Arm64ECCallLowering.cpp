@@ -21,9 +21,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CallingConv.h"
+#include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
@@ -61,23 +63,27 @@ struct ThunkArgInfo {
 class AArch64Arm64ECCallLowering : public ModulePass {
 public:
   static char ID;
-  AArch64Arm64ECCallLowering() : ModulePass(ID) {
-    initializeAArch64Arm64ECCallLoweringPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64Arm64ECCallLowering() : ModulePass(ID) {}
 
   Function *buildExitThunk(FunctionType *FnTy, AttributeList Attrs);
   Function *buildEntryThunk(Function *F);
   void lowerCall(CallBase *CB);
   Function *buildGuestExitThunk(Function *F);
-  bool processFunction(Function &F, SetVector<Function *> &DirectCalledFns);
+  Function *buildPatchableThunk(GlobalAlias *UnmangledAlias,
+                                GlobalAlias *MangledAlias);
+  bool processFunction(Function &F, SetVector<GlobalValue *> &DirectCalledFns,
+                       DenseMap<GlobalAlias *, GlobalAlias *> &FnsMap);
   bool runOnModule(Module &M) override;
 
 private:
   int cfguard_module_flag = 0;
   FunctionType *GuardFnType = nullptr;
   PointerType *GuardFnPtrType = nullptr;
+  FunctionType *DispatchFnType = nullptr;
+  PointerType *DispatchFnPtrType = nullptr;
   Constant *GuardFnCFGlobal = nullptr;
   Constant *GuardFnGlobal = nullptr;
+  Constant *DispatchFnGlobal = nullptr;
   Module *M = nullptr;
 
   Type *PtrTy;
@@ -524,7 +530,7 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   unsigned ThunkArgOffset = TransformDirectToSRet ? 2 : 1;
   unsigned PassthroughArgSize =
       (F->isVarArg() ? 5 : Thunk->arg_size()) - ThunkArgOffset;
-  assert(ArgTranslations.size() == F->isVarArg() ? 5 : PassthroughArgSize);
+  assert(ArgTranslations.size() == (F->isVarArg() ? 5 : PassthroughArgSize));
 
   // Translate arguments to call.
   SmallVector<Value *> Args;
@@ -619,10 +625,10 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
       Function::Create(Arm64Ty, GlobalValue::WeakODRLinkage, 0, ThunkName, M);
   GuestExit->setComdat(M->getOrInsertComdat(ThunkName));
   GuestExit->setSection(".wowthk$aa");
-  GuestExit->setMetadata(
+  GuestExit->addMetadata(
       "arm64ec_unmangled_name",
-      MDNode::get(M->getContext(),
-                  MDString::get(M->getContext(), F->getName())));
+      *MDNode::get(M->getContext(),
+                   MDString::get(M->getContext(), F->getName())));
   GuestExit->setMetadata(
       "arm64ec_ecmangled_name",
       MDNode::get(M->getContext(),
@@ -671,9 +677,69 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   return GuestExit;
 }
 
+Function *
+AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
+                                                GlobalAlias *MangledAlias) {
+  llvm::raw_null_ostream NullThunkName;
+  FunctionType *Arm64Ty, *X64Ty;
+  Function *F = cast<Function>(MangledAlias->getAliasee());
+  SmallVector<ThunkArgTranslation> ArgTranslations;
+  getThunkType(F->getFunctionType(), F->getAttributes(),
+               Arm64ECThunkType::GuestExit, NullThunkName, Arm64Ty, X64Ty,
+               ArgTranslations);
+  std::string ThunkName(MangledAlias->getName());
+  if (ThunkName[0] == '?' && ThunkName.find("@") != std::string::npos) {
+    ThunkName.insert(ThunkName.find("@"), "$hybpatch_thunk");
+  } else {
+    ThunkName.append("$hybpatch_thunk");
+  }
+
+  Function *GuestExit =
+      Function::Create(Arm64Ty, GlobalValue::WeakODRLinkage, 0, ThunkName, M);
+  GuestExit->setComdat(M->getOrInsertComdat(ThunkName));
+  GuestExit->setSection(".wowthk$aa");
+  BasicBlock *BB = BasicBlock::Create(M->getContext(), "", GuestExit);
+  IRBuilder<> B(BB);
+
+  // Load the global symbol as a pointer to the check function.
+  LoadInst *DispatchLoad = B.CreateLoad(DispatchFnPtrType, DispatchFnGlobal);
+
+  // Create new dispatch call instruction.
+  Function *ExitThunk =
+      buildExitThunk(F->getFunctionType(), F->getAttributes());
+  CallInst *Dispatch =
+      B.CreateCall(DispatchFnType, DispatchLoad,
+                   {UnmangledAlias, ExitThunk, UnmangledAlias->getAliasee()});
+
+  // Ensure that the first arguments are passed in the correct registers.
+  Dispatch->setCallingConv(CallingConv::CFGuard_Check);
+
+  Value *DispatchRetVal = B.CreateBitCast(Dispatch, PtrTy);
+  SmallVector<Value *> Args;
+  for (Argument &Arg : GuestExit->args())
+    Args.push_back(&Arg);
+  CallInst *Call = B.CreateCall(Arm64Ty, DispatchRetVal, Args);
+  Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
+
+  if (Call->getType()->isVoidTy())
+    B.CreateRetVoid();
+  else
+    B.CreateRet(Call);
+
+  auto SRetAttr = F->getAttributes().getParamAttr(0, Attribute::StructRet);
+  auto InRegAttr = F->getAttributes().getParamAttr(0, Attribute::InReg);
+  if (SRetAttr.isValid() && !InRegAttr.isValid()) {
+    GuestExit->addParamAttr(0, SRetAttr);
+    Call->addParamAttr(0, SRetAttr);
+  }
+
+  MangledAlias->setAliasee(GuestExit);
+  return GuestExit;
+}
+
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
-  assert(Triple(CB->getModule()->getTargetTriple()).isOSWindows() &&
+  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
          "Only applicable for Windows targets");
 
   IRBuilder<> B(CB);
@@ -725,18 +791,95 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   VoidTy = Type::getVoidTy(M->getContext());
 
   GuardFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy}, false);
-  GuardFnPtrType = PointerType::get(GuardFnType, 0);
+  GuardFnPtrType = PointerType::get(M->getContext(), 0);
+  DispatchFnType = FunctionType::get(PtrTy, {PtrTy, PtrTy, PtrTy}, false);
+  DispatchFnPtrType = PointerType::get(M->getContext(), 0);
   GuardFnCFGlobal =
       M->getOrInsertGlobal("__os_arm64x_check_icall_cfg", GuardFnPtrType);
   GuardFnGlobal =
       M->getOrInsertGlobal("__os_arm64x_check_icall", GuardFnPtrType);
+  DispatchFnGlobal =
+      M->getOrInsertGlobal("__os_arm64x_dispatch_call", DispatchFnPtrType);
 
-  SetVector<Function *> DirectCalledFns;
+  // Mangle names of function aliases and add the alias name to
+  // arm64ec_unmangled_name metadata to ensure a weak anti-dependency symbol is
+  // emitted for the alias as well. Do this early, before handling
+  // hybrid_patchable functions, to avoid mangling their aliases.
+  for (GlobalAlias &A : Mod.aliases()) {
+    auto F = dyn_cast_or_null<Function>(A.getAliaseeObject());
+    if (!F)
+      continue;
+    if (std::optional<std::string> MangledName =
+            getArm64ECMangledFunctionName(A.getName().str())) {
+      F->addMetadata("arm64ec_unmangled_name",
+                     *MDNode::get(M->getContext(),
+                                  MDString::get(M->getContext(), A.getName())));
+      A.setName(MangledName.value());
+    }
+  }
+
+  DenseMap<GlobalAlias *, GlobalAlias *> FnsMap;
+  SetVector<GlobalAlias *> PatchableFns;
+
+  for (Function &F : Mod) {
+    if (F.hasPersonalityFn()) {
+      GlobalValue *PersFn =
+          cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
+      if (PersFn->getValueType() && PersFn->getValueType()->isFunctionTy()) {
+        if (std::optional<std::string> MangledName =
+                getArm64ECMangledFunctionName(PersFn->getName().str())) {
+          PersFn->setName(MangledName.value());
+        }
+      }
+    }
+
+    if (!F.hasFnAttribute(Attribute::HybridPatchable) || F.isDeclaration() ||
+        F.hasLocalLinkage() || F.getName().ends_with("$hp_target"))
+      continue;
+
+    // Rename hybrid patchable functions and change callers to use a global
+    // alias instead.
+    if (std::optional<std::string> MangledName =
+            getArm64ECMangledFunctionName(F.getName().str())) {
+      std::string OrigName(F.getName());
+      F.setName(MangledName.value() + "$hp_target");
+
+      // The unmangled symbol is a weak alias to an undefined symbol with the
+      // "EXP+" prefix. This undefined symbol is resolved by the linker by
+      // creating an x86 thunk that jumps back to the actual EC target. Since we
+      // can't represent that in IR, we create an alias to the target instead.
+      // The "EXP+" symbol is set as metadata, which is then used by
+      // emitGlobalAlias to emit the right alias.
+      auto *A =
+          GlobalAlias::create(GlobalValue::LinkOnceODRLinkage, OrigName, &F);
+      auto *AM = GlobalAlias::create(GlobalValue::LinkOnceODRLinkage,
+                                     MangledName.value(), &F);
+      F.replaceUsesWithIf(AM,
+                          [](Use &U) { return isa<GlobalAlias>(U.getUser()); });
+      F.replaceAllUsesWith(A);
+      F.setMetadata("arm64ec_exp_name",
+                    MDNode::get(M->getContext(),
+                                MDString::get(M->getContext(),
+                                              "EXP+" + MangledName.value())));
+      A->setAliasee(&F);
+      AM->setAliasee(&F);
+
+      if (F.hasDLLExportStorageClass()) {
+        A->setDLLStorageClass(GlobalValue::DLLExportStorageClass);
+        F.setDLLStorageClass(GlobalValue::DefaultStorageClass);
+      }
+
+      FnsMap[A] = AM;
+      PatchableFns.insert(A);
+    }
+  }
+
+  SetVector<GlobalValue *> DirectCalledFns;
   for (Function &F : Mod)
     if (!F.isDeclaration() &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_Native &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_X64)
-      processFunction(F, DirectCalledFns);
+      processFunction(F, DirectCalledFns, FnsMap);
 
   struct ThunkInfo {
     Constant *Src;
@@ -754,13 +897,19 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
           {&F, buildEntryThunk(&F), Arm64ECThunkType::Entry});
     }
   }
-  for (Function *F : DirectCalledFns) {
+  for (GlobalValue *O : DirectCalledFns) {
+    auto GA = dyn_cast<GlobalAlias>(O);
+    auto F = dyn_cast<Function>(GA ? GA->getAliasee() : O);
     ThunkMapping.push_back(
-        {F, buildExitThunk(F->getFunctionType(), F->getAttributes()),
+        {O, buildExitThunk(F->getFunctionType(), F->getAttributes()),
          Arm64ECThunkType::Exit});
-    if (!F->hasDLLImportStorageClass())
+    if (!GA && !F->hasDLLImportStorageClass())
       ThunkMapping.push_back(
           {buildGuestExitThunk(F), F, Arm64ECThunkType::GuestExit});
+  }
+  for (GlobalAlias *A : PatchableFns) {
+    Function *Thunk = buildPatchableThunk(A, FnsMap[A]);
+    ThunkMapping.push_back({Thunk, A, Arm64ECThunkType::GuestExit});
   }
 
   if (!ThunkMapping.empty()) {
@@ -784,7 +933,8 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
 }
 
 bool AArch64Arm64ECCallLowering::processFunction(
-    Function &F, SetVector<Function *> &DirectCalledFns) {
+    Function &F, SetVector<GlobalValue *> &DirectCalledFns,
+    DenseMap<GlobalAlias *, GlobalAlias *> &FnsMap) {
   SmallVector<CallBase *, 8> IndirectCalls;
 
   // For ARM64EC targets, a function definition's name is mangled differently
@@ -797,9 +947,9 @@ bool AArch64Arm64ECCallLowering::processFunction(
   if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
     if (std::optional<std::string> MangledName =
             getArm64ECMangledFunctionName(F.getName().str())) {
-      F.setMetadata("arm64ec_unmangled_name",
-                    MDNode::get(M->getContext(),
-                                MDString::get(M->getContext(), F.getName())));
+      F.addMetadata("arm64ec_unmangled_name",
+                    *MDNode::get(M->getContext(),
+                                 MDString::get(M->getContext(), F.getName())));
       if (F.hasComdat() && F.getComdat()->getName() == F.getName()) {
         Comdat *MangledComdat = M->getOrInsertComdat(MangledName.value());
         SmallVector<GlobalObject *> ComdatUsers =
@@ -834,6 +984,16 @@ bool AArch64Arm64ECCallLowering::processFunction(
 
         DirectCalledFns.insert(F);
         continue;
+      }
+
+      // Use mangled global alias for direct calls to patchable functions.
+      if (GlobalAlias *A = dyn_cast<GlobalAlias>(CB->getCalledOperand())) {
+        auto I = FnsMap.find(A);
+        if (I != FnsMap.end()) {
+          CB->setCalledOperand(I->second);
+          DirectCalledFns.insert(I->first);
+          continue;
+        }
       }
 
       IndirectCalls.push_back(CB);

@@ -7,7 +7,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @_QQmain_omp_outline_1(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     omp.target map_entries(%0 -> %arg2 : !llvm.ptr) {
-    ^bb0(%arg2: !llvm.ptr):
       omp.parallel {
         %1 = llvm.mlir.constant(1 : i32) : i32
         llvm.store %1, %arg2 : i32, !llvm.ptr
@@ -21,7 +20,6 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @_test_num_threads(%arg0: !llvm.ptr) attributes {omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (to)>} {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     omp.target map_entries(%0 -> %arg2 : !llvm.ptr) {
-    ^bb0(%arg2: !llvm.ptr):
       %1 = llvm.mlir.constant(156 : i32) : i32
       omp.parallel num_threads(%1 : i32) {
         %2 = llvm.mlir.constant(1 : i32) : i32
@@ -39,12 +37,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "d"}
     %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "ifcond"}
     omp.target map_entries(%2 -> %arg1, %3 -> %arg2 : !llvm.ptr, !llvm.ptr) {
-    ^bb0(%arg1: !llvm.ptr, %arg2: !llvm.ptr):
       %4 = llvm.mlir.constant(10 : i32) : i32
       %5 = llvm.load %arg2 : !llvm.ptr -> i32
       %6 = llvm.mlir.constant(0 : i64) : i32
       %7 = llvm.icmp "ne" %5, %6 : i32
-      omp.parallel if(%7 : i1) {
+      omp.parallel if(%7) {
         llvm.store %4, %arg1 : i32, !llvm.ptr
         omp.terminator
       }
@@ -55,7 +52,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 }
 
 // CHECK: define weak_odr protected amdgpu_kernel void @[[FUNC0:.*]](
-// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) {
+// CHECK-SAME: ptr %[[TMP:.*]], ptr %[[TMP0:.*]]) #{{[0-9]+}} {
 // CHECK:         %[[TMP1:.*]] = alloca [1 x ptr], align 8, addrspace(5)
 // CHECK:         %[[TMP2:.*]] = addrspacecast ptr addrspace(5) %[[TMP1]] to ptr
 // CHECK:         %[[STRUCTARG:.*]] = alloca { ptr }, align 8, addrspace(5)
@@ -94,12 +91,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
 //
 // This test checks if MLIR expression:
 //      %7 = llvm.icmp "ne" %5, %6 : i32
-//      omp.parallel if(%7 : i1)
+//      omp.parallel if(%7)
 // is correctly lowered to LLVM IR code and the if condition variable
 // is passed as a param to kmpc_parallel_51 function
 
 // CHECK: define weak_odr protected amdgpu_kernel void @{{.*}}(
-// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) {
+// CHECK-SAME: ptr {{.*}}, ptr {{.*}}, ptr %[[IFCOND_ARG2:.*]]) #{{[0-9]+}} {
 // CHECK:         store ptr %[[IFCOND_ARG2]], ptr %[[IFCOND_TMP1:.*]], align 8
 // CHECK:         %[[IFCOND_TMP2:.*]] = load i32, ptr %[[IFCOND_TMP1]], align 4
 // CHECK:         %[[IFCOND_TMP3:.*]] = icmp ne i32 %[[IFCOND_TMP2]], 0

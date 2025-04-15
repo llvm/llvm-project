@@ -146,7 +146,7 @@ static void setArgResAttrDict(FunctionOpInterface op, unsigned numTotalIndices,
     return removeArgResAttrs<isArg>(op);
 
   // Otherwise, create a new attribute array with the updated dictionary.
-  SmallVector<Attribute, 8> newAttrs(rawAttrArray.begin(), rawAttrArray.end());
+  SmallVector<Attribute, 8> newAttrs(rawAttrArray);
   newAttrs[index] = attrs;
   setArgResAttrs<isArg>(op, ArrayAttr::get(op->getContext(), newAttrs));
 }
@@ -199,8 +199,7 @@ void function_interface_impl::insertFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block.
-  Block &entry = op->getRegion(0).front();
+  // - Block arguments of entry block, if not empty.
 
   // Update the argument attributes of the function.
   ArrayAttr oldArgAttrs = op.getArgAttrsAttr();
@@ -226,10 +225,15 @@ void function_interface_impl::insertFunctionArguments(
     setAllArgAttrDicts(op, newArgAttrs);
   }
 
-  // Update the function type and any entry block arguments.
+  // Update the function type.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-  for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
-    entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
+
+  // Update entry block arguments, if not empty.
+  if (!op.isExternal()) {
+    Block &entry = op->getRegion(0).front();
+    for (unsigned i = 0, e = argIndices.size(); i < e; ++i)
+      entry.insertArgument(argIndices[i] + i, argTypes[i], argLocs[i]);
+  }
 }
 
 void function_interface_impl::insertFunctionResults(
@@ -279,8 +283,7 @@ void function_interface_impl::eraseFunctionArguments(
   // There are 3 things that need to be updated:
   // - Function type.
   // - Arg attrs.
-  // - Block arguments of entry block.
-  Block &entry = op->getRegion(0).front();
+  // - Block arguments of entry block, if not empty.
 
   // Update the argument attributes of the function.
   if (ArrayAttr argAttrs = op.getArgAttrsAttr()) {
@@ -292,9 +295,14 @@ void function_interface_impl::eraseFunctionArguments(
     setAllArgAttrDicts(op, newArgAttrs);
   }
 
-  // Update the function type and any entry block arguments.
+  // Update the function type.
   op.setFunctionTypeAttr(TypeAttr::get(newType));
-  entry.eraseArguments(argIndices);
+
+  // Update entry block arguments, if not empty.
+  if (!op.isExternal()) {
+    Block &entry = op->getRegion(0).front();
+    entry.eraseArguments(argIndices);
+  }
 }
 
 void function_interface_impl::eraseFunctionResults(

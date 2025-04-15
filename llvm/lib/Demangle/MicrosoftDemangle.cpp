@@ -24,6 +24,7 @@
 #include <array>
 #include <cctype>
 #include <cstdio>
+#include <optional>
 #include <string_view>
 #include <tuple>
 
@@ -1373,6 +1374,11 @@ Demangler::demangleStringLiteral(std::string_view &MangledName) {
       Result->IsTruncated = true;
 
     while (!consumeFront(MangledName, '@')) {
+      // For a wide string StringByteSize has to have an even length.
+      if (StringByteSize % 2 != 0)
+        goto StringLiteralError;
+      if (StringByteSize == 0)
+        goto StringLiteralError;
       if (MangledName.size() < 2)
         goto StringLiteralError;
       wchar_t W = demangleWcharLiteral(MangledName);
@@ -2035,6 +2041,10 @@ Demangler::demanglePrimitiveType(std::string_view &MangledName) {
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char16);
     case 'U':
       return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Char32);
+    case 'P':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::Auto);
+    case 'T':
+      return Arena.alloc<PrimitiveTypeNode>(PrimitiveKind::DecltypeAuto);
     }
     break;
   }
@@ -2343,12 +2353,13 @@ Demangler::demangleTemplateParameterList(std::string_view &MangledName) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
       TPRN->Symbol = parse(MangledName);
       TPRN->Affinity = PointerAffinity::Reference;
-    } else if (llvm::itanium_demangle::starts_with(MangledName, "$F") ||
-               llvm::itanium_demangle::starts_with(MangledName, "$G")) {
+    } else if (startsWith(MangledName, "$F", "F", !IsAutoNTTP) ||
+               startsWith(MangledName, "$G", "G", !IsAutoNTTP)) {
       TP.N = TPRN = Arena.alloc<TemplateParameterReferenceNode>();
 
       // Data member pointer.
-      MangledName.remove_prefix(1);
+      if (!IsAutoNTTP)
+        MangledName.remove_prefix(1); // Remove leading '$'
       char InheritanceSpecifier = MangledName.front();
       MangledName.remove_prefix(1);
 
@@ -2421,6 +2432,24 @@ void Demangler::dumpBackReferences() {
   }
   if (Backrefs.NamesCount > 0)
     std::printf("\n");
+}
+
+std::optional<size_t>
+llvm::getArm64ECInsertionPointInMangledName(std::string_view MangledName) {
+  std::string_view ProcessedName{MangledName};
+
+  // We only support this for MSVC-style C++ symbols.
+  if (!consumeFront(ProcessedName, '?'))
+    return std::nullopt;
+
+  // The insertion point is just after the name of the symbol, so parse that to
+  // remove it from the processed name.
+  Demangler D;
+  D.demangleFullyQualifiedSymbolName(ProcessedName);
+  if (D.Error)
+    return std::nullopt;
+
+  return MangledName.length() - ProcessedName.length();
 }
 
 char *llvm::microsoftDemangle(std::string_view MangledName, size_t *NMangled,

@@ -57,12 +57,13 @@ struct BadPredicate3 {
 };
 static_assert(!std::indirect_unary_predicate<BadPredicate3, It>);
 
-// Should fail when the predicate can't be called with std::iter_common_reference_t<It>
-struct BadPredicate4 {
-    template <class T> bool operator()(T const&) const;
-    bool operator()(std::iter_common_reference_t<It>) const = delete;
+// This case was made valid by P2997R1.
+struct GoodPredicate4 {
+  template <class T>
+  bool operator()(T const&) const;
+  bool operator()(std::iter_common_reference_t<It>) const = delete;
 };
-static_assert(!std::indirect_unary_predicate<BadPredicate4, It>);
+static_assert(std::indirect_unary_predicate<GoodPredicate4, It>);
 
 // Test ADL-proofing (P2538R1)
 #if TEST_STD_VER >= 26 || defined(_LIBCPP_VERSION)

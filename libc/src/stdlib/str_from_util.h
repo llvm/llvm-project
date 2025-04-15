@@ -18,6 +18,7 @@
 #define LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/str_to_integer.h"
 #include "src/stdio/printf_core/converter_atlas.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -25,7 +26,8 @@
 
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE::internal {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 template <typename T>
 using storage_type = typename fputil::FPBits<T>::StorageType;
@@ -102,8 +104,8 @@ printf_core::FormatSection parse_format_string(const char *__restrict format,
   return section;
 }
 
-template <typename T>
-int strfromfloat_convert(printf_core::Writer *writer,
+template <typename T, printf_core::WriteMode write_mode>
+int strfromfloat_convert(printf_core::Writer<write_mode> *writer,
                          const printf_core::FormatSection &section) {
   if (!section.has_conv)
     return writer->write(section.raw_string);
@@ -133,6 +135,7 @@ int strfromfloat_convert(printf_core::Writer *writer,
   return -1;
 }
 
-} // namespace LIBC_NAMESPACE::internal
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STDLIB_STRFROM_UTIL_H

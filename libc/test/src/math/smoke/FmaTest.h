@@ -9,6 +9,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_FMATEST_H
 
+#include "src/__support/FPUtil/cast.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -37,6 +38,11 @@ class FmaTestTemplate : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   OutConstants out;
   InConstants in;
 
+  const InType in_out_min_normal =
+      LIBC_NAMESPACE::fputil::cast<InType>(out.min_normal);
+  const InType in_out_min_denormal =
+      LIBC_NAMESPACE::fputil::cast<InType>(out.min_denormal);
+
 public:
   using FmaFunc = OutType (*)(InType, InType, InType);
 
@@ -52,7 +58,7 @@ public:
 
     // Test underflow rounding up.
     EXPECT_FP_EQ(OutFPBits(OutStorageType(2)).get_val(),
-                 func(OutType(0.5), out.min_denormal, out.min_denormal));
+                 func(InType(0.5), in_out_min_denormal, in_out_min_denormal));
 
     if constexpr (sizeof(OutType) < sizeof(InType)) {
       EXPECT_FP_EQ(out.zero,
@@ -63,21 +69,27 @@ public:
     OutType v = OutFPBits(static_cast<OutStorageType>(OUT_MIN_NORMAL_U +
                                                       OutStorageType(1)))
                     .get_val();
-    EXPECT_FP_EQ(v, func(OutType(1) / OutType(OUT_MIN_NORMAL_U << 1), v,
-                         out.min_normal));
+    EXPECT_FP_EQ(v, func(InType(1) / InType(OUT_MIN_NORMAL_U << 1),
+                         LIBC_NAMESPACE::fputil::cast<InType>(v),
+                         in_out_min_normal));
 
     if constexpr (sizeof(OutType) < sizeof(InType)) {
+      InFPBits tmp = InFPBits::one();
+      tmp.set_biased_exponent(InFPBits::EXP_BIAS - InFPBits::FRACTION_LEN - 1);
+      InType reciprocal_value = tmp.get_val();
+
       InType v = InFPBits(static_cast<InStorageType>(IN_MIN_NORMAL_U +
                                                      InStorageType(1)))
                      .get_val();
-      EXPECT_FP_EQ(
-          out.min_normal,
-          func(InType(1) / InType(IN_MIN_NORMAL_U << 1), v, out.min_normal));
+      EXPECT_FP_EQ(out.min_normal,
+                   func(reciprocal_value, v, in_out_min_normal));
     }
 
     // Test overflow.
     OutType z = out.max_normal;
-    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z, func(InType(1.75), z, -z));
+    InType in_z = LIBC_NAMESPACE::fputil::cast<InType>(out.max_normal);
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0.75) * z,
+                              func(InType(1.75), in_z, -in_z));
 
     // Exact cancellation.
     EXPECT_FP_EQ_ROUNDING_NEAREST(

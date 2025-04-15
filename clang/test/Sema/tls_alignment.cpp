@@ -22,7 +22,9 @@ struct  struct_with_aligned_field {
 template <typename>
 struct templated_struct {};
 // expected-note@-1{{candidate template ignored: couldn't infer template argument ''}}
-// expected-note@-2{{candidate function template not viable: requires 1 argument, but 0 were provided}}
+// expected-note@-2{{implicit deduction guide declared as 'template <typename> templated_struct() -> templated_struct<type-parameter-0-0>'}}
+// expected-note@-3{{candidate function template not viable: requires 1 argument, but 0 were provided}}
+// expected-note@-4{{implicit deduction guide declared as 'template <typename> templated_struct(templated_struct<type-parameter-0-0>) -> templated_struct<type-parameter-0-0>'}}
 
 // A typedef of the aligned struct.
 typedef aligned_struct another_aligned_struct;

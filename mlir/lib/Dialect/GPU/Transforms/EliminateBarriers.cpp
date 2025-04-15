@@ -68,7 +68,7 @@ static bool isSequentialLoopLike(Operation *op) { return isa<scf::ForOp>(op); }
 /// most once. Thus, if an operation in one of the nested regions of `op` is
 /// executed than so are all the other operations in this region.
 static bool hasSingleExecutionBody(Operation *op) {
-  return isa<scf::IfOp, memref::AllocaScopeOp>(op);
+  return isa<FunctionOpInterface, scf::IfOp, memref::AllocaScopeOp>(op);
 }
 
 /// Returns `true` if the operation is known to produce a pointer-like object
@@ -132,6 +132,29 @@ collectEffects(Operation *op,
   return false;
 }
 
+/// Get all effects before the given operation caused by other operations in the
+/// same block. That is, this will not consider operations beyond the block.
+static bool
+getEffectsBeforeInBlock(Operation *op,
+                        SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+                        bool stopAtBarrier) {
+  if (op == &op->getBlock()->front())
+    return true;
+
+  for (Operation *it = op->getPrevNode(); it != nullptr;
+       it = it->getPrevNode()) {
+    if (isa<BarrierOp>(it)) {
+      if (stopAtBarrier)
+        return true;
+      continue;
+    }
+
+    if (!collectEffects(it, effects))
+      return false;
+  }
+  return true;
+}
+
 /// Collects memory effects from operations that may be executed before `op` in
 /// a trivial structured control flow, e.g., without branches. Stops at the
 /// parallel region boundary or at the barrier operation if `stopAtBarrier` is
@@ -153,26 +176,16 @@ getEffectsBefore(Operation *op,
   }
 
   // Collect all effects before the op.
-  if (op != &op->getBlock()->front()) {
-    for (Operation *it = op->getPrevNode(); it != nullptr;
-         it = it->getPrevNode()) {
-      if (isa<BarrierOp>(it)) {
-        if (stopAtBarrier)
-          return true;
-        else
-          continue;
-      }
-      if (!collectEffects(it, effects))
-        return false;
-    }
-  }
+  getEffectsBeforeInBlock(op, effects, stopAtBarrier);
 
   // Stop if reached the parallel region boundary.
   if (isParallelRegionBoundary(op->getParentOp()))
     return true;
 
+  Operation *parent = op->getParentOp();
   // Otherwise, keep collecting above the parent operation.
-  if (!getEffectsBefore(op->getParentOp(), effects, stopAtBarrier))
+  if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+      !getEffectsBefore(parent, effects, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the trailing operations until
@@ -189,10 +202,10 @@ getEffectsBefore(Operation *op,
   // the operation `op2` at iteration `i` is known to be executed before the
   // operation `op1` at iteration `i+1` and the side effects must be ordered
   // appropriately.
-  if (isSequentialLoopLike(op->getParentOp())) {
+  if (isSequentialLoopLike(parent)) {
     // Assuming loop terminators have no side effects.
-    return getEffectsBefore(op->getBlock()->getTerminator(), effects,
-                            /*stopAtBarrier=*/true);
+    return getEffectsBeforeInBlock(op->getBlock()->getTerminator(), effects,
+                                   /*stopAtBarrier=*/true);
   }
 
   // If the parent operation is not guaranteed to execute its (single-block)
@@ -210,6 +223,28 @@ getEffectsBefore(Operation *op,
     });
 
   return !conservative;
+}
+
+/// Get all effects after the given operation caused by other operations in the
+/// same block. That is, this will not consider operations beyond the block.
+static bool
+getEffectsAfterInBlock(Operation *op,
+                       SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+                       bool stopAtBarrier) {
+  if (op == &op->getBlock()->back())
+    return true;
+
+  for (Operation *it = op->getNextNode(); it != nullptr;
+       it = it->getNextNode()) {
+    if (isa<BarrierOp>(it)) {
+      if (stopAtBarrier)
+        return true;
+      continue;
+    }
+    if (!collectEffects(it, effects))
+      return false;
+  }
+  return true;
 }
 
 /// Collects memory effects from operations that may be executed after `op` in
@@ -233,24 +268,17 @@ getEffectsAfter(Operation *op,
   }
 
   // Collect all effects after the op.
-  if (op != &op->getBlock()->back())
-    for (Operation *it = op->getNextNode(); it != nullptr;
-         it = it->getNextNode()) {
-      if (isa<BarrierOp>(it)) {
-        if (stopAtBarrier)
-          return true;
-        continue;
-      }
-      if (!collectEffects(it, effects))
-        return false;
-    }
+  getEffectsAfterInBlock(op, effects, stopAtBarrier);
 
+  Operation *parent = op->getParentOp();
   // Stop if reached the parallel region boundary.
-  if (isParallelRegionBoundary(op->getParentOp()))
+  if (isParallelRegionBoundary(parent))
     return true;
 
   // Otherwise, keep collecting below the parent operation.
-  if (!getEffectsAfter(op->getParentOp(), effects, stopAtBarrier))
+  // Don't look into, for example, neighboring functions
+  if (!parent->hasTrait<OpTrait::IsIsolatedFromAbove>() &&
+      !getEffectsAfter(parent, effects, stopAtBarrier))
     return false;
 
   // If the op is loop-like, collect effects from the leading operations until
@@ -267,13 +295,13 @@ getEffectsAfter(Operation *op,
   // the operation `op1` at iteration `i` is known to be executed after the
   // operation `op2` at iteration `i-1` and the side effects must be ordered
   // appropriately.
-  if (isSequentialLoopLike(op->getParentOp())) {
+  if (isSequentialLoopLike(parent)) {
     if (isa<BarrierOp>(op->getBlock()->front()))
       return true;
 
     bool exact = collectEffects(&op->getBlock()->front(), effects);
-    return getEffectsAfter(&op->getBlock()->front(), effects,
-                           /*stopAtBarrier=*/true) &&
+    return getEffectsAfterInBlock(&op->getBlock()->front(), effects,
+                                  /*stopAtBarrier=*/true) &&
            exact;
   }
 
@@ -607,7 +635,7 @@ class GpuEliminateBarriersPass
     auto funcOp = getOperation();
     RewritePatternSet patterns(&getContext());
     mlir::populateGpuEliminateBarriersPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns)))) {
+    if (failed(applyPatternsGreedily(funcOp, std::move(patterns)))) {
       return signalPassFailure();
     }
   }

@@ -18,7 +18,6 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "func-to-spirv-pattern"
@@ -88,7 +87,7 @@ public:
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateFuncToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
+void mlir::populateFuncToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                        RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 

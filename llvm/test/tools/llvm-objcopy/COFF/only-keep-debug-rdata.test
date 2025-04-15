@@ -1,0 +1,45 @@
+RUN: yaml2obj %p/Inputs/i386-debug-rdata.yaml -o %t.in.exe
+
+RUN: llvm-objcopy --only-keep-debug %t.in.exe %t.out.exe
+RUN: llvm-readobj --sections %t.out.exe | FileCheck %s
+
+Check that all non-debug/rodata (which contains the debug directory in this case)
+sections with IMAGE_SCN_CNT_CODE or IMAGE_SCN_CNT_INITIALIZED_DATA are truncated,
+and no others.
+
+CHECK:       Section {
+CHECK-NEXT:   Number: 1
+CHECK-NEXT:   Name: .text (2E 74 65 78 74 00 00 00)
+CHECK-NEXT:   VirtualSize: 0x12
+CHECK-NEXT:   VirtualAddress: 0x1000
+CHECK-NEXT:   RawDataSize: 0
+CHECK:       Section {
+CHECK-NEXT:   Number: 2
+CHECK-NEXT:   Name: .rdata (2E 72 64 61 74 61 00 00)
+CHECK-NEXT:   VirtualSize: 0x6D
+CHECK-NEXT:   VirtualAddress: 0x2000
+CHECK-NEXT:   RawDataSize: 512
+CHECK:       Section {
+CHECK-NEXT:   Number: 3
+CHECK-NEXT:   Name: .debug_abbrev (2F 34 00 00 00 00 00 00)
+CHECK-NEXT:   VirtualSize: 0x4E
+CHECK-NEXT:   VirtualAddress: 0x3000
+CHECK-NEXT:   RawDataSize: 512
+CHECK:       Section {
+CHECK-NEXT:   Number: 4
+CHECK-NEXT:   Name: .debug_info (2F 32 39 00 00 00 00 00)
+CHECK-NEXT:   VirtualSize: 0x74
+CHECK-NEXT:   VirtualAddress: 0x4000
+CHECK-NEXT:   RawDataSize: 512
+CHECK:       Section {
+CHECK-NEXT:   Number: 5
+CHECK-NEXT:   Name: .debug_line (2F 34 31 00 00 00 00 00)
+CHECK-NEXT:   VirtualSize: 0x3C
+CHECK-NEXT:   VirtualAddress: 0x5000
+CHECK-NEXT:   RawDataSize: 512
+CHECK:       Section {
+CHECK-NEXT:   Number: 6
+CHECK-NEXT:   Name: .debug_str (2F 31 38 00 00 00 00 00)
+CHECK-NEXT:   VirtualSize: 0xD9
+CHECK-NEXT:   VirtualAddress: 0x6000
+CHECK-NEXT:   RawDataSize: 512

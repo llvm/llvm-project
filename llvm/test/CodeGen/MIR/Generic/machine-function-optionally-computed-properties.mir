@@ -1,0 +1,84 @@
+# RUN: llc -run-pass none -o - %s | FileCheck %s
+
+# Test that we can disable certain properties that are normally computed
+
+---
+# CHECK-LABEL: name: TestNoPhis
+# CHECK: noPhis: true
+# CHECK: ...
+name:            TestNoPhis
+...
+---
+# CHECK-LABEL: name: TestNoPhisOverride
+# CHECK: noPhis: false
+# CHECK: ...
+name:            TestNoPhisOverride
+noPhis: false
+...
+---
+# CHECK-LABEL: name: TestNoPhisOverrideTrue
+# CHECK: noPhis: true
+# CHECK: ...
+name:            TestNoPhisOverrideTrue
+noPhis: true
+...
+---
+# CHECK-LABEL: name: TestIsSSA
+# CHECK: isSSA: true
+# CHECK: ...
+name:            TestIsSSA
+...
+---
+# CHECK-LABEL: name: TestIsSSAOverride
+# CHECK: isSSA: false
+# CHECK: ...
+name:            TestIsSSAOverride
+isSSA: false
+...
+---
+# CHECK-LABEL: name: TestIsSSAOverrideTrue
+# CHECK: isSSA: true
+# CHECK: ...
+name:            TestIsSSAOverrideTrue
+isSSA: true
+...
+---
+# CHECK-LABEL: name: TestNoVRegs
+# CHECK: noVRegs: true
+# CHECK: ...
+name:            TestNoVRegs
+...
+---
+# CHECK-LABEL: name: TestNoVRegsOverride
+# CHECK: noVRegs: false
+# CHECK: ...
+name:            TestNoVRegsOverride
+noVRegs: false
+...
+---
+# CHECK-LABEL: name: TestNoVRegsOverrideTrue
+# CHECK: noVRegs: true
+# CHECK: ...
+name:            TestNoVRegsOverrideTrue
+noVRegs: true
+...
+---
+# CHECK-LABEL: name: TestHasFakeUses
+# CHECK: hasFakeUses: false
+# CHECK: ...
+name:            TestHasFakeUses
+...
+---
+# CHECK-LABEL: name: TestHasFakeUsesOverride
+# CHECK: hasFakeUses: false
+# CHECK: ...
+name:            TestHasFakeUsesOverride
+hasFakeUses: false
+...
+---
+# CHECK-LABEL: name: TestHasFakeUsesOverrideTrue
+# CHECK: hasFakeUses: true
+# CHECK: ...
+name:            TestHasFakeUsesOverrideTrue
+hasFakeUses: true
+...

@@ -14,7 +14,7 @@ declare i32 @__gxx_personality_v0(...)
 
 declare void @b() #0
 
-define void @a() #0 personality ptr @__gxx_personality_v0 {
+define void @a(i1 %arg) #0 personality ptr @__gxx_personality_v0 {
 ", bb1":
   invoke void @b()
           to label %invoke.cont unwind label %"bb22"
@@ -39,7 +39,7 @@ define void @a() #0 personality ptr @__gxx_personality_v0 {
   unreachable
 
 invoke.cont:                                      ; preds = %", bb1"
-  br i1 undef, label %", bb15", label %", bb8"
+  br i1 %arg, label %", bb15", label %", bb8"
 
 invoke.cont25:                                    ; preds = %", bb8"
   unreachable

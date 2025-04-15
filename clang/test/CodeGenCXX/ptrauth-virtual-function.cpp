@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios   -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck --check-prefixes=CHECK,DARWIN %s
+// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -emit-llvm -std=c++11 %s -o - | FileCheck --check-prefixes=CHECK,ELF    %s
 
 // Check virtual function pointers in vtables are signed.
 
@@ -182,7 +183,8 @@ V1::~V1() {
 // Check sign/authentication of vtable pointers and authentication of virtual
 // functions.
 
-// CHECK-LABEL: define noundef ptr @_ZN2V1D2Ev(
+// DARWIN-LABEL: define noundef ptr @_ZN2V1D2Ev(
+// ELF-LABEL:    define dso_local void @_ZN2V1D2Ev(
 // CHECK: %[[THIS1:.*]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T1:[0-9]+]] = ptrtoint ptr %[[T0]] to i64
@@ -193,7 +195,7 @@ V1::~V1() {
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T7]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS1]]
 
-// CHECK-LABEL: define void @_Z8testB0m0P2B0(
+// CHECK-LABEL: define{{.*}} void @_Z8testB0m0P2B0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -208,7 +210,7 @@ void testB0m0(B0 *a) {
   a->m0();
 }
 
-// CHECK-LABEL: define void @_Z8testB0m1P2B0(
+// CHECK-LABEL: define{{.*}} void @_Z8testB0m1P2B0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -223,7 +225,7 @@ void testB0m1(B0 *a) {
   a->m1();
 }
 
-// CHECK-LABEL: define void @_Z8testB0m2P2B0(
+// CHECK-LABEL: define{{.*}} void @_Z8testB0m2P2B0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -238,7 +240,7 @@ void testB0m2(B0 *a) {
   a->m2();
 }
 
-// CHECK-LABEL: define void @_Z8testD0m0P2D0(
+// CHECK-LABEL: define{{.*}} void @_Z8testD0m0P2D0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -253,7 +255,7 @@ void testD0m0(D0 *a) {
   a->m0();
 }
 
-// CHECK-LABEL: define void @_Z8testD0m1P2D0(
+// CHECK-LABEL: define{{.*}} void @_Z8testD0m1P2D0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -268,7 +270,7 @@ void testD0m1(D0 *a) {
   a->m1();
 }
 
-// CHECK-LABEL: define void @_Z8testD0m2P2D0(
+// CHECK-LABEL: define{{.*}} void @_Z8testD0m2P2D0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -283,7 +285,7 @@ void testD0m2(D0 *a) {
   a->m2();
 }
 
-// CHECK-LABEL: define void @_Z8testD0m3P2D0(
+// CHECK-LABEL: define{{.*}} void @_Z8testD0m3P2D0(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -299,7 +301,7 @@ void testD0m3(D0 *a) {
 }
 
 
-// CHECK-LABEL: define void @_Z8testD1m0P2D1(
+// CHECK-LABEL: define{{.*}} void @_Z8testD1m0P2D1(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -314,7 +316,7 @@ void testD1m0(D1 *a) {
   a->m0();
 }
 
-// CHECK-LABEL: define void @_Z8testD1m1P2D1(
+// CHECK-LABEL: define{{.*}} void @_Z8testD1m1P2D1(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -329,7 +331,7 @@ void testD1m1(D1 *a) {
   a->m1();
 }
 
-// CHECK-LABEL: define void @_Z8testD1m2P2D1(
+// CHECK-LABEL: define{{.*}} void @_Z8testD1m2P2D1(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -345,7 +347,7 @@ void testD1m2(D1 *a) {
 }
 
 
-// CHECK-LABEL: define void @_Z8testD2m0P2D2(
+// CHECK-LABEL: define{{.*}} void @_Z8testD2m0P2D2(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -360,7 +362,7 @@ void testD2m0(D2 *a) {
   a->m0();
 }
 
-// CHECK-LABEL: define void @_Z8testD2m1P2D2(
+// CHECK-LABEL: define{{.*}} void @_Z8testD2m1P2D2(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -375,21 +377,21 @@ void testD2m1(D2 *a) {
   a->m1();
 }
 
-// CHECK-LABEL: define void @_Z10testD2m2D0P2D2(
+// CHECK-LABEL: define{{.*}} void @_Z10testD2m2D0P2D2(
 // CHECK: call void @_ZN2B02m2Ev(ptr noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
 
 void testD2m2D0(D2 *a) {
   a->D0::m2();
 }
 
-// CHECK-LABEL: define void @_Z10testD2m2D1P2D2(
+// CHECK-LABEL: define{{.*}} void @_Z10testD2m2D1P2D2(
 // CHECK: call void @_ZN2B02m2Ev(ptr noundef nonnull align {{[0-9]+}} dereferenceable(12) %{{.*}}){{$}}
 
 void testD2m2D1(D2 *a) {
   a->D1::m2();
 }
 
-// CHECK-LABEL: define void @_Z8testD2m3P2D2(
+// CHECK-LABEL: define{{.*}} void @_Z8testD2m3P2D2(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -404,7 +406,7 @@ void testD2m3(D2 *a) {
   a->m3();
 }
 
-// CHECK-LABEL: define void @_Z8testD3m0P2D3(
+// CHECK-LABEL: define{{.*}} void @_Z8testD3m0P2D3(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -419,7 +421,7 @@ void testD3m0(D3 *a) {
   a->m0();
 }
 
-// CHECK-LABEL: define void @_Z8testD3m1P2D3(
+// CHECK-LABEL: define{{.*}} void @_Z8testD3m1P2D3(
 // CHECK: %[[VTABLE:[a-z]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
 // CHECK: %[[T3:[0-9]+]] = call i64 @llvm.ptrauth.auth(i64 %[[T0]], i32 2, i64 0)
@@ -434,7 +436,7 @@ void testD3m1(D3 *a) {
   a->m1();
 }
 
-// CHECK: define void @_Z8testD3m2P2D3(ptr noundef %[[A:.*]])
+// CHECK: define{{.*}} void @_Z8testD3m2P2D3(ptr noundef %[[A:.*]])
 // CHECK: %[[A_ADDR:.*]] = alloca ptr, align 8
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
@@ -459,7 +461,7 @@ void testD3m2(D3 *a) {
   a->m2();
 }
 
-// CHECK-LABEL: define void @_Z17testD3Destructor0P2D3(
+// CHECK-LABEL: define{{.*}} void @_Z17testD3Destructor0P2D3(
 // CHECK: load ptr, ptr
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T2:[0-9]+]] = ptrtoint ptr %[[VTABLE]] to i64
@@ -475,7 +477,7 @@ void testD3Destructor0(D3 *a) {
   delete a;
 }
 
-// CHECK-LABEL: define void @_Z17testD3Destructor1P2D3(
+// CHECK-LABEL: define{{.*}} void @_Z17testD3Destructor1P2D3(
 // CHECK: %[[T6:.*]] = load ptr, ptr %
 // CHECK: %[[VTABLE0:[a-z0-9]+]] = load ptr, ptr %
 // CHECK: %[[T2:[0-9]+]] = ptrtoint ptr %[[VTABLE0]] to i64
@@ -492,14 +494,15 @@ void testD3Destructor0(D3 *a) {
 // CHECK: %[[T12:[0-9]+]] = load ptr, ptr %[[VFN]]
 // CHECK: %[[T13:[0-9]+]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK: %[[T14:[0-9]+]] = call i64 @llvm.ptrauth.blend(i64 %[[T13]], i64 57279)
-// CHECK: %call = call noundef ptr %[[T12]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
+// DARWIN: %call = call noundef ptr %[[T12]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
+// ELF:    call void %[[T12]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T14]]) ]
 // CHECK: call void @_ZdlPv(ptr noundef %[[T7]])
 
 void testD3Destructor1(D3 *a) {
   ::delete a;
 }
 
-// CHECK-LABEL: define void @_Z17testD3Destructor2P2D3(
+// CHECK-LABEL: define{{.*}} void @_Z17testD3Destructor2P2D3(
 // CHECK: load ptr, ptr
 // CHECK: %[[VTABLE:.*]] = load ptr, ptr %
 // CHECK: %[[T2:.*]] = ptrtoint ptr %[[VTABLE]] to i64
@@ -509,7 +512,8 @@ void testD3Destructor1(D3 *a) {
 // CHECK: %[[T5:.*]] = load ptr, ptr %[[VFN]]
 // CHECK: %[[T6:.*]] = ptrtoint ptr %[[VFN]] to i64
 // CHECK: %[[T7:.*]] = call i64 @llvm.ptrauth.blend(i64 %[[T6]], i64 57279)
-// CHECK: %call = call noundef ptr %[[T5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// DARWIN: %call = call noundef ptr %[[T5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
+// ELF:    call void %[[T5]](ptr noundef nonnull align {{[0-9]+}} dereferenceable(32) %{{.*}}) #{{.*}} [ "ptrauth"(i32 0, i64 %[[T7]]) ]
 
 void testD3Destructor2(D3 *a) {
   a->~D3();
@@ -526,23 +530,27 @@ void materializeConstructors() {
   V1 V1;
 }
 
-// CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2B0C2Ev(
+// DARWIN-LABEL: define linkonce_odr noundef ptr @_ZN2B0C2Ev(
+// ELF-LABEL:    define linkonce_odr void @_ZN2B0C2Ev(
 // CHECK: %[[THIS:.*]] = load ptr, ptr %
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 40) ({ [7 x ptr] }, ptr @_ZTV2B0, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D0C2Ev(
+// DARWIN-LABEL: define linkonce_odr noundef ptr @_ZN2D0C2Ev(
+// ELF-LABEL:    define linkonce_odr void @_ZN2D0C2Ev(
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 56) ({ [9 x ptr] }, ptr @_ZTV2D0, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D1C2Ev(
+// DARWIN-LABEL: define linkonce_odr noundef ptr @_ZN2D1C2Ev(
+// ELF-LABEL:    define linkonce_odr void @_ZN2D1C2Ev(
 // CHECK: %[[T0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 48) ({ [8 x ptr] }, ptr @_ZTV2D1, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[SIGNED_VTADDR:[0-9]+]] = inttoptr i64 %[[T0]] to ptr
 // CHECK: store ptr %[[SIGNED_VTADDR]], ptr %[[THIS]]
 
-// CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2D2C2Ev(
+// DARWIN-LABEL: define linkonce_odr noundef ptr @_ZN2D2C2Ev(
+// ELF-LABEL:    define linkonce_odr void @_ZN2D2C2Ev(
 // CHECK: %[[SLOT0:.*]] = load ptr, ptr
 // CHECK: %[[SIGN_VTADDR0:[0-9]+]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr inbounds inrange(-16, 56) ({ [9 x ptr], [8 x ptr] }, ptr @_ZTV2D2, i32 0, i32 0, i32 2) to i64), i32 2, i64 0)
 // CHECK: %[[T1:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR0]] to ptr
@@ -552,7 +560,8 @@ void materializeConstructors() {
 // CHECK: %[[T5:[0-9]+]] = inttoptr i64 %[[SIGN_VTADDR1]] to ptr
 // CHECK: store ptr %[[T5]], ptr %[[T3]]
 
-// CHECK-LABEL: define linkonce_odr noundef ptr @_ZN2V0C2Ev(
+// DARWIN-LABEL: define linkonce_odr noundef ptr @_ZN2V0C2Ev(
+// ELF-LABEL:    define linkonce_odr void @_ZN2V0C2Ev(
 // CHECK: %[[THIS1]] = load ptr, ptr %
 // CHECK: %[[VTT:[a-z0-9]+]] = load ptr, ptr %{{.*}}
 // CHECK: %[[T0:[0-9]+]] = load ptr, ptr %[[VTT]]

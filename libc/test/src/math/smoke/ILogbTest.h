@@ -15,6 +15,8 @@
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class LlvmLibcILogbTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<InType>;
@@ -47,13 +49,13 @@ public:
     EXPECT_EQ(OutType(2), func(InType(-4.0)));
 
     EXPECT_EQ(OutType(3), func(InType(8.0)));
-    EXPECT_EQ(OutType(3), func(-8.0));
+    EXPECT_EQ(OutType(3), func(InType(-8.0)));
 
-    EXPECT_EQ(OutType(4), func(16.0));
-    EXPECT_EQ(OutType(4), func(-16.0));
+    EXPECT_EQ(OutType(4), func(InType(16.0)));
+    EXPECT_EQ(OutType(4), func(InType(-16.0)));
 
-    EXPECT_EQ(OutType(5), func(32.0));
-    EXPECT_EQ(OutType(5), func(-32.0));
+    EXPECT_EQ(OutType(5), func(InType(32.0)));
+    EXPECT_EQ(OutType(5), func(InType(-32.0)));
   }
 
   void test_some_integers(Func func) {
@@ -67,10 +69,10 @@ public:
     EXPECT_EQ(OutType(3), func(InType(-10.0)));
 
     EXPECT_EQ(OutType(4), func(InType(31.0)));
-    EXPECT_EQ(OutType(4), func(-31.0));
+    EXPECT_EQ(OutType(4), func(InType(-31.0)));
 
-    EXPECT_EQ(OutType(5), func(55.0));
-    EXPECT_EQ(OutType(5), func(-55.0));
+    EXPECT_EQ(OutType(5), func(InType(55.0)));
+    EXPECT_EQ(OutType(5), func(InType(-55.0)));
   }
 
   void test_subnormal_range(Func func) {

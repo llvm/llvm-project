@@ -471,6 +471,7 @@ def : InstRW<[WLat1, FXa, NormalGr], (instregex "NC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "OC(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NN(G)?RK$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NO(G)?RK$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "NOT(G)?R$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "NX(G)?RK$")>;
 
 //===----------------------------------------------------------------------===//
@@ -530,13 +531,13 @@ def : InstRW<[WLat5LSU, WLat5LSU, FXa4, LSU, GroupAlone2],
 def : InstRW<[WLat2LSU, FXa, LSU, NormalGr], (instregex "RLL(G)?$")>;
 
 // Rotate and insert
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?$")>;
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBH(G|H|L)$")>;
-def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBH(G|H|L)(Opt)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBL(G|H|L)(Opt)?$")>;
+def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBG(N|32)?(Z)?(Opt)?$")>;
 def : InstRW<[WLat1, FXa, NormalGr], (instregex "RISBMux$")>;
 
 // Rotate and Select
-def : InstRW<[WLat2, WLat2, FXa2, Cracked], (instregex "R(N|O|X)SBG$")>;
+def : InstRW<[WLat2, WLat2, FXa2, Cracked], (instregex "R(N|O|X)SBG(Opt)?$")>;
 
 //===----------------------------------------------------------------------===//
 // Comparison
@@ -1554,12 +1555,12 @@ def : InstRW<[WLat2, VecDFX, NormalGr], (instregex "V(T|C)P$")>;
 
 def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCH(S|D|X)?P$")>;
 def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VSCSHP$")>;
-def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VCSPH")>;
-def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VCLZDP")>;
-def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRPR")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VPKZR")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZH")>;
-def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZL")>;
+def : InstRW<[WLat30, VecDF2, NormalGr], (instregex "VCSPH$")>;
+def : InstRW<[WLat2, WLat2, VecXsPm, NormalGr], (instregex "VCLZDP$")>;
+def : InstRW<[WLat10, WLat10, VecDF2, NormalGr], (instregex "VSRPR$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VPKZR$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZH$")>;
+def : InstRW<[WLat2, WLat2, VecDFX, NormalGr], (instregex "VUPKZL$")>;
 
 // -------------------------------- System ---------------------------------- //
 
@@ -1596,8 +1597,8 @@ def : InstRW<[WLat30, MCD], (instregex "S(T)?PX$")>;
 // System: Breaking-Event-Address-Register Instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat3LSU, LSU2, GroupAlone], (instregex "LBEAR")>;
-def : InstRW<[WLat1, LSU2, FXb, GroupAlone], (instregex "STBEAR")>;
+def : InstRW<[WLat3LSU, LSU2, GroupAlone], (instregex "LBEAR$")>;
+def : InstRW<[WLat1, LSU2, FXb, GroupAlone], (instregex "STBEAR$")>;
 
 //===----------------------------------------------------------------------===//
 // System: Storage-Key and Real Memory Instructions
@@ -1722,5 +1723,11 @@ def : InstRW<[WLat30, MCD], (instregex "STC(PS|RW)$")>;
 def : InstRW<[WLat30, MCD], (instregex "TPE?I$")>;
 def : InstRW<[WLat30, MCD], (instregex "SAL$")>;
 
+//===----------------------------------------------------------------------===//
+// NOPs
+//===----------------------------------------------------------------------===//
+
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "NOP(R)?(Opt)?$")>;
+def : InstRW<[WLat1, VBU, NormalGr], (instregex "J(G)?NOP$")>;
 }
 

@@ -11,13 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/BinaryFormat/GOFF.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -65,157 +63,166 @@ constexpr uint8_t RecContinued = Flags(7, 1, 1);
 constexpr uint8_t RecContinuation = Flags(6, 1, 1);
 
 // The GOFFOstream is responsible to write the data into the fixed physical
-// records of the format. A user of this class announces the start of a new
-// logical record and the size of its content. While writing the content, the
-// physical records are created for the data. Possible fill bytes at the end of
-// a physical record are written automatically. In principle, the GOFFOstream
-// is agnostic of the endianness of the content. However, it also supports
-// writing data in big endian byte order.
-class GOFFOstream : public raw_ostream {
+// records of the format. A user of this class announces the begin of a new
+// logical record. While writing the payload, the physical records are created
+// for the data. Possible fill bytes at the end of a physical record are written
+// automatically. In principle, the GOFFOstream is agnostic of the endianness of
+// the payload. However, it also supports writing data in big endian byte order.
+//
+// The physical records use the flag field to indicate if the there is a
+// successor and predecessor record. To be able to set these flags while
+// writing, the basic implementation idea is to always buffer the last seen
+// physical record.
+class GOFFOstream {
   /// The underlying raw_pwrite_stream.
   raw_pwrite_stream &OS;
 
-  /// The remaining size of this logical record, including fill bytes.
-  size_t RemainingSize;
+  /// The number of logical records emitted so far.
+  uint32_t LogicalRecords = 0;
 
-#ifndef NDEBUG
-  /// The number of bytes needed to fill up the last physical record.
-  size_t Gap = 0;
-#endif
+  /// The number of physical records emitted so far.
+  uint32_t PhysicalRecords = 0;
 
-  /// The number of logical records emitted to far.
-  uint32_t LogicalRecords;
+  /// The size of the buffer. Same as the payload size of a physical record.
+  static constexpr uint8_t BufferSize = GOFF::PayloadLength;
 
-  /// The type of the current (logical) record.
-  GOFF::RecordType CurrentType;
+  /// Current position in buffer.
+  char *BufferPtr = Buffer;
 
-  /// Signals start of new record.
-  bool NewLogicalRecord;
+  /// Static allocated buffer for the stream.
+  char Buffer[BufferSize];
 
-  /// Static allocated buffer for the stream, used by the raw_ostream class. The
-  /// buffer is sized to hold the content of a physical record.
-  char Buffer[GOFF::RecordContentLength];
-
-  // Return the number of bytes left to write until next physical record.
-  // Please note that we maintain the total numbers of byte left, not the
-  // written size.
-  size_t bytesToNextPhysicalRecord() {
-    size_t Bytes = RemainingSize % GOFF::RecordContentLength;
-    return Bytes ? Bytes : GOFF::RecordContentLength;
-  }
-
-  /// Write the record prefix of a physical record, using the given record type.
-  static void writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
-                                size_t RemainingSize,
-                                uint8_t Flags = RecContinuation);
-
-  /// Fill the last physical record of a logical record with zero bytes.
-  void fillRecord();
-
-  /// See raw_ostream::write_impl.
-  void write_impl(const char *Ptr, size_t Size) override;
-
-  /// Return the current position within the stream, not counting the bytes
-  /// currently in the buffer.
-  uint64_t current_pos() const override { return OS.tell(); }
+  /// The type of the current logical record, and the flags (aka continued and
+  /// continuation indicators) for the previous (physical) record.
+  uint8_t TypeAndFlags = 0;
 
 public:
-  explicit GOFFOstream(raw_pwrite_stream &OS)
-      : OS(OS), RemainingSize(0), LogicalRecords(0), NewLogicalRecord(false) {
-    SetBuffer(Buffer, sizeof(Buffer));
-  }
-
-  ~GOFFOstream() { finalize(); }
+  GOFFOstream(raw_pwrite_stream &OS);
+  ~GOFFOstream();
 
   raw_pwrite_stream &getOS() { return OS; }
+  size_t getWrittenSize() const { return PhysicalRecords * GOFF::RecordLength; }
+  uint32_t getNumLogicalRecords() { return LogicalRecords; }
 
-  void newRecord(GOFF::RecordType Type, size_t Size);
+  /// Write the specified bytes.
+  void write(const char *Ptr, size_t Size);
 
-  void finalize() { fillRecord(); }
+  /// Write zeroes, up to a maximum of 16 bytes.
+  void write_zeros(unsigned NumZeros);
 
-  uint32_t logicalRecords() { return LogicalRecords; }
-
-  // Support for endian-specific data.
+  /// Support for endian-specific data.
   template <typename value_type> void writebe(value_type Value) {
     Value =
         support::endian::byte_swap<value_type>(Value, llvm::endianness::big);
-    write(reinterpret_cast<const char *>(&Value), sizeof(value_type));
+    write((const char *)&Value, sizeof(value_type));
   }
-};
 
-void GOFFOstream::writeRecordPrefix(raw_ostream &OS, GOFF::RecordType Type,
-                                    size_t RemainingSize, uint8_t Flags) {
-  uint8_t TypeAndFlags = Flags | (Type << 4);
-  if (RemainingSize > GOFF::RecordLength)
+  /// Begin a new logical record. Implies finalizing the previous record.
+  void newRecord(GOFF::RecordType Type);
+
+  /// Ends a logical record.
+  void finalizeRecord();
+
+private:
+  /// Updates the continued/continuation flags, and writes the record prefix of
+  /// a physical record.
+  void updateFlagsAndWritePrefix(bool IsContinued);
+
+  /// Returns the remaining size in the buffer.
+  size_t getRemainingSize();
+};
+} // namespace
+
+GOFFOstream::GOFFOstream(raw_pwrite_stream &OS) : OS(OS) {}
+
+GOFFOstream::~GOFFOstream() { finalizeRecord(); }
+
+void GOFFOstream::updateFlagsAndWritePrefix(bool IsContinued) {
+  // Update the flags based on the previous state and the flag IsContinued.
+  if (TypeAndFlags & RecContinued)
+    TypeAndFlags |= RecContinuation;
+  if (IsContinued)
     TypeAndFlags |= RecContinued;
+  else
+    TypeAndFlags &= ~RecContinued;
+
   OS << static_cast<unsigned char>(GOFF::PTVPrefix) // Record Type
      << static_cast<unsigned char>(TypeAndFlags)    // Continuation
      << static_cast<unsigned char>(0);              // Version
+
+  ++PhysicalRecords;
 }
 
-void GOFFOstream::newRecord(GOFF::RecordType Type, size_t Size) {
-  fillRecord();
-  CurrentType = Type;
-  RemainingSize = Size;
-#ifdef NDEBUG
-  size_t Gap;
-#endif
-  Gap = (RemainingSize % GOFF::RecordContentLength);
-  if (Gap) {
-    Gap = GOFF::RecordContentLength - Gap;
-    RemainingSize += Gap;
+size_t GOFFOstream::getRemainingSize() {
+  return size_t(&Buffer[BufferSize] - BufferPtr);
+}
+
+void GOFFOstream::write(const char *Ptr, size_t Size) {
+  size_t RemainingSize = getRemainingSize();
+
+  // Data fits into the buffer.
+  if (LLVM_LIKELY(Size <= RemainingSize)) {
+    memcpy(BufferPtr, Ptr, Size);
+    BufferPtr += Size;
+    return;
   }
-  NewLogicalRecord = true;
+
+  // Otherwise the buffer is partially filled or full, and data does not fit
+  // into it.
+  updateFlagsAndWritePrefix(/*IsContinued=*/true);
+  OS.write(Buffer, size_t(BufferPtr - Buffer));
+  if (RemainingSize > 0) {
+    OS.write(Ptr, RemainingSize);
+    Ptr += RemainingSize;
+    Size -= RemainingSize;
+  }
+
+  while (Size > BufferSize) {
+    updateFlagsAndWritePrefix(/*IsContinued=*/true);
+    OS.write(Ptr, BufferSize);
+    Ptr += BufferSize;
+    Size -= BufferSize;
+  }
+
+  // The remaining bytes fit into the buffer.
+  memcpy(Buffer, Ptr, Size);
+  BufferPtr = &Buffer[Size];
+}
+
+void GOFFOstream::write_zeros(unsigned NumZeros) {
+  assert(NumZeros <= 16 && "Range for zeros too large");
+
+  // Handle the common case first: all fits in the buffer.
+  size_t RemainingSize = getRemainingSize();
+  if (LLVM_LIKELY(RemainingSize >= NumZeros)) {
+    memset(BufferPtr, 0, NumZeros);
+    BufferPtr += NumZeros;
+    return;
+  }
+
+  // Otherwise some field value is cleared.
+  static char Zeros[16] = {
+      0,
+  };
+  write(Zeros, NumZeros);
+}
+
+void GOFFOstream::newRecord(GOFF::RecordType Type) {
+  finalizeRecord();
+  TypeAndFlags = Type << 4;
   ++LogicalRecords;
 }
 
-void GOFFOstream::fillRecord() {
-  assert((GetNumBytesInBuffer() <= RemainingSize) &&
-         "More bytes in buffer than expected");
-  size_t Remains = RemainingSize - GetNumBytesInBuffer();
-  if (Remains) {
-    assert(Remains == Gap && "Wrong size of fill gap");
-    assert((Remains < GOFF::RecordLength) &&
-           "Attempt to fill more than one physical record");
-    raw_ostream::write_zeros(Remains);
-  }
-  flush();
-  assert(RemainingSize == 0 && "Not fully flushed");
-  assert(GetNumBytesInBuffer() == 0 && "Buffer not fully empty");
+void GOFFOstream::finalizeRecord() {
+  if (Buffer == BufferPtr)
+    return;
+  updateFlagsAndWritePrefix(/*IsContinued=*/false);
+  OS.write(Buffer, size_t(BufferPtr - Buffer));
+  OS.write_zeros(getRemainingSize());
+  BufferPtr = Buffer;
 }
 
-// This function is called from the raw_ostream implementation if:
-// - The internal buffer is full. Size is excactly the size of the buffer.
-// - Data larger than the internal buffer is written. Size is a multiple of the
-//   buffer size.
-// - flush() has been called. Size is at most the buffer size.
-// The GOFFOstream implementation ensures that flush() is called before a new
-// logical record begins. Therefore it is sufficient to check for a new block
-// only once.
-void GOFFOstream::write_impl(const char *Ptr, size_t Size) {
-  assert((RemainingSize >= Size) && "Attempt to write too much data");
-  assert(RemainingSize && "Logical record overflow");
-  if (!(RemainingSize % GOFF::RecordContentLength)) {
-    writeRecordPrefix(OS, CurrentType, RemainingSize,
-                      NewLogicalRecord ? 0 : RecContinuation);
-    NewLogicalRecord = false;
-  }
-  assert(!NewLogicalRecord &&
-         "New logical record not on physical record boundary");
-
-  size_t Idx = 0;
-  while (Size > 0) {
-    size_t BytesToWrite = bytesToNextPhysicalRecord();
-    if (BytesToWrite > Size)
-      BytesToWrite = Size;
-    OS.write(Ptr + Idx, BytesToWrite);
-    Idx += BytesToWrite;
-    Size -= BytesToWrite;
-    RemainingSize -= BytesToWrite;
-    if (Size)
-      writeRecordPrefix(OS, CurrentType, RemainingSize);
-  }
-}
+namespace {
 
 class GOFFObjectWriter : public MCObjectWriter {
   // The target specific GOFF writer instance.
@@ -236,17 +243,15 @@ public:
   void writeEnd();
 
   // Implementation of the MCObjectWriter interface.
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {}
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override {}
+  uint64_t writeObject(MCAssembler &Asm) override;
 };
 } // end anonymous namespace
 
 void GOFFObjectWriter::writeHeader() {
-  OS.newRecord(GOFF::RT_HDR, /*Size=*/57);
+  OS.newRecord(GOFF::RT_HDR);
   OS.write_zeros(1);       // Reserved
   OS.writebe<uint32_t>(0); // Target Hardware Environment
   OS.writebe<uint32_t>(0); // Target Operating System Environment
@@ -266,7 +271,7 @@ void GOFFObjectWriter::writeEnd() {
 
   // TODO Set Flags/AMODE/ESDID for entry point.
 
-  OS.newRecord(GOFF::RT_END, /*Size=*/13);
+  OS.newRecord(GOFF::RT_END);
   OS.writebe<uint8_t>(Flags(6, 2, F)); // Indicator flags
   OS.writebe<uint8_t>(AMODE);          // AMODE
   OS.write_zeros(3);                   // Reserved
@@ -275,19 +280,19 @@ void GOFFObjectWriter::writeEnd() {
   // being zero.
   OS.writebe<uint32_t>(0);     // Record Count
   OS.writebe<uint32_t>(ESDID); // ESDID (of entry point)
-  OS.finalize();
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm,
-                                       const MCAsmLayout &Layout) {
-  uint64_t StartOffset = OS.tell();
-
+uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
   writeHeader();
   writeEnd();
 
-  LLVM_DEBUG(dbgs() << "Wrote " << OS.logicalRecords() << " logical records.");
+  // Make sure all records are written.
+  OS.finalizeRecord();
 
-  return OS.tell() - StartOffset;
+  LLVM_DEBUG(dbgs() << "Wrote " << OS.getNumLogicalRecords()
+                    << " logical records.");
+
+  return OS.getWrittenSize();
 }
 
 std::unique_ptr<MCObjectWriter>

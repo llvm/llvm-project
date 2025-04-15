@@ -13,9 +13,10 @@
 #ifndef LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
 #define LLVM_ANALYSIS_SYNTHETICCOUNTSUTILS_H
 
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/ScaledNumber.h"
+#include <vector>
 
 namespace llvm {
 

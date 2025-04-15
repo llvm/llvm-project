@@ -14,7 +14,10 @@
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Lex/Token.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::ast_matchers;
 
@@ -44,10 +47,12 @@ namespace {
 
 AST_MATCHER(Decl, isFirstDecl) { return Node.isFirstDecl(); }
 
+AST_MATCHER(FunctionDecl, hasBody) { return Node.hasBody(); }
+
 static bool isInMainFile(SourceLocation L, SourceManager &SM,
                          const FileExtensionsSet &HeaderFileExtensions) {
   for (;;) {
-    if (utils::isSpellingLocInHeaderFile(L, SM, HeaderFileExtensions))
+    if (utils::isExpansionLocInHeaderFile(L, SM, HeaderFileExtensions))
       return false;
     if (SM.isInMainFile(L))
       return true;
@@ -75,6 +80,22 @@ AST_POLYMORPHIC_MATCHER(isExternStorageClass,
   return Node.getStorageClass() == SC_Extern;
 }
 
+AST_MATCHER(FunctionDecl, isAllocationOrDeallocationOverloadedFunction) {
+  // [basic.stc.dynamic.allocation]
+  // An allocation function that is not a class member function shall belong to
+  // the global scope and not have a name with internal linkage.
+  // [basic.stc.dynamic.deallocation]
+  // A deallocation function that is not a class member function shall belong to
+  // the global scope and not have a name with internal linkage.
+  static const llvm::DenseSet<OverloadedOperatorKind> OverloadedOperators{
+      OverloadedOperatorKind::OO_New,
+      OverloadedOperatorKind::OO_Array_New,
+      OverloadedOperatorKind::OO_Delete,
+      OverloadedOperatorKind::OO_Array_Delete,
+  };
+  return OverloadedOperators.contains(Node.getOverloadedOperator());
+}
+
 } // namespace
 
 UseInternalLinkageCheck::UseInternalLinkageCheck(StringRef Name,
@@ -97,13 +118,22 @@ void UseInternalLinkageCheck::registerMatchers(MatchFinder *Finder) {
                 isExternStorageClass(), isExternC(),
                 // 3. template
                 isExplicitTemplateSpecialization(),
-                // 4. friend
-                hasAncestor(friendDecl()))));
+                hasAncestor(decl(anyOf(
+                    // 4. friend
+                    friendDecl(),
+                    // 5. module export decl
+                    exportDecl()))))));
   Finder->addMatcher(
-      functionDecl(Common, unless(cxxMethodDecl()), unless(isMain()))
+      functionDecl(Common, hasBody(),
+                   unless(anyOf(cxxMethodDecl(), isConsteval(),
+                                isAllocationOrDeallocationOverloadedFunction(),
+                                isMain())))
           .bind("fn"),
       this);
-  Finder->addMatcher(varDecl(Common, hasGlobalStorage()).bind("var"), this);
+  Finder->addMatcher(
+      varDecl(Common, hasGlobalStorage(), unless(hasThreadStorageDuration()))
+          .bind("var"),
+      this);
 }
 
 static constexpr StringRef Message =
@@ -113,7 +143,7 @@ static constexpr StringRef Message =
 void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *FD = Result.Nodes.getNodeAs<FunctionDecl>("fn")) {
     DiagnosticBuilder DB = diag(FD->getLocation(), Message) << "function" << FD;
-    SourceLocation FixLoc = FD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = FD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)
@@ -121,8 +151,14 @@ void UseInternalLinkageCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
   if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("var")) {
+    // In C++, const variables at file scope have implicit internal linkage,
+    // so we should not warn there. This is not the case in C.
+    // https://eel.is/c++draft/diff#basic-3
+    if (getLangOpts().CPlusPlus && VD->getType().isConstQualified())
+      return;
+
     DiagnosticBuilder DB = diag(VD->getLocation(), Message) << "variable" << VD;
-    SourceLocation FixLoc = VD->getTypeSpecStartLoc();
+    const SourceLocation FixLoc = VD->getInnerLocStart();
     if (FixLoc.isInvalid() || FixLoc.isMacroID())
       return;
     if (FixMode == FixModeKind::UseStatic)

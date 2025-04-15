@@ -6,12 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: stdlib=system && target={{.+}}-apple-macosx{{10.13|10.14|10.15|11.0}}
-
 // <string>
 
-// This test demonstrates the smaller allocation sizes when the alignment
-// requirements of std::string are dropped from 16 to 8.
 #include <algorithm>
 #include <cassert>
 #include <cstddef>

@@ -6,7 +6,7 @@ source_filename = "test.cpp"
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-android21"
 
-define dso_local void @_Z1ml(i64 %e) {
+define dso_local void @_Z1ml(i64 %e, i1 %arg) {
 ; CHECK-LABEL: @_Z1ml(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[L:%.*]] = alloca i8, align 1
@@ -20,7 +20,7 @@ define dso_local void @_Z1ml(i64 %e) {
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[TMP1]] = phi ptr [ [[L]], [[ENTRY:%.*]] ], [ [[TMP0]], [[WHILE_COND_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[I_0]] = phi ptr [ [[L]], [[ENTRY]] ], [ [[I_1_LCSSA]], [[WHILE_COND_LOOPEXIT]] ]
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY_LR_PH:%.*]], label [[WHILE_COND_LOOPEXIT]]
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[FOR_BODY_LR_PH:%.*]], label [[WHILE_COND_LOOPEXIT]]
 ; CHECK:       for.body.lr.ph:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
@@ -32,7 +32,7 @@ define dso_local void @_Z1ml(i64 %e) {
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[TMP2]], align 1
 ; CHECK-NEXT:    br label [[_Z1DPCS_L_EXIT:%.*]]
 ; CHECK:       _Z1dPcS_l.exit:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN3:%.*]], label [[IF_END5]]
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN3:%.*]], label [[IF_END5]]
 ; CHECK:       if.then3:
 ; CHECK-NEXT:    [[ADD_PTR4:%.*]] = getelementptr inbounds i8, ptr [[I_15]], i64 [[E]]
 ; CHECK-NEXT:    br label [[IF_END5]]
@@ -55,7 +55,7 @@ while.cond.loopexit:                              ; preds = %while.cond, %for.co
 while.cond:                                       ; preds = %while.cond.loopexit, %entry
   %1 = phi ptr [ %l, %entry ], [ %0, %while.cond.loopexit ]
   %i.0 = phi ptr [ %l, %entry ], [ %i.1.lcssa, %while.cond.loopexit ]
-  br i1 undef, label %for.body.lr.ph, label %while.cond.loopexit
+  br i1 %arg, label %for.body.lr.ph, label %while.cond.loopexit
 
 for.body.lr.ph:                                   ; preds = %while.cond
   br label %for.body
@@ -70,7 +70,7 @@ for.body:                                         ; preds = %if.end5, %for.body.
   br label %_Z1dPcS_l.exit
 
 _Z1dPcS_l.exit:                                   ; preds = %for.body
-  br i1 undef, label %if.then3, label %if.end5
+  br i1 %arg, label %if.then3, label %if.end5
 
 if.then3:                                         ; preds = %_Z1dPcS_l.exit
   %add.ptr4 = getelementptr inbounds i8, ptr %i.15, i64 %e

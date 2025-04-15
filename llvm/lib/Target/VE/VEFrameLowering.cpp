@@ -119,11 +119,8 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/Function.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Target/TargetOptions.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -415,10 +412,10 @@ void VEFrameLowering::emitEpilogue(MachineFunction &MF,
   emitEpilogueInsns(MF, MBB, MBBI, NumBytes, true);
 }
 
-// hasFP - Return true if the specified function should have a dedicated frame
-// pointer register.  This is true if the function has variable sized allocas
-// or if frame pointer elimination is disabled.
-bool VEFrameLowering::hasFP(const MachineFunction &MF) const {
+// hasFPImpl - Return true if the specified function should have a dedicated
+// frame pointer register.  This is true if the function has variable sized
+// allocas or if frame pointer elimination is disabled.
+bool VEFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();

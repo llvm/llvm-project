@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
@@ -26,7 +27,7 @@
 #include "mlir/Transforms/Passes.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_SCFTOCONTROLFLOW
+#define GEN_PASS_DEF_SCFTOCONTROLFLOWPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -36,7 +37,7 @@ using namespace mlir::scf;
 namespace {
 
 struct SCFToControlFlowPass
-    : public impl::SCFToControlFlowBase<SCFToControlFlowPass> {
+    : public impl::SCFToControlFlowPassBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -370,9 +371,18 @@ LogicalResult ForLowering::matchAndRewrite(ForOp forOp,
   auto comparison = rewriter.create<arith::CmpIOp>(
       loc, arith::CmpIPredicate::slt, iv, upperBound);
 
-  rewriter.create<cf::CondBranchOp>(loc, comparison, firstBodyBlock,
-                                    ArrayRef<Value>(), endBlock,
-                                    ArrayRef<Value>());
+  auto condBranchOp = rewriter.create<cf::CondBranchOp>(
+      loc, comparison, firstBodyBlock, ArrayRef<Value>(), endBlock,
+      ArrayRef<Value>());
+
+  // Let the CondBranchOp carry the LLVM attributes from the ForOp, such as the
+  // llvm.loop_annotation attribute.
+  SmallVector<NamedAttribute> llvmAttrs;
+  llvm::copy_if(forOp->getAttrs(), std::back_inserter(llvmAttrs),
+                [](auto attr) {
+                  return isa<LLVM::LLVMDialect>(attr.getValue().getDialect());
+                });
+  condBranchOp->setDiscardableAttrs(llvmAttrs);
   // The result of the loop operation is the values of the condition block
   // arguments except the induction variable on the last iteration.
   rewriter.replaceOp(forOp, conditionBlock->getArguments().drop_front());
@@ -472,7 +482,10 @@ LogicalResult
 ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
                                   PatternRewriter &rewriter) const {
   Location loc = parallelOp.getLoc();
-  auto reductionOp = cast<ReduceOp>(parallelOp.getBody()->getTerminator());
+  auto reductionOp = dyn_cast<ReduceOp>(parallelOp.getBody()->getTerminator());
+  if (!reductionOp) {
+    return failure();
+  }
 
   // For a parallel loop, we essentially need to create an n-dimensional loop
   // nest. We do this by translating to scf.for ops and have those lowered in
@@ -712,8 +725,4 @@ void SCFToControlFlowPass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
-}
-
-std::unique_ptr<Pass> mlir::createConvertSCFToCFPass() {
-  return std::make_unique<SCFToControlFlowPass>();
 }

@@ -38,7 +38,7 @@ define <4 x i32> @masked_load_and_zero_inactive_3(ptr %ptr, <4 x i1> %mask, <4 x
 ; Remove redundant select when its mask doesn't overlap with the load mask.
 define <4 x i32> @masked_load_and_zero_inactive_4(ptr %ptr, <4 x i1> %inv_mask) {
 ; CHECK-LABEL: @masked_load_and_zero_inactive_4(
-; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR:%.*]], i32 4, <4 x i1> [[MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x i32> [[LOAD]]
 ;
@@ -51,7 +51,7 @@ define <4 x i32> @masked_load_and_zero_inactive_4(ptr %ptr, <4 x i1> %inv_mask) 
 ; As above but reuse the load's existing passthrough.
 define <4 x i32> @masked_load_and_zero_inactive_5(ptr %ptr, <4 x i1> %inv_mask) {
 ; CHECK-LABEL: @masked_load_and_zero_inactive_5(
-; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR:%.*]], i32 4, <4 x i1> [[MASK]], <4 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x i32> [[LOAD]]
 ;
@@ -64,7 +64,7 @@ define <4 x i32> @masked_load_and_zero_inactive_5(ptr %ptr, <4 x i1> %inv_mask) 
 ; No transform when the load's passthrough cannot be reused or altered.
 define <4 x i32> @masked_load_and_zero_inactive_6(ptr %ptr, <4 x i1> %inv_mask, <4 x i32> %passthrough) {
 ; CHECK-LABEL: @masked_load_and_zero_inactive_6(
-; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], splat (i1 true)
 ; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr [[PTR:%.*]], i32 4, <4 x i1> [[MASK]], <4 x i32> [[PASSTHROUGH:%.*]])
 ; CHECK-NEXT:    [[MASKED:%.*]] = select <4 x i1> [[INV_MASK]], <4 x i32> zeroinitializer, <4 x i32> [[LOAD]]
 ; CHECK-NEXT:    ret <4 x i32> [[MASKED]]
@@ -91,8 +91,8 @@ define <4 x i32> @masked_load_and_zero_inactive_7(ptr %ptr, <4 x i1> %mask1, <4 
 ; load's inactive lanes and thus the load's passthrough takes effect.
 define <4 x float> @masked_load_and_zero_inactive_8(ptr %ptr, <4 x i1> %inv_mask, <4 x i1> %cond) {
 ; CHECK-LABEL: @masked_load_and_zero_inactive_8(
-; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[PG:%.*]] = and <4 x i1> [[MASK]], [[COND:%.*]]
+; CHECK-NEXT:    [[MASK:%.*]] = xor <4 x i1> [[INV_MASK:%.*]], splat (i1 true)
+; CHECK-NEXT:    [[PG:%.*]] = and <4 x i1> [[COND:%.*]], [[MASK]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = call <4 x float> @llvm.masked.load.v4f32.p0(ptr [[PTR:%.*]], i32 4, <4 x i1> [[PG]], <4 x float> zeroinitializer)
 ; CHECK-NEXT:    ret <4 x float> [[LOAD]]
 ;

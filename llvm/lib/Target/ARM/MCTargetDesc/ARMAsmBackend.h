@@ -23,9 +23,6 @@ public:
   ARMAsmBackend(const Target &T, bool isThumb, llvm::endianness Endian)
       : MCAsmBackend(Endian), isThumbMode(isThumb) {}
 
-  unsigned getNumFixupKinds() const override {
-    return ARM::NumTargetFixupKinds;
-  }
 
   bool hasNOP(const MCSubtargetInfo *STI) const {
     return STI->hasFeature(ARM::HasV6T2Ops);
@@ -57,9 +54,9 @@ public:
   const char *reasonForFixupRelaxation(const MCFixup &Fixup,
                                        uint64_t Value) const;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                    const MCFixup &, const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;

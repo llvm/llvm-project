@@ -27,7 +27,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/FileManager.h"
-#include "clang/Basic/FileSystemStatCache.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
@@ -55,10 +54,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Capacity.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -80,13 +77,13 @@ LLVM_INSTANTIATE_REGISTRY(PragmaHandlerRegistry)
 
 ExternalPreprocessorSource::~ExternalPreprocessorSource() = default;
 
-Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
+Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
                            DiagnosticsEngine &diags, const LangOptions &opts,
                            SourceManager &SM, HeaderSearch &Headers,
                            ModuleLoader &TheModuleLoader,
                            IdentifierInfoLookup *IILookup, bool OwnsHeaders,
                            TranslationUnitKind TUKind)
-    : PPOpts(std::move(PPOpts)), Diags(&diags), LangOpts(opts),
+    : PPOpts(PPOpts), Diags(&diags), LangOpts(opts),
       FileMgr(Headers.getFileMgr()), SourceMgr(SM),
       ScratchBuf(new ScratchBuffer(SourceMgr)), HeaderInfo(Headers),
       TheModuleLoader(TheModuleLoader), ExternalSource(nullptr),
@@ -159,18 +156,18 @@ Preprocessor::Preprocessor(std::shared_ptr<PreprocessorOptions> PPOpts,
     SkippingUntilPragmaHdrStop = true;
 
   // If using a PCH with a through header, start skipping tokens.
-  if (!this->PPOpts->PCHThroughHeader.empty() &&
-      !this->PPOpts->ImplicitPCHInclude.empty())
+  if (!this->PPOpts.PCHThroughHeader.empty() &&
+      !this->PPOpts.ImplicitPCHInclude.empty())
     SkippingUntilPCHThroughHeader = true;
 
-  if (this->PPOpts->GeneratePreamble)
+  if (this->PPOpts.GeneratePreamble)
     PreambleConditionalStack.startRecording();
 
   MaxTokens = LangOpts.MaxTokens;
 }
 
 Preprocessor::~Preprocessor() {
-  assert(BacktrackPositions.empty() && "EnableBacktrack/Backtrack imbalance!");
+  assert(!isBacktrackEnabled() && "EnableBacktrack/Backtrack imbalance!");
 
   IncludeMacroStack.clear();
 
@@ -580,18 +577,18 @@ void Preprocessor::EnterMainSourceFile() {
   // Start parsing the predefines.
   EnterSourceFile(FID, nullptr, SourceLocation());
 
-  if (!PPOpts->PCHThroughHeader.empty()) {
+  if (!PPOpts.PCHThroughHeader.empty()) {
     // Lookup and save the FileID for the through header. If it isn't found
     // in the search path, it's a fatal error.
     OptionalFileEntryRef File = LookupFile(
-        SourceLocation(), PPOpts->PCHThroughHeader,
+        SourceLocation(), PPOpts.PCHThroughHeader,
         /*isAngled=*/false, /*FromDir=*/nullptr, /*FromFile=*/nullptr,
         /*CurDir=*/nullptr, /*SearchPath=*/nullptr, /*RelativePath=*/nullptr,
         /*SuggestedModule=*/nullptr, /*IsMapped=*/nullptr,
         /*IsFrameworkFound=*/nullptr);
     if (!File) {
       Diag(SourceLocation(), diag::err_pp_through_header_not_found)
-          << PPOpts->PCHThroughHeader;
+          << PPOpts.PCHThroughHeader;
       return;
     }
     setPCHThroughHeaderFileID(
@@ -617,21 +614,21 @@ bool Preprocessor::isPCHThroughHeader(const FileEntry *FE) {
 }
 
 bool Preprocessor::creatingPCHWithThroughHeader() {
-  return TUKind == TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind == TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::usingPCHWithThroughHeader() {
-  return TUKind != TU_Prefix && !PPOpts->PCHThroughHeader.empty() &&
+  return TUKind != TU_Prefix && !PPOpts.PCHThroughHeader.empty() &&
          PCHThroughHeaderFileID.isValid();
 }
 
 bool Preprocessor::creatingPCHWithPragmaHdrStop() {
-  return TUKind == TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind == TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 bool Preprocessor::usingPCHWithPragmaHdrStop() {
-  return TUKind != TU_Prefix && PPOpts->PCHWithHdrStop;
+  return TUKind != TU_Prefix && PPOpts.PCHWithHdrStop;
 }
 
 /// Skip tokens until after the #include of the through header or
@@ -660,8 +657,8 @@ void Preprocessor::SkipTokensWhileUsingPCH() {
   if (ReachedMainFileEOF) {
     if (UsingPCHThroughHeader)
       Diag(SourceLocation(), diag::err_pp_through_header_not_seen)
-          << PPOpts->PCHThroughHeader << 1;
-    else if (!PPOpts->PCHWithHdrStopCreate)
+          << PPOpts.PCHThroughHeader << 1;
+    else if (!PPOpts.PCHWithHdrStopCreate)
       Diag(SourceLocation(), diag::err_pp_pragma_hdrstop_not_seen);
   }
 }
@@ -902,6 +899,10 @@ void Preprocessor::Lex(Token &Result) {
     case tok::r_brace:
       StdCXXImportSeqState.handleCloseBrace();
       break;
+#define PRAGMA_ANNOTATION(X) case tok::annot_##X:
+// For `#pragma ...` mimic ';'.
+#include "clang/Basic/TokenKinds.def"
+#undef PRAGMA_ANNOTATION
     // This token is injected to represent the translation of '#include "a.h"'
     // into "import a.h;". Mimic the notional ';'.
     case tok::annot_module_include:
@@ -988,7 +989,7 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 }
 
 /// Lex a header-name token (including one formed from header-name-tokens if
-/// \p AllowConcatenation is \c true).
+/// \p AllowMacroExpansion is \c true).
 ///
 /// \param FilenameTok Filled in with the next token. On success, this will
 ///        be either a header_name token. On failure, it will be whatever other
@@ -1330,9 +1331,10 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
   return true;
 }
 
-void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc) {
+void Preprocessor::makeModuleVisible(Module *M, SourceLocation Loc,
+                                     bool IncludeExports) {
   CurSubmoduleState->VisibleModules.setVisible(
-      M, Loc, [](Module *) {},
+      M, Loc, IncludeExports, [](Module *) {},
       [&](ArrayRef<Module *> Path, Module *Conflict, StringRef Message) {
         // FIXME: Include the path in the diagnostic.
         // FIXME: Include the import location for the conflicting module.

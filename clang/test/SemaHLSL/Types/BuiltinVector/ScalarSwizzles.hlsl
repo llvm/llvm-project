@@ -113,7 +113,7 @@ int64_t4 HooBoy() {
 // list with float truncation casts.
 
 // CHECK-LABEL: AllRighty
-// CHECK: ImplicitCastExpr {{.*}} 'float3':'vector<float, 3>' <FloatingCast>
+// CHECK: ImplicitCastExpr {{.*}} 'vector<float, 3>' <FloatingCast>
 // CHECK-NEXT: ExtVectorElementExpr {{.*}} 'vector<double, 3>' rrr
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'vector<double, 1>' <VectorSplat>
 // CHECK-NEXT: FloatingLiteral {{.*}} 'double' 1.000000e+00

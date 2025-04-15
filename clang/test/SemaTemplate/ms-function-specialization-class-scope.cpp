@@ -156,7 +156,13 @@ namespace UsesThis {
     auto h<int>() -> decltype(this); // expected-error {{'this' cannot be used in a static member function declaration}}
   };
 
-  template struct A<int>; // expected-note 3{{in instantiation of}}
+  template struct A<int>; // expected-note {{in instantiation of}}
+  template<> template<> void A<int>::f<int>();
+  template<> template<> void A<int>::g<int>();
+  void test1() {
+    A<int>().f<int>(); // expected-note {{in instantiation of}}
+    A<int>().g<int>(); // expected-note {{in instantiation of}}
+  }
 
   template <typename T>
   struct Foo {
@@ -390,7 +396,12 @@ namespace UsesThis {
     }
   };
 
-  template struct D<int>; // expected-note 2{{in instantiation of}}
+  template struct D<int>;
+
+  void test2() {
+    D<int>().non_static_spec(0); // expected-note {{in instantiation of}}
+    D<int>().static_spec(0); // expected-note {{in instantiation of}}
+  }
 
   template<typename T>
   struct E : T {
@@ -574,6 +585,23 @@ namespace UsesThis {
     }
   };
 
-  template struct E<B>; // expected-note 2{{in instantiation of}}
+  template struct E<B>;
 
+  void test3() {
+    E<B>().non_static_spec(0); // expected-note {{in instantiation of}}
+    E<B>().static_spec(0); // expected-note {{in instantiation of}}
+  }
 }
+
+namespace GH111266 {
+  template<class T> struct S {
+    template<int> auto foo();
+    template<> auto foo<1>() {
+      return [](auto x) { return x; };
+    }
+  };
+  template struct S<void>;
+  void test() {
+    S<void>().foo<1>();
+  }
+} // namespace GH111266

@@ -77,7 +77,8 @@ module m
     !CHECK: error: Actual argument associated with INTENT(IN OUT) dummy argument 'op=' is not definable
     !CHECK: because: 'objp' is an INTENT(IN) dummy argument
     call test3a(objp)
-    !CHECK: error: Actual argument associated with procedure pointer dummy argument 'pp=' may not be INTENT(IN)
+    !CHECK: error: Actual argument associated with INTENT(IN OUT) procedure pointer dummy argument 'pp=' is not definable
+    !CHECK: because: 'procp' is an INTENT(IN) dummy argument
     call test3b(procp)
   end subroutine
   subroutine test3a(op)
@@ -109,7 +110,29 @@ module m
   end
   pure subroutine test7(lp)
     type(list), pointer :: lp
-    !CHECK-NOT: error:
-    lp%next%next => null()
+    lp%next%next => null() ! ok
   end
 end module
+program main
+  use iso_fortran_env, only: lock_type
+  type(lock_type) lock
+  interface
+    subroutine inlock(lock)
+      import lock_type
+      type(lock_type), intent(in) :: lock
+    end
+    subroutine outlock(lock)
+      import lock_type
+      !CHECK: error: An INTENT(OUT) dummy argument may not be, or contain, EVENT_TYPE or LOCK_TYPE
+      type(lock_type), intent(out) :: lock
+    end
+    subroutine inoutlock(lock)
+      import lock_type
+      type(lock_type), intent(in out) :: lock
+    end
+  end interface
+  call inlock(lock) ! ok
+  call inoutlock(lock) ! ok
+  !CHECK: error: Actual argument associated with INTENT(OUT) dummy argument 'lock=' is not definable
+  call outlock(lock)
+end

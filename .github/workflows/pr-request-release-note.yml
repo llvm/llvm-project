@@ -2,7 +2,6 @@ name: PR Request Release Note
 
 permissions:
   contents: read
-  pull-requests: write
 
 on:
   pull_request:
@@ -15,7 +14,7 @@ jobs:
       github.repository_owner == 'llvm' &&
       startsWith(github.ref, 'refs/heads/release')
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # We need to pull the script from the main branch, so that we ensure
       # we get the latest version of this script.
@@ -41,3 +40,10 @@ jobs:
             --token "$GITHUB_TOKEN" \
             request-release-note \
             --pr-number ${{ github.event.pull_request.number}}
+
+      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 #v4.3.0
+        if: always()
+        with:
+          name: workflow-args
+          path: |
+            comments

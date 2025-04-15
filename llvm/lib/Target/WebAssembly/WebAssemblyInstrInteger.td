@@ -129,3 +129,48 @@ def : Pat<(select (i32 (seteq I32:$cond, 0)), I32:$lhs, I32:$rhs),
           (SELECT_I32 I32:$rhs, I32:$lhs, I32:$cond)>;
 def : Pat<(select (i32 (seteq I32:$cond, 0)), I64:$lhs, I64:$rhs),
           (SELECT_I64 I64:$rhs, I64:$lhs, I32:$cond)>;
+
+let Predicates = [HasWideArithmetic] in {
+defm I64_ADD128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+                    (outs), (ins),
+                    [],
+                     "i64.add128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
+                     "i64.add128",
+                     0xfc13>;
+defm I64_SUB128 : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs_lo, I64:$lhs_hi, I64:$rhs_lo, I64:$rhs_hi),
+                    (outs), (ins),
+                    [],
+                     "i64.sub128\t$lo, $hi, $lhs_lo, $lhs_hi, $rhs_lo, $rhs_hi",
+                     "i64.sub128",
+                     0xfc14>;
+defm I64_MUL_WIDE_S : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                         "i64.mul_wide_s\t$lo, $hi, $lhs, $rhs",
+                         "i64.mul_wide_s",
+                         0xfc15>;
+defm I64_MUL_WIDE_U : I<(outs I64:$lo, I64:$hi), (ins I64:$lhs, I64:$rhs),
+                        (outs), (ins),
+                        [],
+                        "i64.mul_wide_u\t$lo, $hi, $lhs, $rhs",
+                        "i64.mul_wide_u",
+                        0xfc16>;
+} // Predicates = [HasWideArithmetic]
+
+def wasm_binop128_t : SDTypeProfile<2, 4, []>;
+def wasm_add128 : SDNode<"WebAssemblyISD::I64_ADD128", wasm_binop128_t>;
+def wasm_sub128 : SDNode<"WebAssemblyISD::I64_SUB128", wasm_binop128_t>;
+
+def : Pat<(wasm_add128 I64:$a, I64:$b, I64:$c, I64:$d),
+          (I64_ADD128 $a, $b, $c, $d)>;
+def : Pat<(wasm_sub128 I64:$a, I64:$b, I64:$c, I64:$d),
+          (I64_SUB128 $a, $b, $c, $d)>;
+
+def wasm_mul_wide_t : SDTypeProfile<2, 2, []>;
+def wasm_mul_wide_s : SDNode<"WebAssemblyISD::I64_MUL_WIDE_S", wasm_mul_wide_t>;
+def wasm_mul_wide_u : SDNode<"WebAssemblyISD::I64_MUL_WIDE_U", wasm_mul_wide_t>;
+
+def : Pat<(wasm_mul_wide_s I64:$x, I64:$y),
+          (I64_MUL_WIDE_S $x, $y)>;
+def : Pat<(wasm_mul_wide_u I64:$x, I64:$y),
+          (I64_MUL_WIDE_U $x, $y)>;

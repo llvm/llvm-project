@@ -26,12 +26,12 @@
 declare void @llvm.lifetime.end(i64, ptr nocapture) #0
 
 ; Function Attrs: nounwind ssp uwtable
-define hidden void @fun(ptr %N) #1 align 2 {
+define hidden void @fun(ptr %N, i1 %arg) #1 align 2 {
 ; CHECK: define
 entry:
   %NumOperands.i = getelementptr inbounds %"class.llvm::SDNode.310.1762.9990.10474.10958.11442.11926.12410.12894.13378.13862.15314.15798.16282.17734.19186.21122.25962.26930.29350.29834.30318.30802.31286.31770.32254.32738.33706.36610.38062.41642", ptr %N, i64 0, i32 8
   %0 = load i16, ptr %NumOperands.i, align 8, !tbaa !1
-  br i1 undef, label %for.cond.cleanup, label %for.body.lr.ph
+  br i1 %arg, label %for.cond.cleanup, label %for.body.lr.ph
 
 for.body.lr.ph:                                   ; preds = %entry
   %wide.trip.count192 = zext i16 %0 to i64

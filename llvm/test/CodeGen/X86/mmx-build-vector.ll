@@ -8,7 +8,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx2    | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512f | FileCheck %s --check-prefix=X64
 
-declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
 
 ;
 ; v2i32
@@ -35,9 +35,9 @@ define void @build_v2i32_01(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x i32> undef, i32 %a0, i32 0
   %2 = insertelement <2 x i32>    %1, i32 %a1, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -58,9 +58,9 @@ define void @build_v2i32_0z(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x i32> undef, i32 %a0, i32 0
   %2 = insertelement <2 x i32>    %1, i32   0, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -92,9 +92,9 @@ define void @build_v2i32_u1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x i32> undef, i32 undef, i32 0
   %2 = insertelement <2 x i32>    %1, i32   %a1, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -119,9 +119,9 @@ define void @build_v2i32_z1(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x i32> undef, i32   0, i32 0
   %2 = insertelement <2 x i32>    %1, i32 %a1, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -153,9 +153,9 @@ define void @build_v2i32_00(ptr%p0, i32 %a0, i32 %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x i32> undef, i32 %a0, i32 0
   %2 = insertelement <2 x i32>    %1, i32 %a0, i32 1
-  %3 = bitcast <2 x i32> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x i32> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -194,9 +194,9 @@ define void @build_v4i16_0123(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16 %a1, i32 1
   %3 = insertelement <4 x i16>    %2, i16 %a2, i32 2
   %4 = insertelement <4 x i16>    %3, i16 %a3, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -229,9 +229,9 @@ define void @build_v4i16_01zz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16 %a1, i32 1
   %3 = insertelement <4 x i16>    %2, i16   0, i32 2
   %4 = insertelement <4 x i16>    %3, i16   0, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -254,9 +254,9 @@ define void @build_v4i16_0uuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16 undef, i32 1
   %3 = insertelement <4 x i16>    %2, i16 undef, i32 2
   %4 = insertelement <4 x i16>    %3, i16     0, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -281,9 +281,9 @@ define void @build_v4i16_0zuz(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16     0, i32 1
   %3 = insertelement <4 x i16>    %2, i16 undef, i32 2
   %4 = insertelement <4 x i16>    %3, i16     0, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -316,9 +316,9 @@ define void @build_v4i16_012u(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16   %a1, i32 1
   %3 = insertelement <4 x i16>    %2, i16   %a2, i32 2
   %4 = insertelement <4 x i16>    %3, i16 undef, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -353,9 +353,9 @@ define void @build_v4i16_0u00(ptr%p0, i16 %a0, i16 %a1, i16 %a2, i16 %a3) nounwi
   %2 = insertelement <4 x i16>    %1, i16 undef, i32 1
   %3 = insertelement <4 x i16>    %2, i16   %a0, i32 2
   %4 = insertelement <4 x i16>    %3, i16   %a0, i32 3
-  %5 = bitcast <4 x i16> %4 to x86_mmx
-  %6 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %5)
-  store x86_mmx %6, ptr%p0
+  %5 = bitcast <4 x i16> %4 to <1 x i64>
+  %6 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %5)
+  store <1 x i64> %6, ptr%p0
   ret void
 }
 
@@ -414,9 +414,9 @@ define void @build_v8i8_01234567(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8 %a5, i32 5
   %7  = insertelement <8 x i8>    %6, i8 %a6, i32 6
   %8  = insertelement <8 x i8>    %7, i8 %a7, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -469,9 +469,9 @@ define void @build_v8i8_0u2345z7(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8   %a5, i32 5
   %7  = insertelement <8 x i8>    %6, i8    0,  i32 6
   %8  = insertelement <8 x i8>    %7, i8   %a7, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -522,9 +522,9 @@ define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8     0, i32 5
   %7  = insertelement <8 x i8>    %6, i8     0, i32 6
   %8  = insertelement <8 x i8>    %7, i8 undef, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -551,9 +551,9 @@ define void @build_v8i8_0uuuuzzz(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8     0, i32 5
   %7  = insertelement <8 x i8>    %6, i8     0, i32 6
   %8  = insertelement <8 x i8>    %7, i8     0, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -582,9 +582,9 @@ define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8     0, i32 5
   %7  = insertelement <8 x i8>    %6, i8     0, i32 6
   %8  = insertelement <8 x i8>    %7, i8 undef, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -626,9 +626,9 @@ define void @build_v8i8_00000000(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
   %6  = insertelement <8 x i8>    %5, i8 %a0, i32 5
   %7  = insertelement <8 x i8>    %6, i8 %a0, i32 6
   %8  = insertelement <8 x i8>    %7, i8 %a0, i32 7
-  %9  = bitcast <8 x i8> %8 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %9, x86_mmx %9)
-  store x86_mmx %10, ptr%p0
+  %9  = bitcast <8 x i8> %8 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %9, <1 x i64> %9)
+  store <1 x i64> %10, ptr%p0
   ret void
 }
 
@@ -669,9 +669,9 @@ define void @build_v2f32_01(ptr%p0, float %a0, float %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x float> undef, float %a0, i32 0
   %2 = insertelement <2 x float>    %1, float %a1, i32 1
-  %3 = bitcast <2 x float> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x float> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -707,9 +707,9 @@ define void @build_v2f32_0z(ptr%p0, float %a0, float %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x float> undef, float %a0, i32 0
   %2 = insertelement <2 x float>    %1, float 0.0, i32 1
-  %3 = bitcast <2 x float> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x float> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -742,9 +742,9 @@ define void @build_v2f32_u1(ptr%p0, float %a0, float %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x float> undef, float undef, i32 0
   %2 = insertelement <2 x float>    %1, float   %a1, i32 1
-  %3 = bitcast <2 x float> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x float> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -780,9 +780,9 @@ define void @build_v2f32_z1(ptr%p0, float %a0, float %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x float> undef, float 0.0, i32 0
   %2 = insertelement <2 x float>    %1, float %a1, i32 1
-  %3 = bitcast <2 x float> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x float> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }
 
@@ -815,8 +815,8 @@ define void @build_v2f32_00(ptr%p0, float %a0, float %a1) nounwind {
 ; X64-NEXT:    retq
   %1 = insertelement <2 x float> undef, float %a0, i32 0
   %2 = insertelement <2 x float>    %1, float %a0, i32 1
-  %3 = bitcast <2 x float> %2 to x86_mmx
-  %4 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %3, x86_mmx %3)
-  store x86_mmx %4, ptr%p0
+  %3 = bitcast <2 x float> %2 to <1 x i64>
+  %4 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %3, <1 x i64> %3)
+  store <1 x i64> %4, ptr%p0
   ret void
 }

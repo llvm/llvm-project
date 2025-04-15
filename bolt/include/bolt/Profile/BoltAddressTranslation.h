@@ -141,15 +141,13 @@ private:
                          uint64_t FuncOutputAddress) const;
 
   /// Write the serialized address translation table for a function.
-  template <bool Cold>
-  void writeMaps(std::map<uint64_t, MapTy> &Maps, uint64_t &PrevAddress,
-                 raw_ostream &OS);
+  template <bool Cold> void writeMaps(uint64_t &PrevAddress, raw_ostream &OS);
 
   /// Read the serialized address translation table for a function.
   /// Return a parse error if failed.
   template <bool Cold>
-  void parseMaps(std::vector<uint64_t> &HotFuncs, uint64_t &PrevAddress,
-                 DataExtractor &DE, uint64_t &Offset, Error &Err);
+  void parseMaps(uint64_t &PrevAddress, DataExtractor &DE, uint64_t &Offset,
+                 Error &Err);
 
   /// Returns the bitmask with set bits corresponding to indices of BRANCHENTRY
   /// entries in function address translation map.
@@ -160,6 +158,9 @@ private:
   size_t getNumEqualOffsets(const MapTy &Map, uint32_t Skew) const;
 
   std::map<uint64_t, MapTy> Maps;
+
+  /// Ordered vector with addresses of hot functions.
+  std::vector<uint64_t> HotFuncs;
 
   /// Map a function to its basic blocks count
   std::unordered_map<uint64_t, size_t> NumBasicBlocksMap;

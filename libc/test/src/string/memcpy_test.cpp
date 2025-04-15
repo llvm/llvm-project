@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "memory_utils/memory_check_utils.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/os.h" // LIBC_TARGET_OS_IS_LINUX
 #include "src/string/memcpy.h"
 #include "test/UnitTest/Test.h"
@@ -15,7 +16,7 @@
 #include "memory_utils/protected_pages.h"
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // Adapt CheckMemcpy signature to memcpy.
 static inline void Adaptor(cpp::span<char> dst, cpp::span<char> src,
@@ -47,7 +48,7 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
     auto page = pages.GetPageB().WithAccess(PROT_WRITE);
     // And fill it with random numbers.
     for (size_t i = 0; i < page.page_size; ++i)
-      page.page_ptr[i] = rand();
+      page.page_ptr[i] = static_cast<uint8_t>(rand());
     // Then return it in read mode.
     return page.WithAccess(PROT_READ);
   }();
@@ -71,4 +72,4 @@ TEST(LlvmLibcMemcpyTest, CheckAccess) {
 
 #endif // !defined(LIBC_FULL_BUILD) && defined(LIBC_TARGET_OS_IS_LINUX)
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

@@ -134,3 +134,17 @@ void test_clang_diagnostic_error() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: error: unknown type name 'UnknownType' [clang-diagnostic-error]
   // CHECK-FIXES-NOT: {{^}}  UnknownType b = 0;{{$}}
 }
+
+namespace gh112089 {
+    void foo(void*);
+    using FPtr = void(*)(void*);
+    void test() {
+        void(*a1)(void*);
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: variable 'a1' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: void(*a1)(void*) = nullptr;
+        FPtr a2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: variable 'a2' is not initialized [cppcoreguidelines-init-variables]
+  // CHECK-FIXES: FPtr a2 = nullptr;
+    }
+} // namespace gh112089
+

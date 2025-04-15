@@ -8,53 +8,24 @@
 
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/BinaryFormat/DXContainer.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Alignment.h"
-#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() {}
 
-namespace {
-class DXContainerObjectWriter : public MCObjectWriter {
-  ::support::endian::Writer W;
-
-  /// The target specific DXContainer writer instance.
-  std::unique_ptr<MCDXContainerTargetWriter> TargetObjectWriter;
-
-public:
-  DXContainerObjectWriter(std::unique_ptr<MCDXContainerTargetWriter> MOTW,
-                          raw_pwrite_stream &OS)
-      : W(OS, llvm::endianness::little), TargetObjectWriter(std::move(MOTW)) {}
-
-  ~DXContainerObjectWriter() override {}
-
-private:
-  void recordRelocation(MCAssembler &Asm, const MCAsmLayout &Layout,
-                        const MCFragment *Fragment, const MCFixup &Fixup,
-                        MCValue Target, uint64_t &FixedValue) override {}
-
-  void executePostLayoutBinding(MCAssembler &Asm,
-                                const MCAsmLayout &Layout) override {}
-
-  uint64_t writeObject(MCAssembler &Asm, const MCAsmLayout &Layout) override;
-};
-} // namespace
-
-uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
-                                              const MCAsmLayout &Layout) {
+uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm) {
   // Start the file size as the header plus the size of the part offsets.
   // Presently DXContainer files usually contain 7-10 parts. Reserving space for
   // 16 part offsets gives us a little room for growth.
   llvm::SmallVector<uint64_t, 16> PartOffsets;
   uint64_t PartOffset = 0;
   for (const MCSection &Sec : Asm) {
-    uint64_t SectionSize = Layout.getSectionAddressSize(&Sec);
+    uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
     // Skip empty sections.
     if (SectionSize == 0)
       continue;
@@ -95,7 +66,7 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
     W.write<uint32_t>(static_cast<uint32_t>(PartStart + Offset));
 
   for (const MCSection &Sec : Asm) {
-    uint64_t SectionSize = Layout.getSectionAddressSize(&Sec);
+    uint64_t SectionSize = Asm.getSectionAddressSize(Sec);
     // Skip empty sections.
     if (SectionSize == 0)
       continue;
@@ -139,14 +110,9 @@ uint64_t DXContainerObjectWriter::writeObject(MCAssembler &Asm,
       W.write<char>(ArrayRef<char>(reinterpret_cast<char *>(&Header),
                                    sizeof(dxbc::ProgramHeader)));
     }
-    Asm.writeSectionData(W.OS, &Sec, Layout);
+    Asm.writeSectionData(W.OS, &Sec);
     unsigned Size = W.OS.tell() - Start;
     W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
   }
   return 0;
-}
-
-std::unique_ptr<MCObjectWriter> llvm::createDXContainerObjectWriter(
-    std::unique_ptr<MCDXContainerTargetWriter> MOTW, raw_pwrite_stream &OS) {
-  return std::make_unique<DXContainerObjectWriter>(std::move(MOTW), OS);
 }

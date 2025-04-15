@@ -9,13 +9,14 @@
 #include "src/stdio/snprintf.h"
 
 #include "src/__support/arg_list.h"
+#include "src/__support/macros/config.h"
 #include "src/stdio/printf_core/printf_main.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stdarg.h>
 #include <stddef.h>
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, snprintf,
                    (char *__restrict buffer, size_t buffsz,
@@ -26,8 +27,10 @@ LLVM_LIBC_FUNCTION(int, snprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::WriteBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<printf_core::Mode<
+      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
+      wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::Writer writer(wb);
 
   int ret_val = printf_core::printf_main(&writer, format, args);
   if (buffsz > 0) // if the buffsz is 0 the buffer may be a null pointer.
@@ -35,4 +38,4 @@ LLVM_LIBC_FUNCTION(int, snprintf,
   return ret_val;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

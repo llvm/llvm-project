@@ -13,8 +13,6 @@
 
 #include "LoongArchBaseInfo.h"
 #include "LoongArchMCTargetDesc.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -55,9 +53,11 @@ static ABI getTripleABI(const Triple &TT) {
   ABI TripleABI;
   switch (TT.getEnvironment()) {
   case llvm::Triple::EnvironmentType::GNUSF:
+  case llvm::Triple::EnvironmentType::MuslSF:
     TripleABI = Is64Bit ? ABI_LP64S : ABI_ILP32S;
     break;
   case llvm::Triple::EnvironmentType::GNUF32:
+  case llvm::Triple::EnvironmentType::MuslF32:
     TripleABI = Is64Bit ? ABI_LP64F : ABI_ILP32F;
     break;
   // Let the fallback case behave like {ILP32,LP64}D.

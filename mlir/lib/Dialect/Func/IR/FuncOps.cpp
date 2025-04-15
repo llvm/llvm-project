@@ -123,12 +123,13 @@ LogicalResult CallIndirectOp::canonicalize(CallIndirectOp indirectCall,
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult ConstantOp::verify() {
+LogicalResult ConstantOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   StringRef fnName = getValue();
   Type type = getType();
 
   // Try to find the referenced function.
-  auto fn = (*this)->getParentOfType<ModuleOp>().lookupSymbol<FuncOp>(fnName);
+  auto fn = symbolTable.lookupNearestSymbolFrom<FuncOp>(
+      this->getOperation(), StringAttr::get(getContext(), fnName));
   if (!fn)
     return emitOpError() << "reference to undefined function '" << fnName
                          << "'";
@@ -189,7 +190,7 @@ void FuncOp::build(OpBuilder &builder, OperationState &state, StringRef name,
   if (argAttrs.empty())
     return;
   assert(type.getNumInputs() == argAttrs.size());
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, state, argAttrs, /*resultAttrs=*/std::nullopt,
       getArgAttrsAttrName(state.name), getResAttrsAttrName(state.name));
 }

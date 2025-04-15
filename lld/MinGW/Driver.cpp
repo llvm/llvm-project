@@ -58,13 +58,13 @@ enum {
 #undef OPTION
 };
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
@@ -92,16 +92,19 @@ static constexpr opt::OptTable::Info infoTable[] = {
 namespace {
 class MinGWOptTable : public opt::GenericOptTable {
 public:
-  MinGWOptTable() : opt::GenericOptTable(infoTable, false) {}
+  MinGWOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
+                             false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
 
-static void printHelp(const char *argv0) {
+static void printHelp(CommonLinkerContext &ctx, const char *argv0) {
+  auto &outs = ctx.e.outs();
   MinGWOptTable().printHelp(
-      lld::outs(), (std::string(argv0) + " [options] file...").c_str(), "lld",
-      false /*ShowHidden*/, true /*ShowAllAliases*/);
-  lld::outs() << "\n";
+      outs, (std::string(argv0) + " [options] file...").c_str(), "lld",
+      /*ShowHidden=*/false, /*ShowAllAliases=*/true);
+  outs << '\n';
 }
 
 static cl::TokenizerCallback getQuotingStyle() {
@@ -168,6 +171,14 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   return "";
 }
 
+static bool isI386Target(const opt::InputArgList &args,
+                         const Triple &defaultTarget) {
+  auto *a = args.getLastArg(OPT_m);
+  if (a)
+    return StringRef(a->getValue()) == "i386pe";
+  return defaultTarget.getArch() == Triple::x86;
+}
+
 namespace lld {
 namespace coff {
 bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -189,7 +200,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_help)) {
-    printHelp(argsArr[0]);
+    printHelp(*ctx, argsArr[0]);
     return true;
   }
 
@@ -213,6 +224,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
   }
 
+  Triple defaultTarget(Triple::normalize(sys::getDefaultTargetTriple()));
+
   std::vector<std::string> linkArgs;
   auto add = [&](const Twine &s) { linkArgs.push_back(s.str()); };
 
@@ -221,7 +234,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *a = args.getLastArg(OPT_entry)) {
     StringRef s = a->getValue();
-    if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
+    if (isI386Target(args, defaultTarget) && s.starts_with("_"))
       add("-entry:" + s.substr(1));
     else if (!s.empty())
       add("-entry:" + s);
@@ -329,6 +342,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       add("-build-id");
   }
 
+  if (auto *a = args.getLastArg(OPT_functionpadmin)) {
+    StringRef v = a->getValue();
+    if (v.empty())
+      add("-functionpadmin");
+    else
+      add("-functionpadmin:" + v);
+  }
+
   if (args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false))
     add("-WX");
   else
@@ -398,6 +419,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
                    OPT_no_allow_multiple_definition, false))
     add("-force:multiple");
 
+  if (auto *a = args.getLastArg(OPT_dependent_load_flag))
+    add("-dependentloadflag:" + StringRef(a->getValue()));
+
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();
     if (s == "all")
@@ -447,6 +471,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     else
       add("-errorlimit:" + s);
   }
+
+  if (auto *a = args.getLastArg(OPT_rpath))
+    warn("parameter " + a->getSpelling() + " has no effect on PE/COFF targets");
 
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
@@ -504,13 +531,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args.filtered(OPT_Xlink))
     add(a->getValue());
 
-  if (args.getLastArgValue(OPT_m) == "i386pe")
+  if (isI386Target(args, defaultTarget))
     add("-alternatename:__image_base__=___ImageBase");
   else
     add("-alternatename:__image_base__=__ImageBase");
 
   for (auto *a : args.filtered(OPT_require_defined))
     add("-include:" + StringRef(a->getValue()));
+  for (auto *a : args.filtered(OPT_undefined_glob))
+    add("-includeglob:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_undefined))
     add("-includeoptional:" + StringRef(a->getValue()));
   for (auto *a : args.filtered(OPT_delayload))
@@ -558,7 +587,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     return false;
 
   if (args.hasArg(OPT_verbose) || args.hasArg(OPT__HASH_HASH_HASH))
-    lld::errs() << llvm::join(linkArgs, " ") << "\n";
+    ctx->e.errs() << llvm::join(linkArgs, " ") << "\n";
 
   if (args.hasArg(OPT__HASH_HASH_HASH))
     return true;

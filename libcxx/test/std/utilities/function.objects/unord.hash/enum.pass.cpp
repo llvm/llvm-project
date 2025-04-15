@@ -12,12 +12,14 @@
 
 // Make sure that we can hash enumeration values.
 
-#include "test_macros.h"
-
 #include <functional>
 #include <cassert>
-#include <type_traits>
+#include <cstddef>
+#include <cstdint>
 #include <limits>
+#include <type_traits>
+
+#include "test_macros.h"
 
 enum class Colors { red, orange, yellow, green, blue, indigo, violet };
 enum class Cardinals { zero, one, two, three, five=5 };

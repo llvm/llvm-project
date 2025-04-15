@@ -5,7 +5,7 @@ define float @dotf(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: @dotf(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = fmul fast <4 x float> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP0]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:
@@ -33,7 +33,7 @@ define double @dotd(ptr byval(<4 x double>) nocapture readonly align 32, ptr byv
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x double>, ptr [[TMP0:%.*]], align 32
 ; CHECK-NEXT:    [[Y:%.*]] = load <4 x double>, ptr [[TMP1:%.*]], align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> [[X]], [[Y]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
 entry:
@@ -63,7 +63,7 @@ define float @dotfq(ptr nocapture readonly %x, ptr nocapture readonly %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[X:%.*]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[Y:%.*]], align 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
 ; CHECK-NEXT:    ret float [[TMP3]]
 ;
 entry:
@@ -93,7 +93,7 @@ define double @dotdq(ptr nocapture readonly %x, ptr nocapture readonly %y) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[X:%.*]], align 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x double>, ptr [[Y:%.*]], align 32
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x double> [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP2]])
+; CHECK-NEXT:    [[TMP3:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP2]])
 ; CHECK-NEXT:    ret double [[TMP3]]
 ;
 entry:

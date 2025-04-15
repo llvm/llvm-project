@@ -9,14 +9,15 @@
 #ifndef LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 #define LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H
 
-#include "llvm-libc-types/struct_statvfs.h"
+#include "include/llvm-libc-types/struct_statvfs.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h"
 #include "src/errno/libc_errno.h"
 #include <asm/statfs.h>
 #include <sys/syscall.h>
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace statfs_utils {
 #ifdef SYS_statfs64
@@ -77,19 +78,20 @@ LIBC_INLINE struct statvfs statfs_to_statvfs(const LinuxStatFs &in) {
   struct statvfs out;
   out.f_bsize = in.f_bsize;
   out.f_frsize = in.f_frsize;
-  out.f_blocks = in.f_blocks;
-  out.f_bfree = in.f_bfree;
-  out.f_bavail = in.f_bavail;
-  out.f_files = in.f_files;
-  out.f_ffree = in.f_ffree;
-  out.f_favail = in.f_ffree;
-  out.f_fsid = in.f_fsid.val[0] |
-               static_cast<decltype(out.f_fsid)>(in.f_fsid.val[1]) << 32;
+  out.f_blocks = static_cast<decltype(out.f_blocks)>(in.f_blocks);
+  out.f_bfree = static_cast<decltype(out.f_bfree)>(in.f_bfree);
+  out.f_bavail = static_cast<decltype(out.f_bavail)>(in.f_bavail);
+  out.f_files = static_cast<decltype(out.f_files)>(in.f_files);
+  out.f_ffree = static_cast<decltype(out.f_ffree)>(in.f_ffree);
+  out.f_favail = static_cast<decltype(out.f_favail)>(in.f_ffree);
+  out.f_fsid = in.f_fsid.val[0];
+  if constexpr (sizeof(decltype(out.f_fsid)) == sizeof(uint64_t))
+    out.f_fsid |= static_cast<decltype(out.f_fsid)>(in.f_fsid.val[1]) << 32;
   out.f_flag = in.f_flags;
   out.f_namemax = in.f_namelen;
   return out;
 }
 } // namespace statfs_utils
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STATVFS_LINUX_STATFS_TO_STATVFS_H

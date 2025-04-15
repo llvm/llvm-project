@@ -25,35 +25,33 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
+* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
+  GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
+  from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
+  ensuring compatibility with GNU ld linker.
 
-* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
-  matched output sections without the ``SHF_ALLOC`` flag.
-  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
-  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
-* The default compression level for zlib is now independent of linker
-  optimization level (``Z_BEST_SPEED``).
-* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
-  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
-  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
-* ``--debug-names`` is added to create a merged ``.debug_names`` index
-  from input ``.debug_names`` sections. Type units are not handled yet.
-  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
-* ``--enable-non-contiguous-regions`` option allows automatically packing input
-  sections into memory regions by automatically spilling to later matches if a
-  region would overflow. This reduces the toil of manually packing regions
-  (typical for embedded). It also makes full LTO feasible in such cases, since
-  IR merging currently prevents the linker script from referring to input
-  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
-* ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
-  and combine relocation sections if their relocated section group members are
-  placed to the same output section.
-  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
-* ``--build-id`` now defaults to generating a 20-byte digest ("sha1") instead
-  of 8-byte ("fast"). This improves compatibility with RPM packaging tools.
-  (`#93943 <https://github.com/llvm/llvm-project/pull/93943>`_)
+* The default Hexagon architecture version in ELF object files produced by
+  lld is changed to v68. This change is only effective when the version is
+  not provided in the command line by the user and cannot be inferred from
+  inputs.
+
+* ``--why-live=<glob>`` prints for each symbol matching ``<glob>`` a chain of
+  items that kept it live during garbage collection. This is inspired by the
+  Mach-O LLD feature of the same name.
+
+* Linker script ``OVERLAY`` descriptions now support virtual memory regions
+  (e.g. ``>region``) and ``NOCROSSREFS``.
+
+* Added ``--xosegment`` and ``--no-xosegment`` flags to control whether to place
+  executable-only and readable-executable sections in the same segment. The
+  default value is ``--no-xosegment``.
+  (`#132412 <https://github.com/llvm/llvm-project/pull/132412>`_)
 
 Breaking changes
 ----------------
+* Executable-only and readable-executable sections are now allowed to be placed
+  in the same segment by default. Pass ``--xosegment`` to lld in order to get
+  the old behavior back.
 
 COFF Improvements
 -----------------

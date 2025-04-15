@@ -2,7 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Tests for LLVM libc string.h functions.
+# Tests for LLVM libc sys/epoll.h functions.
 
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
@@ -17,6 +17,9 @@ libc_test(
         "//libc:epoll_create",
         "//libc:close",
     ],
+    deps = [
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
 )
 
 libc_test(
@@ -28,6 +31,7 @@ libc_test(
     ],
     deps = [
         "//libc:hdr_sys_epoll_macros",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -43,6 +47,7 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -59,6 +64,7 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
@@ -75,24 +81,24 @@ libc_test(
     deps = [
         "//libc:hdr_sys_epoll_macros",
         "//libc:types_struct_epoll_event",
+        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
-#TODO: Enable once epoll_pwait2 availablilty can be checked first.
-# https://github.com/llvm/llvm-project/issues/80060
-# libc_test(
-#     name = "epoll_pwait2_test",
-#     srcs = ["linux/epoll_pwait2_test.cpp"],
-#     libc_function_deps = [
-#         "//libc:epoll_pwait2",
-#         "//libc:epoll_create1",
-#         "//libc:epoll_ctl",
-#         "//libc:pipe",
-#         "//libc:close",
-#     ],
-#     deps = [
-#         "//libc:hdr_sys_epoll_macros",
-#         "//libc:types_struct_epoll_event",
-#         "//libc:types_struct_timespec",
-#     ],
-# )
+libc_test(
+    name = "epoll_pwait2_test",
+    srcs = ["linux/epoll_pwait2_test.cpp"],
+    libc_function_deps = [
+        "//libc:epoll_pwait2",
+        "//libc:epoll_create1",
+        "//libc:epoll_ctl",
+        "//libc:pipe",
+        "//libc:close",
+    ],
+    deps = [
+        "//libc:hdr_sys_epoll_macros",
+        "//libc:types_struct_epoll_event",
+        "//libc:types_struct_timespec",
+        "//libc/test/UnitTest:errno_test_helpers",
+    ],
+)

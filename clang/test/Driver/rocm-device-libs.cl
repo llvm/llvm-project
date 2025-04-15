@@ -145,8 +145,8 @@
 // RUN: 2>&1 | FileCheck  --check-prefixes=NOASAN %s
 
 // COMMON: "-triple" "amdgcn-amd-amdhsa"
-// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/opencl.bc"
+// ASAN-SAME: "-mlink-bitcode-file" "{{.*}}/amdgcn/bitcode/asanrtl.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ocml.bc"
 // COMMON-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/ockl.bc"
 

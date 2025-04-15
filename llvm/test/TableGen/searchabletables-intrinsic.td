@@ -1,48 +1,21 @@
-// RUN: llvm-tblgen -gen-searchable-tables -I %p/../../include %s | FileCheck %s
+// RUN: llvm-tblgen -gen-searchable-tables -I %p/../../include -DTEST_INTRINSICS_SUPPRESS_DEFS %s | FileCheck %s
 // XFAIL: vg_leak
 
 include "llvm/TableGen/SearchableTable.td"
+include "llvm/Target/Target.td"
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
-
-class SDNodeProperty;
-
-class ValueType<int size, int value> {
-  string Namespace = "MVT";
-  int Size = size;
-  int Value = value;
-}
-
-class LLVMType<ValueType vt> {
-  ValueType VT = vt;
-}
-
-class Intrinsic<list<LLVMType> param_types = []> {
-  string LLVMName = "";
-  bit isTarget = 0;
-  string TargetPrefix = "";
-  list<LLVMType> RetTypes = [];
-  list<LLVMType> ParamTypes = param_types;
-  list<IntrinsicProperty> IntrProperties = [];
-  list<SDNodeProperty> Properties = [];
-  bit DisableDefaultAttributes = 1;
-}
-
-def iAny : ValueType<0, 253>;
-def llvm_anyint_ty : LLVMType<iAny>;
+def DummyTarget : Target;
 
 def int_abc : Intrinsic<[llvm_anyint_ty]>;
 def int_xyz : Intrinsic<[llvm_anyint_ty]>;
 
-let isTarget = 1, TargetPrefix = "gtarget" in {
+let TargetPrefix = "gtarget" in {
   def int_gtarget_def : Intrinsic<[llvm_anyint_ty]>;
   def int_gtarget_defg : Intrinsic<[llvm_anyint_ty]>;
   def int_gtarget_uvw : Intrinsic<[llvm_anyint_ty]>;
 }
 
-let isTarget = 1, TargetPrefix = "ftarget" in {
+let TargetPrefix = "ftarget" in {
   def int_ftarget_ghi : Intrinsic<[llvm_anyint_ty]>;
   def int_ftarget_ghi_x : Intrinsic<[llvm_anyint_ty]>;
   def int_ftarget_rst : Intrinsic<[llvm_anyint_ty]>;

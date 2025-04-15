@@ -10,16 +10,18 @@
 #define LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDTHREADPLANPYTHONINTERFACE_H
 
 #include "lldb/Host/Config.h"
+#include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
 
 #if LLDB_ENABLE_PYTHON
 
 #include "ScriptedPythonInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedThreadPlanInterface.h"
+
 #include <optional>
 
 namespace lldb_private {
 class ScriptedThreadPlanPythonInterface : public ScriptedThreadPlanInterface,
-                                          public ScriptedPythonInterface {
+                                          public ScriptedPythonInterface,
+                                          public PluginInterface {
 public:
   ScriptedThreadPlanPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
@@ -28,7 +30,8 @@ public:
                      lldb::ThreadPlanSP thread_plan_sp,
                      const StructuredDataImpl &args_sp) override;
 
-  llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const override {
+  llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const override {
     return {};
   }
 
@@ -40,7 +43,17 @@ public:
 
   lldb::StateType GetRunState() override;
 
-  llvm::Expected<bool> GetStopDescription(lldb_private::Stream *s) override;
+  llvm::Error GetStopDescription(lldb::StreamSP &stream) override;
+
+  static void Initialize();
+
+  static void Terminate();
+
+  static llvm::StringRef GetPluginNameStatic() {
+    return "ScriptedThreadPlanPythonInterface";
+  }
+
+  llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 };
 } // namespace lldb_private
 

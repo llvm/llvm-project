@@ -120,26 +120,24 @@ bool CommandObject::ParseOptions(Args &args, CommandReturnObject &result) {
     if (args_or) {
       args = std::move(*args_or);
       error = options->NotifyOptionParsingFinished(&exe_ctx);
-    } else
-      error = args_or.takeError();
-
-    if (error.Success()) {
-      if (options->VerifyOptions(result))
-        return true;
     } else {
-      const char *error_cstr = error.AsCString();
-      if (error_cstr) {
-        // We got an error string, lets use that
-        result.AppendError(error_cstr);
-      } else {
-        // No error string, output the usage information into result
-        options->GenerateOptionUsage(
-            result.GetErrorStream(), *this,
-            GetCommandInterpreter().GetDebugger().GetTerminalWidth());
-      }
+      error = Status::FromError(args_or.takeError());
     }
-    result.SetStatus(eReturnStatusFailed);
-    return false;
+
+    if (error.Fail()) {
+      result.SetError(error.takeError());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (llvm::Error error = options->VerifyOptions()) {
+      result.SetError(std::move(error));
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return true;
   }
   return true;
 }
@@ -287,7 +285,6 @@ void CommandObject::HandleCompletion(CompletionRequest &request) {
   } else {
     // Can we do anything generic with the options?
     Options *cur_options = GetOptions();
-    CommandReturnObject result(m_interpreter.GetDebugger().GetUseColor());
     OptionElementVector opt_element_vector;
 
     if (cur_options != nullptr) {
@@ -758,17 +755,23 @@ Target &CommandObject::GetDummyTarget() {
   return m_interpreter.GetDebugger().GetDummyTarget();
 }
 
-Target &CommandObject::GetSelectedOrDummyTarget(bool prefer_dummy) {
-  return m_interpreter.GetDebugger().GetSelectedOrDummyTarget(prefer_dummy);
-}
+Target &CommandObject::GetTarget() {
+  // Prefer the frozen execution context in the command object.
+  if (Target *target = m_exe_ctx.GetTargetPtr())
+    return *target;
 
-Target &CommandObject::GetSelectedTarget() {
-  assert(m_flags.AnySet(eCommandRequiresTarget | eCommandProcessMustBePaused |
-                        eCommandProcessMustBeLaunched | eCommandRequiresFrame |
-                        eCommandRequiresThread | eCommandRequiresProcess |
-                        eCommandRequiresRegContext) &&
-         "GetSelectedTarget called from object that may have no target");
-  return *m_interpreter.GetDebugger().GetSelectedTarget();
+  // Fallback to the command interpreter's execution context in case we get
+  // called after DoExecute has finished. For example, when doing multi-line
+  // expression that uses an input reader or breakpoint callbacks.
+  if (Target *target = m_interpreter.GetExecutionContext().GetTargetPtr())
+    return *target;
+
+  // Finally, if we have no other target, get the selected target.
+  if (TargetSP target_sp = m_interpreter.GetDebugger().GetSelectedTarget())
+    return *target_sp;
+
+  // We only have the dummy target.
+  return GetDummyTarget();
 }
 
 Thread *CommandObject::GetDefaultThread() {

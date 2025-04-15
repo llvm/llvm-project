@@ -258,9 +258,8 @@ public:
   Token getNext();
 
   void printError(SMLoc Loc, SourceMgr::DiagKind Kind, const Twine &Message,
-                  ArrayRef<SMRange> Ranges = std::nullopt) {
-    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ std::nullopt,
-                    ShowColors);
+                  ArrayRef<SMRange> Ranges = {}) {
+    SM.PrintMessage(Loc, Kind, Message, Ranges, /* FixIts= */ {}, ShowColors);
   }
 
   void setError(const Twine &Message, StringRef::iterator Position) {

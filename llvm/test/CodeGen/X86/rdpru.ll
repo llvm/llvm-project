@@ -6,6 +6,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver2 | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver3 -fast-isel | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver4 -fast-isel | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-- -mcpu=znver5 -fast-isel | FileCheck %s --check-prefix=X64
 
 define void @rdpru_asm() {
 ; X86-LABEL: rdpru_asm:

@@ -258,6 +258,7 @@ function(add_lldb_tool name)
   endif()
 
   add_lldb_executable(${name} GENERATE_INSTALL ${ARG_UNPARSED_ARGUMENTS})
+  set_target_properties(${name} PROPERTIES XCODE_GENERATE_SCHEME ON)
 endfunction()
 
 # The test suite relies on finding LLDB.framework binary resources in the

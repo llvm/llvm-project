@@ -1,5 +1,5 @@
 --- |
-  ; RUN: llc %s -march=x86-64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - | FileCheck %s -implicit-check-not=DBG_VALUE
 
   ; Check that DBG_VALUE instructions are propagated into loops within loops.
 

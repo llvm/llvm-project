@@ -1,38 +1,22 @@
-// RUN: llvm-tblgen -gen-intrinsic-enums %s | FileCheck %s
+// RUN: llvm-tblgen -gen-intrinsic-enums -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS | FileCheck %s --check-prefix=CHECK-ENUM
+// RUN: llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS > /dev/null 2>&1
+// RUN: not llvm-tblgen -gen-intrinsic-impl -I %p/../../include %s -DTEST_INTRINSICS_SUPPRESS_DEFS -DENABLE_ERROR 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+
 // XFAIL: vg_leak
 
-class IntrinsicProperty<bit is_default = 0> {
-  bit IsDefault = is_default;
-}
+include "llvm/IR/Intrinsics.td"
 
-class SDNodeProperty;
+// Make sure we can return up to 9 values.
+// CHECK-ENUM: returns_9_results = {{[0-9]+}}, // llvm.returns.9.results
+def int_returns_9_results : Intrinsic<
+                              !listsplat(llvm_anyint_ty, 9),
+                              [], [], "llvm.returns.9.results">;
 
-class ValueType<int size, int value> {
-  string Namespace = "MVT";
-  int Size = size;
-  int Value = value;
-}
+#ifdef ENABLE_ERROR
+// CHECK-ERROR: error: intrinsics can only return upto 9 values, 'int_returns_10_results' returns 10 values
+// CHECK-ERROR-NEXT: def int_returns_10_results : Intrinsic<
+def int_returns_10_results : Intrinsic<
+                              !listsplat(llvm_anyint_ty, 10),
+                              [], [], "llvm.returns.10.results">;
 
-class LLVMType<ValueType vt> {
-  ValueType VT = vt;
-}
-
-class Intrinsic<string name, list<LLVMType> ret_types = []> {
-  string LLVMName = name;
-  bit isTarget = 0;
-  string TargetPrefix = "";
-  list<LLVMType> RetTypes = ret_types;
-  list<LLVMType> ParamTypes = [];
-  list<IntrinsicProperty> IntrProperties = [];
-  list<SDNodeProperty> Properties = [];
-  bit DisableDefaultAttributes = 1;
-}
-
-def iAny : ValueType<0, 253>;
-def llvm_anyint_ty : LLVMType<iAny>;
-
-// Make sure we can return up to 8 values
-// CHECK: returns_8_results = {{[0-9]+}}, // llvm.returns.8.results
-def int_returns_8_results : Intrinsic<"llvm.returns.8.results",
-    [llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty,
-     llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty, llvm_anyint_ty]>;
+#endif

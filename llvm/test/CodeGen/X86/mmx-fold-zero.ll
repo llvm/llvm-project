@@ -115,32 +115,32 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-LARGE-NEXT:    paddw %mm2, %mm0
 ; X64-LARGE-NEXT:    movq2dq %mm0, %xmm0
 ; X64-LARGE-NEXT:    retq
-  %5 = bitcast double %0 to x86_mmx
-  %6 = bitcast double %1 to x86_mmx
-  %7 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %5, x86_mmx %6)
-  %8 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %7, x86_mmx bitcast (double 0.000000e+00 to x86_mmx))
-  %9 = bitcast double %2 to x86_mmx
-  %10 = tail call x86_mmx @llvm.x86.mmx.padd.d(x86_mmx %8, x86_mmx %9)
-  %11 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %5, x86_mmx %10)
-  %12 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %6, x86_mmx %11)
-  %13 = bitcast double %3 to x86_mmx
-  %14 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %12, x86_mmx %13)
-  %15 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %14, x86_mmx %9)
-  %16 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %15, x86_mmx %13)
-  %17 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %16, x86_mmx %10)
-  %18 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %17, x86_mmx %11)
-  %19 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %18, x86_mmx %8)
-  %20 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %19, x86_mmx %7)
-  %21 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %20, x86_mmx bitcast (double 0.000000e+00 to x86_mmx))
-  %22 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %21, x86_mmx %12)
-  %23 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %22, x86_mmx %15)
-  %24 = tail call x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx %23, x86_mmx %6)
-  %25 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %24, x86_mmx %16)
-  %26 = tail call x86_mmx @llvm.x86.mmx.padd.w(x86_mmx %25, x86_mmx %17)
-  %27 = bitcast x86_mmx %26 to double
+  %5 = bitcast double %0 to <1 x i64>
+  %6 = bitcast double %1 to <1 x i64>
+  %7 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %5, <1 x i64> %6)
+  %8 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %7, <1 x i64> bitcast (double 0.000000e+00 to <1 x i64>))
+  %9 = bitcast double %2 to <1 x i64>
+  %10 = tail call <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64> %8, <1 x i64> %9)
+  %11 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %5, <1 x i64> %10)
+  %12 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %6, <1 x i64> %11)
+  %13 = bitcast double %3 to <1 x i64>
+  %14 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %12, <1 x i64> %13)
+  %15 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %14, <1 x i64> %9)
+  %16 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %15, <1 x i64> %13)
+  %17 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %16, <1 x i64> %10)
+  %18 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %17, <1 x i64> %11)
+  %19 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %18, <1 x i64> %8)
+  %20 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %19, <1 x i64> %7)
+  %21 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %20, <1 x i64> bitcast (double 0.000000e+00 to <1 x i64>))
+  %22 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %21, <1 x i64> %12)
+  %23 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %22, <1 x i64> %15)
+  %24 = tail call <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64> %23, <1 x i64> %6)
+  %25 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %24, <1 x i64> %16)
+  %26 = tail call <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64> %25, <1 x i64> %17)
+  %27 = bitcast <1 x i64> %26 to double
   ret double %27
 }
 
-declare x86_mmx @llvm.x86.mmx.padd.d(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.padd.w(x86_mmx, x86_mmx)
-declare x86_mmx @llvm.x86.mmx.pmulu.dq(x86_mmx, x86_mmx)
+declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.padd.w(<1 x i64>, <1 x i64>)
+declare <1 x i64> @llvm.x86.mmx.pmulu.dq(<1 x i64>, <1 x i64>)

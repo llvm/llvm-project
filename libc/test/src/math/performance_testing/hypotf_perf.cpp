@@ -12,5 +12,5 @@
 
 #include <math.h>
 
-BINARY_OP_SINGLE_OUTPUT_PERF(float, LIBC_NAMESPACE::hypotf, ::hypotf,
+BINARY_OP_SINGLE_OUTPUT_PERF(float, float, LIBC_NAMESPACE::hypotf, ::hypotf,
                              "hypotf_perf.log")

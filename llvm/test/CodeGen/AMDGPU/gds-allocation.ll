@@ -2,9 +2,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx900 -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx9-generic --amdhsa-code-object-version=6 -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-@gds0 = internal addrspace(2) global [4 x i32] undef, align 4
-@lds0 = internal addrspace(3) global [4 x i32] undef, align 128
-@lds1 = internal addrspace(3) global [4 x i32] undef, align 256
+@gds0 = internal addrspace(2) global [4 x i32] poison, align 4
+@lds0 = internal addrspace(3) global [4 x i32] poison, align 128
+@lds1 = internal addrspace(3) global [4 x i32] poison, align 256
 
 ; These two objects should be allocated at the same constant offsets
 ; from the base.
@@ -55,8 +55,8 @@ define amdgpu_kernel void @alloc_lds_gds_align(ptr addrspace(1) %out) #1 {
   ret void
 }
 
-@gds_align8 = internal addrspace(2) global [4 x i32] undef, align 8
-@gds_align32 = internal addrspace(2) global [4 x i32] undef, align 32
+@gds_align8 = internal addrspace(2) global [4 x i32] poison, align 8
+@gds_align32 = internal addrspace(2) global [4 x i32] poison, align 32
 
 define amdgpu_kernel void @gds_global_align(ptr addrspace(1) %out) {
 ; GCN-LABEL: gds_global_align:
@@ -100,13 +100,13 @@ define amdgpu_kernel void @gds_global_align_plus_attr(ptr addrspace(1) %out) #0 
   ret void
 }
 
-@small.gds = internal addrspace(2) global i8 undef, align 1
+@small.gds = internal addrspace(2) global i8 poison, align 1
 @gds.external = external unnamed_addr addrspace(3) global [0 x i32], align 4
 
 define amdgpu_kernel void @gds_extern_align(ptr addrspace(1) %out, ptr addrspace(2) %gds.arg) #0 {
 ; GCN-LABEL: gds_extern_align:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    s_load_dword s0, s[0:1], 0x8
+; GCN-NEXT:    s_load_dword s0, s[4:5], 0x8
 ; GCN-NEXT:    v_mov_b32_e32 v0, 5
 ; GCN-NEXT:    s_movk_i32 m0, 0x401
 ; GCN-NEXT:    s_movk_i32 s1, 0x400

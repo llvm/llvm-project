@@ -9,13 +9,13 @@ int main() {
   free(x);
   // CHECK: AddressSanitizer: attempting double-free on [[ADDR:0x[0-9a-f]+]]
   // CHECK-NEXT: {{#0 .* free }}
-  // CHECK: {{ #[1-2] .* main .*double_free.cpp}}:[[@LINE-3]]
+  // CHECK: {{ #[1-3] .* main .*double_free.cpp}}:[[@LINE-3]]
   // CHECK: [[ADDR]] is located 0 bytes inside of 168-byte region
   // CHECK-LABEL: freed by thread T0 here:
   // CHECK-NEXT: {{#0 .* free }}
-  // CHECK: {{ #[1-2] .* main .*double_free.cpp}}:[[@LINE-8]]
+  // CHECK: {{ #[1-3] .* main .*double_free.cpp}}:[[@LINE-8]]
   // CHECK-LABEL: previously allocated by thread T0 here:
   // CHECK-NEXT: {{#0 .* malloc }}
-  // CHECK: {{ #[1-2] .* main .*double_free.cpp}}:[[@LINE-12]]
+  // CHECK: {{ #[1-3] .* main .*double_free.cpp}}:[[@LINE-12]]
   return 0;
 }

@@ -9,10 +9,12 @@
 #ifndef LLVM_LIBC_SRC_UNISTD_ACCESS_H
 #define LLVM_LIBC_SRC_UNISTD_ACCESS_H
 
-namespace LIBC_NAMESPACE {
+#include "src/__support/macros/config.h"
+
+namespace LIBC_NAMESPACE_DECL {
 
 int access(const char *path, int mode);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_UNISTD_ACCESS_H

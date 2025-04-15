@@ -9,13 +9,14 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
 #define LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H
 
-#include "include/llvm-libc-macros/limits-macros.h" // CHAR_BIT
+#include "hdr/limits_macros.h" // CHAR_BIT
 #include "src/__support/CPP/type_traits/is_integral.h"
 #include "src/__support/CPP/type_traits/is_signed.h"
-#include "src/__support/macros/attributes.h"       // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace cpp {
 
 namespace internal {
@@ -86,6 +87,6 @@ struct numeric_limits<__uint128_t>
 #endif
 
 } // namespace cpp
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_CPP_LIMITS_H

@@ -1252,10 +1252,10 @@ highlightLines(StringRef FileData, unsigned StartLineNumber,
     for (unsigned I = 0; I <= Spelling.size(); ++I) {
       // This line is done.
       if (I == Spelling.size() || isVerticalWhitespace(Spelling[I])) {
-        SmallVector<TextDiagnostic::StyleRange> &LineRanges =
-            SnippetRanges[L - StartLineNumber];
-
         if (L >= StartLineNumber) {
+          SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+              SnippetRanges[L - StartLineNumber];
+
           if (L == TokenStartLine) // First line
             appendStyle(LineRanges, T, StartCol, LineLength);
           else if (L == TokenEndLine) // Last line

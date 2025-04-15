@@ -109,14 +109,13 @@ findContextForNS(llvm::StringRef TargetNS, const DeclContext *CurContext) {
 // afterwards it can be shared with define-inline code action.
 llvm::Expected<std::string>
 getFunctionSourceAfterReplacements(const FunctionDecl *FD,
-                                   const tooling::Replacements &Replacements) {
+                                   const tooling::Replacements &Replacements,
+                                   bool TargetFileIsHeader) {
   const auto &SM = FD->getASTContext().getSourceManager();
   auto OrigFuncRange = toHalfOpenFileRange(
       SM, FD->getASTContext().getLangOpts(), FD->getSourceRange());
   if (!OrigFuncRange)
     return error("Couldn't get range for function.");
-  assert(!FD->getDescribedFunctionTemplate() &&
-         "Define out-of-line doesn't apply to function templates.");
 
   // Get new begin and end positions for the qualified function definition.
   unsigned FuncBegin = SM.getFileOffset(OrigFuncRange->getBegin());
@@ -128,7 +127,42 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
       SM.getBufferData(SM.getMainFileID()), Replacements);
   if (!QualifiedFunc)
     return QualifiedFunc.takeError();
-  return QualifiedFunc->substr(FuncBegin, FuncEnd - FuncBegin + 1);
+
+  auto Source = QualifiedFunc->substr(FuncBegin, FuncEnd - FuncBegin + 1);
+  std::string TemplatePrefix;
+  auto AddToTemplatePrefixIfApplicable = [&](const Decl *D) {
+    const TemplateParameterList *Params = D->getDescribedTemplateParams();
+    if (!Params)
+      return;
+    for (Decl *P : *Params) {
+      if (auto *TTP = dyn_cast<TemplateTypeParmDecl>(P))
+        TTP->removeDefaultArgument();
+      else if (auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P))
+        NTTP->removeDefaultArgument();
+      else if (auto *TTPD = dyn_cast<TemplateTemplateParmDecl>(P))
+        TTPD->removeDefaultArgument();
+    }
+    std::string S;
+    llvm::raw_string_ostream Stream(S);
+    Params->print(Stream, FD->getASTContext());
+    if (!S.empty())
+      *S.rbegin() = '\n'; // Replace space with newline
+    TemplatePrefix.insert(0, S);
+  };
+  AddToTemplatePrefixIfApplicable(FD);
+  if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(FD)) {
+    for (const CXXRecordDecl *Parent = MD->getParent(); Parent;
+         Parent =
+             llvm::dyn_cast_or_null<const CXXRecordDecl>(Parent->getParent())) {
+      AddToTemplatePrefixIfApplicable(Parent);
+    }
+  }
+
+  if (TargetFileIsHeader)
+    Source.insert(0, "inline ");
+  if (!TemplatePrefix.empty())
+    Source.insert(0, TemplatePrefix);
+  return Source;
 }
 
 // Returns replacements to delete tokens with kind `Kind` in the range
@@ -181,7 +215,8 @@ deleteTokensWithKind(const syntax::TokenBuffer &TokBuf, tok::TokenKind Kind,
 llvm::Expected<std::string>
 getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
                       const syntax::TokenBuffer &TokBuf,
-                      const HeuristicResolver *Resolver) {
+                      const HeuristicResolver *Resolver,
+                      bool TargetFileIsHeader) {
   auto &AST = FD->getASTContext();
   auto &SM = AST.getSourceManager();
 
@@ -204,6 +239,8 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {
+          if (ND->getKind() == Decl::TemplateTypeParm)
+            return;
           if (ND->getDeclContext() != Ref.Targets.front()->getDeclContext()) {
             elog("Targets from multiple contexts: {0}, {1}",
                  printQualifiedName(*Ref.Targets.front()),
@@ -212,9 +249,13 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
           }
         }
         const NamedDecl *ND = Ref.Targets.front();
-        const std::string Qualifier =
+        std::string Qualifier =
             getQualification(AST, TargetContext,
                              SM.getLocForStartOfFile(SM.getMainFileID()), ND);
+        if (ND->getDeclContext()->isDependentContext() &&
+            llvm::isa<TypeDecl>(ND)) {
+          Qualifier.insert(0, "typename ");
+        }
         if (auto Err = DeclarationCleanups.add(
                 tooling::Replacement(SM, Ref.NameLoc, 0, Qualifier)))
           Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
@@ -312,7 +353,8 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
 
   if (Errors)
     return std::move(Errors);
-  return getFunctionSourceAfterReplacements(FD, DeclarationCleanups);
+  return getFunctionSourceAfterReplacements(FD, DeclarationCleanups,
+                                            TargetFileIsHeader);
 }
 
 struct InsertionPoint {
@@ -394,23 +436,40 @@ public:
         Source->isOutOfLine())
       return false;
 
-    // Bail out if this is a function template or specialization, as their
+    // Bail out if this is a function template specialization, as their
     // definitions need to be visible in all including translation units.
-    if (Source->getDescribedFunctionTemplate())
-      return false;
     if (Source->getTemplateSpecializationInfo())
       return false;
 
     auto *MD = llvm::dyn_cast<CXXMethodDecl>(Source);
     if (!MD) {
+      if (Source->getDescribedFunctionTemplate())
+        return false;
       // Can't outline free-standing functions in the same file.
       return !SameFile;
     }
 
-    // Bail out in templated classes, as it is hard to spell the class name,
-    // i.e if the template parameter is unnamed.
-    if (MD->getParent()->isTemplated())
-      return false;
+    for (const CXXRecordDecl *Parent = MD->getParent(); Parent;
+         Parent =
+             llvm::dyn_cast_or_null<const CXXRecordDecl>(Parent->getParent())) {
+      if (const TemplateParameterList *Params =
+              Parent->getDescribedTemplateParams()) {
+
+        // Class template member functions must be defined in the
+        // same file.
+        SameFile = true;
+
+        // Bail out if the template parameter is unnamed.
+        for (NamedDecl *P : *Params) {
+          if (!P->getIdentifier())
+            return false;
+        }
+      }
+    }
+
+    // Function templates must be defined in the same file.
+    if (MD->getDescribedTemplate())
+      SameFile = true;
 
     // The refactoring is meaningless for unnamed classes and namespaces,
     // unless we're outlining in the same file
@@ -447,7 +506,8 @@ public:
 
     auto FuncDef = getFunctionSourceCode(
         Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
-        Sel.AST->getHeuristicResolver());
+        Sel.AST->getHeuristicResolver(),
+        SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 

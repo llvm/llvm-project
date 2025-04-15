@@ -51,7 +51,7 @@ namespace cwg1611 { // cwg1611: dup 1658
   struct B : virtual A { virtual void f() = 0; };
   struct C : B { C() : A(0) {} void f(); };
   C c;
-}
+} // namespace cwg1611
 
 namespace cwg1631 {  // cwg1631: 3.7
 #if __cplusplus >= 201103L
@@ -81,7 +81,7 @@ namespace cwg1631 {  // cwg1631: 3.7
     }
   }
 #endif
-}
+} // namespace cwg1631
 
 namespace cwg1638 { // cwg1638: 3.1
 #if __cplusplus >= 201103L
@@ -122,7 +122,7 @@ namespace cwg1638 { // cwg1638: 3.1
     // since-cxx11-note@-3 {{remove 'enum class' to befriend an enum}}
   };
 #endif
-}
+} // namespace cwg1638
 
 namespace cwg1645 { // cwg1645: 3.9
 #if __cplusplus >= 201103L
@@ -149,14 +149,14 @@ namespace cwg1645 { // cwg1645: 3.9
   //   since-cxx11-note@#cwg1645-int-int-int {{candidate inherited constructor has been explicitly deleted}}
   //   since-cxx11-note@#cwg1645-using {{constructor from base class 'A' inherited here}}
 #endif
-}
+} // namespace cwg1645
 
 namespace cwg1652 { // cwg1652: 3.6
   int a, b;
   static_assert(&a + 1 == &b, "");
   // expected-error@-1 {{static assertion expression is not an integral constant expression}}
   //   expected-note@-2 {{comparison against pointer '&a + 1' that points past the end of a complete object has unspecified value}}
-}
+} // namespace cwg1652
 
 namespace cwg1653 { // cwg1653: 4 c++17
   void f(bool b) {
@@ -173,7 +173,7 @@ namespace cwg1653 { // cwg1653: 4 c++17
     b += 1; // ok
     b -= 1; // ok
   }
-}
+} // namespace cwg1653
 
 namespace cwg1658 { // cwg1658: 5
   namespace DefCtor {
@@ -324,7 +324,7 @@ namespace cwg1658 { // cwg1658: 5
   }
 
   // assignment case is superseded by cwg2180
-}
+} // namespace cwg1658
 
 namespace cwg1672 { // cwg1672: 7
   struct Empty {};
@@ -349,7 +349,7 @@ namespace cwg1672 { // cwg1672: 7
   static_assert(!__is_standard_layout(Y<G>), "");
   static_assert(!__is_standard_layout(Y<H>), "");
   static_assert(!__is_standard_layout(Y<X>), "");
-}
+} // namespace cwg1672
 
 namespace cwg1684 { // cwg1684: 3.6
 #if __cplusplus >= 201103L
@@ -363,7 +363,7 @@ namespace cwg1684 { // cwg1684: 3.6
   // cxx11-20-error@-1 {{constexpr function's 1st parameter type 'NonLiteral' is not a literal type}}
   //   cxx11-20-note@#cwg1684-struct {{'NonLiteral' is not literal because it is not an aggregate and has no constexpr constructors other than copy or move constructors}}
 #endif
-}
+} // namespace cwg1684
 
 namespace cwg1687 { // cwg1687: 7
   template<typename T> struct To {
@@ -386,7 +386,7 @@ namespace cwg1687 { // cwg1687: 7
   // since-cxx20-error@-1 {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
   //   since-cxx20-note@#cwg1687-op-T {{operand was implicitly converted to type 'cwg1687::E}}
 #endif
-}
+} // namespace cwg1687
 
 namespace cwg1690 { // cwg1690: 9
   // See also the various tests in "CXX/basic/basic.lookup/basic.lookup.argdep".
@@ -401,7 +401,7 @@ namespace cwg1690 { // cwg1690: 9
     f(s); // ok
   }
 #endif
-}
+} // namespace cwg1690
 
 namespace cwg1691 { // cwg1691: 9
 #if __cplusplus >= 201103L
@@ -421,7 +421,7 @@ namespace cwg1691 { // cwg1691: 9
     //   since-cxx11-note@#cwg1691-g {{'N::g' declared here}}
   }
 #endif
-}
+} // namespace cwg1691
 
 namespace cwg1692 { // cwg1692: 9
   namespace N {
@@ -436,7 +436,7 @@ namespace cwg1692 { // cwg1692: 9
     N::A::B::C c;
     f(c); // ok
   }
-}
+} // namespace cwg1692
 
 namespace cwg1696 { // cwg1696: 7
   namespace std_examples {
@@ -449,6 +449,27 @@ namespace cwg1696 { // cwg1696: 7
       //   since-cxx14-note@-2 {{default member initializer declared here}}
     };
     A a{a, a};
+
+    struct A1 {
+      A1() : v(42) {}
+      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+      // since-cxx14-note@#cwg1696-A1 {{reference member declared here}}
+      const int &v; // #cwg1696-A1
+    };
+
+    struct A2 {
+      A2() = default;
+      // since-cxx14-error@-1 {{reference member 'v' binds to a temporary object whose lifetime would be shorter than the lifetime of the constructed object}}
+      // since-cxx14-note-re@#cwg1696-A2-b {{in defaulted default constructor for {{.*}} first required here}}
+      // since-cxx14-note@#cwg1696-A2-a {{initializing field 'v' with default member initializer}}
+      A2(int v) : v(v) {}
+      // since-cxx14-warning@-1 {{binding reference member 'v' to stack allocated parameter 'v'}}
+      // since-cxx14-note@#cwg1696-A2-a {{reference member declared here}}
+      const int &v = 42;  // #cwg1696-A2-a
+    };
+    A2 a1;    // #cwg1696-A2-b
+    
+    A2 a2(1); // OK, unfortunately
 #endif
   }
 
@@ -483,8 +504,6 @@ namespace cwg1696 { // cwg1696: 7
     const A &a = A(); // #cwg1696-D1-a
   };
   D1 d1 = {}; // #cwg1696-d1
-  // since-cxx14-warning@-1 {{lifetime extension of temporary created by aggregate initialization using a default member initializer is not yet supported; lifetime of temporary will end at the end of the full-expression}}
-  //   since-cxx14-note@#cwg1696-D1-a {{initializing field 'a' with default member initializer}}
 
   struct D2 {
     const A &a = A(); // #cwg1696-D2-a
@@ -535,4 +554,4 @@ namespace cwg1696 { // cwg1696: 7
     //   since-cxx11-note@#cwg1696-il-5 {{nitializing field 'il' with default member initializer}}
   };
 #endif
-}
+} // namespace cwg1696

@@ -312,11 +312,46 @@ define <4 x float> @ulto4f32(<4 x i64> %a) {
   ret <4 x float> %b
 }
 
+define <4 x float> @ulto4f32_nneg(<4 x i64> %a) {
+; NODQ-LABEL: ulto4f32_nneg:
+; NODQ:       # %bb.0:
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm1, %xmm1
+; NODQ-NEXT:    vmovq %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm2, %xmm2
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
+; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; NODQ-NEXT:    vmovq %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm2
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
+; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
+; NODQ-NEXT:    vcvtsi2ss %rax, %xmm3, %xmm0
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
+; NODQ-NEXT:    vzeroupper
+; NODQ-NEXT:    retq
+;
+; VLDQ-LABEL: ulto4f32_nneg:
+; VLDQ:       # %bb.0:
+; VLDQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
+; VLDQ-NEXT:    vzeroupper
+; VLDQ-NEXT:    retq
+;
+; DQNOVL-LABEL: ulto4f32_nneg:
+; DQNOVL:       # %bb.0:
+; DQNOVL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; DQNOVL-NEXT:    vcvtqq2ps %zmm0, %ymm0
+; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; DQNOVL-NEXT:    vzeroupper
+; DQNOVL-NEXT:    retq
+  %b = uitofp nneg <4 x i64> %a to <4 x float>
+  ret <4 x float> %b
+}
+
 define <8 x double> @ulto8f64(<8 x i64> %a) {
 ; NODQ-LABEL: ulto8f64:
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm1 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
-; NODQ-NEXT:    vpternlogq $248, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
+; NODQ-NEXT:    vpternlogq {{.*#+}} zmm1 = zmm1 | (zmm0 & mem)
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-NEXT:    vporq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
 ; NODQ-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
@@ -342,14 +377,14 @@ define <16 x double> @ulto16f64(<16 x i64> %a) {
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295,4294967295]
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200,4841369599423283200]
 ; NODQ-NEXT:    vmovdqa64 %zmm3, %zmm4
-; NODQ-NEXT:    vpternlogq $248, %zmm2, %zmm0, %zmm4
+; NODQ-NEXT:    vpternlogq {{.*#+}} zmm4 = zmm4 | (zmm0 & zmm2)
 ; NODQ-NEXT:    vpsrlq $32, %zmm0, %zmm0
 ; NODQ-NEXT:    vpbroadcastq {{.*#+}} zmm5 = [4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072,4985484787499139072]
 ; NODQ-NEXT:    vporq %zmm5, %zmm0, %zmm0
 ; NODQ-NEXT:    vbroadcastsd {{.*#+}} zmm6 = [1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25,1.9342813118337666E+25]
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm0, %zmm0
 ; NODQ-NEXT:    vaddpd %zmm0, %zmm4, %zmm0
-; NODQ-NEXT:    vpternlogq $248, %zmm2, %zmm1, %zmm3
+; NODQ-NEXT:    vpternlogq {{.*#+}} zmm3 = zmm3 | (zmm1 & zmm2)
 ; NODQ-NEXT:    vpsrlq $32, %zmm1, %zmm1
 ; NODQ-NEXT:    vporq %zmm5, %zmm1, %zmm1
 ; NODQ-NEXT:    vsubpd %zmm6, %zmm1, %zmm1
@@ -1483,7 +1518,7 @@ define <16 x float> @sbto16f32(<16 x i32> %a) {
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NODQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NODQ-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NODQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; NODQ-NEXT:    retq
 ;
@@ -1564,7 +1599,7 @@ define <16 x double> @sbto16f64(<16 x double> %a) {
 ; NODQ-NEXT:    vcmpltpd %zmm0, %zmm2, %k0
 ; NODQ-NEXT:    vcmpltpd %zmm1, %zmm2, %k1
 ; NODQ-NEXT:    kunpckbw %k0, %k1, %k1
-; NODQ-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1 {%k1} {z}
+; NODQ-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
 ; NODQ-NEXT:    vcvtdq2pd %ymm1, %zmm0
 ; NODQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm1
 ; NODQ-NEXT:    vcvtdq2pd %ymm1, %zmm1
@@ -1603,7 +1638,7 @@ define <8 x double> @sbto8f64(<8 x double> %a) {
 ; NOVLDQ:       # %bb.0:
 ; NOVLDQ-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVLDQ-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; NOVLDQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NOVLDQ-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NOVLDQ-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; NOVLDQ-NEXT:    retq
 ;
@@ -1864,7 +1899,7 @@ define <16 x float> @ubto16f32(<16 x i32> %a) {
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NODQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NODQ-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NODQ-NEXT:    vpsrld $31, %zmm0, %zmm0
 ; NODQ-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; NODQ-NEXT:    retq
@@ -1894,7 +1929,7 @@ define <16 x double> @ubto16f64(<16 x i32> %a) {
 ; NODQ:       # %bb.0:
 ; NODQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; NODQ-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; NODQ-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; NODQ-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; NODQ-NEXT:    vpsrld $31, %zmm0, %zmm1
 ; NODQ-NEXT:    vcvtdq2pd %ymm1, %zmm0
 ; NODQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm1

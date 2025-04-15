@@ -29,7 +29,6 @@
 #include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/QuasiPolynomial.h"
-#include <bitset>
 #include <optional>
 
 namespace mlir {

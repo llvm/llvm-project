@@ -12,7 +12,7 @@
 
 #include "clang/AST/Attr.h"
 #include "clang/Basic/AttributeCommonInfo.h"
-#include "clang/Parse/ParseDiagnostic.h"
+#include "clang/Basic/DiagnosticParse.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -27,10 +27,10 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
     return false;
   DeclGroupRef Decls = DG.get();
   bool IsValid = true;
-  // Only allow function, variable, record decls inside HLSLBuffer.
+  // Only allow function, variable, record, and empty decls inside HLSLBuffer.
   for (DeclGroupRef::iterator I = Decls.begin(), E = Decls.end(); I != E; ++I) {
     Decl *D = *I;
-    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl>(D))
+    if (isa<CXXRecordDecl, RecordDecl, FunctionDecl, VarDecl, EmptyDecl>(D))
       continue;
 
     // FIXME: support nested HLSLBuffer and namespace inside HLSLBuffer.
@@ -119,9 +119,11 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
-                                  SourceLocation *EndLoc) {
+                                  SourceLocation *EndLoc,
+                                  bool CouldBeBitField) {
 
   assert(Tok.is(tok::colon) && "Not a HLSL Annotation");
+  Token OldToken = Tok;
   ConsumeToken();
 
   IdentifierInfo *II = nullptr;
@@ -131,6 +133,10 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
     II = Tok.getIdentifierInfo();
 
   if (!II) {
+    if (CouldBeBitField) {
+      UnconsumeToken(OldToken);
+      return;
+    }
     Diag(Tok.getLocation(), diag::err_expected_semantic_identifier);
     return;
   }
@@ -274,6 +280,8 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
   case ParsedAttr::UnknownAttribute:
     Diag(Loc, diag::err_unknown_hlsl_semantic) << II;
     return;
+  case ParsedAttr::AT_HLSLSV_GroupThreadID:
+  case ParsedAttr::AT_HLSLSV_GroupID:
   case ParsedAttr::AT_HLSLSV_GroupIndex:
   case ParsedAttr::AT_HLSLSV_DispatchThreadID:
     break;

@@ -19,11 +19,12 @@ of undefined behavior that can potentially allow attackers to subvert the
 program's control flow. These schemes have been optimized for performance,
 allowing developers to enable them in release builds.
 
-To enable Clang's available CFI schemes, use the flag ``-fsanitize=cfi``.
-You can also enable a subset of available :ref:`schemes <cfi-schemes>`.
-As currently implemented, all schemes rely on link-time optimization (LTO);
-so it is required to specify ``-flto``, and the linker used must support LTO,
-for example via the `gold plugin`_.
+To enable Clang's available CFI schemes, use the flag
+``-fsanitize=cfi``. You can also enable a subset of available
+:ref:`schemes <cfi-schemes>`. As currently implemented, all schemes
+except for ``kcfi`` rely on link-time optimization (LTO); so it is
+required to specify ``-flto`` or ``-flto=thin``, and the linker used
+must support LTO, for example via the `gold plugin`_.
 
 To allow the checks to be implemented efficiently, the program must
 be structured such that certain object files are compiled with CFI
@@ -336,6 +337,15 @@ cross-DSO function address equality. These properties make KCFI easier to
 adopt in low-level software. KCFI is limited to checking only function
 pointers, and isn't compatible with executable-only memory.
 
+``-fsanitize-kcfi-arity``
+-----------------------------
+
+For supported targets, this feature extends kCFI by telling the compiler to
+record information about each indirect-callable function's arity (i.e., the
+number of arguments passed in registers) into the binary. Some kernel CFI
+techniques, such as FineIBT, may be able to use this information to provide
+enhanced security.
+
 Member Function Pointer Call Checking
 =====================================
 
@@ -417,6 +427,6 @@ Publications
 `Control-Flow Integrity: Principles, Implementations, and Applications <https://research.microsoft.com/pubs/64250/ccs05.pdf>`_.
 Martin Abadi, Mihai Budiu, Úlfar Erlingsson, Jay Ligatti.
 
-`Enforcing Forward-Edge Control-Flow Integrity in GCC & LLVM <http://www.pcc.me.uk/~peter/acad/usenix14.pdf>`_.
+`Enforcing Forward-Edge Control-Flow Integrity in GCC & LLVM <https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-tice.pdf>`_.
 Caroline Tice, Tom Roeder, Peter Collingbourne, Stephen Checkoway,
 Úlfar Erlingsson, Luis Lozano, Geoff Pike.

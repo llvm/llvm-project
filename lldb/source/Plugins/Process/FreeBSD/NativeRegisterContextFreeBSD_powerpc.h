@@ -31,7 +31,7 @@ class NativeRegisterContextFreeBSD_powerpc
     : public NativeRegisterContextFreeBSD {
 public:
   NativeRegisterContextFreeBSD_powerpc(const ArchSpec &target_arch,
-                                       NativeThreadProtocol &native_thread);
+                                       NativeThreadFreeBSD &native_thread);
 
   uint32_t GetRegisterSetCount() const override;
 

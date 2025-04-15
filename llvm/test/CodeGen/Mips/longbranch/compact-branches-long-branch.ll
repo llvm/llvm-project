@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=mips -mcpu=mips32r6 -force-mips-long-branch | FileCheck %s
+; RUN: llc < %s -mtriple=mips -mcpu=mips32r6 -force-mips-long-branch | FileCheck %s
 
 ; Check that when MIPS32R6 with the static relocation model with the usage of
 ; long branches, that there is a nop between any compact branch and the static

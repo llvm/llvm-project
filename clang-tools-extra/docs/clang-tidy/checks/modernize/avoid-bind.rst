@@ -50,8 +50,9 @@ Options
   of every placeholder parameter list. Without this, it is possible for a fix-it
   to perform an incorrect transformation in the case where the result of the ``bind``
   is used in the context of a type erased functor such as ``std::function`` which
-  allows mismatched arguments. For example:
+  allows mismatched arguments. Default is is `false`.
 
+For example:
 
 .. code-block:: c++
 

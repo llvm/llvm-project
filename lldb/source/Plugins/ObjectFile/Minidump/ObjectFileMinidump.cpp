@@ -55,24 +55,42 @@ size_t ObjectFileMinidump::GetModuleSpecifications(
   return 0;
 }
 
-bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
-                                  const lldb_private::FileSpec &outfile,
-                                  lldb::SaveCoreStyle &core_style,
-                                  lldb_private::Status &error) {
-  // Set default core style if it isn't set.
-  if (core_style == SaveCoreStyle::eSaveCoreUnspecified)
-    core_style = SaveCoreStyle::eSaveCoreStackOnly;
+struct DumpFailRemoveHolder {
+  DumpFailRemoveHolder(MinidumpFileBuilder &builder) : m_builder(builder) {}
 
-  if (!process_sp)
-    return false;
+  ~DumpFailRemoveHolder() {
+    if (!m_success)
+      m_builder.DeleteFile();
+  }
+
+  void SetSuccess() { m_success = true; }
+
+private:
+  MinidumpFileBuilder &m_builder;
+  bool m_success = false;
+};
+
+bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
+                                  lldb_private::SaveCoreOptions &options,
+                                  lldb_private::Status &error) {
+  // Output file and process_sp are both checked in PluginManager::SaveCore.
+  assert(options.GetOutputFile().has_value());
+  assert(process_sp);
+
+  // Minidump defaults to stacks only.
+  if (options.GetStyle() == SaveCoreStyle::eSaveCoreUnspecified)
+    options.SetStyle(SaveCoreStyle::eSaveCoreStackOnly);
 
   llvm::Expected<lldb::FileUP> maybe_core_file = FileSystem::Instance().Open(
-      outfile, File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
+      options.GetOutputFile().value(),
+      File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate);
   if (!maybe_core_file) {
-    error = maybe_core_file.takeError();
+    error = Status::FromError(maybe_core_file.takeError());
     return false;
   }
-  MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp);
+  MinidumpFileBuilder builder(std::move(maybe_core_file.get()), process_sp,
+                              options);
+  DumpFailRemoveHolder request(builder);
 
   Log *log = GetLog(LLDBLog::Object);
   error = builder.AddHeaderAndCalculateDirectories();
@@ -119,7 +137,7 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
 
   // Note: add memory HAS to be the last thing we do. It can overflow into 64b
   // land and many RVA's only support 32b
-  error = builder.AddMemoryList(core_style);
+  error = builder.AddMemoryList();
   if (error.Fail()) {
     LLDB_LOGF(log, "AddMemoryList failed: %s", error.AsCString());
     return false;
@@ -130,6 +148,8 @@ bool ObjectFileMinidump::SaveCore(const lldb::ProcessSP &process_sp,
     LLDB_LOGF(log, "DumpFile failed: %s", error.AsCString());
     return false;
   }
+
+  request.SetSuccess();
 
   return true;
 }

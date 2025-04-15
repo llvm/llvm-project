@@ -47,13 +47,12 @@ namespace sys {
   /// The particular format of the names are target dependent, and suitable for
   /// passing as -mattr to the target which matches the host.
   ///
-  /// \param Features - A string mapping feature names to either
-  /// true (if enabled) or false (if disabled). This routine makes no guarantees
-  /// about exactly which features may appear in this map, except that they are
-  /// all valid LLVM feature names.
-  ///
-  /// \return - True on success.
-  bool getHostCPUFeatures(StringMap<bool, MallocAllocator> &Features);
+  /// \return - A string map mapping feature names to either true (if enabled)
+  /// or false (if disabled). This routine makes no guarantees about exactly
+  /// which features may appear in this map, except that they are all valid LLVM
+  /// feature names. The map can be empty, for example if feature detection
+  /// fails.
+  const StringMap<bool, MallocAllocator> getHostCPUFeatures();
 
   /// This is a function compatible with cl::AddExtraVersionPrinter, which adds
   /// info about the current target triple and detected CPU.

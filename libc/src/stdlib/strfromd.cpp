@@ -7,9 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/strfromd.h"
+#include "src/__support/macros/config.h"
 #include "src/stdlib/str_from_util.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, strfromd,
                    (char *__restrict s, size_t n, const char *__restrict format,
@@ -18,8 +19,10 @@ LLVM_LIBC_FUNCTION(int, strfromd,
 
   printf_core::FormatSection section =
       internal::parse_format_string(format, fp);
-  printf_core::WriteBuffer wb(s, (n > 0 ? n - 1 : 0));
-  printf_core::Writer writer(&wb);
+  printf_core::WriteBuffer<printf_core::Mode<
+      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
+      wb(s, (n > 0 ? n - 1 : 0));
+  printf_core::Writer writer(wb);
 
   int result = 0;
   if (section.has_conv)
@@ -36,4 +39,4 @@ LLVM_LIBC_FUNCTION(int, strfromd,
   return writer.get_chars_written();
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

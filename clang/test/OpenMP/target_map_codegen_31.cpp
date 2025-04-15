@@ -81,10 +81,10 @@ void explicit_maps_single (int ii){
 // Make sure the struct picks up present even if another element of the struct
 // doesn't have present.
 // Region 00
-// CK31A: [[ST1_J:%.+]] = getelementptr inbounds [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 1
-// CK31A: [[ST1_I:%.+]] = getelementptr inbounds [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 0
-// CK31A: [[ST2_I:%.+]] = getelementptr inbounds [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 0
-// CK31A: [[ST2_J:%.+]] = getelementptr inbounds [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 1
+// CK31A: [[ST1_J:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 1
+// CK31A: [[ST1_I:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST1]], i{{.+}} 0, i{{.+}} 0
+// CK31A: [[ST2_I:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 0
+// CK31A: [[ST2_J:%.+]] = getelementptr inbounds nuw [[ST]], ptr [[ST2]], i{{.+}} 0, i{{.+}} 1
 // CK31A-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK31A-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK31A-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
