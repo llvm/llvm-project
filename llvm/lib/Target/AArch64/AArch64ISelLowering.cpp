@@ -1604,6 +1604,26 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MSTORE, VT, Custom);
     }
 
+    if (EnablePartialReduceNodes) {
+      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+          // 1. Set all combinations where a type is illegal to "Legal"
+          // - These will be legalized to a legal type pair
+          // - Avoid expanding them too early (or preventing folds)
+          if (!isTypeLegal(VT) || !isTypeLegal(InnerVT)) {
+            setPartialReduceMLAAction(VT, InnerVT, Legal);
+            continue;
+          }
+          //  2. Set all legal combinations to "Expand"
+          // - Not all of these can be lowered (via a Legal or Custom lowering).
+          setPartialReduceMLAAction(VT, InnerVT, Expand);
+        }
+      }
+      // 3. Mark known legal pairs as 'Legal' (these will expand to USDOT).
+      setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
+      setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+    }
+
     // Firstly, exclude all scalable vector extending loads/truncating stores,
     // include both integer and floating scalable vector.
     for (MVT VT : MVT::scalable_vector_valuetypes()) {
@@ -1856,6 +1876,14 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     // Other pairs will default to 'Expand'.
     setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
     setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i64, Custom);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i32, Custom);
+
+    setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv4i64, Custom);
+    setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv8i32, Custom);
+    setPartialReduceMLAAction(MVT::nxv8i16, MVT::nxv16i16, Custom);
+    setPartialReduceMLAAction(MVT::nxv16i8, MVT::nxv32i8, Custom);
   }
 
   // Handle operations that are only available in non-streaming SVE mode.
