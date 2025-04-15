@@ -100,9 +100,13 @@ struct CIRRecordLowering final {
   // Output fields, consumed by CIRGenTypes::computeRecordLayout
   llvm::SmallVector<mlir::Type, 16> fieldTypes;
   llvm::DenseMap<const FieldDecl *, unsigned> fields;
-  bool zeroInitializable : 1;
-  bool packed : 1;
-  bool padded : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned zeroInitializable : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned packed : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned padded : 1;
 
 private:
   CIRRecordLowering(const CIRRecordLowering &) = delete;
@@ -123,6 +127,12 @@ void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
     cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                        "lower: union");
+    return;
+  }
+
+  if (isa<CXXRecordDecl>(recordDecl)) {
+    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
+                                       "lower: class");
     return;
   }
 
