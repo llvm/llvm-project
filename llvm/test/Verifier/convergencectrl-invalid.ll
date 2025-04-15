@@ -20,7 +20,7 @@ define void @wrong_token() {
   ret void
 }
 
-; CHECK: Convergence control token can only be used in a convergent call.
+; convergence control token can be used on non-convergent calls, but it has no effect.
 ; CHECK-NEXT  call void @g(){{.*}}%t05_tok1
 define void @missing.attribute() {
   %t05_tok1 = call token @llvm.experimental.convergence.anchor()
