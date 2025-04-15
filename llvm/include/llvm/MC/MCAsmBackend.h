@@ -153,7 +153,6 @@ public:
   /// Target specific predicate for whether a given fixup requires the
   /// associated instruction to be relaxed.
   virtual bool fixupNeedsRelaxationAdvanced(const MCAssembler &,
-                                            const MCRelaxableFragment &,
                                             const MCFixup &, const MCValue &,
                                             uint64_t, bool Resolved) const;
 
@@ -221,11 +220,6 @@ public:
   virtual uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                                  const MCContext *Ctxt) const {
     return 0;
-  }
-
-  /// Check whether a given symbol has been flagged with MICROMIPS flag.
-  virtual bool isMicroMips(const MCSymbol *Sym) const {
-    return false;
   }
 
   bool isDarwinCanonicalPersonality(const MCSymbol *Sym) const;

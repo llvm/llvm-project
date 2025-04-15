@@ -65,6 +65,14 @@ jobs:
           export CXX=/opt/llvm/bin/clang++
 
           ./.ci/monolithic-linux.sh "${projects_to_build}" "${project_check_targets}" "${runtimes_to_build}" "${runtimes_check_targets}"
+            - name: "Upload artifact"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: Premerge Artifacts
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'
 
   premerge-checks-windows:
     name: Windows Premerge Checks (Test Only - Please Ignore Results)
@@ -113,6 +121,13 @@ jobs:
           set MAX_PARALLEL_LINK_JOBS=64
           call C:\\BuildTools\\Common7\\Tools\\VsDevCmd.bat -arch=amd64 -host_arch=amd64
           bash .ci/monolithic-windows.sh "${{ steps.vars.outputs.windows-projects }}" "${{ steps.vars.outputs.windows-check-targets }}"
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: Premerge Artifacts
+          path: artifacts/
+          retention-days: 5
+          include-hidden-files: 'true'
 
   premerge-check-macos:
     name: MacOS Premerge Checks
