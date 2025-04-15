@@ -5580,7 +5580,6 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     return false;
 
   LLT PartialResTy = LLT::scalar(SplitSize);
-  bool NeedsBitcast = false;
   if (Ty.isVector()) {
     LLT EltTy = Ty.getElementType();
     unsigned EltSize = EltTy.getSizeInBits();
@@ -5589,10 +5588,8 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     } else if (EltSize == 16 || EltSize == 32) {
       unsigned NElem = SplitSize / EltSize;
       PartialResTy = Ty.changeElementCount(ElementCount::getFixed(NElem));
-    } else {
-      // Handle all other cases via S32/S64 pieces
-      NeedsBitcast = true;
     }
+    // Handle all other cases via S32/S64 pieces;
   }
 
   SmallVector<Register, 4> PartialRes;
@@ -5618,12 +5615,7 @@ bool AMDGPULegalizerInfo::legalizeLaneOp(LegalizerHelper &Helper,
     PartialRes.push_back(createLaneOp(Src0, Src1, Src2, PartialResTy));
   }
 
-  if (NeedsBitcast)
-    B.buildBitcast(DstReg, B.buildMergeLikeInstr(
-                               LLT::scalar(Ty.getSizeInBits()), PartialRes));
-  else
-    B.buildMergeLikeInstr(DstReg, PartialRes);
-
+  B.buildMergeLikeInstr(DstReg, PartialRes);
   MI.eraseFromParent();
   return true;
 }
