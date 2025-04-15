@@ -1064,7 +1064,8 @@ public:
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
-        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        if (CIValue.ult(CIValue.getBitWidth()))
+          InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
         break;
       case Instruction::Mul:
         if (CIValue.isOne()) {
