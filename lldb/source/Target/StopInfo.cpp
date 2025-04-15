@@ -263,6 +263,10 @@ public:
     return bp_site_sp->GetSuggestedStackFrameIndex();
   }
 
+  bool ShouldShow() const override { return !m_was_all_internal; }
+
+  bool ShouldSelect() const override { return !m_was_all_internal; }
+
 protected:
   bool ShouldStop(Event *event_ptr) override {
     // This just reports the work done by PerformAction or the synchronous

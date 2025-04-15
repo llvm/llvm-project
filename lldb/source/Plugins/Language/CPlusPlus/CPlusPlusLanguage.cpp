@@ -62,9 +62,47 @@ void CPlusPlusLanguage::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
+std::unique_ptr<Language::MethodName>
+CPlusPlusLanguage::GetMethodName(ConstString full_name) const {
+  std::unique_ptr<CxxMethodName> cpp_method =
+      std::make_unique<CxxMethodName>(full_name);
+  cpp_method->IsValid();
+  return cpp_method;
+}
+
+std::pair<FunctionNameType, std::optional<ConstString>>
+CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
+  if (Mangled::IsMangledName(name.GetCString()))
+    return {eFunctionNameTypeFull, std::nullopt};
+
+  FunctionNameType func_name_type = eFunctionNameTypeNone;
+  CxxMethodName method(name);
+  llvm::StringRef basename = method.GetBasename();
+  if (basename.empty()) {
+    llvm::StringRef context;
+    func_name_type |=
+        (ExtractContextAndIdentifier(name.GetCString(), context, basename)
+             ? (eFunctionNameTypeMethod | eFunctionNameTypeBase)
+             : eFunctionNameTypeFull);
+  } else {
+    func_name_type |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+  }
+
+  if (!method.GetQualifiers().empty()) {
+    // There is a 'const' or other qualifier following the end of the function
+    // parens, this can't be a eFunctionNameTypeBase.
+    func_name_type &= ~(eFunctionNameTypeBase);
+  }
+
+  if (basename.empty())
+    return {func_name_type, std::nullopt};
+  else
+    return {func_name_type, ConstString(basename)};
+}
+
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
   const char *mangled_name = mangled.GetMangledName().GetCString();
-  return mangled_name && CPlusPlusLanguage::IsCPPMangledName(mangled_name);
+  return mangled_name && Mangled::IsMangledName(mangled_name);
 }
 
 ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
@@ -81,7 +119,7 @@ ConstString CPlusPlusLanguage::GetDemangledFunctionNameWithoutArguments(
                                         // eventually handle eSymbolTypeData,
                                         // we will want this back)
     {
-      CPlusPlusLanguage::MethodName cxx_method(demangled_name);
+      CxxMethodName cxx_method(demangled_name);
       if (!cxx_method.GetBasename().empty()) {
         std::string shortname;
         if (!cxx_method.GetContext().empty())
@@ -104,17 +142,6 @@ Language *CPlusPlusLanguage::CreateInstance(lldb::LanguageType language) {
       language != eLanguageTypeObjC_plus_plus)
     return new CPlusPlusLanguage();
   return nullptr;
-}
-
-void CPlusPlusLanguage::MethodName::Clear() {
-  m_full.Clear();
-  m_basename = llvm::StringRef();
-  m_context = llvm::StringRef();
-  m_arguments = llvm::StringRef();
-  m_qualifiers = llvm::StringRef();
-  m_return_type = llvm::StringRef();
-  m_parsed = false;
-  m_parse_error = false;
 }
 
 static bool ReverseFindMatchingChars(const llvm::StringRef &s,
@@ -181,7 +208,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
                                             char const *full_name,
                                             ExecutionContextScope *exe_scope,
                                             VariableList const &args) {
-  CPlusPlusLanguage::MethodName cpp_method{ConstString(full_name)};
+  CPlusPlusLanguage::CxxMethodName cpp_method{ConstString(full_name)};
 
   if (!cpp_method.IsValid())
     return false;
@@ -208,7 +235,7 @@ static bool PrettyPrintFunctionNameWithArgs(Stream &out_stream,
   return true;
 }
 
-bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
+bool CPlusPlusLanguage::CxxMethodName::TrySimplifiedParse() {
   // This method tries to parse simple method definitions which are presumably
   // most comman in user programs. Definitions that can be parsed by this
   // function don't have return types and templates in the name.
@@ -251,7 +278,7 @@ bool CPlusPlusLanguage::MethodName::TrySimplifiedParse() {
   return false;
 }
 
-void CPlusPlusLanguage::MethodName::Parse() {
+void CPlusPlusLanguage::CxxMethodName::Parse() {
   if (!m_parsed && m_full) {
     if (TrySimplifiedParse()) {
       m_parse_error = false;
@@ -268,55 +295,19 @@ void CPlusPlusLanguage::MethodName::Parse() {
         m_parse_error = true;
       }
     }
+    if (m_context.empty()) {
+      m_scope_qualified = std::string(m_basename);
+    } else {
+      m_scope_qualified = m_context;
+      m_scope_qualified += "::";
+      m_scope_qualified += m_basename;
+    }
     m_parsed = true;
   }
 }
 
-llvm::StringRef CPlusPlusLanguage::MethodName::GetBasename() {
-  if (!m_parsed)
-    Parse();
-  return m_basename;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetContext() {
-  if (!m_parsed)
-    Parse();
-  return m_context;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetArguments() {
-  if (!m_parsed)
-    Parse();
-  return m_arguments;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetQualifiers() {
-  if (!m_parsed)
-    Parse();
-  return m_qualifiers;
-}
-
-llvm::StringRef CPlusPlusLanguage::MethodName::GetReturnType() {
-  if (!m_parsed)
-    Parse();
-  return m_return_type;
-}
-
-std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
-  if (!m_parsed)
-    Parse();
-  if (m_context.empty())
-    return std::string(m_basename);
-
-  std::string res;
-  res += m_context;
-  res += "::";
-  res += m_basename;
-  return res;
-}
-
 llvm::StringRef
-CPlusPlusLanguage::MethodName::GetBasenameNoTemplateParameters() {
+CPlusPlusLanguage::CxxMethodName::GetBasenameNoTemplateParameters() {
   llvm::StringRef basename = GetBasename();
   size_t arg_start, arg_end;
   llvm::StringRef parens("<>", 2);
@@ -326,7 +317,7 @@ CPlusPlusLanguage::MethodName::GetBasenameNoTemplateParameters() {
   return basename;
 }
 
-bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
+bool CPlusPlusLanguage::CxxMethodName::ContainsPath(llvm::StringRef path) {
   if (!m_parsed)
     Parse();
 
@@ -375,21 +366,9 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   return false;
 }
 
-bool CPlusPlusLanguage::IsCPPMangledName(llvm::StringRef name) {
-  // FIXME!! we should really run through all the known C++ Language plugins
-  // and ask each one if this is a C++ mangled name
-
-  Mangled::ManglingScheme scheme = Mangled::GetManglingScheme(name);
-
-  if (scheme == Mangled::eManglingSchemeNone)
-    return false;
-
-  return true;
-}
-
 bool CPlusPlusLanguage::DemangledNameContainsPath(llvm::StringRef path,
                                                   ConstString demangled) const {
-  MethodName demangled_name(demangled);
+  CxxMethodName demangled_name(demangled);
   return demangled_name.ContainsPath(path);
 }
 
@@ -588,7 +567,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
   if (!demangled)
     return ConstString();
 
-  CPlusPlusLanguage::MethodName cpp_name(demangled);
+  CxxMethodName cpp_name(demangled);
   std::string scope_qualified_name = cpp_name.GetScopeQualifiedName();
 
   if (!scope_qualified_name.size())
@@ -611,7 +590,7 @@ ConstString CPlusPlusLanguage::FindBestAlternateFunctionMangledName(
     Mangled mangled(alternate_mangled_name);
     ConstString demangled = mangled.GetDemangledName();
 
-    CPlusPlusLanguage::MethodName alternate_cpp_name(demangled);
+    CxxMethodName alternate_cpp_name(demangled);
     if (!cpp_name.IsValid())
       continue;
 
