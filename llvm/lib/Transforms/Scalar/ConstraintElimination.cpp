@@ -1880,15 +1880,14 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         Changed |= checkAndReplaceMinMax(MinMax, Info, ToRemove);
       } else if (auto *CmpIntr = dyn_cast<CmpIntrinsic>(Inst)) {
         Changed |= checkAndReplaceCmp(CmpIntr, Info, ToRemove);
+      } else if (match(Inst, m_Intrinsic<Intrinsic::abs>(m_Value()))) {
+        Changed |=
+            checkAndReplaceAbs(dyn_cast<IntrinsicInst>(Inst), Info, ToRemove);
       } else if (auto *SatIntr = dyn_cast<SaturatingInst>(Inst)) {
         if (SatIntr->getIntrinsicID() == Intrinsic::usub_sat)
           Changed |= checkAndReplaceUSubSat(SatIntr, Info, ToRemove);
         else
           llvm_unreachable("Unexpected intrinsic.");
-      } else if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
-        if (II->getIntrinsicID() == Intrinsic::abs) {
-          Changed |= checkAndReplaceAbs(II, Info, ToRemove);
-        }
       }
       continue;
     }
