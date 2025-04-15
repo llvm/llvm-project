@@ -279,8 +279,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
-def fpnegimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
 
 // VIS instruction patterns.
 let Predicates = [HasVIS] in {
@@ -299,6 +299,7 @@ def : Pat<(i64 (mulhu i64:$lhs, i64:$rhs)), (UMULXHI $lhs, $rhs)>;
 // Signed "MULXHI".
 // Based on the formula presented in OSA2011 §7.140, but with bitops to select
 // the values to be added.
+// TODO: This expansion should probably be moved to DAG legalization phase.
 def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
       (SUBrr (UMULXHI $lhs, $rhs),
              (ADDrr (ANDrr (SRAXri $lhs, 63), $rhs),
