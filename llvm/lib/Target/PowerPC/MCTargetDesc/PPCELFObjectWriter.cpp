@@ -41,7 +41,6 @@ PPCELFObjectWriter::PPCELFObjectWriter(bool Is64Bit, uint8_t OSABI)
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  MCFixupKind Kind = Fixup.getKind();
   SMLoc Loc = Fixup.getValue()->getLoc();
   auto Spec = static_cast<PPCMCExpr::Specifier>(Target.getSpecifier());
   switch (Spec) {
