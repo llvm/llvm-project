@@ -320,6 +320,7 @@ LIBC_INLINE static double log2_eval(double x) {
   return result;
 }
 
+// x should be positive, normal finite value
 template <typename T> LIBC_INLINE static T log_eval(T x) {
   // For x = 2^ex * (1 + mx), logf(x) = ex * logf(2) + logf(1 + mx).
   using FPBits = fputil::FPBits<T>;
