@@ -2297,6 +2297,16 @@ are listed below.
    pure ThinLTO, as all split regular LTO modules are merged and LTO linked
    with regular LTO.
 
+.. option:: -f[no-]unique-source-file-names
+
+   When enabled, allows the compiler to assume that each object file
+   passed to the linker has been compiled using a unique source file
+   name. This is useful for reducing link times when doing ThinLTO
+   in combination with whole-program devirtualization or CFI.
+
+   A misuse of this flag will generally result in a duplicate symbol
+   error at link time.
+
 .. option:: -fforce-emit-vtables
 
    In order to improve devirtualization, forces emitting of vtables even in
