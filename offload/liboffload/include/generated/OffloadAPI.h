@@ -202,47 +202,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olInit();
 OL_APIEXPORT ol_result_t OL_APICALL olShutDown();
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves all available platforms.
-///
-/// @details
-///    - Multiple calls to this function will return identical platforms
-///    handles, in the same order.
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_SIZE
-///         + `NumEntries == 0`
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == Platforms`
-OL_APIEXPORT ol_result_t OL_APICALL olGetPlatform(
-    // [in] The number of platforms to be added to Platforms. NumEntries must be
-    // greater than zero.
-    uint32_t NumEntries,
-    // [out] Array of handle of platforms. If NumEntries is less than the number
-    // of platforms available, then olGetPlatform shall only retrieve that
-    // number of platforms.
-    ol_platform_handle_t *Platforms);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves the number of available platforms.
-///
-/// @details
-///
-/// @returns
-///     - ::OL_RESULT_SUCCESS
-///     - ::OL_ERRC_UNINITIALIZED
-///     - ::OL_ERRC_DEVICE_LOST
-///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///     - ::OL_ERRC_INVALID_NULL_POINTER
-///         + `NULL == NumPlatforms`
-OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformCount(
-    // [out] returns the total number of platforms available.
-    uint32_t *NumPlatforms);
-
-///////////////////////////////////////////////////////////////////////////////
 /// @brief Supported platform info.
 typedef enum ol_platform_info_t {
   /// [char[]] The string denoting name of the platform. The size of the info
@@ -372,7 +331,7 @@ typedef enum ol_device_info_t {
 } ol_device_info_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves the number of available devices within a platform.
+/// @brief Retrieves the number of available devices.
 ///
 /// @details
 ///
@@ -381,17 +340,14 @@ typedef enum ol_device_info_t {
 ///     - ::OL_ERRC_UNINITIALIZED
 ///     - ::OL_ERRC_DEVICE_LOST
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Platform`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == NumDevices`
 OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(
-    // [in] handle of the platform instance
-    ol_platform_handle_t Platform,
     // [out] pointer to the number of devices.
     uint32_t *NumDevices);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Retrieves devices within a platform.
+/// @brief Retrieves devices.
 ///
 /// @details
 ///    - Multiple calls to this function will return identical device handles,
@@ -404,12 +360,9 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(
 ///     - ::OL_ERRC_INVALID_SIZE
 ///         + `NumEntries == 0`
 ///     - ::OL_ERRC_INVALID_NULL_HANDLE
-///         + `NULL == Platform`
 ///     - ::OL_ERRC_INVALID_NULL_POINTER
 ///         + `NULL == Devices`
-OL_APIEXPORT ol_result_t OL_APICALL olGetDevice(
-    // [in] handle of the platform instance
-    ol_platform_handle_t Platform,
+OL_APIEXPORT ol_result_t OL_APICALL olGetDevices(
     // [in] the number of devices to be added to phDevices, which must be
     // greater than zero
     uint32_t NumEntries,
@@ -417,6 +370,77 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDevice(
     // devices available, then this function shall only retrieve that number of
     // devices.
     ol_device_handle_t *Devices);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief User-provided function to determine whether a platform is selected.
+typedef bool (*ol_platform_filter_cb_t)(
+    // the backend of the platform which is selected for filtering
+    ol_platform_backend_t Backend,
+    // the name of the platform which is selected for filtering
+    const char *Name);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief User-provided function to determine whether a device is selected.
+typedef bool (*ol_device_filter_cb_t)(
+    // the type of the device which is selected for filtering
+    ol_device_type_t Type);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Retrieve a subset of the available devices
+///
+/// @details
+///    - Platforms and devices are lazily initialized when they are first
+///    filtered
+///    - Use MaxNumDevices to stop device and platform discovery after a fixed
+///    number of devices
+///    - Multiple calls to this function will return identical device handles,
+///    in the same order.
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == FilteredDevices`
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevices(
+    // [in] the maximum number of devices to be added to phDevices, which must
+    // be greater than zero
+    uint32_t MaxNumDevices,
+    // [in] the callback used to decide whether a platform is included
+    ol_platform_filter_cb_t PlatformFilter,
+    // [in] the callback used to decide whether a platform is included
+    ol_device_filter_cb_t DeviceFilter,
+    // [out] output pointer for the selected devices
+    ol_device_handle_t *FilteredDevices);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Retrieve the number of devices that would be returned by
+/// olGetFilteredDevices with the given filters.
+///
+/// @details
+///    - Platforms and devices are lazily initialized when they are first
+///    filtered
+///    - Use MaxNumDevices to stop device and platform discovery after a fixed
+///    number of devices
+///
+/// @returns
+///     - ::OL_RESULT_SUCCESS
+///     - ::OL_ERRC_UNINITIALIZED
+///     - ::OL_ERRC_DEVICE_LOST
+///     - ::OL_ERRC_INVALID_NULL_HANDLE
+///     - ::OL_ERRC_INVALID_NULL_POINTER
+///         + `NULL == NumFilteredDevices`
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCount(
+    // [in] the maximum number of devices to be added to phDevices; a value of 0
+    // implies no limit.
+    uint32_t MaxNumDevices,
+    // [in] the callback used to decide whether a platform is included
+    ol_platform_filter_cb_t PlatformFilter,
+    // [in] the callback used to decide whether a platform is included
+    ol_device_filter_cb_t DeviceFilter,
+    // [out] output pointer for the number of selected devices
+    uint32_t *NumFilteredDevices);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Queries the given property of the device.
@@ -783,21 +807,6 @@ OL_APIEXPORT ol_result_t OL_APICALL olLaunchKernel(
     ol_event_handle_t *EventOut);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetPlatform
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_platform_params_t {
-  uint32_t *pNumEntries;
-  ol_platform_handle_t **pPlatforms;
-} ol_get_platform_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetPlatformCount
-/// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_platform_count_params_t {
-  uint32_t **pNumPlatforms;
-} ol_get_platform_count_params_t;
-
-///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetPlatformInfo
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_get_platform_info_params_t {
@@ -820,18 +829,36 @@ typedef struct ol_get_platform_info_size_params_t {
 /// @brief Function parameters for olGetDeviceCount
 /// @details Each entry is a pointer to the parameter passed to the function;
 typedef struct ol_get_device_count_params_t {
-  ol_platform_handle_t *pPlatform;
   uint32_t **pNumDevices;
 } ol_get_device_count_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Function parameters for olGetDevice
+/// @brief Function parameters for olGetDevices
 /// @details Each entry is a pointer to the parameter passed to the function;
-typedef struct ol_get_device_params_t {
-  ol_platform_handle_t *pPlatform;
+typedef struct ol_get_devices_params_t {
   uint32_t *pNumEntries;
   ol_device_handle_t **pDevices;
-} ol_get_device_params_t;
+} ol_get_devices_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olGetFilteredDevices
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_get_filtered_devices_params_t {
+  uint32_t *pMaxNumDevices;
+  ol_platform_filter_cb_t *pPlatformFilter;
+  ol_device_filter_cb_t *pDeviceFilter;
+  ol_device_handle_t **pFilteredDevices;
+} ol_get_filtered_devices_params_t;
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Function parameters for olGetFilteredDevicesCount
+/// @details Each entry is a pointer to the parameter passed to the function;
+typedef struct ol_get_filtered_devices_count_params_t {
+  uint32_t *pMaxNumDevices;
+  ol_platform_filter_cb_t *pPlatformFilter;
+  ol_device_filter_cb_t *pDeviceFilter;
+  uint32_t **pNumFilteredDevices;
+} ol_get_filtered_devices_count_params_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Function parameters for olGetDeviceInfo
@@ -977,21 +1004,6 @@ OL_APIEXPORT ol_result_t OL_APICALL
 olShutDownWithCodeLoc(ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetPlatform that also sets source code location
-/// information
-/// @details See also ::olGetPlatform
-OL_APIEXPORT ol_result_t OL_APICALL
-olGetPlatformWithCodeLoc(uint32_t NumEntries, ol_platform_handle_t *Platforms,
-                         ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetPlatformCount that also sets source code location
-/// information
-/// @details See also ::olGetPlatformCount
-OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformCountWithCodeLoc(
-    uint32_t *NumPlatforms, ol_code_location_t *CodeLocation);
-
-///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olGetPlatformInfo that also sets source code location
 /// information
 /// @details See also ::olGetPlatformInfo
@@ -1011,17 +1023,34 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformInfoSizeWithCodeLoc(
 /// @brief Variant of olGetDeviceCount that also sets source code location
 /// information
 /// @details See also ::olGetDeviceCount
-OL_APIEXPORT ol_result_t OL_APICALL
-olGetDeviceCountWithCodeLoc(ol_platform_handle_t Platform, uint32_t *NumDevices,
-                            ol_code_location_t *CodeLocation);
+OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCountWithCodeLoc(
+    uint32_t *NumDevices, ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
-/// @brief Variant of olGetDevice that also sets source code location
+/// @brief Variant of olGetDevices that also sets source code location
 /// information
-/// @details See also ::olGetDevice
-OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceWithCodeLoc(
-    ol_platform_handle_t Platform, uint32_t NumEntries,
-    ol_device_handle_t *Devices, ol_code_location_t *CodeLocation);
+/// @details See also ::olGetDevices
+OL_APIEXPORT ol_result_t OL_APICALL
+olGetDevicesWithCodeLoc(uint32_t NumEntries, ol_device_handle_t *Devices,
+                        ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olGetFilteredDevices that also sets source code location
+/// information
+/// @details See also ::olGetFilteredDevices
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesWithCodeLoc(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices,
+    ol_code_location_t *CodeLocation);
+
+///////////////////////////////////////////////////////////////////////////////
+/// @brief Variant of olGetFilteredDevicesCount that also sets source code
+/// location information
+/// @details See also ::olGetFilteredDevicesCount
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCountWithCodeLoc(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices,
+    ol_code_location_t *CodeLocation);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// @brief Variant of olGetDeviceInfo that also sets source code location

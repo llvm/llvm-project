@@ -15,7 +15,7 @@ using olCreateProgramTest = OffloadDeviceTest;
 TEST_F(olCreateProgramTest, Success) {
 
   std::unique_ptr<llvm::MemoryBuffer> DeviceBin;
-  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Platform, DeviceBin));
+  ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
   ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
 
   ol_program_handle_t Program;

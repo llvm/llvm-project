@@ -10,19 +10,13 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
-using olGetDeviceCountTest = OffloadPlatformTest;
+using olGetDeviceCountTest = OffloadTest;
 
 TEST_F(olGetDeviceCountTest, Success) {
   uint32_t Count = 0;
-  ASSERT_SUCCESS(olGetDeviceCount(Platform, &Count));
-}
-
-TEST_F(olGetDeviceCountTest, InvalidNullPlatform) {
-  uint32_t Count = 0;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE, olGetDeviceCount(nullptr, &Count));
+  ASSERT_SUCCESS(olGetDeviceCount(&Count));
 }
 
 TEST_F(olGetDeviceCountTest, InvalidNullPointer) {
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olGetDeviceCount(Platform, nullptr));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olGetDeviceCount(nullptr));
 }

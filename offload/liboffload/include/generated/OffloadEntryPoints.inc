@@ -69,85 +69,6 @@ ol_result_t olShutDownWithCodeLoc(ol_code_location_t *CodeLocation) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetPlatform_val(uint32_t NumEntries,
-                                   ol_platform_handle_t *Platforms) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NumEntries == 0) {
-      return OL_ERRC_INVALID_SIZE;
-    }
-
-    if (NULL == Platforms) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetPlatform_impl(NumEntries, Platforms);
-}
-OL_APIEXPORT ol_result_t OL_APICALL
-olGetPlatform(uint32_t NumEntries, ol_platform_handle_t *Platforms) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetPlatform";
-  }
-
-  ol_result_t Result = olGetPlatform_val(NumEntries, Platforms);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_platform_params_t Params = {&NumEntries, &Platforms};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetPlatformWithCodeLoc(uint32_t NumEntries,
-                                     ol_platform_handle_t *Platforms,
-                                     ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetPlatform(NumEntries, Platforms);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetPlatformCount_val(uint32_t *NumPlatforms) {
-  if (offloadConfig().ValidationEnabled) {
-    if (NULL == NumPlatforms) {
-      return OL_ERRC_INVALID_NULL_POINTER;
-    }
-  }
-
-  return llvm::offload::olGetPlatformCount_impl(NumPlatforms);
-}
-OL_APIEXPORT ol_result_t OL_APICALL olGetPlatformCount(uint32_t *NumPlatforms) {
-  if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetPlatformCount";
-  }
-
-  ol_result_t Result = olGetPlatformCount_val(NumPlatforms);
-
-  if (offloadConfig().TracingEnabled) {
-    ol_get_platform_count_params_t Params = {&NumPlatforms};
-    llvm::errs() << "(" << &Params << ")";
-    llvm::errs() << "-> " << Result << "\n";
-    if (Result && Result->Details) {
-      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
-    }
-  }
-  return Result;
-}
-ol_result_t olGetPlatformCountWithCodeLoc(uint32_t *NumPlatforms,
-                                          ol_code_location_t *CodeLocation) {
-  currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetPlatformCount(NumPlatforms);
-
-  currentCodeLocation() = nullptr;
-  return Result;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 ol_impl_result_t olGetPlatformInfo_val(ol_platform_handle_t Platform,
                                        ol_platform_info_t PropName,
                                        size_t PropSize, void *PropValue) {
@@ -251,30 +172,24 @@ ol_result_t olGetPlatformInfoSizeWithCodeLoc(ol_platform_handle_t Platform,
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDeviceCount_val(ol_platform_handle_t Platform,
-                                      uint32_t *NumDevices) {
+ol_impl_result_t olGetDeviceCount_val(uint32_t *NumDevices) {
   if (offloadConfig().ValidationEnabled) {
-    if (NULL == Platform) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
-    }
-
     if (NULL == NumDevices) {
       return OL_ERRC_INVALID_NULL_POINTER;
     }
   }
 
-  return llvm::offload::olGetDeviceCount_impl(Platform, NumDevices);
+  return llvm::offload::olGetDeviceCount_impl(NumDevices);
 }
-OL_APIEXPORT ol_result_t OL_APICALL
-olGetDeviceCount(ol_platform_handle_t Platform, uint32_t *NumDevices) {
+OL_APIEXPORT ol_result_t OL_APICALL olGetDeviceCount(uint32_t *NumDevices) {
   if (offloadConfig().TracingEnabled) {
     llvm::errs() << "---> olGetDeviceCount";
   }
 
-  ol_result_t Result = olGetDeviceCount_val(Platform, NumDevices);
+  ol_result_t Result = olGetDeviceCount_val(NumDevices);
 
   if (offloadConfig().TracingEnabled) {
-    ol_get_device_count_params_t Params = {&Platform, &NumDevices};
+    ol_get_device_count_params_t Params = {&NumDevices};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -283,27 +198,21 @@ olGetDeviceCount(ol_platform_handle_t Platform, uint32_t *NumDevices) {
   }
   return Result;
 }
-ol_result_t olGetDeviceCountWithCodeLoc(ol_platform_handle_t Platform,
-                                        uint32_t *NumDevices,
+ol_result_t olGetDeviceCountWithCodeLoc(uint32_t *NumDevices,
                                         ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetDeviceCount(Platform, NumDevices);
+  ol_result_t Result = ::olGetDeviceCount(NumDevices);
 
   currentCodeLocation() = nullptr;
   return Result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-ol_impl_result_t olGetDevice_val(ol_platform_handle_t Platform,
-                                 uint32_t NumEntries,
-                                 ol_device_handle_t *Devices) {
+ol_impl_result_t olGetDevices_val(uint32_t NumEntries,
+                                  ol_device_handle_t *Devices) {
   if (offloadConfig().ValidationEnabled) {
     if (NumEntries == 0) {
       return OL_ERRC_INVALID_SIZE;
-    }
-
-    if (NULL == Platform) {
-      return OL_ERRC_INVALID_NULL_HANDLE;
     }
 
     if (NULL == Devices) {
@@ -311,19 +220,18 @@ ol_impl_result_t olGetDevice_val(ol_platform_handle_t Platform,
     }
   }
 
-  return llvm::offload::olGetDevice_impl(Platform, NumEntries, Devices);
+  return llvm::offload::olGetDevices_impl(NumEntries, Devices);
 }
-OL_APIEXPORT ol_result_t OL_APICALL olGetDevice(ol_platform_handle_t Platform,
-                                                uint32_t NumEntries,
-                                                ol_device_handle_t *Devices) {
+OL_APIEXPORT ol_result_t OL_APICALL olGetDevices(uint32_t NumEntries,
+                                                 ol_device_handle_t *Devices) {
   if (offloadConfig().TracingEnabled) {
-    llvm::errs() << "---> olGetDevice";
+    llvm::errs() << "---> olGetDevices";
   }
 
-  ol_result_t Result = olGetDevice_val(Platform, NumEntries, Devices);
+  ol_result_t Result = olGetDevices_val(NumEntries, Devices);
 
   if (offloadConfig().TracingEnabled) {
-    ol_get_device_params_t Params = {&Platform, &NumEntries, &Devices};
+    ol_get_devices_params_t Params = {&NumEntries, &Devices};
     llvm::errs() << "(" << &Params << ")";
     llvm::errs() << "-> " << Result << "\n";
     if (Result && Result->Details) {
@@ -332,12 +240,103 @@ OL_APIEXPORT ol_result_t OL_APICALL olGetDevice(ol_platform_handle_t Platform,
   }
   return Result;
 }
-ol_result_t olGetDeviceWithCodeLoc(ol_platform_handle_t Platform,
-                                   uint32_t NumEntries,
-                                   ol_device_handle_t *Devices,
-                                   ol_code_location_t *CodeLocation) {
+ol_result_t olGetDevicesWithCodeLoc(uint32_t NumEntries,
+                                    ol_device_handle_t *Devices,
+                                    ol_code_location_t *CodeLocation) {
   currentCodeLocation() = CodeLocation;
-  ol_result_t Result = ::olGetDevice(Platform, NumEntries, Devices);
+  ol_result_t Result = ::olGetDevices(NumEntries, Devices);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olGetFilteredDevices_val(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices) {
+  if (offloadConfig().ValidationEnabled) {
+    if (NULL == FilteredDevices) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return llvm::offload::olGetFilteredDevices_impl(
+      MaxNumDevices, PlatformFilter, DeviceFilter, FilteredDevices);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevices(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices) {
+  if (offloadConfig().TracingEnabled) {
+    llvm::errs() << "---> olGetFilteredDevices";
+  }
+
+  ol_result_t Result = olGetFilteredDevices_val(MaxNumDevices, PlatformFilter,
+                                                DeviceFilter, FilteredDevices);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_get_filtered_devices_params_t Params = {&MaxNumDevices, &PlatformFilter,
+                                               &DeviceFilter, &FilteredDevices};
+    llvm::errs() << "(" << &Params << ")";
+    llvm::errs() << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olGetFilteredDevicesWithCodeLoc(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, ol_device_handle_t *FilteredDevices,
+    ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = ::olGetFilteredDevices(MaxNumDevices, PlatformFilter,
+                                              DeviceFilter, FilteredDevices);
+
+  currentCodeLocation() = nullptr;
+  return Result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+ol_impl_result_t olGetFilteredDevicesCount_val(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices) {
+  if (offloadConfig().ValidationEnabled) {
+    if (NULL == NumFilteredDevices) {
+      return OL_ERRC_INVALID_NULL_POINTER;
+    }
+  }
+
+  return llvm::offload::olGetFilteredDevicesCount_impl(
+      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
+}
+OL_APIEXPORT ol_result_t OL_APICALL olGetFilteredDevicesCount(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices) {
+  if (offloadConfig().TracingEnabled) {
+    llvm::errs() << "---> olGetFilteredDevicesCount";
+  }
+
+  ol_result_t Result = olGetFilteredDevicesCount_val(
+      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
+
+  if (offloadConfig().TracingEnabled) {
+    ol_get_filtered_devices_count_params_t Params = {
+        &MaxNumDevices, &PlatformFilter, &DeviceFilter, &NumFilteredDevices};
+    llvm::errs() << "(" << &Params << ")";
+    llvm::errs() << "-> " << Result << "\n";
+    if (Result && Result->Details) {
+      llvm::errs() << "     *Error Details* " << Result->Details << " \n";
+    }
+  }
+  return Result;
+}
+ol_result_t olGetFilteredDevicesCountWithCodeLoc(
+    uint32_t MaxNumDevices, ol_platform_filter_cb_t PlatformFilter,
+    ol_device_filter_cb_t DeviceFilter, uint32_t *NumFilteredDevices,
+    ol_code_location_t *CodeLocation) {
+  currentCodeLocation() = CodeLocation;
+  ol_result_t Result = ::olGetFilteredDevicesCount(
+      MaxNumDevices, PlatformFilter, DeviceFilter, NumFilteredDevices);
 
   currentCodeLocation() = nullptr;
   return Result;

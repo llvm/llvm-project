@@ -139,6 +139,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct {0} *pa
           Param.getName(), TypeInfo->first, TypeInfo->second);
     } else if (Param.isPointerType() || Param.isHandleType()) {
       OS << formatv(TAB_1 "printPtr(os, *params->p{0});\n", Param.getName());
+    } else if (Param.isFptrType()) {
+      OS << formatv(TAB_1 "os << reinterpret_cast<void*>(*params->p{0});\n",
+                    Param.getName());
     } else {
       OS << formatv(TAB_1 "os << *params->p{0};\n", Param.getName());
     }

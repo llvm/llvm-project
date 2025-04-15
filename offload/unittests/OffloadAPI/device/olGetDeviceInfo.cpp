@@ -37,7 +37,7 @@ TEST_P(olGetDeviceInfoTest, Success) {
   if (InfoType == OL_DEVICE_INFO_PLATFORM) {
     auto *ReturnedPlatform =
         reinterpret_cast<ol_platform_handle_t *>(InfoData.data());
-    ASSERT_EQ(Platform, *ReturnedPlatform);
+    ASSERT_NE(nullptr, *ReturnedPlatform);
   }
 }
 

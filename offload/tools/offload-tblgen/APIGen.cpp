@@ -165,6 +165,19 @@ static void ProcessStruct(const StructRec &Struct, raw_ostream &OS) {
   OS << formatv("} {0};\n\n", Struct.getName());
 }
 
+static void ProcessFptrTypedef(const FptrTypedefRec &F, raw_ostream &OS) {
+  OS << CommentsHeader;
+  OS << formatv("/// @brief {0}\n", F.getDesc());
+  OS << formatv("typedef {0} (*{1})(", F.getReturn(), F.getName());
+  for (const auto &Param : F.getParams()) {
+    OS << formatv("\n  // {0}\n  {1} {2}", Param.getDesc(), Param.getType(),
+                  Param.getName());
+    if (Param != F.getParams().back())
+      OS << ",";
+  }
+  OS << ");\n";
+}
+
 static void ProcessFuncParamStruct(const FunctionRec &Func, raw_ostream &OS) {
   if (Func.getParams().size() == 0) {
     return;
@@ -220,6 +233,8 @@ void EmitOffloadAPI(const RecordKeeper &Records, raw_ostream &OS) {
       ProcessEnum(EnumRec{R}, OS);
     } else if (R->isSubClassOf("Struct")) {
       ProcessStruct(StructRec{R}, OS);
+    } else if (R->isSubClassOf("FptrTypedef")) {
+      ProcessFptrTypedef(FptrTypedefRec{R}, OS);
     }
   }
 

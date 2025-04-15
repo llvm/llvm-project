@@ -371,32 +371,6 @@ operator<<(llvm::raw_ostream &os,
 
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
-           const struct ol_get_platform_params_t *params) {
-  os << ".NumEntries = ";
-  os << *params->pNumEntries;
-  os << ", ";
-  os << ".Platforms = ";
-  os << "{";
-  for (size_t i = 0; i < *params->pNumEntries; i++) {
-    if (i > 0) {
-      os << ", ";
-    }
-    printPtr(os, (*params->pPlatforms)[i]);
-  }
-  os << "}";
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
-           const struct ol_get_platform_count_params_t *params) {
-  os << ".NumPlatforms = ";
-  printPtr(os, *params->pNumPlatforms);
-  return os;
-}
-
-inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os,
            const struct ol_get_platform_info_params_t *params) {
   os << ".Platform = ";
   printPtr(os, *params->pPlatform);
@@ -429,19 +403,14 @@ operator<<(llvm::raw_ostream &os,
 inline llvm::raw_ostream &
 operator<<(llvm::raw_ostream &os,
            const struct ol_get_device_count_params_t *params) {
-  os << ".Platform = ";
-  printPtr(os, *params->pPlatform);
-  os << ", ";
   os << ".NumDevices = ";
   printPtr(os, *params->pNumDevices);
   return os;
 }
 
 inline llvm::raw_ostream &
-operator<<(llvm::raw_ostream &os, const struct ol_get_device_params_t *params) {
-  os << ".Platform = ";
-  printPtr(os, *params->pPlatform);
-  os << ", ";
+operator<<(llvm::raw_ostream &os,
+           const struct ol_get_devices_params_t *params) {
   os << ".NumEntries = ";
   os << *params->pNumEntries;
   os << ", ";
@@ -454,6 +423,40 @@ operator<<(llvm::raw_ostream &os, const struct ol_get_device_params_t *params) {
     printPtr(os, (*params->pDevices)[i]);
   }
   os << "}";
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_get_filtered_devices_params_t *params) {
+  os << ".MaxNumDevices = ";
+  os << *params->pMaxNumDevices;
+  os << ", ";
+  os << ".PlatformFilter = ";
+  os << reinterpret_cast<void *>(*params->pPlatformFilter);
+  os << ", ";
+  os << ".DeviceFilter = ";
+  os << reinterpret_cast<void *>(*params->pDeviceFilter);
+  os << ", ";
+  os << ".FilteredDevices = ";
+  printPtr(os, *params->pFilteredDevices);
+  return os;
+}
+
+inline llvm::raw_ostream &
+operator<<(llvm::raw_ostream &os,
+           const struct ol_get_filtered_devices_count_params_t *params) {
+  os << ".MaxNumDevices = ";
+  os << *params->pMaxNumDevices;
+  os << ", ";
+  os << ".PlatformFilter = ";
+  os << reinterpret_cast<void *>(*params->pPlatformFilter);
+  os << ", ";
+  os << ".DeviceFilter = ";
+  os << reinterpret_cast<void *>(*params->pDeviceFilter);
+  os << ", ";
+  os << ".NumFilteredDevices = ";
+  printPtr(os, *params->pNumFilteredDevices);
   return os;
 }
 

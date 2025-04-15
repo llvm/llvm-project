@@ -9,40 +9,6 @@
 // This file contains Offload API definitions related to the Platform handle
 //
 //===----------------------------------------------------------------------===//
-def : Function {
-  let name = "olGetPlatform";
-  let desc = "Retrieves all available platforms.";
-  let details = [
-    "Multiple calls to this function will return identical platforms handles, in the same order.",
-  ];
-  let params = [
-    Param<"uint32_t", "NumEntries",
-      "The number of platforms to be added to Platforms. NumEntries must be "
-      "greater than zero.",
-      PARAM_IN>,
-    RangedParam<"ol_platform_handle_t*", "Platforms", 
-      "Array of handle of platforms. If NumEntries is less than the number of "
-      "platforms available, then olGetPlatform shall only retrieve that "
-      "number of platforms.",
-      PARAM_OUT, Range<"0", "NumEntries">>
-  ];
-  let returns = [
-    Return<"OL_ERRC_INVALID_SIZE", [
-      "`NumEntries == 0`"
-    ]>
-  ];
-}
-
-def : Function {
-  let name = "olGetPlatformCount";
-  let desc = "Retrieves the number of available platforms.";
-  let params = [
-    Param<"uint32_t*",
-      "NumPlatforms", "returns the total number of platforms available.",
-      PARAM_OUT>
-  ];
-  let returns = [];
-}
 
 def : Enum {
   let name = "ol_platform_info_t";

@@ -46,29 +46,28 @@ struct OffloadTest : ::testing::Test {
   // No special behavior now, but just in case we need to override it in future
 };
 
-struct OffloadPlatformTest : OffloadTest {
+struct OffloadDeviceTest : OffloadTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadTest::SetUp());
 
-    Platform = TestEnvironment::getPlatform();
-    ASSERT_NE(Platform, nullptr);
-  }
-
-  ol_platform_handle_t Platform;
-};
-
-struct OffloadDeviceTest : OffloadPlatformTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadPlatformTest::SetUp());
-
-    uint32_t NumDevices;
-    ASSERT_SUCCESS(olGetDeviceCount(Platform, &NumDevices));
-    if (NumDevices == 0)
-      GTEST_SKIP() << "No available devices on this platform.";
-    ASSERT_SUCCESS(olGetDevice(Platform, 1, &Device));
+    Device = TestEnvironment::getDevice();
+    if (Device == nullptr)
+      GTEST_SKIP() << "No available devices.";
   }
 
   ol_device_handle_t Device = nullptr;
+};
+
+struct OffloadPlatformTest : OffloadDeviceTest {
+  void SetUp() override {
+    RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
+
+    ASSERT_SUCCESS(olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM,
+                                   sizeof(Platform), &Platform));
+    ASSERT_NE(Platform, nullptr);
+  }
+
+  ol_platform_handle_t Platform = nullptr;
 };
 
 // Fixture for a generic program test. If you want a different program, use
@@ -76,7 +75,7 @@ struct OffloadDeviceTest : OffloadPlatformTest {
 struct OffloadProgramTest : OffloadDeviceTest {
   void SetUp() override {
     RETURN_ON_FATAL_FAILURE(OffloadDeviceTest::SetUp());
-    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Platform, DeviceBin));
+    ASSERT_TRUE(TestEnvironment::loadDeviceBinary("foo", Device, DeviceBin));
     ASSERT_GE(DeviceBin->getBufferSize(), 0lu);
     ASSERT_SUCCESS(olCreateProgram(Device, DeviceBin->getBufferStart(),
                                    DeviceBin->getBufferSize(), &Program));

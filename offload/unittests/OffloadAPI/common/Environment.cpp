@@ -27,8 +27,8 @@ static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
                      cl::value_desc("platform"));
 
-std::ostream &operator<<(std::ostream &Out,
-                         const ol_platform_handle_t &Platform) {
+raw_ostream &operator<<(raw_ostream &Out,
+                        const ol_platform_handle_t &Platform) {
   size_t Size;
   olGetPlatformInfoSize(Platform, OL_PLATFORM_INFO_NAME, &Size);
   std::vector<char> Name(Size);
@@ -37,74 +37,69 @@ std::ostream &operator<<(std::ostream &Out,
   return Out;
 }
 
-std::ostream &operator<<(std::ostream &Out,
-                         const std::vector<ol_platform_handle_t> &Platforms) {
-  for (auto Platform : Platforms) {
-    Out << "\n  * \"" << Platform << "\"";
-  }
-  return Out;
-}
-
-const std::vector<ol_platform_handle_t> &TestEnvironment::getPlatforms() {
-  static std::vector<ol_platform_handle_t> Platforms{};
-
-  if (Platforms.empty()) {
-    uint32_t PlatformCount = 0;
-    olGetPlatformCount(&PlatformCount);
-    if (PlatformCount > 0) {
-      Platforms.resize(PlatformCount);
-      olGetPlatform(PlatformCount, Platforms.data());
-    }
+void printPlatforms() {
+  SmallDenseSet<ol_platform_handle_t> Platforms;
+  uint32_t DeviceCount = 0;
+  olGetDeviceCount(&DeviceCount);
+  std::vector<ol_device_handle_t> Devices{DeviceCount};
+  olGetDevices(DeviceCount, Devices.data());
+  for (auto &Device : Devices) {
+    ol_platform_handle_t Platform;
+    olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                    &Platform);
+    Platforms.insert(Platform);
   }
 
-  return Platforms;
+  for (const auto &Platform : Platforms) {
+    errs() << "  * " << Platform << "\n";
+  }
 }
 
-// Get a single platform, which may be selected by the user.
-ol_platform_handle_t TestEnvironment::getPlatform() {
-  static ol_platform_handle_t Platform = nullptr;
-  const auto &Platforms = getPlatforms();
+ol_device_handle_t TestEnvironment::getDevice() {
+  static ol_device_handle_t Device = nullptr;
 
-  if (!Platform) {
-    if (SelectedPlatform != "") {
-      for (const auto CandidatePlatform : Platforms) {
-        std::stringstream PlatformName;
-        PlatformName << CandidatePlatform;
-        if (SelectedPlatform == PlatformName.str()) {
-          Platform = CandidatePlatform;
-          return Platform;
-        }
+  if (!Device) {
+    uint32_t DeviceCount = 0;
+    auto PlatformFilter = [](ol_platform_backend_t Backend, const char *Name) {
+      if (SelectedPlatform != "") {
+        return SelectedPlatform == Name;
+      } else {
+        return Backend != OL_PLATFORM_BACKEND_UNKNOWN;
       }
-      std::cout << "No platform found with the name \"" << SelectedPlatform
-                << "\". Choose from:" << Platforms << "\n";
-      std::exit(1);
+    };
+    // Accept any device in the filtered platform
+    auto DeviceFilter = [](ol_device_type_t) { return true; };
+    olGetFilteredDevicesCount(128, PlatformFilter, DeviceFilter, &DeviceCount);
+    if (DeviceCount > 0) {
+      olGetFilteredDevices(1, PlatformFilter, DeviceFilter, &Device);
     } else {
-      // Pick a single platform. We prefer one that has available devices, but
-      // just pick the first initially in case none have any devices.
-      Platform = Platforms[0];
-      for (auto CandidatePlatform : Platforms) {
-        uint32_t NumDevices = 0;
-        if (olGetDeviceCount(CandidatePlatform, &NumDevices) == OL_SUCCESS) {
-          if (NumDevices > 0) {
-            Platform = CandidatePlatform;
-            break;
-          }
-        }
-      }
+      errs() << "No device found with the platform \"" << SelectedPlatform
+             << "\". Choose from:"
+             << "\n";
+      printPlatforms();
+      std::exit(1);
     }
   }
 
-  return Platform;
+  return Device;
+}
+
+ol_device_handle_t TestEnvironment::getHostDevice() {
+  ol_device_handle_t HostDevice = nullptr;
+  olGetHostDevice(&HostDevice);
+  return HostDevice;
 }
 
 // TODO: Allow overriding via cmd line arg
 const std::string DeviceBinsDirectory = DEVICE_CODE_PATH;
 
 bool TestEnvironment::loadDeviceBinary(
-    const std::string &BinaryName, ol_platform_handle_t Platform,
+    const std::string &BinaryName, ol_device_handle_t Device,
     std::unique_ptr<MemoryBuffer> &BinaryOut) {
 
   // Get the platform type
+  ol_platform_handle_t Platform;
+  olGetDeviceInfo(Device, OL_DEVICE_INFO_PLATFORM, sizeof(Platform), &Platform);
   ol_platform_backend_t Backend = OL_PLATFORM_BACKEND_UNKNOWN;
   olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
                     &Backend);

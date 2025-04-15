@@ -6,8 +6,6 @@ message(${OFFLOAD_TEST_DEVICE_CODE_PATH})
 
 add_libompt_unittest("offload.unittests"
     ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatform.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformCount.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformInfo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/platform/olGetPlatformInfoSize.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/device/olGetDevice.cpp
