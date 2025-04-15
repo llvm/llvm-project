@@ -525,15 +525,6 @@ func.func @test_vector.transfer_read(%arg0: memref<?x?xvector<2x3xf32>>) {
 
 // -----
 
-func.func @test_vector.transfer_read(%arg1: memref<?xindex>) -> vector<3x4xi32> {
-  %c3 = arith.constant 3 : index
-  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
-  %0 = vector.transfer_read %arg1[%c3, %c3], %c3 : memref<?xindex>, vector<3x4xi32>
-  return %0 : vector<3x4xi32>
-}
-
-// -----
-
 func.func @test_vector.transfer_read(%arg1: memref<?xindex>) -> vector<3x4xindex> {
   %c3 = arith.constant 3 : index
   // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
@@ -660,14 +651,6 @@ func.func @test_vector.transfer_write(%arg0: memref<?xf32>, %arg1: vector<7xf32>
   vector.transfer_write %arg1, %arg0[%c3]
       {permutation_map = affine_map<(d0) -> (0)>}
       : vector<7xf32>, memref<?xf32>
-}
-
-// -----
-
-func.func @test_vector.transfer_write(%vec_to_write: vector<3x4xi32>, %output_memref: memref<?xindex>) {
-  %c3 = arith.constant 3 : index
-  // expected-error@+1 {{expected a custom permutation_map when rank(source) != rank(destination)}}
-  vector.transfer_write %vec_to_write, %output_memref[%c3, %c3] : vector<3x4xi32>, memref<?xindex>
 }
 
 // -----

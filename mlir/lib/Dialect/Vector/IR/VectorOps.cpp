@@ -151,6 +151,27 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   return false;
 }
 
+/// Returns the number of dimensions of the `shapedType` that participate in the
+/// vector transfer, effectively the rank of the vector dimensions within the
+/// `shapedType`. This is calculated by taking the rank of the `vectorType`
+/// being transferred and subtracting the rank of the `shapedType`'s element
+/// type if it's also a vector.
+///
+/// This is used to determine the number of minor dimensions for identity maps
+/// in vector transfers.
+///
+/// For example, given a transfer operation involving `shapedType` and
+/// `vectorType`:
+///
+///   - shapedType = tensor<10x20xf32>, vectorType = vector<2x4xf32>
+///     - shapedType.getElementType() = f32 (rank 0)
+///     - vectorType.getRank() = 2
+///     - Result = 2 - 0 = 2
+///
+///   - shapedType = tensor<10xvector<20xf32>>, vectorType = vector<20xf32>
+///     - shapedType.getElementType() = vector<20xf32> (rank 1)
+///     - vectorType.getRank() = 1
+///     - Result = 1 - 1 = 0
 static unsigned getRealVectorRank(ShapedType shapedType,
                                   VectorType vectorType) {
   unsigned elementVectorRank = 0;
