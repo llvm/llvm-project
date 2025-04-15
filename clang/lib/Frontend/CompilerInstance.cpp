@@ -1150,19 +1150,11 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
   return LangOpts.CPlusPlus ? Language::CXX : Language::C;
 }
 
-/// Creates a \c CompilerInstance for compiling a module.
-///
-/// This expects a properly initialized \c FrontendInputFile.
-static std::unique_ptr<CompilerInstance>
-createCompilerInstanceForModuleCompileImpl(CompilerInstance &ImportingInstance,
-                                           SourceLocation ImportLoc,
-                                           StringRef ModuleName,
-                                           FrontendInputFile Input,
-                                           StringRef OriginalModuleMapFile,
-                                           StringRef ModuleFileName) {
+std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
+    SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
+    StringRef OriginalModuleMapFile, StringRef ModuleFileName) {
   // Construct a compiler invocation for creating this module.
-  auto Invocation =
-      std::make_shared<CompilerInvocation>(ImportingInstance.getInvocation());
+  auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
 
   PreprocessorOptions &PPOpts = Invocation->getPreprocessorOpts();
 
@@ -1182,7 +1174,7 @@ createCompilerInstanceForModuleCompileImpl(CompilerInstance &ImportingInstance,
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts().ModuleName =
-      ImportingInstance.getInvocation().getLangOpts().ModuleName;
+      getInvocation().getLangOpts().ModuleName;
 
   // Note the name of the module we're building.
   Invocation->getLangOpts().CurrentModule = std::string(ModuleName);
@@ -1206,82 +1198,70 @@ createCompilerInstanceForModuleCompileImpl(CompilerInstance &ImportingInstance,
   DiagnosticOptions &DiagOpts = Invocation->getDiagnosticOpts();
 
   DiagOpts.VerifyDiagnostics = 0;
-  assert(ImportingInstance.getInvocation().getModuleHash() ==
-         Invocation->getModuleHash() && "Module hash mismatch!");
+  assert(getInvocation().getModuleHash() == Invocation->getModuleHash() &&
+         "Module hash mismatch!");
 
   // Construct a compiler instance that will be used to actually create the
   // module.  Since we're sharing an in-memory module cache,
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      ImportingInstance.getPCHContainerOperations(),
-      &ImportingInstance.getModuleCache());
+      getPCHContainerOperations(), &getModuleCache());
   auto &Instance = *InstancePtr;
 
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
   Instance.createDiagnostics(
-      ImportingInstance.getVirtualFileSystem(),
-      new ForwardingDiagnosticConsumer(ImportingInstance.getDiagnosticClient()),
+      getVirtualFileSystem(),
+      new ForwardingDiagnosticConsumer(getDiagnosticClient()),
       /*ShouldOwnClient=*/true);
 
   if (llvm::is_contained(DiagOpts.SystemHeaderWarningsModules, ModuleName))
     Instance.getDiagnostics().setSuppressSystemWarnings(false);
 
   if (FrontendOpts.ModulesShareFileManager) {
-    Instance.setFileManager(&ImportingInstance.getFileManager());
+    Instance.setFileManager(&getFileManager());
   } else {
-    Instance.createFileManager(&ImportingInstance.getVirtualFileSystem());
+    Instance.createFileManager(&getVirtualFileSystem());
   }
   Instance.createSourceManager(Instance.getFileManager());
   SourceManager &SourceMgr = Instance.getSourceManager();
 
   // Note that this module is part of the module build stack, so that we
   // can detect cycles in the module graph.
-  SourceMgr.setModuleBuildStack(
-    ImportingInstance.getSourceManager().getModuleBuildStack());
+  SourceMgr.setModuleBuildStack(getSourceManager().getModuleBuildStack());
   SourceMgr.pushModuleBuildStack(ModuleName,
-    FullSourceLoc(ImportLoc, ImportingInstance.getSourceManager()));
+                                 FullSourceLoc(ImportLoc, getSourceManager()));
 
-  // Make sure that the failed-module structure has been allocated in
-  // the importing instance, and propagate the pointer to the newly-created
-  // instance.
-  if (!ImportingInstance.hasFailedModulesSet())
-    ImportingInstance.createFailedModulesSet();
-  Instance.setFailedModulesSet(ImportingInstance.getFailedModulesSetPtr());
+  // Make a copy for the new instance.
+  Instance.FailedModules = FailedModules;
 
   // If we're collecting module dependencies, we need to share a collector
   // between all of the module CompilerInstances. Other than that, we don't
   // want to produce any dependency output from the module build.
-  Instance.setModuleDepCollector(ImportingInstance.getModuleDepCollector());
+  Instance.setModuleDepCollector(getModuleDepCollector());
   Inv.getDependencyOutputOpts() = DependencyOutputOptions();
 
   return InstancePtr;
 }
 
-/// Compile a module file for the given module, using the options
-/// provided by the importing compiler instance. Returns true if the module
-/// was built without errors.
-static bool compileModule(CompilerInstance &ImportingInstance,
-                          SourceLocation ImportLoc, StringRef ModuleName,
-                          StringRef ModuleFileName,
-                          CompilerInstance &Instance) {
+bool CompilerInstance::compileModule(SourceLocation ImportLoc,
+                                     StringRef ModuleName,
+                                     StringRef ModuleFileName,
+                                     CompilerInstance &Instance) {
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
 
   // Never compile a module that's already finalized - this would cause the
   // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
-          ModuleFileName)) {
-    ImportingInstance.getDiagnostics().Report(
-        ImportLoc, diag::err_module_rebuild_finalized)
+  if (getModuleCache().getInMemoryModuleCache().isPCMFinal(ModuleFileName)) {
+    getDiagnostics().Report(ImportLoc, diag::err_module_rebuild_finalized)
         << ModuleName;
     return false;
   }
 
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build)
-    << ModuleName << ModuleFileName;
+  getDiagnostics().Report(ImportLoc, diag::remark_module_build)
+      << ModuleName << ModuleFileName;
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
@@ -1292,13 +1272,15 @@ static bool compileModule(CompilerInstance &ImportingInstance,
       },
       DesiredStackSize);
 
-  ImportingInstance.getDiagnostics().Report(ImportLoc,
-                                            diag::remark_module_build_done)
-    << ModuleName;
+  getDiagnostics().Report(ImportLoc, diag::remark_module_build_done)
+      << ModuleName;
 
   // Propagate the statistics to the parent FileManager.
-  if (!ImportingInstance.getFrontendOpts().ModulesShareFileManager)
-    ImportingInstance.getFileManager().AddStats(Instance.getFileManager());
+  if (!getFrontendOpts().ModulesShareFileManager)
+    getFileManager().AddStats(Instance.getFileManager());
+
+  // Propagate the failed modules to the parent instance.
+  FailedModules = std::move(Instance.FailedModules);
 
   if (Crashed) {
     // Clear the ASTConsumer if it hasn't been already, in case it owns streams
@@ -1312,8 +1294,8 @@ static bool compileModule(CompilerInstance &ImportingInstance,
 
   // We've rebuilt a module. If we're allowed to generate or update the global
   // module index, record that fact in the importing compiler instance.
-  if (ImportingInstance.getFrontendOpts().GenerateGlobalModuleIndex) {
-    ImportingInstance.setBuildGlobalModuleIndex(true);
+  if (getFrontendOpts().GenerateGlobalModuleIndex) {
+    setBuildGlobalModuleIndex(true);
   }
 
   // If \p AllowPCMWithCompilerErrors is set return 'success' even if errors
@@ -1378,8 +1360,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
     bool IsSystem = isSystem(SLoc.getFile().getFileCharacteristic());
 
     // Use the module map where this module resides.
-    return createCompilerInstanceForModuleCompileImpl(
-        *this, ImportLoc, ModuleName,
+    return cloneForModuleCompileImpl(
+        ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
   }
@@ -1395,8 +1377,8 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
   llvm::raw_string_ostream OS(InferredModuleMapContent);
   Module->print(OS);
 
-  auto Instance = createCompilerInstanceForModuleCompileImpl(
-      *this, ImportLoc, ModuleName,
+  auto Instance = cloneForModuleCompileImpl(
+      ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName);
 
@@ -1460,9 +1442,9 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
   auto Instance = ImportingInstance.cloneForModuleCompile(ModuleNameLoc, Module,
                                                           ModuleFileName);
 
-  if (!compileModule(ImportingInstance, ModuleNameLoc,
-                     Module->getTopLevelModuleName(), ModuleFileName,
-                     *Instance)) {
+  if (!ImportingInstance.compileModule(ModuleNameLoc,
+                                       Module->getTopLevelModuleName(),
+                                       ModuleFileName, *Instance)) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_built)
         << Module->Name << SourceRange(ImportLoc, ModuleNameLoc);
@@ -2002,7 +1984,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
   }
 
   // Check whether we have already attempted to build this module (but failed).
-  if (FailedModules && FailedModules->hasAlreadyFailed(ModuleName)) {
+  if (FailedModules.contains(ModuleName)) {
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_built)
         << ModuleName << SourceRange(ImportLoc, ModuleNameLoc);
     return nullptr;
@@ -2013,8 +1995,7 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
                                ModuleFilename)) {
     assert(getDiagnostics().hasErrorOccurred() &&
            "undiagnosed error in compileModuleAndReadAST");
-    if (FailedModules)
-      FailedModules->addFailed(ModuleName);
+    FailedModules.insert(ModuleName);
     return nullptr;
   }
 
@@ -2238,8 +2219,8 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
 
   std::string NullTerminatedSource(Source.str());
 
-  auto Other = createCompilerInstanceForModuleCompileImpl(
-      *this, ImportLoc, ModuleName, Input, StringRef(), ModuleFileName);
+  auto Other = cloneForModuleCompileImpl(ImportLoc, ModuleName, Input,
+                                         StringRef(), ModuleFileName);
 
   // Create a virtual file containing our desired source.
   // FIXME: We shouldn't need to do this.
@@ -2252,8 +2233,7 @@ void CompilerInstance::createModuleFromSource(SourceLocation ImportLoc,
   Other->DeleteBuiltModules = false;
 
   // Build the module, inheriting any modules that we've built locally.
-  bool Success =
-      compileModule(*this, ImportLoc, ModuleName, ModuleFileName, *Other);
+  bool Success = compileModule(ImportLoc, ModuleName, ModuleFileName, *Other);
 
   BuiltModules = std::move(Other->BuiltModules);
 
