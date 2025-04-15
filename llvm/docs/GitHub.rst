@@ -42,8 +42,7 @@ GitHub Tools
 You can interact with GitHub in several ways: via git command line tools,
 the web browser, `GitHub Desktop <https://desktop.github.com/>`_, or the
 `GitHub CLI <https://cli.github.com>`_. This guide will cover the git command line
-tools and the GitHub CLI. The GitHub CLI (`gh`) will be most like the `arc` workflow and
-recommended.
+tools and the GitHub CLI.
 
 Creating Pull Requests
 ----------------------
@@ -219,10 +218,11 @@ commonly used first:
 Branches
 ========
 
-It is possible to create branches that start with `users/<username>/`, however this is
-intended to be able to support "stacked" pull-request. Do not create any branches in the
-llvm/llvm-project repository otherwise, please use a fork (see above). User branches that
-aren't associated with a pull-request **will be deleted**.
+It is possible to create branches in `llvm/llvm-project/` that start with
+`users/<username>/`, however this is intended to be able to support "stacked"
+pull-request. Do not create any branches in the `llvm/llvm-project` repository
+otherwise, please use a fork (see above). User branches that aren't
+associated with a pull-request **will be deleted**.
 
 Stacked Pull Requests
 =====================

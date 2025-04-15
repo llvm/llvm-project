@@ -1556,6 +1556,9 @@ static bool processDbgDeclare(FunctionLoweringInfo &FuncInfo,
   if (processIfEntryValueDbgDeclare(FuncInfo, Address, Expr, Var, DbgLoc))
     return true;
 
+  if (!Address->getType()->isPointerTy())
+    return false;
+
   MachineFunction *MF = FuncInfo.MF;
   const DataLayout &DL = MF->getDataLayout();
 
@@ -2317,7 +2320,7 @@ void SelectionDAGISel::SelectInlineAsmMemoryOperands(std::vector<SDValue> &Ops,
                               SelOps.size());
       Flags.setMemConstraint(ConstraintID);
       Handles.emplace_back(CurDAG->getTargetConstant(Flags, DL, MVT::i32));
-      Handles.insert(Handles.end(), SelOps.begin(), SelOps.end());
+      llvm::append_range(Handles, SelOps);
       i += 2;
     }
   }

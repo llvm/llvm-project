@@ -14,6 +14,7 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -442,6 +443,90 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 }
 
 //===----------------------------------------------------------------------===//
+// CallOp
+//===----------------------------------------------------------------------===//
+
+static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::FlatSymbolRefAttr calleeAttr;
+
+  if (!parser.parseOptionalAttribute(calleeAttr, "callee", result.attributes)
+           .has_value())
+    return mlir::failure();
+
+  if (parser.parseLParen())
+    return mlir::failure();
+
+  // TODO(cir): parse argument list here
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  if (parser.parseRParen())
+    return mlir::failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return ::mlir::failure();
+
+  if (parser.parseColon())
+    return ::mlir::failure();
+
+  mlir::FunctionType opsFnTy;
+  if (parser.parseType(opsFnTy))
+    return mlir::failure();
+
+  return mlir::success();
+}
+
+static void printCallCommon(mlir::Operation *op,
+                            mlir::FlatSymbolRefAttr calleeSym,
+                            mlir::OpAsmPrinter &printer) {
+  printer << ' ';
+
+  printer.printAttributeWithoutType(calleeSym);
+  printer << "(";
+  // TODO(cir): print call args here
+  assert(!cir::MissingFeatures::opCallArgs());
+  printer << ")";
+
+  printer.printOptionalAttrDict(op->getAttrs(), {"callee"});
+
+  printer << " : ";
+  printer.printFunctionalType(op->getOperands().getTypes(),
+                              op->getResultTypes());
+}
+
+mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
+                                     mlir::OperationState &result) {
+  return parseCallCommon(parser, result);
+}
+
+void cir::CallOp::print(mlir::OpAsmPrinter &p) {
+  printCallCommon(*this, getCalleeAttr(), p);
+}
+
+static LogicalResult
+verifyCallCommInSymbolUses(mlir::Operation *op,
+                           SymbolTableCollection &symbolTable) {
+  auto fnAttr = op->getAttrOfType<FlatSymbolRefAttr>("callee");
+  if (!fnAttr)
+    return mlir::failure();
+
+  auto fn = symbolTable.lookupNearestSymbolFrom<cir::FuncOp>(op, fnAttr);
+  if (!fn)
+    return op->emitOpError() << "'" << fnAttr.getValue()
+                             << "' does not reference a valid function";
+
+  // TODO(cir): verify function arguments and return type
+  assert(!cir::MissingFeatures::opCallArgs());
+
+  return mlir::success();
+}
+
+LogicalResult
+cir::CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  return verifyCallCommInSymbolUses(*this, symbolTable);
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
@@ -476,6 +561,120 @@ mlir::LogicalResult cir::ReturnOp::verify() {
 
   return success();
 }
+
+//===----------------------------------------------------------------------===//
+// IfOp
+//===----------------------------------------------------------------------===//
+
+ParseResult cir::IfOp::parse(OpAsmParser &parser, OperationState &result) {
+  // create the regions for 'then'.
+  result.regions.reserve(2);
+  Region *thenRegion = result.addRegion();
+  Region *elseRegion = result.addRegion();
+
+  mlir::Builder &builder = parser.getBuilder();
+  OpAsmParser::UnresolvedOperand cond;
+  Type boolType = cir::BoolType::get(builder.getContext());
+
+  if (parser.parseOperand(cond) ||
+      parser.resolveOperand(cond, boolType, result.operands))
+    return failure();
+
+  // Parse 'then' region.
+  mlir::SMLoc parseThenLoc = parser.getCurrentLocation();
+  if (parser.parseRegion(*thenRegion, /*arguments=*/{}, /*argTypes=*/{}))
+    return failure();
+
+  if (ensureRegionTerm(parser, *thenRegion, parseThenLoc).failed())
+    return failure();
+
+  // If we find an 'else' keyword, parse the 'else' region.
+  if (!parser.parseOptionalKeyword("else")) {
+    mlir::SMLoc parseElseLoc = parser.getCurrentLocation();
+    if (parser.parseRegion(*elseRegion, /*arguments=*/{}, /*argTypes=*/{}))
+      return failure();
+    if (ensureRegionTerm(parser, *elseRegion, parseElseLoc).failed())
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+  return success();
+}
+
+void cir::IfOp::print(OpAsmPrinter &p) {
+  p << " " << getCondition() << " ";
+  mlir::Region &thenRegion = this->getThenRegion();
+  p.printRegion(thenRegion,
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/!omitRegionTerm(thenRegion));
+
+  // Print the 'else' regions if it exists and has a block.
+  mlir::Region &elseRegion = this->getElseRegion();
+  if (!elseRegion.empty()) {
+    p << " else ";
+    p.printRegion(elseRegion,
+                  /*printEntryBlockArgs=*/false,
+                  /*printBlockTerminators=*/!omitRegionTerm(elseRegion));
+  }
+
+  p.printOptionalAttrDict(getOperation()->getAttrs());
+}
+
+/// Default callback for IfOp builders.
+void cir::buildTerminatedBody(OpBuilder &builder, Location loc) {
+  // add cir.yield to end of the block
+  builder.create<cir::YieldOp>(loc);
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void cir::IfOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                    SmallVectorImpl<RegionSuccessor> &regions) {
+  // The `then` and the `else` region branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // Don't consider the else region if it is empty.
+  Region *elseRegion = &this->getElseRegion();
+  if (elseRegion->empty())
+    elseRegion = nullptr;
+
+  // If the condition isn't constant, both regions may be executed.
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  // If the else region does not exist, it is not a viable successor.
+  if (elseRegion)
+    regions.push_back(RegionSuccessor(elseRegion));
+
+  return;
+}
+
+void cir::IfOp::build(OpBuilder &builder, OperationState &result, Value cond,
+                      bool withElseRegion, BuilderCallbackRef thenBuilder,
+                      BuilderCallbackRef elseBuilder) {
+  assert(thenBuilder && "the builder callback for 'then' must be present");
+  result.addOperands(cond);
+
+  OpBuilder::InsertionGuard guard(builder);
+  Region *thenRegion = result.addRegion();
+  builder.createBlock(thenRegion);
+  thenBuilder(builder, result.location);
+
+  Region *elseRegion = result.addRegion();
+  if (!withElseRegion)
+    return;
+
+  builder.createBlock(elseRegion);
+  elseBuilder(builder, result.location);
+}
+
+LogicalResult cir::IfOp::verify() { return success(); }
 
 //===----------------------------------------------------------------------===//
 // ScopeOp
@@ -646,6 +845,41 @@ parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
   }
 
   typeAttr = TypeAttr::get(opTy);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// GetGlobalOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  mlir::Operation *op =
+      symbolTable.lookupNearestSymbolFrom(*this, getNameAttr());
+  if (op == nullptr || !(isa<GlobalOp>(op) || isa<FuncOp>(op)))
+    return emitOpError("'")
+           << getName()
+           << "' does not reference a valid cir.global or cir.func";
+
+  mlir::Type symTy;
+  if (auto g = dyn_cast<GlobalOp>(op)) {
+    symTy = g.getSymType();
+    assert(!cir::MissingFeatures::addressSpace());
+    assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  } else if (auto f = dyn_cast<FuncOp>(op)) {
+    symTy = f.getFunctionType();
+  } else {
+    llvm_unreachable("Unexpected operation for GetGlobalOp");
+  }
+
+  auto resultType = dyn_cast<PointerType>(getAddr().getType());
+  if (!resultType || symTy != resultType.getPointee())
+    return emitOpError("result type pointee type '")
+           << resultType.getPointee() << "' does not match type " << symTy
+           << " of the global @" << getName();
+
   return success();
 }
 

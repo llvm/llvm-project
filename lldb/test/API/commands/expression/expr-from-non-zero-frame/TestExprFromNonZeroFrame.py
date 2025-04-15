@@ -7,7 +7,7 @@ from lldbsuite.test import lldbutil
 class ExprFromNonZeroFrame(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # Expression fails to evaluate on Windows, for unknown reasons.
+    # Requires DWARF debug information.
     @skipIfWindows
     def test(self):
         """

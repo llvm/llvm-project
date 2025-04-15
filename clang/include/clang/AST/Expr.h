@@ -1564,6 +1564,9 @@ class FixedPointLiteral : public Expr, public APIntStorage {
   /// Returns an empty fixed-point literal.
   static FixedPointLiteral *Create(const ASTContext &C, EmptyShell Empty);
 
+  /// Returns an internal integer representation of the literal.
+  llvm::APInt getValue() const { return APIntStorage::getValue(); }
+
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
 
@@ -7378,6 +7381,14 @@ private:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 };
+
+/// Insertion operator for diagnostics.  This allows sending
+/// Expr into a diagnostic with <<.
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const Expr *E) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
+  return DB;
+}
 
 } // end namespace clang
 

@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/OpenACC/RegisterOpenACCExtensions.h"
+#include "flang/Optimizer/OpenMP/Support/RegisterOpenMPExtensions.h"
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/Affine/Passes.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
@@ -67,6 +68,7 @@ inline void addFIRExtensions(mlir::DialectRegistry &registry,
   addFIRToLLVMIRExtension(registry);
   cuf::registerCUFDialectTranslation(registry);
   fir::acc::registerOpenACCExtensions(registry);
+  fir::omp::registerOpenMPExtensions(registry);
 }
 
 inline void loadNonCodegenDialects(mlir::MLIRContext &context) {

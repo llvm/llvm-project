@@ -6,7 +6,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#if defined (__x86_64__) && !defined(__APPLE__)
+#if defined(__x86_64__) ||                                                     \
+    (defined(__aarch64__) || defined(__arm64__)) && !defined(__APPLE__)
 
 #include "common.h"
 
@@ -73,8 +74,10 @@ static bool hasPagecacheTHPSupport() {
   if (Res < 0)
     return false;
 
-  if (!strStr(Buf, "[always]") && !strStr(Buf, "[madvise]"))
+  if (!strStr(Buf, "[always]") && !strStr(Buf, "[madvise]")) {
+    DEBUG(report("[hugify] THP support is not enabled.\n");)
     return false;
+  }
 
   struct KernelVersionTy {
     uint32_t major;
@@ -167,12 +170,20 @@ extern "C" void __bolt_hugify_self_impl() {
 
 /// This is hooking ELF's entry, it needs to save all machine state.
 extern "C" __attribute((naked)) void __bolt_hugify_self() {
+  // clang-format off
 #if defined(__x86_64__)
   __asm__ __volatile__(SAVE_ALL "call __bolt_hugify_self_impl\n" RESTORE_ALL
-                                "jmp __bolt_hugify_start_program\n" ::
-                                    :);
+                                "jmp __bolt_hugify_start_program\n"
+                                :::);
+#elif defined(__aarch64__) || defined(__arm64__)
+  __asm__ __volatile__(SAVE_ALL "bl __bolt_hugify_self_impl\n" RESTORE_ALL
+                                "adrp x16, __bolt_hugify_start_program\n"
+                                "add x16, x16, #:lo12:__bolt_hugify_start_program\n"
+                                "br x16\n"
+                                :::);
 #else
-  exit(1);
+  __exit(1);
 #endif
+  // clang-format on
 }
 #endif

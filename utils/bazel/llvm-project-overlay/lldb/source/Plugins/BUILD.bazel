@@ -1186,25 +1186,12 @@ cc_library(
     ],
 )
 
-gentbl_cc_library(
-    name = "DynamicLoaderMacOSXDYLDProperties",
-    strip_include_prefix = "DynamicLoader/MacOSX-DYLD",
-    tbl_outs = {
-        "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.inc": ["-gen-lldb-property-defs"],
-        "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
-    },
-    tblgen = "//lldb:lldb-tblgen",
-    td_file = "DynamicLoader/MacOSX-DYLD/DynamicLoaderDarwinProperties.td",
-    deps = ["//lldb:CoreTdFiles"],
-)
-
 cc_library(
     name = "PluginDynamicLoaderMacOSXDYLD",
     srcs = glob(["DynamicLoader/MacOSX-DYLD/*.cpp"]),
     hdrs = glob(["DynamicLoader/MacOSX-DYLD/*.h"]),
     includes = [".."],
     deps = [
-        ":DynamicLoaderMacOSXDYLDProperties",
         ":PluginObjCRuntime",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",

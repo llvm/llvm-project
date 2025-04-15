@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -DCIR_ONLY %s -o %t.cir
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
@@ -57,16 +57,16 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   // CIR: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !s32i
   // LLVM: %{{[0-9]+}} = zext i1 %{{[0-9]+}} to i32
 
-  #ifdef CIR_ONLY
   bool b2 = x2; // int to bool
   // CIR: %{{[0-9]+}} = cir.cast(int_to_bool, %{{[0-9]+}} : !s32i), !cir.bool
-  #endif
+  // LLVM: %[[INTTOBOOL:[0-9]+]]  = icmp ne i32 %{{[0-9]+}}, 0
+  // LLVM: zext i1 %[[INTTOBOOL]] to i8
 
-  #ifdef CIR_ONLY
   void *p;
-   bool b3 = p; // ptr to bool
+  bool b3 = p; // ptr to bool
   // CIR: %{{[0-9]+}} = cir.cast(ptr_to_bool, %{{[0-9]+}} : !cir.ptr<!void>), !cir.bool
-  #endif
+  // LLVM: %[[PTRTOBOOL:[0-9]+]]  = icmp ne ptr %{{[0-9]+}}, null
+  // LLVM: zext i1 %[[PTRTOBOOL]] to i8
 
   float f;
   bool b4 = f; // float to bool
@@ -77,7 +77,6 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   return 0;
 }
 
-#ifdef CIR_ONLY
 bool cptr(void *d) {
   bool x = d;
   return x;
@@ -88,7 +87,15 @@ bool cptr(void *d) {
 
 // CIR:   %[[DVAL:[0-9]+]] = cir.load %[[DPTR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:   %{{[0-9]+}} = cir.cast(ptr_to_bool, %[[DVAL]] : !cir.ptr<!void>), !cir.bool
-#endif
+
+// LLVM-LABEL: define i1 @cptr(ptr %0)
+// LLVM:         %[[ARG_STORAGE:.*]] = alloca ptr, i64 1
+// LLVM:         %[[RETVAL:.*]] = alloca i8, i64 1
+// LLVM:         %[[X_STORAGE:.*]] = alloca i8, i64 1
+// LLVM:         store ptr %0, ptr %[[ARG_STORAGE]]
+// LLVM:         %[[LOADED_PTR:.*]] = load ptr, ptr %[[ARG_STORAGE]]
+// LLVM:         %[[NULL_CHECK:.*]] = icmp ne ptr %[[LOADED_PTR]], null
+// LLVM:         ret i1
 
 void should_not_cast() {
   unsigned x1;
