@@ -160,6 +160,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -197,6 +198,8 @@
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
+
+#define DEBUG_TYPE "separate-offset-gep"
 
 static cl::opt<bool> DisableSeparateConstOffsetFromGEP(
     "disable-separate-const-offset-from-gep", cl::init(false),
@@ -484,6 +487,9 @@ private:
 
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingAdds;
   DenseMap<ExprKey, SmallVector<Instruction *, 2>> DominatingSubs;
+
+  bool decomposeXor(Function &F);
+  Value *tryFoldXorToOrDisjoint(Instruction &I);
 };
 
 } // end anonymous namespace
@@ -1162,6 +1168,162 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   return true;
 }
 
+bool SeparateConstOffsetFromGEP::decomposeXor(Function &F) {
+  bool FunctionChanged = false;
+  SmallVector<std::pair<Instruction *, Value *>, 16> ReplacementsToMake;
+
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (I.getOpcode() == Instruction::Xor) {
+        if (Value *Replacement = tryFoldXorToOrDisjoint(I)) {
+          ReplacementsToMake.push_back({&I, Replacement});
+          FunctionChanged = true;
+        }
+      }
+    }
+  }
+
+  if (!ReplacementsToMake.empty()) {
+    LLVM_DEBUG(dbgs() << "Applying " << ReplacementsToMake.size()
+                      << " XOR->OR Disjoint replacements in " << F.getName()
+                      << "\n");
+    for (auto &Pair : ReplacementsToMake) {
+      Pair.first->replaceAllUsesWith(Pair.second);
+    }
+    for (auto &Pair : ReplacementsToMake) {
+      Pair.first->eraseFromParent();
+    }
+  }
+
+  return FunctionChanged;
+}
+
+static llvm::Instruction *findClosestSequentialXor(Value *A, Instruction &I) {
+  llvm::Instruction *ClosestUser = nullptr;
+  for (llvm::User *User : A->users()) {
+    if (auto *UserInst = llvm::dyn_cast<llvm::Instruction>(User)) {
+      if (UserInst->getOpcode() != Instruction::Xor || UserInst == &I)
+        continue;
+      if (!ClosestUser) {
+        ClosestUser = UserInst;
+      } else {
+        // Compare instruction positions.
+        if (UserInst->comesBefore(ClosestUser)) {
+          ClosestUser = UserInst;
+        }
+      }
+    }
+  }
+  return ClosestUser;
+}
+
+/// Try to transform I = xor(A, C1) into or disjoint(Y, C2)
+/// where Y = xor(A, C0) is another existing instruction dominating I,
+/// C2 = C0 ^ C1, and A is known to be disjoint with C2.
+///
+/// @param I  The XOR instruction being visited.
+/// @return The replacement Value* if successful, nullptr otherwise.
+Value *SeparateConstOffsetFromGEP::tryFoldXorToOrDisjoint(Instruction &I) {
+  assert(I.getOpcode() == Instruction::Xor && "Instruction must be XOR");
+
+  // Check if I has at least one GEP user.
+  bool HasGepUser = false;
+  for (User *U : I.users()) {
+    if (isa<GetElementPtrInst>(U)) {
+      HasGepUser = true;
+      break;
+    }
+  }
+  // If no user is a GEP instruction, abort the transformation.
+  if (!HasGepUser) {
+    LLVM_DEBUG(
+        dbgs() << "SeparateConstOffsetFromGEP: Skipping XOR->OR DISJOINT for "
+               << I << " because it has no GEP users.\n");
+    return nullptr;
+  }
+
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+  ConstantInt *C1 = dyn_cast<ConstantInt>(Op1);
+  Value *A = Op0;
+
+  // Bail out of there is not constant operand.
+  if (!C1) {
+    C1 = dyn_cast<ConstantInt>(Op0);
+    if (!C1)
+      return nullptr;
+    A = Op1;
+  }
+
+  if (isa<UndefValue>(A))
+    return nullptr;
+
+  APInt C1_APInt = C1->getValue();
+  unsigned BitWidth = C1_APInt.getBitWidth();
+  Type *Ty = I.getType();
+
+  // --- Step 2: Find Dominating Y = xor A, C0 ---
+  Instruction *FoundUserInst = nullptr; // Instruction Y
+  APInt C0_APInt;
+
+  auto UserInst = findClosestSequentialXor(A, I);
+
+  BinaryOperator *UserBO = cast<BinaryOperator>(UserInst);
+  Value *UserOp0 = UserBO->getOperand(0);
+  Value *UserOp1 = UserBO->getOperand(1);
+  ConstantInt *UserC = nullptr;
+  if (UserOp0 == A)
+    UserC = dyn_cast<ConstantInt>(UserOp1);
+  else if (UserOp1 == A)
+    UserC = dyn_cast<ConstantInt>(UserOp0);
+  if (UserC) {
+    if (DT->dominates(UserInst, &I)) {
+      FoundUserInst = UserInst;
+      C0_APInt = UserC->getValue();
+    }
+  }
+  if (!FoundUserInst)
+    return nullptr;
+
+  // Calculate C2.
+  APInt C2_APInt = C0_APInt ^ C1_APInt;
+
+  // Check Disjointness A & C2 == 0.
+  KnownBits KnownA(BitWidth);
+  AssumptionCache *AC = nullptr;
+  computeKnownBits(A, KnownA, *DL, 0, AC, &I, DT);
+
+  if ((KnownA.Zero & C2_APInt) != C2_APInt)
+    return nullptr;
+
+  IRBuilder<> Builder(&I);
+  Builder.SetInsertPoint(&I); // Access Builder directly
+  Constant *C2_Const = ConstantInt::get(Ty, C2_APInt);
+  Twine Name = I.getName(); // Create Twine explicitly
+  Value *NewOr = BinaryOperator::CreateDisjointOr(FoundUserInst, C2_Const, Name,
+                                                  I.getIterator());
+  // Transformation Conditions Met.
+  LLVM_DEBUG(dbgs() << "SeparateConstOffsetFromGEP: Replacing " << I
+                    << " (used by GEP) with " << *NewOr << " based on "
+                    << *FoundUserInst << "\n");
+
+#if 0
+  // Preserve metadata
+  if (Instruction *NewOrInst = dyn_cast<Instruction>(NewOr)) {
+    NewOrInst->copyMetadata(I);
+  } else {
+    assert(false && "CreateNUWOr did not return an Instruction");
+    if (NewOr)
+      NewOr->deleteValue();
+    return nullptr;
+  }
+#endif
+
+  // Return the replacement value. runOnFunction will handle replacement &
+  // deletion.
+  return NewOr;
+}
+
 bool SeparateConstOffsetFromGEPLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
@@ -1181,6 +1343,10 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   DL = &F.getDataLayout();
   bool Changed = false;
+
+  // Decompose xor in to "or disjoint" if possible.
+  Changed |= decomposeXor(F);
+
   for (BasicBlock &B : F) {
     if (!DT->isReachableFromEntry(&B))
       continue;
