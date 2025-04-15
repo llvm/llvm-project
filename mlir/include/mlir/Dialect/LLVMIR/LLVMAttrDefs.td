@@ -1365,4 +1365,13 @@ def LLVM_DependentLibrariesAttr
   let assemblyFormat = "`<` $libs `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// UWTableKindAttr
+//===----------------------------------------------------------------------===//
+
+def UWTableKindAttr : LLVM_Attr<"UWTableKind", "uwtableKind"> {
+  let parameters = (ins "uwtable::UWTableKind":$uwtableKind);
+  let assemblyFormat = "`<` $uwtableKind `>`";
+}
+
 #endif // LLVMIR_ATTRDEFS

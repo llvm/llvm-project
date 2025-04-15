@@ -855,4 +855,25 @@ def ModFlagBehaviorAttr : LLVM_EnumAttr<
   let cppNamespace = "::mlir::LLVM";
 }
 
+//===----------------------------------------------------------------------===//
+// UWTableKind
+//===----------------------------------------------------------------------===//
+
+def UWTableKindNone
+    : LLVM_EnumAttrCase<"None", "none", "None", 0>;
+def UWTableKindSync
+    : LLVM_EnumAttrCase<"Sync", "sync", "Sync", 1>;
+def UWTableKindAsync
+    : LLVM_EnumAttrCase<"Async", "async", "Async", 2>;
+
+// UWTableKind::Default is unsupported as the llvm enum value is the same as async  
+// which the generated enum converters can't deal with.
+def UWTableKindEnum : LLVM_EnumAttr<
+    "UWTableKind",
+    "::llvm::UWTableKind",
+    "LLVM Unwind Behavior",
+    [UWTableKindNone, UWTableKindSync, UWTableKindAsync]> {
+  let cppNamespace = "::mlir::LLVM::uwtable";
+}
+
 #endif // LLVMIR_ENUMS
