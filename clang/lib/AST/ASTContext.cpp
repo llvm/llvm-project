@@ -4011,7 +4011,7 @@ public:
     QualType EltTy = Visit(T->getElementType());
     QualType NewTy = Ctx.getDependentSizedArrayType(
         EltTy, T->getSizeExpr(), T->getSizeModifier(),
-        T->getIndexTypeCVRQualifiers(), T->getBracketsRange());
+        T->getIndexTypeCVRQualifiers());
     return {NewTy, false};
   }
 
@@ -4028,7 +4028,7 @@ public:
     QualType EltTy = Visit(T->getElementType());
     QualType NewTy = Ctx.getVariableArrayType(
         EltTy, T->getSizeExpr(), T->getSizeModifier(),
-        T->getIndexTypeCVRQualifiers(), T->getBracketsRange());
+        T->getIndexTypeCVRQualifiers());
     return {NewTy, false};
   }
 
