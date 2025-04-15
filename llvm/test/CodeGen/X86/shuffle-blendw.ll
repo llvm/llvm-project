@@ -334,8 +334,8 @@ define <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
 ; X64-AVX512-NEXT:    retq
   %ld0 = load <4 x double>, ptr %p0, align 32
   %ld1 = load <4 x double>, ptr %p1, align 32
-  %bcst0 = shufflevector <4 x double> %ld0, <4 x double> undef, <4 x i32> zeroinitializer
-  %bcst1 = shufflevector <4 x double> %ld1, <4 x double> undef, <4 x i32> zeroinitializer
+  %bcst0 = shufflevector <4 x double> %ld0, <4 x double> poison, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <4 x double> %ld1, <4 x double> poison, <4 x i32> zeroinitializer
   %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x double> %blend
 }
@@ -568,8 +568,8 @@ define <4 x double> @blend_broadcasts_v1f64_4x(ptr %p0, ptr %p1) {
 ; X64-AVX512-NEXT:    retq
   %ld0 = load <1 x double>, ptr %p0, align 32
   %ld1 = load <1 x double>, ptr %p1, align 32
-  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <4 x i32> zeroinitializer
-  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <4 x i32> zeroinitializer
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <4 x i32> zeroinitializer
   %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
   ret <4 x double> %blend
 }
@@ -644,8 +644,8 @@ define <4 x double> @blend_broadcasts_v1f64_2x(ptr %p0, ptr %p1) {
 ; X64-AVX512-NEXT:    retq
   %ld0 = load <1 x double>, ptr %p0, align 32
   %ld1 = load <1 x double>, ptr %p1, align 32
-  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <2 x i32> zeroinitializer
-  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <2 x i32> zeroinitializer
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> poison, <2 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> poison, <2 x i32> zeroinitializer
   %blend = shufflevector <2 x double> %bcst0, <2 x double> %bcst1, <4 x i32> <i32 0, i32 2, i32 3, i32 1>
   ret <4 x double> %blend
 }
