@@ -87,6 +87,13 @@
 ! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.box<!fir.array<?xi32>>
 ! CHECK: }
 
+! CHECK-LABEL: @privatization_ref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>> init {
+! CHECK: ^bb0(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>):
+! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.box<!fir.heap<i32>>
+! CHECK:   %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {uniq_name = "acc.private.init"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:   acc.yield %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: }
+
 ! CHECK-LABEL: acc.private.recipe @privatization_ref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> init {
 ! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>):
 ! CHECK:   %[[LOADBOX:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -291,6 +298,29 @@ end subroutine
 ! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_A]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "a"}
 ! CHECK: acc.loop {{.*}} private({{.*}}@privatization_ref_box_heap_Uxi32 -> %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK: acc.serial private(@privatization_ref_box_heap_Uxi32 -> %{{.*}} : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+
+subroutine acc_private_allocatable_scalar(b, a, n)
+  integer :: a(n)
+  integer, allocatable :: b
+  integer :: i, n
+
+  !$acc parallel loop private(b)
+  do i = 1, n
+    a(i) = b
+  end do
+
+  !$acc serial private(b)
+  a(i) = b
+  !$acc end serial
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_private_allocatable_scalar(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.heap<i32>>> {fir.bindc_name = "b"}
+! CHECK: %[[DECLA_B:.*]]:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFacc_private_allocatable_scalarEb"} : (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK: acc.parallel {{.*}} {
+! CHECK: %[[PRIVATE:.*]] = acc.private varPtr(%[[DECLA_B]]#0 : !fir.ref<!fir.box<!fir.heap<i32>>>) -> !fir.ref<!fir.box<!fir.heap<i32>>> {name = "b"}
+! CHECK: acc.loop {{.*}} private({{.*}}@privatization_ref_box_heap_i32 -> %[[PRIVATE]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK: acc.serial private(@privatization_ref_box_heap_i32 -> %{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) {
 
 subroutine acc_private_pointer_array(a, n)
   integer, pointer :: a(:)
