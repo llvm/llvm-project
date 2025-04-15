@@ -258,7 +258,7 @@ inline bool operator!=(const OpenACCBindClause &LHS,
   return !(LHS == RHS);
 }
 
-using DeviceTypeArgument = std::pair<IdentifierInfo *, SourceLocation>;
+using DeviceTypeArgument = IdentifierLoc;
 /// A 'device_type' or 'dtype' clause, takes a list of either an 'asterisk' or
 /// an identifier. The 'asterisk' means 'the rest'.
 class OpenACCDeviceTypeClause final
@@ -302,7 +302,7 @@ public:
   }
   bool hasAsterisk() const {
     return getArchitectures().size() > 0 &&
-           getArchitectures()[0].first == nullptr;
+           getArchitectures()[0].getIdentifierInfo() == nullptr;
   }
 
   ArrayRef<DeviceTypeArgument> getArchitectures() const {

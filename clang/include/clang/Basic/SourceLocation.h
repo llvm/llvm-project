@@ -31,6 +31,7 @@ template <typename T, typename Enable> struct FoldingSetTrait;
 
 namespace clang {
 
+class IdentifierInfo;
 class SourceManager;
 
 /// An opaque identifier used by SourceManager which refers to a
@@ -463,6 +464,29 @@ public:
   friend bool
   operator!=(const FullSourceLoc &LHS, const FullSourceLoc &RHS) {
     return !(LHS == RHS);
+  }
+};
+
+/// A simple pair of identifier info and location.
+class IdentifierLoc {
+  SourceLocation Loc;
+  IdentifierInfo *II = nullptr;
+
+public:
+  IdentifierLoc() = default;
+  IdentifierLoc(SourceLocation L, IdentifierInfo *Ident) : Loc(L), II(Ident) {}
+
+  void setLoc(SourceLocation L) { Loc = L; }
+  void setIdentifierInfo(IdentifierInfo *Ident) { II = Ident; }
+  SourceLocation getLoc() const { return Loc; }
+  IdentifierInfo *getIdentifierInfo() const { return II; }
+
+  bool operator==(const IdentifierLoc &X) const {
+    return Loc == X.Loc && II == X.II;
+  }
+
+  bool operator!=(const IdentifierLoc &X) const {
+    return Loc != X.Loc || II != X.II;
   }
 };
 
