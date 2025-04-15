@@ -76,7 +76,11 @@ amd_comgr_status_t SPIRVCommand::execute(raw_ostream &LogS) {
   Module *M;
   std::string Err;
 
-  if (!readSpirv(Context, ISS, M, Err)) {
+  SPIRV::TranslatorOpts Opts;
+  Opts.enableAllExtensions();
+  Opts.setDesiredBIsRepresentation(SPIRV::BIsRepresentation::OpenCL20);
+
+  if (!readSpirv(Context, Opts, ISS, M, Err)) {
     LogS << "Failed to load SPIR-V as LLVM Module: " << Err << '\n';
     return AMD_COMGR_STATUS_ERROR;
   }
