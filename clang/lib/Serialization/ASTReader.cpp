@@ -11648,7 +11648,7 @@ void OMPClauseReader::VisitOMPDefaultClause(OMPDefaultClause *C) {
   C->setDefaultKindKwLoc(Record.readSourceLocation());
 }
 
-// Read the parameter of fail clause. This will have been saved when
+// Read the parameter of threadset clause. This will have been saved when
 // OMPClauseWriter is called.
 void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   C->setLParenLoc(Record.readSourceLocation());

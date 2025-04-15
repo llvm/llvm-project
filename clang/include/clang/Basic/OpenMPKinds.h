@@ -243,7 +243,7 @@ enum OpenMPAllocateClauseModifier {
   OMPC_ALLOCATE_unknown
 };
 
-/// OpenMP modifiers for 'allocate' clause.
+/// OpenMP modifiers for 'threadset' clause.
 enum OpenMPThreadsetKind {
 #define OPENMP_THREADSET_KIND(Name) OMPC_THREADSET_##Name,
 #include "clang/Basic/OpenMPKinds.def"

@@ -1241,6 +1241,7 @@ def OMP_TaskLoop : Directive<[Spelling<"taskloop">]> {
     VersionedClause<OMPC_Final>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_Priority>,
+    VersionedClause<OMPC_Threadset, 60>,
   ];
   let allowedExclusiveClauses = [
     VersionedClause<OMPC_GrainSize>,

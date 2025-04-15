@@ -1330,13 +1330,13 @@ public:
   }
 };
 
-/// This represents 'threadset' clause in the '#pragma omp ...' directive.
+/// This represents 'threadset' clause in the '#pragma omp task ...' directive.
 ///
 /// \code
-/// #pragma omp parallel threadset(shared)
+/// #pragma omp task threadset(omp_pool)
 /// \endcode
-/// In this example directive '#pragma omp parallel' has simple 'threadset'
-/// clause with kind 'shared'.
+/// In this example directive '#pragma omp task' has simple 'threadset'
+/// clause with kind 'omp_pool'.
 class OMPThreadsetClause : public OMPClause {
   friend class OMPClauseReader;
 
@@ -1360,9 +1360,9 @@ class OMPThreadsetClause : public OMPClause {
   void setThreadsetKindLoc(SourceLocation KLoc) { KindLoc = KLoc; }
 
 public:
-  /// Build 'threadset' clause with argument \a A ('none' or 'shared').
+  /// Build 'threadset' clause with argument \a A ('omp_team' or 'omp_pool').
   ///
-  /// \param A Argument of the clause ('none' or 'shared').
+  /// \param A Argument of the clause ('omp_team' or 'omp_pool').
   /// \param ALoc Starting location of the argument.
   /// \param StartLoc Starting location of the clause.
   /// \param LParenLoc Location of '('.

@@ -547,6 +547,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
+  case OMPC_threadset:
+    switch (Type) {
+    case OMPC_THREADSET_unknown:
+      return "unknown";
+#define OPENMP_THREADSET_KIND(Name)                                            \
+  case OMPC_THREADSET_##Name:                                                  \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'threadset' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
