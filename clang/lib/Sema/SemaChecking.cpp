@@ -11685,7 +11685,10 @@ static void DiagnoseIntInBoolContext(Sema &S, Expr *E) {
         S.Diag(ExprLoc, diag::warn_left_shift_always)
             << (Result.Val.getInt() != 0);
       else if (E->getType()->isSignedIntegerType())
-        S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context) << E;
+        S.Diag(ExprLoc, diag::warn_left_shift_in_bool_context)
+            << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
+            << FixItHint::CreateInsertion(S.getLocForEndOfToken(E->getEndLoc()),
+                                          ") != 0");
     }
   }
 

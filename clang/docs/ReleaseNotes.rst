@@ -314,6 +314,7 @@ Improvements to Clang's diagnostics
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
+- Clang now consistently quotes expressions in diagnostics.
 - When printing types for diagnostics, clang now doesn't suppress the scopes of
   template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)

@@ -920,7 +920,7 @@ namespace CompoundLiterals {
   // null pointer suggests we're doing something odd during constant expression
   // evaluation: I think it's still taking 'x' as being null from the call to
   // f3() rather than tracking the assignment happening in the VLA.
-  constexpr int f3(int *x, int (*y)[*(x=(int[]){1,2,3})]) { // both-warning {{object backing the pointer x will be destroyed at the end of the full-expression}}
+  constexpr int f3(int *x, int (*y)[*(x=(int[]){1,2,3})]) { // both-warning {{object backing the pointer 'x' will be destroyed at the end of the full-expression}}
     return x[0]; // both-note {{read of dereferenced null pointer is not allowed in a constant expression}}
   }
   constexpr int h = f3(0,0); // both-error {{constexpr variable 'h' must be initialized by a constant expression}} \
