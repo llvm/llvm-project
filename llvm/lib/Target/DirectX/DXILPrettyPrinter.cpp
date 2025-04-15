@@ -139,8 +139,11 @@ static StringRef getTextureDimName(dxil::ResourceKind RK) {
 namespace {
 struct FormatResourceDimension
     : public llvm::FormatAdapter<const dxil::ResourceTypeInfo &> {
-  explicit FormatResourceDimension(const dxil::ResourceTypeInfo &RI)
-      : llvm::FormatAdapter<const dxil::ResourceTypeInfo &>(RI) {}
+  FormatResourceDimension(const dxil::ResourceTypeInfo &RI, bool HasCounter)
+      : llvm::FormatAdapter<const dxil::ResourceTypeInfo &>(RI),
+        HasCounter(HasCounter) {}
+
+  bool HasCounter;
 
   void format(llvm::raw_ostream &OS, StringRef Style) override {
     dxil::ResourceKind RK = Item.getResourceKind();
@@ -155,7 +158,7 @@ struct FormatResourceDimension
     case dxil::ResourceKind::StructuredBuffer:
       if (!Item.isUAV())
         OS << "r/o";
-      else if (Item.getUAV().HasCounter)
+      else if (HasCounter)
         OS << "r/w+cnt";
       else
         OS << "r/w";
@@ -238,7 +241,7 @@ static void prettyPrintResources(raw_ostream &OS, const DXILResourceMap &DRM,
     StringRef Name(RI.getName());
     StringRef Type(getRCName(RC));
     StringRef Format(getFormatName(RTI));
-    FormatResourceDimension Dim(RTI);
+    FormatResourceDimension Dim(RTI, RI.hasCounter());
     FormatBindingID ID(RI, RTI);
     FormatBindingLocation Bind(RI, RTI);
     FormatBindingSize Count(RI);
@@ -262,13 +265,8 @@ class DXILPrettyPrinterLegacy : public llvm::ModulePass {
 
 public:
   static char ID;
-  DXILPrettyPrinterLegacy() : ModulePass(ID), OS(dbgs()) {
-    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
-  }
 
-  explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {
-    initializeDXILPrettyPrinterLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {}
 
   StringRef getPassName() const override {
     return "DXIL Metadata Pretty Printer";

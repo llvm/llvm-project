@@ -692,3 +692,20 @@ llvm.func @caller(%x : i32) -> i32 {
   %z = llvm.call @unreachable_func(%x) : (i32) -> (i32)
   llvm.return %z : i32
 }
+
+// -----
+// Check that @func is not inlined because of llvm.blocktag
+
+func.func @func(%arg0 : i32) -> i32  {
+  llvm.blocktag <id = 1>
+  llvm.return %arg0 : i32
+}
+
+// CHECK-LABEL: @llvm_ret
+func.func @llvm_ret(%arg0 : i32) -> i32 {
+  // CHECK-NOT: llvm.blocktag
+  // CHECK: %[[R:.*]] = call
+  %res = call @func(%arg0) : (i32) -> (i32)
+  // CHECK: return %[[R]]
+  return %res : i32
+}

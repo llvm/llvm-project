@@ -79,6 +79,13 @@ gentbl_cc_library(
             ],
             "include/clang/Basic/Diagnostic%sCompatIDs.inc" % c,
         ),
+        (
+            [
+                "-gen-clang-diags-iface",
+                "-clang-component=%s" % c,
+            ],
+            "include/clang/Basic/Diagnostic%sInterface.inc" % c,
+        ),
     ]] + [
         (
             ["-gen-clang-diag-groups"],
@@ -284,6 +291,14 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/BuiltinsNVPTX.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/BuiltinsNVPTX.td",
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_directx_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsDirectX.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsDirectX.td",
     deps = [":BuiltinsBaseTdFiles"],
 )
 
@@ -611,6 +626,7 @@ cc_library(
         ":basic_attr_gen",
         ":basic_builtin_templates_gen",
         ":basic_builtins_bpf_gen",
+        ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
         ":basic_builtins_hexagon_gen",
         ":basic_builtins_nvptx_gen",
