@@ -413,10 +413,11 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     return nullptr;
   }
   case SPC_Fabs: {
-    if (II->getType() == IC.Builder.getDoubleTy())
-      return IC.Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
-                                             II->getArgOperand(0));
-    return nullptr;
+    if (!II->getType()->isDoubleTy())
+      return nullptr;
+    auto *Fabs = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::fabs, II->getType());
+    return CallInst::Create(Fabs, II->getArgOperand(0));
   }
   }
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
