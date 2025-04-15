@@ -17,12 +17,12 @@ namespace lldb_private {
 
 class ThreadPlanStepOut : public ThreadPlan, public ThreadPlanShouldStopHere {
 public:
-  ThreadPlanStepOut(Thread &thread, SymbolContext *addr_context,
-                    bool first_insn, bool stop_others, Vote report_stop_vote,
-                    Vote report_run_vote, uint32_t frame_idx,
-                    LazyBool step_out_avoids_code_without_debug_info,
-                    bool continue_to_next_branch = false,
-                    bool gather_return_value = true);
+  ThreadPlanStepOut(
+      Thread &thread, SymbolContext *addr_context, bool first_insn,
+      bool stop_others, Vote report_stop_vote, Vote report_run_vote,
+      uint32_t frame_idx, LazyBool step_out_avoids_code_without_debug_info,
+      bool continue_to_next_branch = false, bool gather_return_value = true,
+      lldb_private::Flags flags = ThreadPlanStepOut::s_default_flag_values);
 
   ~ThreadPlanStepOut() override;
 
@@ -86,6 +86,10 @@ private:
   // from step in.
 
   void CalculateReturnValue();
+
+  /// Computes the target frame this plan should step out to.
+  lldb::StackFrameSP ComputeTargetFrame(Thread &thread,
+                                        uint32_t start_frame_idx, Flags flags);
 
   ThreadPlanStepOut(const ThreadPlanStepOut &) = delete;
   const ThreadPlanStepOut &operator=(const ThreadPlanStepOut &) = delete;

@@ -60,7 +60,9 @@ public:
     eAvoidInlines = (1 << 0),
     eStepInAvoidNoDebug = (1 << 1),
     eStepOutAvoidNoDebug = (1 << 2),
-    eStepOutPastThunks = (1 << 3)
+    eStepOutPastThunks = (1 << 3),
+    eStepOutPastHiddenFunctions = (1 << 4),
+    eStepOutPastArtificialFunctions = (1 << 5),
   };
 
   // Constructors and Destructors

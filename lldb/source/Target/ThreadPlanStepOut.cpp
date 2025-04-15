@@ -29,14 +29,44 @@
 using namespace lldb;
 using namespace lldb_private;
 
-uint32_t ThreadPlanStepOut::s_default_flag_values = 0;
+uint32_t ThreadPlanStepOut::s_default_flag_values =
+    eStepOutPastArtificialFunctions | eStepOutPastHiddenFunctions;
+
+StackFrameSP ThreadPlanStepOut::ComputeTargetFrame(Thread &thread,
+                                                   uint32_t start_frame_idx,
+                                                   Flags flags) {
+  uint32_t frame_idx = start_frame_idx + 1;
+  StackFrameSP return_frame_sp = thread.GetStackFrameAtIndex(frame_idx);
+  if (!return_frame_sp)
+    return nullptr;
+
+  // If asked to, step out past artificial/hidden frames.
+  while ((flags.Test(eStepOutPastArtificialFunctions) &&
+          return_frame_sp->IsArtificial()) ||
+         (flags.Test(eStepOutPastHiddenFunctions) &&
+          return_frame_sp->IsHidden())) {
+    m_stepped_past_frames.push_back(return_frame_sp);
+
+    frame_idx++;
+    return_frame_sp = thread.GetStackFrameAtIndex(frame_idx);
+
+    // We never expect to see an artificial frame without a regular ancestor.
+    // Defensively refuse to step out.
+    if (!return_frame_sp) {
+      LLDB_LOG(GetLog(LLDBLog::Step),
+               "Can't step out of frame with artificial ancestors");
+      return nullptr;
+    }
+  }
+  return return_frame_sp;
+}
 
 // ThreadPlanStepOut: Step out of the current frame
 ThreadPlanStepOut::ThreadPlanStepOut(
     Thread &thread, SymbolContext *context, bool first_insn, bool stop_others,
     Vote report_stop_vote, Vote report_run_vote, uint32_t frame_idx,
     LazyBool step_out_avoids_code_without_debug_info,
-    bool continue_to_next_branch, bool gather_return_value)
+    bool continue_to_next_branch, bool gather_return_value, Flags flags)
     : ThreadPlan(ThreadPlan::eKindStepOut, "Step out", thread, report_stop_vote,
                  report_run_vote),
       ThreadPlanShouldStopHere(this), m_step_from_insn(LLDB_INVALID_ADDRESS),
@@ -44,33 +74,16 @@ ThreadPlanStepOut::ThreadPlanStepOut(
       m_return_addr(LLDB_INVALID_ADDRESS), m_stop_others(stop_others),
       m_immediate_step_from_function(nullptr),
       m_calculate_return_value(gather_return_value) {
-  Log *log = GetLog(LLDBLog::Step);
-  SetFlagsToDefault();
+  m_flags = flags;
   SetupAvoidNoDebug(step_out_avoids_code_without_debug_info);
 
   m_step_from_insn = thread.GetRegisterContext()->GetPC(0);
 
-  uint32_t return_frame_index = frame_idx + 1;
-  StackFrameSP return_frame_sp(thread.GetStackFrameAtIndex(return_frame_index));
+  StackFrameSP return_frame_sp = ComputeTargetFrame(thread, frame_idx, m_flags);
   StackFrameSP immediate_return_from_sp(thread.GetStackFrameAtIndex(frame_idx));
 
   if (!return_frame_sp || !immediate_return_from_sp)
     return; // we can't do anything here.  ValidatePlan() will return false.
-
-  // While stepping out, behave as-if artificial frames are not present.
-  while (return_frame_sp->IsArtificial() || return_frame_sp->IsHidden()) {
-    m_stepped_past_frames.push_back(return_frame_sp);
-
-    ++return_frame_index;
-    return_frame_sp = thread.GetStackFrameAtIndex(return_frame_index);
-
-    // We never expect to see an artificial frame without a regular ancestor.
-    // If this happens, log the issue and defensively refuse to step out.
-    if (!return_frame_sp) {
-      LLDB_LOG(log, "Can't step out of frame with artificial ancestors");
-      return;
-    }
-  }
 
   m_step_out_to_id = return_frame_sp->GetStackID();
   m_immediate_step_from_id = immediate_return_from_sp->GetStackID();
@@ -125,6 +138,7 @@ ThreadPlanStepOut::ThreadPlanStepOut(
 
     // Perform some additional validation on the return address.
     uint32_t permissions = 0;
+    Log *log = GetLog(LLDBLog::Step);
     if (!m_process.GetLoadAddressPermissions(m_return_addr, permissions)) {
       LLDB_LOGF(log, "ThreadPlanStepOut(%p): Return address (0x%" PRIx64
                 ") permissions not found.", static_cast<void *>(this),
