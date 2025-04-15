@@ -91,7 +91,7 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        nullptr} // This one has to be last in the list.
   };
 
-  for (int i = 0; !request.ShouldStopAddingResults(); i++) {
+  for (int i = 0; request.ShouldAddCompletions(); i++) {
     if (common_completions[i].type == lldb::eTerminatorCompletion)
       break;
     else if ((common_completions[i].type & completion_mask) ==
@@ -232,9 +232,8 @@ public:
 
       // Now add the functions & symbols to the list - only add if unique:
       for (const SymbolContext &sc : sc_list) {
-        if (m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd()) {
+        if (m_match_set.size() >= m_request.GetMaxNumberOfResultsToAdd())
           break;
-        }
 
         ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
         // Ensure that the function name matches the regex. This is more than
@@ -313,7 +312,8 @@ public:
           m_request.AddCompletion(cur_file_name);
       }
     }
-    return Searcher::eCallbackReturnContinue;
+    return m_request.ShouldAddCompletions() ? Searcher::eCallbackReturnContinue
+                                            : Searcher::eCallbackReturnStop;
   }
 
   void DoCompletion(SearchFilter *filter) override { filter->Search(*this); }
@@ -437,7 +437,8 @@ static void DiskFilesOrDirectories(const llvm::Twine &partial_name,
   std::error_code EC;
   llvm::vfs::directory_iterator Iter = fs.DirBegin(SearchDir, EC);
   llvm::vfs::directory_iterator End;
-  for (; Iter != End && !EC; Iter.increment(EC)) {
+  for (; Iter != End && !EC && request.ShouldAddCompletions();
+       Iter.increment(EC)) {
     auto &Entry = *Iter;
     llvm::ErrorOr<llvm::vfs::Status> Status = fs.GetStatus(Entry.path());
 

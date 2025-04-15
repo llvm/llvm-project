@@ -164,10 +164,10 @@ public:
 
   size_t GetMaxReturnElements() const { return m_max_return_elements; }
 
-  /// Returns true if the maximum number of completions has been reached
-  /// already.
-  bool ShouldStopAddingResults() const {
-    return m_result.GetNumberOfResults() >= m_max_return_elements;
+  /// Returns true if the maximum number of completions has not been reached
+  /// yet, hence we should keep adding completions.
+  bool ShouldAddCompletions() const {
+    return m_result.GetNumberOfResults() < m_max_return_elements;
   }
 
   /// Returns the maximum number of completions that need to be added
@@ -254,7 +254,7 @@ private:
   /// The cursor position in the argument indexed by m_cursor_index.
   size_t m_cursor_char_position;
   /// The maximum number of completions that should be returned.
-  size_t m_max_return_elements = SIZE_MAX;
+  size_t m_max_return_elements = std::numeric_limits<size_t>::max();
 
   /// The result this request is supposed to fill out.
   /// We keep this object private to ensure that no backend can in any way
