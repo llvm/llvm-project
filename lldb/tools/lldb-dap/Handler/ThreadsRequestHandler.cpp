@@ -50,16 +50,23 @@ namespace lldb_dap {
 // }
 void ThreadsRequestHandler::operator()(
     const llvm::json::Object &request) const {
-  lldb::SBProcess process = dap.target.GetProcess();
   llvm::json::Object response;
   FillResponse(request, response);
 
-  const uint32_t num_threads = process.GetNumThreads();
   llvm::json::Array threads;
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
-    threads.emplace_back(CreateThread(thread, dap.thread_format));
+  // Client requests the baseline of currently existing threads after
+  // a successful launch or attach by sending a 'threads' request
+  // right after receiving the configurationDone response.
+  // If no thread has reported to the client, it prevents something
+  // like the pause request from working in the running state.
+  // Return the cache of initial threads as the process might have resumed
+  if (dap.initial_thread_list) {
+    threads = dap.initial_thread_list.value();
+    dap.initial_thread_list.reset();
+  } else {
+    threads = GetThreads(dap.target.GetProcess(), dap.thread_format);
   }
+
   if (threads.size() == 0) {
     response["success"] = llvm::json::Value(false);
   }

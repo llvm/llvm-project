@@ -44,6 +44,7 @@ namespace lldb_dap {
 //             just an acknowledgement, so no body field is required."
 //             }]
 // },
+
 void ConfigurationDoneRequestHandler::operator()(
     const llvm::json::Object &request) const {
   llvm::json::Object response;
@@ -52,8 +53,15 @@ void ConfigurationDoneRequestHandler::operator()(
   dap.configuration_done_sent = true;
   if (dap.stop_at_entry)
     SendThreadStoppedEvent(dap);
-  else
+  else {
+    // Client requests the baseline of currently existing threads after
+    // a successful launch or attach by sending a 'threads' request
+    // right after receiving the configurationDone response.
+    // Obtain the list of threads before we resume the process
+    dap.initial_thread_list =
+        GetThreads(dap.target.GetProcess(), dap.thread_format);
     dap.target.GetProcess().Continue();
+  }
 }
 
 } // namespace lldb_dap

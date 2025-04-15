@@ -414,6 +414,8 @@ llvm::json::Value CreateExtendedStackFrameLabel(lldb::SBThread &thread,
 ///     definition outlined by Microsoft.
 llvm::json::Value CreateThread(lldb::SBThread &thread, lldb::SBFormat &format);
 
+llvm::json::Array GetThreads(lldb::SBProcess process, lldb::SBFormat &format);
+
 /// Create a "StoppedEvent" object for a LLDB thread object.
 ///
 /// This function will fill in the following keys in the returned
