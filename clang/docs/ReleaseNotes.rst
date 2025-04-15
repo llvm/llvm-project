@@ -38,6 +38,9 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
+- For ARM targets when compiling assembly files, the features included in the selected CPU
+  or Architecture's FPU are included. If you wish not to use a specific feature,
+  the relevant ``+no`` option will need to be amended to the command line option.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -191,6 +194,7 @@ Non-comprehensive list of changes in this release
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
+- Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
 
 New Compiler Flags
 ------------------
@@ -303,6 +307,8 @@ Improvements to Clang's diagnostics
 - Clang now better preserves the sugared types of pointers to member.
 - Clang now better preserves the presence of the template keyword with dependent
   prefixes.
+- Clang now in more cases avoids printing 'type-parameter-X-X' instead of the name of
+  the template parameter.
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
@@ -509,6 +515,7 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -523,7 +530,6 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
-- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

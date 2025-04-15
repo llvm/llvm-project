@@ -13,6 +13,8 @@ qc.e.j  -2147483649
 # CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilb' (Qualcomm uC Long Branch Extension)
 qc.e.j  -2147483648
 
+# CHECK-MINUS: :[[@LINE+1]]:1: error: instruction requires the following: 'Xqcilb' (Qualcomm uC Long Branch Extension)
+qc.e.j  foo
 
 # CHECK: :[[@LINE+1]]:1: error: too few operands for instruction
 qc.e.jal

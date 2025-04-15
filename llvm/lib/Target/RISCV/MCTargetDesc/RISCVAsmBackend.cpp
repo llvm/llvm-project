@@ -95,7 +95,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
       {"fixup_riscv_qc_e_branch", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
       {"fixup_riscv_qc_e_32", 16, 32, 0},
       {"fixup_riscv_qc_abs20_u", 12, 20, 0},
-      {"fixup_riscv_qc_e_jump", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
+      {"fixup_riscv_qc_e_jump_plt", 0, 48, MCFixupKindInfo::FKF_IsPCRel},
   };
   static_assert((std::size(Infos)) == RISCV::NumTargetFixupKinds,
                 "Not all fixup kinds added to Infos array");
@@ -141,20 +141,19 @@ bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   return STI->hasFeature(RISCV::FeatureRelax) || ForceRelocs;
 }
 
-bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(
-    const MCAssembler &Asm, const MCFixup &Fixup, bool Resolved, uint64_t Value,
-    const MCRelaxableFragment *DF, const bool WasForced) const {
+bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCAssembler &,
+                                                   const MCFixup &Fixup,
+                                                   const MCValue &,
+                                                   uint64_t Value,
+                                                   bool Resolved) const {
   if (!RelaxBranches)
     return false;
 
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
 
-  // Return true if the symbol is actually unresolved.
-  // Resolved could be always false when shouldForceRelocation return true.
-  // We use !WasForced to indicate that the symbol is unresolved and not forced
-  // by shouldForceRelocation.
-  if (!Resolved && !WasForced)
+  // Return true if the symbol is unresolved.
+  if (!Resolved)
     return true;
 
   switch (Kind) {
@@ -576,7 +575,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     Value = (Bit19 << 31) | (Bit14_0 << 16) | (Bit18_15 << 12);
     return Value;
   }
-  case RISCV::fixup_riscv_qc_e_jump: {
+  case RISCV::fixup_riscv_qc_e_jump_plt: {
     if (!isInt<32>(Value))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     if (Value & 0x1)
@@ -594,12 +593,9 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
-                                          const MCFixup &Fixup,
-                                          const MCFragment *DF,
-                                          const MCValue &Target,
-                                          const MCSubtargetInfo *STI,
-                                          uint64_t &Value, bool &WasForced) {
+bool RISCVAsmBackend::evaluateTargetFixup(
+    const MCAssembler &Asm, const MCFixup &Fixup, const MCFragment *DF,
+    const MCValue &Target, const MCSubtargetInfo *STI, uint64_t &Value) {
   const MCFixup *AUIPCFixup;
   const MCFragment *AUIPCDF;
   MCValue AUIPCTarget;
@@ -646,12 +642,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
-    WasForced = true;
-    return false;
-  }
-
-  return true;
+  return !shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI);
 }
 
 bool RISCVAsmBackend::handleAddSubRelocations(const MCAssembler &Asm,
