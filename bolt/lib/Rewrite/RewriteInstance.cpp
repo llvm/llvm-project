@@ -247,12 +247,14 @@ static cl::opt<bool> WriteBoltInfoSection(
     "bolt-info", cl::desc("write bolt info section in the output binary"),
     cl::init(true), cl::Hidden, cl::cat(BoltOutputCategory));
 
-cl::list<GadgetScannerKind>
-    GadgetScannersToRun("scanners", cl::desc("which gadget scanners to run"),
-                        cl::values(clEnumValN(GS_PACRET, "pacret", "pac-ret"),
-                                   clEnumValN(GS_ALL, "all", "all")),
-                        cl::ZeroOrMore, cl::CommaSeparated,
-                        cl::cat(BinaryAnalysisCategory));
+cl::bits<GadgetScannerKind> GadgetScannersToRun(
+    "scanners", cl::desc("which gadget scanners to run"),
+    cl::values(
+        clEnumValN(GS_PACRET, "pacret",
+                   "pac-ret: return address protection (subset of \"pauth\")"),
+        clEnumValN(GS_PAUTH, "pauth", "All Pointer Authentication scanners"),
+        clEnumValN(GS_ALL, "all", "All implemented scanners")),
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(BinaryAnalysisCategory));
 
 } // namespace opts
 
@@ -2601,7 +2603,9 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
 void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
                                        const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
+  const bool IsX86 = BC->isX86();
   const bool IsFromCode = RelocatedSection.isText();
+  const bool IsWritable = BinarySection(*BC, RelocatedSection).isWritable();
 
   SmallString<16> TypeName;
   Rel.getTypeName(TypeName);
@@ -2610,7 +2614,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     return;
 
   // Adjust the relocation type as the linker might have skewed it.
-  if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+  if (IsX86 && (RType & ELF::R_X86_64_converted_reloc_bit)) {
     if (opts::Verbosity >= 1)
       dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
     RType &= ~ELF::R_X86_64_converted_reloc_bit;
@@ -2618,7 +2622,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (Relocation::isTLS(RType)) {
     // No special handling required for TLS relocations on X86.
-    if (BC->isX86())
+    if (IsX86)
       return;
 
     // The non-got related TLS relocations on AArch64 and RISC-V also could be
@@ -2657,6 +2661,30 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
              << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
     });
     return;
+  }
+
+  if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
+      Relocation::isPCRelative(RType)) {
+    BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
+    if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
+               BD->nameStartsWith("_ZTCN"))) { // construction vtable
+      BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
+          SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+      if (!BF || BF->getAddress() != SymbolAddress) {
+        BC->errs()
+            << "BOLT-ERROR: the virtual function table entry at offset 0x"
+            << Twine::utohexstr(Rel.getOffset());
+        if (BF)
+          BC->errs() << " points to the middle of a function @ 0x"
+                     << Twine::utohexstr(BF->getAddress()) << "\n";
+        else
+          BC->errs() << " does not point to any function\n";
+        exit(1);
+      }
+      BC->addRelocation(Rel.getOffset(), BF->getSymbol(), RType, Addend,
+                        ExtractedValue);
+      return;
+    }
   }
 
   const uint64_t Address = SymbolAddress + Addend;
@@ -2722,7 +2750,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
   // Special handling of PC-relative relocations.
-  if (BC->isX86() && Relocation::isPCRelative(RType)) {
+  if (IsX86 && Relocation::isPCRelative(RType)) {
     if (!IsFromCode && IsToCode) {
       // PC-relative relocations from data to code are tricky since the
       // original information is typically lost after linking, even with
@@ -2825,9 +2853,10 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (SymbolAddress == 0)
       ReferencedSymbol = BC->registerNameAtAddress(SymbolName, 0, 0, 0);
 
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                      << ReferencedSymbol->getName() << " with addend "
-                      << Addend << '\n');
+    LLVM_DEBUG(
+        dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+               << (ReferencedSymbol ? ReferencedSymbol->getName() : "<none>")
+               << " with addend " << Addend << '\n');
   } else if (ReferencedBF) {
     ReferencedSymbol = ReferencedBF->getSymbol();
     uint64_t RefFunctionOffset = 0;
@@ -3539,12 +3568,18 @@ void RewriteInstance::runBinaryAnalyses() {
   // FIXME: add a pass that warns about which functions do not have CFG,
   // and therefore, analysis is most likely to be less accurate.
   using GSK = opts::GadgetScannerKind;
-  // if no command line option was given, act as if "all" was specified.
-  if (opts::GadgetScannersToRun.empty())
-    opts::GadgetScannersToRun.addValue(GSK::GS_ALL);
-  for (GSK ScannerToRun : opts::GadgetScannersToRun) {
-    if (ScannerToRun == GSK::GS_PACRET || ScannerToRun == GSK::GS_ALL)
-      Manager.registerPass(std::make_unique<PAuthGadgetScanner::Analysis>());
+  using PAuthScanner = PAuthGadgetScanner::Analysis;
+
+  // If no command line option was given, act as if "all" was specified.
+  bool RunAll = !opts::GadgetScannersToRun.getBits() ||
+                opts::GadgetScannersToRun.isSet(GSK::GS_ALL);
+
+  if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PAUTH)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/false));
+  } else if (RunAll || opts::GadgetScannersToRun.isSet(GSK::GS_PACRET)) {
+    Manager.registerPass(
+        std::make_unique<PAuthScanner>(/*OnlyPacRetChecks=*/true));
   }
 
   BC->logBOLTErrorsAndQuitOnFatal(Manager.runPasses());

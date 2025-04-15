@@ -2563,7 +2563,8 @@ struct MicrosoftRecordLayoutBuilder {
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
   MicrosoftRecordLayoutBuilder(const ASTContext &Context,
                                EmptySubobjectMap *EmptySubobjects)
-      : Context(Context), EmptySubobjects(EmptySubobjects) {}
+      : Context(Context), EmptySubobjects(EmptySubobjects),
+        RemainingBitsInField(0) {}
 
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
@@ -3230,6 +3231,11 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   uint64_t UnpaddedSizeInBits = Context.toBits(DataSize);
   UnpaddedSizeInBits -= RemainingBitsInField;
 
+  // MS ABI allocates 1 byte for empty class
+  // (not padding)
+  if (Size.isZero())
+    UnpaddedSizeInBits += 8;
+
   // Respect required alignment.  Note that in 32-bit mode Required alignment
   // may be 0 and cause size not to be updated.
   DataSize = Size;
@@ -3262,6 +3268,7 @@ void MicrosoftRecordLayoutBuilder::finalizeLayout(const RecordDecl *RD) {
   }
   unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
   uint64_t SizeInBits = Context.toBits(Size);
+
   if (SizeInBits > UnpaddedSizeInBits) {
     unsigned int PadSize = SizeInBits - UnpaddedSizeInBits;
     bool InBits = true;

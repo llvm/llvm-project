@@ -32,9 +32,26 @@ struct __attribute__((ms_struct)) StructWithUnion { // expected-warning {{paddin
   short i;
 };
 
+struct __attribute__((ms_struct)) EmptyStruct {};
+
+struct __attribute__((ms_struct)) AlignedMemberStruct { // expected-warning {{padding size of 'AlignedMemberStruct' with 28 bytes to alignment boundary}}
+    alignas(32) int x;
+};
+
+struct alignas(32) __attribute__((ms_struct)) AlignedNonEmptyStruct { // expected-warning {{padding size of 'AlignedNonEmptyStruct' with 28 bytes to alignment boundary}}
+    int x;
+};
+
+
+struct alignas(16) __attribute__((ms_struct)) AlignedEmptyStruct {}; // expected-warning {{padding size of 'AlignedEmptyStruct' with 15 bytes to alignment boundary}}
+
 int main() {
   Foo f;
   AlignedStruct a;
   Derived d;
   StructWithUnion swu;
+  EmptyStruct e;
+  AlignedNonEmptyStruct anes;
+  AlignedMemberStruct ams;
+  AlignedEmptyStruct aes;
 }

@@ -7977,6 +7977,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
+
   if (getLangOpts().OpenACC)
     OpenACC().ActOnVariableDeclarator(NewVD);
 
@@ -9353,7 +9354,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
         SemaRef.Context, DC, D.getBeginLoc(), NameInfo, R, TInfo, SC,
         SemaRef.getCurFPFeatures().isFPConstrained(), isInline, HasPrototype,
         ConstexprSpecKind::Unspecified,
-        /*TrailingRequiresClause=*/nullptr);
+        /*TrailingRequiresClause=*/{});
     if (D.isInvalidType())
       NewFD->setInvalidDecl();
 
@@ -9361,7 +9362,7 @@ static FunctionDecl *CreateNewFunctionDecl(Sema &SemaRef, Declarator &D,
   }
 
   ExplicitSpecifier ExplicitSpecifier = D.getDeclSpec().getExplicitSpecifier();
-  Expr *TrailingRequiresClause = D.getTrailingRequiresClause();
+  AssociatedConstraint TrailingRequiresClause(D.getTrailingRequiresClause());
 
   SemaRef.CheckExplicitObjectMemberFunction(DC, D, Name, R);
 
@@ -10168,10 +10169,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // deallocation function shall not be declared with the consteval
       // specifier.
       if (ConstexprKind == ConstexprSpecKind::Consteval &&
-          (NewFD->getOverloadedOperator() == OO_New ||
-           NewFD->getOverloadedOperator() == OO_Array_New ||
-           NewFD->getOverloadedOperator() == OO_Delete ||
-           NewFD->getOverloadedOperator() == OO_Array_Delete)) {
+          NewFD->getDeclName().isAnyOperatorNewOrDelete()) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(),
              diag::err_invalid_consteval_decl_kind)
             << NewFD;
@@ -10275,9 +10273,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //   A deallocation function with no exception-specification is treated
     //   as if it were specified with noexcept(true).
     const FunctionProtoType *FPT = R->getAs<FunctionProtoType>();
-    if ((Name.getCXXOverloadedOperator() == OO_Delete ||
-         Name.getCXXOverloadedOperator() == OO_Array_Delete) &&
-        getLangOpts().CPlusPlus11 && FPT && !FPT->hasExceptionSpec())
+    if (Name.isAnyOperatorDelete() && getLangOpts().CPlusPlus11 && FPT &&
+        !FPT->hasExceptionSpec())
       NewFD->setType(Context.getFunctionType(
           FPT->getReturnType(), FPT->getParamTypes(),
           FPT->getExtProtoInfo().withExceptionSpec(EST_BasicNoexcept)));
@@ -10531,7 +10528,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
            diag::ext_operator_new_delete_declared_inline)
         << NewFD->getDeclName();
 
-    if (Expr *TRC = NewFD->getTrailingRequiresClause()) {
+    if (const Expr *TRC = NewFD->getTrailingRequiresClause().ConstraintExpr) {
       // C++20 [dcl.decl.general]p4:
       //   The optional requires-clause in an init-declarator or
       //   member-declarator shall be present only if the declarator declares a
@@ -12261,7 +12258,7 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
       if (Method->isVirtual() && NewFD->getTrailingRequiresClause())
         // C++2a [class.virtual]p6
         // A virtual method shall not have a requires-clause.
-        Diag(NewFD->getTrailingRequiresClause()->getBeginLoc(),
+        Diag(NewFD->getTrailingRequiresClause().ConstraintExpr->getBeginLoc(),
              diag::err_constrained_virtual_method);
 
       if (Method->isStatic())
@@ -13130,6 +13127,9 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
 
   if (getLangOpts().OpenCL)
     deduceOpenCLAddressSpace(VDecl);
+
+  if (getLangOpts().HLSL)
+    HLSL().deduceAddressSpace(VDecl);
 
   // If this is a redeclaration, check that the type we just deduced matches
   // the previously declared type.
@@ -14246,7 +14246,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
                   Var->getLocation(), ArrayT->getElementType(),
                   diag::err_array_incomplete_or_sizeless_type))
             Var->setInvalidDecl();
-        } else if (Var->getStorageClass() == SC_Static) {
+        }
+        if (Var->getStorageClass() == SC_Static) {
           // C99 6.9.2p3: If the declaration of an identifier for an object is
           // a tentative definition and has internal linkage (C99 6.2.2p3), the
           // declared type shall not be an incomplete type.
@@ -14258,7 +14259,8 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
           // NOTE: to avoid multiple warnings, only check the first declaration.
           if (Var->isFirstDecl())
             RequireCompleteType(Var->getLocation(), Type,
-                                diag::ext_typecheck_decl_incomplete_type);
+                                diag::ext_typecheck_decl_incomplete_type,
+                                Type->isArrayType());
         }
       }
 
@@ -16230,7 +16232,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
 
       // If the function implicitly returns zero (like 'main') or is naked,
       // don't complain about missing return statements.
-      if (FD->hasImplicitReturnZero() || FD->hasAttr<NakedAttr>())
+      // Clang implicitly returns 0 in C89 mode, but that's considered an
+      // extension. The check is necessary to ensure the expected extension
+      // warning is emitted in C89 mode.
+      if ((FD->hasImplicitReturnZero() &&
+           (getLangOpts().CPlusPlus || getLangOpts().C99 || !FD->isMain())) ||
+          FD->hasAttr<NakedAttr>())
         WP.disableCheckFallThrough();
 
       // MSVC permits the use of pure specifier (=0) on function definition,
@@ -16749,7 +16756,7 @@ void Sema::AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(
       FD->getDeclName().getCXXOverloadedOperator() != OO_Array_New)
     return;
 
-  std::optional<unsigned> AlignmentParam;
+  UnsignedOrNone AlignmentParam = std::nullopt;
   bool IsNothrow = false;
   if (!FD->isReplaceableGlobalAllocationFunction(&AlignmentParam, &IsNothrow))
     return;
@@ -19085,8 +19092,7 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
   SmallVector<bool, 4> SatisfactionStatus;
 
   for (CXXMethodDecl *Method : Methods) {
-    const Expr *Constraints = Method->getTrailingRequiresClause();
-    if (!Constraints)
+    if (!Method->getTrailingRequiresClause())
       SatisfactionStatus.push_back(true);
     else {
       ConstraintSatisfaction Satisfaction;
@@ -19105,7 +19111,7 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
     if (FunctionDecl *MF = OrigMethod->getInstantiatedFromMemberFunction())
       OrigMethod = cast<CXXMethodDecl>(MF);
 
-    const Expr *Constraints = OrigMethod->getTrailingRequiresClause();
+    AssociatedConstraint Orig = OrigMethod->getTrailingRequiresClause();
     bool AnotherMethodIsMoreConstrained = false;
     for (size_t j = 0; j < Methods.size(); j++) {
       if (i == j || !SatisfactionStatus[j])
@@ -19118,15 +19124,13 @@ static void SetEligibleMethods(Sema &S, CXXRecordDecl *Record,
                                              CSM))
         continue;
 
-      const Expr *OtherConstraints = OtherMethod->getTrailingRequiresClause();
-      if (!OtherConstraints)
+      AssociatedConstraint Other = OtherMethod->getTrailingRequiresClause();
+      if (!Other)
         continue;
-      if (!Constraints) {
+      if (!Orig) {
         AnotherMethodIsMoreConstrained = true;
         break;
       }
-      AssociatedConstraint Other(OtherConstraints);
-      AssociatedConstraint Orig(Constraints);
       if (S.IsAtLeastAsConstrained(OtherMethod, {Other}, OrigMethod, {Orig},
                                    AnotherMethodIsMoreConstrained)) {
         // There was an error with the constraints comparison. Exit the loop

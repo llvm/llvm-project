@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
@@ -139,7 +140,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
     if (MightHaveChanged) {
       QualType QT = Ctx.getTemplateSpecializationType(
           TST->getTemplateName(), FQArgs,
-          TST->getCanonicalTypeInternal());
+          /*CanonicalArgs=*/std::nullopt, TST->desugar());
       // getTemplateSpecializationType returns a fully qualified
       // version of the specialization itself, so no need to qualify
       // it.
@@ -171,6 +172,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
         TemplateName TN(TSTDecl->getSpecializedTemplate());
         QualType QT = Ctx.getTemplateSpecializationType(
             TN, FQArgs,
+            /*CanonicalArgs=*/std::nullopt,
             TSTRecord->getCanonicalTypeInternal());
         // getTemplateSpecializationType returns a fully qualified
         // version of the specialization itself, so no need to qualify
@@ -414,6 +416,18 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
+  }
+
+  // Handle types with attributes such as `unique_ptr<int> _Nonnull`.
+  if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
+    QualType NewModified =
+        getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
+    QualType NewEquivalent =
+        getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
+    Qualifiers Qualifiers = QT.getLocalQualifiers();
+    return Ctx.getQualifiedType(
+        Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent),
+        Qualifiers);
   }
 
   // Remove the part of the type related to the type being a template

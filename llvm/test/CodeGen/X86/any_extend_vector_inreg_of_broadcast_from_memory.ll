@@ -644,7 +644,7 @@ define void @vec128_i16_widen_to_i32_factor2_broadcast_to_v4i32_factor4(ptr %in.
 ; AVX512BW-SLOW-LABEL: vec128_i16_widen_to_i32_factor2_broadcast_to_v4i32_factor4:
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,9,0,11,0,13,0,15]
-; AVX512BW-SLOW-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vpermw (%rdi), %ymm0, %ymm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rdx)
 ; AVX512BW-SLOW-NEXT:    vzeroupper
@@ -653,7 +653,7 @@ define void @vec128_i16_widen_to_i32_factor2_broadcast_to_v4i32_factor4(ptr %in.
 ; AVX512BW-FAST-LABEL: vec128_i16_widen_to_i32_factor2_broadcast_to_v4i32_factor4:
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,9,0,11,0,13,6,7]
-; AVX512BW-FAST-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vpermw (%rdi), %ymm0, %ymm0
 ; AVX512BW-FAST-NEXT:    vpinsrw $6, (%rdi), %xmm0, %xmm0
 ; AVX512BW-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6],mem[7]
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
@@ -738,7 +738,7 @@ define void @vec128_i16_widen_to_i64_factor4_broadcast_to_v2i64_factor2(ptr %in.
 ; AVX512BW-SLOW-LABEL: vec128_i16_widen_to_i64_factor4_broadcast_to_v2i64_factor2:
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,9,10,11,0,13,6,7]
-; AVX512BW-SLOW-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-SLOW-NEXT:    vpermw (%rdi), %ymm0, %ymm0
 ; AVX512BW-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1,2],mem[3]
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-SLOW-NEXT:    vmovdqa64 %zmm0, (%rdx)
@@ -748,7 +748,7 @@ define void @vec128_i16_widen_to_i64_factor4_broadcast_to_v2i64_factor2(ptr %in.
 ; AVX512BW-FAST-LABEL: vec128_i16_widen_to_i64_factor4_broadcast_to_v2i64_factor2:
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} xmm0 = [0,9,10,11,0,5,6,7]
-; AVX512BW-FAST-NEXT:    vpermw (%rdi), %zmm0, %zmm0
+; AVX512BW-FAST-NEXT:    vpermw (%rdi), %ymm0, %ymm0
 ; AVX512BW-FAST-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],mem[5,6,7]
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
 ; AVX512BW-FAST-NEXT:    vmovdqa64 %zmm0, (%rdx)
