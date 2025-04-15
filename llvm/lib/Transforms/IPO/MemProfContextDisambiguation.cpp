@@ -3807,8 +3807,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
           // Make sure we don't pick a previously existing caller edge of this
           // Node, which would be processed on a different iteration of the
           // outer loop over the saved CallerEdges.
-          if (std::find(CallerEdges.begin(), CallerEdges.end(), E) !=
-              CallerEdges.end())
+          if (llvm::is_contained(CallerEdges, E))
             continue;
           // The CallerAllocTypeForAlloc and CalleeEdgeAllocTypesForCallerEdge
           // are updated further below for all cases where we just invoked

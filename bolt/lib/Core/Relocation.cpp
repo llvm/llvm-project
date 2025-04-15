@@ -96,6 +96,7 @@ static bool isSupportedAArch64(uint32_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2:
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
@@ -202,6 +203,7 @@ static size_t getSizeForTypeAArch64(uint32_t Type) {
   case ELF::R_AARCH64_MOVW_UABS_G2_NC:
   case ELF::R_AARCH64_MOVW_UABS_G3:
   case ELF::R_AARCH64_ABS32:
+  case ELF::R_AARCH64_PLT32:
     return 4;
   case ELF::R_AARCH64_ABS64:
   case ELF::R_AARCH64_PREL64:
@@ -354,6 +356,7 @@ static uint64_t extractValueAArch64(uint32_t Type, uint64_t Contents,
   case ELF::R_AARCH64_PREL16:
     return static_cast<int64_t>(PC) + SignExtend64<16>(Contents & 0xffff);
   case ELF::R_AARCH64_PREL32:
+  case ELF::R_AARCH64_PLT32:
     return static_cast<int64_t>(PC) + SignExtend64<32>(Contents & 0xffffffff);
   case ELF::R_AARCH64_PREL64:
     return static_cast<int64_t>(PC) + Contents;
@@ -676,6 +679,7 @@ static bool isPCRelativeAArch64(uint32_t Type) {
   case ELF::R_AARCH64_PREL16:
   case ELF::R_AARCH64_PREL32:
   case ELF::R_AARCH64_PREL64:
+  case ELF::R_AARCH64_PLT32:
     return true;
   }
 }
