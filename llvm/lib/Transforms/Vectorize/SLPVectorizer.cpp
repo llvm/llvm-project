@@ -15358,15 +15358,14 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   InstructionCost Cost;
   auto EstimateInsertCost = [&](unsigned I, Value *V) {
-    if (V->getType() != ScalarTy) {
+    DemandedElements.setBit(I);
+    if (V->getType() != ScalarTy)
       Cost += TTI->getCastInstrCost(Instruction::Trunc, ScalarTy, V->getType(),
                                     TTI::CastContextHint::None, CostKind);
-      V = nullptr;
-    }
-    if (!ForPoisonSrc)
-      DemandedElements.setBit(I);
   };
   SmallVector<int> ShuffleMask(VL.size(), PoisonMaskElem);
+  SmallVector<int> ConstantShuffleMask(VL.size(), PoisonMaskElem);
+  std::iota(ConstantShuffleMask.begin(), ConstantShuffleMask.end(), 0);
   for (unsigned I = 0, E = VL.size(); I < E; ++I) {
     Value *V = VL[I];
     // No need to shuffle duplicates for constants.
@@ -15376,6 +15375,11 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
       continue;
     }
 
+    if (isConstant(V)) {
+      ConstantShuffleMask[I] = I + E;
+      ShuffleMask[I] = I;
+      continue;
+    }
     auto Res = UniqueElements.try_emplace(V, I);
     if (Res.second) {
       EstimateInsertCost(I, V);
@@ -15387,18 +15391,28 @@ InstructionCost BoUpSLP::getGatherCost(ArrayRef<Value *> VL, bool ForPoisonSrc,
     ShuffledElements.setBit(I);
     ShuffleMask[I] = Res.first->second;
   }
-  if (ForPoisonSrc) {
-    Cost = getScalarizationOverhead(*TTI, ScalarTy, VecTy,
-                                    /*DemandedElts*/ ~ShuffledElements,
-                                    /*Insert*/ true,
-                                    /*Extract*/ false, CostKind,
-                                    /*ForPoisonSrc=*/true, VL);
-  } else if (!DemandedElements.isZero()) {
+  // FIXME: add a cost for constant vector materialization.
+  bool IsAnyNonUndefConst =
+      any_of(VL, [](Value *V) { return !isa<UndefValue>(V) && isConstant(V); });
+  // 1. Shuffle input source vector and constant vector.
+  if (!ForPoisonSrc && IsAnyNonUndefConst) {
+    Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteTwoSrc, VecTy,
+                             ConstantShuffleMask);
+    for (auto [Idx, I] : enumerate(ShuffleMask)) {
+      if (I == PoisonMaskElem)
+        I = Idx;
+      else
+        I += VL.size();
+    }
+  }
+
+  // 2. Insert unique non-constants.
+  if (!DemandedElements.isZero())
     Cost += getScalarizationOverhead(*TTI, ScalarTy, VecTy, DemandedElements,
                                      /*Insert=*/true,
                                      /*Extract=*/false, CostKind,
-                                     /*ForPoisonSrc=*/false, VL);
-  }
+                                     ForPoisonSrc && !IsAnyNonUndefConst, VL);
+  // 3. Shuffle duplicates.
   if (DuplicateNonConst)
     Cost += ::getShuffleCost(*TTI, TargetTransformInfo::SK_PermuteSingleSrc,
                              VecTy, ShuffleMask);

@@ -551,6 +551,9 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
   case SyncScope::OpenCLAllSVMDevices:
     Name = "";
     break;
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    Name = "cluster";
   }
 
   // OpenCL assumes by default that atomic scopes are per-address space for

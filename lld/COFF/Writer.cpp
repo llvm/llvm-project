@@ -1359,14 +1359,14 @@ void Writer::createExportTable() {
 
       for (auto chunk : edataSec->chunks) {
         if (chunk->getMachine() != ARM64) {
-          ctx.hybridSymtab->edataStart = chunk;
-          ctx.hybridSymtab->edataEnd = edataSec->chunks.back();
+          ctx.symtab.edataStart = chunk;
+          ctx.symtab.edataEnd = edataSec->chunks.back();
           break;
         }
 
-        if (!ctx.symtab.edataStart)
-          ctx.symtab.edataStart = chunk;
-        ctx.symtab.edataEnd = chunk;
+        if (!ctx.hybridSymtab->edataStart)
+          ctx.hybridSymtab->edataStart = chunk;
+        ctx.hybridSymtab->edataEnd = chunk;
       }
     }
   }
@@ -1760,7 +1760,8 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  coff->Machine = ctx.symtab.isEC() ? AMD64 : ctx.symtab.machine;
+  SymbolTable &symtab = ctx.hybridSymtab ? *ctx.hybridSymtab : ctx.symtab;
+  coff->Machine = symtab.isEC() ? AMD64 : symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
@@ -1807,7 +1808,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   pe->SizeOfImage = sizeOfImage;
   pe->SizeOfHeaders = sizeOfHeaders;
   if (!config->noEntry) {
-    Defined *entry = cast<Defined>(ctx.symtab.entry);
+    Defined *entry = cast<Defined>(symtab.entry);
     pe->AddressOfEntryPoint = entry->getRVA();
     // Pointer to thumb code must have the LSB set, so adjust it.
     if (config->machine == ARMNT)
@@ -1851,11 +1852,11 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
          dataDirOffset64 == buf - buffer->getBufferStart());
   auto *dir = reinterpret_cast<data_directory *>(buf);
   buf += sizeof(*dir) * numberOfDataDirectory;
-  if (ctx.symtab.edataStart) {
-    dir[EXPORT_TABLE].RelativeVirtualAddress = ctx.symtab.edataStart->getRVA();
-    dir[EXPORT_TABLE].Size = ctx.symtab.edataEnd->getRVA() +
-                             ctx.symtab.edataEnd->getSize() -
-                             ctx.symtab.edataStart->getRVA();
+  if (symtab.edataStart) {
+    dir[EXPORT_TABLE].RelativeVirtualAddress = symtab.edataStart->getRVA();
+    dir[EXPORT_TABLE].Size = symtab.edataEnd->getRVA() +
+                             symtab.edataEnd->getSize() -
+                             symtab.edataStart->getRVA();
   }
   if (importTableStart) {
     dir[IMPORT_TABLE].RelativeVirtualAddress = importTableStart->getRVA();
@@ -1886,7 +1887,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[BASE_RELOCATION_TABLE].RelativeVirtualAddress = relocSec->getRVA();
     dir[BASE_RELOCATION_TABLE].Size = relocSize;
   }
-  if (Symbol *sym = ctx.symtab.findUnderscore("_tls_used")) {
+  if (Symbol *sym = symtab.findUnderscore("_tls_used")) {
     if (Defined *b = dyn_cast<Defined>(sym)) {
       dir[TLS_TABLE].RelativeVirtualAddress = b->getRVA();
       dir[TLS_TABLE].Size = config->is64()
@@ -1898,10 +1899,10 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     dir[DEBUG_DIRECTORY].RelativeVirtualAddress = debugDirectory->getRVA();
     dir[DEBUG_DIRECTORY].Size = debugDirectory->getSize();
   }
-  if (ctx.symtab.loadConfigSym) {
+  if (symtab.loadConfigSym) {
     dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress =
-        ctx.symtab.loadConfigSym->getRVA();
-    dir[LOAD_CONFIG_TABLE].Size = ctx.symtab.loadConfigSize;
+        symtab.loadConfigSym->getRVA();
+    dir[LOAD_CONFIG_TABLE].Size = symtab.loadConfigSize;
   }
   if (!delayIdata.empty()) {
     dir[DELAY_IMPORT_DESCRIPTOR].RelativeVirtualAddress =
@@ -2442,7 +2443,7 @@ void Writer::setECSymbols() {
     // For the hybrid image, set the alternate entry point to the EC entry
     // point. In the hybrid view, it is swapped to the native entry point
     // using ARM64X relocations.
-    if (auto altEntrySym = cast_or_null<Defined>(ctx.hybridSymtab->entry)) {
+    if (auto altEntrySym = cast_or_null<Defined>(ctx.symtab.entry)) {
       // If the entry is an EC export thunk, use its target instead.
       if (auto thunkChunk =
               dyn_cast<ECExportThunkChunk>(altEntrySym->getChunk()))
@@ -2711,7 +2712,7 @@ void Writer::createDynamicRelocs() {
   if (ctx.symtab.entry != ctx.hybridSymtab->entry ||
       pdata.first != hybridPdata.first) {
     chpeSym = cast_or_null<DefinedRegular>(
-        ctx.hybridSymtab->findUnderscore("__chpe_metadata"));
+        ctx.symtab.findUnderscore("__chpe_metadata"));
     if (!chpeSym)
       Warn(ctx) << "'__chpe_metadata' is missing for ARM64X target";
   }
@@ -2720,14 +2721,14 @@ void Writer::createDynamicRelocs() {
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            peHeaderOffset +
                                offsetof(pe32plus_header, AddressOfEntryPoint),
-                           cast_or_null<Defined>(ctx.hybridSymtab->entry));
+                           cast_or_null<Defined>(ctx.symtab.entry));
 
     // Swap the alternate entry point in the CHPE metadata.
     if (chpeSym)
       ctx.dynamicRelocs->add(
           IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
           Arm64XRelocVal(chpeSym, offsetof(chpe_metadata, AlternateEntryPoint)),
-          cast_or_null<Defined>(ctx.symtab.entry));
+          cast_or_null<Defined>(ctx.hybridSymtab->entry));
   }
 
   if (ctx.symtab.edataStart != ctx.hybridSymtab->edataStart) {
@@ -2735,7 +2736,7 @@ void Writer::createDynamicRelocs() {
                            dataDirOffset64 +
                                EXPORT_TABLE * sizeof(data_directory) +
                                offsetof(data_directory, RelativeVirtualAddress),
-                           ctx.hybridSymtab->edataStart);
+                           ctx.symtab.edataStart);
     // The Size value is assigned after addresses are finalized.
     ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                            dataDirOffset64 +
@@ -2773,12 +2774,12 @@ void Writer::createDynamicRelocs() {
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, RelativeVirtualAddress),
-                         ctx.hybridSymtab->loadConfigSym);
+                         ctx.symtab.loadConfigSym);
   ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
                          dataDirOffset64 +
                              LOAD_CONFIG_TABLE * sizeof(data_directory) +
                              offsetof(data_directory, Size),
-                         ctx.hybridSymtab->loadConfigSize);
+                         ctx.symtab.loadConfigSize);
 }
 
 PartialSection *Writer::createPartialSection(StringRef name,
@@ -2889,15 +2890,14 @@ void Writer::prepareLoadConfig(SymbolTable &symtab, T *loadConfig) {
     // On ARM64X, only the EC version of the load config contains
     // CHPEMetadataPointer. Copy its value to the native load config.
     if (ctx.hybridSymtab && !symtab.isEC() &&
-        ctx.hybridSymtab->loadConfigSize >=
+        ctx.symtab.loadConfigSize >=
             offsetof(T, CHPEMetadataPointer) + sizeof(T::CHPEMetadataPointer)) {
       OutputSection *sec =
-          ctx.getOutputSection(ctx.hybridSymtab->loadConfigSym->getChunk());
+          ctx.getOutputSection(ctx.symtab.loadConfigSym->getChunk());
       uint8_t *secBuf = buffer->getBufferStart() + sec->getFileOff();
       auto hybridLoadConfig =
           reinterpret_cast<const coff_load_configuration64 *>(
-              secBuf +
-              (ctx.hybridSymtab->loadConfigSym->getRVA() - sec->getRVA()));
+              secBuf + (ctx.symtab.loadConfigSym->getRVA() - sec->getRVA()));
       loadConfig->CHPEMetadataPointer = hybridLoadConfig->CHPEMetadataPointer;
     }
   }

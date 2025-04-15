@@ -45,11 +45,13 @@ enum class SyncScope {
   WorkgroupScope,
   WavefrontScope,
   SingleScope,
+  ClusterScope,
   HIPSingleThread,
   HIPWavefront,
   HIPWorkgroup,
   HIPAgent,
   HIPSystem,
+  HIPCluster,
   OpenCLWorkGroup,
   OpenCLDevice,
   OpenCLAllSVMDevices,
@@ -69,6 +71,8 @@ inline llvm::StringRef getAsString(SyncScope S) {
     return "wavefront_scope";
   case SyncScope::SingleScope:
     return "single_scope";
+  case SyncScope::ClusterScope:
+    return "cluster_scope";
   case SyncScope::HIPSingleThread:
     return "hip_singlethread";
   case SyncScope::HIPWavefront:
@@ -79,6 +83,8 @@ inline llvm::StringRef getAsString(SyncScope S) {
     return "hip_agent";
   case SyncScope::HIPSystem:
     return "hip_system";
+  case SyncScope::HIPCluster:
+    return "hip_cluster";
   case SyncScope::OpenCLWorkGroup:
     return "opencl_workgroup";
   case SyncScope::OpenCLDevice:
@@ -180,7 +186,8 @@ public:
     Workgroup = 3,
     Agent = 4,
     System = 5,
-    Last = System
+    Cluster = 6,
+    Last = Cluster
   };
 
   AtomicScopeHIPModel() {}
@@ -197,6 +204,8 @@ public:
       return SyncScope::HIPAgent;
     case System:
       return SyncScope::HIPSystem;
+    case Cluster:
+      return SyncScope::HIPCluster;
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -207,11 +216,11 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
-    static_assert(Last == System, "Does not include all sync scopes");
+    static_assert(Last == Cluster, "Does not include all sync scopes");
     static const unsigned Scopes[] = {
         static_cast<unsigned>(SingleThread), static_cast<unsigned>(Wavefront),
-        static_cast<unsigned>(Workgroup), static_cast<unsigned>(Agent),
-        static_cast<unsigned>(System)};
+        static_cast<unsigned>(Workgroup),    static_cast<unsigned>(Agent),
+        static_cast<unsigned>(System),       static_cast<unsigned>(Cluster)};
     return llvm::ArrayRef(Scopes);
   }
 
@@ -230,7 +239,8 @@ public:
     Workgroup = 2,
     Wavefront = 3,
     Single = 4,
-    Last = Single
+    Cluster = 5,
+    Last = Cluster
   };
 
   AtomicScopeGenericModel() = default;
@@ -247,6 +257,8 @@ public:
       return SyncScope::WavefrontScope;
     case Single:
       return SyncScope::SingleScope;
+    case Cluster:
+      return SyncScope::ClusterScope;
     }
     llvm_unreachable("Invalid language sync scope value");
   }
@@ -256,11 +268,11 @@ public:
   }
 
   ArrayRef<unsigned> getRuntimeValues() const override {
-    static_assert(Last == Single, "Does not include all sync scopes");
+    static_assert(Last == Cluster, "Does not include all sync scopes");
     static const unsigned Scopes[] = {
-        static_cast<unsigned>(Device), static_cast<unsigned>(System),
+        static_cast<unsigned>(Device),    static_cast<unsigned>(System),
         static_cast<unsigned>(Workgroup), static_cast<unsigned>(Wavefront),
-        static_cast<unsigned>(Single)};
+        static_cast<unsigned>(Single),    static_cast<unsigned>(Cluster)};
     return llvm::ArrayRef(Scopes);
   }
 
