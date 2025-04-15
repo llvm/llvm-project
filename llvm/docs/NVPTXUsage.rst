@@ -320,6 +320,8 @@ Syntax:
     declare float @llvm.nvvm.fabs.f32(float %a)
     declare double @llvm.nvvm.fabs.f64(double %a)
     declare half @llvm.nvvm.fabs.f16(half %a)
+    declare <2 x half> @llvm.nvvm.fabs.v2f16(<2 x half> %a)
+    declare bfloat @llvm.nvvm.fabs.bf16(bfloat %a)
     declare <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> %a)
 
 Overview:
