@@ -7416,7 +7416,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   }
 
   for (auto &P : VPlans) {
-    SmallVector<ElementCount, 1> VFs(P->vectorFactors());
+    ArrayRef<ElementCount> VFs(P->vectorFactors().begin(),
+                               P->vectorFactors().end());
     auto RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
     for (auto [VF, RU] : zip_equal(VFs, RUs)) {
       if (VF.isScalar())
