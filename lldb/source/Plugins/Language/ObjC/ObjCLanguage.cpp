@@ -60,8 +60,8 @@ Language *ObjCLanguage::CreateInstance(lldb::LanguageType language) {
   }
 }
 
-std::optional<const ObjCLanguage::MethodName>
-ObjCLanguage::MethodName::Create(llvm::StringRef name, bool strict) {
+std::optional<const ObjCLanguage::ObjCMethodName>
+ObjCLanguage::ObjCMethodName::Create(llvm::StringRef name, bool strict) {
   if (name.empty())
     return std::nullopt;
 
@@ -96,11 +96,11 @@ ObjCLanguage::MethodName::Create(llvm::StringRef name, bool strict) {
 
   // If we've gotten here, we're confident that this looks enough like an
   // Objective-C method to treat it like one.
-  ObjCLanguage::MethodName method_name(name, type);
+  ObjCLanguage::ObjCMethodName method_name(name, type);
   return method_name;
 }
 
-llvm::StringRef ObjCLanguage::MethodName::GetClassName() const {
+llvm::StringRef ObjCLanguage::ObjCMethodName::GetClassName() const {
   llvm::StringRef full = m_full;
   const size_t class_start_pos = (full.front() == '[' ? 1 : 2);
   const size_t paren_pos = full.find('(', class_start_pos);
@@ -113,14 +113,14 @@ llvm::StringRef ObjCLanguage::MethodName::GetClassName() const {
   return full.substr(class_start_pos, space_pos - class_start_pos);
 }
 
-llvm::StringRef ObjCLanguage::MethodName::GetClassNameWithCategory() const {
+llvm::StringRef ObjCLanguage::ObjCMethodName::GetClassNameWithCategory() const {
   llvm::StringRef full = m_full;
   const size_t class_start_pos = (full.front() == '[' ? 1 : 2);
   const size_t space_pos = full.find(' ', class_start_pos);
   return full.substr(class_start_pos, space_pos - class_start_pos);
 }
 
-llvm::StringRef ObjCLanguage::MethodName::GetSelector() const {
+llvm::StringRef ObjCLanguage::ObjCMethodName::GetSelector() const {
   llvm::StringRef full = m_full;
   const size_t space_pos = full.find(' ');
   if (space_pos == llvm::StringRef::npos)
@@ -129,7 +129,7 @@ llvm::StringRef ObjCLanguage::MethodName::GetSelector() const {
   return full.substr(space_pos + 1, closing_bracket - space_pos - 1);
 }
 
-llvm::StringRef ObjCLanguage::MethodName::GetCategory() const {
+llvm::StringRef ObjCLanguage::ObjCMethodName::GetCategory() const {
   llvm::StringRef full = m_full;
   const size_t open_paren_pos = full.find('(');
   const size_t close_paren_pos = full.find(')');
@@ -142,7 +142,7 @@ llvm::StringRef ObjCLanguage::MethodName::GetCategory() const {
                      close_paren_pos - (open_paren_pos + 1));
 }
 
-std::string ObjCLanguage::MethodName::GetFullNameWithoutCategory() const {
+std::string ObjCLanguage::ObjCMethodName::GetFullNameWithoutCategory() const {
   llvm::StringRef full = m_full;
   const size_t open_paren_pos = full.find('(');
   const size_t close_paren_pos = full.find(')');
@@ -179,8 +179,8 @@ std::string ObjCLanguage::MethodName::GetFullNameWithoutCategory() const {
 std::vector<Language::MethodNameVariant>
 ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   std::vector<Language::MethodNameVariant> variant_names;
-  std::optional<const ObjCLanguage::MethodName> objc_method =
-      ObjCLanguage::MethodName::Create(method_name.GetStringRef(), false);
+  std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+      ObjCLanguage::ObjCMethodName::Create(method_name.GetStringRef(), false);
   if (!objc_method)
     return variant_names;
 
@@ -220,6 +220,19 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
   }
 
   return variant_names;
+}
+
+std::pair<FunctionNameType, std::optional<ConstString>>
+ObjCLanguage::GetFunctionNameInfo(ConstString name) const {
+  FunctionNameType func_name_type = eFunctionNameTypeNone;
+
+  if (ObjCLanguage::IsPossibleObjCMethodName(name.GetCString()))
+    func_name_type = eFunctionNameTypeFull;
+
+  if (ObjCLanguage::IsPossibleObjCSelector(name.GetCString()))
+    func_name_type |= eFunctionNameTypeSelector;
+
+  return {func_name_type, std::nullopt};
 }
 
 bool ObjCLanguage::SymbolNameFitsToLanguage(Mangled mangled) const {
