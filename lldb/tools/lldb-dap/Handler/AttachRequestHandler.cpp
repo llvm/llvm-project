@@ -85,6 +85,9 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
       GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
   dap.configuration.commandEscapePrefix =
       GetString(arguments, "commandEscapePrefix").value_or("`");
+  dap.configuration.program = GetString(arguments, "program");
+  dap.configuration.targetTriple = GetString(arguments, "targetTriple");
+  dap.configuration.platformName = GetString(arguments, "platformName");
   dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
   dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
 
@@ -107,14 +110,8 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
 
   SetSourceMapFromArguments(*arguments);
 
-  llvm::StringRef program = GetString(arguments, "program").value_or("");
-  llvm::StringRef target_triple =
-      GetString(arguments, "targetTriple").value_or("");
-  llvm::StringRef platform_name =
-      GetString(arguments, "platformName").value_or("");
   lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(program, target_triple,
-                                              platform_name, status));
+  dap.SetTarget(dap.CreateTarget(status));
   if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
     EmplaceSafeString(response, "message", status.GetCString());

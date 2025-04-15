@@ -213,6 +213,20 @@ struct Configuration {
 
   /// LLDB commands executed when the debugging session ends.
   std::vector<std::string> terminateCommands;
+
+  /// Path to the executable.
+  ///
+  /// *NOTE:* When launching, either `launchCommands` or `program` must be
+  /// configured. If both are configured then `launchCommands` takes priority.
+  std::optional<std::string> program;
+
+  /// Target triple for the program (arch-vendor-os). If not set, inferred from
+  /// the binary.
+  std::optional<std::string> targetTriple;
+
+  /// Specify name of the platform to use for this target, creating the platform
+  /// if necessary.
+  std::optional<std::string> platformName;
 };
 
 /// lldb-dap specific launch arguments.
@@ -222,22 +236,17 @@ struct LaunchRequestArguments {
 
   /// If true, the launch request should launch the program without enabling
   /// debugging.
-  std::optional<bool> noDebug;
+  bool noDebug = false;
 
   /// Launch specific operations.
   /// @{
-
-  /// Path to the executable to launch.
-  ///
-  /// *NOTE:* Either launchCommands or program must be configured.
-  std::optional<std::string> program;
 
   /// LLDB commands executed to launch the program.
   ///
   /// *NOTE:* Either launchCommands or program must be configured.
   ///
   /// If set, takes priority over the 'program' when launching the target.
-  std::optional<std::vector<std::string>> launchCommands;
+  std::vector<std::string> launchCommands;
 
   /// The program working directory.
   std::optional<std::string> cwd;
@@ -251,34 +260,26 @@ struct LaunchRequestArguments {
   /// with values or just "VAR" for environment variables with no values.
   llvm::StringMap<std::string> env;
 
-  /// Target triple for the program (arch-vendor-os). If not set, inferred from
-  /// the binary.
-  std::optional<std::string> targetTriple;
-
-  /// Specify name of the platform to use for this target, creating the platform
-  /// if necessary.
-  std::optional<std::string> platformName;
-
   /// If set, then the client stub should detach rather than killing the debugee
   /// if it loses connection with lldb.
-  std::optional<bool> detachOnError;
+  bool detachOnError = false;
 
   /// Disable ASLR (Address Space Layout Randomization) when launching the
   /// process.
-  std::optional<bool> disableASLR;
+  bool disableASLR = true;
 
   /// Do not set up for terminal I/O to go to running process.
-  std::optional<bool> disableSTDIO;
+  bool disableSTDIO = false;
 
   /// Set whether to shell expand arguments to the process when launching.
-  std::optional<bool> shellExpandArguments;
+  bool shellExpandArguments = false;
 
   /// Stop at the entry point of the program when launching a process.
-  std::optional<bool> stopOnEntry;
+  bool stopOnEntry = false;
 
   /// Launch the program inside an integrated terminal in the IDE. Useful for
   /// debugging interactive command line programs.
-  std::optional<bool> runInTerminal;
+  bool runInTerminal = false;
 
   /// Optional timeout for `runInTerminal` requests.
   std::chrono::seconds timeout = std::chrono::seconds(30);

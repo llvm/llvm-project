@@ -316,8 +316,6 @@ struct DAP {
   void RunTerminateCommands();
 
   /// Create a new SBTarget object from the given request arguments.
-  /// \param[in] arguments
-  ///     Launch configuration arguments.
   ///
   /// \param[out] error
   ///     An SBError object that will contain an error description if
@@ -325,10 +323,7 @@ struct DAP {
   ///
   /// \return
   ///     An SBTarget object.
-  lldb::SBTarget CreateTargetFromArguments(llvm::StringRef program,
-                                           llvm::StringRef targetTriple,
-                                           llvm::StringRef platformName,
-                                           lldb::SBError &error);
+  lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
   /// listeing for its breakpoint events.

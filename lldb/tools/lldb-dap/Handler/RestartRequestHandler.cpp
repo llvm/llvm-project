@@ -108,7 +108,7 @@ void RestartRequestHandler::operator()(
       // Update DAP configuration based on the latest copy of the launch
       // arguments.
       dap.SetConfiguration(updated_arguments.configuration, false);
-      dap.stop_at_entry = updated_arguments.stopOnEntry.value_or(false);
+      dap.stop_at_entry = updated_arguments.stopOnEntry;
       dap.ConfigureSourceMaps();
     }
   }

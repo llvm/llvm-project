@@ -654,10 +654,7 @@ void DAP::RunTerminateCommands() {
                   configuration.terminateCommands);
 }
 
-lldb::SBTarget DAP::CreateTargetFromArguments(llvm::StringRef program,
-                                              llvm::StringRef targetTriple,
-                                              llvm::StringRef platformName,
-                                              lldb::SBError &error) {
+lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // Grab the name of the program we need to debug and create a target using
   // the given program as an argument. Executable file can be a source of target
   // architecture and platform, if they differ from the host. Setting exe path
@@ -668,16 +665,17 @@ lldb::SBTarget DAP::CreateTargetFromArguments(llvm::StringRef program,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  auto target = this->debugger.CreateTarget(program.data(), targetTriple.data(),
-                                            platformName.data(),
-                                            true, // Add dependent modules.
-                                            error);
+  auto target = this->debugger.CreateTarget(
+      configuration.program.value_or("").data(),
+      configuration.targetTriple.value_or("").data(),
+      configuration.platformName.value_or("").data(),
+      true, // Add dependent modules.
+      error);
 
   if (error.Fail()) {
     // Update message if there was an error.
     error.SetErrorStringWithFormat(
-        "Could not create a target for a program '%s': %s.", program.data(),
-        error.GetCString());
+        "Could not create a target for a program: %s.", error.GetCString());
   }
 
   return target;

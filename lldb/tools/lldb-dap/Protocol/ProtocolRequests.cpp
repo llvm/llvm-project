@@ -15,6 +15,129 @@
 
 using namespace llvm;
 
+// The 'env' field is either an object as a map of strings or as an array of
+// strings formatted like 'key=value'.
+static bool parseEnv(const json::Value &Params, StringMap<std::string> &env,
+                     json::Path P) {
+  const json::Object *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+
+  const json::Value *value = O->get("env");
+  if (!value)
+    return true;
+
+  if (const json::Object *env_obj = value->getAsObject()) {
+    for (const auto &kv : *env_obj) {
+      const std::optional<StringRef> value = kv.second.getAsString();
+      if (!value) {
+        P.field("env").field(kv.first).report("expected string value");
+        return false;
+      }
+      env.insert({kv.first.str(), value->str()});
+    }
+    return true;
+  }
+
+  if (const json::Array *env_arr = value->getAsArray()) {
+    for (size_t i = 0; i < env_arr->size(); ++i) {
+      const std::optional<StringRef> value = (*env_arr)[i].getAsString();
+      if (!value) {
+        P.field("env").index(i).report("expected string");
+        return false;
+      }
+      std::pair<StringRef, StringRef> kv = value->split("=");
+      env.insert({kv.first, kv.second.str()});
+    }
+
+    return true;
+  }
+
+  P.field("env").report("invalid format, expected array or object");
+  return false;
+}
+
+static bool parseTimeout(const json::Value &Params, std::chrono::seconds &S,
+                         json::Path P) {
+  const json::Object *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+
+  const json::Value *value = O->get("timeout");
+  if (!value)
+    return true;
+  std::optional<double> timeout = value->getAsNumber();
+  if (!timeout) {
+    P.field("timeout").report("expected number");
+    return false;
+  }
+
+  S = std::chrono::duration_cast<std::chrono::seconds>(
+      std::chrono::duration<double>(*value->getAsNumber()));
+  return true;
+}
+
+static bool
+parseSourceMap(const json::Value &Params,
+               std::vector<std::pair<std::string, std::string>> &sourceMap,
+               json::Path P) {
+  const json::Object *O = Params.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+
+  const json::Value *value = O->get("sourceMap");
+  if (!value)
+    return true;
+
+  if (const json::Object *map_obj = value->getAsObject()) {
+    for (const auto &kv : *map_obj) {
+      const std::optional<StringRef> value = kv.second.getAsString();
+      if (!value) {
+        P.field("sourceMap").field(kv.first).report("expected string value");
+        return false;
+      }
+      sourceMap.emplace_back(std::make_pair(kv.first.str(), value->str()));
+    }
+    return true;
+  }
+
+  if (const json::Array *env_arr = value->getAsArray()) {
+    for (size_t i = 0; i < env_arr->size(); ++i) {
+      const json::Array *kv = (*env_arr)[i].getAsArray();
+      if (!kv) {
+        P.field("sourceMap").index(i).report("expected array");
+        return false;
+      }
+      if (kv->size() != 2) {
+        P.field("sourceMap").index(i).report("expected array of pairs");
+        return false;
+      }
+      const std::optional<StringRef> first = (*kv)[0].getAsString();
+      if (!first) {
+        P.field("sourceMap").index(0).report("expected string");
+        return false;
+      }
+      const std::optional<StringRef> second = (*kv)[1].getAsString();
+      if (!second) {
+        P.field("sourceMap").index(1).report("expected string");
+        return false;
+      }
+      sourceMap.emplace_back(std::make_pair(*first, second->str()));
+    }
+
+    return true;
+  }
+
+  P.report("invalid format, expected array or object");
+  return false;
+}
+
 namespace lldb_dap::protocol {
 
 bool fromJSON(const llvm::json::Value &Params, CancelArguments &CA,
@@ -98,66 +221,9 @@ bool fromJSON(const json::Value &Params, InitializeRequestArguments &IRA,
          OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
-static bool
-parseSourceMap(const json::Value &Params,
-               std::vector<std::pair<std::string, std::string>> &sourceMap,
-               json::Path P) {
-  const json::Object *O = Params.getAsObject();
-  if (!O) {
-    P.report("expected object");
-    return false;
-  }
-
-  const json::Value *value = O->get("sourceMap");
-  if (!value)
-    return true;
-
-  if (const json::Object *map_obj = value->getAsObject()) {
-    for (const auto &kv : *map_obj) {
-      const std::optional<StringRef> value = kv.second.getAsString();
-      if (!value) {
-        P.field("sourceMap").field(kv.first).report("expected string value");
-        return false;
-      }
-      sourceMap.emplace_back(std::make_pair(kv.first.str(), value->str()));
-    }
-    return true;
-  }
-
-  if (const json::Array *env_arr = value->getAsArray()) {
-    for (size_t i = 0; i < env_arr->size(); ++i) {
-      const json::Array *kv = (*env_arr)[i].getAsArray();
-      if (!kv) {
-        P.field("sourceMap").index(i).report("expected array");
-        return false;
-      }
-      if (kv->size() != 2) {
-        P.field("sourceMap").index(i).report("expected array of pairs");
-        return false;
-      }
-      const std::optional<StringRef> first = (*kv)[0].getAsString();
-      if (!first) {
-        P.field("sourceMap").index(0).report("expected string");
-        return false;
-      }
-      const std::optional<StringRef> second = (*kv)[1].getAsString();
-      if (!second) {
-        P.field("sourceMap").index(1).report("expected string");
-        return false;
-      }
-      sourceMap.emplace_back(std::make_pair(*first, second->str()));
-    }
-
-    return true;
-  }
-
-  P.report("invalid format, expected array or object");
-  return false;
-}
-
 bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O.mapOptional("debuggerRoot", C.debuggerRoot) &&
+  return O.map("debuggerRoot", C.debuggerRoot) &&
          O.mapOptional("enableAutoVariableSummaries",
                        C.enableAutoVariableSummaries) &&
          O.mapOptional("enableSyntheticChildDebugging",
@@ -165,82 +231,18 @@ bool fromJSON(const json::Value &Params, Configuration &C, json::Path P) {
          O.mapOptional("displayExtendedBacktrace",
                        C.displayExtendedBacktrace) &&
          O.mapOptional("commandEscapePrefix", C.commandEscapePrefix) &&
-         O.mapOptional("customFrameFormat", C.customFrameFormat) &&
-         O.mapOptional("customThreadFormat", C.customThreadFormat) &&
-         O.mapOptional("sourcePath", C.sourcePath) &&
+         O.map("customFrameFormat", C.customFrameFormat) &&
+         O.map("customThreadFormat", C.customThreadFormat) &&
+         O.map("sourcePath", C.sourcePath) &&
          O.mapOptional("initCommands", C.initCommands) &&
          O.mapOptional("preRunCommands", C.preRunCommands) &&
          O.mapOptional("postRunCommands", C.postRunCommands) &&
          O.mapOptional("stopCommands", C.stopCommands) &&
          O.mapOptional("exitCommands", C.exitCommands) &&
          O.mapOptional("terminateCommands", C.terminateCommands) &&
+         O.map("program", C.program) && O.map("targetTriple", C.targetTriple) &&
+         O.map("platformName", C.platformName) &&
          parseSourceMap(Params, C.sourceMap, P);
-}
-
-// The 'env' field is either an object as a map of strings or as an array of
-// strings formatted like 'key=value'.
-static bool parseEnv(const json::Value &Params, StringMap<std::string> &env,
-                     json::Path P) {
-  const json::Object *O = Params.getAsObject();
-  if (!O) {
-    P.report("expected object");
-    return false;
-  }
-
-  const json::Value *value = O->get("env");
-  if (!value)
-    return true;
-
-  if (const json::Object *env_obj = value->getAsObject()) {
-    for (const auto &kv : *env_obj) {
-      const std::optional<StringRef> value = kv.second.getAsString();
-      if (!value) {
-        P.field("env").field(kv.first).report("expected string value");
-        return false;
-      }
-      env.insert({kv.first.str(), value->str()});
-    }
-    return true;
-  }
-
-  if (const json::Array *env_arr = value->getAsArray()) {
-    for (size_t i = 0; i < env_arr->size(); ++i) {
-      const std::optional<StringRef> value = (*env_arr)[i].getAsString();
-      if (!value) {
-        P.field("env").index(i).report("expected string");
-        return false;
-      }
-      std::pair<StringRef, StringRef> kv = value->split("=");
-      env.insert({kv.first, kv.second.str()});
-    }
-
-    return true;
-  }
-
-  P.field("env").report("invalid format, expected array or object");
-  return false;
-}
-
-bool parseTimeout(const json::Value &Params, std::chrono::seconds &S,
-                  json::Path P) {
-  const json::Object *O = Params.getAsObject();
-  if (!O) {
-    P.report("expected object");
-    return false;
-  }
-
-  const json::Value *value = O->get("timeout");
-  if (!value)
-    return true;
-  std::optional<double> timeout = value->getAsNumber();
-  if (!timeout) {
-    P.field("timeout").report("expected number");
-    return false;
-  }
-
-  S = std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::duration<double>(*value->getAsNumber()));
-  return true;
 }
 
 bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
@@ -248,18 +250,15 @@ bool fromJSON(const json::Value &Params, LaunchRequestArguments &LRA,
   json::ObjectMapper O(Params, P);
   return O && fromJSON(Params, LRA.configuration, P) &&
          O.mapOptional("noDebug", LRA.noDebug) &&
-         O.map("program", LRA.program) &&
-         O.map("launchCommands", LRA.launchCommands) && O.map("cwd", LRA.cwd) &&
-         O.mapOptional("args", LRA.args) && parseEnv(Params, LRA.env, P) &&
-         O.map("targetTriple", LRA.targetTriple) &&
-         O.map("platformName", LRA.platformName) &&
+         O.mapOptional("launchCommands", LRA.launchCommands) &&
+         O.map("cwd", LRA.cwd) && O.mapOptional("args", LRA.args) &&
          O.mapOptional("detachOnError", LRA.detachOnError) &&
          O.mapOptional("disableASLR", LRA.disableASLR) &&
          O.mapOptional("disableSTDIO", LRA.disableSTDIO) &&
          O.mapOptional("shellExpandArguments", LRA.shellExpandArguments) &&
          O.mapOptional("stopOnEntry", LRA.stopOnEntry) &&
          O.mapOptional("runInTerminal", LRA.runInTerminal) &&
-         parseTimeout(Params, LRA.timeout, P);
+         parseEnv(Params, LRA.env, P) && parseTimeout(Params, LRA.timeout, P);
 }
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {

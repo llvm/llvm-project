@@ -11,6 +11,7 @@
 #include "JSONUtils.h"
 #include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
 namespace lldb_dap {
@@ -20,7 +21,12 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
     const protocol::LaunchRequestArguments &arguments) const {
   dap.SetConfiguration(arguments.configuration, /*is_attach=*/false);
   dap.last_launch_request = arguments;
-  dap.stop_at_entry = arguments.stopOnEntry.value_or(false);
+  dap.stop_at_entry = arguments.stopOnEntry;
+
+  if (!arguments.launchCommands.empty() && arguments.runInTerminal) {
+    return llvm::make_error<DAPError>("launchCommands and runInTerminal cannot "
+                                      "both be set, use one or the other.");
+  }
 
   PrintWelcomeMessage();
 
@@ -41,9 +47,7 @@ llvm::Expected<protocol::LaunchResponseBody> LaunchRequestHandler::Run(
   dap.ConfigureSourceMaps();
 
   lldb::SBError status;
-  dap.SetTarget(dap.CreateTargetFromArguments(
-      arguments.program.value_or(""), arguments.targetTriple.value_or(""),
-      arguments.platformName.value_or(""), status));
+  dap.SetTarget(dap.CreateTarget(status));
   if (status.Fail())
     return llvm::make_error<DAPError>(status.GetCString());
 

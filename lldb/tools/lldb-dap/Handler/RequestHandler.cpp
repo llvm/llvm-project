@@ -38,14 +38,12 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   return argv;
 }
 
-static uint32_t SetLaunchFlag(uint32_t flags, std::optional<bool> flag,
+static uint32_t SetLaunchFlag(uint32_t flags, bool flag,
                               lldb::LaunchFlags mask) {
-  if (flag) {
-    if (*flag)
-      flags |= mask;
-    else
-      flags &= ~mask;
-  }
+  if (flag)
+    flags |= mask;
+  else
+    flags &= ~mask;
 
   return flags;
 }
@@ -107,7 +105,8 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
     return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
                                       "not supported by the connected client");
 
-  if (!arguments.program || arguments.program->empty())
+  if (!arguments.configuration.program ||
+      arguments.configuration.program->empty())
     return llvm::make_error<DAPError>(
         "program must be set to when using runInTerminal");
 
@@ -128,7 +127,7 @@ RunInTerminal(DAP &dap, const protocol::LaunchRequestArguments &arguments) {
 #endif
 
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      *arguments.program, arguments.args, arguments.env,
+      *arguments.configuration.program, arguments.args, arguments.env,
       arguments.cwd.value_or(""), comm_file.m_path, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
@@ -223,23 +222,21 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     launch_info.SetEnvironment(env, true);
   }
 
-  auto flags = launch_info.GetLaunchFlags();
+  launch_info.SetDetachOnError(arguments.detachOnError);
+  launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
+  auto flags = launch_info.GetLaunchFlags();
   flags =
       SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
-  flags = SetLaunchFlag(flags, arguments.shellExpandArguments,
-                        lldb::eLaunchFlagShellExpandArguments);
-  if (arguments.detachOnError)
-    launch_info.SetDetachOnError(*arguments.detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
 
   if (arguments.runInTerminal) {
     if (llvm::Error err = RunInTerminal(dap, arguments))
       return err;
-  } else if (!launchCommands) {
+  } else if (launchCommands.empty()) {
     lldb::SBError error;
     // Disable async events so the launch will be successful when we return from
     // the launch call and the launch will happen synchronously
@@ -252,7 +249,7 @@ llvm::Error BaseRequestHandler::LaunchProcess(
     // Set the launch info so that run commands can access the configured
     // launch details.
     dap.target.SetLaunchInfo(launch_info);
-    if (llvm::Error err = dap.RunLaunchCommands(*launchCommands))
+    if (llvm::Error err = dap.RunLaunchCommands(launchCommands))
       return err;
 
     // The custom commands might have created a new target so we should use the
