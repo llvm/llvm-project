@@ -851,11 +851,11 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_clz(T x[, T y])        return the number of leading 0 bits in the first argument. If          integer types
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. If the first argument is 0 but only
-                                                one argument is provided, the behaviour is undefined.
+                                                one argument is provided, the result is undefined.
  T __builtin_elementwise_ctz(T x[, T y])        return the number of trailing 0 bits in the first argument. If         integer types
                                                 the first argument is 0 and an optional second argument is provided,
                                                 the second argument is returned. If the first argument is 0 but only
-                                                one argument is provided, the behaviour is undefined.
+                                                one argument is provided, the result is undefined.
 ============================================== ====================================================================== =========================================
 
 
