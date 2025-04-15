@@ -149,9 +149,3 @@ DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbanklegalize", AMDGPURegBankLegalizePass(
 DUMMY_MACHINE_FUNCTION_PASS("amdgpu-regbank-combiner", AMDGPURegBankCombinerPass())
 
 #undef DUMMY_MACHINE_FUNCTION_PASS
-
-
-#define DUMMY_CGSCC_PASS(NAME, CREATE_PASS)
-DUMMY_CGSCC_PASS("amdgpu-annotate-kernel-features", AMDGPUAnnotateKernelFeaturesPass())
-
-#undef DUMMY_CGSCC_PASS
