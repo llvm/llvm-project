@@ -426,6 +426,6 @@ Publications
 `Control-Flow Integrity: Principles, Implementations, and Applications <https://research.microsoft.com/pubs/64250/ccs05.pdf>`_.
 Martin Abadi, Mihai Budiu, Úlfar Erlingsson, Jay Ligatti.
 
-`Enforcing Forward-Edge Control-Flow Integrity in GCC & LLVM <http://www.pcc.me.uk/~peter/acad/usenix14.pdf>`_.
+`Enforcing Forward-Edge Control-Flow Integrity in GCC & LLVM <https://www.usenix.org/system/files/conference/usenixsecurity14/sec14-paper-tice.pdf>`_.
 Caroline Tice, Tom Roeder, Peter Collingbourne, Stephen Checkoway,
 Úlfar Erlingsson, Luis Lozano, Geoff Pike.
