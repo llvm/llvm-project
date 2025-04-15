@@ -1034,9 +1034,16 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
   case NVPTX::BI__nvvm_fmin_xorsign_abs_f16x2:
     return MakeHalfType(Intrinsic::nvvm_fmin_xorsign_abs_f16x2, BuiltinID, E,
                         *this);
+  case NVPTX::BI__nvvm_fabs_f:
   case NVPTX::BI__nvvm_abs_bf16:
   case NVPTX::BI__nvvm_abs_bf16x2:
     return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_ftz_f:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_fabs_ftz,
+                                        EmitScalarExpr(E->getArg(0)));
+  case NVPTX::BI__nvvm_fabs_d:
+    return Builder.CreateUnaryIntrinsic(Intrinsic::fabs,
                                         EmitScalarExpr(E->getArg(0)));
   case NVPTX::BI__nvvm_ldg_h:
   case NVPTX::BI__nvvm_ldg_h2:

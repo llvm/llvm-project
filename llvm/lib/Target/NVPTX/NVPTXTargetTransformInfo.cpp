@@ -141,7 +141,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   enum SpecialCase {
     SPC_Reciprocal,
     SCP_FunnelShiftClamp,
-    SPC_Fabs,
   };
 
   // SimplifyAction is a poor-man's variant (plus an additional flag) that
@@ -186,8 +185,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::ceil, FTZ_MustBeOff};
     case Intrinsic::nvvm_ceil_ftz_f:
       return {Intrinsic::ceil, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fabs:
-      return {SPC_Fabs, FTZ_Any};
     case Intrinsic::nvvm_floor_d:
       return {Intrinsic::floor, FTZ_Any};
     case Intrinsic::nvvm_floor_f:
@@ -411,13 +408,6 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
                               SmallVector<Value *, 3>(II->args()));
     }
     return nullptr;
-  }
-  case SPC_Fabs: {
-    if (!II->getType()->isDoubleTy())
-      return nullptr;
-    auto *Fabs = Intrinsic::getOrInsertDeclaration(
-        II->getModule(), Intrinsic::fabs, II->getType());
-    return CallInst::Create(Fabs, II->getArgOperand(0));
   }
   }
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");

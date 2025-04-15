@@ -333,8 +333,7 @@ Semantics:
 """"""""""
 
 Unlike, '``llvm.fabs.*``', these intrinsics do not perfectly preserve NaN
-values. Instead, a NaN input yeilds an unspecified NaN output. The exception to
-this rule is the double precision variant, for which NaN is preserved.
+values. Instead, a NaN input yeilds an unspecified NaN output.
 
 
 '``llvm.nvvm.fabs.ftz.*``' Intrinsic
