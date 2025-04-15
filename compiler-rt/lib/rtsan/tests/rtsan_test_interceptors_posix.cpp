@@ -885,6 +885,20 @@ TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
+TEST_F(RtsanOpenedFileTest, RenameDiesWhenRealtime) {
+  auto Func = [&]() { rename(GetTemporaryFilePath(), "/tmp/rename_rtsan"); };
+  ExpectRealtimeDeath(Func, "rename");
+  ExpectNonRealtimeSurvival(Func);
+}
+
+TEST_F(RtsanOpenedFileTest, RenameatDiesWhenRealtime) {
+  auto Func = [&]() {
+    renameat(-1, GetTemporaryFilePath(), -1, "/tmp/renameat_rtsan");
+  };
+  ExpectRealtimeDeath(Func, "renameat");
+  ExpectNonRealtimeSurvival(Func);
+}
+
 TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
   auto Func = [&]() { truncate(GetTemporaryFilePath(), 16); };
   ExpectRealtimeDeath(Func, MAYBE_APPEND_64("truncate"));

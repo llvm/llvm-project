@@ -295,6 +295,17 @@ INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
   return REAL(unlinkat)(fd, pathname, flag);
 }
 
+INTERCEPTOR(int, rename, const char *oldpath, const char *newpath) {
+  __rtsan_notify_intercepted_call("rename");
+  return REAL(rename)(oldpath, newpath);
+}
+
+INTERCEPTOR(int, renameat, int oldfd, const char *oldpath, int newfd,
+            const char *newpath) {
+  __rtsan_notify_intercepted_call("renameat");
+  return REAL(renameat)(oldfd, oldpath, newfd, newpath);
+}
+
 INTERCEPTOR(int, truncate, const char *pathname, off_t length) {
   __rtsan_notify_intercepted_call("truncate");
   return REAL(truncate)(pathname, length);
@@ -1534,6 +1545,8 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
   INTERCEPT_FUNCTION(unlink);
   INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(rename);
+  INTERCEPT_FUNCTION(renameat);
   INTERCEPT_FUNCTION(symlink);
   INTERCEPT_FUNCTION(symlinkat);
   INTERCEPT_FUNCTION(truncate);
