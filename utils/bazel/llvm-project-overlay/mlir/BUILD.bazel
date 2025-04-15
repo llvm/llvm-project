@@ -1569,6 +1569,7 @@ cc_library(
         ":IR",
         ":MemRefDialect",
         ":Pass",
+        ":SCFDialect",
         ":SideEffectInterfaces",
         ":Support",
         ":TransformUtils",

@@ -7577,6 +7577,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
             return Res.takeVector();
           };
           auto GetNumOperands = [](const TreeEntry *TE) {
+            if (TE->State == TreeEntry::SplitVectorize)
+              return TE->getNumOperands();
             if (auto *CI = dyn_cast<CallInst>(TE->getMainOp()); CI)
               return CI->arg_size();
             return TE->getNumOperands();
@@ -16008,8 +16010,12 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
   bool IsPHI = isa<PHINode>(LastInst);
-  if (IsPHI)
+  if (IsPHI) {
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
+    if (LastInstIt != LastInst->getParent()->end() &&
+        LastInstIt->getParent()->isLandingPad())
+      LastInstIt = std::next(LastInstIt);
+  }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
        doesNotNeedToSchedule(E->Scalars)) ||
