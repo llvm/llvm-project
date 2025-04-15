@@ -15,16 +15,6 @@ qc.e.j foo
 # INSTR: qc.e.j foo
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_jump_plt
 
-qc.e.j foo@plt
-# RELOC: R_RISCV_CUSTOM195 foo 0x0
-# INSTR: qc.e.j foo
-# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_jump_plt
-
-qc.e.jal foo@plt
-# RELOC: R_RISCV_CUSTOM195 foo 0x0
-# INSTR: qc.e.jal foo
-# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_qc_e_jump_plt
-
 qc.e.jal foo
 # RELOC: R_RISCV_CUSTOM195 foo 0x0
 # INSTR: qc.e.jal foo
