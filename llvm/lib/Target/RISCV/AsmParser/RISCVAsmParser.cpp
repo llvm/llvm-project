@@ -216,13 +216,10 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseGPRPair(OperandVector &Operands, bool IsRV64Inst);
   ParseStatus parseFRMArg(OperandVector &Operands);
   ParseStatus parseFenceArg(OperandVector &Operands);
-  ParseStatus parseRegList(OperandVector &Operands) {
-    return parseRegListCommon(Operands, /*MustIncludeS0=*/false);
-  }
+  ParseStatus parseRegList(OperandVector &Operands, bool MustIncludeS0 = false);
   ParseStatus parseRegListS0(OperandVector &Operands) {
-    return parseRegListCommon(Operands, /*MustIncludeS0=*/true);
+    return parseRegList(Operands, /*MustIncludeS0=*/true);
   }
-  ParseStatus parseRegListCommon(OperandVector &Operands, bool MustIncludeS0);
 
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
@@ -2636,96 +2633,95 @@ ParseStatus RISCVAsmParser::parseRegReg(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-ParseStatus RISCVAsmParser::parseRegListCommon(OperandVector &Operands,
-                                               bool MustIncludeS0) {
-  // RegList: {ra [, s0[-sN]]}
-  // XRegList: {x1 [, x8[-x9][, x18[-xN]]]}
+// RegList: {ra [, s0[-sN]]}
+// XRegList: {x1 [, x8[-x9][, x18[-xN]]]}
 
-  // When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
-  // must include `fp`/`s0` in the list:
-  // RegList: {ra, s0[-sN]}
-  // XRegList: {x1, x8[-x9][, x18[-xN]]}
-
+// When MustIncludeS0 = true (not the default) (used for `qc.cm.pushfp`) which
+// must include `fp`/`s0` in the list:
+// RegList: {ra, s0[-sN]}
+// XRegList: {x1, x8[-x9][, x18[-xN]]}
+ParseStatus RISCVAsmParser::parseRegList(OperandVector &Operands,
+                                         bool MustIncludeS0) {
   if (getTok().isNot(AsmToken::LCurly))
     return ParseStatus::NoMatch;
 
   SMLoc S = getLoc();
+
   Lex();
 
-  bool IsRVE = isRVE();
-
-  if (getLexer().isNot(AsmToken::Identifier))
-    return Error(getLoc(), "register list must start from 'ra' or 'x1'");
-
-  StringRef RegName = getLexer().getTok().getIdentifier();
-  MCRegister RegEnd = matchRegisterNameHelper(RegName);
-  if (RegEnd != RISCV::X1)
-    return Error(getLoc(), "register list must start from 'ra' or 'x1'");
-  getLexer().Lex();
-
-  // parse case like ,s0 (knowing the comma must be there if required)
-  if (parseOptionalToken(AsmToken::Comma)) {
-    if (getLexer().isNot(AsmToken::Identifier))
+  bool UsesXRegs;
+  MCRegister RegEnd;
+  do {
+    if (getTok().isNot(AsmToken::Identifier))
       return Error(getLoc(), "invalid register");
-    StringRef RegName = getLexer().getTok().getIdentifier();
-    RegEnd = matchRegisterNameHelper(RegName);
-    if (!RegEnd)
-      return Error(getLoc(), "invalid register");
-    if (RegEnd != RISCV::X8)
-      return Error(getLoc(),
-                   "continuous register list must start from 's0' or 'x8'");
-    getLexer().Lex(); // eat reg
 
-    // parse case like -s1
+    StringRef RegName = getTok().getIdentifier();
+    MCRegister Reg = matchRegisterNameHelper(RegName);
+    if (!Reg)
+      return Error(getLoc(), "invalid register");
+
+    if (!RegEnd) {
+      UsesXRegs = RegName[0] == 'x';
+      if (Reg != RISCV::X1)
+        return Error(getLoc(), "register list must start from 'ra' or 'x1'");
+    } else if (RegEnd == RISCV::X1) {
+      if (Reg != RISCV::X8 || (UsesXRegs != (RegName[0] == 'x')))
+        return Error(getLoc(), Twine("register must be '") +
+                                   (UsesXRegs ? "x8" : "s0") + "'");
+    } else if (RegEnd == RISCV::X9 && UsesXRegs) {
+      if (Reg != RISCV::X18 || (RegName[0] != 'x'))
+        return Error(getLoc(), "register must be 'x18'");
+    } else {
+      return Error(getLoc(), "too many register ranges");
+    }
+
+    RegEnd = Reg;
+
+    Lex();
+
+    SMLoc MinusLoc = getLoc();
     if (parseOptionalToken(AsmToken::Minus)) {
-      StringRef EndName = getLexer().getTok().getIdentifier();
-      // FIXME: the register mapping and checks of RVE is wrong
-      RegEnd = matchRegisterNameHelper(EndName);
-      if (!(RegEnd == RISCV::X9 ||
-            (RegEnd >= RISCV::X18 && RegEnd <= RISCV::X27)))
+      if (RegEnd == RISCV::X1)
+        return Error(MinusLoc, Twine("register '") + (UsesXRegs ? "x1" : "ra") +
+                                   "' cannot start a multiple register range");
+
+      if (getTok().isNot(AsmToken::Identifier))
         return Error(getLoc(), "invalid register");
-      getLexer().Lex();
-    }
 
-    // parse extra part like ', x18[-x20]' for XRegList
-    if (parseOptionalToken(AsmToken::Comma)) {
-      if (RegEnd != RISCV::X9)
-        return Error(
-            getLoc(),
-            "first contiguous registers pair of register list must be 'x8-x9'");
-
-      // parse ', x18' for extra part
-      if (getLexer().isNot(AsmToken::Identifier) || IsRVE)
+      StringRef RegName = getTok().getIdentifier();
+      MCRegister Reg = matchRegisterNameHelper(RegName);
+      if (!Reg)
         return Error(getLoc(), "invalid register");
-      StringRef EndName = getLexer().getTok().getIdentifier();
-      RegEnd = MatchRegisterName(EndName);
-      if (RegEnd != RISCV::X18)
-        return Error(getLoc(),
-                     "second contiguous registers pair of register list "
-                     "must start from 'x18'");
-      getLexer().Lex();
 
-      // parse '-x20' for extra part
-      if (parseOptionalToken(AsmToken::Minus)) {
-        if (getLexer().isNot(AsmToken::Identifier) || IsRVE)
-          return Error(getLoc(), "invalid register");
-        EndName = getLexer().getTok().getIdentifier();
-        RegEnd = MatchRegisterName(EndName);
-        if (!(RegEnd >= RISCV::X19 && RegEnd <= RISCV::X27))
-          return Error(getLoc(), "invalid register");
-        getLexer().Lex();
-      }
+      if (RegEnd == RISCV::X8) {
+        if ((Reg != RISCV::X9 &&
+             (UsesXRegs || Reg < RISCV::X18 || Reg > RISCV::X27)) ||
+            (UsesXRegs != (RegName[0] == 'x'))) {
+          if (UsesXRegs)
+            return Error(getLoc(), "register must be 'x9'");
+          return Error(getLoc(), "register must be in the range 's1' to 's11'");
+        }
+      } else if (RegEnd == RISCV::X18) {
+        if (Reg < RISCV::X19 || Reg > RISCV::X27 || (RegName[0] != 'x'))
+          return Error(getLoc(),
+                       "register must be in the range 'x19' to 'x27'");
+      } else
+        llvm_unreachable("unexpected register");
+
+      RegEnd = Reg;
+
+      Lex();
     }
-  }
+  } while (parseOptionalToken(AsmToken::Comma));
 
-  if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
+  if (parseToken(AsmToken::RCurly, "expected ',' or '}'"))
     return ParseStatus::Failure;
 
   if (RegEnd == RISCV::X26)
-    return Error(S, "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
-                    "x18-x26} is not supported");
+    return Error(S, "invalid register list, '{ra, s0-s10}' or '{x1, x8-x9, "
+                    "x18-x26}' is not supported");
 
-  auto Encode = RISCVZC::encodeRegList(RegEnd, IsRVE);
+  auto Encode = RISCVZC::encodeRegList(RegEnd, isRVE());
   assert(Encode != RISCVZC::INVALID_RLIST);
 
   if (MustIncludeS0 && Encode == RISCVZC::RA)
