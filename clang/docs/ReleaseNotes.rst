@@ -314,6 +314,7 @@ Improvements to Clang's diagnostics
 - Clang now respects the current language mode when printing expressions in
   diagnostics. This fixes a bunch of `bool` being printed as `_Bool`, and also
   a bunch of HLSL types being printed as their C++ equivalents.
+- Clang now consistently quotes expressions in diagnostics.
 - When printing types for diagnostics, clang now doesn't suppress the scopes of
   template arguments contained within nested names.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
@@ -357,6 +358,16 @@ Improvements to Clang's diagnostics
 
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
+- No longer diagnosing idiomatic function pointer casts on Windows under
+  ``-Wcast-function-type-mismatch`` (which is enabled by ``-Wextra``). Clang
+  would previously warn on this construct, but will no longer do so on Windows:
+
+  .. code-block:: c
+
+    typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+    HMODULE Lib = LoadLibrary("kernel32");
+    PGNSI FnPtr = (PGNSI)GetProcAddress(Lib, "GetNativeSystemInfo");
+
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
@@ -397,6 +408,11 @@ Bug Fixes in This Version
 
     #if 1 ? 1 : 999999999999999999999
     #endif
+- ``#embed`` directive now diagnoses use of a non-character file (device file)
+  such as ``/dev/urandom`` as an error. This restriction may be relaxed in the
+  future. See (#GH126629).
+- Fixed a clang 20 regression where diagnostics attached to some calls to member functions
+  using C++23 "deducing this" did not have a diagnostic location (#GH135522)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -423,6 +439,11 @@ Bug Fixes to Attribute Support
 - No longer crashing on ``__attribute__((align_value(N)))`` during template
   instantiation when the function parameter type is not a pointer or reference.
   (#GH26612)
+- Now allowing the ``[[deprecated]]``, ``[[maybe_unused]]``, and
+  ``[[nodiscard]]`` to be applied to a redeclaration after a definition in both
+  C and C++ mode for the standard spellings (other spellings, such as
+  ``__attribute__((unused))`` are still ignored after the definition, though
+  this behavior may be relaxed in the future). (#GH135481)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -521,6 +542,9 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 - For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
+- The ``+nosimd`` attribute is now fully supported for ARM. Previously, this had no effect when being used with
+  ARM targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
+  also now printed when the ``--print-supported-extensions`` option is used.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -600,6 +624,8 @@ libclang
 --------
 - Added ``clang_visitCXXMethods``, which allows visiting the methods
   of a class.
+- Added ``clang_getFullyQualifiedName``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -654,6 +680,8 @@ Python Binding Changes
   the cursor is a specialization of.
 - Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
   allows visiting the methods of a class.
+- Added ``Type.get_fully_qualified_name``, which provides fully qualified type names as
+  instructed by a PrintingPolicy.
 
 OpenMP Support
 --------------
