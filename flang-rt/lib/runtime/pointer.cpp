@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
+#include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/assign-impl.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/environment.h"
@@ -121,13 +122,15 @@ void RTDEF(PointerAssociateRemapping)(Descriptor &pointer,
   }
 }
 
-RT_API_ATTRS void *AllocateValidatedPointerPayload(std::size_t byteSize) {
+RT_API_ATTRS void *AllocateValidatedPointerPayload(
+    std::size_t byteSize, int allocatorIdx) {
   // Add space for a footer to validate during deallocation.
   constexpr std::size_t align{sizeof(std::uintptr_t)};
   byteSize = ((byteSize + align - 1) / align) * align;
   std::size_t total{byteSize + sizeof(std::uintptr_t)};
-  void *p{std::malloc(total)};
-  if (p) {
+  AllocFct alloc{allocatorRegistry.GetAllocator(allocatorIdx)};
+  void *p{alloc(total, /*asyncId=*/-1)};
+  if (p && allocatorIdx == 0) {
     // Fill the footer word with the XOR of the ones' complement of
     // the base address, which is a value that would be highly unlikely
     // to appear accidentally at the right spot.
@@ -151,7 +154,7 @@ int RTDEF(PointerAllocate)(Descriptor &pointer, bool hasStat,
     elementBytes = pointer.raw().elem_len = 0;
   }
   std::size_t byteSize{pointer.Elements() * elementBytes};
-  void *p{AllocateValidatedPointerPayload(byteSize)};
+  void *p{AllocateValidatedPointerPayload(byteSize, pointer.GetAllocIdx())};
   if (!p) {
     return ReturnError(terminator, CFI_ERROR_MEM_ALLOCATION, errMsg, hasStat);
   }
@@ -211,6 +214,7 @@ int RTDEF(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
   if (executionEnvironment.checkPointerDeallocation &&
+      pointer.GetAllocIdx() == kDefaultAllocator &&
       !ValidatePointerPayload(pointer.raw())) {
     return ReturnError(terminator, StatBadPointerDeallocation, errMsg, hasStat);
   }

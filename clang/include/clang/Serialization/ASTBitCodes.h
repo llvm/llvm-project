@@ -1531,7 +1531,10 @@ enum DeclCode {
   // An OpenACCDeclareDecl record.
   DECL_OPENACC_DECLARE,
 
-  DECL_LAST = DECL_OPENACC_DECLARE
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  DECL_LAST = DECL_OPENACC_ROUTINE
 };
 
 /// Record codes for each kind of statement or expression.

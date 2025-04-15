@@ -484,7 +484,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
                                     emitc::SwitchOp switchOp) {
   raw_indented_ostream &os = emitter.ostream();
 
-  os << "\nswitch (";
+  os << "switch (";
   if (failed(emitter.emitOperand(switchOp.getArg())))
     return failure();
   os << ") {";

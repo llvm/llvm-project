@@ -300,6 +300,25 @@ mlir::LogicalResult cuf::RegisterKernelOp::verify() {
   return emitOpError("device function not found");
 }
 
+//===----------------------------------------------------------------------===//
+// SharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+void cuf::SharedMemoryOp::build(
+    mlir::OpBuilder &builder, mlir::OperationState &result, mlir::Type inType,
+    llvm::StringRef uniqName, llvm::StringRef bindcName,
+    mlir::ValueRange typeparams, mlir::ValueRange shape,
+    llvm::ArrayRef<mlir::NamedAttribute> attributes) {
+  mlir::StringAttr nameAttr =
+      uniqName.empty() ? mlir::StringAttr{} : builder.getStringAttr(uniqName);
+  mlir::StringAttr bindcAttr =
+      bindcName.empty() ? mlir::StringAttr{} : builder.getStringAttr(bindcName);
+  build(builder, result, wrapAllocaResultType(inType),
+        mlir::TypeAttr::get(inType), nameAttr, bindcAttr, typeparams, shape,
+        /*offset=*/mlir::Value{});
+  result.addAttributes(attributes);
+}
+
 // Tablegen operators
 
 #define GET_OP_CLASSES

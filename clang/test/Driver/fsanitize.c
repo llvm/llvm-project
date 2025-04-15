@@ -1053,13 +1053,18 @@
 // RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-TARGET
 // RUN: not %clang --target=x86_64-sie-ps5 -fsanitize=function -fsanitize=kcfi %s -### 2>&1 | FileCheck %s  --check-prefix=CHECK-UBSAN-KCFI-TARGET --check-prefix=CHECK-UBSAN-FUNCTION-TARGET
 // RUN: %clang --target=x86_64-sie-ps5 -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
-// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
 
 // RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY
 // RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MPURE-CODE
 // RUN: not %clang --target=armv6t2-eabi -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MEXECUTE-ONLY
 // RUN: not %clang --target=armv6t2-eabi -mpure-code -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MPURE-CODE
-// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED-VPTR
+// RUN: %clang --target=armv6t2-eabi -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
+
+// RUN: not %clang --target=aarch64 -mexecute-only -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY
+// RUN: not %clang --target=aarch64 -mpure-code -fsanitize=function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-FUNCTION-MPURE-CODE
+// RUN: not %clang --target=aarch64 -mexecute-only -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MEXECUTE-ONLY
+// RUN: not %clang --target=aarch64 -mpure-code -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-KCFI-MPURE-CODE
+// RUN: %clang --target=aarch64 -mexecute-only -fsanitize=undefined %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-UBSAN-UNDEFINED
 
 // CHECK-UBSAN-KCFI-TARGET-DAG: error: unsupported option '-fsanitize=kcfi' for target 'x86_64-sie-ps5'
 // CHECK-UBSAN-KCFI-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=kcfi' not allowed with '-mexecute-only'
@@ -1067,7 +1072,7 @@
 // CHECK-UBSAN-FUNCTION-TARGET-DAG: error: unsupported option '-fsanitize=function' for target 'x86_64-sie-ps5'
 // CHECK-UBSAN-FUNCTION-MEXECUTE-ONLY-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mexecute-only'
 // CHECK-UBSAN-FUNCTION-MPURE-CODE-DAG: error: invalid argument '-fsanitize=function' not allowed with '-mpure-code'
-// CHECK-UBSAN-UNDEFINED-VPTR: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
+// CHECK-UBSAN-UNDEFINED: "-fsanitize={{((alignment|array-bounds|bool|builtin|enum|float-cast-overflow|integer-divide-by-zero|nonnull-attribute|null|pointer-overflow|return|returns-nonnull-attribute|shift-base|shift-exponent|signed-integer-overflow|unreachable|vla-bound),?){17}"}}
 
 // * Test BareMetal toolchain sanitizer support *
 

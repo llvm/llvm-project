@@ -4,7 +4,7 @@
 
 # A wrapper library over MPC for use with LLVM libc math unittests.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
+load("//libc/test:libc_test_rules.bzl", "libc_test_library")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -26,7 +26,7 @@ cc_library(
     ),
 )
 
-libc_support_library(
+libc_test_library(
     name = "mpc_wrapper",
     srcs = ["MPCUtils.cpp"],
     hdrs = ["MPCUtils.h"],

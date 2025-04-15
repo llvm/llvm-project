@@ -264,7 +264,7 @@ entry:
 define <vscale x 4 x i64> @udot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: udot_8to64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    udot z4.s, z2.b, z3.b
 ; CHECK-NEXT:    sunpklo z2.d, z4.s
 ; CHECK-NEXT:    sunpkhi z3.d, z4.s
@@ -327,7 +327,7 @@ entry:
 define <vscale x 4 x i64> @sdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b){
 ; CHECK-LABEL: sdot_8to64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-NEXT:    sdot z4.s, z2.b, z3.b
 ; CHECK-NEXT:    sunpklo z2.d, z4.s
 ; CHECK-NEXT:    sunpkhi z3.d, z4.s
@@ -390,7 +390,7 @@ entry:
 define <vscale x 4 x i64> @usdot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b){
 ; CHECK-I8MM-LABEL: usdot_8to64:
 ; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-I8MM-NEXT:    usdot z4.s, z2.b, z3.b
 ; CHECK-I8MM-NEXT:    sunpklo z2.d, z4.s
 ; CHECK-I8MM-NEXT:    sunpkhi z3.d, z4.s
@@ -523,7 +523,7 @@ entry:
 define <vscale x 4 x i64> @sudot_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-I8MM-LABEL: sudot_8to64:
 ; CHECK-I8MM:       // %bb.0: // %entry
-; CHECK-I8MM-NEXT:    mov z4.s, #0 // =0x0
+; CHECK-I8MM-NEXT:    movi v4.2d, #0000000000000000
 ; CHECK-I8MM-NEXT:    usdot z4.s, z3.b, z2.b
 ; CHECK-I8MM-NEXT:    sunpklo z2.d, z4.s
 ; CHECK-I8MM-NEXT:    sunpkhi z3.d, z4.s
@@ -758,11 +758,11 @@ entry:
 define <vscale x 4 x i64> @udot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a){
 ; CHECK-LABEL: udot_no_bin_op_8to64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.b, #1 // =0x1
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
-; CHECK-NEXT:    udot z4.s, z2.b, z3.b
-; CHECK-NEXT:    sunpklo z2.d, z4.s
-; CHECK-NEXT:    sunpkhi z3.d, z4.s
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEXT:    udot z3.s, z2.b, z4.b
+; CHECK-NEXT:    sunpklo z2.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
 ; CHECK-NEXT:    add z0.d, z0.d, z2.d
 ; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret
@@ -800,11 +800,11 @@ define <vscale x 4 x i64> @udot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale
 define <vscale x 4 x i64> @sdot_no_bin_op_8to64(<vscale x 4 x i64> %acc, <vscale x 16 x i8> %a){
 ; CHECK-LABEL: sdot_no_bin_op_8to64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z3.b, #1 // =0x1
-; CHECK-NEXT:    mov z4.s, #0 // =0x0
-; CHECK-NEXT:    sdot z4.s, z2.b, z3.b
-; CHECK-NEXT:    sunpklo z2.d, z4.s
-; CHECK-NEXT:    sunpkhi z3.d, z4.s
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    mov z4.b, #1 // =0x1
+; CHECK-NEXT:    sdot z3.s, z2.b, z4.b
+; CHECK-NEXT:    sunpklo z2.d, z3.s
+; CHECK-NEXT:    sunpkhi z3.d, z3.s
 ; CHECK-NEXT:    add z0.d, z0.d, z2.d
 ; CHECK-NEXT:    add z1.d, z1.d, z3.d
 ; CHECK-NEXT:    ret

@@ -46,8 +46,6 @@ public:
     cont,                          // 'c'
     continue_with_sig,             // 'C'
     detach,                        // 'D'
-    read_general_regs,             // 'g'
-    write_general_regs,            // 'G'
     set_thread,                    // 'H'
     step_inferior_one_cycle,       // 'i'
     signal_and_step_inf_one_cycle, // 'I'
@@ -221,8 +219,6 @@ public:
   rnb_err_t HandlePacket_M(const char *p);
   rnb_err_t HandlePacket_x(const char *p);
   rnb_err_t HandlePacket_X(const char *p);
-  rnb_err_t HandlePacket_g(const char *p);
-  rnb_err_t HandlePacket_G(const char *p);
   rnb_err_t HandlePacket_z(const char *p);
   rnb_err_t HandlePacket_T(const char *p);
   rnb_err_t HandlePacket_p(const char *p);

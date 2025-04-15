@@ -361,37 +361,45 @@ private:
 
 /// Regions of an op are fixed length and indexed numerically so are represented
 /// with a sequence-like container.
-class PyRegionList {
+class PyRegionList : public Sliceable<PyRegionList, PyRegion> {
 public:
-  PyRegionList(PyOperationRef operation) : operation(std::move(operation)) {}
+  static constexpr const char *pyClassName = "RegionSequence";
+
+  PyRegionList(PyOperationRef operation, intptr_t startIndex = 0,
+               intptr_t length = -1, intptr_t step = 1)
+      : Sliceable(startIndex,
+                  length == -1 ? mlirOperationGetNumRegions(operation->get())
+                               : length,
+                  step),
+        operation(std::move(operation)) {}
 
   PyRegionIterator dunderIter() {
     operation->checkValid();
     return PyRegionIterator(operation);
   }
 
-  intptr_t dunderLen() {
+  static void bindDerived(ClassTy &c) {
+    c.def("__iter__", &PyRegionList::dunderIter);
+  }
+
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyRegionList, PyRegion>;
+
+  intptr_t getRawNumElements() {
     operation->checkValid();
     return mlirOperationGetNumRegions(operation->get());
   }
 
-  PyRegion dunderGetItem(intptr_t index) {
-    // dunderLen checks validity.
-    if (index < 0 || index >= dunderLen()) {
-      throw nb::index_error("attempt to access out of bounds region");
-    }
-    MlirRegion region = mlirOperationGetRegion(operation->get(), index);
-    return PyRegion(operation, region);
+  PyRegion getRawElement(intptr_t pos) {
+    operation->checkValid();
+    return PyRegion(operation, mlirOperationGetRegion(operation->get(), pos));
   }
 
-  static void bind(nb::module_ &m) {
-    nb::class_<PyRegionList>(m, "RegionSequence")
-        .def("__len__", &PyRegionList::dunderLen)
-        .def("__iter__", &PyRegionList::dunderIter)
-        .def("__getitem__", &PyRegionList::dunderGetItem);
+  PyRegionList slice(intptr_t startIndex, intptr_t length, intptr_t step) {
+    return PyRegionList(operation, startIndex, length, step);
   }
 
-private:
   PyOperationRef operation;
 };
 
@@ -450,6 +458,9 @@ public:
 
   PyBlock dunderGetItem(intptr_t index) {
     operation->checkValid();
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0) {
       throw nb::index_error("attempt to access out of bounds block");
     }
@@ -546,6 +557,9 @@ public:
 
   nb::object dunderGetItem(intptr_t index) {
     parentOperation->checkValid();
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0) {
       throw nb::index_error("attempt to access out of bounds operation");
     }
@@ -2629,6 +2643,9 @@ public:
   }
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
+    if (index < 0) {
+      index += dunderLen();
+    }
     if (index < 0 || index >= dunderLen()) {
       throw nb::index_error("attempt to access out of bounds attribute");
     }
@@ -2743,6 +2760,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   // __init__.py will subclass it with site-specific functionality and set a
   // "Context" attribute on this module.
   //----------------------------------------------------------------------------
+
+  // Expose DefaultThreadPool to python
+  nb::class_<PyThreadPool>(m, "ThreadPool")
+      .def("__init__", [](PyThreadPool &self) { new (&self) PyThreadPool(); })
+      .def("get_max_concurrency", &PyThreadPool::getMaxConcurrency)
+      .def("_mlir_thread_pool_ptr", &PyThreadPool::_mlir_thread_pool_ptr);
+
   nb::class_<PyMlirContext>(m, "_BaseContext")
       .def("__init__",
            [](PyMlirContext &self) {
@@ -2814,6 +2838,25 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirContextEnableMultithreading(self.get(), enable);
           },
           nb::arg("enable"))
+      .def("set_thread_pool",
+           [](PyMlirContext &self, PyThreadPool &pool) {
+             // we should disable multi-threading first before setting
+             // new thread pool otherwise the assert in
+             // MLIRContext::setThreadPool will be raised.
+             mlirContextEnableMultithreading(self.get(), false);
+             mlirContextSetThreadPool(self.get(), pool.get());
+           })
+      .def("get_num_threads",
+           [](PyMlirContext &self) {
+             return mlirContextGetNumThreads(self.get());
+           })
+      .def("_mlir_thread_pool_ptr",
+           [](PyMlirContext &self) {
+             MlirLlvmThreadPool pool = mlirContextGetThreadPool(self.get());
+             std::stringstream ss;
+             ss << pool.ptr;
+             return ss.str();
+           })
       .def(
           "is_registered_operation",
           [](PyMlirContext &self, std::string &name) {
@@ -2943,6 +2986,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("callee"), nb::arg("frames"),
           nb::arg("context").none() = nb::none(),
           kContextGetCallSiteLocationDocstring)
+      .def("is_a_callsite", mlirLocationIsACallSite)
+      .def_prop_ro("callee", mlirLocationCallSiteGetCallee)
+      .def_prop_ro("caller", mlirLocationCallSiteGetCaller)
       .def_static(
           "file",
           [](std::string filename, int line, int col,
@@ -2967,6 +3013,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("filename"), nb::arg("start_line"), nb::arg("start_col"),
           nb::arg("end_line"), nb::arg("end_col"),
           nb::arg("context").none() = nb::none(), kContextGetFileRangeDocstring)
+      .def("is_a_file", mlirLocationIsAFileLineColRange)
+      .def_prop_ro("filename",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(
+                         mlirLocationFileLineColRangeGetFilename(loc));
+                   })
+      .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine)
+      .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn)
+      .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine)
+      .def_prop_ro("end_col", mlirLocationFileLineColRangeGetEndColumn)
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
@@ -2984,6 +3040,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("locations"), nb::arg("metadata").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetFusedLocationDocstring)
+      .def("is_a_fused", mlirLocationIsAFused)
+      .def_prop_ro("locations",
+                   [](MlirLocation loc) {
+                     unsigned numLocations =
+                         mlirLocationFusedGetNumLocations(loc);
+                     std::vector<MlirLocation> locations(numLocations);
+                     if (numLocations)
+                       mlirLocationFusedGetLocations(loc, locations.data());
+                     return locations;
+                   })
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -2998,6 +3064,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("name"), nb::arg("childLoc").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetNameLocationDocString)
+      .def("is_a_name", mlirLocationIsAName)
+      .def_prop_ro("name_str",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(mlirLocationNameGetName(loc));
+                   })
+      .def_prop_ro("child_loc", mlirLocationNameGetChildLoc)
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3148,9 +3220,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      auto &concreteOperation = self.getOperation();
                      concreteOperation.checkValid();
                      MlirOperation operation = concreteOperation.get();
-                     MlirStringRef name =
-                         mlirIdentifierStr(mlirOperationGetName(operation));
-                     return nb::str(name.data, name.length);
+                     return mlirIdentifierStr(mlirOperationGetName(operation));
                    })
       .def_prop_ro("operands",
                    [](PyOperationBase &self) {
@@ -3738,8 +3808,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "name",
           [](PyNamedAttribute &self) {
-            return nb::str(mlirIdentifierStr(self.namedAttr.name).data,
-                           mlirIdentifierStr(self.namedAttr.name).length);
+            return mlirIdentifierStr(self.namedAttr.name);
           },
           "The name of the NamedAttribute binding")
       .def_prop_ro(
@@ -3908,11 +3977,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           kValueDunderStrDocstring)
       .def(
           "get_name",
-          [](PyValue &self, bool useLocalScope) {
+          [](PyValue &self, bool useLocalScope, bool useNameLocAsPrefix) {
             PyPrintAccumulator printAccum;
             MlirOpPrintingFlags flags = mlirOpPrintingFlagsCreate();
             if (useLocalScope)
               mlirOpPrintingFlagsUseLocalScope(flags);
+            if (useNameLocAsPrefix)
+              mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
             MlirAsmState valueState =
                 mlirAsmStateCreateForValue(self.get(), flags);
             mlirValuePrintAsOperand(self.get(), valueState,
@@ -3922,7 +3993,8 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirAsmStateDestroy(valueState);
             return printAccum.join();
           },
-          nb::arg("use_local_scope") = false)
+          nb::arg("use_local_scope") = false,
+          nb::arg("use_name_loc_as_prefix") = false)
       .def(
           "get_name",
           [](PyValue &self, PyAsmState &state) {
@@ -3972,7 +4044,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("with"), nb::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
       .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-           [](PyValue &self) { return self.maybeDownCast(); });
+           [](PyValue &self) { return self.maybeDownCast(); })
+      .def_prop_ro(
+          "location",
+          [](MlirValue self) {
+            return PyLocation(
+                PyMlirContext::forContext(mlirValueGetContext(self)),
+                mlirValueGetLocation(self));
+          },
+          "Returns the source location the value");
+
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
   PyOpOperand::bind(m);

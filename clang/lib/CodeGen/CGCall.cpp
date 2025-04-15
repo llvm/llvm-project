@@ -17,6 +17,7 @@
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
+#include "CGDebugInfo.h"
 #include "CGRecordLayout.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -498,7 +499,8 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 /// Arrange the argument and result information for the declaration or
 /// definition of the given function.
 const CGFunctionInfo &
-CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
+CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
@@ -507,6 +509,13 @@ CodeGenTypes::arrangeFunctionDeclaration(const FunctionDecl *FD) {
 
   assert(isa<FunctionType>(FTy));
   setCUDAKernelCallingConvention(FTy, CGM, FD);
+
+  if (FD->hasAttr<OpenCLKernelAttr>() &&
+      GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+    const FunctionType *FT = FTy->getAs<FunctionType>();
+    CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
+    FTy = FT->getCanonicalTypeUnqualified();
+  }
 
   // When declaring a function without a prototype, always use a
   // non-variadic type.
@@ -580,13 +589,11 @@ CodeGenTypes::arrangeUnprototypedObjCMessageSend(QualType returnType,
 const CGFunctionInfo &
 CodeGenTypes::arrangeGlobalDeclaration(GlobalDecl GD) {
   // FIXME: Do we need to handle ObjCMethodDecl?
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-
   if (isa<CXXConstructorDecl>(GD.getDecl()) ||
       isa<CXXDestructorDecl>(GD.getDecl()))
     return arrangeCXXStructorDeclaration(GD);
 
-  return arrangeFunctionDeclaration(FD);
+  return arrangeFunctionDeclaration(GD);
 }
 
 /// Arrange a thunk that takes 'this' as the first parameter followed by
@@ -2390,7 +2397,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes from the callee prototype if we have one.
   AddAttributesFromFunctionProtoType(getContext(), FuncAttrs,
                                      CalleeInfo.getCalleeFunctionProtoType());
-
   const Decl *TargetDecl = CalleeInfo.getCalleeDecl().getDecl();
 
   // Attach assumption attributes to the declaration. If this is a call
@@ -2497,7 +2503,11 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    if (TargetDecl->hasAttr<OpenCLKernelAttr>()) {
+    if (TargetDecl->hasAttr<OpenCLKernelAttr>() &&
+        CallingConv != CallingConv::CC_C &&
+        CallingConv != CallingConv::CC_SpirFunction) {
+      // Check CallingConv to avoid adding uniform-work-group-size attribute to
+      // OpenCL Kernel Stub
       if (getLangOpts().OpenCLVersion <= 120) {
         // OpenCL v1.2 Work groups are always uniform
         FuncAttrs.addAttribute("uniform-work-group-size", "true");
@@ -2607,6 +2617,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (shouldDisableTailCalls())
       FuncAttrs.addAttribute("disable-tail-calls", "true");
 
+    // These functions require the returns_twice attribute for correct codegen,
+    // but the attribute may not be added if -fno-builtin is specified. We
+    // explicitly add that attribute here.
+    static const llvm::StringSet<> ReturnsTwiceFn{
+        "_setjmpex", "setjmp",      "_setjmp", "vfork",
+        "sigsetjmp", "__sigsetjmp", "savectx", "getcontext"};
+    if (ReturnsTwiceFn.contains(Name))
+      FuncAttrs.addAttribute(llvm::Attribute::ReturnsTwice);
+
     // CPU/feature overrides.  addDefaultFunctionDefinitionAttributes
     // handles these separately to set them based on the global defaults.
     GetCPUAndFeaturesAttributes(CalleeInfo.getCalleeDecl(), FuncAttrs);
@@ -2705,7 +2724,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
-  // Apply `nonnull`, `dereferencable(N)` and `align N` to the `this` argument,
+  // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
   // unless this is a thunk function.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
@@ -3633,7 +3652,7 @@ static llvm::StoreInst *findDominatingStoreToReturnValue(CodeGenFunction &CGF) {
     // Look at directly preceding instruction, skipping bitcasts, lifetime
     // markers, and fake uses and their operands.
     const llvm::Instruction *LoadIntoFakeUse = nullptr;
-    for (llvm::Instruction &I : make_range(IP->rbegin(), IP->rend())) {
+    for (llvm::Instruction &I : llvm::reverse(*IP)) {
       // Ignore instructions that are just loads for fake uses; the load should
       // immediately precede the fake use, so we only need to remember the
       // operand for the last fake use seen.

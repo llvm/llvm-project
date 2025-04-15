@@ -68,7 +68,7 @@ func.func @call4() {
   // AARCH64: = call { float, float } @gen4()
   // PPC: = call { float, float } @gen4()
   %1 = fir.call @gen4() : () -> complex<f32>
-  // I32: call void @sink4(ptr %
+  // I32: call void @sink4(ptr byval({ float, float }) align 4 %
   // X64: call void @sink4(<2 x float> %
   // AARCH64: call void @sink4([2 x float] %
   // PPC: call void @sink4(float %{{.*}}, float %{{.*}})
@@ -80,12 +80,12 @@ func.func @call4() {
 // X64-LABEL: define void @call8()
 // AARCH64-LABEL: define void @call8()
 func.func @call8() {
-  // I32: call void @gen8(ptr %
+  // I32: call void @gen8(ptr sret({ double, double }) align 4 %
   // X64: = call { double, double } @gen8()
   // AARCH64: = call { double, double } @gen8()
   // PPC: = call { double, double } @gen8()
   %1 = fir.call @gen8() : () -> complex<f64>
-  // I32: call void @sink8(ptr %
+  // I32: call void @sink8(ptr byval({ double, double }) align 4 %
   // X64: call void @sink8(double %{{[0-9]*}}, double %{{[0-9]*}})
   // AARCH64: call void @sink8([2 x double] %
   // PPC: call void @sink8(double %{{.*}}, double %{{.*}})

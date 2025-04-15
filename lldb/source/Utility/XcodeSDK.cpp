@@ -155,10 +155,6 @@ bool XcodeSDK::Info::operator==(const Info &other) const {
 }
 
 void XcodeSDK::Merge(const XcodeSDK &other) {
-  auto add_internal_sdk_suffix = [](llvm::StringRef sdk) {
-    return (sdk.substr(0, sdk.size() - 3) + "Internal.sdk").str();
-  };
-
   // The "bigger" SDK always wins.
   auto l = Parse();
   auto r = other.Parse();
@@ -168,12 +164,14 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     // The Internal flag always wins.
     if (!l.internal && r.internal) {
       if (llvm::StringRef(m_name).ends_with(".sdk"))
-        m_name = add_internal_sdk_suffix(m_name);
-
-      if (m_sysroot.GetFileNameExtension() == ".sdk")
-        m_sysroot.SetFilename(add_internal_sdk_suffix(m_sysroot.GetFilename()));
+        m_name =
+            m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
     }
   }
+
+  // We changed the SDK name. Adjust the sysroot accordingly.
+  if (m_sysroot && m_sysroot.GetFilename().GetStringRef() != m_name)
+    m_sysroot.SetFilename(m_name);
 }
 
 std::string XcodeSDK::GetCanonicalName(XcodeSDK::Info info) {

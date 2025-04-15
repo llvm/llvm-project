@@ -697,27 +697,27 @@ define <8 x i32> @trunc_ssat_v8i64_v8i32(ptr %p0) "min-legal-vector-width"="256"
 ; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm3
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [2147483647,2147483647]
 ; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm4, %xmm5
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm0, %xmm4, %xmm5
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm2, %xmm4, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm4, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
 ; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = [18446744071562067968,18446744071562067968]
 ; AVX1-NEXT:    # xmm4 = mem[0,0]
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm2, %xmm4, %xmm2
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm5
-; AVX1-NEXT:    vblendvpd %xmm5, %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm1, %xmm5
 ; AVX1-NEXT:    vblendvpd %xmm5, %xmm1, %xmm4, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX1-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2],ymm1[0,2],ymm0[4,6],ymm1[4,6]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm0, %xmm5
+; AVX1-NEXT:    vblendvpd %xmm5, %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm3, %xmm1
+; AVX1-NEXT:    vblendvpd %xmm1, %xmm3, %xmm4, %xmm1
+; AVX1-NEXT:    vpcmpgtq %xmm4, %xmm2, %xmm3
+; AVX1-NEXT:    vblendvpd %xmm3, %xmm2, %xmm4, %xmm2
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm2[0,2],xmm1[0,2]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-SLOW-LABEL: trunc_ssat_v8i64_v8i32:

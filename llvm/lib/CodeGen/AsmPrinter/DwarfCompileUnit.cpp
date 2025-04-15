@@ -1170,7 +1170,7 @@ DIE *DwarfCompileUnit::createAndAddScopeChildren(LexicalScope *Scope,
   // should be emitted for subprograms in this CU.
   if (!includeMinimalInlineScopes() && !Scope->getInlinedAt()) {
     auto &LocalDecls = DD->getLocalDeclsForScope(Scope->getScopeNode());
-    DeferredLocalDecls.insert(LocalDecls.begin(), LocalDecls.end());
+    DeferredLocalDecls.insert_range(LocalDecls);
   }
 
   // Emit inner lexical scopes.

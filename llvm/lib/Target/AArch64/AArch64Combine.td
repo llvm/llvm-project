@@ -21,7 +21,7 @@ def icmp_redundant_trunc_matchdata : GIDefMatchData<"Register">;
 def icmp_redundant_trunc : GICombineRule<
   (defs root:$root, icmp_redundant_trunc_matchdata:$matchinfo),
   (match (G_ICMP $dst, $tst, $src1, $src2):$root,
-         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getKnownBits(), ${matchinfo}); }]),
+         [{ return matchICmpRedundantTrunc(*${root}, MRI, Helper.getValueTracking(), ${matchinfo}); }]),
   (apply [{ applyICmpRedundantTrunc(*${root}, MRI, B, Observer, ${matchinfo}); }])>;
 
 // AArch64-specific offset folding for G_GLOBAL_VALUE.

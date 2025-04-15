@@ -115,11 +115,13 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
+  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+                               const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
                                bool IsMutable = false) {
-    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
+    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
+                              IsMutable);
   }
 
   /// Creates a descriptor for a composite type.

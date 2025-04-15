@@ -12,12 +12,47 @@
 #ifndef CLANG_CIR_LOWERTOLLVM_H
 #define CLANG_CIR_LOWERTOLLVM_H
 
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 namespace cir {
 
 namespace direct {
+
+/// Convert a CIR attribute to an LLVM attribute. May use the datalayout for
+/// lowering attributes to-be-stored in memory.
+mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp, mlir::Attribute attr,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter);
+
+mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage);
+
+class CIRToLLVMBrCondOpLowering
+    : public mlir::OpConversionPattern<cir::BrCondOp> {
+public:
+  using mlir::OpConversionPattern<cir::BrCondOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BrCondOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMCastOpLowering : public mlir::OpConversionPattern<cir::CastOp> {
+  mlir::DataLayout const &dataLayout;
+
+  mlir::Type convertTy(mlir::Type ty) const;
+
+public:
+  CIRToLLVMCastOpLowering(const mlir::TypeConverter &typeConverter,
+                          mlir::MLIRContext *context,
+                          mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CastOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
 
 class CIRToLLVMReturnOpLowering
     : public mlir::OpConversionPattern<cir::ReturnOp> {
@@ -78,13 +113,10 @@ public:
 
 class CIRToLLVMConstantOpLowering
     : public mlir::OpConversionPattern<cir::ConstantOp> {
-  mlir::DataLayout const &dataLayout;
-
 public:
   CIRToLLVMConstantOpLowering(const mlir::TypeConverter &typeConverter,
-                              mlir::MLIRContext *context,
-                              mlir::DataLayout const &dataLayout)
-      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {
+                              mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
     setHasBoundedRewriteRecursion();
   }
 
@@ -105,6 +137,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::FuncOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMGetGlobalOpLowering
+    : public mlir::OpConversionPattern<cir::GetGlobalOp> {
+public:
+  using mlir::OpConversionPattern<cir::GetGlobalOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::GetGlobalOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
@@ -133,6 +175,73 @@ private:
       cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const;
 };
 
+class CIRToLLVMUnaryOpLowering
+    : public mlir::OpConversionPattern<cir::UnaryOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnaryOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnaryOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBinOpLowering : public mlir::OpConversionPattern<cir::BinOp> {
+  mlir::LLVM::IntegerOverflowFlags getIntOverflowFlag(cir::BinOp op) const;
+
+public:
+  using mlir::OpConversionPattern<cir::BinOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BinOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMCmpOpLowering : public mlir::OpConversionPattern<cir::CmpOp> {
+public:
+  CIRToLLVMCmpOpLowering(const mlir::TypeConverter &typeConverter,
+                         mlir::MLIRContext *context)
+      : OpConversionPattern(typeConverter, context) {
+    setHasBoundedRewriteRecursion();
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::CmpOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMBrOpLowering : public mlir::OpConversionPattern<cir::BrOp> {
+public:
+  using mlir::OpConversionPattern<cir::BrOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::BrOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
+public:
+  using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::TrapOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMPtrStrideOpLowering
+    : public mlir::OpConversionPattern<cir::PtrStrideOp> {
+  mlir::DataLayout const &dataLayout;
+
+public:
+  CIRToLLVMPtrStrideOpLowering(const mlir::TypeConverter &typeConverter,
+                               mlir::MLIRContext *context,
+                               mlir::DataLayout const &dataLayout)
+      : OpConversionPattern(typeConverter, context), dataLayout(dataLayout) {}
+  using mlir::OpConversionPattern<cir::PtrStrideOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::PtrStrideOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
 } // namespace direct
 } // namespace cir
 

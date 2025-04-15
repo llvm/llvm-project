@@ -92,3 +92,19 @@ image to a new version with potentially breaking changes, instead allowing us
 to explicitly opt-in to using the new image when we have done sufficient
 testing to ensure that our existing workflows work as expected in the new
 environment.
+
+Top Level Read Permissions
+--------------------------
+
+The top of every workflow should specify that the job only has read
+permissions:
+
+.. code-block:: yaml
+
+  permissions:
+    contents: read
+
+If specific jobs within the workflow need additional permissions, those
+permissions should be added within the specific job. This practice locks down
+all permissions by default and only enables them when needed, better enforcing
+the principle of least privilege.

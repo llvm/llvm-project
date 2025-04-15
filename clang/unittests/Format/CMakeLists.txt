@@ -1,7 +1,3 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  )
-
 add_clang_unittest(FormatTests
   BracesInserterTest.cpp
   BracesRemoverTest.cpp
@@ -36,12 +32,11 @@ add_clang_unittest(FormatTests
   SortIncludesTest.cpp
   UsingDeclarationsSorterTest.cpp
   TokenAnnotatorTest.cpp
-  )
-
-clang_target_link_libraries(FormatTests
-  PRIVATE
+  CLANG_LIBS
   clangBasic
   clangFormat
   clangRewrite
   clangToolingCore
+  LLVM_COMPONENTS
+  Support
   )

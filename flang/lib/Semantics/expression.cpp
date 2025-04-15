@@ -12,6 +12,7 @@
 #include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/idioms.h"
+#include "flang/Common/type-kinds.h"
 #include "flang/Evaluate/common.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
@@ -265,93 +266,32 @@ MaybeExpr ExpressionAnalyzer::Designate(DataRef &&ref) {
   }
 }
 
-// Some subscript semantic checks must be deferred until all of the
-// subscripts are in hand.
-MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
-  const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
-  int symbolRank{symbol.Rank()};
-  int subscripts{static_cast<int>(ref.size())};
-  if (subscripts == 0) {
-    return std::nullopt; // error recovery
-  } else if (subscripts != symbolRank) {
-    if (symbolRank != 0) {
-      Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
-          symbolRank, symbol.name(), subscripts);
-    }
-    return std::nullopt;
-  } else if (symbol.has<semantics::ObjectEntityDetails>() ||
-      symbol.has<semantics::AssocEntityDetails>()) {
-    // C928 & C1002
-    if (Triplet *last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
-      if (!last->upper() && IsAssumedSizeArray(symbol)) {
-        Say("Assumed-size array '%s' must have explicit final "
-            "subscript upper bound value"_err_en_US,
-            symbol.name());
-        return std::nullopt;
-      }
-    }
-  } else {
-    // Shouldn't get here from Analyze(ArrayElement) without a valid base,
-    // which, if not an object, must be a construct entity from
-    // SELECT TYPE/RANK or ASSOCIATE.
-    CHECK(symbol.has<semantics::AssocEntityDetails>());
-  }
-  if (!semantics::IsNamedConstant(symbol) && !inDataStmtObject_) {
-    // Subscripts of named constants are checked in folding.
-    // Subscripts of DATA statement objects are checked in data statement
-    // conversion to initializers.
-    CheckSubscripts(ref);
-  }
-  return Designate(DataRef{std::move(ref)});
-}
-
-// Applies subscripts to a data reference.
-MaybeExpr ExpressionAnalyzer::ApplySubscripts(
-    DataRef &&dataRef, std::vector<Subscript> &&subscripts) {
-  if (subscripts.empty()) {
-    return std::nullopt; // error recovery
-  }
-  return common::visit(
-      common::visitors{
-          [&](SymbolRef &&symbol) {
-            return CompleteSubscripts(ArrayRef{symbol, std::move(subscripts)});
-          },
-          [&](Component &&c) {
-            return CompleteSubscripts(
-                ArrayRef{std::move(c), std::move(subscripts)});
-          },
-          [&](auto &&) -> MaybeExpr {
-            DIE("bad base for ArrayRef");
-            return std::nullopt;
-          },
-      },
-      std::move(dataRef.u));
-}
-
-void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
-  // Fold subscript expressions and check for an empty triplet.
-  const Symbol &arraySymbol{ref.base().GetLastSymbol()};
-  Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
-  CHECK(lb.size() >= ref.subscript().size());
-  Shape ub{GetUBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
-  CHECK(ub.size() >= ref.subscript().size());
+// Returns false if any dimension could be empty (e.g. A(1:0)) or has an error
+static bool FoldSubscripts(semantics::SemanticsContext &context,
+    const Symbol &arraySymbol, std::vector<Subscript> &subscripts, Shape &lb,
+    Shape &ub) {
+  FoldingContext &foldingContext{context.foldingContext()};
+  lb = GetLBOUNDs(foldingContext, NamedEntity{arraySymbol});
+  CHECK(lb.size() >= subscripts.size());
+  ub = GetUBOUNDs(foldingContext, NamedEntity{arraySymbol});
+  CHECK(ub.size() >= subscripts.size());
   bool anyPossiblyEmptyDim{false};
   int dim{0};
-  for (Subscript &ss : ref.subscript()) {
+  for (Subscript &ss : subscripts) {
     if (Triplet * triplet{std::get_if<Triplet>(&ss.u)}) {
-      auto expr{Fold(triplet->stride())};
+      auto expr{Fold(foldingContext, triplet->stride())};
       auto stride{ToInt64(expr)};
       triplet->set_stride(std::move(expr));
       std::optional<ConstantSubscript> lower, upper;
       if (auto expr{triplet->lower()}) {
-        *expr = Fold(std::move(*expr));
+        *expr = Fold(foldingContext, std::move(*expr));
         lower = ToInt64(*expr);
         triplet->set_lower(std::move(*expr));
       } else {
         lower = ToInt64(lb[dim]);
       }
       if (auto expr{triplet->upper()}) {
-        *expr = Fold(std::move(*expr));
+        *expr = Fold(foldingContext, std::move(*expr));
         upper = ToInt64(*expr);
         triplet->set_upper(std::move(*expr));
       } else {
@@ -359,8 +299,9 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
       }
       if (stride) {
         if (*stride == 0) {
-          Say("Stride of triplet must not be zero"_err_en_US);
-          return;
+          foldingContext.messages().Say(
+              "Stride of triplet must not be zero"_err_en_US);
+          return false; // error
         }
         if (lower && upper) {
           if (*stride > 0) {
@@ -380,21 +321,53 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
       }
     } else { // not triplet
       auto &expr{std::get<IndirectSubscriptIntegerExpr>(ss.u).value()};
-      expr = Fold(std::move(expr));
+      expr = Fold(foldingContext, std::move(expr));
       anyPossiblyEmptyDim |= expr.Rank() > 0; // vector subscript
     }
     ++dim;
   }
-  if (anyPossiblyEmptyDim) {
-    return;
+  return !anyPossiblyEmptyDim;
+}
+
+static void ValidateSubscriptValue(parser::ContextualMessages &messages,
+    const Symbol &symbol, ConstantSubscript val,
+    std::optional<ConstantSubscript> lb, std::optional<ConstantSubscript> ub,
+    int dim, const char *co = "") {
+  std::optional<parser::MessageFixedText> msg;
+  std::optional<ConstantSubscript> bound;
+  if (lb && val < *lb) {
+    msg =
+        "%ssubscript %jd is less than lower %sbound %jd for %sdimension %d of array"_err_en_US;
+    bound = *lb;
+  } else if (ub && val > *ub) {
+    msg =
+        "%ssubscript %jd is greater than upper %sbound %jd for %sdimension %d of array"_err_en_US;
+    bound = *ub;
+    if (dim + 1 == symbol.Rank() && IsDummy(symbol) && *bound == 1) {
+      // Old-school overindexing of a dummy array isn't fatal when
+      // it's on the last dimension and the extent is 1.
+      msg->set_severity(parser::Severity::Warning);
+    }
   }
-  dim = 0;
-  for (Subscript &ss : ref.subscript()) {
+  if (msg) {
+    AttachDeclaration(
+        messages.Say(std::move(*msg), co, static_cast<std::intmax_t>(val), co,
+            static_cast<std::intmax_t>(bound.value()), co, dim + 1),
+        symbol);
+  }
+}
+
+static void ValidateSubscripts(semantics::SemanticsContext &context,
+    const Symbol &arraySymbol, const std::vector<Subscript> &subscripts,
+    const Shape &lb, const Shape &ub) {
+  int dim{0};
+  for (const Subscript &ss : subscripts) {
     auto dimLB{ToInt64(lb[dim])};
     auto dimUB{ToInt64(ub[dim])};
     if (dimUB && dimLB && *dimUB < *dimLB) {
       AttachDeclaration(
-          Warn(common::UsageWarning::SubscriptedEmptyArray,
+          context.Warn(common::UsageWarning::SubscriptedEmptyArray,
+              context.foldingContext().messages().at(),
               "Empty array dimension %d should not be subscripted as an element or non-empty array section"_err_en_US,
               dim + 1),
           arraySymbol);
@@ -429,33 +402,103 @@ void ExpressionAnalyzer::CheckSubscripts(ArrayRef &ref) {
     }
     for (int j{0}; j < vals; ++j) {
       if (val[j]) {
-        std::optional<parser::MessageFixedText> msg;
-        std::optional<ConstantSubscript> bound;
-        if (dimLB && *val[j] < *dimLB) {
-          msg =
-              "Subscript %jd is less than lower bound %jd for dimension %d of array"_err_en_US;
-          bound = *dimLB;
-        } else if (dimUB && *val[j] > *dimUB) {
-          msg =
-              "Subscript %jd is greater than upper bound %jd for dimension %d of array"_err_en_US;
-          bound = *dimUB;
-          if (dim + 1 == arraySymbol.Rank() && IsDummy(arraySymbol) &&
-              *bound == 1) {
-            // Old-school overindexing of a dummy array isn't fatal when
-            // it's on the last dimension and the extent is 1.
-            msg->set_severity(parser::Severity::Warning);
-          }
-        }
-        if (msg) {
-          AttachDeclaration(
-              Say(std::move(*msg), static_cast<std::intmax_t>(*val[j]),
-                  static_cast<std::intmax_t>(bound.value()), dim + 1),
-              arraySymbol);
-        }
+        ValidateSubscriptValue(context.foldingContext().messages(), arraySymbol,
+            *val[j], dimLB, dimUB, dim);
       }
     }
     ++dim;
   }
+}
+
+static void CheckSubscripts(
+    semantics::SemanticsContext &context, ArrayRef &ref) {
+  const Symbol &arraySymbol{ref.base().GetLastSymbol()};
+  Shape lb, ub;
+  if (FoldSubscripts(context, arraySymbol, ref.subscript(), lb, ub)) {
+    ValidateSubscripts(context, arraySymbol, ref.subscript(), lb, ub);
+  }
+}
+
+static void CheckSubscripts(
+    semantics::SemanticsContext &context, CoarrayRef &ref) {
+  const Symbol &coarraySymbol{ref.GetBase().GetLastSymbol()};
+  Shape lb, ub;
+  if (FoldSubscripts(context, coarraySymbol, ref.subscript(), lb, ub)) {
+    ValidateSubscripts(context, coarraySymbol, ref.subscript(), lb, ub);
+  }
+  FoldingContext &foldingContext{context.foldingContext()};
+  int dim{0};
+  for (auto &expr : ref.cosubscript()) {
+    expr = Fold(foldingContext, std::move(expr));
+    if (auto val{ToInt64(expr)}) {
+      ValidateSubscriptValue(foldingContext.messages(), coarraySymbol, *val,
+          ToInt64(GetLCOBOUND(coarraySymbol, dim)),
+          ToInt64(GetUCOBOUND(coarraySymbol, dim)), dim, "co");
+    }
+    ++dim;
+  }
+}
+
+// Some subscript semantic checks must be deferred until all of the
+// subscripts are in hand.
+MaybeExpr ExpressionAnalyzer::CompleteSubscripts(ArrayRef &&ref) {
+  const Symbol &symbol{ref.GetLastSymbol().GetUltimate()};
+  int symbolRank{symbol.Rank()};
+  int subscripts{static_cast<int>(ref.size())};
+  if (subscripts == 0) {
+    return std::nullopt; // error recovery
+  } else if (subscripts != symbolRank) {
+    if (symbolRank != 0) {
+      Say("Reference to rank-%d object '%s' has %d subscripts"_err_en_US,
+          symbolRank, symbol.name(), subscripts);
+    }
+    return std::nullopt;
+  } else if (symbol.has<semantics::ObjectEntityDetails>() ||
+      symbol.has<semantics::AssocEntityDetails>()) {
+    // C928 & C1002
+    if (Triplet * last{std::get_if<Triplet>(&ref.subscript().back().u)}) {
+      if (!last->upper() && IsAssumedSizeArray(symbol)) {
+        Say("Assumed-size array '%s' must have explicit final subscript upper bound value"_err_en_US,
+            symbol.name());
+        return std::nullopt;
+      }
+    }
+  } else {
+    // Shouldn't get here from Analyze(ArrayElement) without a valid base,
+    // which, if not an object, must be a construct entity from
+    // SELECT TYPE/RANK or ASSOCIATE.
+    CHECK(symbol.has<semantics::AssocEntityDetails>());
+  }
+  if (!semantics::IsNamedConstant(symbol) && !inDataStmtObject_) {
+    // Subscripts of named constants are checked in folding.
+    // Subscripts of DATA statement objects are checked in data statement
+    // conversion to initializers.
+    CheckSubscripts(context_, ref);
+  }
+  return Designate(DataRef{std::move(ref)});
+}
+
+// Applies subscripts to a data reference.
+MaybeExpr ExpressionAnalyzer::ApplySubscripts(
+    DataRef &&dataRef, std::vector<Subscript> &&subscripts) {
+  if (subscripts.empty()) {
+    return std::nullopt; // error recovery
+  }
+  return common::visit(common::visitors{
+                           [&](SymbolRef &&symbol) {
+                             return CompleteSubscripts(
+                                 ArrayRef{symbol, std::move(subscripts)});
+                           },
+                           [&](Component &&c) {
+                             return CompleteSubscripts(
+                                 ArrayRef{std::move(c), std::move(subscripts)});
+                           },
+                           [&](auto &&) -> MaybeExpr {
+                             DIE("bad base for ArrayRef");
+                             return std::nullopt;
+                           },
+                       },
+      std::move(dataRef.u));
 }
 
 // C919a - only one part-ref of a data-ref may have rank > 0
@@ -608,8 +651,25 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
       dataRef = ExtractDataRef(std::move(result),
           /*intoSubstring=*/false, /*intoComplexPart=*/true);
     }
-    if (dataRef && !CheckDataRef(*dataRef)) {
-      result.reset();
+    if (dataRef) {
+      if (!CheckDataRef(*dataRef)) {
+        result.reset();
+      } else if (ExtractCoarrayRef(*dataRef).has_value()) {
+        if (auto dyType{result->GetType()};
+            dyType && dyType->category() == TypeCategory::Derived) {
+          if (!std::holds_alternative<CoarrayRef>(dataRef->u) &&
+              dyType->IsPolymorphic()) { // F'2023 C918
+            Say("The base of a polymorphic object may not be coindexed"_err_en_US);
+          }
+          if (const auto *derived{GetDerivedTypeSpec(*dyType)}) {
+            if (auto bad{FindPolymorphicAllocatablePotentialComponent(
+                    *derived)}) { // F'2023 C917
+              Say("A coindexed designator may not have a type with the polymorphic potential subobject component '%s'"_err_en_US,
+                  bad.BuildResultDesignatorName());
+            }
+          }
+        }
+      }
     }
   }
   return result;
@@ -999,7 +1059,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
           if (const semantics::IntrinsicTypeSpec *
               intrinType{typeSpec->AsIntrinsic()}) {
             if (auto k{ToInt64(Fold(semantics::KindExpr{intrinType->kind()}))};
-                k && IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
+                k &&
+                common::IsValidKindOfIntrinsicType(TypeCategory::Integer, *k)) {
               kind = *k;
             }
           }
@@ -1018,17 +1079,21 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
           n.symbol->attrs().reset(semantics::Attr::VOLATILE);
         }
       }
-      if (!isWholeAssumedSizeArrayOk_ &&
-          semantics::IsAssumedSizeArray(
-              ResolveAssociations(*n.symbol))) { // C1002, C1014, C1231
-        AttachDeclaration(
-            SayAt(n,
-                "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
-                n.source),
-            *n.symbol);
-      }
+      CheckForWholeAssumedSizeArray(n.source, n.symbol);
       return Designate(DataRef{*n.symbol});
     }
+  }
+}
+
+void ExpressionAnalyzer::CheckForWholeAssumedSizeArray(
+    parser::CharBlock at, const Symbol *symbol) {
+  if (!isWholeAssumedSizeArrayOk_ && symbol &&
+      semantics::IsAssumedSizeArray(ResolveAssociations(*symbol))) {
+    AttachDeclaration(
+        SayAt(at,
+            "Whole assumed-size array '%s' may not appear here without subscripts"_err_en_US,
+            symbol->name()),
+        *symbol);
   }
 }
 
@@ -1524,9 +1589,10 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::CoindexedNamedObject &x) {
     // Reverse the chain of symbols so that the base is first and coarray
     // ultimate component is last.
     if (cosubsOk) {
-      return Designate(
-          DataRef{CoarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
-              std::move(subscripts), std::move(cosubscripts)}});
+      CoarrayRef coarrayRef{SymbolVector{reversed.crbegin(), reversed.crend()},
+          std::move(subscripts), std::move(cosubscripts)};
+      CheckSubscripts(context_, coarrayRef);
+      return Designate(DataRef{std::move(coarrayRef)});
     }
   }
   return std::nullopt;
@@ -1855,7 +1921,9 @@ void ArrayConstructorContext::Add(const parser::AcValue::Triplet &triplet) {
 }
 
 void ArrayConstructorContext::Add(const parser::Expr &expr) {
-  auto restorer{exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer1{
+      exprAnalyzer_.GetContextualMessages().SetLocation(expr.source)};
+  auto restorer2{exprAnalyzer_.AllowWholeAssumedSizeArray(false)};
   Push(exprAnalyzer_.Analyze(expr));
 }
 
@@ -2203,14 +2271,22 @@ MaybeExpr ExpressionAnalyzer::Analyze(
         } else if (IsNullAllocatable(&*value) && IsAllocatable(*symbol)) {
           result.Add(*symbol, Expr<SomeType>{NullPointer{}});
           continue;
-        } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
-            pointer && pureContext) { // C1594(4)
-          if (const Symbol *
-              visible{semantics::FindExternallyVisibleObject(
-                  *value, *pureContext)}) {
-            Say(expr.source,
-                "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
-                visible->name(), symbol->name(), pointer->name());
+        } else if (auto *derived{evaluate::GetDerivedTypeSpec(
+                       evaluate::DynamicType::From(*symbol))}) {
+          if (auto iter{FindPointerPotentialComponent(*derived)};
+              iter && pureContext) { // F'2023 C15104(4)
+            if (const Symbol *
+                visible{semantics::FindExternallyVisibleObject(
+                    *value, *pureContext)}) {
+              Say(expr.source,
+                  "The externally visible object '%s' may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  visible->name(), symbol->name(),
+                  iter.BuildResultDesignatorName());
+            } else if (ExtractCoarrayRef(*value)) {
+              Say(expr.source,
+                  "A coindexed object may not be used in a pure procedure as the value for component '%s' which has the pointer component '%s'"_err_en_US,
+                  symbol->name(), iter.BuildResultDesignatorName());
+            }
           }
         }
         // Make implicit conversion explicit to allow folding of the structure
@@ -2487,6 +2563,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           return CalleeAndArguments{
               ProcedureDesignator{*resolution}, std::move(arguments)};
         } else if (dataRef.has_value()) {
+          if (ExtractCoarrayRef(*dataRef)) {
+            if (IsProcedurePointer(*sym)) {
+              Say(sc.component.source,
+                  "Base of procedure component reference may not be coindexed"_err_en_US);
+            } else {
+              Say(sc.component.source,
+                  "A procedure binding may not be coindexed unless it can be resolved at compilation time"_err_en_US);
+            }
+          }
           if (sym->attrs().test(semantics::Attr::NOPASS)) {
             const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
             if (dtSpec && dtSpec->scope()) {
@@ -3191,7 +3276,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
       const auto &designator{std::get<parser::ProcedureDesignator>(call.t)};
       if (const auto *name{std::get_if<parser::Name>(&designator.u)}) {
         semantics::Scope &scope{context_.FindScope(name->source)};
-        semantics::DerivedTypeSpec dtSpec{name->source, symbol.GetUltimate()};
+        semantics::DerivedTypeSpec dtSpec{name->source, symbol};
         if (!CheckIsValidForwardReference(dtSpec)) {
           return std::nullopt;
         }
@@ -3283,7 +3368,8 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
     ArgumentAnalyzer analyzer{*this};
     const auto &variable{std::get<parser::Variable>(x.t)};
     analyzer.Analyze(variable);
-    analyzer.Analyze(std::get<parser::Expr>(x.t));
+    const auto &rhsExpr{std::get<parser::Expr>(x.t)};
+    analyzer.Analyze(rhsExpr);
     std::optional<Assignment> assignment;
     if (!analyzer.fatalErrors()) {
       auto restorer{GetContextualMessages().SetLocation(variable.GetSource())};
@@ -3293,17 +3379,28 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             "in a non-pointer intrinsic assignment statement");
         analyzer.CheckForAssumedRank("in an assignment statement");
         const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
-        if (auto dyType{lhs.GetType()};
-            dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
-          const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
-          const Symbol *lastWhole{
-              lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
-          if (!lastWhole || !IsAllocatable(*lastWhole)) {
-            Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
-          } else if (evaluate::IsCoarray(*lastWhole)) {
-            Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+        if (auto dyType{lhs.GetType()}) {
+          if (dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
+            const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
+            const Symbol *lastWhole{
+                lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
+            if (!lastWhole || !IsAllocatable(*lastWhole)) {
+              Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
+            } else if (evaluate::IsCoarray(*lastWhole)) {
+              Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+            }
+          }
+          if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
+            if (auto iter{FindAllocatableUltimateComponent(*derived)}) {
+              if (ExtractCoarrayRef(lhs)) {
+                Say("Left-hand side of assignment must not be coindexed due to allocatable ultimate component '%s'"_err_en_US,
+                    iter.BuildResultDesignatorName());
+              }
+            }
           }
         }
+        CheckForWholeAssumedSizeArray(
+            rhsExpr.source, UnwrapWholeSymbolDataRef(analyzer.GetExpr(1)));
       }
       assignment.emplace(analyzer.MoveExpr(0), analyzer.MoveExpr(1));
       if (procRef) {

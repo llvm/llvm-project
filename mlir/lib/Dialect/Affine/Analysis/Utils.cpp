@@ -1988,6 +1988,8 @@ unsigned mlir::affine::getNestingDepth(Operation *op) {
   while ((currOp = currOp->getParentOp())) {
     if (isa<AffineForOp>(currOp))
       depth++;
+    if (auto parOp = dyn_cast<AffineParallelOp>(currOp))
+      depth += parOp.getNumDims();
   }
   return depth;
 }
@@ -2307,8 +2309,8 @@ FailureOr<AffineValueMap> mlir::affine::simplifyConstrainedMinMaxOp(
 
 Block *mlir::affine::findInnermostCommonBlockInScope(Operation *a,
                                                      Operation *b) {
-  Region *aScope = mlir::affine::getAffineScope(a);
-  Region *bScope = mlir::affine::getAffineScope(b);
+  Region *aScope = getAffineAnalysisScope(a);
+  Region *bScope = getAffineAnalysisScope(b);
   if (aScope != bScope)
     return nullptr;
 

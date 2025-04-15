@@ -49,6 +49,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86TargetTransformInfo.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
@@ -175,7 +176,7 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 8;
 }
 
-bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty) const {
+bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
   if (!ST->hasCF())
     return false;
   if (!Ty)
@@ -5368,8 +5369,8 @@ X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
   unsigned NumElem = SrcVTy->getNumElements();
   auto *MaskTy =
       FixedVectorType::get(Type::getInt8Ty(SrcVTy->getContext()), NumElem);
-  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment)) ||
-      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment))) {
+  if ((IsLoad && !isLegalMaskedLoad(SrcVTy, Alignment, AddressSpace)) ||
+      (IsStore && !isLegalMaskedStore(SrcVTy, Alignment, AddressSpace))) {
     // Scalarization
     APInt DemandedElts = APInt::getAllOnes(NumElem);
     InstructionCost MaskSplitCost = getScalarizationOverhead(
@@ -6229,13 +6230,7 @@ bool X86TTIImpl::canMacroFuseCmp() {
   return ST->hasMacroFusion() || ST->hasBranchFusion();
 }
 
-bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
-  Type *ScalarTy = DataTy->getScalarType();
-
-  // The backend can't handle a single element vector w/o CFCMOV.
-  if (isa<VectorType>(DataTy) && cast<FixedVectorType>(DataTy)->getNumElements() == 1)
-    return ST->hasCF() && hasConditionalLoadStoreForType(ScalarTy);
-
+static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
   if (!ST->hasAVX())
     return false;
 
@@ -6259,8 +6254,30 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
          ((IntWidth == 8 || IntWidth == 16) && ST->hasBWI());
 }
 
-bool X86TTIImpl::isLegalMaskedStore(Type *DataType, Align Alignment) {
-  return isLegalMaskedLoad(DataType, Alignment);
+bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
+                                   unsigned AddressSpace) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) &&
+      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() &&
+           hasConditionalLoadStoreForType(ScalarTy, /*IsStore=*/false);
+
+  return isLegalMaskedLoadStore(ScalarTy, ST);
+}
+
+bool X86TTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
+                                    unsigned AddressSpace) {
+  Type *ScalarTy = DataTy->getScalarType();
+
+  // The backend can't handle a single element vector w/o CFCMOV.
+  if (isa<VectorType>(DataTy) &&
+      cast<FixedVectorType>(DataTy)->getNumElements() == 1)
+    return ST->hasCF() &&
+           hasConditionalLoadStoreForType(ScalarTy, /*IsStore=*/true);
+
+  return isLegalMaskedLoadStore(ScalarTy, ST);
 }
 
 bool X86TTIImpl::isLegalNTLoad(Type *DataType, Align Alignment) {
@@ -7057,7 +7074,7 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // Scale represents reg2 * scale, thus account for 1
     // as soon as we use a second register.
     return AM.Scale != 0;
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {

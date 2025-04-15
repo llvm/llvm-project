@@ -125,6 +125,16 @@ bool isCheckedPtr(const std::string &Name) {
   return Name == "CheckedPtr" || Name == "CheckedRef";
 }
 
+bool isSmartPtrClass(const std::string &Name) {
+  return isRefType(Name) || isCheckedPtr(Name) || isRetainPtr(Name) ||
+         Name == "WeakPtr" || Name == "WeakPtrFactory" ||
+         Name == "WeakPtrFactoryWithBitField" || Name == "WeakPtrImplBase" ||
+         Name == "WeakPtrImplBaseSingleThread" || Name == "ThreadSafeWeakPtr" ||
+         Name == "ThreadSafeWeakOrStrongPtr" ||
+         Name == "ThreadSafeWeakPtrControlBlock" ||
+         Name == "ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr";
+}
+
 bool isCtorOfRefCounted(const clang::FunctionDecl *F) {
   assert(F);
   const std::string &FunctionName = safeGetName(F);
@@ -147,7 +157,7 @@ bool isCtorOfCheckedPtr(const clang::FunctionDecl *F) {
 bool isCtorOfRetainPtr(const clang::FunctionDecl *F) {
   const std::string &FunctionName = safeGetName(F);
   return FunctionName == "RetainPtr" || FunctionName == "adoptNS" ||
-         FunctionName == "adoptCF";
+         FunctionName == "adoptCF" || FunctionName == "retainPtr";
 }
 
 bool isCtorOfSafePtr(const clang::FunctionDecl *F) {
@@ -162,13 +172,14 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       type = elaboratedT->desugar();
       continue;
     }
-    auto *SpecialT = type->getAs<TemplateSpecializationType>();
-    if (!SpecialT)
-      return false;
-    auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
-    if (!Decl)
-      return false;
-    return Pred(Decl->getNameAsString());
+    if (auto *SpecialT = type->getAs<TemplateSpecializationType>()) {
+      auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
+      auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else
+      break;
   }
   return false;
 }
@@ -221,23 +232,40 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
 
   auto PointeeQT = QT->getPointeeType();
   const RecordType *RT = PointeeQT->getAs<RecordType>();
-  if (!RT)
+  if (!RT) {
+    if (TD->hasAttr<ObjCBridgeAttr>() || TD->hasAttr<ObjCBridgeMutableAttr>()) {
+      if (auto *Type = TD->getTypeForDecl())
+        RecordlessTypes.insert(Type);
+    }
     return;
+  }
 
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
-    if (Redecl->getAttr<ObjCBridgeAttr>()) {
+    if (Redecl->getAttr<ObjCBridgeAttr>() ||
+        Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
       return;
     }
   }
 }
 
-bool RetainTypeChecker::isUnretained(const QualType QT) {
-  if (ento::cocoa::isCocoaObjectRef(QT) && !IsARCEnabled)
+bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
+  if (ento::cocoa::isCocoaObjectRef(QT) && (!IsARCEnabled || ignoreARC))
     return true;
   auto CanonicalType = QT.getCanonicalType();
   auto PointeeType = CanonicalType->getPointeeType();
   auto *RT = dyn_cast_or_null<RecordType>(PointeeType.getTypePtrOrNull());
+  if (!RT) {
+    auto *Type = QT.getTypePtrOrNull();
+    while (Type) {
+      if (RecordlessTypes.contains(Type))
+        return true;
+      auto *ET = dyn_cast_or_null<ElaboratedType>(Type);
+      if (!ET)
+        break;
+      Type = ET->desugar().getTypePtrOrNull();
+    }
+  }
   return RT && CFPointees.contains(RT);
 }
 
@@ -371,7 +399,8 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType());
+        return T && (T->isPointerType() || T->isReferenceType() ||
+                     T->isObjCObjectPointerType());
       }
     }
   }
@@ -414,10 +443,22 @@ bool isPtrConversion(const FunctionDecl *F) {
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
       FunctionName == "checkedDowncast" ||
-      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast")
+      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
+      FunctionName == "bridge_cast" || FunctionName == "bridge_id_cast" ||
+      FunctionName == "dynamic_cf_cast" || FunctionName == "checked_cf_cast" ||
+      FunctionName == "dynamic_objc_cast" ||
+      FunctionName == "checked_objc_cast")
     return true;
 
   return false;
+}
+
+bool isTrivialBuiltinFunction(const FunctionDecl *F) {
+  if (!F || !F->getDeclName().isIdentifier())
+    return false;
+  auto Name = F->getName();
+  return Name.starts_with("__builtin") || Name == "__libcpp_verbose_abort" ||
+         Name.starts_with("os_log") || Name.starts_with("_os_log");
 }
 
 bool isSingleton(const FunctionDecl *F) {
@@ -479,6 +520,10 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
+    if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+      if (FnDecl->isVirtualAsWritten())
+        return false;
+    }
     return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {
@@ -593,8 +638,7 @@ public:
         Name == "isMainThreadOrGCThread" || Name == "isMainRunLoop" ||
         Name == "isWebThread" || Name == "isUIThread" ||
         Name == "mayBeGCThread" || Name == "compilerFenceForCrash" ||
-        Name == "bitwise_cast" || Name.find("__builtin") == 0 ||
-        Name == "__libcpp_verbose_abort")
+        Name == "bitwise_cast" || isTrivialBuiltinFunction(Callee))
       return true;
 
     return IsFunctionTrivial(Callee);
