@@ -1132,20 +1132,17 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::umax:
     case Intrinsic::smin:
     case Intrinsic::smax:
+    case Intrinsic::usub_sat:
       // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
-      if (isGuaranteedNotToBePoison(&I))
-        WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
-      break;
-    case Intrinsic::usub_sat:
-      WorkList.push_back(
-          FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       [[fallthrough]];
     case Intrinsic::abs:
     case Intrinsic::uadd_sat:
+      if (!isGuaranteedNotToBePoison(&I))
+        break;
       WorkList.push_back(FactOrCheck::getInstFact(DT.getNode(&BB), &I));
       break;
     }
