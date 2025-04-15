@@ -3718,32 +3718,31 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
     return getResult();
 
+  // All subsequent successful folds require a constant input.
   Attribute foldInput = adaptor.getVector();
-  if (!foldInput) {
+  if (!foldInput)
     return {};
-  }
 
-  // rewrite : ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
+  // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
   if (auto splat = llvm::dyn_cast<SplatElementsAttr>(foldInput))
     DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
-  // rewrite ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+  // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
   if (auto dense = llvm::dyn_cast<DenseElementsAttr>(foldInput)) {
     // TODO: Handle non-unit strides when they become available.
     if (hasNonUnitStrides())
       return {};
 
-    Value sourceVector = getVector();
-    auto sourceVecTy = llvm::cast<VectorType>(sourceVector.getType());
+    VectorType sourceVecTy = getSourceVectorType();
     ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
     SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
 
     VectorType sliceVecTy = getType();
     ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
-    int64_t sliceRank = sliceVecTy.getRank();
+    int64_t rank = sliceVecTy.getRank();
 
     // Expand offsets and sizes to match the vector rank.
-    SmallVector<int64_t, 4> offsets(sliceRank, 0);
+    SmallVector<int64_t, 4> offsets(rank, 0);
     copy(getI64SubArray(getOffsets()), offsets.begin());
 
     SmallVector<int64_t, 4> sizes(sourceShape);
@@ -3752,7 +3751,7 @@ OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
     // Calculate the slice elements by enumerating all slice positions and
     // linearizing them. The enumeration order is lexicographic which yields a
     // sequence of monotonically increasing linearized position indices.
-    auto denseValuesBegin = dense.value_begin<Attribute>();
+    const auto denseValuesBegin = dense.value_begin<Attribute>();
     SmallVector<Attribute> sliceValues;
     sliceValues.reserve(sliceVecTy.getNumElements());
     SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
