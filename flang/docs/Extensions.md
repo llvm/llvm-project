@@ -825,6 +825,19 @@ print *, [(j,j=1,10)]
   of these values in violation of the restriction in f23 clause 17.11.42 set
   the mode to ieee_nearest.
 
+* Some compilers allow an `INTENT(OUT)` dummy argument's value to appear
+  via host association in a specification expression.  A non-host-associated
+  use is an error because an `INTENT(OUT)` dummy argument's value is not
+  defined.  The argument put forth to accept this usage in a `BLOCK` construct
+  or inner procedure is that the language in 10.1.11 (specification expressions)
+  allows any host-associated object to appear, but that's unconvincing
+  because it would also allow a host-associated `OPTIONAL` dummy argument to
+  be used in a nested scope, and that doesn't make sense.  This compiler
+  accepts an `INTENT(OUT)` non-`OPTIONAL` host-associated value to appear
+  in a specification expression via host association with a portability
+  warning since such values may have become defined by the time the nested
+  expression's value is required.
+
 ## De Facto Standard Features
 
 * `EXTENDS_TYPE_OF()` returns `.TRUE.` if both of its arguments have the
