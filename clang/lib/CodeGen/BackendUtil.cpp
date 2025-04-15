@@ -1141,6 +1141,10 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (CodeGenOpts.LinkBitcodePostopt)
     MPM.addPass(LinkInModulesPass(BC));
 
+  if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
+      LangOpts.HIPStdParInterposeAlloc)
+    MPM.addPass(HipStdParAllocationInterpositionPass());
+
   // Add a verifier pass if requested. We don't have to do this if the action
   // requires code generation because there will already be a verifier pass in
   // the code-generation pipeline.
@@ -1203,10 +1207,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     outs() << "\n";
     return;
   }
-
-  if (LangOpts.HIPStdPar && !LangOpts.CUDAIsDevice &&
-      LangOpts.HIPStdParInterposeAlloc)
-    MPM.addPass(HipStdParAllocationInterpositionPass());
 
   // Now that we have all of the passes ready, run them.
   {
