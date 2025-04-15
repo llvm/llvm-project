@@ -139,16 +139,16 @@ def bare_simm32 : RISCVOp<XLenVT> {
 }
 
 // A 32-bit signed immediate where the least significant bit is zero.
-def simm32_lsb0 : Operand<OtherVT> {
-  let ParserMatchClass = SImmAsmOperand<32, "Lsb0">;
+def bare_simm32_lsb0 : Operand<OtherVT> {
+  let ParserMatchClass = BareSImmNLsb0AsmOperand<32>;
   let PrintMethod = "printBranchOperand";
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<32>";
   let MCOperandPredicate = [{
     int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedInt<31, 1>(Imm);
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isShiftedInt<31, 1>(Imm);
+    return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_PCREL";
 }
@@ -301,7 +301,7 @@ def InsnQC_EJ : DirectiveInsnQC_EJ<(outs),
                                         uimm3:$func3,
                                         uimm2:$func2,
                                         uimm5:$func5,
-                                        simm32_lsb0:$imm31),
+                                        bare_simm32_lsb0:$imm31),
                                    "$opcode, $func3, $func2, $func5, $imm31">;
 def InsnQC_ES : DirectiveInsnQC_ES<(outs),
                                    (ins uimm7_opcode:$opcode,
@@ -353,7 +353,7 @@ def : InstAlias<".insn_qc.ej $opcode, $func3, $func2, $func5, $imm31",
                             uimm3:$func3,
                             uimm2:$func2,
                             uimm5:$func5,
-                            simm32_lsb0:$imm31)>;
+                            bare_simm32_lsb0:$imm31)>;
 def : InstAlias<".insn_qc.es $opcode, $func3, $func2, $rs2, ${imm26}(${rs1})",
                  (InsnQC_ES uimm7_opcode:$opcode,
                             uimm3:$func3,
@@ -707,8 +707,8 @@ class QCIRVInstEI<bits<3> funct3, bits<2> funct2, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIRVInst48EJ<bits<2> func2, string opcodestr>
-    : RVInst48<(outs), (ins simm32_lsb0:$imm31),
-               opcodestr, "$imm31", [], InstFormatOther> {
+    : RVInst48<(outs), (ins bare_simm32_lsb0:$imm31),
+               opcodestr, "$imm31", [], InstFormatQC_EJ> {
   bits<31> imm31;
 
   let Inst{47-32} = imm31{30-15};

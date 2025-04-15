@@ -4261,11 +4261,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::DependentSizedArray: {
     const auto *dat = cast<DependentSizedArrayType>(ty);
     result = getDependentSizedArrayType(
-                 getVariableArrayDecayedType(dat->getElementType()),
-                                        dat->getSizeExpr(),
-                                        dat->getSizeModifier(),
-                                        dat->getIndexTypeCVRQualifiers(),
-                                        dat->getBracketsRange());
+        getVariableArrayDecayedType(dat->getElementType()), dat->getSizeExpr(),
+        dat->getSizeModifier(), dat->getIndexTypeCVRQualifiers());
     break;
   }
 
@@ -4275,17 +4272,17 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
     result =
         getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
                              /*size*/ nullptr, ArraySizeModifier::Normal,
-                             iat->getIndexTypeCVRQualifiers(), SourceRange());
+                             iat->getIndexTypeCVRQualifiers());
     break;
   }
 
   // Turn VLA types into [*] types.
   case Type::VariableArray: {
     const auto *vat = cast<VariableArrayType>(ty);
-    result = getVariableArrayType(
-        getVariableArrayDecayedType(vat->getElementType()),
-        /*size*/ nullptr, ArraySizeModifier::Star,
-        vat->getIndexTypeCVRQualifiers(), vat->getBracketsRange());
+    result =
+        getVariableArrayType(getVariableArrayDecayedType(vat->getElementType()),
+                             /*size*/ nullptr, ArraySizeModifier::Star,
+                             vat->getIndexTypeCVRQualifiers());
     break;
   }
   }
@@ -4298,8 +4295,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 /// variable array of the specified element type.
 QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
                                           ArraySizeModifier ASM,
-                                          unsigned IndexTypeQuals,
-                                          SourceRange Brackets) const {
+                                          unsigned IndexTypeQuals) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
   // that have an expression provided for their size.
   QualType Canon;
@@ -4309,12 +4305,12 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
   if (!EltTy.isCanonical() || EltTy.hasLocalQualifiers()) {
     SplitQualType canonSplit = getCanonicalType(EltTy).split();
     Canon = getVariableArrayType(QualType(canonSplit.Ty, 0), NumElts, ASM,
-                                 IndexTypeQuals, Brackets);
+                                 IndexTypeQuals);
     Canon = getQualifiedType(Canon, canonSplit.Quals);
   }
 
   auto *New = new (*this, alignof(VariableArrayType))
-      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals, Brackets);
+      VariableArrayType(EltTy, Canon, NumElts, ASM, IndexTypeQuals);
 
   VariableArrayTypes.push_back(New);
   Types.push_back(New);
@@ -4324,11 +4320,10 @@ QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
 /// getDependentSizedArrayType - Returns a non-unique reference to
 /// the type for a dependently-sized array of the specified element
 /// type.
-QualType ASTContext::getDependentSizedArrayType(QualType elementType,
-                                                Expr *numElements,
-                                                ArraySizeModifier ASM,
-                                                unsigned elementTypeQuals,
-                                                SourceRange brackets) const {
+QualType
+ASTContext::getDependentSizedArrayType(QualType elementType, Expr *numElements,
+                                       ArraySizeModifier ASM,
+                                       unsigned elementTypeQuals) const {
   assert((!numElements || numElements->isTypeDependent() ||
           numElements->isValueDependent()) &&
          "Size must be type- or value-dependent!");
@@ -4354,7 +4349,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 
     auto *newType = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(elementType, QualType(), numElements, ASM,
-                                elementTypeQuals, brackets);
+                                elementTypeQuals);
     DependentSizedArrayTypes.InsertNode(newType, insertPos);
     Types.push_back(newType);
     return QualType(newType, 0);
@@ -4364,7 +4359,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   if (!canonTy) {
     canonTy = new (*this, alignof(DependentSizedArrayType))
         DependentSizedArrayType(QualType(canonElementType.Ty, 0), QualType(),
-                                numElements, ASM, elementTypeQuals, brackets);
+                                numElements, ASM, elementTypeQuals);
     DependentSizedArrayTypes.InsertNode(canonTy, insertPos);
     Types.push_back(canonTy);
   }
@@ -4383,7 +4378,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
   // of the element type.
   auto *sugaredType = new (*this, alignof(DependentSizedArrayType))
       DependentSizedArrayType(elementType, canon, numElements, ASM,
-                              elementTypeQuals, brackets);
+                              elementTypeQuals);
   Types.push_back(sugaredType);
   return QualType(sugaredType, 0);
 }
@@ -6355,34 +6350,36 @@ QualType ASTContext::getReferenceQualifiedType(const Expr *E) const {
 /// nodes. This would never be helpful, since each such type has its own
 /// expression, and would not give a significant memory saving, since there
 /// is an Expr tree under each such type.
-QualType ASTContext::getDecltypeType(Expr *e, QualType UnderlyingType) const {
-  DecltypeType *dt;
-
+QualType ASTContext::getDecltypeType(Expr *E, QualType UnderlyingType) const {
   // C++11 [temp.type]p2:
   //   If an expression e involves a template parameter, decltype(e) denotes a
   //   unique dependent type. Two such decltype-specifiers refer to the same
   //   type only if their expressions are equivalent (14.5.6.1).
-  if (e->isInstantiationDependent()) {
+  QualType CanonType;
+  if (!E->isInstantiationDependent()) {
+    CanonType = getCanonicalType(UnderlyingType);
+  } else if (!UnderlyingType.isNull()) {
+    CanonType = getDecltypeType(E, QualType());
+  } else {
     llvm::FoldingSetNodeID ID;
-    DependentDecltypeType::Profile(ID, *this, e);
+    DependentDecltypeType::Profile(ID, *this, E);
 
     void *InsertPos = nullptr;
-    DependentDecltypeType *Canon
-      = DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos);
-    if (!Canon) {
-      // Build a new, canonical decltype(expr) type.
-      Canon = new (*this, alignof(DependentDecltypeType))
-          DependentDecltypeType(e, DependentTy);
-      DependentDecltypeTypes.InsertNode(Canon, InsertPos);
-    }
-    dt = new (*this, alignof(DecltypeType))
-        DecltypeType(e, UnderlyingType, QualType((DecltypeType *)Canon, 0));
-  } else {
-    dt = new (*this, alignof(DecltypeType))
-        DecltypeType(e, UnderlyingType, getCanonicalType(UnderlyingType));
+    if (DependentDecltypeType *Canon =
+            DependentDecltypeTypes.FindNodeOrInsertPos(ID, InsertPos))
+      return QualType(Canon, 0);
+
+    // Build a new, canonical decltype(expr) type.
+    auto *DT =
+        new (*this, alignof(DependentDecltypeType)) DependentDecltypeType(E);
+    DependentDecltypeTypes.InsertNode(DT, InsertPos);
+    Types.push_back(DT);
+    return QualType(DT, 0);
   }
-  Types.push_back(dt);
-  return QualType(dt, 0);
+  auto *DT = new (*this, alignof(DecltypeType))
+      DecltypeType(E, UnderlyingType, CanonType);
+  Types.push_back(DT);
+  return QualType(DT, 0);
 }
 
 QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
@@ -6422,36 +6419,41 @@ QualType ASTContext::getPackIndexingType(QualType Pattern, Expr *IndexExpr,
 
 /// getUnaryTransformationType - We don't unique these, since the memory
 /// savings are minimal and these are rare.
-QualType ASTContext::getUnaryTransformType(QualType BaseType,
-                                           QualType UnderlyingType,
-                                           UnaryTransformType::UTTKind Kind)
-    const {
-  UnaryTransformType *ut = nullptr;
+QualType
+ASTContext::getUnaryTransformType(QualType BaseType, QualType UnderlyingType,
+                                  UnaryTransformType::UTTKind Kind) const {
 
-  if (BaseType->isDependentType()) {
-    // Look in the folding set for an existing type.
-    llvm::FoldingSetNodeID ID;
-    DependentUnaryTransformType::Profile(ID, getCanonicalType(BaseType), Kind);
+  llvm::FoldingSetNodeID ID;
+  UnaryTransformType::Profile(ID, BaseType, UnderlyingType, Kind);
 
-    void *InsertPos = nullptr;
-    DependentUnaryTransformType *Canon
-      = DependentUnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos);
+  void *InsertPos = nullptr;
+  if (UnaryTransformType *UT =
+          UnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos))
+    return QualType(UT, 0);
 
-    if (!Canon) {
-      // Build a new, canonical __underlying_type(type) type.
-      Canon = new (*this, alignof(DependentUnaryTransformType))
-          DependentUnaryTransformType(*this, getCanonicalType(BaseType), Kind);
-      DependentUnaryTransformTypes.InsertNode(Canon, InsertPos);
-    }
-    ut = new (*this, alignof(UnaryTransformType))
-        UnaryTransformType(BaseType, QualType(), Kind, QualType(Canon, 0));
+  QualType CanonType;
+  if (!BaseType->isDependentType()) {
+    CanonType = UnderlyingType.getCanonicalType();
   } else {
-    QualType CanonType = getCanonicalType(UnderlyingType);
-    ut = new (*this, alignof(UnaryTransformType))
-        UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
+    assert(UnderlyingType.isNull() || BaseType == UnderlyingType);
+    UnderlyingType = QualType();
+    if (QualType CanonBase = BaseType.getCanonicalType();
+        BaseType != CanonBase) {
+      CanonType = getUnaryTransformType(CanonBase, QualType(), Kind);
+      assert(CanonType.isCanonical());
+
+      // Find the insertion position again.
+      [[maybe_unused]] UnaryTransformType *UT =
+          UnaryTransformTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!UT && "broken canonicalization");
+    }
   }
-  Types.push_back(ut);
-  return QualType(ut, 0);
+
+  auto *UT = new (*this, alignof(UnaryTransformType))
+      UnaryTransformType(BaseType, UnderlyingType, Kind, CanonType);
+  UnaryTransformTypes.InsertNode(UT, InsertPos);
+  Types.push_back(UT);
+  return QualType(UT, 0);
 }
 
 QualType ASTContext::getAutoTypeInternal(
@@ -6768,17 +6770,14 @@ QualType ASTContext::getUnqualifiedArrayType(QualType type,
   }
 
   if (const auto *VAT = dyn_cast<VariableArrayType>(AT)) {
-    return getVariableArrayType(unqualElementType,
-                                VAT->getSizeExpr(),
+    return getVariableArrayType(unqualElementType, VAT->getSizeExpr(),
                                 VAT->getSizeModifier(),
-                                VAT->getIndexTypeCVRQualifiers(),
-                                VAT->getBracketsRange());
+                                VAT->getIndexTypeCVRQualifiers());
   }
 
   const auto *DSAT = cast<DependentSizedArrayType>(AT);
   return getDependentSizedArrayType(unqualElementType, DSAT->getSizeExpr(),
-                                    DSAT->getSizeModifier(), 0,
-                                    SourceRange());
+                                    DSAT->getSizeModifier(), 0);
 }
 
 /// Attempt to unwrap two types that may both be array types with the same bound
@@ -7722,19 +7721,14 @@ const ArrayType *ASTContext::getAsArrayType(QualType T) const {
                                            IAT->getIndexTypeCVRQualifiers()));
 
   if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(ATy))
-    return cast<ArrayType>(
-                     getDependentSizedArrayType(NewEltTy,
-                                                DSAT->getSizeExpr(),
-                                                DSAT->getSizeModifier(),
-                                              DSAT->getIndexTypeCVRQualifiers(),
-                                                DSAT->getBracketsRange()));
+    return cast<ArrayType>(getDependentSizedArrayType(
+        NewEltTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
+        DSAT->getIndexTypeCVRQualifiers()));
 
   const auto *VAT = cast<VariableArrayType>(ATy);
-  return cast<ArrayType>(getVariableArrayType(NewEltTy,
-                                              VAT->getSizeExpr(),
-                                              VAT->getSizeModifier(),
-                                              VAT->getIndexTypeCVRQualifiers(),
-                                              VAT->getBracketsRange()));
+  return cast<ArrayType>(
+      getVariableArrayType(NewEltTy, VAT->getSizeExpr(), VAT->getSizeModifier(),
+                           VAT->getIndexTypeCVRQualifiers()));
 }
 
 QualType ASTContext::getAdjustedParameterType(QualType T) const {
@@ -11460,6 +11454,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     if (LQuals.getCVRQualifiers() != RQuals.getCVRQualifiers() ||
         LQuals.getAddressSpace() != RQuals.getAddressSpace() ||
         LQuals.getObjCLifetime() != RQuals.getObjCLifetime() ||
+        !LQuals.getPointerAuth().isEquivalent(RQuals.getPointerAuth()) ||
         LQuals.hasUnaligned() != RQuals.hasUnaligned())
       return {};
 
@@ -13839,10 +13834,7 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     return Ctx.getDependentSizedArrayType(
         getCommonArrayElementType(Ctx, AX, QX, AY, QY),
         getCommonSizeExpr(Ctx, AX, AY), getCommonSizeModifier(AX, AY),
-        getCommonIndexTypeCVRQualifiers(AX, AY),
-        AX->getBracketsRange() == AY->getBracketsRange()
-            ? AX->getBracketsRange()
-            : SourceRange());
+        getCommonIndexTypeCVRQualifiers(AX, AY));
   }
   case Type::ConstantArray: {
     const auto *AX = cast<ConstantArrayType>(X),

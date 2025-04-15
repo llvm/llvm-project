@@ -863,10 +863,8 @@ __sort<__less<long double>&, long double*>(long double*, long double*, __less<lo
 template <class _AlgPolicy, class _RandomAccessIterator, class _Comp>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 __sort_dispatch(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
-  using difference_type = typename iterator_traits<_RandomAccessIterator>::difference_type;
-  using __size_type     = __make_unsigned_t<difference_type>;
-  difference_type __depth_limit =
-      static_cast<difference_type>(2 * std::__bit_log2(static_cast<__size_type>(__last - __first)));
+  typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
+  difference_type __depth_limit = 2 * std::__bit_log2(std::__to_unsigned_like(__last - __first));
 
   // Only use bitset partitioning for arithmetic types.  We should also check
   // that the default comparator is in use so that we are sure that there are no

@@ -771,6 +771,11 @@ bool IncDecHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                   bool CanOverflow) {
   assert(!Ptr.isDummy());
 
+  if (!S.inConstantContext()) {
+    if (isConstexprUnknown(Ptr))
+      return false;
+  }
+
   if constexpr (std::is_same_v<T, Boolean>) {
     if (!S.getLangOpts().CPlusPlus14)
       return Invalid(S, OpPC);
@@ -1006,7 +1011,8 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
 
   // Function pointers cannot be compared in an ordered way.
-  if (LHS.isFunctionPointer() || RHS.isFunctionPointer()) {
+  if (LHS.isFunctionPointer() || RHS.isFunctionPointer() ||
+      LHS.isTypeidPointer() || RHS.isTypeidPointer()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
         << LHS.toDiagnosticString(S.getASTContext())
@@ -2478,13 +2484,15 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    [[maybe_unused]] const Record *R = This.getRecord();
-    if (!R)
-      R = This.narrow().getRecord();
-    assert(R);
-    assert(
-        R->getDecl() ==
-        cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
+    if (!This.isTypeidPointer()) {
+      [[maybe_unused]] const Record *R = This.getRecord();
+      if (!R)
+        R = This.narrow().getRecord();
+      assert(R);
+      assert(R->getDecl() ==
+             cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())
+                 ->getParent());
+    }
   }
 
   S.Stk.push<Pointer>(This);
