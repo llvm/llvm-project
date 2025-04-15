@@ -116,7 +116,7 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                 EDAttributes.IsReadOnly, 0, StringRef());
       Emitted = true;
     } else
-      OS << Name << " CATTR ,\n";
+      OS << Name << " CATTR\n";
     break;
   }
   case GOFF::ESD_ST_PartReference: {
@@ -132,7 +132,7 @@ void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
       ED->Emitted = true;
       Emitted = true;
     } else
-      OS << ED->getName() << " CATTR ,\n";
+      OS << ED->getName() << " CATTR PART(" << Name << ")\n";
     break;
   }
   default:
