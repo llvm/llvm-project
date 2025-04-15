@@ -93,6 +93,12 @@ public:
   virtual void printLeft(const Node &N);
   virtual void printRight(const Node &N);
 
+  /// Called when we write to this object anywhere other than the end.
+  virtual void notifyInsertion(size_t /*Position*/, size_t /*Count*/) {}
+
+  /// Called when we reset the \c CurrentPosition of this object.
+  virtual void notifyPositionChanged(size_t /*OldPos*/, size_t /*NewPos*/) {}
+
   /// If a ParameterPackExpansion (or similar type) is encountered, the offset
   /// into the pack that we're currently printing.
   unsigned CurrentPackIndex = std::numeric_limits<unsigned>::max();
@@ -130,6 +136,8 @@ public:
 
   OutputBuffer &prepend(std::string_view R) {
     size_t Size = R.size();
+
+    notifyInsertion(/*Position=*/0, /*Count=*/Size);
 
     grow(Size);
     std::memmove(Buffer + Size, Buffer, CurrentPosition);
@@ -171,6 +179,9 @@ public:
     DEMANGLE_ASSERT(Pos <= CurrentPosition, "");
     if (N == 0)
       return;
+
+    notifyInsertion(Pos, N);
+
     grow(N);
     std::memmove(Buffer + Pos + N, Buffer + Pos, CurrentPosition - Pos);
     std::memcpy(Buffer + Pos, S, N);
@@ -178,7 +189,10 @@ public:
   }
 
   size_t getCurrentPosition() const { return CurrentPosition; }
-  void setCurrentPosition(size_t NewPos) { CurrentPosition = NewPos; }
+  void setCurrentPosition(size_t NewPos) {
+    notifyPositionChanged(CurrentPosition, NewPos);
+    CurrentPosition = NewPos;
+  }
 
   char back() const {
     DEMANGLE_ASSERT(CurrentPosition, "");
