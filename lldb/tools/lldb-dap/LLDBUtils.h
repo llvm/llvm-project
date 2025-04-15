@@ -95,7 +95,7 @@ std::string RunLLDBCommands(lldb::SBDebugger &debugger, llvm::StringRef prefix,
                             const llvm::ArrayRef<std::string> &commands,
                             bool &required_command_failed,
                             bool parse_command_directives = true,
-                            bool echo_commands = true);
+                            bool echo_commands = false);
 
 /// Similar to the method above, but without parsing command directives.
 std::string RunLLDBCommandsVerbatim(lldb::SBDebugger &debugger,
