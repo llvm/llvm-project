@@ -117,12 +117,13 @@ define dso_local float @testfmax_fast(float %a, float %b) local_unnamed_addr {
 ;
 ; NO-FAST-P9-LABEL: testfmax_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    xsmaxcdp f1, f1, f2
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testfmax_fast:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    xssubsp f0, f2, f1
+; NO-FAST-P8-NEXT:    fsel f1, f0, f2, f1
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf ogt float %a, %b
@@ -137,12 +138,13 @@ define dso_local double @testdmax_fast(double %a, double %b) local_unnamed_addr 
 ;
 ; NO-FAST-P9-LABEL: testdmax_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P9-NEXT:    xsmaxcdp f1, f1, f2
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testdmax_fast:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xsmaxdp f1, f1, f2
+; NO-FAST-P8-NEXT:    xssubdp f0, f2, f1
+; NO-FAST-P8-NEXT:    fsel f1, f0, f2, f1
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf ogt double %a, %b
@@ -157,12 +159,13 @@ define dso_local float @testfmin_fast(float %a, float %b) local_unnamed_addr {
 ;
 ; NO-FAST-P9-LABEL: testfmin_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    xsmincdp f1, f1, f2
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testfmin_fast:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    xssubsp f0, f1, f2
+; NO-FAST-P8-NEXT:    fsel f1, f0, f2, f1
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf olt float %a, %b
@@ -177,12 +180,13 @@ define dso_local double @testdmin_fast(double %a, double %b) local_unnamed_addr 
 ;
 ; NO-FAST-P9-LABEL: testdmin_fast:
 ; NO-FAST-P9:       # %bb.0: # %entry
-; NO-FAST-P9-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P9-NEXT:    xsmincdp f1, f1, f2
 ; NO-FAST-P9-NEXT:    blr
 ;
 ; NO-FAST-P8-LABEL: testdmin_fast:
 ; NO-FAST-P8:       # %bb.0: # %entry
-; NO-FAST-P8-NEXT:    xsmindp f1, f1, f2
+; NO-FAST-P8-NEXT:    xssubdp f0, f1, f2
+; NO-FAST-P8-NEXT:    fsel f1, f0, f2, f1
 ; NO-FAST-P8-NEXT:    blr
 entry:
   %cmp = fcmp nnan ninf olt double %a, %b

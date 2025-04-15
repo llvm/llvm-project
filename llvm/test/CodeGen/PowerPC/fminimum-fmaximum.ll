@@ -301,13 +301,22 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    xvcmpeqsp 1, 35, 35
 ; VSX-NEXT:    xvcmpeqsp 2, 34, 34
 ; VSX-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
+; VSX-NEXT:    xxleqv 36, 36, 36
+; VSX-NEXT:    xvminsp 0, 34, 35
+; VSX-NEXT:    vslw 4, 4, 4
 ; VSX-NEXT:    addi 3, 3, .LCPI4_0@toc@l
 ; VSX-NEXT:    xxlnor 1, 1, 1
 ; VSX-NEXT:    xxlnor 2, 2, 2
-; VSX-NEXT:    xvminsp 0, 34, 35
+; VSX-NEXT:    vcmpequw 5, 2, 4
 ; VSX-NEXT:    xxlor 1, 2, 1
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxsel 34, 0, 2, 1
+; VSX-NEXT:    xxsel 0, 0, 2, 1
+; VSX-NEXT:    xxlxor 2, 2, 2
+; VSX-NEXT:    xvcmpeqsp 2, 0, 2
+; VSX-NEXT:    xxsel 1, 0, 34, 37
+; VSX-NEXT:    vcmpequw 2, 3, 4
+; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xxsel 34, 0, 1, 2
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v4f32_minimum:
@@ -315,12 +324,21 @@ define <4 x float> @v4f32_minimum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    xvcmpeqsp 1, 35, 35
 ; AIX-NEXT:    xvcmpeqsp 2, 34, 34
 ; AIX-NEXT:    ld 3, L..C4(2) # %const.0
+; AIX-NEXT:    xxleqv 36, 36, 36
 ; AIX-NEXT:    xvminsp 0, 34, 35
+; AIX-NEXT:    vslw 4, 4, 4
 ; AIX-NEXT:    xxlnor 1, 1, 1
 ; AIX-NEXT:    xxlnor 2, 2, 2
+; AIX-NEXT:    vcmpequw 5, 2, 4
 ; AIX-NEXT:    xxlor 1, 2, 1
 ; AIX-NEXT:    lxvw4x 2, 0, 3
-; AIX-NEXT:    xxsel 34, 0, 2, 1
+; AIX-NEXT:    xxsel 0, 0, 2, 1
+; AIX-NEXT:    xxlxor 2, 2, 2
+; AIX-NEXT:    xvcmpeqsp 2, 0, 2
+; AIX-NEXT:    xxsel 1, 0, 34, 37
+; AIX-NEXT:    vcmpequw 2, 3, 4
+; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xxsel 34, 0, 1, 2
 ; AIX-NEXT:    blr
 entry:
   %m = call <4 x float> @llvm.minimum.v4f32(<4 x float> %a, <4 x float> %b)
@@ -359,9 +377,16 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; VSX-NEXT:    xxlnor 1, 1, 1
 ; VSX-NEXT:    xxlnor 2, 2, 2
 ; VSX-NEXT:    xvmaxsp 0, 34, 35
+; VSX-NEXT:    xxlxor 36, 36, 36
+; VSX-NEXT:    vcmpequw 5, 2, 4
 ; VSX-NEXT:    xxlor 1, 2, 1
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxsel 34, 0, 2, 1
+; VSX-NEXT:    xxsel 0, 0, 2, 1
+; VSX-NEXT:    xvcmpeqsp 2, 0, 36
+; VSX-NEXT:    xxsel 1, 0, 34, 37
+; VSX-NEXT:    vcmpequw 2, 3, 4
+; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xxsel 34, 0, 1, 2
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v4f32_maximum:
@@ -370,11 +395,18 @@ define <4 x float> @v4f32_maximum(<4 x float> %a, <4 x float> %b) {
 ; AIX-NEXT:    xvcmpeqsp 2, 34, 34
 ; AIX-NEXT:    ld 3, L..C5(2) # %const.0
 ; AIX-NEXT:    xvmaxsp 0, 34, 35
+; AIX-NEXT:    xxlxor 36, 36, 36
 ; AIX-NEXT:    xxlnor 1, 1, 1
 ; AIX-NEXT:    xxlnor 2, 2, 2
+; AIX-NEXT:    vcmpequw 5, 2, 4
 ; AIX-NEXT:    xxlor 1, 2, 1
 ; AIX-NEXT:    lxvw4x 2, 0, 3
-; AIX-NEXT:    xxsel 34, 0, 2, 1
+; AIX-NEXT:    xxsel 0, 0, 2, 1
+; AIX-NEXT:    xvcmpeqsp 2, 0, 36
+; AIX-NEXT:    xxsel 1, 0, 34, 37
+; AIX-NEXT:    vcmpequw 2, 3, 4
+; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xxsel 34, 0, 1, 2
 ; AIX-NEXT:    blr
 entry:
   %m = call <4 x float> @llvm.maximum.v4f32(<4 x float> %a, <4 x float> %b)
@@ -461,28 +493,47 @@ define <2 x double> @v2f64_minimum(<2 x double> %a, <2 x double> %b) {
 ; VSX-LABEL: v2f64_minimum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    addis 3, 2, .LCPI6_0@toc@ha
-; VSX-NEXT:    xvmindp 0, 34, 35
-; VSX-NEXT:    xvcmpeqdp 35, 35, 35
+; VSX-NEXT:    xvcmpeqdp 36, 35, 35
+; VSX-NEXT:    xvcmpeqdp 37, 34, 34
 ; VSX-NEXT:    addi 3, 3, .LCPI6_0@toc@l
-; VSX-NEXT:    xvcmpeqdp 34, 34, 34
-; VSX-NEXT:    xxlnor 35, 35, 35
-; VSX-NEXT:    xxlnor 34, 34, 34
+; VSX-NEXT:    xxlnor 36, 36, 36
+; VSX-NEXT:    xxlnor 37, 37, 37
+; VSX-NEXT:    xvmindp 0, 34, 35
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxlor 1, 34, 35
-; VSX-NEXT:    xxsel 34, 0, 2, 1
+; VSX-NEXT:    addis 3, 2, .LCPI6_1@toc@ha
+; VSX-NEXT:    xxlor 1, 37, 36
+; VSX-NEXT:    addi 3, 3, .LCPI6_1@toc@l
+; VSX-NEXT:    lxvd2x 36, 0, 3
+; VSX-NEXT:    vcmpequd 5, 2, 4
+; VSX-NEXT:    xxsel 0, 0, 2, 1
+; VSX-NEXT:    xxlxor 2, 2, 2
+; VSX-NEXT:    xxsel 1, 0, 34, 37
+; VSX-NEXT:    vcmpequd 2, 3, 4
+; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xvcmpeqdp 34, 0, 2
+; VSX-NEXT:    xxsel 34, 0, 1, 34
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v2f64_minimum:
 ; AIX:       # %bb.0: # %entry
 ; AIX-NEXT:    ld 3, L..C6(2) # %const.0
-; AIX-NEXT:    xvmindp 0, 34, 35
-; AIX-NEXT:    xvcmpeqdp 35, 35, 35
+; AIX-NEXT:    xvcmpeqdp 36, 35, 35
+; AIX-NEXT:    xvcmpeqdp 37, 34, 34
 ; AIX-NEXT:    lxvd2x 2, 0, 3
-; AIX-NEXT:    xvcmpeqdp 34, 34, 34
-; AIX-NEXT:    xxlnor 35, 35, 35
-; AIX-NEXT:    xxlnor 34, 34, 34
-; AIX-NEXT:    xxlor 1, 34, 35
-; AIX-NEXT:    xxsel 34, 0, 2, 1
+; AIX-NEXT:    ld 3, L..C7(2) # %const.1
+; AIX-NEXT:    xxlnor 36, 36, 36
+; AIX-NEXT:    xxlnor 37, 37, 37
+; AIX-NEXT:    xvmindp 0, 34, 35
+; AIX-NEXT:    xxlor 1, 37, 36
+; AIX-NEXT:    lxvd2x 36, 0, 3
+; AIX-NEXT:    vcmpequd 5, 2, 4
+; AIX-NEXT:    xxsel 0, 0, 2, 1
+; AIX-NEXT:    xxlxor 2, 2, 2
+; AIX-NEXT:    xxsel 1, 0, 34, 37
+; AIX-NEXT:    vcmpequd 2, 3, 4
+; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xvcmpeqdp 34, 0, 2
+; AIX-NEXT:    xxsel 34, 0, 1, 34
 ; AIX-NEXT:    blr
 entry:
   %m = call <2 x double> @llvm.minimum.v2f64(<2 x double> %a, <2 x double> %b)
@@ -567,28 +618,42 @@ define <2 x double> @v2f64_maximum(<2 x double> %a, <2 x double> %b) {
 ; VSX-LABEL: v2f64_maximum:
 ; VSX:       # %bb.0: # %entry
 ; VSX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; VSX-NEXT:    xvmaxdp 0, 34, 35
-; VSX-NEXT:    xvcmpeqdp 35, 35, 35
+; VSX-NEXT:    xvcmpeqdp 36, 35, 35
+; VSX-NEXT:    xvcmpeqdp 37, 34, 34
 ; VSX-NEXT:    addi 3, 3, .LCPI7_0@toc@l
-; VSX-NEXT:    xvcmpeqdp 34, 34, 34
-; VSX-NEXT:    xxlnor 35, 35, 35
-; VSX-NEXT:    xxlnor 34, 34, 34
+; VSX-NEXT:    xxlnor 36, 36, 36
+; VSX-NEXT:    xxlnor 37, 37, 37
+; VSX-NEXT:    xvmaxdp 0, 34, 35
 ; VSX-NEXT:    lxvd2x 2, 0, 3
-; VSX-NEXT:    xxlor 1, 34, 35
-; VSX-NEXT:    xxsel 34, 0, 2, 1
+; VSX-NEXT:    xxlor 1, 37, 36
+; VSX-NEXT:    xxlxor 36, 36, 36
+; VSX-NEXT:    vcmpequd 5, 2, 4
+; VSX-NEXT:    xxsel 0, 0, 2, 1
+; VSX-NEXT:    xxsel 1, 0, 34, 37
+; VSX-NEXT:    vcmpequd 2, 3, 4
+; VSX-NEXT:    xxsel 1, 1, 35, 34
+; VSX-NEXT:    xvcmpeqdp 34, 0, 36
+; VSX-NEXT:    xxsel 34, 0, 1, 34
 ; VSX-NEXT:    blr
 ;
 ; AIX-LABEL: v2f64_maximum:
 ; AIX:       # %bb.0: # %entry
-; AIX-NEXT:    ld 3, L..C7(2) # %const.0
-; AIX-NEXT:    xvmaxdp 0, 34, 35
-; AIX-NEXT:    xvcmpeqdp 35, 35, 35
+; AIX-NEXT:    ld 3, L..C8(2) # %const.0
+; AIX-NEXT:    xvcmpeqdp 36, 35, 35
+; AIX-NEXT:    xvcmpeqdp 37, 34, 34
 ; AIX-NEXT:    lxvd2x 2, 0, 3
-; AIX-NEXT:    xvcmpeqdp 34, 34, 34
-; AIX-NEXT:    xxlnor 35, 35, 35
-; AIX-NEXT:    xxlnor 34, 34, 34
-; AIX-NEXT:    xxlor 1, 34, 35
-; AIX-NEXT:    xxsel 34, 0, 2, 1
+; AIX-NEXT:    xxlnor 36, 36, 36
+; AIX-NEXT:    xxlnor 37, 37, 37
+; AIX-NEXT:    xvmaxdp 0, 34, 35
+; AIX-NEXT:    xxlor 1, 37, 36
+; AIX-NEXT:    xxlxor 36, 36, 36
+; AIX-NEXT:    vcmpequd 5, 2, 4
+; AIX-NEXT:    xxsel 0, 0, 2, 1
+; AIX-NEXT:    xxsel 1, 0, 34, 37
+; AIX-NEXT:    vcmpequd 2, 3, 4
+; AIX-NEXT:    xxsel 1, 1, 35, 34
+; AIX-NEXT:    xvcmpeqdp 34, 0, 36
+; AIX-NEXT:    xxsel 34, 0, 1, 34
 ; AIX-NEXT:    blr
 entry:
   %m = call <2 x double> @llvm.maximum.v2f64(<2 x double> %a, <2 x double> %b)
