@@ -320,21 +320,22 @@ LogicalResult TensorDescType::verify(
 // ---------------------------------------------------------------------
 // Case 1: Regular loads/stores.
 // ---------------------------------------------------------------------
-// Distributed vector shape must be:
-//        [chunk_size / lane_data_size, lane_data_size]
-// If the tensor descriptor shape is 1D, first dimension is ignored (set to 1).
-//        [lane_data_size]
+// The following conditions must be met:
+//        * tensor_desc[0] == lane_layout[0]
+// Distributed vector is a 1D vector with shape:
+//        [chunk_size]
 // ---------------------------------------------------------------------
 // Case 2: Block loads/stores
 // ---------------------------------------------------------------------
 // Additional definitions:
 //        tensor_size = tensor_desc[0] * .. * tensor_desc[r-1] * array_length
 //        n_distribution_units = tensor_size / distribution_unit_size
+//        fragment_size = n_distribution_units * lane_data_size
 // Given above definitions, the following conditions must be met:
 //        * tensor_desc[0] % (lane_layout[0] × lane_data[0]) == 0
 //        * tensor_desc[1] % (lane_layout[1] × lane_data[1]) == 0
-// Distributed vector shape must be:
-//        [n_distribution_units, lane_data_size]
+// Distributed vector is a 1D vector with shape:
+//        [fragment_size]
 FailureOr<VectorType> TensorDescType::getDistributedVectorType() {
   auto layout = llvm::dyn_cast_if_present<LayoutAttr>(getLayout());
   // It only works for subgroup level layout, which only has lane_layout

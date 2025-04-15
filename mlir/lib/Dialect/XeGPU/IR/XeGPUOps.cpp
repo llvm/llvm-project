@@ -295,7 +295,6 @@ LogicalResult LoadNdOp::verify() {
   }
 
   // Check SIMD mode.
-  // adjusted tensor descriptor shape tracks the expected shape of the result.
   auto tdescShape = getShapeOf(tdescTy);
   auto valueShape = getShapeOf(valueTy);
 
