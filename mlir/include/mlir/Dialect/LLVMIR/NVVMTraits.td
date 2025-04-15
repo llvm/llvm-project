@@ -27,8 +27,12 @@ def RequiresSMInterface: OpInterface<"RequiresSMInterface"> {
   ];
 }
 
-class NVVMRequiresSM<int Version, string ArchAccelerated = "false"> :
+class NVVMRequiresSM<int minVersion, string isArchAccelerated = "false",
+                    string exactMatch = "false"> :
   ParamNativeOpTrait<"NVVMRequiresSM",
-                    !cast<string>(Version) # "," # ArchAccelerated>;
+                    !cast<string>(minVersion) # "," # isArchAccelerated # ","
+                      # exactMatch>;
+                      
+def NVVMRequiresSM90a : NVVMRequiresSM<90, "true", "true">;
 
 #endif //NVVM_TRAITS

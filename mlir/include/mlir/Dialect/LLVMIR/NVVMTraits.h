@@ -21,14 +21,21 @@ namespace mlir {
 
 namespace NVVM {
 
+// Structure to store and check compatibility of SM versions.
 struct NVVMCheckSMVersion {
   int archVersion;
   bool archAccelerated;
+  bool exactMatch;
 
-  NVVMCheckSMVersion() {}
-  NVVMCheckSMVersion(StringRef smVersion) { parse(smVersion); }
-  NVVMCheckSMVersion(int archVersion, bool archAccelerated)
-      : archVersion(archVersion), archAccelerated(archAccelerated) {}
+  NVVMCheckSMVersion()
+      : archVersion(0), archAccelerated(false), exactMatch(false) {}
+  NVVMCheckSMVersion(StringRef smVersion, bool exactMatch = false)
+      : exactMatch(exactMatch) {
+    parse(smVersion);
+  }
+  NVVMCheckSMVersion(int archVersion, bool archAccelerated, bool exactMatch)
+      : archVersion(archVersion), archAccelerated(archAccelerated),
+        exactMatch(exactMatch) {}
 
   // Parses the SM version string and sets the archVersion (integer) and
   // the archAccelerated flag.
@@ -40,11 +47,12 @@ struct NVVMCheckSMVersion {
   }
 
   bool isCompatible(const NVVMCheckSMVersion &targetSM) const {
-    // for arch-conditional SMs, they should exactly match to be valid
-    if (archAccelerated || targetSM.archAccelerated)
+    if (exactMatch)
       return (*this) == targetSM;
-
-    return archVersion <= targetSM.archVersion;
+    
+    return archAccelerated ? 
+      archVersion <= targetSM.archVersion && targetSM.archAccelerated :
+      archVersion <= targetSM.archVersion;
   }
 
   bool operator==(const NVVMCheckSMVersion &other) const {
@@ -61,16 +69,18 @@ namespace mlir {
 
 namespace OpTrait {
 
-template <int Version, bool ArchAccelerated = false>
+template <int MinVersion, bool ArchAccelerated = false, bool ExactMatch = false>
 class NVVMRequiresSM {
 public:
   template <typename ConcreteOp>
-  class Impl : public OpTrait::TraitBase<
-                   ConcreteOp, NVVMRequiresSM<Version, ArchAccelerated>::Impl>,
-               public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
+  class Impl
+      : public OpTrait::TraitBase<
+            ConcreteOp,
+            NVVMRequiresSM<MinVersion, ArchAccelerated, ExactMatch>::Impl>,
+        public mlir::NVVM::RequiresSMInterface::Trait<ConcreteOp> {
   public:
     const NVVM::NVVMCheckSMVersion getRequiredMinSMVersion() const {
-      return NVVM::NVVMCheckSMVersion(Version, ArchAccelerated);
+      return NVVM::NVVMCheckSMVersion(MinVersion, ArchAccelerated, ExactMatch);
     }
   };
 };
