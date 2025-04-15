@@ -22,7 +22,7 @@ class CFIInstBuilder {
   MachineBasicBlock &MBB;
   MachineBasicBlock::iterator InsertPt;
 
-  /// MIflag to set on a MachineInstr. Typically, FrameSetup or FrameDestroy.
+  /// MIFlag to set on a MachineInstr. Typically, FrameSetup or FrameDestroy.
   MachineInstr::MIFlag MIFlag;
 
   /// Selects DWARF register numbering: debug or exception handling. Should be
