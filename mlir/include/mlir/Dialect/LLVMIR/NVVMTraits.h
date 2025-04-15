@@ -49,10 +49,10 @@ struct NVVMCheckSMVersion {
   bool isCompatible(const NVVMCheckSMVersion &targetSM) const {
     if (exactMatch)
       return (*this) == targetSM;
-    
-    return archAccelerated ? 
-      archVersion <= targetSM.archVersion && targetSM.archAccelerated :
-      archVersion <= targetSM.archVersion;
+
+    return archAccelerated
+               ? archVersion <= targetSM.archVersion && targetSM.archAccelerated
+               : archVersion <= targetSM.archVersion;
   }
 
   bool operator==(const NVVMCheckSMVersion &other) const {
