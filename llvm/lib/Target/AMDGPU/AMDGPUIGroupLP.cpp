@@ -94,9 +94,8 @@ protected:
   std::optional<SmallVector<SUnit *, 4>> Cache;
 
 public:
-  virtual bool
-  apply(const SUnit *, const ArrayRef<SUnit *>,
-        SmallVectorImpl<SchedGroup> &) {
+  virtual bool apply(const SUnit *, const ArrayRef<SUnit *>,
+                     SmallVectorImpl<SchedGroup> &) {
     return true;
   };
 
@@ -696,6 +695,76 @@ bool PipelineSolver::solveExact() {
   return FinishedExploring;
 }
 
+// Implement a IGLP scheduling strategy.
+class IGLPStrategy {
+protected:
+  ScheduleDAGInstrs *DAG;
+
+  const SIInstrInfo *TII;
+
+public:
+  /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
+  virtual bool applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      AMDGPU::SchedulingPhase Phase) = 0;
+
+  // Returns true if this strategy should be applied to a ScheduleDAG.
+  virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
+                                   AMDGPU::SchedulingPhase Phase) = 0;
+
+  bool IsBottomUp = true;
+
+  IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : DAG(DAG), TII(TII) {}
+
+  virtual ~IGLPStrategy() = default;
+};
+
+class MaxsOpt final : public IGLPStrategy {
+private:
+public:
+  bool applyIGLPStrategy(
+      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+      AMDGPU::SchedulingPhase Phase) override;
+
+  bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
+                           AMDGPU::SchedulingPhase Phase) override {
+    return true;
+  }
+
+  MaxsOpt(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
+      : IGLPStrategy(DAG, TII) {
+    IsBottomUp = true;
+  }
+};
+
+bool MaxsOpt::applyIGLPStrategy(
+    DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
+    DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
+    AMDGPU::SchedulingPhase Phase) {
+  // Count the number of MFMA instructions.
+  unsigned MFMACount = 0;
+  for (const MachineInstr &I : *DAG)
+    if (TII->isMFMAorWMMA(I))
+      ++MFMACount;
+
+  const unsigned PipelineSyncID = 0;
+  SchedGroup *SG = nullptr;
+  for (unsigned I = 0; I < MFMACount * 3; ++I) {
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::DS, 2, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+
+    SG = &SyncedSchedGroups[PipelineSyncID].emplace_back(
+        SchedGroupMask::MFMA, 1, PipelineSyncID, DAG, TII);
+    SG->initSchedGroup(SyncedInstrs[SG->getSyncID()]);
+  }
+
+  return true;
+}
+
 template <typename T>
 void PipelineSolver::greedyFind(
     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
@@ -815,33 +884,8 @@ enum IGLPStrategyID : int {
   MFMASmallGemmOptID = 0,
   MFMASmallGemmSingleWaveOptID = 1,
   MFMAExpInterleaveID = 2,
-  MFMAExpSimpleInterleaveID = 3
-};
-
-// Implement a IGLP scheduling strategy.
-class IGLPStrategy {
-protected:
-  ScheduleDAGInstrs *DAG;
-
-  const SIInstrInfo *TII;
-
-public:
-  /// Add SchedGroups to \p SyncedSchedGroups to implement this Strategy.
-  virtual bool applyIGLPStrategy(
-      DenseMap<int, SUnitsToCandidateSGsMap> &SyncedInstrs,
-      DenseMap<int, SmallVector<SchedGroup, 4>> &SyncedSchedGroups,
-      AMDGPU::SchedulingPhase Phase) = 0;
-
-  // Returns true if this strategy should be applied to a ScheduleDAG.
-  virtual bool shouldApplyStrategy(ScheduleDAGInstrs *DAG,
-                                   AMDGPU::SchedulingPhase Phase) = 0;
-
-  bool IsBottomUp = true;
-
-  IGLPStrategy(ScheduleDAGInstrs *DAG, const SIInstrInfo *TII)
-      : DAG(DAG), TII(TII) {}
-
-  virtual ~IGLPStrategy() = default;
+  MFMAExpSimpleInterleaveID = 3,
+  MaxsID = 4
 };
 
 class MFMASmallGemmOpt final : public IGLPStrategy {
@@ -2335,6 +2379,8 @@ createIGLPStrategy(IGLPStrategyID ID, ScheduleDAGInstrs *DAG,
     return std::make_unique<MFMAExpInterleaveOpt>(DAG, TII);
   case MFMAExpSimpleInterleaveID:
     return std::make_unique<MFMAExpSimpleInterleaveOpt>(DAG, TII);
+  case MaxsID:
+    return std::make_unique<MaxsOpt>(DAG, TII);
   }
 
   llvm_unreachable("Unknown IGLPStrategyID");
@@ -2599,10 +2645,14 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
   }
 
   if (FoundSB || (FoundIGLP && ShouldApplyIGLP)) {
+    // llvm::dbgs() << "before pipeline solver\n";
+    // DAG->dump();
     PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG, IsBottomUp);
     // PipelineSolver performs the mutation by adding the edges it
     // determined as the best
     PS.solve();
+    // llvm::dbgs() << "after pipeline solver\n";
+    // DAG->dump();
     return;
   }
 }
