@@ -456,4 +456,47 @@ define i32 @provenance_only_capture() {
   ret i32 %l1
 }
 
+define i32 @simple_with_lifetimes() {
+; CHECK-LABEL: @simple_with_lifetimes(
+; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    ret i32 0
+;
+  %a = alloca i32
+  call void @llvm.lifetime.start(i64 4, ptr %a)
+  store i32 0, ptr %a
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  call void @llvm.lifetime.end(i64 4, ptr %a)
+  ret i32 %l1
+}
+
+define i32 @twoalloc_with_lifetimes() {
+; CHECK-LABEL: @twoalloc_with_lifetimes(
+; CHECK-NEXT:    [[A:%.*]] = alloca { i32, i32 }, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    store i32 0, ptr [[A]], align 4
+; CHECK-NEXT:    [[B:%.*]] = getelementptr i32, ptr [[A]], i32 1
+; CHECK-NEXT:    store i32 1, ptr [[B]], align 4
+; CHECK-NEXT:    call void @callee(ptr [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add i32 0, 1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[A]])
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %a = alloca {i32, i32}
+  call void @llvm.lifetime.start(i64 8, ptr %a)
+  store i32 0, ptr %a
+  %b = getelementptr i32, ptr %a, i32 1
+  store i32 1, ptr %b
+  call void @callee(ptr %a)
+  %l1 = load i32, ptr %a
+  %l2 = load i32, ptr %b
+  %r = add i32 %l1, %l2
+  call void @llvm.lifetime.end(i64 8, ptr %a)
+  ret i32 %r
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
