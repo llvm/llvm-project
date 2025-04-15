@@ -738,6 +738,14 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
     else if (const auto *BE = B.dyn_cast<const Expr *>()) {
       OS << BE->getStmtClassName() << ' ';
       dumpPointer(BE);
+    } else if (const auto BTI = B.dyn_cast<TypeInfoLValue>()) {
+      OS << "TypeInfoLValue ";
+      ColorScope Color(OS, ShowColors, TypeColor);
+      BTI.print(OS, PrintPolicy);
+    } else if (B.is<DynamicAllocLValue>()) {
+      OS << "DynamicAllocLValue";
+      auto BDA = B.getDynamicAllocType();
+      dumpType(BDA);
     } else {
       const auto *VDB = B.get<const ValueDecl *>();
       OS << VDB->getDeclKindName() << "Decl";
@@ -1357,6 +1365,8 @@ void TextNodeDumper::VisitTemplateExpansionTemplateArgument(
 void TextNodeDumper::VisitExpressionTemplateArgument(
     const TemplateArgument &TA) {
   OS << " expr";
+  if (TA.isCanonicalExpr())
+    OS << " canonical";
   dumpTemplateArgument(TA);
 }
 
