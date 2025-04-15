@@ -985,6 +985,12 @@ public:
 
   bool isIGLP(const MachineInstr &MI) const { return isIGLP(MI.getOpcode()); }
 
+  // Return true if the instruction is mutually exclusive with all non-IGLP DAG
+  // mutations, requiring all other mutations to be disabled.
+  bool isIGLPMutationOnly(unsigned Opcode) const {
+    return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
+  }
+
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
     case AMDGPU::S_WAITCNT_soft:

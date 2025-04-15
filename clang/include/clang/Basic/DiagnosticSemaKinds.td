@@ -167,9 +167,10 @@ def err_expr_not_string_literal : Error<"expression is not a string literal">;
 def ext_predef_outside_function : Warning<
   "predefined identifier is only valid inside function">,
   InGroup<DiagGroup<"predefined-identifier-outside-function">>;
-def ext_init_from_predefined : ExtWarn<
-  "initializing an array from a '%0' predefined identifier is a Microsoft extension">,
-  InGroup<MicrosoftInitFromPredefined>;
+def ext_init_from_predefined
+    : ExtWarn<"initializing an array from a %0 predefined identifier is a "
+              "Microsoft extension">,
+      InGroup<MicrosoftInitFromPredefined>;
 def ext_string_literal_from_predefined : ExtWarn<
   "expansion of predefined identifier '%0' to a string literal is a Microsoft extension">,
   InGroup<MicrosoftStringLiteralFromPredefined>;
@@ -1030,6 +1031,9 @@ def err_deleted_main : Error<"'main' is not allowed to be deleted">;
 def err_mainlike_template_decl : Error<"%0 cannot be a template">;
 def err_main_returns_nonint : Error<"'main' must return 'int'">;
 def ext_main_returns_nonint : ExtWarn<"return type of 'main' is not 'int'">,
+    InGroup<MainReturnType>;
+def ext_main_no_return : Extension<
+    "implicit '0' return value from 'main' is a C99 extension">,
     InGroup<MainReturnType>;
 def note_main_change_return_type : Note<"change return type to 'int'">;
 def err_main_surplus_args : Error<"too many parameters (%0) for 'main': "
@@ -2592,8 +2596,8 @@ def err_auto_non_deduced_not_alone : Error<
 def err_implied_std_initializer_list_not_found : Error<
   "cannot deduce type of initializer list because std::initializer_list was "
   "not found; include <initializer_list>">;
-def err_malformed_std_initializer_list : Error<
-  "std::initializer_list must be a class template with a single type parameter">;
+def err_malformed_std_class_template : Error<
+  "std::%0 must be a class template with a single type parameter">;
 def err_auto_init_list_from_c : Error<
   "cannot use %select{'auto'|<ERROR>|'__auto_type'}0 with "
   "%select{initializer list|array}1 in C">;
@@ -2614,10 +2618,9 @@ def err_decltype_auto_initializer_list : Error<
   "cannot deduce 'decltype(auto)' from initializer list">;
 
 // C++17 deduced class template specialization types
-def err_deduced_class_template_compound_type : Error<
-  "cannot %select{form pointer to|form reference to|form array of|"
-  "form function returning|use parentheses when declaring variable with}0 "
-  "deduced class template specialization type">;
+def err_deduced_class_template_compound_type
+    : Error<"cannot form %select{pointer to|reference to|array of|function "
+            "returning}0 deduced class template specialization type">;
 def err_deduced_non_class_or_alias_template_specialization_type : Error<
   "%select{<error>|function template|variable template|alias template|"
   "template template parameter|concept|template}0 %1 requires template "
@@ -3019,14 +3022,14 @@ def note_substituted_constraint_expr_is_ill_formed : Note<
   "because substituted constraint expression is ill-formed%0">;
 def note_constraint_references_error
     : Note<"constraint depends on a previously diagnosed expression">;
-def note_atomic_constraint_evaluated_to_false : Note<
-  "%select{and|because}0 '%1' evaluated to false">;
-def note_concept_specialization_constraint_evaluated_to_false : Note<
-  "%select{and|because}0 '%1' evaluated to false">;
+def note_atomic_constraint_evaluated_to_false
+    : Note<"%select{and|because}0 %1 evaluated to false">;
+def note_concept_specialization_constraint_evaluated_to_false
+    : Note<"%select{and|because}0 %1 evaluated to false">;
 def note_single_arg_concept_specialization_constraint_evaluated_to_false : Note<
   "%select{and|because}0 %1 does not satisfy %2">;
-def note_atomic_constraint_evaluated_to_false_elaborated : Note<
-  "%select{and|because}0 '%1' (%2 %3 %4) evaluated to false">;
+def note_atomic_constraint_evaluated_to_false_elaborated
+    : Note<"%select{and|because}0 %1 (%2 %3 %4) evaluated to false">;
 def note_is_deducible_constraint_evaluated_to_false : Note<
   "cannot deduce template arguments for %0 from %1">;
 def err_constrained_virtual_method : Error<
@@ -3046,14 +3049,14 @@ def note_expr_requirement_expr_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_expr_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def note_expr_requirement_noexcept_not_met : Note<
-  "%select{and|because}0 '%1' may throw an exception">;
+def note_expr_requirement_noexcept_not_met
+    : Note<"%select{and|because}0 %1 may throw an exception">;
 def note_expr_requirement_type_requirement_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid: %2">;
 def note_expr_requirement_type_requirement_unknown_substitution_error : Note<
   "%select{and|because}0 '%1' would be invalid">;
-def note_expr_requirement_constraints_not_satisfied : Note<
-  "%select{and|because}0 type constraint '%1' was not satisfied:">;
+def note_expr_requirement_constraints_not_satisfied
+    : Note<"%select{and|because}0 type constraint %1 was not satisfied:">;
 def note_expr_requirement_constraints_not_satisfied_simple : Note<
   "%select{and|because}0 %1 does not satisfy %2:">;
 def note_type_requirement_substitution_error : Note<
@@ -3170,6 +3173,8 @@ def note_musttail_mismatch : Note<
     "|has type mismatch at %ordinal3 parameter"
     "%diff{ (expected $ but has $)|}1,2"
     "|has different return type%diff{ ($ expected but has $)|}1,2}0">;
+def note_musttail_disabled_by_not_tail_called : Note<
+  "'not_tail_called' attribute prevents being called as a tail call">;
 def err_musttail_callconv_mismatch : Error<
   "cannot perform a tail call to function%select{| %1}0 because it uses an "
   "incompatible calling convention">;
@@ -4352,9 +4357,9 @@ def note_reference_is_return_value : Note<"%0 returns a reference">;
 
 def note_pointer_declared_here : Note<
   "pointer %0 declared here">;
-def warn_division_sizeof_ptr : Warning<
-  "'%0' will return the size of the pointer, not the array itself">,
-  InGroup<DiagGroup<"sizeof-pointer-div">>;
+def warn_division_sizeof_ptr
+    : Warning<"%0 will return the size of the pointer, not the array itself">,
+      InGroup<DiagGroup<"sizeof-pointer-div">>;
 def warn_division_sizeof_array : Warning<
   "expression does not compute the number of elements in this array; element "
   "type is %0, not %1">,
@@ -5577,8 +5582,9 @@ def note_function_member_spec_matched : Note<
 def err_template_recursion_depth_exceeded : Error<
   "recursive template instantiation exceeded maximum depth of %0">,
   DefaultFatal, NoSFINAE;
-def err_constraint_depends_on_self : Error<
-  "satisfaction of constraint '%0' depends on itself">, NoSFINAE;
+def err_constraint_depends_on_self
+    : Error<"satisfaction of constraint %0 depends on itself">,
+      NoSFINAE;
 def note_template_recursion_depth : Note<
   "use -ftemplate-depth=N to increase recursive template instantiation depth">;
 
@@ -7094,8 +7100,8 @@ def warn_precedence_bitwise_rel : Warning<
   InGroup<Parentheses>;
 def note_precedence_bitwise_first : Note<
   "place parentheses around the %0 expression to evaluate it first">;
-def note_precedence_silence : Note<
-  "place parentheses around the '%0' expression to silence this warning">;
+def note_precedence_silence : Note<"place parentheses around the %quoted0 "
+                                   "expression to silence this warning">;
 
 def warn_precedence_conditional : Warning<
   "operator '?:' has lower precedence than '%0'; '%0' will be evaluated first">,
@@ -7113,9 +7119,11 @@ def warn_consecutive_comparison : Warning<
 def warn_enum_constant_in_bool_context : Warning<
   "converting the enum constant to a boolean">,
   InGroup<IntInBoolContext>, DefaultIgnore;
-def warn_left_shift_in_bool_context : Warning<
-  "converting the result of '<<' to a boolean; did you mean '(%0) != 0'?">,
-  InGroup<IntInBoolContext>, DefaultIgnore;
+def warn_left_shift_in_bool_context
+    : Warning<"converting the result of '<<' to a boolean; did you mean to "
+              "compare with '0'?">,
+      InGroup<IntInBoolContext>,
+      DefaultIgnore;
 def warn_logical_instead_of_bitwise : Warning<
   "use of logical '%0' with constant operand">,
   InGroup<DiagGroup<"constant-logical-operand">>;
@@ -9754,7 +9762,7 @@ def err_operator_new_delete_invalid_result_type : Error<
 def err_operator_new_delete_dependent_result_type : Error<
   "%0 cannot have a dependent return type; use %1 instead">;
 def err_operator_new_delete_too_few_parameters : Error<
-  "%0 must have at least one parameter">;
+  "%select{|type aware }0%select{|destroying }1%2 must have at least %select{|one|two|three|four|five}3 parameter%s3">;
 def err_operator_new_delete_template_too_few_parameters : Error<
   "%0 template must have at least two parameters">;
 def warn_operator_new_returns_null : Warning<
@@ -9762,19 +9770,38 @@ def warn_operator_new_returns_null : Warning<
   "%select{| or 'noexcept'}1">, InGroup<OperatorNewReturnsNull>;
 
 def err_operator_new_dependent_param_type : Error<
-  "%0 cannot take a dependent type as first parameter; "
-  "use size_t (%1) instead">;
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %ordinal3 parameter; "
+  "use %5 (%4) instead">;
 def err_operator_new_param_type : Error<
-  "%0 takes type size_t (%1) as first parameter">;
+  "%select{|type aware }0%select{|destroying }1%2 takes type %5 (%4) as %ordinal3 parameter">;
 def err_operator_new_default_arg: Error<
   "parameter of %0 cannot have a default argument">;
 def err_operator_delete_dependent_param_type : Error<
-  "%0 cannot take a dependent type as first parameter; use %1 instead">;
+  "%select{|type aware }0%select{|destroying }1%2 cannot take a dependent type as its %ordinal3 parameter; "
+  "use %4 instead">;
 def err_operator_delete_param_type : Error<
-  "first parameter of %0 must have type %1">;
+  "%ordinal3 parameter of%select{| type aware}0%select{| destroying}1 %2 must have type %4">;
 def err_destroying_operator_delete_not_usual : Error<
   "destroying operator delete can have only an optional size and optional "
   "alignment parameter">;
+
+def err_type_aware_destroying_operator_delete : Error<
+  "destroying delete is not permitted to be type aware">;
+
+def ext_cxx26_type_aware_allocators : ExtWarn<
+  "type aware allocators are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx26_type_aware_allocators : Warning<
+  "type aware allocators are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+def err_type_aware_allocator_missing_matching_operator : Error<
+  "declaration of type aware %0 in %1 must have matching type aware %2"
+>;
+def note_unmatched_type_aware_allocator_declared : Note<
+  "unmatched type aware %0 declared here">;
+def err_mismatching_type_aware_cleanup_deallocator : Error<
+  "type aware %0 requires a matching type aware %select{|placement }1%2 to be declared in the same scope">;
+def note_type_aware_operator_declared : Note<
+  "%select{non-|}0type aware %1 declared here in %2">;
 def note_implicit_delete_this_in_destructor_here : Note<
   "while checking implicit 'delete this' for virtual destructor">;
 def err_builtin_operator_new_delete_not_usual : Error<
@@ -10308,9 +10335,11 @@ def warn_dangling_pointer_assignment : Warning<
    "object backing %select{|the pointer }0%1 "
    "will be destroyed at the end of the full-expression">,
    InGroup<DanglingAssignment>;
-def warn_dangling_reference_captured : Warning<
-   "object whose reference is captured by '%0' will be destroyed at the end of "
-   "the full-expression">, InGroup<DanglingCapture>;
+def warn_dangling_reference_captured
+    : Warning<"object whose reference is captured by %0 will be destroyed at "
+              "the end of "
+              "the full-expression">,
+      InGroup<DanglingCapture>;
 def warn_dangling_reference_captured_by_unknown : Warning<
    "object whose reference is captured will be destroyed at the end of "
    "the full-expression">, InGroup<DanglingCapture>;
@@ -12146,6 +12175,9 @@ def warn_always_inline_coroutine : Warning<
 def err_coroutine_unusable_new : Error<
   "'operator new' provided by %0 is not usable with the function signature of %1"
 >;
+def note_coroutine_unusable_type_aware_allocators : Note<
+  "type aware %0 will not be used for coroutine allocation"
+>;
 def err_coroutine_unfound_nothrow_new : Error <
   "unable to find %select{'::operator new(size_t, nothrow_t)'|"
   "'::operator new(size_t, align_val_t, nothrow_t)'}1 for %0"
@@ -12165,6 +12197,9 @@ def err_coroutine_return_type : Error<
   "function returns a type %0 marked with [[clang::coro_return_type]] but is neither a coroutine nor a coroutine wrapper; "
   "non-coroutines should be marked with [[clang::coro_wrapper]] to allow returning coroutine return type"
 >;
+def warn_coroutine_type_aware_allocator_ignored : Warning <
+  "type aware %0 will not be used for coroutine allocation">,
+  InGroup<CoroTypeAwareAllocationFunction>;
 } // end of coroutines issue category
 
 let CategoryName = "Documentation Issue" in {
@@ -13009,15 +13044,15 @@ def note_acc_atomic_too_many_stmts
 def note_acc_atomic_expected_binop : Note<"expected binary operation on right "
                                           "hand side of assignment operator">;
 def note_acc_atomic_mismatch_operand
-    : Note<"left hand side of assignment operation('%0') must match one side "
-           "of the sub-operation on the right hand side('%1' and '%2')">;
+    : Note<"left hand side of assignment operation(%0) must match one side "
+           "of the sub-operation on the right hand side(%1 and %2)">;
 def note_acc_atomic_mismatch_compound_operand
     : Note<"variable %select{|in unary expression|on right hand side of "
            "assignment|on left hand side of assignment|on left hand side of "
-           "compound assignment|on left hand side of assignment}2('%3') must "
+           "compound assignment|on left hand side of assignment}2(%3) must "
            "match variable used %select{|in unary expression|on right hand "
            "side of assignment|<not possible>|on left hand side of compound "
-           "assignment|on left hand side of assignment}0('%1') from the first "
+           "assignment|on left hand side of assignment}0(%1) from the first "
            "statement">;
 def err_acc_declare_required_clauses
     : Error<"no valid clauses specified in OpenACC 'declare' directive">;
@@ -13037,9 +13072,9 @@ def err_acc_multiple_references
     : Error<"variable referenced in '%0' clause of OpenACC 'declare' directive "
             "was already referenced">;
 def err_acc_routine_not_func
-    : Error<"OpenACC routine name '%0' does not name a function">;
+    : Error<"OpenACC routine name %0 does not name a function">;
 def err_acc_routine_overload_set
-    : Error<"OpenACC routine name '%0' names a set of overloads">;
+    : Error<"OpenACC routine name %0 names a set of overloads">;
 def err_acc_magic_static_in_routine
     : Error<"function static variables are not permitted in functions to which "
             "an OpenACC 'routine' directive applies">;
@@ -13058,6 +13093,11 @@ def err_acc_decl_for_routine
     : Error<"expected function or lambda declaration for 'routine' construct">;
 def err_acc_invalid_modifier
     : Error<"OpenACC '%0' modifier not valid on '%1' clause">;
+def err_acc_invalid_default_type
+    : Error<"invalid value %0 in '%1' clause; valid values are %2">;
+def err_acc_device_type_multiple_archs
+    : Error<"OpenACC 'device_type' clause on a 'set' construct only permits "
+            "one architecture">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

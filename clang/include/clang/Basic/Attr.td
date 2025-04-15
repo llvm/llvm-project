@@ -1709,6 +1709,13 @@ def EmptyBases : InheritableAttr, TargetSpecificAttr<TargetMicrosoftCXXABI> {
 def AllocSize : InheritableAttr {
   let Spellings = [GCC<"alloc_size">];
   let Subjects = SubjectList<[HasFunctionProto]>;
+  // The parameter names here are a bit misleading.
+  // When used with a single argument, the first argument is obviously the
+  // allocation size; but when used with two arguments, the first argument is
+  // usually the number of elements, while the second argument is usually the
+  // element size - the reverse of how they are named here.
+  // The documentation of both GCC and clang does not describe any semantic
+  // difference between the first and second argument.
   let Args = [ParamIdxArgument<"ElemSizeParam">,
               ParamIdxArgument<"NumElemsParam", /*opt*/ 1>];
   let TemplateDependent = 1;

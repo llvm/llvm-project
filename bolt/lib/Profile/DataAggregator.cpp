@@ -871,17 +871,26 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF,
 
   BinaryContext &BC = BF.getBinaryContext();
 
-  if (!BF.isSimple())
-    return std::nullopt;
-
-  assert(BF.hasCFG() && "can only record traces in CFG state");
-
   // Offsets of the trace within this function.
   const uint64_t From = FirstLBR.To - BF.getAddress();
   const uint64_t To = SecondLBR.From - BF.getAddress();
 
   if (From > To)
     return std::nullopt;
+
+  // Accept fall-throughs inside pseudo functions (PLT/thunks).
+  // This check has to be above BF.empty as pseudo functions would pass it:
+  // pseudo => ignored => CFG not built => empty.
+  // If we return nullopt, trace would be reported as mismatching disassembled
+  // function contents which it is not. To avoid this, return an empty
+  // fall-through list instead.
+  if (BF.isPseudo())
+    return Branches;
+
+  if (!BF.isSimple())
+    return std::nullopt;
+
+  assert(BF.hasCFG() && "can only record traces in CFG state");
 
   const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
   const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
