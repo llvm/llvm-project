@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if __OPENCL_C_VERSION__ >= CL_VERSION_2_0
+
 #define __CLC_FUNCTION ctz
 #define __CLC_BODY <clc/shared/unary_decl.inc>
 
@@ -13,3 +15,5 @@
 
 #undef __CLC_BODY
 #undef __CLC_FUNCTION
+
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_2_0
