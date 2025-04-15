@@ -1741,7 +1741,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
   if (!gpuModuleOp)
     return emitError(gpuModule->getLoc(),
                      "NVVM target attribute must be attached to a GPU module");
-  
+
   NVVMCheckSMVersion targetSMVersion(getChip());
   if (targetSMVersion.archVersion < 20)
     return emitError(gpuModule->getLoc(),
