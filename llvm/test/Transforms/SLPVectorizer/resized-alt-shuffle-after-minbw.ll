@@ -6,9 +6,11 @@ define void @func(i32 %0) {
 ; CHECK-SAME: i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[TMP0]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = or <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shl i32 [[TMP0]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 0
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <32 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <32 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = sext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i64 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP9]] to i32
