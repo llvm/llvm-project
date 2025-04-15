@@ -2244,18 +2244,19 @@ def Vector_ShapeCastOp :
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "shape_cast casts between vector shapes";
   let description = [{
-    The shape_cast operation casts between an n-D source vector shape and
-    a k-D result vector shape (the element type remains the same).
+    The shape_cast operation casts from an n-D source vector to a k-D result
+    vector. The element type remains the same, as does the number of elements
+    (product of dimensions).
 
-    If reducing rank (n > k), result dimension sizes must be a product
-    of contiguous source dimension sizes.
-    If expanding rank (n < k), source dimensions must factor into a
-    contiguous sequence of destination dimension sizes.
+    If reducing or preserving rank (n >= k), all result dimension sizes must be
+    products of contiguous source dimension sizes. If expanding rank (n < k),
+    source dimensions must all factor into contiguous sequences of destination
+    dimension sizes.
+
     Each source dim is expanded (or contiguous sequence of source dims combined)
     in source dimension list order (i.e. 0 <= i < n), to produce a contiguous
     sequence of result dims (or a single result dim), in result dimension list
-    order (i.e. 0 <= j < k). The product of all source dimension sizes and all
-    result dimension sizes must match.
+    order (i.e. 0 <= j < k).
 
     It is currently assumed that this operation does not require moving data,
     and that it will be folded away before lowering vector operations.
