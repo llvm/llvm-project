@@ -161,11 +161,6 @@ public:
   SmallSet(llvm::from_range_t, Range &&R)
       : SmallSet(adl_begin(R), adl_end(R)) {}
 
-  template <typename RangeT>
-  explicit SmallSet(const iterator_range<RangeT> &R) {
-    insert(R.begin(), R.end());
-  }
-
   SmallSet(std::initializer_list<T> L) { insert(L.begin(), L.end()); }
 
   SmallSet &operator=(const SmallSet &) = default;

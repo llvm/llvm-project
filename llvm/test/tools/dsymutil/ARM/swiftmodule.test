@@ -1,0 +1,29 @@
+# RUN: dsymutil -verbose -oso-prepend-path=%p -y -o %t.dSYM  %s | FileCheck %s
+#
+# RUN: dsymutil --linker parallel -verbose -oso-prepend-path=%p -y %s -o %t-parallel.dSYM | FileCheck %s
+#
+# To regenerate:
+# echo ''>I.swift
+# echo ''>B.swift
+# echo 'import I'>main.swift
+# xcrun swiftc -emit-module-interface-path I.swiftinterface -enable-library-evolution I.swift
+# xcrun swiftc -emit-module-path B.swiftmodule B.swift -Xfrontend -no-serialize-debugging-options
+# xcrun swiftc -explicit-module-build main.swift -I. -module-cache-path cache -g -Xfrontend  -no-serialize-debugging-options
+# output is "B.swiftmodule" and "cache/I*.swiftmodule"
+#
+# CHECK-NOT: Skipping compiled textual Swift interface: {{.*}}/Inputs/Binary.swiftmodule
+# CHECK: Skipping compiled textual Swift interface: {{.*}}/Inputs/FromInterface.swiftmodule
+
+#
+---
+triple:          'arm64-apple-darwin'
+objects:
+  - filename:        '../Inputs/Binary.swiftmodule'
+    timestamp:       0
+    type:            50
+    symbols:         []
+  - filename:        '../Inputs/FromInterface.swiftmodule'
+    timestamp:       0
+    type:            50
+    symbols:         []
+...

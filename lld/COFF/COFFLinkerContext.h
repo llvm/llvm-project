@@ -32,25 +32,22 @@ public:
   SymbolTable symtab;
   COFFOptTable optTable;
 
-  // A hybrid ARM64EC symbol table on ARM64X target.
+  // A native ARM64 symbol table on ARM64X target.
   std::optional<SymbolTable> hybridSymtab;
-
-  // Pointer to the ARM64EC symbol table: either symtab for an ARM64EC target or
-  // hybridSymtab for an ARM64X target.
-  SymbolTable *symtabEC = nullptr;
 
   // Returns the appropriate symbol table for the specified machine type.
   SymbolTable &getSymtab(llvm::COFF::MachineTypes machine) {
-    if (hybridSymtab && (machine == ARM64EC || machine == AMD64))
+    if (hybridSymtab && machine == ARM64)
       return *hybridSymtab;
     return symtab;
   }
 
   // Invoke the specified callback for each symbol table.
   void forEachSymtab(std::function<void(SymbolTable &symtab)> f) {
-    f(symtab);
+    // If present, process the native symbol table first.
     if (hybridSymtab)
       f(*hybridSymtab);
+    f(symtab);
   }
 
   std::vector<ObjFile *> objFileInstances;

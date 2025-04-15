@@ -37,6 +37,12 @@ static cl::opt<unsigned> SLPMaxVF(
         "exclusively by SLP vectorizer."),
     cl::Hidden);
 
+static cl::opt<unsigned>
+    RVVMinTripCount("riscv-v-min-trip-count",
+                    cl::desc("Set the lower bound of a trip count to decide on "
+                             "vectorization while tail-folding."),
+                    cl::init(5), cl::Hidden);
+
 InstructionCost
 RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
                                       TTI::TargetCostKind CostKind) {
@@ -430,10 +436,14 @@ costShuffleViaVRegSplitting(RISCVTTIImpl &TTI, MVT LegalVT,
   copy(Mask, NormalizedMask.begin());
   InstructionCost Cost = 0;
   int NumShuffles = 0;
+  SmallDenseSet<std::pair<ArrayRef<int>, unsigned>> ReusedSingleSrcShuffles;
   processShuffleMasks(
       NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
       [&](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
         if (ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size()))
+          return;
+        if (!ReusedSingleSrcShuffles.insert(std::make_pair(RegMask, SrcReg))
+                 .second)
           return;
         ++NumShuffles;
         Cost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SingleOpTy,
@@ -2596,6 +2606,10 @@ unsigned RISCVTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
   // If no vector registers, or absurd element widths, disable
   // vectorization by returning 1.
   return std::max<unsigned>(1U, RegWidth.getFixedValue() / ElemWidth);
+}
+
+unsigned RISCVTTIImpl::getMinTripCountTailFoldingThreshold() const {
+  return RVVMinTripCount;
 }
 
 TTI::AddressingModeKind

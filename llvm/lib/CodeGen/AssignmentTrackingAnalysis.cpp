@@ -897,8 +897,8 @@ public:
         Worklist.push(RPONumber);
         ++RPONumber;
       }
-      LiveIn.init(RPONumber);
-      LiveOut.init(RPONumber);
+      LiveIn.reserve(RPONumber);
+      LiveOut.reserve(RPONumber);
     }
 
     // Perform the traversal.
@@ -2318,8 +2318,8 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
       Worklist.push(RPONumber);
       ++RPONumber;
     }
-    LiveIn.init(RPONumber);
-    LiveOut.init(RPONumber);
+    LiveIn.reserve(RPONumber);
+    LiveOut.reserve(RPONumber);
   }
 
   // Perform the traversal.

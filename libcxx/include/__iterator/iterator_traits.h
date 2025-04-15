@@ -32,6 +32,7 @@
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_referenceable.h>
 #include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/nat.h>
 #include <__type_traits/remove_const.h>
@@ -49,14 +50,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-using __with_reference _LIBCPP_NODEBUG = _Tp&;
-
-template <class _Tp>
-concept __can_reference = requires { typename __with_reference<_Tp>; };
-
-template <class _Tp>
 concept __dereferenceable = requires(_Tp& __t) {
-  { *__t } -> __can_reference; // not required to be equality-preserving
+  { *__t } -> __referenceable; // not required to be equality-preserving
 };
 
 // [iterator.traits]
@@ -66,15 +61,15 @@ using iter_reference_t = decltype(*std::declval<_Tp&>());
 #endif // _LIBCPP_STD_VER >= 20
 
 template <class _Iter>
-struct _LIBCPP_TEMPLATE_VIS iterator_traits;
+struct iterator_traits;
 
-struct _LIBCPP_TEMPLATE_VIS input_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS output_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS forward_iterator_tag : public input_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS bidirectional_iterator_tag : public forward_iterator_tag {};
-struct _LIBCPP_TEMPLATE_VIS random_access_iterator_tag : public bidirectional_iterator_tag {};
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag : public input_iterator_tag {};
+struct bidirectional_iterator_tag : public forward_iterator_tag {};
+struct random_access_iterator_tag : public bidirectional_iterator_tag {};
 #if _LIBCPP_STD_VER >= 20
-struct _LIBCPP_TEMPLATE_VIS contiguous_iterator_tag : public random_access_iterator_tag {};
+struct contiguous_iterator_tag : public random_access_iterator_tag {};
 #endif
 
 template <class _Iter>
@@ -138,9 +133,9 @@ public:
 namespace __iterator_traits_detail {
 template <class _Ip>
 concept __cpp17_iterator = requires(_Ip __i) {
-  { *__i } -> __can_reference;
+  { *__i } -> __referenceable;
   { ++__i } -> same_as<_Ip&>;
-  { *__i++ } -> __can_reference;
+  { *__i++ } -> __referenceable;
 } && copyable<_Ip>;
 
 template <class _Ip>
@@ -377,7 +372,7 @@ struct __iterator_traits<_Iter, true>
 //    the client expects instead of failing at compile time.
 
 template <class _Iter>
-struct _LIBCPP_TEMPLATE_VIS iterator_traits : __iterator_traits<_Iter, __has_iterator_typedefs<_Iter>::value> {
+struct iterator_traits : __iterator_traits<_Iter, __has_iterator_typedefs<_Iter>::value> {
   using __primary_template _LIBCPP_NODEBUG = iterator_traits;
 };
 #endif // _LIBCPP_STD_VER >= 20
@@ -386,7 +381,7 @@ template <class _Tp>
 #if _LIBCPP_STD_VER >= 20
   requires is_object_v<_Tp>
 #endif
-struct _LIBCPP_TEMPLATE_VIS iterator_traits<_Tp*> {
+struct iterator_traits<_Tp*> {
   typedef ptrdiff_t difference_type;
   typedef __remove_cv_t<_Tp> value_type;
   typedef _Tp* pointer;

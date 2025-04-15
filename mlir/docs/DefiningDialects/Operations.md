@@ -248,7 +248,7 @@ To declare a variadic operand that has a variadic number of sub-ranges, wrap the
 `TypeConstraint` for the operand with `VariadicOfVariadic<...,
 "<segment-attribute-name>">`.
 
-The second field of the `VariadicOfVariadic` is the name of an `I32ElementsAttr`
+The second field of the `VariadicOfVariadic` is the name of a `DenseI32ArrayAttr`
 argument that contains the sizes of the variadic sub-ranges. This attribute will
 be used when determining the size of sub-ranges, or when updating the size of
 sub-ranges.
@@ -906,11 +906,12 @@ declarative parameter to `parse` method argument is detailed below:
     -   Variadic: `SmallVectorImpl<Type> &`
     -   VariadicOfVariadic: `SmallVectorImpl<SmallVector<Type>> &`
 *   `attr-dict` Directive: `NamedAttrList &`
+*   `prop-dict` Directive: `OperationState &`
 
 When a variable is optional, the value should only be specified if the variable
 is present. Otherwise, the value should remain `None` or null.
 
-The arguments to the `print<UserDirective>` method is firstly a reference to the
+The arguments to the `print<UserDirective>` method are firstly a reference to the
 `OpAsmPrinter`(`OpAsmPrinter &`), second the op (e.g. `FooOp op` which can be
 `Operation *op` alternatively), and finally a set of output parameters
 corresponding to the parameters specified in the format. The mapping of
@@ -940,6 +941,7 @@ declarative parameter to `print` method argument is detailed below:
     -   Variadic: `TypeRange`
     -   VariadicOfVariadic: `TypeRangeRange`
 *   `attr-dict` Directive: `DictionaryAttr`
+*   `prop-dict` Directive: `FooOp::Properties`
 
 When a variable is optional, the provided value may be null. When a variable is
 referenced in a custom directive parameter using `ref`, it is passed in by
@@ -1397,7 +1399,7 @@ is used. They serve as "hooks" to the enclosing environment. This includes
     information of the current operation.
 *   `$_self` will be replaced with the entity this predicate is attached to.
     E.g., `BoolAttr` is an attribute constraint that wraps a
-    `CPred<"$_self.isa<BoolAttr>()">`. Then for `BoolAttr:$attr`,`$_self` will be
+    `CPred<"isa<BoolAttr>($_self)">`. Then for `BoolAttr:$attr`,`$_self` will be
     replaced by `$attr`. For type constraints, it's a little bit special since
     we want the constraints on each type definition reads naturally and we want
     to attach type constraints directly to an operand/result, `$_self` will be
@@ -1409,8 +1411,8 @@ to allow referencing operand/result `$-name`s; such `$-name`s can start with
 underscore.
 
 For example, to write an attribute `attr` is an `IntegerAttr`, in C++ you can
-just call `attr.isa<IntegerAttr>()`. The code can be wrapped in a `CPred` as
-`$_self.isa<IntegerAttr>()`, with `$_self` as the special placeholder to be
+just call `isa<IntegerAttr>(attr)`. The code can be wrapped in a `CPred` as
+`isa<IntegerAttr>($_self)`, with `$_self` as the special placeholder to be
 replaced by the current attribute `attr` at expansion time.
 
 For more complicated predicates, you can wrap it in a single `CPred`, or you can
@@ -1419,10 +1421,10 @@ that an attribute `attr` is a 32-bit or 64-bit integer, you can write it as
 
 ```tablegen
 And<[
-  CPred<"$_self.isa<IntegerAttr>()">,
+  CPred<"$isa<IntegerAttr>(_self)()">,
   Or<[
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(32)">,
-    CPred<"$_self.cast<IntegerAttr>().getType().isInteger(64)">
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(32)">,
+    CPred<"cast<IntegerAttr>($_self).getType().isInteger(64)">
   ]>
 ]>
 ```
@@ -1498,22 +1500,17 @@ optionality, default values, etc.:
 *   `AllAttrOf`: adapts an attribute with
     [multiple constraints](#combining-constraints).
 
-### Enum attributes
+## Enum definition
 
-Some attributes can only take values from a predefined enum, e.g., the
-comparison kind of a comparison op. To define such attributes, ODS provides
-several mechanisms: `IntEnumAttr`, and `BitEnumAttr`.
+MLIR is capabable of generating C++ enums, both those that represent a set
+of values drawn from a list or that can hold a combination of flags
+using the `IntEnum` and `BitEnum` classes, respectively.
 
-*   `IntEnumAttr`: each enum case is an integer, the attribute is stored as a
-    [`IntegerAttr`][IntegerAttr] in the op.
-*   `BitEnumAttr`: each enum case is a either the empty case, a single bit,
-    or a group of single bits, and the attribute is stored as a
-    [`IntegerAttr`][IntegerAttr] in the op.
-
-All these `*EnumAttr` attributes require fully specifying all of the allowed
-cases via their corresponding `*EnumAttrCase`. With this, ODS is able to
+All these `IntEnum` and `BitEnum` classes require fully specifying all of the allowed
+cases via a `EnumCase` or `BitEnumCase` subclass, respectively. With this, ODS is able to
 generate additional verification to only accept allowed cases. To facilitate the
-interaction between `*EnumAttr`s and their C++ consumers, the
+interaction between tablegen enums and the attributes or properties that wrap them and
+to make them easier to use in C++, the
 [`EnumsGen`][EnumsGen] TableGen backend can generate a few common utilities: a
 C++ enum class, `llvm::DenseMapInfo` for the enum class, conversion functions
 from/to strings. This is controlled via the `-gen-enum-decls` and
@@ -1522,10 +1519,10 @@ from/to strings. This is controlled via the `-gen-enum-decls` and
 For example, given the following `EnumAttr`:
 
 ```tablegen
-def Case15: I32EnumAttrCase<"Case15", 15>;
-def Case20: I32EnumAttrCase<"Case20", 20>;
+def Case15: I32EnumCase<"Case15", 15>;
+def Case20: I32EnumCase<"Case20", 20>;
 
-def MyIntEnum: I32EnumAttr<"MyIntEnum", "An example int enum",
+def MyIntEnum: I32Enum<"MyIntEnum", "An example int enum",
                            [Case15, Case20]> {
   let cppNamespace = "Outer::Inner";
   let stringToSymbolFnName = "ConvertToEnum";
@@ -1611,14 +1608,17 @@ std::optional<MyIntEnum> symbolizeMyIntEnum(uint32_t value) {
 Similarly for the following `BitEnumAttr` definition:
 
 ```tablegen
-def None: I32BitEnumAttrCaseNone<"None">;
-def Bit0: I32BitEnumAttrCaseBit<"Bit0", 0, "tagged">;
-def Bit1: I32BitEnumAttrCaseBit<"Bit1", 1>;
-def Bit2: I32BitEnumAttrCaseBit<"Bit2", 2>;
-def Bit3: I32BitEnumAttrCaseBit<"Bit3", 3>;
+def None: I32BitEnumCaseNone<"None">;
+def Bit0: I32BitEnumCaseBit<"Bit0", 0, "tagged">;
+def Bit1: I32BitEnumCaseBit<"Bit1", 1>;
+def Bit2: I32BitEnumCaseBit<"Bit2", 2>;
+def Bit3: I32BitEnumCaseBit<"Bit3", 3>;
 
-def MyBitEnum: BitEnumAttr<"MyBitEnum", "An example bit enum",
-                           [None, Bit0, Bit1, Bit2, Bit3]>;
+def MyBitEnum: I32BitEnum<"MyBitEnum", "An example bit enum",
+                           [None, Bit0, Bit1, Bit2, Bit3]> {
+  // Note: this is the default value, and is listed for illustrative purposes.
+  let separator = "|";
+}
 ```
 
 We can have:
@@ -1737,6 +1737,43 @@ std::optional<MyBitEnum> symbolizeMyBitEnum(uint32_t value) {
   return static_cast<MyBitEnum>(value);
 }
 ```
+
+### Wrapping enums in attributes
+
+There are several mechanisms for creating an `Attribute` whose values are
+taken from a `*Enum`.
+
+The most common of these is to use the `EnumAttr` class, which takes
+an `EnumInfo` (either a `IntEnum` or `BitEnum`) as a parameter and constructs
+an attribute that holds one argument - value of the enum. This attribute
+is defined within a dialect and can have its assembly format customized to,
+for example, print angle brackets around the enum value or assign a mnemonic.
+
+An older form involves using the `*IntEnumAttr` and `*BitEnumATtr` classes
+and their corresponding `*EnumAttrCase` classes (which can be used
+anywhere a `*EnumCase` is needed). These classes store their values
+as a `SignlessIntegerAttr` of their bitwidth, imposing the constraint on it
+that it has a value within the valid range of the enum. If their
+`genSpecializedAttr` parameter is set, they will also generate a
+wrapper attribute instead of using a bare signless integer attribute
+for storage.
+
+### Enum properties
+
+Enums can be wrapped in properties so that they can be stored inline.
+This causes a value of the enum's C++ class to become a member of the operation's
+property struct and for the operation's verifier to check that the enum's value
+is a valid value for the enum.
+
+The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+
+A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
+the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`
+and a mnemonic string, which becomes part of the property's syntax.
+
+Both of these `EnumProp` types have a `*EnumPropWithAttrForm`, which allows for
+transparently upgrading from `EnumAttr`s and optionally retaining those
+attributes in the generic form.
 
 ## Debugging Tips
 

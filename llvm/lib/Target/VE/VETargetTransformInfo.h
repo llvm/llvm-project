@@ -133,10 +133,12 @@ public:
   }
 
   // Load & Store {
-  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedLoad(Type *DataType, MaybeAlign Alignment,
+                         unsigned /*AddressSpace*/) {
     return isVectorLaneType(*getLaneType(DataType));
   }
-  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment) {
+  bool isLegalMaskedStore(Type *DataType, MaybeAlign Alignment,
+                          unsigned /*AddressSpace*/) {
     return isVectorLaneType(*getLaneType(DataType));
   }
   bool isLegalMaskedGather(Type *DataType, MaybeAlign Alignment) {

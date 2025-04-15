@@ -25,9 +25,8 @@ bool M68kMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
-  Res =
-      MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), specifier);
-  return Res.getSymB() ? specifier == VK_None : true;
+  Res.setSpecifier(specifier);
+  return !Res.getSubSym();
 }
 
 void M68kMCExpr::visitUsedExpr(MCStreamer &S) const { S.visitUsedExpr(*Expr); }

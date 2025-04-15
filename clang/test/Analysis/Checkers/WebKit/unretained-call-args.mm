@@ -271,6 +271,16 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace cxx_assignment_op {
+
+  SomeObj* provide();
+  void foo() {
+    RetainPtr<SomeObj> ptr;
+    ptr = provide();
+  }
+
+}
+
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();
@@ -375,9 +385,37 @@ namespace alloc_class {
   }
 }
 
+namespace ptr_conversion {
+
+SomeObj *provide_obj();
+
+void dobjc(SomeObj* obj) {
+  [dynamic_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+void cobjc(SomeObj* obj) {
+  [checked_objc_cast<OtherObj>(obj) doMoreWork:nil];
+}
+
+unsigned dcf(CFTypeRef obj) {
+  return CFArrayGetCount(dynamic_cf_cast<CFArrayRef>(obj));
+}
+
+unsigned ccf(CFTypeRef obj) {
+  return CFArrayGetCount(checked_cf_cast<CFArrayRef>(obj));
+}
+
+void some_function(id);
+void idcf(CFTypeRef obj) {
+  some_function(bridge_id_cast(obj));
+}
+
+} // ptr_conversion
+
 @interface TestObject : NSObject
 - (void)doWork:(NSString *)msg, ...;
 - (void)doWorkOnSelf;
+- (SomeObj *)getSomeObj;
 @end
 
 @implementation TestObject
@@ -392,6 +430,14 @@ namespace alloc_class {
   // expected-warning@-1{{Call argument is unretained and unsafe}}
   // expected-warning@-2{{Call argument is unretained and unsafe}}
   [self doWork:@"hello", RetainPtr<SomeObj> { provide() }.get(), RetainPtr<CFMutableArrayRef> { provide_cf() }.get()];
+}
+
+- (SomeObj *)getSomeObj {
+    return RetainPtr<SomeObj *>(provide()).autorelease();
+}
+
+- (void)doWorkOnSomeObj {
+    [[self getSomeObj] doWork];
 }
 
 @end

@@ -34,10 +34,7 @@ public:
   static char ID;
 
 public:
-  AMDGPUGlobalISelDivergenceLowering() : MachineFunctionPass(ID) {
-    initializeAMDGPUGlobalISelDivergenceLoweringPass(
-        *PassRegistry::getPassRegistry());
-  }
+  AMDGPUGlobalISelDivergenceLowering() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

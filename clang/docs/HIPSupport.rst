@@ -704,7 +704,7 @@ Open Questions / Future Developments
 SPIR-V Support on HIPAMD ToolChain
 ==================================
 
-The HIPAMD ToolChain supports targetting
+The HIPAMD ToolChain supports targeting
 `AMDGCN Flavoured SPIR-V <https://llvm.org/docs/SPIRVUsage.html#target-triples>`_.
 The support for SPIR-V in the ROCm and HIPAMD ToolChain is under active
 development.
