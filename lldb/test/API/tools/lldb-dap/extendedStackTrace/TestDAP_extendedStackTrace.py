@@ -66,11 +66,11 @@ class TestDAP_extendedStackTrace(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(len(stackLabels), 2, "expected two label stack frames")
         self.assertRegex(
             stackLabels[0][1]["name"],
-            "Enqueued from com.apple.root.default-qos \(Thread \d\)",
+            r"Enqueued from com.apple.root.default-qos \(Thread \d\)",
         )
         self.assertRegex(
             stackLabels[1][1]["name"],
-            "Enqueued from com.apple.main-thread \(Thread \d\)",
+            r"Enqueued from com.apple.main-thread \(Thread \d\)",
         )
 
         for i, frame in stackLabels:

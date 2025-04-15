@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/KnownFPClass.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "gtest/gtest.h"
@@ -2677,6 +2678,41 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
   EXPECT_EQ(3u, Known_0_256_Align8.countMinTrailingZeros());
   EXPECT_EQ(0u, Known_0_256_Align8.countMinLeadingOnes());
   EXPECT_EQ(0u, Known_0_256_Align8.countMinTrailingOnes());
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPExtendBeforeMul) {
+  // The index should be extended before multiplying with the scale.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %base = inttoptr i16 %and to ptr
+      %A = getelementptr i32, ptr %base, i8 80
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(~320 & 0x7fff, Known.Zero);
+  EXPECT_EQ(320, Known.One);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
+  // GEP should only affect the index width.
+  parseAssembly(R"(
+    target datalayout = "p:16:16:16:8"
+
+    define void @test(i16 %arg) {
+      %and = and i16 %arg, u0x8000
+      %or = or i16 %and, u0x00ff
+      %base = inttoptr i16 %or to ptr
+      %A = getelementptr i8, ptr %base, i8 1
+      ret void
+    }
+    )");
+  KnownBits Known = computeKnownBits(A, M->getDataLayout());
+  EXPECT_EQ(0x7fff, Known.Zero);
+  EXPECT_EQ(0, Known.One);
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {

@@ -113,6 +113,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
   case lldb::eStopReasonVFork:
   case lldb::eStopReasonVForkDone:
   case lldb::eStopReasonInterrupt:
+  case lldb::eStopReasonHistoryBoundary:
     return true;
   case lldb::eStopReasonThreadExiting:
   case lldb::eStopReasonInvalid:
@@ -160,6 +161,15 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
     envs.SetEntries(entries, true);
   }
   return envs;
+}
+
+llvm::Error ToError(const lldb::SBError &error) {
+  if (error.Success())
+    return llvm::Error::success();
+
+  return llvm::createStringError(
+      std::error_code(error.GetError(), std::generic_category()),
+      error.GetCString());
 }
 
 } // namespace lldb_dap

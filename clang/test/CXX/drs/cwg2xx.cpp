@@ -98,8 +98,8 @@ public:
 
 void foo() { Templ<Derived> x(&Derived::func); }
 // expected-error@-1 {{no matching constructor for initialization of 'Templ<Derived>'}}
-//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'const Templ<Derived>' for 1st argument}}
-//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (cwg203::ex3::Base::*)() const' to 'Templ<Derived>' for 1st argument}}
+//   expected-note@#cwg203-ex3-Templ {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'const Templ<cwg203::ex3::Derived>' for 1st argument}}
+//   since-cxx11-note@#cwg203-ex3-Templ {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'int (Derived::*)() const' (aka 'int (Base::*)() const') to 'Templ<cwg203::ex3::Derived>' for 1st argument}}
 //   expected-note@#cwg203-ex3-Templ-ctor {{candidate template ignored: could not match 'cwg203::ex3::Derived' against 'cwg203::ex3::Base'}}
 } // namespace ex3
 
@@ -426,7 +426,7 @@ namespace cwg224 { // cwg224: 16
       A::type a;
       A<T>::type b;
       A<T*>::type c;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type'; implicit 'typename' is a C++20 extension}}
       ::cwg224::example1::A<T>::type d;
 
       class B {
@@ -435,13 +435,13 @@ namespace cwg224 { // cwg224: 16
         A::type a;
         A<T>::type b;
         A<T*>::type c;
-        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::type; implicit 'typename' is a C++20 extension}}
+        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::type'; implicit 'typename' is a C++20 extension}}
         ::cwg224::example1::A<T>::type d;
 
         B::type e;
         A<T>::B::type f;
         A<T*>::B::type g;
-        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::B::type; implicit 'typename' is a C++20 extension}}
+        // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B::type'; implicit 'typename' is a C++20 extension}}
         typename A<T*>::B::type h;
       };
     };
@@ -450,25 +450,25 @@ namespace cwg224 { // cwg224: 16
       typedef int type;
       A<T*>::type a;
       A<T>::type b;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T>::type'; implicit 'typename' is a C++20 extension}}
     };
 
     template <class T1, class T2, int I> struct B {
       typedef int type;
       B<T1, T2, I>::type b1;
       B<T2, T1, I>::type b2;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name B<T2, T1, I>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<T2, T1, I>::type'; implicit 'typename' is a C++20 extension}}
 
       typedef T1 my_T1;
       static const int my_I = I;
       static const int my_I2 = I+0;
       static const int my_I3 = my_I;
       B<my_T1, T2, my_I>::type b3;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name B<my_T1, T2, my_I>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I>::type'; implicit 'typename' is a C++20 extension}}
       B<my_T1, T2, my_I2>::type b4;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name B<my_T1, T2, my_I2>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I2>::type'; implicit 'typename' is a C++20 extension}}
       B<my_T1, T2, my_I3>::type b5;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name B<my_T1, T2, my_I3>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B<my_T1, T2, my_I3>::type'; implicit 'typename' is a C++20 extension}}
     };
   }
 
@@ -480,7 +480,7 @@ namespace cwg224 { // cwg224: 16
       X<A::i, char>::type x;
       X<A<T>::i, double>::type y;
       X<A<T*>::i, long>::type z;
-      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name X<A<T *>::i, long>::type; implicit 'typename' is a C++20 extension}}
+      // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<A<T *>::i, long>::type'; implicit 'typename' is a C++20 extension}}
       int f();
     };
     template <class T> int A<T>::f() {
@@ -867,7 +867,7 @@ namespace cwg252 { // cwg252: 3.1
   struct E {
     void operator delete(void*, int);
     void operator delete(void*) = delete; // #cwg252-E
-    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}} 
+    // cxx98-error@-1 {{deleted function definitions are a C++11 extension}}
     virtual ~E();
   };
   E::~E() {}

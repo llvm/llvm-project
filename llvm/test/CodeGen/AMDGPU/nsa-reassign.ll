@@ -15,7 +15,7 @@ main_body:
   %lod.1 = fadd float %lod, 1.0
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare.1, float %s1.1, float %t1.1, float %r1.1, float %lod.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2.1, float %t2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -35,7 +35,7 @@ main_body:
   %lod.1 = fadd float %lod, 1.0
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare.1, float %s1.1, float %t1.1, float %r1.1, float %lod.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2.1, float %t2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -55,7 +55,7 @@ main_body:
   %lod.1 = fadd float %lod, 1.0
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2.1, float %t2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v1 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %t2.1, float %s2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -75,7 +75,7 @@ main_body:
   %lod.1 = fadd float %lod, 1.0
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2.1, float %t2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 1)
   %v1 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2.1, float %t2.1, float %r2.1, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }

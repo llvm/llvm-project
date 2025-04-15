@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/tools.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
@@ -17,6 +16,7 @@
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <set>
@@ -136,12 +136,6 @@ Tristate IsDefinedAssignment(
     const std::optional<evaluate::DynamicType> &rhsType, int rhsRank) {
   if (!lhsType || !rhsType) {
     return Tristate::No; // error or rhs is untyped
-  }
-  if (lhsType->IsUnlimitedPolymorphic()) {
-    return Tristate::No;
-  }
-  if (rhsType->IsUnlimitedPolymorphic()) {
-    return Tristate::Maybe;
   }
   TypeCategory lhsCat{lhsType->category()};
   TypeCategory rhsCat{rhsType->category()};
@@ -315,69 +309,6 @@ bool IsBindCProcedure(const Scope &scope) {
   } else {
     return false;
   }
-}
-
-static const Symbol *FindPointerComponent(
-    const Scope &scope, std::set<const Scope *> &visited) {
-  if (!scope.IsDerivedType()) {
-    return nullptr;
-  }
-  if (!visited.insert(&scope).second) {
-    return nullptr;
-  }
-  // If there's a top-level pointer component, return it for clearer error
-  // messaging.
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (IsPointer(symbol)) {
-      return &symbol;
-    }
-  }
-  for (const auto &pair : scope) {
-    const Symbol &symbol{*pair.second};
-    if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (const DeclTypeSpec * type{details->type()}) {
-        if (const DerivedTypeSpec * derived{type->AsDerived()}) {
-          if (const Scope * nested{derived->scope()}) {
-            if (const Symbol *
-                pointer{FindPointerComponent(*nested, visited)}) {
-              return pointer;
-            }
-          }
-        }
-      }
-    }
-  }
-  return nullptr;
-}
-
-const Symbol *FindPointerComponent(const Scope &scope) {
-  std::set<const Scope *> visited;
-  return FindPointerComponent(scope, visited);
-}
-
-const Symbol *FindPointerComponent(const DerivedTypeSpec &derived) {
-  if (const Scope * scope{derived.scope()}) {
-    return FindPointerComponent(*scope);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec &type) {
-  if (const DerivedTypeSpec * derived{type.AsDerived()}) {
-    return FindPointerComponent(*derived);
-  } else {
-    return nullptr;
-  }
-}
-
-const Symbol *FindPointerComponent(const DeclTypeSpec *type) {
-  return type ? FindPointerComponent(*type) : nullptr;
-}
-
-const Symbol *FindPointerComponent(const Symbol &symbol) {
-  return IsPointer(symbol) ? &symbol : FindPointerComponent(symbol.GetType());
 }
 
 // C1594 specifies several ways by which an object might be globally visible.
@@ -639,9 +570,9 @@ const EquivalenceSet *FindEquivalenceSet(const Symbol &symbol) {
 }
 
 bool IsOrContainsEventOrLockComponent(const Symbol &original) {
-  const Symbol &symbol{ResolveAssociations(original)};
-  if (const auto *details{symbol.detailsIf<ObjectEntityDetails>()}) {
-    if (const DeclTypeSpec * type{details->type()}) {
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
+  if (evaluate::IsVariable(symbol)) {
+    if (const DeclTypeSpec * type{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{type->AsDerived()}) {
         return IsEventTypeOrLockType(derived) ||
             FindEventOrLockPotentialComponent(*derived);
@@ -855,7 +786,7 @@ static const Symbol *HasImpureFinal(
 }
 
 const Symbol *HasImpureFinal(const Symbol &original, std::optional<int> rank) {
-  const Symbol &symbol{ResolveAssociations(original)};
+  const Symbol &symbol{ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
   if (symbol.has<ObjectEntityDetails>()) {
     if (const DeclTypeSpec * symType{symbol.GetType()}) {
       if (const DerivedTypeSpec * derived{symType->AsDerived()}) {
@@ -1392,6 +1323,19 @@ template class ComponentIterator<ComponentKind::Potential>;
 template class ComponentIterator<ComponentKind::Scope>;
 template class ComponentIterator<ComponentKind::PotentialAndPointer>;
 
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &derived) {
+  PotentialComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(),
+      [](const Symbol &symbol) { return evaluate::IsCoarray(symbol); });
+}
+
+PotentialAndPointerComponentIterator::const_iterator
+FindPointerPotentialComponent(const DerivedTypeSpec &derived) {
+  PotentialAndPointerComponentIterator potentials{derived};
+  return std::find_if(potentials.begin(), potentials.end(), IsPointer);
+}
+
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};
@@ -1789,16 +1733,20 @@ bool HadUseError(
         at, "Reference to '%s' is ambiguous"_err_en_US, symbol->name())};
     for (const auto &[location, sym] : details->occurrences()) {
       const Symbol &ultimate{sym->GetUltimate()};
-      auto &attachment{
-          msg.Attach(location, "'%s' was use-associated from module '%s'"_en_US,
-              at, sym->owner().GetName().value())};
-      if (&*sym != &ultimate) {
-        // For incompatible definitions where one comes from a hermetic
-        // module file's incorporated dependences and the other from another
-        // module of the same name.
-        attachment.Attach(ultimate.name(),
-            "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
-            ultimate.owner().GetName().value());
+      if (sym->owner().IsModule()) {
+        auto &attachment{msg.Attach(location,
+            "'%s' was use-associated from module '%s'"_en_US, at,
+            sym->owner().GetName().value())};
+        if (&*sym != &ultimate) {
+          // For incompatible definitions where one comes from a hermetic
+          // module file's incorporated dependences and the other from another
+          // module of the same name.
+          attachment.Attach(ultimate.name(),
+              "ultimately from '%s' in module '%s'"_en_US, ultimate.name(),
+              ultimate.owner().GetName().value());
+        }
+      } else {
+        msg.Attach(sym->name(), "declared here"_en_US);
       }
     }
     context.SetError(*symbol);

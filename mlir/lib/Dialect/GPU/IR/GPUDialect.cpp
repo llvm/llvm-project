@@ -1467,7 +1467,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
     return failure();
 
   auto signatureLocation = parser.getCurrentLocation();
-  if (failed(function_interface_impl::parseFunctionSignature(
+  if (failed(function_interface_impl::parseFunctionSignatureWithArguments(
           parser, /*allowVariadic=*/false, entryArgs, isVariadic, resultTypes,
           resultAttrs)))
     return failure();
@@ -1487,7 +1487,7 @@ ParseResult GPUFuncOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute(getFunctionTypeAttrName(result.name),
                       TypeAttr::get(type));
 
-  function_interface_impl::addArgAndResultAttrs(
+  call_interface_impl::addArgAndResultAttrs(
       builder, result, entryArgs, resultAttrs, getArgAttrsAttrName(result.name),
       getResAttrsAttrName(result.name));
 
@@ -2564,7 +2564,7 @@ CompilationTarget TargetOptions::getDefaultCompilationTarget() {
 }
 
 std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
-TargetOptions::tokenizeCmdOptions() const {
+TargetOptions::tokenizeCmdOptions(const std::string &cmdOptions) {
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
   llvm::StringSaver stringSaver(options.first);
   StringRef opts = cmdOptions;
@@ -2584,6 +2584,23 @@ TargetOptions::tokenizeCmdOptions() const {
                                    /*MarkEOLs=*/false);
 #endif // _WIN32
   return options;
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  return tokenizeCmdOptions(cmdOptions);
+}
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith) {
+  size_t startPos = cmdOptions.find(startsWith);
+  if (startPos == std::string::npos)
+    return {llvm::BumpPtrAllocator(), SmallVector<const char *>()};
+
+  auto tokenized =
+      tokenizeCmdOptions(cmdOptions.substr(startPos + startsWith.size()));
+  cmdOptions.resize(startPos);
+  return tokenized;
 }
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)

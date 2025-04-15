@@ -45,8 +45,7 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i16, ptr [[L_1]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i16, ptr [[TMP5]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i16>, ptr [[TMP6]], align 2, !alias.scope [[META0:![0-9]+]]
@@ -59,7 +58,7 @@ define i16 @test(ptr %arg, i64 %N) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT_LOOPEXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[VECTOR_MEMCHECK]] ], [ 0, [[LOOP_3_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[LOOP_3_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP_3:%.*]]
 ; CHECK:       inner.latch:
 ; CHECK-NEXT:    [[C_4:%.*]] = call i1 @cond()
@@ -157,8 +156,7 @@ define void @test2(ptr %dst) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[TMP0]], [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP6]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP7]], 4294967295
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[DST:%.*]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[TMP9]], i32 0

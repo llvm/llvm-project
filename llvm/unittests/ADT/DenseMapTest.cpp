@@ -379,6 +379,28 @@ TEST(DenseMapCustomTest, EqualityComparison) {
   EXPECT_NE(M1, M3);
 }
 
+TEST(DenseMapCustomTest, InsertRange) {
+  DenseMap<int, int> M;
+
+  std::pair<int, int> InputVals[3] = {{0, 0}, {0, 1}, {1, 2}};
+  M.insert_range(InputVals);
+
+  EXPECT_EQ(M.size(), 2u);
+  EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
+                                               testing::Pair(1, 2)));
+}
+
+TEST(SmallDenseMapCustomTest, InsertRange) {
+  SmallDenseMap<int, int> M;
+
+  std::pair<int, int> InputVals[3] = {{0, 0}, {0, 1}, {1, 2}};
+  M.insert_range(InputVals);
+
+  EXPECT_EQ(M.size(), 2u);
+  EXPECT_THAT(M, testing::UnorderedElementsAre(testing::Pair(0, 0),
+                                               testing::Pair(1, 2)));
+}
+
 // Test for the default minimum size of a DenseMap
 TEST(DenseMapCustomTest, DefaultMinReservedSizeTest) {
   // IF THIS VALUE CHANGE, please update InitialSizeTest, InitFromIterator, and

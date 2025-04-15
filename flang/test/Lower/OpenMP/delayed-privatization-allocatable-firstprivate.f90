@@ -18,9 +18,9 @@ subroutine delayed_privatization_allocatable
 end subroutine
 
 ! CHECK-LABEL: omp.private {type = firstprivate}
-! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
+! CHECK-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.heap<i32>>]] init {
 
-! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
+! CHECK-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CHECK: } copy {
 ! CHECK: ^bb0(%[[PRIV_ORIG_ARG:.*]]: [[TYPE]], %[[PRIV_PRIV_ARG:.*]]: [[TYPE]]):

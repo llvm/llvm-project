@@ -78,3 +78,47 @@ setx (0x0123456700000000+0x0000000089abcdef), %g1, %o0
 ! V9: sllx %g1, 32, %g1                       ! encoding: [0x83,0x28,0x70,0x20]
 ! V9: or %g1, %o0, %o0                        ! encoding: [0x90,0x10,0x40,0x08]
 setx (.BB1-.BB0), %g1, %o0
+
+!! In V9, setuw is a mnemonic alias for set.
+! V8:      error: invalid instruction mnemonic
+! V9: sethi %hi(32768), %g1            ! encoding: [0x03,0b00AAAAAA,A,A]
+! V9:                                  !   fixup A - offset: 0, value: %hi(32768), kind: fixup_sparc_hi22
+setuw 32768, %g1
+! V9: mov 1, %g1 ! encoding: [0x82,0x10,0x20,0x01]
+setuw 1, %g1
+
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: mov 4095, %g1                   ! encoding: [0x82,0x10,0x2f,0xff]
+setsw 4095, %g1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: mov -4096, %g1                  ! encoding: [0x82,0x10,0x30,0x00]
+setsw -4096, %g1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: sethi %hi(4096), %g1            ! encoding: [0x03,0b00AAAAAA,A,A]
+! V9:                                 !   fixup A - offset: 0, value: %hi(4096), kind: fixup_sparc_hi22
+setsw 4096, %g1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: sethi %hi(-4097), %g1           ! encoding: [0x03,0b00AAAAAA,A,A]
+! V9:                                 !   fixup A - offset: 0, value: %hi(-4097), kind: fixup_sparc_hi22
+! V9: sra %g1, %g0, %g1               ! encoding: [0x83,0x38,0x40,0x00]
+setsw -4097, %g1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: sethi %hi(2147483647), %o1      ! encoding: [0x13,0b00AAAAAA,A,A]
+! V9:                                 !   fixup A - offset: 0, value: %hi(2147483647), kind: fixup_sparc_hi22
+! V9: or %o1, %lo(2147483647), %o1    ! encoding: [0x92,0x12,0b011000AA,A]
+! V9:                                 !   fixup A - offset: 0, value: %lo(2147483647), kind: fixup_sparc_lo10
+setsw 2147483647, %o1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: sethi %hi(-2147483647), %o1     ! encoding: [0x13,0b00AAAAAA,A,A]
+! V9:                                 !   fixup A - offset: 0, value: %hi(-2147483647), kind: fixup_sparc_hi22
+! V9: or %o1, %lo(-2147483647), %o1   ! encoding: [0x92,0x12,0b011000AA,A]
+! V9:                                 !   fixup A - offset: 0, value: %lo(-2147483647), kind: fixup_sparc_lo10
+! V9: sra %o1, %g0, %o1               ! encoding: [0x93,0x3a,0x40,0x00]
+setsw -2147483647, %o1
+! V8:      error: instruction requires a CPU feature not currently enabled
+! V9: sethi %hi(.Ltmp0), %o1          ! encoding: [0x13,0b00AAAAAA,A,A]
+! V9:                                 !   fixup A - offset: 0, value: %hi(.Ltmp0), kind: fixup_sparc_hi22
+! V9: or %o1, %lo(.Ltmp0), %o1        ! encoding: [0x92,0x12,0b011000AA,A]
+! V9:                                 !   fixup A - offset: 0, value: %lo(.Ltmp0), kind: fixup_sparc_lo10
+! V9: sra %o1, %g0, %o1               ! encoding: [0x93,0x3a,0x40,0x00]
+setsw ., %o1

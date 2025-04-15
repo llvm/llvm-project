@@ -195,7 +195,7 @@ mlir::Type hlfir::DeclareOp::getHLFIRVariableType(mlir::Type inputType,
   bool hasDynamicLengthParams = fir::characterWithDynamicLen(eleType) ||
                                 fir::isRecordWithTypeParameters(eleType);
   if (hasExplicitLowerBounds || hasDynamicExtents || hasDynamicLengthParams)
-    return fir::BoxType::get(type);
+    return fir::BoxType::get(type, fir::isa_volatile_type(inputType));
   return inputType;
 }
 
@@ -1889,6 +1889,35 @@ llvm::LogicalResult hlfir::RegionAssignOp::verify() {
     return emitOpError("left-hand side region must be terminated by an "
                        "hlfir.yield or hlfir.elemental_addr");
   return mlir::success();
+}
+
+static mlir::Type
+getNonVectorSubscriptedLhsType(hlfir::RegionAssignOp regionAssign) {
+  hlfir::YieldOp yieldOp = mlir::dyn_cast_or_null<hlfir::YieldOp>(
+      getTerminator(regionAssign.getLhsRegion()));
+  return yieldOp ? yieldOp.getEntity().getType() : mlir::Type{};
+}
+
+bool hlfir::RegionAssignOp::isPointerObjectAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && hlfir::isFortranPointerObjectType(lhsType);
+}
+
+bool hlfir::RegionAssignOp::isProcedurePointerAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && hlfir::isFortranProcedurePointerType(lhsType);
+}
+
+bool hlfir::RegionAssignOp::isPointerAssignment() {
+  if (!getUserDefinedAssignment().empty())
+    return false;
+  mlir::Type lhsType = getNonVectorSubscriptedLhsType(*this);
+  return lhsType && (hlfir::isFortranPointerObjectType(lhsType) ||
+                     hlfir::isFortranProcedurePointerType(lhsType));
 }
 
 //===----------------------------------------------------------------------===//

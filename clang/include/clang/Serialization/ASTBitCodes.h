@@ -1522,13 +1522,19 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_SPECIALIZATIONS,
 
-  // A decls specilization record.
+  // A decls specialization record.
   DECL_PARTIAL_SPECIALIZATIONS,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  // An OpenACCDeclareDecl record.
+  DECL_OPENACC_DECLARE,
+
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  DECL_LAST = DECL_OPENACC_ROUTINE
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1938,6 +1944,7 @@ enum StmtCode {
   STMT_OMP_PARALLEL_DIRECTIVE,
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
+  STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
   STMT_OMP_REVERSE_DIRECTIVE,
   STMT_OMP_INTERCHANGE_DIRECTIVE,
@@ -2044,6 +2051,8 @@ enum StmtCode {
   STMT_OPENACC_SHUTDOWN_CONSTRUCT,
   STMT_OPENACC_SET_CONSTRUCT,
   STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
+  STMT_OPENACC_CACHE_CONSTRUCT,
 
   // HLSL Constructs
   EXPR_HLSL_OUT_ARG,

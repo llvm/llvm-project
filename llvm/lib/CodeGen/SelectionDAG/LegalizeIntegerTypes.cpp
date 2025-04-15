@@ -118,6 +118,7 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_SRL:      Res = PromoteIntRes_SRL(N); break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:    Res = PromoteIntRes_TRUNCATE(N); break;
+  case ISD::POISON:
   case ISD::UNDEF:       Res = PromoteIntRes_UNDEF(N); break;
   case ISD::VAARG:       Res = PromoteIntRes_VAARG(N); break;
   case ISD::VSCALE:      Res = PromoteIntRes_VSCALE(N); break;
@@ -157,6 +158,11 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
+
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Res = PromoteIntRes_PARTIAL_REDUCE_MLA(N);
     break;
 
   case ISD::SIGN_EXTEND:
@@ -566,6 +572,29 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     }
   }
 
+  // TODO: Handle big endian
+  if (!NOutVT.isVector() && InOp.getValueType().isVector() &&
+      DAG.getDataLayout().isLittleEndian()) {
+    // Pad the vector operand with undef and cast to a wider integer.
+    EVT EltVT = InOp.getValueType().getVectorElementType();
+    TypeSize EltSize = EltVT.getSizeInBits();
+    TypeSize OutSize = NOutVT.getSizeInBits();
+
+    if (OutSize.hasKnownScalarFactor(EltSize)) {
+      unsigned NumEltsWithPadding = OutSize.getKnownScalarFactor(EltSize);
+      EVT WideVecVT =
+          EVT::getVectorVT(*DAG.getContext(), EltVT, NumEltsWithPadding);
+
+      if (isTypeLegal(WideVecVT)) {
+        SDValue Inserted = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, WideVecVT,
+                                       DAG.getUNDEF(WideVecVT), InOp,
+                                       DAG.getVectorIdxConstant(0, dl));
+
+        return DAG.getNode(ISD::BITCAST, dl, NOutVT, Inserted);
+      }
+    }
+  }
+
   return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT,
                      CreateStackStoreLoad(InOp, OutVT));
 }
@@ -820,27 +849,9 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_VECTOR_ELT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_XINT(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  unsigned NewOpc = N->getOpcode();
+  unsigned NewOpc =
+      TLI.getPreferredFPToIntOpcode(N->getOpcode(), N->getValueType(0), NVT);
   SDLoc dl(N);
-
-  // If we're promoting a UINT to a larger size and the larger FP_TO_UINT is
-  // not Legal, check to see if we can use FP_TO_SINT instead.  (If both UINT
-  // and SINT conversions are Custom, there is no way to tell which is
-  // preferable. We choose SINT because that's the right thing on PPC.)
-  if (N->getOpcode() == ISD::FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::FP_TO_SINT, NVT))
-    NewOpc = ISD::FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::STRICT_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::STRICT_FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::STRICT_FP_TO_SINT, NVT))
-    NewOpc = ISD::STRICT_FP_TO_SINT;
-
-  if (N->getOpcode() == ISD::VP_FP_TO_UINT &&
-      !TLI.isOperationLegal(ISD::VP_FP_TO_UINT, NVT) &&
-      TLI.isOperationLegalOrCustom(ISD::VP_FP_TO_SINT, NVT))
-    NewOpc = ISD::VP_FP_TO_SINT;
 
   SDValue Res;
   if (N->isStrictFPOpcode()) {
@@ -2076,6 +2087,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_FIND_LAST_ACTIVE:
     Res = PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(N, OpNo);
     break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2181,9 +2196,43 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
+  EVT OutVT = N->getValueType(0);
+  SDValue InOp = N->getOperand(0);
+  EVT InVT = InOp.getValueType();
+  EVT NInVT = TLI.getTypeToTransformTo(*DAG.getContext(), InVT);
+  SDLoc dl(N);
+
+  switch (getTypeAction(InVT)) {
+  case TargetLowering::TypePromoteInteger: {
+    // TODO: Handle big endian
+    if (OutVT.isVector() && DAG.getDataLayout().isLittleEndian()) {
+      EVT EltVT = OutVT.getVectorElementType();
+      TypeSize EltSize = EltVT.getSizeInBits();
+      TypeSize NInSize = NInVT.getSizeInBits();
+
+      if (NInSize.hasKnownScalarFactor(EltSize)) {
+        unsigned NumEltsWithPadding = NInSize.getKnownScalarFactor(EltSize);
+        EVT WideVecVT =
+            EVT::getVectorVT(*DAG.getContext(), EltVT, NumEltsWithPadding);
+
+        if (isTypeLegal(WideVecVT)) {
+          SDValue Promoted = GetPromotedInteger(InOp);
+          SDValue Cast = DAG.getNode(ISD::BITCAST, dl, WideVecVT, Promoted);
+          return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OutVT, Cast,
+                             DAG.getVectorIdxConstant(0, dl));
+        }
+      }
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
   // This should only occur in unusual situations like bitcasting to an
   // x86_fp80, so just turn it into a store+load
-  return CreateStackStoreLoad(N->getOperand(0), N->getValueType(0));
+  return CreateStackStoreLoad(InOp, OutVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo) {
@@ -2824,6 +2873,18 @@ SDValue DAGTypeLegalizer::PromoteIntOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N,
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
+SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SmallVector<SDValue, 1> NewOps(N->ops());
+  if (N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA) {
+    NewOps[1] = SExtPromotedInteger(N->getOperand(1));
+    NewOps[2] = SExtPromotedInteger(N->getOperand(2));
+  } else {
+    NewOps[1] = ZExtPromotedInteger(N->getOperand(1));
+    NewOps[2] = ZExtPromotedInteger(N->getOperand(2));
+  }
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Result Expansion
 //===----------------------------------------------------------------------===//
@@ -2854,6 +2915,7 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
   case ISD::SELECT_CC:    SplitRes_SELECT_CC(N, Lo, Hi); break;
+  case ISD::POISON:
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::FREEZE:       SplitRes_FREEZE(N, Lo, Hi); break;
   case ISD::SETCC:        ExpandIntRes_SETCC(N, Lo, Hi); break;
@@ -5824,15 +5886,19 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_INTERLEAVE_DEINTERLEAVE(SDNode *N) {
-  SDLoc dl(N);
+  SDLoc DL(N);
+  unsigned Factor = N->getNumOperands();
 
-  SDValue V0 = GetPromotedInteger(N->getOperand(0));
-  SDValue V1 = GetPromotedInteger(N->getOperand(1));
-  EVT ResVT = V0.getValueType();
-  SDValue Res = DAG.getNode(N->getOpcode(), dl,
-                            DAG.getVTList(ResVT, ResVT), V0, V1);
-  SetPromotedInteger(SDValue(N, 0), Res.getValue(0));
-  SetPromotedInteger(SDValue(N, 1), Res.getValue(1));
+  SmallVector<SDValue, 8> Ops(Factor);
+  for (unsigned i = 0; i != Factor; i++)
+    Ops[i] = GetPromotedInteger(N->getOperand(i));
+
+  SmallVector<EVT, 8> ResVTs(Factor, Ops[0].getValueType());
+  SDValue Res = DAG.getNode(N->getOpcode(), DL, DAG.getVTList(ResVTs), Ops);
+
+  for (unsigned i = 0; i != Factor; i++)
+    SetPromotedInteger(SDValue(N, i), Res.getValue(i));
+
   return SDValue();
 }
 
@@ -6137,6 +6203,15 @@ SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
   return DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, SDLoc(N), NVT, N->ops());
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_PARTIAL_REDUCE_MLA(SDNode *N) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue ExtAcc = GetPromotedInteger(N->getOperand(0));
+  return DAG.getNode(N->getOpcode(), DL, NVT, ExtAcc, N->getOperand(1),
+                     N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INSERT_VECTOR_ELT(SDNode *N) {

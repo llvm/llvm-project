@@ -145,6 +145,57 @@ using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
                  RAIIMutexDescriptor>;
 
+class SuppressNonBlockingStreams : public BugReporterVisitor {
+private:
+  const CallDescription OpenFunction{CDM::CLibrary, {"open"}, 2};
+  SymbolRef StreamSym;
+  const int NonBlockMacroVal;
+  bool Satisfied = false;
+
+public:
+  SuppressNonBlockingStreams(SymbolRef StreamSym, int NonBlockMacroVal)
+      : StreamSym(StreamSym), NonBlockMacroVal(NonBlockMacroVal) {}
+
+  static void *getTag() {
+    static bool Tag;
+    return &Tag;
+  }
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    ID.AddPointer(getTag());
+  }
+
+  PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
+                                   BugReporterContext &BRC,
+                                   PathSensitiveBugReport &BR) override {
+    if (Satisfied)
+      return nullptr;
+
+    std::optional<StmtPoint> Point = N->getLocationAs<StmtPoint>();
+    if (!Point)
+      return nullptr;
+
+    const auto *CE = Point->getStmtAs<CallExpr>();
+    if (!CE || !OpenFunction.matchesAsWritten(*CE))
+      return nullptr;
+
+    if (N->getSVal(CE).getAsSymbol() != StreamSym)
+      return nullptr;
+
+    Satisfied = true;
+
+    // Check if open's second argument contains O_NONBLOCK
+    const llvm::APSInt *FlagVal = N->getSVal(CE->getArg(1)).getAsInteger();
+    if (!FlagVal)
+      return nullptr;
+
+    if ((*FlagVal & NonBlockMacroVal) != 0)
+      BR.markInvalid(getTag(), nullptr);
+
+    return nullptr;
+  }
+};
+
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
   const std::array<MutexDescriptor, 8> MutexDescriptors{
@@ -181,6 +232,9 @@ private:
 
   const BugType BlockInCritSectionBugType{
       this, "Call to blocking function in critical section", "Blocking Error"};
+
+  using O_NONBLOCKValueTy = std::optional<int>;
+  mutable std::optional<O_NONBLOCKValueTy> O_NONBLOCKValue;
 
   void reportBlockInCritSection(const CallEvent &call, CheckerContext &C) const;
 
@@ -337,6 +391,28 @@ void BlockInCriticalSectionChecker::reportBlockInCritSection(
      << "' inside of critical section";
   auto R = std::make_unique<PathSensitiveBugReport>(BlockInCritSectionBugType,
                                                     os.str(), ErrNode);
+  // for 'read' and 'recv' call, check whether it's file descriptor(first
+  // argument) is
+  // created by 'open' API with O_NONBLOCK flag or is equal to -1, they will
+  // not cause block in these situations, don't report
+  StringRef FuncName = Call.getCalleeIdentifier()->getName();
+  if (FuncName == "read" || FuncName == "recv") {
+    SVal SV = Call.getArgSVal(0);
+    SValBuilder &SVB = C.getSValBuilder();
+    ProgramStateRef state = C.getState();
+    ConditionTruthVal CTV =
+        state->areEqual(SV, SVB.makeIntVal(-1, C.getASTContext().IntTy));
+    if (CTV.isConstrainedTrue())
+      return;
+
+    if (SymbolRef SR = SV.getAsSymbol()) {
+      if (!O_NONBLOCKValue)
+        O_NONBLOCKValue = tryExpandAsInteger(
+            "O_NONBLOCK", C.getBugReporter().getPreprocessor());
+      if (*O_NONBLOCKValue)
+        R->addVisitor<SuppressNonBlockingStreams>(SR, **O_NONBLOCKValue);
+    }
+  }
   R->addRange(Call.getSourceRange());
   R->markInteresting(Call.getReturnValue());
   C.emitReport(std::move(R));

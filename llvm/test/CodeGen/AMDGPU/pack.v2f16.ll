@@ -53,7 +53,7 @@ define amdgpu_kernel void @s_pack_v2f16(ptr addrspace(4) %in0, ptr addrspace(4) 
   %hi.i = trunc i32 %val1 to i16
   %lo = bitcast i16 %lo.i to half
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
@@ -102,7 +102,7 @@ define amdgpu_kernel void @s_pack_v2f16_imm_lo(ptr addrspace(4) %in1) #0 {
   %val1 = load i32, ptr addrspace(4) %in1
   %hi.i = trunc i32 %val1 to i16
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half 0xH1234, i32 0
+  %vec.0 = insertelement <2 x half> poison, half 0xH1234, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
@@ -151,7 +151,7 @@ define amdgpu_kernel void @s_pack_v2f16_imm_hi(ptr addrspace(4) %in0) #0 {
   %val0 = load i32, ptr addrspace(4) %in0
   %lo.i = trunc i32 %val0 to i16
   %lo = bitcast i16 %lo.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH1234, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
 
@@ -230,7 +230,7 @@ define amdgpu_kernel void @v_pack_v2f16(ptr addrspace(1) %in0, ptr addrspace(1) 
   %hi.i = trunc i32 %val1 to i16
   %lo = bitcast i16 %lo.i to half
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -313,11 +313,11 @@ define amdgpu_kernel void @v_pack_v2f16_user(ptr addrspace(1) %in0, ptr addrspac
   %hi.i = trunc i32 %val1 to i16
   %lo = bitcast i16 %lo.i to half
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   %foo = add i32 %vec.i32, 9
-  store volatile i32 %foo, ptr addrspace(1) undef
+  store volatile i32 %foo, ptr addrspace(1) poison
   ret void
 }
 
@@ -376,7 +376,7 @@ define amdgpu_kernel void @v_pack_v2f16_imm_lo(ptr addrspace(1) %in1) #0 {
   %val1 = load volatile i32, ptr addrspace(1) %in1.gep
   %hi.i = trunc i32 %val1 to i16
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half 0xH1234, i32 0
+  %vec.0 = insertelement <2 x half> poison, half 0xH1234, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -438,7 +438,7 @@ define amdgpu_kernel void @v_pack_v2f16_inline_imm_lo(ptr addrspace(1) %in1) #0 
   %val1 = load volatile i32, ptr addrspace(1) %in1.gep
   %hi.i = trunc i32 %val1 to i16
   %hi = bitcast i16 %hi.i to half
-  %vec.0 = insertelement <2 x half> undef, half 4.0, i32 0
+  %vec.0 = insertelement <2 x half> poison, half 4.0, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half %hi, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -500,7 +500,7 @@ define amdgpu_kernel void @v_pack_v2f16_imm_hi(ptr addrspace(1) %in0) #0 {
   %val0 = load volatile i32, ptr addrspace(1) %in0.gep
   %lo.i = trunc i32 %val0 to i16
   %lo = bitcast i16 %lo.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH1234, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -562,7 +562,7 @@ define amdgpu_kernel void @v_pack_v2f16_inline_f16imm_hi(ptr addrspace(1) %in0) 
   %val0 = load volatile i32, ptr addrspace(1) %in0.gep
   %lo.i = trunc i32 %val0 to i16
   %lo = bitcast i16 %lo.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 1.0, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0
@@ -623,7 +623,7 @@ define amdgpu_kernel void @v_pack_v2f16_inline_imm_hi(ptr addrspace(1) %in0) #0 
   %val0 = load volatile i32, ptr addrspace(1) %in0.gep
   %lo.i = trunc i32 %val0 to i16
   %lo = bitcast i16 %lo.i to half
-  %vec.0 = insertelement <2 x half> undef, half %lo, i32 0
+  %vec.0 = insertelement <2 x half> poison, half %lo, i32 0
   %vec.1 = insertelement <2 x half> %vec.0, half 0xH0040, i32 1
   %vec.i32 = bitcast <2 x half> %vec.1 to i32
   call void asm sideeffect "; use $0", "v"(i32 %vec.i32) #0

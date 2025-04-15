@@ -95,6 +95,12 @@ public:
     Embed_Marker    // Embed a marker as a placeholder for bitcode.
   };
 
+  enum class ExtendVariableLivenessKind {
+    None,
+    This,
+    All,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
@@ -274,6 +280,10 @@ public:
   /// Name of the profile file to use as output for -fprofile-instr-generate,
   /// -fprofile-generate, and -fcs-profile-generate.
   std::string InstrProfileOutput;
+
+  /// Name of the patchable function entry section with
+  /// -fpatchable-function-entry.
+  std::string PatchableFunctionEntrySection;
 
   /// Name of the profile file to use with -fprofile-sample-use.
   std::string SampleProfileFile;

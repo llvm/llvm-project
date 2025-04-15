@@ -45,6 +45,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -78,11 +79,6 @@ static cl::opt<PtrauthCheckMode> PtrauthAuthChecks(
     cl::desc("Check pointer authentication auth/resign failures"),
     cl::init(Default));
 
-static cl::opt<bool> EnableImportCallOptimization(
-    "aarch64-win-import-call-optimization", cl::Hidden,
-    cl::desc("Enable import call optimization for AArch64 Windows"),
-    cl::init(false));
-
 #define DEBUG_TYPE "asm-printer"
 
 namespace {
@@ -95,6 +91,7 @@ class AArch64AsmPrinter : public AsmPrinter {
 #ifndef NDEBUG
   unsigned InstsEmitted;
 #endif
+  bool EnableImportCallOptimization = false;
   DenseMap<MCSection *, std::vector<std::pair<MCSymbol *, MCSymbol *>>>
       SectionToImportedFunctionCalls;
 
@@ -116,7 +113,8 @@ public:
   const MCExpr *lowerBlockAddressConstant(const BlockAddress &BA) override;
 
   void emitStartOfAsmFile(Module &M) override;
-  void emitJumpTableInfo() override;
+  void emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                         ArrayRef<unsigned> JumpTableIndices) override;
   std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
              codeview::JumpTableEntrySize>
   getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
@@ -212,6 +210,9 @@ public:
   void emitAttributes(unsigned Flags, uint64_t PAuthABIPlatform,
                       uint64_t PAuthABIVersion, AArch64TargetStreamer *TS);
 
+  // Emit expansion of Compare-and-branch pseudo instructions
+  void emitCBPseudoExpansion(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -227,6 +228,12 @@ public:
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      PSI = &PSIW->getPSI();
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      SDPI = &SDPIW->getStaticDataProfileInfo();
+
     AArch64FI = MF.getInfo<AArch64FunctionInfo>();
     STI = &MF.getSubtarget<AArch64Subtarget>();
 
@@ -255,7 +262,9 @@ public:
     return false;
   }
 
-  const MCExpr *lowerConstant(const Constant *CV) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
@@ -344,6 +353,9 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->emitSymbolAttribute(S, MCSA_Global);
     OutStreamer->emitAssignment(
         S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+
+    if (M.getModuleFlag("import-call-optimization"))
+      EnableImportCallOptimization = true;
   }
 
   if (!TT.isOSBinFormatELF())
@@ -485,11 +497,11 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_PAUTHABI),
                       AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
-                      PAuthABIPlatform, "", false);
+                      PAuthABIPlatform, "");
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_PAUTHABI),
                       AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
-                      "", false);
+                      "");
   }
 
   unsigned BTIValue =
@@ -507,16 +519,13 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
         AArch64BuildAttributes::SubsectionType::ULEB128);
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "",
-                      false);
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "");
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "",
-                      false);
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "");
     TS->emitAttribute(AArch64BuildAttributes::getVendorName(
                           AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "",
-                      false);
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 
@@ -920,19 +929,17 @@ void AArch64AsmPrinter::emitHwasanMemaccessSymbols(Module &M) {
       // Intentionally load the GOT entry and branch to it, rather than possibly
       // late binding the function, which may clobber the registers before we
       // have a chance to save them.
-      EmitToStreamer(
-          MCInstBuilder(AArch64::ADRP)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_PAGE,
-                  OutContext)));
-      EmitToStreamer(
-          MCInstBuilder(AArch64::LDRXui)
-              .addReg(AArch64::X16)
-              .addReg(AArch64::X16)
-              .addExpr(AArch64MCExpr::create(
-                  HwasanTagMismatchRef, AArch64MCExpr::VariantKind::VK_GOT_LO12,
-                  OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::ADRP)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_PAGE,
+                             OutContext)));
+      EmitToStreamer(MCInstBuilder(AArch64::LDRXui)
+                         .addReg(AArch64::X16)
+                         .addReg(AArch64::X16)
+                         .addExpr(AArch64MCExpr::create(
+                             HwasanTagMismatchRef, AArch64MCExpr::VK_GOT_LO12,
+                             OutContext)));
       EmitToStreamer(MCInstBuilder(AArch64::BR).addReg(AArch64::X16));
     }
   }
@@ -1142,7 +1149,7 @@ bool AArch64AsmPrinter::printAsmRegInClass(const MachineOperand &MO,
   assert(MO.isReg() && "Should only get here with a register!");
   const TargetRegisterInfo *RI = STI->getRegisterInfo();
   Register Reg = MO.getReg();
-  unsigned RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
+  MCRegister RegToPrint = RC->getRegister(RI->getEncodingValue(Reg));
   if (!RI->regsOverlap(RegToPrint, Reg))
     return true;
   O << AArch64InstPrinter::getRegisterName(RegToPrint, AltName);
@@ -1284,19 +1291,26 @@ void AArch64AsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
   printOperand(MI, NOps - 2, OS);
 }
 
-void AArch64AsmPrinter::emitJumpTableInfo() {
-  const MachineJumpTableInfo *MJTI = MF->getJumpTableInfo();
-  if (!MJTI) return;
-
-  const std::vector<MachineJumpTableEntry> &JT = MJTI->getJumpTables();
-  if (JT.empty()) return;
-
+void AArch64AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
+                                          ArrayRef<unsigned> JumpTableIndices) {
+  // Fast return if there is nothing to emit to avoid creating empty sections.
+  if (JumpTableIndices.empty())
+    return;
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
-  MCSection *ReadOnlySec = TLOF.getSectionForJumpTable(MF->getFunction(), TM);
+  const auto &F = MF->getFunction();
+  ArrayRef<MachineJumpTableEntry> JT = MJTI.getJumpTables();
+
+  MCSection *ReadOnlySec = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    ReadOnlySec =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    ReadOnlySec = TLOF.getSectionForJumpTable(F, TM);
+  }
   OutStreamer->switchSection(ReadOnlySec);
 
   auto AFI = MF->getInfo<AArch64FunctionInfo>();
-  for (unsigned JTI = 0, e = JT.size(); JTI != e; ++JTI) {
+  for (unsigned JTI : JumpTableIndices) {
     const std::vector<MachineBasicBlock*> &JTBBs = JT[JTI].MBBs;
 
     // If this jump table was deleted, ignore it.
@@ -1370,8 +1384,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
     auto emitFunctionAlias = [&](MCSymbol *Src, MCSymbol *Dst) {
       OutStreamer->emitSymbolAttribute(Src, MCSA_WeakAntiDep);
       OutStreamer->emitAssignment(
-          Src, MCSymbolRefExpr::create(Dst, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Src, MCSymbolRefExpr::create(Dst, MMI->getContext()));
     };
 
     auto getSymbolFromMetadata = [&](StringRef Name) {
@@ -1383,22 +1396,21 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
       return Sym;
     };
 
-    if (MCSymbol *UnmangledSym =
-            getSymbolFromMetadata("arm64ec_unmangled_name")) {
-      MCSymbol *ECMangledSym = getSymbolFromMetadata("arm64ec_ecmangled_name");
-
-      if (ECMangledSym) {
-        // An external function, emit the alias from the unmangled symbol to
-        // mangled symbol name and the alias from the mangled symbol to guest
-        // exit thunk.
+    SmallVector<MDNode *> UnmangledNames;
+    MF->getFunction().getMetadata("arm64ec_unmangled_name", UnmangledNames);
+    for (MDNode *Node : UnmangledNames) {
+      StringRef NameStr = cast<MDString>(Node->getOperand(0))->getString();
+      MCSymbol *UnmangledSym = MMI->getContext().getOrCreateSymbol(NameStr);
+      if (std::optional<std::string> MangledName =
+              getArm64ECMangledFunctionName(UnmangledSym->getName())) {
+        MCSymbol *ECMangledSym =
+            MMI->getContext().getOrCreateSymbol(*MangledName);
         emitFunctionAlias(UnmangledSym, ECMangledSym);
-        emitFunctionAlias(ECMangledSym, CurrentFnSym);
-      } else {
-        // A function implementation, emit the alias from the unmangled symbol
-        // to mangled symbol name.
-        emitFunctionAlias(UnmangledSym, CurrentFnSym);
       }
     }
+    if (MCSymbol *ECMangledSym =
+            getSymbolFromMetadata("arm64ec_ecmangled_name"))
+      emitFunctionAlias(ECMangledSym, CurrentFnSym);
   }
 }
 
@@ -1444,8 +1456,7 @@ void AArch64AsmPrinter::emitGlobalAlias(const Module &M,
       OutStreamer->endCOFFSymbolDef();
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Weak);
       OutStreamer->emitAssignment(
-          Sym, MCSymbolRefExpr::create(ExpSym, MCSymbolRefExpr::VK_None,
-                                       MMI->getContext()));
+          Sym, MCSymbolRefExpr::create(ExpSym, MMI->getContext()));
       return;
     }
   }
@@ -2600,6 +2611,124 @@ AArch64AsmPrinter::lowerBlockAddressConstant(const BlockAddress &BA) {
   return BAE;
 }
 
+void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
+  bool IsImm = false;
+  bool Is32Bit = false;
+
+  switch (MI->getOpcode()) {
+  default:
+    llvm_unreachable("This is not a CB pseudo instruction");
+  case AArch64::CBWPrr:
+    Is32Bit = true;
+    break;
+  case AArch64::CBXPrr:
+    Is32Bit = false;
+    break;
+  case AArch64::CBWPri:
+    IsImm = true;
+    Is32Bit = true;
+    break;
+  case AArch64::CBXPri:
+    IsImm = true;
+    break;
+  }
+
+  AArch64CC::CondCode CC =
+      static_cast<AArch64CC::CondCode>(MI->getOperand(0).getImm());
+  bool NeedsRegSwap = false;
+  bool NeedsImmDec = false;
+  bool NeedsImmInc = false;
+
+  // Decide if we need to either swap register operands or increment/decrement
+  // immediate operands
+  unsigned MCOpC;
+  switch (CC) {
+  default:
+    llvm_unreachable("Invalid CB condition code");
+  case AArch64CC::EQ:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBEQWri : AArch64::CBEQXri)
+                  : (Is32Bit ? AArch64::CBEQWrr : AArch64::CBEQXrr);
+    break;
+  case AArch64CC::NE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBNEWri : AArch64::CBNEXri)
+                  : (Is32Bit ? AArch64::CBNEWrr : AArch64::CBNEXrr);
+    break;
+  case AArch64CC::HS:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
+                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    NeedsImmDec = IsImm;
+    break;
+  case AArch64CC::LO:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
+                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    NeedsRegSwap = !IsImm;
+    break;
+  case AArch64CC::HI:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBHIWri : AArch64::CBHIXri)
+                  : (Is32Bit ? AArch64::CBHIWrr : AArch64::CBHIXrr);
+    break;
+  case AArch64CC::LS:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLOWri : AArch64::CBLOXri)
+                  : (Is32Bit ? AArch64::CBHSWrr : AArch64::CBHSXrr);
+    NeedsRegSwap = !IsImm;
+    NeedsImmInc = IsImm;
+    break;
+  case AArch64CC::GE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
+                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    NeedsImmDec = IsImm;
+    break;
+  case AArch64CC::LT:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
+                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    NeedsRegSwap = !IsImm;
+    break;
+  case AArch64CC::GT:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBGTWri : AArch64::CBGTXri)
+                  : (Is32Bit ? AArch64::CBGTWrr : AArch64::CBGTXrr);
+    break;
+  case AArch64CC::LE:
+    MCOpC = IsImm ? (Is32Bit ? AArch64::CBLTWri : AArch64::CBLTXri)
+                  : (Is32Bit ? AArch64::CBGEWrr : AArch64::CBGEXrr);
+    NeedsRegSwap = !IsImm;
+    NeedsImmInc = IsImm;
+    break;
+  }
+
+  MCInst Inst;
+  Inst.setOpcode(MCOpC);
+
+  MCOperand Lhs, Rhs, Trgt;
+  lowerOperand(MI->getOperand(1), Lhs);
+  lowerOperand(MI->getOperand(2), Rhs);
+  lowerOperand(MI->getOperand(3), Trgt);
+
+  // Now swap, increment or decrement
+  if (NeedsRegSwap) {
+    assert(Lhs.isReg() && "Expected register operand for CB");
+    assert(Rhs.isReg() && "Expected register operand for CB");
+    Inst.addOperand(Rhs);
+    Inst.addOperand(Lhs);
+  } else if (NeedsImmDec) {
+    Rhs.setImm(Rhs.getImm() - 1);
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  } else if (NeedsImmInc) {
+    Rhs.setImm(Rhs.getImm() + 1);
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  } else {
+    Inst.addOperand(Lhs);
+    Inst.addOperand(Rhs);
+  }
+
+  assert((!IsImm || (Rhs.getImm() >= 0 && Rhs.getImm() < 64)) &&
+         "CB immediate operand out-of-bounds");
+
+  Inst.addOperand(Trgt);
+  EmitToStreamer(*OutStreamer, Inst);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3166,11 +3295,18 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
 
   case AArch64::BLR:
-  case AArch64::BR:
+  case AArch64::BR: {
     recordIfImportCall(MI);
     MCInst TmpInst;
     MCInstLowering.Lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
+  case AArch64::CBWPri:
+  case AArch64::CBXPri:
+  case AArch64::CBWPrr:
+  case AArch64::CBXPrr:
+    emitCBPseudoExpansion(MI);
     return;
   }
 
@@ -3182,8 +3318,7 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
 
 void AArch64AsmPrinter::recordIfImportCall(
     const llvm::MachineInstr *BranchInst) {
-  if (!EnableImportCallOptimization ||
-      !TM.getTargetTriple().isOSBinFormatCOFF())
+  if (!EnableImportCallOptimization)
     return;
 
   auto [GV, OpFlags] = BranchInst->getMF()->tryGetCalledGlobal(BranchInst);
@@ -3377,13 +3512,15 @@ void AArch64AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
                      .addReg(AArch64::X16));
 }
 
-const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV) {
+const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
+                                               const Constant *BaseCV,
+                                               uint64_t Offset) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(CV)) {
     return MCSymbolRefExpr::create(MCInstLowering.GetGlobalValueSymbol(GV, 0),
                                    OutContext);
   }
 
-  return AsmPrinter::lowerConstant(CV);
+  return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
 // Force static initialization.

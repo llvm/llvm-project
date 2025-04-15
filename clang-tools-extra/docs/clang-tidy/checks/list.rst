@@ -84,6 +84,7 @@ Clang-Tidy Checks
    :doc:`bugprone-bitwise-pointer-cast <bugprone/bitwise-pointer-cast>`,
    :doc:`bugprone-bool-pointer-implicit-conversion <bugprone/bool-pointer-implicit-conversion>`, "Yes"
    :doc:`bugprone-branch-clone <bugprone/branch-clone>`,
+   :doc:`bugprone-capturing-this-in-member-variable <bugprone/capturing-this-in-member-variable>`,
    :doc:`bugprone-casting-through-void <bugprone/casting-through-void>`,
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
@@ -158,6 +159,7 @@ Clang-Tidy Checks
    :doc:`bugprone-undelegated-constructor <bugprone/undelegated-constructor>`,
    :doc:`bugprone-unhandled-exception-at-new <bugprone/unhandled-exception-at-new>`,
    :doc:`bugprone-unhandled-self-assignment <bugprone/unhandled-self-assignment>`,
+   :doc:`bugprone-unintended-char-ostream-output <bugprone/unintended-char-ostream-output>`, "Yes"
    :doc:`bugprone-unique-ptr-array-mismatch <bugprone/unique-ptr-array-mismatch>`, "Yes"
    :doc:`bugprone-unsafe-functions <bugprone/unsafe-functions>`,
    :doc:`bugprone-unused-local-non-trivial-variable <bugprone/unused-local-non-trivial-variable>`,
@@ -352,6 +354,7 @@ Clang-Tidy Checks
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
+   :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes"
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"

@@ -1,6 +1,6 @@
 ; REQUIRES: x86_64-linux
 ; REQUIRES: asserts
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -persist-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -report-profile-staleness -persist-profile-staleness -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl -pass-remarks=inline --min-call-count-for-cg-matching=0 --min-func-count-for-cg-matching=0 --func-profile-similarity-threshold=70 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-renaming.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl --min-call-count-for-cg-matching=10 --min-func-count-for-cg-matching=10 2>&1 | FileCheck %s  --check-prefix=TINY-FUNC
 
 ; Verify find new IR functions.
@@ -8,7 +8,7 @@
 ; CHECK: Function new_foo is not in profile or profile symbol list.
 
 ; CHECK: Run stale profile matching for main
-; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.86
+; CHECK: The similarity between new_foo(IR) and foo(profile) is 0.75
 ; CHECK: Function:new_foo matches profile:foo
 ; CHECK: Run stale profile matching for cold_func
 ; CHECK: The checksums for new_block_only(IR) and block_only(Profile) match.

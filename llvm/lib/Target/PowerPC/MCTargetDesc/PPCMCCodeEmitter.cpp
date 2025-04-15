@@ -12,6 +12,7 @@
 
 #include "PPCMCCodeEmitter.h"
 #include "MCTargetDesc/PPCFixupKinds.h"
+#include "PPCMCExpr.h"
 #include "PPCMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -328,14 +329,14 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
     (void)SRE;
     // Currently these are the only valid PCRelative Relocations.
-    assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TLSLD_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL or "
-           "VK_PPC_GOT_TLSGD_PCREL or VK_PPC_GOT_TLSLD_PCREL or "
-           "VK_PPC_GOT_TPREL_PCREL.");
+    assert((getSpecifier(SRE) == PPCMCExpr::VK_PCREL ||
+            getSpecifier(SRE) == PPCMCExpr::VK_GOT_PCREL ||
+            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TLSGD_PCREL ||
+            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TLSLD_PCREL ||
+            getSpecifier(SRE) == PPCMCExpr::VK_GOT_TPREL_PCREL) &&
+           "VariantKind must be VK_PCREL or VK_GOT_PCREL or "
+           "VK_GOT_TLSGD_PCREL or VK_GOT_TLSLD_PCREL or "
+           "VK_GOT_TPREL_PCREL.");
     // Generate the fixup for the relocation.
     Fixups.push_back(
         MCFixup::create(0, Expr,
@@ -367,9 +368,9 @@ PPCMCCodeEmitter::getDispRI34PCRelEncoding(const MCInst &MI, unsigned OpNo,
            "Value must fit in 34 bits.");
 
     // Currently these are the only valid PCRelative Relocations.
-    assert((SRE->getKind() == MCSymbolRefExpr::VK_PCREL ||
-            SRE->getKind() == MCSymbolRefExpr::VK_PPC_GOT_PCREL) &&
-           "VariantKind must be VK_PCREL or VK_PPC_GOT_PCREL");
+    assert((getSpecifier(SRE) == PPCMCExpr::VK_PCREL ||
+            getSpecifier(SRE) == PPCMCExpr::VK_GOT_PCREL) &&
+           "VariantKind must be VK_PCREL or VK_GOT_PCREL");
     // Generate the fixup for the relocation.
     Fixups.push_back(
         MCFixup::create(0, Expr,
@@ -432,7 +433,7 @@ unsigned PPCMCCodeEmitter::getTLSRegEncoding(const MCInst &MI, unsigned OpNo,
   // if using PC relative memops.
   const MCExpr *Expr = MO.getExpr();
   const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(Expr);
-  bool IsPCRel = SRE->getKind() == MCSymbolRefExpr::VK_PPC_TLS_PCREL;
+  bool IsPCRel = getSpecifier(SRE) == PPCMCExpr::VK_TLS_PCREL;
   Fixups.push_back(MCFixup::create(IsPCRel ? 1 : 0, Expr,
                                    (MCFixupKind)PPC::fixup_ppc_nofixup));
   const Triple &TT = STI.getTargetTriple();
@@ -488,7 +489,7 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
             MI.getOpcode() != PPC::MFOCRF && MI.getOpcode() != PPC::MFOCRF8) ||
            MO.getReg() < PPC::CR0 || MO.getReg() > PPC::CR7);
     unsigned OpNo = getOpIdxForMO(MI, MO);
-    unsigned Reg =
+    MCRegister Reg =
         PPC::getRegNumForOperand(MCII.get(MI.getOpcode()), MO.getReg(), OpNo);
     return CTX.getRegisterInfo()->getEncodingValue(Reg);
   }

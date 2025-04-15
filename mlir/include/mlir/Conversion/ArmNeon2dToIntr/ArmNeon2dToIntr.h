@@ -15,17 +15,12 @@ namespace mlir {
 class Pass;
 class RewritePatternSet;
 
-#define GEN_PASS_DECL_CONVERTARMNEON2DTOINTR
+#define GEN_PASS_DECL_CONVERTARMNEON2DTOINTRPASS
 #include "mlir/Conversion/Passes.h.inc"
 
 /// Populates patterns for the lowering of Arm NEON 2D ops to intrinsics.
 /// See createConvertArmNeon2dToIntrPass.
 void populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns);
-
-/// Creates a pass to lower Arm NEON 2D ops to intrinsics, i.e.
-/// equivalent ops operating on flattened 1D vectors and mapping more
-/// directly to the corresponding Arm NEON instruction.
-std::unique_ptr<Pass> createConvertArmNeon2dToIntrPass();
 
 } // namespace mlir
 

@@ -15,9 +15,8 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Frontend/ParserActions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/provenance.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/StringOstream.h"

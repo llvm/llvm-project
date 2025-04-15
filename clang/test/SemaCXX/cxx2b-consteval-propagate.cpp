@@ -560,3 +560,19 @@ void foo() {
     S s;
 }
 } // namespace GH118000
+
+namespace GH119046 {
+
+template <typename Cls> constexpr auto tfn(int) {
+  return (unsigned long long)(&Cls::sfn);
+  //expected-note@-1 {{'tfn<GH119046::S>' is an immediate function because its body evaluates the address of a consteval function 'sfn'}}
+};
+struct S { static consteval void sfn() {} };
+
+int f() {
+  int a = 0; // expected-note{{declared here}}
+  return tfn<S>(a);
+  //expected-error@-1 {{call to immediate function 'GH119046::tfn<GH119046::S>' is not a constant expression}}
+  //expected-note@-2 {{read of non-const variable 'a' is not allowed in a constant expression}}
+}
+}

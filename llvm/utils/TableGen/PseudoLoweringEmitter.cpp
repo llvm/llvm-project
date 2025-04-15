@@ -79,8 +79,9 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // "zero_reg" definition.
       if (DI->getDef()->isSubClassOf("Register") ||
           DI->getDef()->getName() == "zero_reg") {
-        OperandMap[BaseIdx + i].Kind = OpData::Reg;
-        OperandMap[BaseIdx + i].Data.Reg = DI->getDef();
+        auto &Entry = OperandMap[BaseIdx + i];
+        Entry.Kind = OpData::Reg;
+        Entry.Data.Reg = DI->getDef();
         ++OpsAdded;
         continue;
       }
@@ -89,7 +90,6 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
       // problem.
       // FIXME: We probably shouldn't ever get a non-zero BaseIdx here.
       assert(BaseIdx == 0 && "Named subargument in pseudo expansion?!");
-      // FIXME: Are the message operand types backward?
       if (DI->getDef() != Insn.Operands[BaseIdx + i].Rec) {
         PrintError(Rec, "In pseudo instruction '" + Rec->getName() +
                             "', operand type '" + DI->getDef()->getName() +
@@ -105,12 +105,14 @@ unsigned PseudoLoweringEmitter::addDagOperandMapping(
         OperandMap[BaseIdx + i + I].Kind = OpData::Operand;
       OpsAdded += Insn.Operands[i].MINumOperands;
     } else if (const IntInit *II = dyn_cast<IntInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = II->getValue();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = II->getValue();
       ++OpsAdded;
     } else if (const auto *BI = dyn_cast<BitsInit>(Dag->getArg(i))) {
-      OperandMap[BaseIdx + i].Kind = OpData::Imm;
-      OperandMap[BaseIdx + i].Data.Imm = *BI->convertInitializerToInt();
+      auto &Entry = OperandMap[BaseIdx + i];
+      Entry.Kind = OpData::Imm;
+      Entry.Data.Imm = *BI->convertInitializerToInt();
       ++OpsAdded;
     } else if (const DagInit *SubDag = dyn_cast<DagInit>(Dag->getArg(i))) {
       // Just add the operands recursively. This is almost certainly
@@ -244,9 +246,9 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
       // FIXME: Instruction operands with defaults values (predicates and cc_out
       //        in ARM, for example shouldn't need explicit values in the
       //        expansion DAG.
-      unsigned MIOpNo = 0;
       for (const auto &DestOperand : Dest.Operands) {
         o << "    // Operand: " << DestOperand.Name << "\n";
+        unsigned MIOpNo = DestOperand.MIOperandNo;
         for (unsigned i = 0, e = DestOperand.MINumOperands; i != e; ++i) {
           switch (Expansion.OperandMap[MIOpNo + i].Kind) {
           case OpData::Operand:
@@ -274,12 +276,13 @@ void PseudoLoweringEmitter::emitLoweringEmitter(raw_ostream &o) {
           }
           }
         }
-        MIOpNo += DestOperand.MINumOperands;
       }
       if (Dest.Operands.isVariadic) {
-        MIOpNo = Source.Operands.size() + 1;
+        unsigned LastOpNo = 0;
+        for (const auto &Op : Source.Operands)
+          LastOpNo += Op.MINumOperands;
         o << "    // variable_ops\n";
-        o << "    for (unsigned i = " << MIOpNo
+        o << "    for (unsigned i = " << LastOpNo
           << ", e = MI->getNumOperands(); i != e; ++i)\n"
           << "      if (lowerOperand(MI->getOperand(i), MCOp))\n"
           << "        Inst.addOperand(MCOp);\n";

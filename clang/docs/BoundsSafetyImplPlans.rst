@@ -134,7 +134,7 @@ same basic block and without side effect in between.
       int *__counted_by(count) buf; size_t count;
    } sized_buf_t;
 
-   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {
+   void alloc_buf(sized_buf_t *sbuf, size_t nelems) {
       sbuf->buf = (int *)malloc(sizeof(int) * nelems);
       sbuf->count = nelems;
    }
