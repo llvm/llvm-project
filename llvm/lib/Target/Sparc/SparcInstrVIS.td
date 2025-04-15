@@ -279,8 +279,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
-def fpnegimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
 
 // VIS instruction patterns.
 let Predicates = [HasVIS] in {
@@ -311,7 +311,7 @@ def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
 def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 
 def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
-def : Pat<(i64 (zext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;
+def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;
 def : Pat<(i64 (sext (i32 (bitconvert f32:$src)))), (MOVSTOSW $src)>;
 def : Pat<(f32 (bitconvert i32:$src)), (MOVWTOS $src)>;
 def : Pat<(i64 (bitconvert f64:$src)), (MOVDTOX $src)>;

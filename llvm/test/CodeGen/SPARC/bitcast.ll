@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=sparcv9 | FileCheck %s -check-prefix=V9
 ; RUN: llc < %s -mtriple=sparcv9 -mattr=vis3 | FileCheck %s -check-prefix=VIS3
 
-define i32 @stow(float %0) nounwind {
+define i32 @stow(float %float) nounwind {
 ; V9-LABEL: stow:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -15,11 +15,11 @@ define i32 @stow(float %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movstouw %f1, %o0
-  %2 = bitcast float %0 to i32
-  ret i32 %2
+  %w = bitcast float %float to i32
+  ret i32 %w
 }
 
-define zeroext i32 @stouw(float %0) nounwind {
+define zeroext i32 @stouw(float %float) nounwind {
 ; V9-LABEL: stouw:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -32,11 +32,11 @@ define zeroext i32 @stouw(float %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movstouw %f1, %o0
-  %2 = bitcast float %0 to i32
-  ret i32 %2
+  %uw = bitcast float %float to i32
+  ret i32 %uw
 }
 
-define signext i32 @stosw(float %0) nounwind {
+define signext i32 @stosw(float %float) nounwind {
 ; V9-LABEL: stosw:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -49,11 +49,11 @@ define signext i32 @stosw(float %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movstosw %f1, %o0
-  %2 = bitcast float %0 to i32
-  ret i32 %2
+  %sw = bitcast float %float to i32
+  ret i32 %sw
 }
 
-define float @wtos(i32 %0) nounwind {
+define float @wtos(i32 %w) nounwind {
 ; V9-LABEL: wtos:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -66,11 +66,11 @@ define float @wtos(i32 %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movwtos %o0, %f0
-  %2 = bitcast i32 %0 to float
-  ret float %2
+  %float = bitcast i32 %w to float
+  ret float %float
 }
 
-define float @uwtos(i32 zeroext %0) nounwind {
+define float @uwtos(i32 zeroext %uw) nounwind {
 ; V9-LABEL: uwtos:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -83,11 +83,11 @@ define float @uwtos(i32 zeroext %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movwtos %o0, %f0
-  %2 = bitcast i32 %0 to float
-  ret float %2
+  %float = bitcast i32 %uw to float
+  ret float %float
 }
 
-define float @swtos(i32 signext %0) nounwind {
+define float @swtos(i32 signext %sw) nounwind {
 ; V9-LABEL: swtos:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -100,11 +100,11 @@ define float @swtos(i32 signext %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movwtos %o0, %f0
-  %2 = bitcast i32 %0 to float
-  ret float %2
+  %float = bitcast i32 %sw to float
+  ret float %float
 }
 
-define i64 @dtox(double %0) nounwind {
+define i64 @dtox(double %double) nounwind {
 ; V9-LABEL: dtox:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -117,11 +117,11 @@ define i64 @dtox(double %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movdtox %f0, %o0
-  %2 = bitcast double %0 to i64
-  ret i64 %2
+  %x = bitcast double %double to i64
+  ret i64 %x
 }
 
-define double @xtod(i64 %0) nounwind {
+define double @xtod(i64 %x) nounwind {
 ; V9-LABEL: xtod:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
@@ -134,6 +134,6 @@ define double @xtod(i64 %0) nounwind {
 ; VIS3:       ! %bb.0:
 ; VIS3-NEXT:    retl
 ; VIS3-NEXT:    movxtod %o0, %f0
-  %2 = bitcast i64 %0 to double
-  ret double %2
+  %double = bitcast i64 %x to double
+  ret double %double
 }
