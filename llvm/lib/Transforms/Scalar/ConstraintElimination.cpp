@@ -1121,7 +1121,8 @@ void State::addInfoFor(BasicBlock &BB) {
       }
       break;
     }
-    // Enqueue ssub_with_overflow for simplification.
+    // Enqueue overflow intrinsics for simplification.
+    case Intrinsic::sadd_with_overflow:
     case Intrinsic::ssub_with_overflow:
     case Intrinsic::ucmp:
     case Intrinsic::scmp:
@@ -1699,6 +1700,38 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   }
 }
 
+static bool replaceAddOverflowUses(IntrinsicInst *II, Value *A, Value *B,
+                                   SmallVectorImpl<Instruction *> &ToRemove) {
+  bool Changed = false;
+  IRBuilder<> Builder(II->getParent(), II->getIterator());
+  Value *Add = nullptr;
+  for (User *U : make_early_inc_range(II->users())) {
+    if (match(U, m_ExtractValue<0>(m_Value()))) {
+      if (!Add)
+        Add = Builder.CreateAdd(A, B);
+      U->replaceAllUsesWith(Add);
+      Changed = true;
+    } else if (match(U, m_ExtractValue<1>(m_Value()))) {
+      U->replaceAllUsesWith(Builder.getFalse());
+      Changed = true;
+    } else
+      continue;
+
+    if (U->use_empty()) {
+      auto *I = cast<Instruction>(U);
+      ToRemove.push_back(I);
+      I->setOperand(0, PoisonValue::get(II->getType()));
+      Changed = true;
+    }
+  }
+
+  if (II->use_empty()) {
+    II->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
 static bool replaceSubOverflowUses(IntrinsicInst *II, Value *A, Value *B,
                                    SmallVectorImpl<Instruction *> &ToRemove) {
   bool Changed = false;
@@ -1745,7 +1778,30 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   };
 
   bool Changed = false;
-  if (II->getIntrinsicID() == Intrinsic::ssub_with_overflow) {
+  switch (II->getIntrinsicID()) {
+  default:
+    llvm_unreachable("Unexpected intrinsic.");
+  case Intrinsic::sadd_with_overflow: {
+    Value *A = II->getArgOperand(0);
+    Value *B = II->getArgOperand(1);
+    bool ASgeZero = DoesConditionHold(CmpInst::ICMP_SGE, A,
+                                      ConstantInt::get(A->getType(), 0), Info);
+    bool BSgeZero = DoesConditionHold(CmpInst::ICMP_SGE, B,
+                                      ConstantInt::get(B->getType(), 0), Info);
+    bool ASleZero = DoesConditionHold(CmpInst::ICMP_SLE, A,
+                                      ConstantInt::get(A->getType(), 0), Info);
+    bool BSleZero = DoesConditionHold(CmpInst::ICMP_SLE, B,
+                                      ConstantInt::get(B->getType(), 0), Info);
+    
+    // If A and B have different signs, sadd.with.overflow(a, b) should not
+    // overflow.
+    if ((ASgeZero && BSleZero) || (ASleZero && BSgeZero)) {
+      Changed = replaceAddOverflowUses(II, A, B, ToRemove);
+      break;
+    }
+    break;
+  }
+  case Intrinsic::ssub_with_overflow: {
     // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
     // can be simplified to a regular sub.
     Value *A = II->getArgOperand(0);
@@ -1755,7 +1811,10 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                            ConstantInt::get(A->getType(), 0), Info))
       return false;
     Changed = replaceSubOverflowUses(II, A, B, ToRemove);
+    break;
   }
+  }
+
   return Changed;
 }
 
