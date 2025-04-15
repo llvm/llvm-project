@@ -25,12 +25,14 @@ using namespace iterator;
 namespace {
 
 class STLAlgorithmModeling : public Checker<eval::Call> {
-  bool evalFind(CheckerContext &C, const CallExpr *CE) const;
+  bool evalFind(CheckerContext &C, const CallExpr *CE,
+                CFGBlock::ConstCFGElementRef ElemRef) const;
 
-  void Find(CheckerContext &C, const CallExpr *CE, unsigned paramNum) const;
+  void Find(CheckerContext &C, const CallExpr *CE,
+            CFGBlock::ConstCFGElementRef ElemRef, unsigned paramNum) const;
 
-  using FnCheck = bool (STLAlgorithmModeling::*)(CheckerContext &,
-                                                const CallExpr *) const;
+  using FnCheck = bool (STLAlgorithmModeling::*)(
+      CheckerContext &, const CallExpr *, CFGBlock::ConstCFGElementRef) const;
 
   const CallDescriptionMap<FnCheck> Callbacks = {
       {{CDM::SimpleFunc, {"std", "find"}, 3}, &STLAlgorithmModeling::evalFind},
@@ -97,11 +99,12 @@ bool STLAlgorithmModeling::evalCall(const CallEvent &Call,
   if (!Handler)
     return false;
 
-  return (this->**Handler)(C, CE);
+  return (this->**Handler)(C, CE, Call.getCFGElementRef());
 }
 
-bool STLAlgorithmModeling::evalFind(CheckerContext &C,
-                                    const CallExpr *CE) const {
+bool STLAlgorithmModeling::evalFind(
+    CheckerContext &C, const CallExpr *CE,
+    CFGBlock::ConstCFGElementRef ElemRef) const {
   // std::find()-like functions either take their primary range in the first
   // two parameters, or if the first parameter is "execution policy" then in
   // the second and third. This means that the second parameter must always be
@@ -112,14 +115,14 @@ bool STLAlgorithmModeling::evalFind(CheckerContext &C,
   // If no "execution policy" parameter is used then the first argument is the
   // beginning of the range.
   if (isIteratorType(CE->getArg(0)->getType())) {
-    Find(C, CE, 0);
+    Find(C, CE, ElemRef, 0);
     return true;
   }
 
   // If "execution policy" parameter is used then the second argument is the
   // beginning of the range.
   if (isIteratorType(CE->getArg(2)->getType())) {
-    Find(C, CE, 1);
+    Find(C, CE, ElemRef, 1);
     return true;
   }
 
@@ -127,12 +130,13 @@ bool STLAlgorithmModeling::evalFind(CheckerContext &C,
 }
 
 void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
+                                CFGBlock::ConstCFGElementRef ElemRef,
                                 unsigned paramNum) const {
   auto State = C.getState();
   auto &SVB = C.getSValBuilder();
   const auto *LCtx = C.getLocationContext();
 
-  SVal RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, C.blockCount());
+  SVal RetVal = SVB.conjureSymbolVal(nullptr, ElemRef, LCtx, C.blockCount());
   SVal Param = State->getSVal(CE->getArg(paramNum), LCtx);
 
   auto StateFound = State->BindExpr(CE, LCtx, RetVal);
@@ -144,7 +148,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
   const auto *Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        CE, LCtx, C.blockCount());
+                                        ElemRef, LCtx, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -166,7 +170,7 @@ void STLAlgorithmModeling::Find(CheckerContext &C, const CallExpr *CE,
   Pos = getIteratorPosition(State, Param);
   if (Pos) {
     StateFound = createIteratorPosition(StateFound, RetVal, Pos->getContainer(),
-                                        CE, LCtx, C.blockCount());
+                                        ElemRef, LCtx, C.blockCount());
     const auto *NewPos = getIteratorPosition(StateFound, RetVal);
     assert(NewPos && "Failed to create new iterator position.");
 
@@ -199,4 +203,3 @@ void ento::registerSTLAlgorithmModeling(CheckerManager &Mgr) {
 bool ento::shouldRegisterSTLAlgorithmModeling(const CheckerManager &mgr) {
   return true;
 }
-

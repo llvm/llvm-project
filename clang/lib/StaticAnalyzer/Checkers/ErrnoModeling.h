@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ERRNOMODELING_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ERRNOMODELING_H
 
+#include "clang/Analysis/CFG.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
@@ -96,9 +97,9 @@ ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
 /// Set errno state for the common case when a standard function indicates
 /// failure only by \c errno. Sets \c ErrnoCheckState to \c MustBeChecked, and
 /// invalidates the errno region (clear of previous value).
-/// \arg \c InvalE Expression that causes invalidation of \c errno.
 ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
-                                         CheckerContext &C, const Expr *InvalE);
+                                         CheckerContext &C,
+                                         CFGBlock::ConstCFGElementRef ElemRef);
 
 } // namespace errno_modeling
 } // namespace ento

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ITERATOR_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_ITERATOR_H
 
+#include "clang/Analysis/CFG.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
@@ -165,7 +166,8 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State, SVal Val);
 ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
                                     const IteratorPosition &Pos);
 ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
-                                       const MemRegion *Cont, const Stmt *S,
+                                       const MemRegion *Cont,
+                                       CFGBlock::ConstCFGElementRef ElemRef,
                                        const LocationContext *LCtx,
                                        unsigned blockCount);
 ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
