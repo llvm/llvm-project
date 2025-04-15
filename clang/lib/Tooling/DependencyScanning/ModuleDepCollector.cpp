@@ -763,14 +763,9 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.IsSystem = M->IsSystem;
 
   // Start off with the assumption that this module is shareable when there
-  // is a sysroot provided. As more dependencies are discovered, check if those
-  // come from the provided shared directories.
-  const llvm::SmallVector<StringRef> StableDirs = {
-      MDC.ScanInstance.getHeaderSearchOpts().Sysroot,
-      MDC.ScanInstance.getHeaderSearchOpts().ResourceDir};
-  MD.IsInStableDirectories =
-      !StableDirs[0].empty() &&
-      (llvm::sys::path::root_directory(StableDirs[0]) != StableDirs[0]);
+  // are stable directories. As more dependencies are discovered, check if those
+  // come from the provided directories.
+  MD.IsInStableDirectories = !MDC.StableDirs.empty();
 
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
@@ -817,7 +812,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
           MD.IsInStableDirectories =
-              isPathInStableDir(StableDirs, *FullFilePath);
+              isPathInStableDir(MDC.StableDirs, *FullFilePath);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
@@ -864,7 +859,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // IsInStableDirectories.
   if (MD.IsInStableDirectories)
     MD.IsInStableDirectories =
-        areOptionsInStableDir(StableDirs, CI.getHeaderSearchOpts());
+        areOptionsInStableDir(MDC.StableDirs, CI.getHeaderSearchOpts());
 
   MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
@@ -978,11 +973,12 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap)
+    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+    const ArrayRef<StringRef> StableDirs)
     : Service(Service), ScanInstance(ScanInstance), Consumer(C),
       Controller(Controller),
       PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
-      Opts(std::move(Opts)),
+      StableDirs(StableDirs), Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
 

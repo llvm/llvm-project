@@ -271,6 +271,16 @@ namespace cxx_member_operator_call {
   }
 }
 
+namespace cxx_assignment_op {
+
+  SomeObj* provide();
+  void foo() {
+    RetainPtr<SomeObj> ptr;
+    ptr = provide();
+  }
+
+}
+
 namespace call_with_ptr_on_ref {
   RetainPtr<SomeObj> provideProtected();
   RetainPtr<CFMutableArrayRef> provideProtectedCF();

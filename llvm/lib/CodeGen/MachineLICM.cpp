@@ -215,11 +215,9 @@ namespace {
         : MI(mi), Def(def), FI(fi) {}
     };
 
-    void HoistRegionPostRA(MachineLoop *CurLoop,
-                           MachineBasicBlock *CurPreheader);
+    void HoistRegionPostRA(MachineLoop *CurLoop);
 
-    void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop,
-                     MachineBasicBlock *CurPreheader);
+    void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
                    SmallDenseSet<int> &StoredFIs,
@@ -259,8 +257,7 @@ namespace {
         DenseMap<MachineDomTreeNode *, unsigned> &OpenChildren,
         const DenseMap<MachineDomTreeNode *, MachineDomTreeNode *> &ParentMap);
 
-    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop,
-                        MachineBasicBlock *CurPreheader);
+    void HoistOutOfLoop(MachineDomTreeNode *HeaderN, MachineLoop *CurLoop);
 
     void InitRegPressure(MachineBasicBlock *BB);
 
@@ -291,8 +288,7 @@ namespace {
 
     bool isTgtHotterThanSrc(MachineBasicBlock *SrcBlock,
                             MachineBasicBlock *TgtBlock);
-    MachineBasicBlock *getCurPreheader(MachineLoop *CurLoop,
-                                       MachineBasicBlock *CurPreheader);
+    MachineBasicBlock *getOrCreatePreheader(MachineLoop *CurLoop);
   };
 
   class MachineLICMBase : public MachineFunctionPass {
@@ -417,16 +413,15 @@ bool MachineLICMImpl::run(MachineFunction &MF) {
   SmallVector<MachineLoop *, 8> Worklist(MLI->begin(), MLI->end());
   while (!Worklist.empty()) {
     MachineLoop *CurLoop = Worklist.pop_back_val();
-    MachineBasicBlock *CurPreheader = nullptr;
 
-    if (!PreRegAlloc)
-      HoistRegionPostRA(CurLoop, CurPreheader);
-    else {
+    if (!PreRegAlloc) {
+      HoistRegionPostRA(CurLoop);
+    } else {
       // CSEMap is initialized for loop header when the first instruction is
       // being hoisted.
       MachineDomTreeNode *N = MDTU->getDomTree().getNode(CurLoop->getHeader());
       FirstInLoop = true;
-      HoistOutOfLoop(N, CurLoop, CurPreheader);
+      HoistOutOfLoop(N, CurLoop);
       CSEMap.clear();
     }
   }
@@ -606,9 +601,8 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
 
 /// Walk the specified region of the CFG and hoist loop invariants out to the
 /// preheader.
-void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop,
-                                        MachineBasicBlock *CurPreheader) {
-  MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
+void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
+  MachineBasicBlock *Preheader = getOrCreatePreheader(CurLoop);
   if (!Preheader)
     return;
 
@@ -702,7 +696,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop,
     }
 
     if (Safe)
-      HoistPostRA(MI, Candidate.Def, CurLoop, CurPreheader);
+      HoistPostRA(MI, Candidate.Def, CurLoop);
   }
 }
 
@@ -726,9 +720,8 @@ void MachineLICMImpl::AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop) {
 /// When an instruction is found to only use loop invariant operands that is
 /// safe to hoist, this instruction is called to do the dirty work.
 void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
-                                  MachineLoop *CurLoop,
-                                  MachineBasicBlock *CurPreheader) {
-  MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
+                                  MachineLoop *CurLoop) {
+  MachineBasicBlock *Preheader = CurLoop->getLoopPreheader();
 
   // Now move the instructions to the predecessor, inserting it before any
   // terminator instructions.
@@ -831,9 +824,8 @@ void MachineLICMImpl::ExitScopeIfDone(
 /// order w.r.t the DominatorTree. This allows us to visit definitions before
 /// uses, allowing us to hoist a loop body in one pass without iteration.
 void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
-                                     MachineLoop *CurLoop,
-                                     MachineBasicBlock *CurPreheader) {
-  MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);
+                                     MachineLoop *CurLoop) {
+  MachineBasicBlock *Preheader = getOrCreatePreheader(CurLoop);
   if (!Preheader)
     return;
 
@@ -1714,34 +1706,23 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 }
 
 /// Get the preheader for the current loop, splitting a critical edge if needed.
-MachineBasicBlock *
-MachineLICMImpl::getCurPreheader(MachineLoop *CurLoop,
-                                 MachineBasicBlock *CurPreheader) {
+MachineBasicBlock *MachineLICMImpl::getOrCreatePreheader(MachineLoop *CurLoop) {
   // Determine the block to which to hoist instructions. If we can't find a
   // suitable loop predecessor, we can't do any hoisting.
+  if (MachineBasicBlock *Preheader = CurLoop->getLoopPreheader())
+    return Preheader;
 
-  // If we've tried to get a preheader and failed, don't try again.
-  if (CurPreheader == reinterpret_cast<MachineBasicBlock *>(-1))
-    return nullptr;
-
-  if (!CurPreheader) {
-    CurPreheader = CurLoop->getLoopPreheader();
-    if (!CurPreheader) {
-      MachineBasicBlock *Pred = CurLoop->getLoopPredecessor();
-      if (!Pred) {
-        CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
-        return nullptr;
-      }
-
-      CurPreheader = Pred->SplitCriticalEdge(CurLoop->getHeader(), LegacyPass,
-                                             MFAM, nullptr, MDTU);
-      if (!CurPreheader) {
-        CurPreheader = reinterpret_cast<MachineBasicBlock *>(-1);
-        return nullptr;
-      }
-    }
+  // Try forming a preheader by splitting the critical edge between the single
+  // predecessor and the loop header.
+  if (MachineBasicBlock *Pred = CurLoop->getLoopPredecessor()) {
+    MachineBasicBlock *NewPreheader = Pred->SplitCriticalEdge(
+        CurLoop->getHeader(), LegacyPass, MFAM, nullptr, MDTU);
+    if (NewPreheader)
+      Changed = true;
+    return NewPreheader;
   }
-  return CurPreheader;
+
+  return nullptr;
 }
 
 /// Is the target basic block at least "BlockFrequencyRatioThreshold"
