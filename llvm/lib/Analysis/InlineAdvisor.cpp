@@ -588,6 +588,7 @@ static inline const char *getLTOPhase(ThinOrFullLTOPhase LTOPhase) {
     return "prelink";
   case (ThinOrFullLTOPhase::ThinLTOPostLink):
   case (ThinOrFullLTOPhase::FullLTOPostLink):
+  case (ThinOrFullLTOPhase::CustomLTOPostLink):
     return "postlink";
   }
   llvm_unreachable("unreachable");
