@@ -3818,7 +3818,9 @@ def Capability : InheritableAttr {
 
 def AssertCapability : InheritableAttr {
   let Spellings = [Clang<"assert_capability", 0>,
-                   Clang<"assert_shared_capability", 0>];
+                   Clang<"assert_shared_capability", 0>,
+                   GNU<"assert_exclusive_lock">,
+                   GNU<"assert_shared_lock">];
   let Subjects = SubjectList<[Function]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
@@ -3826,7 +3828,8 @@ def AssertCapability : InheritableAttr {
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [VariadicExprArgument<"Args">];
   let Accessors = [Accessor<"isShared",
-                    [Clang<"assert_shared_capability", 0>]>];
+                    [Clang<"assert_shared_capability", 0>,
+                     GNU<"assert_shared_lock">]>];
   let Documentation = [AssertCapabilityDocs];
 }
 
@@ -3849,16 +3852,18 @@ def AcquireCapability : InheritableAttr {
 
 def TryAcquireCapability : InheritableAttr {
   let Spellings = [Clang<"try_acquire_capability", 0>,
-                   Clang<"try_acquire_shared_capability", 0>];
-  let Subjects = SubjectList<[Function],
-                             ErrorDiag>;
+                   Clang<"try_acquire_shared_capability", 0>,
+                   GNU<"exclusive_trylock_function">,
+                   GNU<"shared_trylock_function">];
+  let Subjects = SubjectList<[Function]>;
   let LateParsed = LateAttrParseStandard;
   let TemplateDependent = 1;
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
   let Accessors = [Accessor<"isShared",
-                    [Clang<"try_acquire_shared_capability", 0>]>];
+                    [Clang<"try_acquire_shared_capability", 0>,
+                     GNU<"shared_trylock_function">]>];
   let Documentation = [TryAcquireCapabilityDocs];
 }
 
@@ -3945,54 +3950,6 @@ def AcquiredBefore : InheritableAttr {
   let ParseArgumentsAsUnevaluated = 1;
   let InheritEvenIfAlreadyPresent = 1;
   let Subjects = SubjectList<[Field, SharedVar]>;
-  let Documentation = [Undocumented];
-}
-
-def AssertExclusiveLock : InheritableAttr {
-  let Spellings = [GNU<"assert_exclusive_lock">];
-  let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-def AssertSharedLock : InheritableAttr {
-  let Spellings = [GNU<"assert_shared_lock">];
-  let Args = [VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-// The first argument is an integer or boolean value specifying the return value
-// of a successful lock acquisition.
-def ExclusiveTrylockFunction : InheritableAttr {
-  let Spellings = [GNU<"exclusive_trylock_function">];
-  let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
-}
-
-// The first argument is an integer or boolean value specifying the return value
-// of a successful lock acquisition.
-def SharedTrylockFunction : InheritableAttr {
-  let Spellings = [GNU<"shared_trylock_function">];
-  let Args = [ExprArgument<"SuccessValue">, VariadicExprArgument<"Args">];
-  let LateParsed = LateAttrParseStandard;
-  let TemplateDependent = 1;
-  let ParseArgumentsAsUnevaluated = 1;
-  let InheritEvenIfAlreadyPresent = 1;
-  let Subjects = SubjectList<[Function]>;
   let Documentation = [Undocumented];
 }
 
