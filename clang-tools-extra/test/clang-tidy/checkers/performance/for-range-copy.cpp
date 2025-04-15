@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s performance-for-range-copy %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy %s performance-for-range-copy %t -- -- -fno-delayed-template-parsing
 
 namespace std {
 
@@ -79,7 +79,7 @@ template <typename T>
 void uninstantiated() {
   for (const S S1 : View<Iterator<S>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not a reference type; this creates a copy in each iteration; consider making this a reference [performance-for-range-copy]
-  // CHECK-FIXES: {{^}}  for (const S& S1 : View<Iterator<S>>()) {}
+  // CHECK-FIXES: for (const S& S1 : View<Iterator<S>>()) {}
 
   // Don't warn on dependent types.
   for (const T t1 : View<Iterator<T>>()) {
@@ -90,15 +90,15 @@ template <typename T>
 void instantiated() {
   for (const S S2 : View<Iterator<S>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
-  // CHECK-FIXES: {{^}}  for (const S& S2 : View<Iterator<S>>()) {}
+  // CHECK-FIXES: for (const S& S2 : View<Iterator<S>>()) {}
 
   for (const auto [X, Y] : View<Iterator<Point>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:19: warning: the loop variable's type is
-  // CHECK-FIXES: {{^}}  for (const auto& [X, Y] : View<Iterator<Point>>()) {}
+  // CHECK-FIXES: for (const auto& [X, Y] : View<Iterator<Point>>()) {}
 
   for (const T T2 : View<Iterator<T>>()) {}
   // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is {{.*}}
-  // CHECK-FIXES: {{^}}  for (const T& T2 : View<Iterator<T>>()) {}
+  // CHECK-FIXES: for (const T& T2 : View<Iterator<T>>()) {}
 }
 
 template <typename T>
@@ -311,10 +311,8 @@ View<Iterator<S>> createView(S) { return View<Iterator<S>>(); }
 
 void positiveValueIteratorUsedElseWhere() {
   for (const S SS : createView(*ValueReturningIterator<S>())) {
-    // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not
-    // a reference type; this creates a copy in each iteration; consider making
-    // this a reference [performance-for-range-copy] CHECK-FIXES: for (const S&
-    // SS : createView(*ValueReturningIterator<S>())) {
+    // CHECK-MESSAGES: [[@LINE-1]]:16: warning: the loop variable's type is not a reference type; this creates a copy in each iteration; consider making this a reference [performance-for-range-copy]
+    // CHECK-FIXES: for (const S& SS : createView(*ValueReturningIterator<S>())) {
   }
 }
 
