@@ -1109,7 +1109,7 @@ def LLVM_ConstantRangeAttr : LLVM_Attr<"ConstantRange", "constant_range"> {
 
     Syntax:
     ```
-    `<` `i`(wdith($lower)), $lower `,` $upper `>`
+    `<` `i`(width($lower)) $lower `,` $upper `>`
     ```
   }];
 
