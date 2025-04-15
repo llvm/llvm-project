@@ -34,8 +34,6 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
-add_compile_options("-Werror=global-constructors")
-
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 
@@ -130,24 +128,19 @@ else()
   endif()
 endif()
 
-# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
-set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
-include(LLVMLibCArchitectures)
-
-# Some targets can only support the full build.
-set(default_to_full_build OFF)
-if(LIBC_TARGET_OS_IS_GPU)
-  set(default_to_full_build ON)
-endif()
-
-option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" ${default_to_full_build})
+option(LLVM_LIBC_FULL_BUILD "Build and test LLVM libc as if it is the full libc" OFF)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
+
+set(LIBC_TARGET_TRIPLE "" CACHE STRING "The target triple for the libc build.")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
 set(LIBC_ENABLE_UNITTESTS ON)
 set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
+
+# Defines LIBC_TARGET_ARCHITECTURE and associated macros.
+include(LLVMLibCArchitectures)
 
 set(LIBC_CONFIG_JSON_FILE_LIST "")
 
