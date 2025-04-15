@@ -1337,6 +1337,8 @@ static const VecDesc VecFuncs_ArmPL[] = {
 #define TLI_DEFINE_ARMPL_VECFUNCS
 #define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK, VABI_PREFIX)                   \
   {SCAL, VEC, VF, MASK, VABI_PREFIX},
+#define TLI_DEFINE_VECFUNC_CC(SCAL, VEC, VF, MASK, VABI_PREFIX, CONV)          \
+  {SCAL, VEC, VF, MASK, VABI_PREFIX, CONV},
 #include "llvm/Analysis/VecFuncs.def"
 #undef TLI_DEFINE_ARMPL_VECFUNCS
 };
