@@ -18,6 +18,17 @@ code bases.
 
 New Features
 ------------
+- Added a Comgr Caching infrastructure, currently covering the following
+behaviors:
+  - caching unbundling of compressed clang offload bundles
+  - caching SPIR-V to LLVM IR translations
+  - caching clang driver invocations
+  More information about the Comgr Caching infrastructure and how to use it can
+  be found in amd/comgr/README.md.
+- Updated the license used for Comgr from Illinois to Apache 2.0 with LLVM
+Extensions (the same license used by LLVM).
+- Added Image Support to Comgr's handling of ISA metadata. Support for images
+can now be queried with Comgr's metadata APIs.
 
 Bug Fixes
 ---------
