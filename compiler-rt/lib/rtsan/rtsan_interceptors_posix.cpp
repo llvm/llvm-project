@@ -701,14 +701,15 @@ INTERCEPTOR(void, OSSpinLockLock, volatile OSSpinLock *lock) {
 #endif // SANITIZER_APPLE
 
 #if SANITIZER_APPLE
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
 typedef volatile OSSpinLock *_os_nospin_lock_t;
 
 INTERCEPTOR(void, _os_nospin_lock_lock, _os_nospin_lock_t lock) {
   __rtsan_notify_intercepted_call("_os_nospin_lock_lock");
   return REAL(_os_nospin_lock_lock)(lock);
 }
-#endif // SANITIZER_APPLE
 #pragma clang diagnostic pop // "-Wdeprecated-declarations"
+#endif                       // SANITIZER_APPLE
 
 #if SANITIZER_APPLE
 INTERCEPTOR(void, os_unfair_lock_lock, os_unfair_lock_t lock) {

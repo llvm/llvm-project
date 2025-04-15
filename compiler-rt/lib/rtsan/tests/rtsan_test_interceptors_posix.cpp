@@ -1109,16 +1109,16 @@ TEST(TestRtsanInterceptors, PthreadJoinDiesWhenRealtime) {
 }
 
 #if SANITIZER_APPLE
-
 #pragma clang diagnostic push
 // OSSpinLockLock is deprecated, but still in use in libc++
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #undef OSSpinLockLock
 extern "C" {
-  typedef int32_t OSSpinLock;
-  void OSSpinLockLock(volatile OSSpinLock *__lock);
-  typedef volatile OSSpinLock *_os_nospin_lock_t;
-  void _os_nospin_lock_lock(_os_nospin_lock_t lock);
+typedef int32_t OSSpinLock;
+void OSSpinLockLock(volatile OSSpinLock *__lock);
+// _os_nospin_lock_lock may replace OSSpinLockLock due to deprecation macro.
+typedef volatile OSSpinLock *_os_nospin_lock_t;
+void _os_nospin_lock_lock(_os_nospin_lock_t lock);
 }
 
 TEST(TestRtsanInterceptors, OsSpinLockLockDiesWhenRealtime) {
@@ -1136,7 +1136,6 @@ TEST(TestRtsanInterceptors, OsNoSpinLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "_os_nospin_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
-#endif // SANITIZER_APPLE
 #pragma clang diagnostic pop //"-Wdeprecated-declarations"
 
 TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
@@ -1147,6 +1146,7 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
   ExpectRealtimeDeath(Func, "os_unfair_lock_lock");
   ExpectNonRealtimeSurvival(Func);
 }
+#endif // SANITIZER_APPLE
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {
