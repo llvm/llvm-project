@@ -1922,6 +1922,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
         !eq(VT.Size, 1024) : VRegSrc_1024,
         !eq(VT.Size, 576)  : VRegSrc_576,
         !eq(VT.Size, 512)  : VRegSrc_512,
+        !eq(VT.Size, 384)  : VRegSrc_384,
         !eq(VT.Size, 288)  : VRegSrc_288,
         !eq(VT.Size, 256)  : VRegSrc_256,
         !eq(VT.Size, 192)  : VRegSrc_192,
@@ -1936,6 +1937,7 @@ class getVOP3SrcForVT<ValueType VT, bit IsTrue16 = 0> {
 class getVOP3VRegSrcForVT<ValueType VT> {
   RegisterOperand ret = !cond(!eq(VT.Size, 1024) : VRegSrc_1024,
                               !eq(VT.Size, 512)  : VRegSrc_512,
+                              !eq(VT.Size, 384)  : VRegSrc_384,
                               !eq(VT.Size, 256)  : VRegSrc_256,
                               !eq(VT.Size, 192)  : VRegSrc_192,
                               !eq(VT.Size, 128)  : VRegSrc_128,

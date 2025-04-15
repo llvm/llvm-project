@@ -262,7 +262,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             return inferScalarType(R->getOperand(0));
           })
           // VPInstructionWithType must be handled before VPInstruction.
-          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe>(
+          .Case<VPInstructionWithType, VPWidenIntrinsicRecipe,
+                VPWidenCastRecipe>(
               [](const auto *R) { return R->getResultType(); })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
@@ -271,8 +272,6 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPWidenCastRecipe>(
-              [](const VPWidenCastRecipe *R) { return R->getResultType(); })
           .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })

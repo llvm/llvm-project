@@ -3172,6 +3172,8 @@ def note_musttail_mismatch : Note<
     "|has type mismatch at %ordinal3 parameter"
     "%diff{ (expected $ but has $)|}1,2"
     "|has different return type%diff{ ($ expected but has $)|}1,2}0">;
+def note_musttail_disabled_by_not_tail_called : Note<
+  "'not_tail_called' attribute prevents being called as a tail call">;
 def err_musttail_callconv_mismatch : Error<
   "cannot perform a tail call to function%select{| %1}0 because it uses an "
   "incompatible calling convention">;
