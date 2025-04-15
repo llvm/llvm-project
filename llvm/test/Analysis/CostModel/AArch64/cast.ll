@@ -972,9 +972,9 @@ define i32 @store_truncs() {
 
 define void @extend_extract() {
 ; CHECK-LABEL: 'extend_extract'
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e8 = extractelement <8 x i8> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e16 = extractelement <8 x i16> undef, i32 1
-; CHECK-NEXT:  Cost Model: Found costs of 2 for: %e32 = extractelement <8 x i32> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e8 = extractelement <8 x i8> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e16 = extractelement <8 x i16> undef, i32 1
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %e32 = extractelement <8 x i32> undef, i32 1
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8_16 = sext i8 %e8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %z8_16 = zext i8 %e8 to i16
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %s8_32 = sext i8 %e8 to i32

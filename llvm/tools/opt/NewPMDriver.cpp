@@ -14,6 +14,7 @@
 
 #include "NewPMDriver.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
@@ -30,6 +31,7 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -517,7 +519,8 @@ bool llvm::runPassPipeline(
     break;
   case OK_OutputThinLTOBitcode:
     MPM.addPass(ThinLTOBitcodeWriterPass(
-        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr));
+        Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
+        ShouldPreserveBitcodeUseListOrder));
     break;
   }
 
@@ -565,6 +568,9 @@ bool llvm::runPassPipeline(
 
   if (DebugifyEach && !DebugifyExport.empty())
     exportDebugifyStats(DebugifyExport, Debugify.getDebugifyStatsMap());
+
+  TimerGroup::printAll(*CreateInfoOutputFile());
+  TimerGroup::clearAll();
 
   return true;
 }

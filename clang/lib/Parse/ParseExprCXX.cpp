@@ -587,12 +587,12 @@ bool Parser::ParseOptionalCXXScopeSpecifier(
               << II.getName()
               << FixItHint::CreateInsertion(Tok.getLocation(), "template ");
         }
-
-        SourceLocation TemplateNameLoc = ConsumeToken();
+        ConsumeToken();
 
         TemplateNameKind TNK = Actions.ActOnTemplateName(
-            getCurScope(), SS, TemplateNameLoc, TemplateName, ObjectType,
-            EnteringContext, Template, /*AllowInjectedClassName*/ true);
+            getCurScope(), SS, /*TemplateKWLoc=*/SourceLocation(), TemplateName,
+            ObjectType, EnteringContext, Template,
+            /*AllowInjectedClassName=*/true);
         if (AnnotateTemplateIdToken(Template, TNK, SS, SourceLocation(),
                                     TemplateName, false))
           return true;

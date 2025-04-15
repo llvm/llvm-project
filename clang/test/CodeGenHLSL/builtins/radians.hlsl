@@ -63,20 +63,3 @@ float3 test_radians_float3(float3 p0) { return radians(p0); }
 // CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].radians.v4f32
 // CHECK: ret <4 x float> %{{.*}}
 float4 test_radians_float4(float4 p0) { return radians(p0); }
-
-// CHECK: define [[FNATTRS]] float @
-// CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn float @llvm.[[TARGET]].radians.f32(
-// CHECK: ret float %{{.*}}
-float test_radians_double(double p0) { return radians(p0); }
-// CHECK: define [[FNATTRS]] <2 x float> @
-// CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <2 x float> @llvm.[[TARGET]].radians.v2f32
-// CHECK: ret <2 x float> %{{.*}}
-float2 test_radians_double2(double2 p0) { return radians(p0); }
-// CHECK: define [[FNATTRS]] <3 x float> @
-// CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <3 x float> @llvm.[[TARGET]].radians.v3f32
-// CHECK: ret <3 x float> %{{.*}}
-float3 test_radians_double3(double3 p0) { return radians(p0); }
-// CHECK: define [[FNATTRS]] <4 x float> @
-// CHECK: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.[[TARGET]].radians.v4f32
-// CHECK: ret <4 x float> %{{.*}}
-float4 test_radians_double4(double4 p0) { return radians(p0); }

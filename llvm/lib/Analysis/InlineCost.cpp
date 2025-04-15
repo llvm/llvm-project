@@ -344,7 +344,7 @@ protected:
   /// Called at the end of processing a switch instruction, with the given
   /// number of case clusters.
   virtual void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                                bool DefaultDestUndefined) {}
+                                bool DefaultDestUnreachable) {}
 
   /// Called to account for any other instruction not specifically accounted
   /// for.
@@ -722,14 +722,14 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUndefined) override {
+                        bool DefaultDestUnreachable) override {
     // If suitable for a jump table, consider the cost for the table size and
     // branch to destination.
     // Maximum valid cost increased in this function.
     if (JumpTableSize) {
       // Suppose a default branch includes one compare and one conditional
       // branch if it's reachable.
-      if (!DefaultDestUndefined)
+      if (!DefaultDestUnreachable)
         addCost(2 * InstrCost);
       // Suppose a jump table requires one load and one jump instruction.
       int64_t JTCost =
@@ -742,7 +742,7 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
       // Suppose a comparison includes one compare and one conditional branch.
       // We can reduce a set of instructions if the default branch is
       // undefined.
-      addCost((NumCaseCluster - DefaultDestUndefined) * 2 * InstrCost);
+      addCost((NumCaseCluster - DefaultDestUnreachable) * 2 * InstrCost);
       return;
     }
 
@@ -1268,9 +1268,9 @@ private:
   }
 
   void onFinalizeSwitch(unsigned JumpTableSize, unsigned NumCaseCluster,
-                        bool DefaultDestUndefined) override {
+                        bool DefaultDestUnreachable) override {
     if (JumpTableSize) {
-      if (!DefaultDestUndefined)
+      if (!DefaultDestUnreachable)
         increment(InlineCostFeatureIndex::switch_default_dest_penalty,
                   SwitchDefaultDestCostMultiplier * InstrCost);
       int64_t JTCost = static_cast<int64_t>(JumpTableSize) * InstrCost +
@@ -1281,7 +1281,7 @@ private:
 
     if (NumCaseCluster <= 3) {
       increment(InlineCostFeatureIndex::case_cluster_penalty,
-                (NumCaseCluster - DefaultDestUndefined) *
+                (NumCaseCluster - DefaultDestUnreachable) *
                     CaseClusterCostMultiplier * InstrCost);
       return;
     }
@@ -2508,7 +2508,7 @@ bool CallAnalyzer::visitSwitchInst(SwitchInst &SI) {
   unsigned NumCaseCluster =
       TTI.getEstimatedNumberOfCaseClusters(SI, JumpTableSize, PSI, BFI);
 
-  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUndefined());
+  onFinalizeSwitch(JumpTableSize, NumCaseCluster, SI.defaultDestUnreachable());
   return false;
 }
 
@@ -3295,9 +3295,12 @@ InlineCostAnnotationPrinterPass::run(Function &F,
       [&](Function &F) -> AssumptionCache & {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
-  Module *M = F.getParent();
-  ProfileSummaryInfo PSI(*M);
-  TargetTransformInfo TTI(M->getDataLayout());
+
+  auto &MAMProxy = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
+  ProfileSummaryInfo *PSI =
+      MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
+  const TargetTransformInfo &TTI = FAM.getResult<TargetIRAnalysis>(F);
+
   // FIXME: Redesign the usage of InlineParams to expand the scope of this pass.
   // In the current implementation, the type of InlineParams doesn't matter as
   // the pass serves only for verification of inliner's decisions.
@@ -3312,7 +3315,7 @@ InlineCostAnnotationPrinterPass::run(Function &F,
           continue;
         OptimizationRemarkEmitter ORE(CalledFunction);
         InlineCostCallAnalyzer ICCA(*CalledFunction, *CB, Params, TTI,
-                                    GetAssumptionCache, nullptr, nullptr, &PSI,
+                                    GetAssumptionCache, nullptr, nullptr, PSI,
                                     &ORE);
         ICCA.analyze();
         OS << "      Analyzing call of " << CalledFunction->getName()

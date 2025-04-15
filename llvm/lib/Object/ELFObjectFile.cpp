@@ -799,6 +799,12 @@ ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
     case Triple::aarch64_be:
       JumpSlotReloc = ELF::R_AARCH64_JUMP_SLOT;
       break;
+    case Triple::arm:
+    case Triple::armeb:
+    case Triple::thumb:
+    case Triple::thumbeb:
+      JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
+      break;
     case Triple::hexagon:
       JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
       GlobDatReloc = ELF::R_HEX_GLOB_DAT;
