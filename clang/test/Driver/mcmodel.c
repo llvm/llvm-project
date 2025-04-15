@@ -1,10 +1,9 @@
 // RUN: not %clang -### -c --target=i686 -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=ERR-MEDIUM %s
-// RUN: %clang --target=x86_64 -### -c -mcmodel=tiny %s 2>&1 | FileCheck --check-prefix=TINY %s
+// RUN: not %clang --target=x86_64 -### -c -mcmodel=tiny %s 2>&1 | FileCheck --check-prefix=TINY %s
 // RUN: %clang --target=x86_64 -### -c -mcmodel=small %s 2>&1 | FileCheck --check-prefix=SMALL %s
 // RUN: %clang --target=x86_64 -### -S -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=KERNEL %s
 // RUN: %clang --target=x86_64 -### -c -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=MEDIUM %s
 // RUN: %clang --target=x86_64 -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=LARGE %s
-// RUN: not %clang --target=x86_64 -c -mcmodel=tiny %s 2>&1 | FileCheck %s
 // RUN: not %clang -### -c --target=powerpc-linux-gnu -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=ERR-MEDIUM %s
 // RUN: %clang --target=powerpc-unknown-aix -### -S -mcmodel=small %s 2>&1 | FileCheck --check-prefix=SMALL %s
 // RUN: %clang --target=powerpc-unknown-aix -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=LARGE %s

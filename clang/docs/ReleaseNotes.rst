@@ -370,6 +370,7 @@ Improvements to Clang's diagnostics
 
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
+- The ``-mcmodel=tiny`` option will now be diagnosed on all targets other than ARM or AArch64.
 
 Improvements to Clang's time-trace
 ----------------------------------
