@@ -35,6 +35,7 @@ struct MissingFeatures {
   static bool opGlobalThreadLocal() { return false; }
   static bool opGlobalConstant() { return false; }
   static bool opGlobalAlignment() { return false; }
+  static bool opGlobalWeakRef() { return false; }
 
   static bool supportIFuncAttr() { return false; }
   static bool supportVisibility() { return false; }
@@ -72,6 +73,24 @@ struct MissingFeatures {
   static bool opFuncLinkage() { return false; }
   static bool opFuncVisibility() { return false; }
 
+  // CallOp handling
+  static bool opCallBuiltinFunc() { return false; }
+  static bool opCallPseudoDtor() { return false; }
+  static bool opCallArgs() { return false; }
+  static bool opCallReturn() { return false; }
+  static bool opCallArgEvaluationOrder() { return false; }
+  static bool opCallCallConv() { return false; }
+  static bool opCallSideEffect() { return false; }
+  static bool opCallChainCall() { return false; }
+  static bool opCallNoPrototypeFunc() { return false; }
+  static bool opCallMustTail() { return false; }
+  static bool opCallIndirect() { return false; }
+  static bool opCallVirtual() { return false; }
+  static bool opCallInAlloca() { return false; }
+  static bool opCallAttrs() { return false; }
+  static bool opCallSurroundingTry() { return false; }
+  static bool opCallASTAttr() { return false; }
+
   // ScopeOp handling
   static bool opScopeCleanupRegion() { return false; }
 
@@ -80,6 +99,10 @@ struct MissingFeatures {
 
   // Clang early optimizations or things defered to LLVM lowering.
   static bool mayHaveIntegerOverflow() { return false; }
+  static bool shouldReverseUnaryCondOnBoolExpr() { return false; }
+
+  // RecordType
+  static bool recordTypeLayoutInfo() { return false; }
 
   // Misc
   static bool cxxABI() { return false; }
@@ -88,9 +111,11 @@ struct MissingFeatures {
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
   static bool opTBAA() { return false; }
-  static bool opCmp() { return false; }
   static bool objCLifetime() { return false; }
+  static bool objCBlocks() { return false; }
   static bool emitNullabilityCheck() { return false; }
+  static bool emitLValueAlignmentAssumption() { return false; }
+  static bool emitLifetimeMarkers() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
   static bool aggValueSlot() { return false; }
@@ -108,6 +133,20 @@ struct MissingFeatures {
   static bool cgFPOptionsRAII() { return false; }
   static bool metaDataNode() { return false; }
   static bool fastMathFlags() { return false; }
+  static bool alignCXXRecordDecl() { return false; }
+  static bool setNonGC() { return false; }
+  static bool incrementProfileCounter() { return false; }
+  static bool insertBuiltinUnpredictable() { return false; }
+  static bool objCGC() { return false; }
+  static bool weakRefReference() { return false; }
+  static bool hip() { return false; }
+  static bool setObjCGCLValueClass() { return false; }
+  static bool mangledNames() { return false; }
+  static bool setDLLStorageClass() { return false; }
+  static bool openMP() { return false; }
+  static bool emitCheckedInBoundsGEP() { return false; }
+  static bool preservedAccessIndexRegion() { return false; }
+  static bool bitfields() { return false; }
 
   // Missing types
   static bool dataMemberType() { return false; }
@@ -127,6 +166,7 @@ struct MissingFeatures {
   static bool complexImagOp() { return false; }
   static bool complexRealOp() { return false; }
   static bool ifOp() { return false; }
+  static bool invokeOp() { return false; }
   static bool labelOp() { return false; }
   static bool ptrDiffOp() { return false; }
   static bool ptrStrideOp() { return false; }

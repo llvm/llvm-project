@@ -111,7 +111,6 @@ set(LLVM_TEST_DEPENDS
           llvm-ml
           llvm-ml64
           llvm-modextract
-          llvm-mt
           llvm-nm
           llvm-objcopy
           llvm-objdump
@@ -172,6 +171,10 @@ endif()
 if(TARGET LTO)
   set(LLVM_TEST_DEPENDS ${LLVM_TEST_DEPENDS} LTO)
 endif()
+
+if (TARGET llvm-mt)
+  list(APPEND LLVM_TEST_DEPENDS llvm-mt)
+endif ()
 
 if(LLVM_BUILD_EXAMPLES)
   list(APPEND LLVM_TEST_DEPENDS

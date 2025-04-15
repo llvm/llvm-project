@@ -467,3 +467,17 @@ namespace TransformDependentTemplates {
     void f(Arg<int>);
   };
 } // namespace TransformDependentTemplates
+
+namespace TransformNestedName {
+  enum class S { kA };
+
+  template <class T> struct N {
+    using State = S;
+    template <typename T::template X<State::kA> = 0>
+    void F();
+  };
+
+  template <class T>
+  template <typename T::template X<N<T>::State::kA>>
+  inline void N<T>::F() {}
+} // namespace TransformNestedName

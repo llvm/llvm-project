@@ -3981,7 +3981,9 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(Result.get(), Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get(),
+                                                  /*IsCanonical=*/false),
+                                 Result.get());
     }
 
     case TemplateArgument::Template:
@@ -4941,7 +4943,8 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     E = SemaRef.ActOnConstantExpression(E);
     if (E.isInvalid())
       return true;
-    Output = TemplateArgumentLoc(TemplateArgument(E.get()), E.get());
+    Output = TemplateArgumentLoc(
+        TemplateArgument(E.get(), /*IsCanonical=*/false), E.get());
     return false;
   }
   }
@@ -11989,13 +11992,10 @@ void OpenACCClauseTransform<Derived>::VisitDetachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(
-      std::remove_if(VarList.begin(), VarList.end(),
-                     [&](Expr *E) {
-                       return Self.getSema().OpenACC().CheckVarIsPointerType(
-                           OpenACCClauseKind::Detach, E);
-                     }),
-      VarList.end());
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::Detach, E);
+  });
 
   ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCDetachClause::Create(
@@ -16131,8 +16131,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = new (getSema().Context)
-            PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt);
+        ArgStorage = TemplateArgument(
+            new (getSema().Context)
+                PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt),
+            /*IsCanonical=*/false);
       }
       PackArgs = ArgStorage;
     }

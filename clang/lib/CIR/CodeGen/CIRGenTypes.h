@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 #define LLVM_CLANG_LIB_CODEGEN_CODEGENTYPES_H
 
+#include "CIRGenFunctionInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "clang/AST/Type.h"
@@ -33,6 +34,7 @@ class Type;
 
 namespace clang::CIRGen {
 
+class CallArgList;
 class CIRGenBuilderTy;
 class CIRGenModule;
 
@@ -43,6 +45,13 @@ class CIRGenTypes {
   clang::ASTContext &astContext;
   CIRGenBuilderTy &builder;
 
+  /// Contains the CIR type for any converted RecordDecl
+  llvm::DenseMap<const clang::Type *, cir::RecordType> recordDeclTypes;
+
+  /// Hold memoized CIRGenFunctionInfo results
+  llvm::FoldingSet<CIRGenFunctionInfo> functionInfos;
+
+  llvm::SmallPtrSet<const CIRGenFunctionInfo *, 4> functionsBeingProcessed;
   /// Heper for convertType.
   mlir::Type convertFunctionTypeInternal(clang::QualType ft);
 
@@ -65,6 +74,11 @@ public:
   /// Convert a Clang type into a mlir::Type.
   mlir::Type convertType(clang::QualType type);
 
+  mlir::Type convertRecordDeclType(const clang::RecordDecl *recordDecl);
+
+  std::string getRecordTypeName(const clang::RecordDecl *,
+                                llvm::StringRef suffix);
+
   /// Convert type T into an mlir::Type. This differs from convertType in that
   /// it is used to convert to the memory representation for a type. For
   /// example, the scalar representation for bool is i1, but the memory
@@ -74,7 +88,11 @@ public:
 
   /// Return whether a type can be zero-initialized (in the C++ sense) with an
   /// LLVM zeroinitializer.
-  bool isZeroInitializable(clang::QualType t);
+  bool isZeroInitializable(clang::QualType ty);
+
+  const CIRGenFunctionInfo &arrangeFreeFunctionCall();
+
+  const CIRGenFunctionInfo &arrangeCIRFunctionInfo();
 };
 
 } // namespace clang::CIRGen
