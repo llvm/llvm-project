@@ -2731,6 +2731,8 @@ def : Pat<(f32 (fneg (fabs f32:$S))),
                (COPY_TO_REGCLASS $S, VSFRC)), VSSRC))>;
 
 // f32 Min.
+def : Pat<(f32 (fminnum f32:$A, f32:$B)),
+          (f32 FpMinMax.F32Min)>;
 def : Pat<(f32 (fminnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Min)>;
 def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), f32:$B)),
@@ -2742,6 +2744,8 @@ def : Pat<(f32 (fminnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
 // F32 Max.
 def : Pat<(f32 (fmaxnum_ieee f32:$A, f32:$B)),
           (f32 FpMinMax.F32Max)>;
+def : Pat<(f32 (fmaxnum f32:$A, f32:$B)),
+          (f32 FpMinMax.F32Max)>;
 def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), f32:$B)),
           (f32 FpMinMax.F32Max)>;
 def : Pat<(f32 (fmaxnum_ieee f32:$A, (fcanonicalize f32:$B))),
@@ -2750,6 +2754,8 @@ def : Pat<(f32 (fmaxnum_ieee (fcanonicalize f32:$A), (fcanonicalize f32:$B))),
           (f32 FpMinMax.F32Max)>;
 
 // f64 Min.
+def : Pat<(f64 (fminnum f64:$A, f64:$B)),
+          (f64 (XSMINDP $A, $B))>;
 def : Pat<(f64 (fminnum_ieee f64:$A, f64:$B)),
           (f64 (XSMINDP $A, $B))>;
 def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), f64:$B)),
@@ -2759,6 +2765,8 @@ def : Pat<(f64 (fminnum_ieee f64:$A, (fcanonicalize f64:$B))),
 def : Pat<(f64 (fminnum_ieee (fcanonicalize f64:$A), (fcanonicalize f64:$B))),
           (f64 (XSMINDP $A, $B))>;
 // f64 Max.
+def : Pat<(f64 (fmaxnum f64:$A, f64:$B)),
+          (f64 (XSMAXDP $A, $B))>;
 def : Pat<(f64 (fmaxnum_ieee f64:$A, f64:$B)),
           (f64 (XSMAXDP $A, $B))>;
 def : Pat<(f64 (fmaxnum_ieee (fcanonicalize f64:$A), f64:$B)),
