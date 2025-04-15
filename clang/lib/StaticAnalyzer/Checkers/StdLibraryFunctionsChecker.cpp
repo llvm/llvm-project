@@ -2663,7 +2663,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
             .Case({ArgumentCondition(1, WithinRange, Range(1, SizeMax)),
                    IsNull(Ret)},
                   ErrnoNEZeroIrrelevant, GenericFailureMsg)
-            .ArgConstraint(NotNull(ArgNo(0)))
             .ArgConstraint(
                 BufferSize(/*Buffer*/ ArgNo(0), /*BufSize*/ ArgNo(1)))
             .ArgConstraint(
