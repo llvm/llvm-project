@@ -1131,7 +1131,7 @@ def Tosa_AbsOp : Tosa_ElementwiseUnaryOp<"abs"> {
     Example:
 
     ```mlir
-    %out = tosa.abs(%in) : (tensor<21x3xf32>) -> tensor<21x3xf32>
+    %output = tosa.abs(%input1) : (tensor<21x3xf32>) -> tensor<21x3xf32>
     ```
   }];
 
