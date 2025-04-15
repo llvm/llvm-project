@@ -292,7 +292,7 @@ void initializeSlotIndexesWrapperPassPass(PassRegistry &);
 void initializeSpeculativeExecutionLegacyPassPass(PassRegistry &);
 void initializeSpillPlacementWrapperLegacyPass(PassRegistry &);
 void initializeStackColoringLegacyPass(PassRegistry &);
-void initializeStackFrameLayoutAnalysisPassPass(PassRegistry &);
+void initializeStackFrameLayoutAnalysisLegacyPass(PassRegistry &);
 void initializeStaticDataSplitterPass(PassRegistry &);
 void initializeStackMapLivenessPass(PassRegistry &);
 void initializeStackProtectorPass(PassRegistry &);
