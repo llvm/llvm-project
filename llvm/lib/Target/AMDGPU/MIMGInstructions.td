@@ -1798,7 +1798,10 @@ multiclass MIMG_MSAA_Load <mimgopc op, string asm> {
 }
 
 class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords> {
-  list<RegisterClass> addr_types = !if(IsTraceRay, [VGPR_32, VReg_96, VGPR_32, VReg_96, VReg_96], !if(isPacket, [VGPR_32, VGPR_32], [VGPR_32, VGPR_32, VGPR_32]));
+  list<RegisterClass> addr_types =
+    !cond(IsTraceRay : [VGPR_32, VReg_96, VReg_128, VReg_128],
+          isPacket :   [VGPR_32, VGPR_32],
+          true     :   [VGPR_32, VGPR_32, VGPR_32]);
   int num_addrs = !size(addr_types);
   int VAddrDwords = !if(IsTraceRay, 11, !if(isPacket, 2, 3));
   int VDataDwords = !if(HasVdst, !if(IsTraceRay, 1, !if(isPacket, 1, !if(isPrimOrCoords, 3, 9))), 0);
@@ -1806,7 +1809,12 @@ class VIMAGE_RTS_Helper<bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrC
 
 class VIMAGE_RTS<int op, string opcode, int num_addrs, dag RsrcIns, GFXGen gfxGen, MIMGEncoding encoding,
                  list<RegisterClass> addr_types, bit HasVdst, bit IsTraceRay, bit isPacket, bit isPrimOrCoords>
-    : VIMAGE<op, !if(HasVdst, !if(IsTraceRay, (outs VGPR_32:$vdata), !if(isPacket, (outs VGPR_32:$vdata), !if(isPrimOrCoords, (outs VReg_96:$vdata), (outs VReg_288:$vdata)))), (outs)),
+    : VIMAGE<op,
+             !cond(!not(HasVdst)  : (outs),
+                   IsTraceRay     : (outs VGPR_32:$vdata),
+                   isPacket       : (outs VGPR_32:$vdata),
+                   isPrimOrCoords : (outs VReg_96:$vdata),
+                   true           : (outs VReg_288:$vdata)),
              num_addrs, gfxGen.AssemblerPredicate, encoding, gfxGen.DecoderNamespace, addr_types>{
   let InOperandList = !con(nsah.AddrIns, RsrcIns, (ins R128A16:$r128));
   let AsmString = opcode#!if(HasVdst, " $vdata, ", " ")#nsah.AddrAsm#!if(IsTraceRay, ", $rsrc", ", null")#"$r128";
@@ -2018,13 +2026,33 @@ let SubtargetPredicate = isGFX12Plus in {
 
 class RtsTraceRayPat<VIMAGE_RTS inst, SDPatternOperator node, ValueType vdata_vt = isVoid> : GCNPat<
   !if(!ne(vdata_vt, isVoid),
-      (vdata_vt:$vdata (node i32:$vaddr0, v3i32:$vaddr1, f32:$vaddr2, v3f32:$vaddr3, v3f32:$vaddr4, v4i32:$rsrc)),
-      (node i32:$vaddr0, v3i32:$vaddr1, f32:$vaddr2, v3f32:$vaddr3, v3f32:$vaddr4, v4i32:$rsrc)),
-  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, $vaddr4, $rsrc, (i1 1))
+      (vdata_vt:$vdata (node i32:$ray_initial_data, v3i32:$ray_initial_flags, (Ignore), v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
+      (node i32:$ray_initial_data, v3i32:$ray_initial_flags, (Ignore), v4f32:$ray_origin, v4f32:$ray_direction, v4i32:$rsrc)),
+  (inst $ray_initial_data, $ray_initial_flags, $ray_origin, $ray_direction, $rsrc, (i1 1))
+>;
+
+// Convert v3f32 ray_origin and ray_direction to v4f32
+class RtsTraceRayPatV3F32<VIMAGE_RTS inst, SDPatternOperator node, ValueType vdata_vt = isVoid> : GCNPat<
+  !if(!ne(vdata_vt, isVoid),
+      (vdata_vt:$vdata (node i32:$ray_initial_data, v3i32:$ray_initial_flags, f32:$ray_extent, v3f32:$ray_origin, v3f32:$ray_direction, v4i32:$rsrc)),
+      (node i32:$ray_initial_data, v3i32:$ray_initial_flags, f32:$ray_extent, v3f32:$ray_origin, v3f32:$ray_direction, v4i32:$rsrc)),
+  (inst $ray_initial_data, $ray_initial_flags,
+        (REG_SEQUENCE VReg_128, (f32 (EXTRACT_SUBREG VReg_96:$ray_origin, sub0)), sub0,
+                                (f32 (EXTRACT_SUBREG VReg_96:$ray_origin, sub1)), sub1,
+                                (f32 (EXTRACT_SUBREG VReg_96:$ray_origin, sub2)), sub2,
+                                (f32 (V_MOV_B32_e32 (i32 0))), sub3), // tmin
+        (REG_SEQUENCE VReg_128, (f32 (EXTRACT_SUBREG VReg_96:$ray_direction, sub0)), sub0,
+                                (f32 (EXTRACT_SUBREG VReg_96:$ray_direction, sub1)), sub1,
+                                (f32 (EXTRACT_SUBREG VReg_96:$ray_direction, sub2)), sub2,
+                                $ray_extent, sub3), // tmax
+        $rsrc, (i1 1))
 >;
 
 def : RtsTraceRayPat <RTS_TRACE_RAY_gfx13, int_amdgcn_rts_trace_ray>;
 def : RtsTraceRayPat <RTS_TRACE_RAY_NONBLOCK_gfx13, int_amdgcn_rts_trace_ray_nonblock, i32>;
+
+def : RtsTraceRayPatV3F32 <RTS_TRACE_RAY_gfx13, int_amdgcn_rts_trace_ray>;
+def : RtsTraceRayPatV3F32 <RTS_TRACE_RAY_NONBLOCK_gfx13, int_amdgcn_rts_trace_ray_nonblock, i32>;
 
 def : GCNPat<
   (v9f32:$vdata (int_amdgcn_rts_read_vertex i64:$vaddr, i32:$vaddr2)),
