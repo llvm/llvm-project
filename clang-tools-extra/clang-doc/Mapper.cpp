@@ -19,7 +19,7 @@ namespace clang {
 namespace doc {
 
 static llvm::StringSet<> USRVisited;
-static llvm::sys::Mutex USRVisitedGuard;
+static llvm::sys::SmartMutex<true> USRVisitedGuard;
 
 template <typename T> bool isTypedefAnonRecord(const T *D) {
   if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
@@ -48,7 +48,7 @@ bool MapASTVisitor::mapDecl(const T *D, bool IsDefinition) {
     return true;
   // Prevent Visiting USR twice
   {
-    std::lock_guard<llvm::sys::Mutex> Guard(USRVisitedGuard);
+    llvm::sys::SmartScopedLock<true> Guard(USRVisitedGuard);
     StringRef Visited = USR.str();
     if (USRVisited.count(Visited) && !isTypedefAnonRecord<T>(D))
       return true;
