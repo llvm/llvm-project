@@ -122,7 +122,7 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   OpFoldResult zero = b.getIndexAttr(0);
 
   // Compute new offsets, lengths, low padding, high padding.
-  SmallVector<OpFoldResult> newOffsets, newLengths, newStrides;
+  SmallVector<OpFoldResult> newOffsets, newLengths;
   SmallVector<OpFoldResult> newLows, newHighs;
   // Set to true if the original data source is not read at all.
   bool hasZeroLen = false;
@@ -131,6 +131,8 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
   Value dynHasZeroLenCond;
 
   int64_t rank = padOp.getSourceType().getRank();
+  // Only unit stride supported.
+  SmallVector<OpFoldResult> newStrides(rank, b.getIndexAttr(1));
   for (unsigned dim = 0; dim < rank; ++dim) {
     auto low = padOp.getMixedLowPad()[dim];
     bool hasLowPad = !isConstantIntValue(low, 0);
@@ -138,6 +140,16 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     bool hasHighPad = !isConstantIntValue(high, 0);
     auto offset = offsets[dim];
     auto length = sizes[dim];
+    // If the dim has no padding, we dont need to calculate new values for that
+    // dim as the exisiting ones are correct even after the pattern.
+    if (!hasLowPad && !hasHighPad) {
+      newOffsets.push_back(offset);
+      newLengths.push_back(length);
+      newLows.push_back(low);
+      newHighs.push_back(high);
+      continue;
+    }
+
     auto srcSize = tensor::getMixedSize(b, loc, padOp.getSource(), dim);
 
     // The new amount of low padding is `low - offset`. Except for the case
@@ -216,9 +228,6 @@ FailureOr<TilingResult> tensor::bubbleUpPadSlice(OpBuilder &b,
     OpFoldResult newHigh =
         hasHighPad ? sub(sub(length, newLength), newLow) : zero;
     newHighs.push_back(newHigh);
-
-    // Only unit stride supported.
-    newStrides.push_back(b.getIndexAttr(1));
   }
 
   // The shape of the result can be obtained from the sizes passed in.
