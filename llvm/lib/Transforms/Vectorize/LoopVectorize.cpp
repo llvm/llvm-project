@@ -7444,7 +7444,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
       // Make sure that the VF doesn't use more than the number of available
       // registers
       const auto &MLU = RU.MaxLocalUsers;
-      if (any_of(MLU, [&](decltype(MLU.front()) &LU) {
+      if (any_of(MLU, [&](auto &LU) {
             return LU.second > TTI.getNumberOfRegisters(LU.first);
           })) {
         LLVM_DEBUG(dbgs() << "LV(REG): Ignoring VF " << VF
