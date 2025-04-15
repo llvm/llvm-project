@@ -707,6 +707,10 @@ void TargetPassConfig::addPass(Pass *P) {
   // and shouldn't reference it.
   AnalysisID PassID = P->getPassID();
 
+  IdentifyingPassPtr TargetID = getPassSubstitution(PassID);
+  if (!overridePass(PassID, TargetID).isValid())
+    return;
+
   if (StartBefore == PassID && StartBeforeCount++ == StartBeforeInstanceNum)
     Started = true;
   if (StopBefore == PassID && StopBeforeCount++ == StopBeforeInstanceNum)
