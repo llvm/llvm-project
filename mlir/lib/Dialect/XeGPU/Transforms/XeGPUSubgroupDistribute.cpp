@@ -600,6 +600,8 @@ namespace {
 /// Driver class for running the LayoutInfoPropagation analysis.
 class RunLayoutInfoPropagation {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(RunLayoutInfoPropagation)
+
   RunLayoutInfoPropagation(Operation *op) : target(op) {
     SymbolTableCollection symbolTable;
     solver.load<DeadCodeAnalysis>();
