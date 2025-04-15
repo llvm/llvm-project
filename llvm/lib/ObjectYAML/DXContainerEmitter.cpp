@@ -19,6 +19,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 using namespace llvm;
 
@@ -276,7 +277,7 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
 
         switch (Param.Type) {
 
-        case dxbc::RootParameterType::Constants32Bit:
+        case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
           NewParam.Constants.Num32BitValues = Param.Constants.Num32BitValues;
           NewParam.Constants.RegisterSpace = Param.Constants.RegisterSpace;
           NewParam.Constants.ShaderRegister = Param.Constants.ShaderRegister;

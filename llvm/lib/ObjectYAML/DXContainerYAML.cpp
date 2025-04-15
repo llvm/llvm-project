@@ -16,6 +16,7 @@
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include <cstdint>
 #include <system_error>
 
 namespace llvm {
@@ -279,8 +280,9 @@ void MappingTraits<llvm::DXContainerYAML::RootParameterYamlDesc>::mapping(
     IO &IO, llvm::DXContainerYAML::RootParameterYamlDesc &P) {
   IO.mapRequired("ParameterType", P.Type);
   IO.mapRequired("ShaderVisibility", P.Visibility);
+
   switch (P.Type) {
-  case dxbc::RootParameterType::Constants32Bit:
+  case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
     IO.mapRequired("Constants", P.Constants);
     break;
   }

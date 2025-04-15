@@ -34,7 +34,7 @@ size_t RootSignatureDesc::getSize() const {
 
   for (const auto &P : Parameters) {
     switch (P.Header.ParameterType) {
-    case dxbc::RootParameterType::Constants32Bit:
+    case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
       Size += sizeof(dxbc::RootConstants);
       break;
     }
@@ -75,7 +75,7 @@ void RootSignatureDesc::write(raw_ostream &OS) const {
     const auto &P = Parameters[I];
 
     switch (P.Header.ParameterType) {
-    case dxbc::RootParameterType::Constants32Bit:
+    case static_cast<uint32_t>(dxbc::RootParameterType::Constants32Bit):
       support::endian::write(BOS, P.Constants.ShaderRegister,
                              llvm::endianness::little);
       support::endian::write(BOS, P.Constants.RegisterSpace,

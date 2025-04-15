@@ -139,7 +139,8 @@ struct RootParameterView {
 
 struct RootConstantView : RootParameterView {
   static bool classof(const RootParameterView *V) {
-    return V->Header.ParameterType == dxbc::RootParameterType::Constants32Bit;
+    return V->Header.ParameterType ==
+           (uint32_t)dxbc::RootParameterType::Constants32Bit;
   }
 
   llvm::Expected<dxbc::RootConstants> read() {
@@ -183,7 +184,10 @@ public:
   getParameter(const dxbc::RootParameterHeader &Header) const {
     size_t DataSize;
 
-    switch (Header.ParameterType) {
+    if (!dxbc::isValidParameterType(Header.ParameterType))
+      return parseFailed("invalid parameter type");
+
+    switch (static_cast<dxbc::RootParameterType>(Header.ParameterType)) {
     case dxbc::RootParameterType::Constants32Bit:
       DataSize = sizeof(dxbc::RootConstants);
       break;
