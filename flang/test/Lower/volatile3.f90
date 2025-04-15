@@ -44,6 +44,7 @@ contains
    end subroutine
 end program
 
+
 ! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "p"} {
 ! CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
 ! CHECK:           %[[VAL_1:.*]] = fir.address_of(@_QFEnonvolatile_array) : !fir.ref<!fir.array<10xi32>>
@@ -117,9 +118,10 @@ end program
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_2:.*]] = arith.constant 5 : i32
 ! CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_volatile_array_assumed_shapeEarr"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
-! CHECK:           %[[VAL_5:.*]] = hlfir.designate %[[VAL_4]]#0 (%[[VAL_1]])  : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
-! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_5]] : i32, !fir.ref<i32>
+! CHECK:           %[[VAL_4:.*]] = fir.volatile_cast %[[VAL_0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>, volatile>
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_4]] dummy_scope %[[VAL_3]] {fortran_attrs = #fir.var_attrs<volatile>, uniq_name = "_QFFsub_volatile_array_assumed_shapeEarr"} : (!fir.box<!fir.array<?xi32>, volatile>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>, volatile>, !fir.box<!fir.array<?xi32>, volatile>)
+! CHECK:           %[[VAL_6:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_1]])  : (!fir.box<!fir.array<?xi32>, volatile>, index) -> !fir.ref<i32, volatile>
+! CHECK:           hlfir.assign %[[VAL_2]] to %[[VAL_6]] : i32, !fir.ref<i32, volatile>
 ! CHECK:           return
 ! CHECK:         }
 

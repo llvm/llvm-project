@@ -207,6 +207,35 @@ static bool hasExplicitLowerBounds(mlir::Value shape) {
          mlir::isa<fir::ShapeShiftType, fir::ShiftType>(shape.getType());
 }
 
+static std::pair<mlir::Type, mlir::Value>
+updateTypeWithVolatility(mlir::Type inputType, mlir::Value memref,
+                         mlir::OpBuilder &builder,
+                         fir::FortranVariableFlagsAttr fortran_attrs) {
+  if (mlir::isa<fir::BoxType, fir::ReferenceType>(inputType) && fortran_attrs &&
+      bitEnumContainsAny(fortran_attrs.getFlags(),
+                         fir::FortranVariableFlagsEnum::fortran_volatile)) {
+    const bool isPointer = bitEnumContainsAny(
+        fortran_attrs.getFlags(), fir::FortranVariableFlagsEnum::pointer);
+    auto updateType = [&](auto t) {
+      using FIRT = decltype(t);
+      // If an entity is a pointer, the entity it points to is volatile, as far
+      // as consumers of the pointer are concerned.
+      auto elementType = t.getEleTy();
+      const bool elementTypeIsVolatile =
+          isPointer || fir::isa_volatile_type(elementType);
+      auto newEleTy =
+          fir::updateTypeWithVolatility(elementType, elementTypeIsVolatile);
+      inputType = FIRT::get(newEleTy, true);
+    };
+    llvm::TypeSwitch<mlir::Type>(inputType)
+        .Case<fir::ReferenceType, fir::BoxType>(updateType)
+        .Default([](mlir::Type t) { return t; });
+    memref =
+        builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
+  }
+  return std::make_pair(inputType, memref);
+}
+
 void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
                              mlir::OperationState &result, mlir::Value memref,
                              llvm::StringRef uniq_name, mlir::Value shape,
@@ -217,22 +246,8 @@ void hlfir::DeclareOp::build(mlir::OpBuilder &builder,
   auto nameAttr = builder.getStringAttr(uniq_name);
   mlir::Type inputType = memref.getType();
   bool hasExplicitLbs = hasExplicitLowerBounds(shape);
-  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(inputType);
-      fortran_attrs && refType &&
-      bitEnumContainsAny(fortran_attrs.getFlags(),
-                         fir::FortranVariableFlagsEnum::fortran_volatile)) {
-    auto eleType = refType.getEleTy();
-    const bool isPointer = bitEnumContainsAny(
-        fortran_attrs.getFlags(), fir::FortranVariableFlagsEnum::pointer);
-    if (isPointer) {
-      // If an entity is a pointer, the entity it points to is volatile, as far
-      // as consumers of the pointer are concerned.
-      eleType = fir::updateTypeWithVolatility(eleType, true);
-    }
-    inputType = fir::ReferenceType::get(eleType, /*isVolatile=*/true);
-    memref =
-        builder.create<fir::VolatileCastOp>(memref.getLoc(), inputType, memref);
-  }
+  std::tie(inputType, memref) =
+      updateTypeWithVolatility(inputType, memref, builder, fortran_attrs);
   mlir::Type hlfirVariableType =
       getHLFIRVariableType(inputType, hasExplicitLbs);
   build(builder, result, {hlfirVariableType, inputType}, memref, shape,
