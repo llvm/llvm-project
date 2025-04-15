@@ -224,6 +224,7 @@ private:
   /// discovery) and start at 2. 1 is reserved for the translation
   /// unit, while 0 is reserved for NULL.
   llvm::DenseMap<const Decl *, LocalDeclID> DeclIDs;
+  // TMP: ^ DeclIDs type for reference
 
   /// Set of predefined decls. This is a helper data to determine if a decl
   /// is predefined. It should be more clear and safer to query the set
