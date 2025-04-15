@@ -16,7 +16,7 @@ define amdgpu_kernel void @offloading_kernel() {
 }
 
 define void @call_unknown() {
-  %1 = alloca ptr, align 8
+  %1 = alloca ptr, align 8, addrspace(0)
   %2 = call i32 %1()
   ret void
 }

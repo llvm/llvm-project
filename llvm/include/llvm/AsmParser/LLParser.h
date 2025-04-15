@@ -326,7 +326,8 @@ namespace llvm {
     bool parseOptionalStackAlignment(unsigned &Alignment);
     bool parseOptionalCommaAlign(MaybeAlign &Alignment, bool &AteExtraComma);
     bool parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
-                                     bool &AteExtraComma);
+                                     bool &AteExtraComma,
+                                     unsigned DefaultAS = 0);
     bool parseAllocSizeArguments(unsigned &BaseSizeArg,
                                  std::optional<unsigned> &HowManyArg);
     bool parseVScaleRangeArguments(unsigned &MinValue, unsigned &MaxValue);

@@ -12,12 +12,12 @@ declare void @use2(ptr, ptr)
 define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(ptr %a) {
 ; CHECK-LABEL: @__omp_offloading_802_ea0109_main_l8(
 ; CHECK-NEXT:  .master:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 1, addrspace(0)
 ; CHECK-NEXT:    call void @use2(ptr nonnull [[TMP0]], ptr nonnull [[TMP0]])
 ; CHECK-NEXT:    ret void
 ;
 .master:
-  %0 = alloca i8, i64 8, align 1
+  %0 = alloca i8, i64 8, align 1, addrspace(0)
   store ptr undef, ptr %0, align 8
   call void @use2(ptr %0, ptr %0)
   ret void
@@ -28,23 +28,23 @@ define weak amdgpu_kernel void @__omp_offloading_802_ea0109_main_l8(ptr %a) {
 define void @spam(ptr %arg1) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [0 x [30 x %struct.widget]], align 16
+; CHECK-NEXT:    [[ALLOCA1:%.*]] = alloca [0 x [30 x %struct.widget]], align 16, addrspace(0)
 ; CHECK-NEXT:    call void @zot(ptr nonnull [[ALLOCA1]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %alloca = alloca [30 x %struct.widget], i32 0, align 16
+  %alloca = alloca [30 x %struct.widget], i32 0, align 16, addrspace(0)
   call void @zot(ptr %alloca)
   ret void
 }
 
 define i1 @alloca_addrspace_0_nonnull() {
 ; CHECK-LABEL: @alloca_addrspace_0_nonnull(
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 1, addrspace(0)
 ; CHECK-NEXT:    call void @use(ptr nonnull [[ALLOCA]])
 ; CHECK-NEXT:    ret i1 true
 ;
-  %alloca = alloca i8
+  %alloca = alloca i8, addrspace(0)
   call void @use(ptr %alloca)
   %cmp = icmp ne ptr %alloca, null
   ret i1 %cmp

@@ -47,8 +47,8 @@ define internal void @spmd_callees__debug(i1 %c) {
 ; AMDGPU-LABEL: define {{[^@]+}}@spmd_callees__debug
 ; AMDGPU-SAME: (i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(0)
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_callees_kernel_environment, ptr null)
 ; AMDGPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
@@ -107,8 +107,8 @@ define internal void @spmd_callees__debug(i1 %c) {
 ; NVPTX-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
-  %.zero.addr = alloca i32, align 4
-  %.threadid_temp. = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %.threadid_temp. = alloca i32, align 4, addrspace(0)
   %0 = call i32 @__kmpc_target_init(ptr @spmd_callees_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
@@ -133,7 +133,7 @@ define internal void @__omp_outlined_spmd_amenable1(ptr noalias %.global_tid., p
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined_spmd_amenable1
 ; AMDGPU-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
+; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8, addrspace(0)
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
 ; AMDGPU:       for.cond:
 ; AMDGPU-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY:%.*]] ]
@@ -167,7 +167,7 @@ define internal void @__omp_outlined_spmd_amenable1(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP16:![0-9]+]]
 ;
 entry:
-  %captured_vars_addrs = alloca [0 x ptr], align 8
+  %captured_vars_addrs = alloca [0 x ptr], align 8, addrspace(0)
   br label %for.cond
 
 for.cond:                                         ; preds = %for.body, %entry
@@ -214,9 +214,9 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined__1_wrapper
 ; AMDGPU-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR2:[0-9]+]] {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(0)
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__1(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR10]]
 ; AMDGPU-NEXT:    ret void
@@ -232,9 +232,9 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; NVPTX-NEXT:    ret void
 ;
 entry:
-  %.addr1 = alloca i32, align 4
-  %.zero.addr = alloca i32, align 4
-  %global_args = alloca ptr, align 8
+  %.addr1 = alloca i32, align 4, addrspace(0)
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %global_args = alloca ptr, align 8, addrspace(0)
   store i32 %1, ptr %.addr1, align 4, !tbaa !18
   store i32 0, ptr %.zero.addr, align 4
   call void @__kmpc_get_shared_variables(ptr %global_args)
@@ -250,7 +250,7 @@ define internal void @__omp_outlined_spmd_amenable2(ptr noalias %.global_tid., p
 ; AMDGPU-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[X_H2S:%.*]] = alloca i8, i64 4, align 4, addrspace(5)
-; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
+; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8, addrspace(0)
 ; AMDGPU-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[X_H2S]] to ptr
 ; AMDGPU-NEXT:    call void @use(ptr captures(none) [[MALLOC_CAST]]) #[[ATTR6]]
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
@@ -288,7 +288,7 @@ define internal void @__omp_outlined_spmd_amenable2(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP19:![0-9]+]]
 ;
 entry:
-  %captured_vars_addrs = alloca [0 x ptr], align 8
+  %captured_vars_addrs = alloca [0 x ptr], align 8, addrspace(0)
   %x = call align 4 ptr @__kmpc_alloc_shared(i64 4)
   call void @use(ptr nocapture %x) #10
   br label %for.cond
@@ -337,9 +337,9 @@ define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined__3_wrapper
 ; AMDGPU-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR2]] {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(0)
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    call void @__omp_outlined__3(ptr [[DOTADDR1]], ptr [[DOTZERO_ADDR]]) #[[ATTR10]]
 ; AMDGPU-NEXT:    ret void
@@ -355,9 +355,9 @@ define internal void @__omp_outlined__3_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; NVPTX-NEXT:    ret void
 ;
 entry:
-  %.addr1 = alloca i32, align 4
-  %.zero.addr = alloca i32, align 4
-  %global_args = alloca ptr, align 8
+  %.addr1 = alloca i32, align 4, addrspace(0)
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %global_args = alloca ptr, align 8, addrspace(0)
   store i32 %1, ptr %.addr1, align 4, !tbaa !18
   store i32 0, ptr %.zero.addr, align 4
   call void @__kmpc_get_shared_variables(ptr %global_args)
@@ -374,8 +374,8 @@ define weak ptx_kernel void @spmd_and_non_spmd_callee(i1 %c) #0 {
 ; AMDGPU-SAME: (i1 [[C:%.*]]) #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(0)
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_and_non_spmd_callee_kernel_environment, ptr null)
 ; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
@@ -492,8 +492,8 @@ define weak ptx_kernel void @spmd_and_non_spmd_callee(i1 %c) #0 {
 ; NVPTX-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
-  %.zero.addr = alloca i32, align 4
-  %.threadid_temp. = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %.threadid_temp. = alloca i32, align 4, addrspace(0)
   %0 = call i32 @__kmpc_target_init(ptr @spmd_and_non_spmd_callee_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
@@ -518,7 +518,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined_spmd_amenable3
 ; AMDGPU-SAME: (ptr noalias [[DOTGLOBAL_TID_:%.*]], ptr noalias [[DOTBOUND_TID_:%.*]]) {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
+; AMDGPU-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8, addrspace(0)
 ; AMDGPU-NEXT:    [[X:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR10]]
 ; AMDGPU-NEXT:    br label [[FOR_COND:%.*]]
 ; AMDGPU:       for.cond:
@@ -558,7 +558,7 @@ define internal void @__omp_outlined_spmd_amenable3(ptr noalias %.global_tid., p
 ; NVPTX-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP22:![0-9]+]]
 ;
 entry:
-  %captured_vars_addrs = alloca [1 x ptr], align 8
+  %captured_vars_addrs = alloca [1 x ptr], align 8, addrspace(0)
   %x = call align 4 ptr @__kmpc_alloc_shared(i64 4)
   br label %for.cond
 
@@ -617,9 +617,9 @@ define internal void @__omp_outlined__5_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; AMDGPU-LABEL: define {{[^@]+}}@__omp_outlined__5_wrapper
 ; AMDGPU-SAME: (i16 zeroext [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR2]] {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8
+; AMDGPU-NEXT:    [[DOTADDR1:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[GLOBAL_ARGS:%.*]] = alloca ptr, align 8, addrspace(0)
 ; AMDGPU-NEXT:    call void @__kmpc_get_shared_variables(ptr [[GLOBAL_ARGS]])
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[GLOBAL_ARGS]], align 8
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP2]], align 8, !tbaa [[TBAA20]]
@@ -639,9 +639,9 @@ define internal void @__omp_outlined__5_wrapper(i16 zeroext %0, i32 %1) #3 {
 ; NVPTX-NEXT:    ret void
 ;
 entry:
-  %.addr1 = alloca i32, align 4
-  %.zero.addr = alloca i32, align 4
-  %global_args = alloca ptr, align 8
+  %.addr1 = alloca i32, align 4, addrspace(0)
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %global_args = alloca ptr, align 8, addrspace(0)
   store i32 %1, ptr %.addr1, align 4, !tbaa !18
   store i32 0, ptr %.zero.addr, align 4
   call void @__kmpc_get_shared_variables(ptr %global_args)
@@ -658,8 +658,8 @@ define weak ptx_kernel void @spmd_callees_metadata(ptr %fp) #0 {
 ; AMDGPU-LABEL: define {{[^@]+}}@spmd_callees_metadata
 ; AMDGPU-SAME: (ptr [[FP:%.*]]) #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(0)
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_callees_metadata_kernel_environment, ptr null)
 ; AMDGPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
@@ -692,8 +692,8 @@ define weak ptx_kernel void @spmd_callees_metadata(ptr %fp) #0 {
 ; NVPTX-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
-  %.zero.addr = alloca i32, align 4
-  %.threadid_temp. = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %.threadid_temp. = alloca i32, align 4, addrspace(0)
   %0 = call i32 @__kmpc_target_init(ptr @spmd_callees_metadata_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
@@ -718,8 +718,8 @@ define weak ptx_kernel void @spmd_and_non_spmd_callees_metadata(ptr %fp) #0 {
 ; AMDGPU-SAME: (ptr [[FP:%.*]]) #[[ATTR0]] {
 ; AMDGPU-NEXT:  entry:
 ; AMDGPU-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4
-; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4
+; AMDGPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(0)
+; AMDGPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(0)
 ; AMDGPU-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @spmd_and_non_spmd_callees_metadata_kernel_environment, ptr null)
 ; AMDGPU-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; AMDGPU-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
@@ -834,8 +834,8 @@ define weak ptx_kernel void @spmd_and_non_spmd_callees_metadata(ptr %fp) #0 {
 ; NVPTX-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
-  %.zero.addr = alloca i32, align 4
-  %.threadid_temp. = alloca i32, align 4
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %.threadid_temp. = alloca i32, align 4, addrspace(0)
   %0 = call i32 @__kmpc_target_init(ptr @spmd_and_non_spmd_callees_metadata_kernel_environment, ptr null)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
@@ -1043,9 +1043,9 @@ define internal void @__omp_outlined__9_wrapper(i16 zeroext %0, i32 %1) #3 {
 ;
 ;
 entry:
-  %.addr1 = alloca i32, align 4
-  %.zero.addr = alloca i32, align 4
-  %global_args = alloca ptr, align 8
+  %.addr1 = alloca i32, align 4, addrspace(0)
+  %.zero.addr = alloca i32, align 4, addrspace(0)
+  %global_args = alloca ptr, align 8, addrspace(0)
   store i32 %1, ptr %.addr1, align 4, !tbaa !18
   store i32 0, ptr %.zero.addr, align 4
   call void @__kmpc_get_shared_variables(ptr %global_args)

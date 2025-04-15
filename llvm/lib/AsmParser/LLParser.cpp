@@ -2711,7 +2711,8 @@ bool LLParser::parseOptionalCommaAlign(MaybeAlign &Alignment,
 /// This returns with AteExtraComma set to true if it ate an excess comma at the
 /// end.
 bool LLParser::parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
-                                           bool &AteExtraComma) {
+                                           bool &AteExtraComma,
+                                           unsigned DefaultAS) {
   AteExtraComma = false;
   while (EatIfPresent(lltok::comma)) {
     // Metadata at the end is an early exit.
@@ -2724,7 +2725,7 @@ bool LLParser::parseOptionalCommaAddrSpace(unsigned &AddrSpace, LocTy &Loc,
     if (Lex.getKind() != lltok::kw_addrspace)
       return error(Lex.getLoc(), "expected metadata or 'addrspace'");
 
-    if (parseOptionalAddrSpace(AddrSpace))
+    if (parseOptionalAddrSpace(AddrSpace, DefaultAS))
       return true;
   }
 
@@ -8354,7 +8355,8 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   Value *Size = nullptr;
   LocTy SizeLoc, TyLoc, ASLoc;
   MaybeAlign Alignment;
-  unsigned AddrSpace = 0;
+  unsigned DefaultAS = M->getDataLayout().getAllocaAddrSpace();
+  unsigned AddrSpace = DefaultAS;
   Type *Ty = nullptr;
 
   bool IsInAlloca = EatIfPresent(lltok::kw_inalloca);
@@ -8371,11 +8373,12 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
     if (Lex.getKind() == lltok::kw_align) {
       if (parseOptionalAlignment(Alignment))
         return true;
-      if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
+      if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma,
+                                      DefaultAS))
         return true;
     } else if (Lex.getKind() == lltok::kw_addrspace) {
       ASLoc = Lex.getLoc();
-      if (parseOptionalAddrSpace(AddrSpace))
+      if (parseOptionalAddrSpace(AddrSpace, DefaultAS))
         return true;
     } else if (Lex.getKind() == lltok::MetadataVar) {
       AteExtraComma = true;
@@ -8386,11 +8389,12 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
         if (Lex.getKind() == lltok::kw_align) {
           if (parseOptionalAlignment(Alignment))
             return true;
-          if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
+          if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma,
+                                          DefaultAS))
             return true;
         } else if (Lex.getKind() == lltok::kw_addrspace) {
           ASLoc = Lex.getLoc();
-          if (parseOptionalAddrSpace(AddrSpace))
+          if (parseOptionalAddrSpace(AddrSpace, DefaultAS))
             return true;
         } else if (Lex.getKind() == lltok::MetadataVar) {
           AteExtraComma = true;

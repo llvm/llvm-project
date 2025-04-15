@@ -4724,7 +4724,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     }
 
     unsigned AddrSpace = AI->getAddressSpace();
-    if (AddrSpace != 0) {
+    unsigned DefaultAllocaAS =
+        I.getModule()->getDataLayout().getAllocaAddrSpace();
+    // Avoid confusion by omitting the addrspace only if it is 0 and that is the
+    // default. Dropping the "AddrSpace != 0" condition would also be correct.
+    if (AddrSpace != 0 || AddrSpace != DefaultAllocaAS) {
       Out << ", addrspace(" << AddrSpace << ')';
     }
   } else if (isa<CastInst>(I)) {

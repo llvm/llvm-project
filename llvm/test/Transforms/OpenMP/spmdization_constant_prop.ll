@@ -42,7 +42,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; Function Attrs: alwaysinline convergent norecurse nounwind
 define weak_odr amdgpu_kernel void @__omp_offloading_20_11e3950_main_l12(ptr %dyn, i64 noundef %nxyz, i64 noundef %ng, ptr noundef nonnull align 8 dereferenceable(8) %aa) local_unnamed_addr #0 {
 entry:
-  %ng1 = alloca i32, align 4
+  %ng1 = alloca i32, align 4, addrspace(0)
   %captured_vars_addrs = alloca [2 x ptr], align 8, addrspace(5)
   %0 = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_20_11e3950_main_l12_kernel_environment to ptr), ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1

@@ -153,7 +153,7 @@ define i32 @remove_alloca_ptr_arg(i1 %c, ptr %ptr) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr @g1, i64 32, i1 false)
   br i1 %c, label %if, label %join
 
@@ -212,7 +212,7 @@ define i32 @test_memcpy_after_phi(i1 %cond, ptr %ptr) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %a = alloca [32 x i8]
+  %a = alloca [32 x i8], addrspace(0)
   br i1 %cond, label %if, label %join
 
 if:
@@ -228,7 +228,7 @@ join:
 define i32 @addrspace_diff_keep_alloca(i1 %cond, ptr %x) {
 ; CHECK-LABEL: @addrspace_diff_keep_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [32 x i8], align 1, addrspace(0)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[A]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
@@ -239,7 +239,7 @@ define i32 @addrspace_diff_keep_alloca(i1 %cond, ptr %x) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %a = alloca [32 x i8]
+  %a = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %a, ptr addrspace(1) @g2, i64 32, i1 false)
   br i1 %cond, label %if, label %join
 
@@ -255,7 +255,7 @@ join:
 define i32 @addrspace_diff_keep_alloca_extra_gep(i1 %cond, ptr %x) {
 ; CHECK-LABEL: @addrspace_diff_keep_alloca_extra_gep(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    [[A:%.*]] = alloca [32 x i8], align 1, addrspace(0)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[A]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
 ; CHECK:       if:
@@ -267,7 +267,7 @@ define i32 @addrspace_diff_keep_alloca_extra_gep(i1 %cond, ptr %x) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %a = alloca [32 x i8]
+  %a = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %a, ptr addrspace(1) @g2, i64 32, i1 false)
   %gep = getelementptr i8, ptr %a, i64 4
   br i1 %cond, label %if, label %join
@@ -293,7 +293,7 @@ define i32 @addrspace_diff_remove_alloca(i1 %cond) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %a = alloca [32 x i8]
+  %a = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %a, ptr addrspace(1) @g2, i64 32, i1 false)
   %gep = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 2
   br i1 %cond, label %if, label %join
@@ -320,7 +320,7 @@ define i32 @phi_loop(i1 %c) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr @g1, i64 32, i1 false)
   br label %loop
 
@@ -337,7 +337,7 @@ exit:
 define i32 @phi_loop_different_addrspace(i1 %c) {
 ; CHECK-LABEL: @phi_loop_different_addrspace(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(0)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -349,7 +349,7 @@ define i32 @phi_loop_different_addrspace(i1 %c) {
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %alloca, ptr addrspace(1) @g2, i64 32, i1 false)
   br label %loop
 
@@ -371,7 +371,7 @@ define i8 @select_same_addrspace_remove_alloca(i1 %cond, ptr %p) {
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p0.i64(ptr %alloca, ptr @g1, i64 32, i1 false)
   %ptr = select i1 %cond, ptr %alloca, ptr %p
   %load = load i8, ptr %ptr
@@ -381,14 +381,14 @@ entry:
 define i8 @select_after_memcpy_keep_alloca(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @select_after_memcpy_keep_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(0)
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[P:%.*]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[PTR]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   %ptr = select i1 %cond, ptr %alloca, ptr %p
   call void @llvm.memcpy.p0.p0.i64(ptr %ptr, ptr @g1, i64 32, i1 false)
   %load = load i8, ptr %ptr
@@ -418,7 +418,7 @@ define i8 @select_diff_addrspace_remove_alloca(i1 %cond, ptr %p) {
 ; CHECK-NEXT:    ret i8 0
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %alloca, ptr addrspace(1) @g2, i64 32, i1 false)
   %gep = getelementptr inbounds [32 x i8], ptr %alloca, i32 0, i32 2
   %sel = select i1 %cond, ptr %alloca, ptr %gep
@@ -435,7 +435,7 @@ define i8 @select_diff_addrspace_remove_alloca_asan(i1 %cond, ptr %p) sanitize_a
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
-  %alloca = alloca [32 x i8]
+  %alloca = alloca [32 x i8], addrspace(0)
   call void @llvm.memcpy.p0.p1.i64(ptr %alloca, ptr addrspace(1) @g2, i64 32, i1 false)
   %gep = getelementptr inbounds [32 x i8], ptr %alloca, i32 0, i32 2
   %sel = select i1 %cond, ptr %alloca, ptr %gep

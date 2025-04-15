@@ -18,7 +18,7 @@ define void @correct_alloca_addrspace() nounwind uwtable safestack {
 ; TLS-NEXT:    ret void
 ;
 entry:
-  %a = alloca i8, align 8
+  %a = alloca i8, align 8, addrspace(0)
   call void @Capture(ptr %a)
   ret void
 }

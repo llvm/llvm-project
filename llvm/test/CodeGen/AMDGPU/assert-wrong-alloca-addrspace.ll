@@ -10,7 +10,7 @@ declare void @func(ptr)
 
 define void @main() {
 bb:
-  %alloca = alloca i32, align 4
+  %alloca = alloca i32, align 4, addrspace(0)
   call void @func(ptr %alloca)
   ret void
 }
