@@ -404,6 +404,8 @@ Bug Fixes in This Version
 - Defining an integer literal suffix (e.g., ``LL``) before including
   ``<stdint.h>`` in a freestanding build no longer causes invalid token pasting
   when using the ``INTn_C`` macros. (#GH85995)
+- Fixed an assertion failure in the expansion of builtin macros like ``__has_embed()`` with line breaks before the
+  closing paren. (#GH133574)
 - Clang no longer accepts invalid integer constants which are too large to fit
   into any (standard or extended) integer type when the constant is unevaluated.
   Merely forming the token is sufficient to render the program invalid. Code
