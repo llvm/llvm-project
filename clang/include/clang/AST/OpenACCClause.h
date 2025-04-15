@@ -430,6 +430,11 @@ public:
   }
 
   bool isConditionExprClause() const { return HasConditionExpr.has_value(); }
+  bool isVarListClause() const { return !isConditionExprClause(); }
+  bool isEmptySelfClause() const {
+    return (isConditionExprClause() && !hasConditionExpr()) ||
+           (!isConditionExprClause() && getVarList().empty());
+  }
 
   bool hasConditionExpr() const {
     assert(HasConditionExpr.has_value() &&
