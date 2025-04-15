@@ -282,7 +282,8 @@ public:
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap);
+                     const PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
+                     const ArrayRef<StringRef> StableDirs);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -305,6 +306,9 @@ private:
   /// Mapping from prebuilt AST filepaths to their attributes referenced during
   /// dependency collecting.
   const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
+  /// Directory paths known to be stable through an active development and build
+  /// cycle.
+  const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
   /// Hash identifying the compilation conditions of the current TU.

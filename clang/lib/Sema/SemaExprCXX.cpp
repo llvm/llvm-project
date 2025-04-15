@@ -1929,8 +1929,9 @@ static bool CheckDeleteOperator(Sema &S, SourceLocation StartLoc,
     }
     return true;
   }
-
-  return S.CheckAllocationAccess(StartLoc, Range, NamingClass, Decl, Diagnose);
+  Sema::AccessResult Accessible =
+      S.CheckAllocationAccess(StartLoc, Range, NamingClass, Decl, Diagnose);
+  return Accessible == Sema::AR_inaccessible;
 }
 
 /// Select the correct "usual" deallocation function to use from a selection of

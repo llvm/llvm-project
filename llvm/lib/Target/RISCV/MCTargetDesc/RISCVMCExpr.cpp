@@ -34,8 +34,7 @@ const RISCVMCExpr *RISCVMCExpr::create(const MCExpr *Expr, Specifier S,
 
 void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   Specifier S = getSpecifier();
-  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT) &&
-                     (S != VK_QC_E_JUMP_PLT));
+  bool HasVariant = ((S != VK_None) && (S != VK_CALL) && (S != VK_CALL_PLT));
 
   if (HasVariant)
     OS << '%' << getSpecifierName(S) << '(';
@@ -168,8 +167,6 @@ StringRef RISCVMCExpr::getSpecifierName(Specifier S) {
     return "pltpcrel";
   case VK_QC_ABS20:
     return "qc.abs20";
-  case VK_QC_E_JUMP_PLT:
-    return "qc_e_jump_plt";
   }
   llvm_unreachable("Invalid ELF symbol kind");
 }

@@ -1828,7 +1828,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
           name, tgfmt(namedProperty->prop.getWriteToMlirBytecodeCall(), &fctx));
       continue;
     }
-    const auto *namedAttr = attrOrProp.dyn_cast<const AttributeMetadata *>();
+    const auto *namedAttr = dyn_cast<const AttributeMetadata *>(attrOrProp);
     StringRef name = namedAttr->attrName;
     if (namedAttr->isRequired) {
       readPropertiesMethod << formatv(R"(
