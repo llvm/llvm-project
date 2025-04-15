@@ -2301,11 +2301,31 @@ are listed below.
 
    When enabled, allows the compiler to assume that each object file
    passed to the linker has been compiled using a unique source file
-   name. This is useful for reducing link times when doing ThinLTO
+   path. This is useful for reducing link times when doing ThinLTO
    in combination with whole-program devirtualization or CFI.
 
-   A misuse of this flag will generally result in a duplicate symbol
-   error at link time.
+   The full source path passed to the compiler must be unique. This
+   means that, for example, the following is a usage error:
+
+   .. code-block:: console
+
+     $ cd foo
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ../bar
+     $ clang -funique-source-file-names -c foo.c
+     $ cd ..
+     $ clang foo/foo.o bar/foo.o
+    
+   but this is not:
+
+   .. code-block:: console
+
+     $ clang -funique-source-file-names -c foo/foo.c
+     $ clang -funique-source-file-names -c bar/foo.c
+     $ clang foo/foo.o bar/foo.o
+
+   A misuse of this flag may result in a duplicate symbol error at
+   link time.
 
 .. option:: -fforce-emit-vtables
 
