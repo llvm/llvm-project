@@ -988,8 +988,15 @@ public:
           op, "Currently minloc/maxloc is not handled");
     } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
                          std::is_same_v<Op, hlfir::MinvalOp>) {
+      mlir::Type ty = op.getType();
+      if (!(mlir::isa<mlir::FloatType>(ty) ||
+            mlir::isa<mlir::IntegerType>(ty))) {
+        return rewriter.notifyMatchFailure(
+            op, "Type is not supported for Maxval or Minval yet");
+      }
+
       bool isMax = std::is_same_v<Op, hlfir::MaxvalOp>;
-      init = makeMinMaxInitValGenerator(isMax)(builder, loc, op.getType());
+      init = makeMinMaxInitValGenerator(isMax)(builder, loc, ty);
       genBodyFn = [inlineSource, isMax](
                       fir::FirOpBuilder builder, mlir::Location loc,
                       mlir::Value reduction,
