@@ -54,12 +54,10 @@ static Operation *extractFunction(std::vector<Operation *> &ops,
       slice.push_back(op);
 
     // All results are returned by the extracted function.
-    outputTypes.insert(outputTypes.end(), op->getResults().getTypes().begin(),
-                       op->getResults().getTypes().end());
+    llvm::append_range(outputTypes, op->getResults().getTypes());
 
     // Track all values that need to be taken as input to function.
-    values.insert(values.end(), op->getOperands().begin(),
-                  op->getOperands().end());
+    llvm::append_range(values, op->getOperands());
   }
 
   // Create the function
