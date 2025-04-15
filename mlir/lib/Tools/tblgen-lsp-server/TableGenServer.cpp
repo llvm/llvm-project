@@ -403,8 +403,7 @@ TableGenTextFile::TableGenTextFile(
   llvm::SmallString<32> uriDirectory(uri.file());
   llvm::sys::path::remove_filename(uriDirectory);
   includeDirs.push_back(uriDirectory.str().str());
-  includeDirs.insert(includeDirs.end(), extraIncludeDirs.begin(),
-                     extraIncludeDirs.end());
+  llvm::append_range(includeDirs, extraIncludeDirs);
 
   // Initialize the file.
   initialize(uri, version, diagnostics);

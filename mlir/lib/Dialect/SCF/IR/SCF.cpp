@@ -2017,8 +2017,7 @@ IfOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
   if (!yieldOp)
     return failure();
   TypeRange types = yieldOp.getOperandTypes();
-  inferredReturnTypes.insert(inferredReturnTypes.end(), types.begin(),
-                             types.end());
+  llvm::append_range(inferredReturnTypes, types);
   return success();
 }
 
