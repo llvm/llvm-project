@@ -29,7 +29,7 @@ class IdentifierInfo;
 
 /// A sequence of identifier/location pairs used to describe a particular
 /// module or submodule, e.g., std.vector.
-using ModuleIdPath = ArrayRef<std::pair<IdentifierInfo *, SourceLocation>>;
+using ModuleIdPath = ArrayRef<IdentifierLoc>;
 
 /// Describes the result of attempting to load a module.
 class ModuleLoadResult {

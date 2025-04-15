@@ -76,9 +76,6 @@ inline bool isReservedInAllContexts(ReservedIdentifierStatus Status) {
          Status != ReservedIdentifierStatus::StartsWithUnderscoreAndIsExternC;
 }
 
-/// A simple pair of identifier info and location.
-using IdentifierLocPair = std::pair<IdentifierInfo *, SourceLocation>;
-
 /// IdentifierInfo and other related classes are aligned to
 /// 8 bytes so that DeclarationName can use the lower 3 bits
 /// of a pointer to one of these classes.

@@ -14,7 +14,6 @@
 namespace clang {
 
 class Expr;
-struct IdentifierLoc;
 
 /// Loop optimization hint for loop and unroll pragmas.
 struct LoopHint {
