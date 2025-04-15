@@ -67,3 +67,19 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc host_data present_or_copy(LocalInt)
   ;
 }
+void ModList() {
+  int V1;
+  // expected-error@+2{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc data copy(always, alwaysin, alwaysout, zero, readonly: V1)
+  ;
+  // expected-error@+1{{OpenACC 'readonly' modifier not valid on 'copy' clause}}
+#pragma acc data copy(readonly: V1)
+  ;
+  // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copy' clause}}
+#pragma acc data copy(zero: V1)
+  ;
+#pragma acc data copy(always, alwaysin, alwaysout: V1)
+;
+}
+

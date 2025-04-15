@@ -4067,9 +4067,6 @@ bool NVPTXTargetLowering::getTgtMemIntrinsic(
     return true;
   }
 
-  case Intrinsic::nvvm_atomic_load_inc_32:
-  case Intrinsic::nvvm_atomic_load_dec_32:
-
   case Intrinsic::nvvm_atomic_add_gen_f_cta:
   case Intrinsic::nvvm_atomic_add_gen_f_sys:
   case Intrinsic::nvvm_atomic_add_gen_i_cta:
@@ -6145,6 +6142,18 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
     default:
       llvm_unreachable("unsupported width encountered");
     }
+  case AtomicRMWInst::BinOp::UIncWrap:
+  case AtomicRMWInst::BinOp::UDecWrap:
+    switch (ITy->getBitWidth()) {
+    case 32:
+      return AtomicExpansionKind::None;
+    case 8:
+    case 16:
+    case 64:
+      return AtomicExpansionKind::CmpXChg;
+    default:
+      llvm_unreachable("unsupported width encountered");
+    }
   }
 
   return AtomicExpansionKind::CmpXChg;
@@ -6212,6 +6221,33 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
     return Builder.CreateFence(AtomicOrdering::Acquire);
 
   return nullptr;
+}
+
+// Rather than default to SINT when both UINT and SINT are custom, we only
+// change the opcode when UINT is not legal and SINT is. UINT is preferred when
+// both are custom since unsigned CVT instructions can lead to slightly better
+// SASS code with fewer instructions.
+unsigned NVPTXTargetLowering::getPreferredFPToIntOpcode(unsigned Op, EVT FromVT,
+                                                        EVT ToVT) const {
+  if (isOperationLegal(Op, ToVT))
+    return Op;
+  switch (Op) {
+  case ISD::FP_TO_UINT:
+    if (isOperationLegal(ISD::FP_TO_SINT, ToVT))
+      return ISD::FP_TO_SINT;
+    break;
+  case ISD::STRICT_FP_TO_UINT:
+    if (isOperationLegal(ISD::STRICT_FP_TO_SINT, ToVT))
+      return ISD::STRICT_FP_TO_SINT;
+    break;
+  case ISD::VP_FP_TO_UINT:
+    if (isOperationLegal(ISD::VP_FP_TO_SINT, ToVT))
+      return ISD::VP_FP_TO_SINT;
+    break;
+  default:
+    break;
+  }
+  return Op;
 }
 
 // Pin NVPTXTargetObjectFile's vtables to this file.

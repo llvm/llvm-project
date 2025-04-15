@@ -411,8 +411,8 @@
 // RUN: %clang --target=i386 -mavx10.2-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,WARN-AVX10-512 %s
 // RUN: %clang --target=i386 -mavx10.2-256 -mavx10.1-512 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_256,AVX10_1_512 %s
 // RUN: %clang --target=i386 -mavx10.2-512 -mavx10.1-256 %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=AVX10_2_512,AVX10_1_256 %s
-// WARN-EVEX512: warning: argument '{{.*}}evex512' is deprecated, because AVX10/256 is not supported and will be removed [-Wdeprecated]
-// WARN-AVX10-256: warning: argument 'avx10.{{.*}}-256' is deprecated, because AVX10/256 is not supported and will be removed [-Wdeprecated]
+// WARN-EVEX512: warning: argument '{{.*}}evex512' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
+// WARN-AVX10-256: warning: argument 'avx10.{{.*}}-256' is deprecated, no alternative argument provided because AVX10/256 is not supported and will be removed [-Wdeprecated]
 // WARN-AVX10-512: warning: argument 'avx10.{{.*}}-512' is deprecated, use 'avx10.{{.*}}' instead [-Wdeprecated]
 // EVEX512: "-target-feature" "+evex512"
 // NO-EVEX512: "-target-feature" "-evex512"

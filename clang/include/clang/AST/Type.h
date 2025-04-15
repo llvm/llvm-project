@@ -2158,12 +2158,15 @@ protected:
     // The index of the template parameter this substitution represents.
     unsigned Index : 15;
 
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned Final : 1;
+
     /// Represents the index within a pack if this represents a substitution
     /// from a pack expansion. This index starts at the end of the pack and
     /// increments towards the beginning.
     /// Positive non-zero number represents the index + 1.
     /// Zero means this is not substituted from an expansion.
-    unsigned PackIndex : 16;
+    unsigned PackIndex : 15;
   };
 
   class SubstTemplateTypeParmPackTypeBitfields {
@@ -2756,6 +2759,10 @@ public:
   /// Determine whether this type has a floating-point representation
   /// of some sort, e.g., it is a floating-point type or a vector thereof.
   bool hasFloatingRepresentation() const;
+
+  /// Determine whether this type has a boolean representation
+  /// of some sort.
+  bool hasBooleanRepresentation() const;
 
   // Type Checking Functions: Check to see if this type is structurally the
   // specified type, ignoring typedefs and qualifiers, and return a pointer to
@@ -3820,14 +3827,9 @@ class VariableArrayType : public ArrayType {
   /// a function block.
   Stmt *SizeExpr;
 
-  /// The range spanned by the left and right array brackets.
-  SourceRange Brackets;
-
-  VariableArrayType(QualType et, QualType can, Expr *e,
-                    ArraySizeModifier sm, unsigned tq,
-                    SourceRange brackets)
-      : ArrayType(VariableArray, et, can, sm, tq, e),
-        SizeExpr((Stmt*) e), Brackets(brackets) {}
+  VariableArrayType(QualType et, QualType can, Expr *e, ArraySizeModifier sm,
+                    unsigned tq)
+      : ArrayType(VariableArray, et, can, sm, tq, e), SizeExpr((Stmt *)e) {}
 
 public:
   friend class StmtIteratorBase;
@@ -3837,10 +3839,6 @@ public:
     // to have a dependency of Type.h on Stmt.h/Expr.h.
     return (Expr*) SizeExpr;
   }
-
-  SourceRange getBracketsRange() const { return Brackets; }
-  SourceLocation getLBracketLoc() const { return Brackets.getBegin(); }
-  SourceLocation getRBracketLoc() const { return Brackets.getEnd(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -3877,12 +3875,8 @@ class DependentSizedArrayType : public ArrayType {
   /// type will have its size deduced from an initializer.
   Stmt *SizeExpr;
 
-  /// The range spanned by the left and right array brackets.
-  SourceRange Brackets;
-
   DependentSizedArrayType(QualType et, QualType can, Expr *e,
-                          ArraySizeModifier sm, unsigned tq,
-                          SourceRange brackets);
+                          ArraySizeModifier sm, unsigned tq);
 
 public:
   friend class StmtIteratorBase;
@@ -3892,10 +3886,6 @@ public:
     // to have a dependency of Type.h on Stmt.h/Expr.h.
     return (Expr*) SizeExpr;
   }
-
-  SourceRange getBracketsRange() const { return Brackets; }
-  SourceLocation getLBracketLoc() const { return Brackets.getBegin(); }
-  SourceLocation getRBracketLoc() const { return Brackets.getEnd(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -5911,7 +5901,7 @@ public:
 /// of this class via DecltypeType nodes.
 class DependentDecltypeType : public DecltypeType, public llvm::FoldingSetNode {
 public:
-  DependentDecltypeType(Expr *E, QualType UnderlyingTpe);
+  DependentDecltypeType(Expr *E);
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
     Profile(ID, Context, getUnderlyingExpr());
@@ -5959,7 +5949,7 @@ public:
     return *(getExpansionsPtr() + *getSelectedIndex());
   }
 
-  std::optional<unsigned> getSelectedIndex() const;
+  UnsignedOrNone getSelectedIndex() const;
 
   bool hasSelectedType() const { return getSelectedIndex() != std::nullopt; }
 
@@ -5996,7 +5986,7 @@ private:
 };
 
 /// A unary type transform, which is a type constructed from another.
-class UnaryTransformType : public Type {
+class UnaryTransformType : public Type, public llvm::FoldingSetNode {
 public:
   enum UTTKind {
 #define TRANSFORM_TYPE_TRAIT_DEF(Enum, _) Enum,
@@ -6030,28 +6020,16 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == UnaryTransform;
   }
-};
-
-/// Internal representation of canonical, dependent
-/// __underlying_type(type) types.
-///
-/// This class is used internally by the ASTContext to manage
-/// canonical, dependent types, only. Clients will only see instances
-/// of this class via UnaryTransformType nodes.
-class DependentUnaryTransformType : public UnaryTransformType,
-                                    public llvm::FoldingSetNode {
-public:
-  DependentUnaryTransformType(const ASTContext &C, QualType BaseType,
-                              UTTKind UKind);
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, getBaseType(), getUTTKind());
+    Profile(ID, getBaseType(), getUnderlyingType(), getUTTKind());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType BaseType,
-                      UTTKind UKind) {
-    ID.AddPointer(BaseType.getAsOpaquePtr());
-    ID.AddInteger((unsigned)UKind);
+                      QualType UnderlyingType, UTTKind UKind) {
+    BaseType.Profile(ID);
+    UnderlyingType.Profile(ID);
+    ID.AddInteger(UKind);
   }
 };
 
@@ -6397,7 +6375,8 @@ class SubstTemplateTypeParmType final
   Decl *AssociatedDecl;
 
   SubstTemplateTypeParmType(QualType Replacement, Decl *AssociatedDecl,
-                            unsigned Index, std::optional<unsigned> PackIndex);
+                            unsigned Index, UnsignedOrNone PackIndex,
+                            bool Final);
 
 public:
   /// Gets the type that was substituted for the template
@@ -6420,10 +6399,13 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmTypeBits.Index; }
 
-  std::optional<unsigned> getPackIndex() const {
-    if (SubstTemplateTypeParmTypeBits.PackIndex == 0)
-      return std::nullopt;
-    return SubstTemplateTypeParmTypeBits.PackIndex - 1;
+  // This substitution is Final, which means the substitution is fully
+  // sugared: it doesn't need to be resugared later.
+  unsigned getFinal() const { return SubstTemplateTypeParmTypeBits.Final; }
+
+  UnsignedOrNone getPackIndex() const {
+    return UnsignedOrNone::fromInternalRepresentation(
+        SubstTemplateTypeParmTypeBits.PackIndex);
   }
 
   bool isSugared() const { return true; }
@@ -6431,17 +6413,12 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, getReplacementType(), getAssociatedDecl(), getIndex(),
-            getPackIndex());
+            getPackIndex(), getFinal());
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Replacement,
                       const Decl *AssociatedDecl, unsigned Index,
-                      std::optional<unsigned> PackIndex) {
-    Replacement.Profile(ID);
-    ID.AddPointer(AssociatedDecl);
-    ID.AddInteger(Index);
-    ID.AddInteger(PackIndex ? *PackIndex - 1 : 0);
-  }
+                      UnsignedOrNone PackIndex, bool Final);
 
   static bool classof(const Type *T) {
     return T->getTypeClass() == SubstTemplateTypeParm;
@@ -6488,7 +6465,8 @@ public:
   /// This should match the result of `getReplacedParameter()->getIndex()`.
   unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
 
-  // When true the substitution will be 'Final' (subst node won't be placed).
+  // This substitution will be Final, which means the substitution will be fully
+  // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
   unsigned getNumArgs() const {
@@ -6669,10 +6647,9 @@ class TemplateSpecializationType : public Type, public llvm::FoldingSetNode {
   /// replacement must, recursively, be one of these).
   TemplateName Template;
 
-  TemplateSpecializationType(TemplateName T,
+  TemplateSpecializationType(TemplateName T, bool IsAlias,
                              ArrayRef<TemplateArgument> Args,
-                             QualType Canon,
-                             QualType Aliased);
+                             QualType Underlying);
 
 public:
   /// Determine whether any of the given template arguments are dependent.
@@ -6740,7 +6717,7 @@ public:
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx);
   static void Profile(llvm::FoldingSetNodeID &ID, TemplateName T,
-                      ArrayRef<TemplateArgument> Args,
+                      ArrayRef<TemplateArgument> Args, QualType Underlying,
                       const ASTContext &Context);
 
   static bool classof(const Type *T) {
@@ -7138,7 +7115,7 @@ class PackExpansionType : public Type, public llvm::FoldingSetNode {
   QualType Pattern;
 
   PackExpansionType(QualType Pattern, QualType Canon,
-                    std::optional<unsigned> NumExpansions)
+                    UnsignedOrNone NumExpansions)
       : Type(PackExpansion, Canon,
              (Pattern->getDependence() | TypeDependence::Dependent |
               TypeDependence::Instantiation) &
@@ -7156,7 +7133,7 @@ public:
 
   /// Retrieve the number of expansions that this pack expansion will
   /// generate, if known.
-  std::optional<unsigned> getNumExpansions() const {
+  UnsignedOrNone getNumExpansions() const {
     if (PackExpansionTypeBits.NumExpansions)
       return PackExpansionTypeBits.NumExpansions - 1;
     return std::nullopt;
@@ -7170,11 +7147,9 @@ public:
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, QualType Pattern,
-                      std::optional<unsigned> NumExpansions) {
+                      UnsignedOrNone NumExpansions) {
     ID.AddPointer(Pattern.getAsOpaquePtr());
-    ID.AddBoolean(NumExpansions.has_value());
-    if (NumExpansions)
-      ID.AddInteger(*NumExpansions);
+    ID.AddInteger(NumExpansions.toInternalRepresentation());
   }
 
   static bool classof(const Type *T) {

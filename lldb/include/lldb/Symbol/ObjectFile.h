@@ -748,6 +748,7 @@ public:
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
                                         uint64_t Offset);
+  std::string GetObjectName() const;
 
 protected:
   // Member variables.

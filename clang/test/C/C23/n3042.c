@@ -83,6 +83,9 @@ void test() {
   (float)null_val;      // expected-error {{cannot cast an object of type 'nullptr_t' to 'float'}}
   (float)nullptr;       // expected-error {{cannot cast an object of type 'nullptr_t' to 'float'}}
   (nullptr_t)(int *)12; // expected-error {{cannot cast an object of type 'int *' to 'nullptr_t'}}
+  (nullptr_t)"testing"; // expected-error {{cannot cast an object of type 'char *' to 'nullptr_t'}}
+  (nullptr_t)1.0f;      // expected-error {{cannot cast an object of type 'float' to 'nullptr_t'}}
+  (nullptr_t)'a';       // expected-error {{cannot cast an object of type 'int' to 'nullptr_t'}}
 
   (void)null_val;     // ok
   (void)nullptr;      // ok
