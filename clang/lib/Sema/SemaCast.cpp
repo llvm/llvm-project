@@ -1153,8 +1153,31 @@ static unsigned int checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
     return false;
   };
 
+  auto IsFarProc = [](const FunctionType *T) {
+    // The definition of FARPROC depends on the platform in terms of its return
+    // type, which could be int, or long long, etc. We'll look for a source
+    // signature for: <integer type> (*)() and call that "close enough" to
+    // FARPROC to be sufficient to silence the diagnostic. This is similar to
+    // how we allow casts between function pointers and void * for supporting
+    // dlsym.
+    // Note: we could check for __stdcall on the function pointer as well, but
+    // that seems like splitting hairs.
+    if (!T->getReturnType()->isIntegerType())
+      return false;
+    if (const auto *PT = T->getAs<FunctionProtoType>())
+      return !PT->isVariadic() && PT->getNumParams() == 0;
+    return true;
+  };
+
   // Skip if either function type is void(*)(void)
   if (IsVoidVoid(SrcFTy) || IsVoidVoid(DstFTy))
+    return 0;
+
+  // On Windows, GetProcAddress() returns a FARPROC, which is a typedef for a
+  // function pointer type (with no prototype, in C). We don't want to diagnose
+  // this case so we don't diagnose idiomatic code on Windows.
+  if (Self.getASTContext().getTargetInfo().getTriple().isOSWindows() &&
+      IsFarProc(SrcFTy))
     return 0;
 
   // Check return type.
