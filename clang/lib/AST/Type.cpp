@@ -1940,13 +1940,10 @@ TagDecl *Type::getAsTagDecl() const {
 
 const TemplateSpecializationType *
 Type::getAsNonAliasTemplateSpecializationType() const {
-  for (const auto *T = this; /**/; /**/) {
-    const TemplateSpecializationType *TST =
-        T->getAs<TemplateSpecializationType>();
-    if (!TST || !TST->isTypeAlias())
-      return TST;
-    T = TST->desugar().getTypePtr();
-  }
+  const auto *TST = getAs<TemplateSpecializationType>();
+  while (TST && TST->isTypeAlias())
+    TST = TST->desugar()->getAs<TemplateSpecializationType>();
+  return TST;
 }
 
 bool Type::hasAttr(attr::Kind AK) const {
