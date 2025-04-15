@@ -124,6 +124,7 @@ static_library("Support") {
     "Parallel.cpp",
     "PluginLoader.cpp",
     "PrettyStackTrace.cpp",
+    "ProgramStack.cpp",
     "RISCVAttributeParser.cpp",
     "RISCVAttributes.cpp",
     "RISCVISAUtils.cpp",
