@@ -1733,9 +1733,10 @@ public:
 template <typename T, typename ValueT>
 class ValueEqualsMatcher : public SingleNodeMatcherInterface<T> {
   static_assert(std::is_base_of<CharacterLiteral, T>::value ||
-                std::is_base_of<CXXBoolLiteralExpr, T>::value ||
-                std::is_base_of<FloatingLiteral, T>::value ||
-                std::is_base_of<IntegerLiteral, T>::value,
+                    std::is_base_of<CXXBoolLiteralExpr, T>::value ||
+                    std::is_base_of<FloatingLiteral, T>::value ||
+                    std::is_base_of<IntegerLiteral, T>::value ||
+                    std::is_base_of<FixedPointLiteral, T>::value,
                 "the node must have a getValue method");
 
 public:
