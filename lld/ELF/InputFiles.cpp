@@ -591,6 +591,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     desc = desc.slice(alignTo<(ELFT::Is64Bits ? 8 : 4)>(size));
   }
 }
+
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
 // - Feature flags (32 bits) representing x86 or AArch64 features for
