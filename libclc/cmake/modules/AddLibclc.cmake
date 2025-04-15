@@ -466,16 +466,22 @@ function(libclc_configure_lib_source LIB_FILE_LIST)
   ## Add the generated convert files here to prevent adding the ones listed in
   ## SOURCES
   set( rel_files ${${LIB_FILE_LIST}} ) # Source directory input files, relative to the root dir
-  set( objects ${${LIB_FILE_LIST}} )   # A "set" of already-added input files
+  # A "set" of already-added input files
+  set( objects )
+  foreach( f ${${LIB_FILE_LIST}} )
+    get_filename_component( name ${f} NAME )
+    list( APPEND objects ${name} )
+  endforeach()
 
   foreach( l ${source_list} )
     file( READ ${l} file_list )
     string( REPLACE "\n" ";" file_list ${file_list} )
     get_filename_component( dir ${l} DIRECTORY )
     foreach( f ${file_list} )
+      get_filename_component( name ${f} NAME )
       # Only add each file once, so that targets can 'specialize' builtins
-      if( NOT ${f} IN_LIST objects )
-        list( APPEND objects ${f} )
+      if( NOT ${name} IN_LIST objects )
+        list( APPEND objects ${name} )
         list( APPEND rel_files ${dir}/${f} )
       endif()
     endforeach()
