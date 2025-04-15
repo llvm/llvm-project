@@ -1669,61 +1669,55 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
-  {
-    ScopedSaveAliaseesAndUsed S(M);
+  // Build aliases pointing to offsets into the jump table, and replace
+  // references to the original functions with references to the aliases.
+  for (unsigned I = 0; I != Functions.size(); ++I) {
+    Function *F = cast<Function>(Functions[I]->getGlobal());
+    bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    // Build aliases pointing to offsets into the jump table, and replace
-    // references to the original functions with references to the aliases.
-    for (unsigned I = 0; I != Functions.size(); ++I) {
-      Function *F = cast<Function>(Functions[I]->getGlobal());
-      bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
+        JumpTableType, JumpTable,
+        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
+                             ConstantInt::get(IntPtrTy, I)});
 
-      Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-          JumpTableType, JumpTable,
-          ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                               ConstantInt::get(IntPtrTy, I)});
+    const bool IsExported = Functions[I]->isExported();
+    if (!IsJumpTableCanonical) {
+      GlobalValue::LinkageTypes LT = IsExported ? GlobalValue::ExternalLinkage
+                                                : GlobalValue::InternalLinkage;
+      GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+                                                 F->getName() + ".cfi_jt",
+                                                 CombinedGlobalElemPtr, &M);
+      if (IsExported)
+        JtAlias->setVisibility(GlobalValue::HiddenVisibility);
+      else
+        appendToUsed(M, {JtAlias});
+    }
 
-      const bool IsExported = Functions[I]->isExported();
-      if (!IsJumpTableCanonical) {
-        GlobalValue::LinkageTypes LT = IsExported
-                                           ? GlobalValue::ExternalLinkage
-                                           : GlobalValue::InternalLinkage;
-        GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
-                                                   F->getName() + ".cfi_jt",
-                                                   CombinedGlobalElemPtr, &M);
-        if (IsExported)
-          JtAlias->setVisibility(GlobalValue::HiddenVisibility);
-        else
-          appendToUsed(M, {JtAlias});
-      }
+    if (IsExported) {
+      if (IsJumpTableCanonical)
+        ExportSummary->cfiFunctionDefs().emplace(F->getName());
+      else
+        ExportSummary->cfiFunctionDecls().emplace(F->getName());
+    }
 
-      if (IsExported) {
-        if (IsJumpTableCanonical)
-          ExportSummary->cfiFunctionDefs().emplace(F->getName());
-        else
-          ExportSummary->cfiFunctionDecls().emplace(F->getName());
-      }
+    if (!IsJumpTableCanonical) {
+      if (F->hasExternalWeakLinkage())
+        replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr,
+                                               IsJumpTableCanonical);
+      else
+        replaceCfiUses(F, CombinedGlobalElemPtr, IsJumpTableCanonical);
+    } else {
+      assert(F->getType()->getAddressSpace() == 0);
 
-      if (!IsJumpTableCanonical) {
-        if (F->hasExternalWeakLinkage())
-          replaceWeakDeclarationWithJumpTablePtr(F, CombinedGlobalElemPtr,
-                                                 IsJumpTableCanonical);
-        else
-          replaceCfiUses(F, CombinedGlobalElemPtr, IsJumpTableCanonical);
-      } else {
-        assert(F->getType()->getAddressSpace() == 0);
-
-        GlobalAlias *FAlias =
-            GlobalAlias::create(F->getValueType(), 0, F->getLinkage(), "",
-                                CombinedGlobalElemPtr, &M);
-        FAlias->setVisibility(F->getVisibility());
-        FAlias->takeName(F);
-        if (FAlias->hasName())
-          F->setName(FAlias->getName() + ".cfi");
-        replaceCfiUses(F, FAlias, IsJumpTableCanonical);
-        if (!F->hasLocalLinkage())
-          F->setVisibility(GlobalVariable::HiddenVisibility);
-      }
+      GlobalAlias *FAlias = GlobalAlias::create(
+          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
+      FAlias->setVisibility(F->getVisibility());
+      FAlias->takeName(F);
+      if (FAlias->hasName())
+        F->setName(FAlias->getName() + ".cfi");
+      replaceCfiUses(F, FAlias, IsJumpTableCanonical);
+      if (!F->hasLocalLinkage())
+        F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
 
@@ -2339,39 +2333,43 @@ bool LowerTypeTestsModule::lower() {
   if (GlobalClasses.empty())
     return false;
 
-  // For each disjoint set we found...
-  for (const auto &C : GlobalClasses) {
-    if (!C->isLeader())
-      continue;
+  {
+    ScopedSaveAliaseesAndUsed S(M);
+    // For each disjoint set we found...
+    for (const auto &C : GlobalClasses) {
+      if (!C->isLeader())
+        continue;
 
-    ++NumTypeIdDisjointSets;
-    // Build the list of type identifiers in this disjoint set.
-    std::vector<Metadata *> TypeIds;
-    std::vector<GlobalTypeMember *> Globals;
-    std::vector<ICallBranchFunnel *> ICallBranchFunnels;
-    for (auto M : GlobalClasses.members(*C)) {
-      if (isa<Metadata *>(M))
-        TypeIds.push_back(cast<Metadata *>(M));
-      else if (isa<GlobalTypeMember *>(M))
-        Globals.push_back(cast<GlobalTypeMember *>(M));
-      else
-        ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(M));
+      ++NumTypeIdDisjointSets;
+      // Build the list of type identifiers in this disjoint set.
+      std::vector<Metadata *> TypeIds;
+      std::vector<GlobalTypeMember *> Globals;
+      std::vector<ICallBranchFunnel *> ICallBranchFunnels;
+      for (auto M : GlobalClasses.members(*C)) {
+        if (isa<Metadata *>(M))
+          TypeIds.push_back(cast<Metadata *>(M));
+        else if (isa<GlobalTypeMember *>(M))
+          Globals.push_back(cast<GlobalTypeMember *>(M));
+        else
+          ICallBranchFunnels.push_back(cast<ICallBranchFunnel *>(M));
+      }
+
+      // Order type identifiers by unique ID for determinism. This ordering is
+      // stable as there is a one-to-one mapping between metadata and unique
+      // IDs.
+      llvm::sort(TypeIds, [&](Metadata *M1, Metadata *M2) {
+        return TypeIdInfo[M1].UniqueId < TypeIdInfo[M2].UniqueId;
+      });
+
+      // Same for the branch funnels.
+      llvm::sort(ICallBranchFunnels,
+                 [&](ICallBranchFunnel *F1, ICallBranchFunnel *F2) {
+                   return F1->UniqueId < F2->UniqueId;
+                 });
+
+      // Build bitsets for this disjoint set.
+      buildBitSetsFromDisjointSet(TypeIds, Globals, ICallBranchFunnels);
     }
-
-    // Order type identifiers by unique ID for determinism. This ordering is
-    // stable as there is a one-to-one mapping between metadata and unique IDs.
-    llvm::sort(TypeIds, [&](Metadata *M1, Metadata *M2) {
-      return TypeIdInfo[M1].UniqueId < TypeIdInfo[M2].UniqueId;
-    });
-
-    // Same for the branch funnels.
-    llvm::sort(ICallBranchFunnels,
-               [&](ICallBranchFunnel *F1, ICallBranchFunnel *F2) {
-                 return F1->UniqueId < F2->UniqueId;
-               });
-
-    // Build bitsets for this disjoint set.
-    buildBitSetsFromDisjointSet(TypeIds, Globals, ICallBranchFunnels);
   }
 
   allocateByteArrays();
