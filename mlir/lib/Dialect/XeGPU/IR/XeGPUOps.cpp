@@ -547,30 +547,18 @@ LogicalResult LoadGatherOp::verify() {
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
 
   auto chunkSize = tdescTy.getChunkSize();
-  // for SIMT code, the value should be 1D vector with size of chunkSize.
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() != tdescShape[0]) {
-    if (valueTy.getNumElements() != chunkSize) {
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
+    if (tdescTy.getLayoutAttr())
       return emitOpError()
-             << "Result shape " << makeString(valueShape)
-             << " is not a valid distribution for tensor descriptor "
-             << tdescTy;
-    } else { // valid SIMT code doesn't need LayoutAttr and TransposeAttr.
-      if (tdescTy.getLayoutAttr())
-        return emitOpError()
-               << "TensorDesc doesn't need LayoutAttr for SIMT code";
-      if (getTransposeAttr())
-        return emitOpError() << "doesn't need TransposeAttr for SIMT code";
-    }
-    return success();
-  } else if (valueTy.getRank() == 1 && tdescShape[0] == chunkSize) {
-    // for 1D vector and valueTy.getNumElements() == tdescShape[0] case,
-    // it is a valid SIMT code if chunkSize happens to be the same as
-    // subgroup size, e.g., tensor_desc<16x16xf16, chunkSize = 16>
+             << "TensorDesc doesn't need LayoutAttr for SIMT code";
+    if (getTransposeAttr())
+      return emitOpError() << "doesn't need TransposeAttr for SIMT code";
     return success();
   }
 
-  // For SIMD code verification.
-  if (tdescTy.getRank() == 2) {
+  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
     if (!getTransposeAttr())
       return emitOpError("load of rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
@@ -578,7 +566,8 @@ LogicalResult LoadGatherOp::verify() {
 
   if (tdescShape != valueShape)
     return emitOpError() << "Result shape " << makeString(valueShape)
-                         << " is not consistent with tensor descriptor "
+                         << " is neither a valid distribution for SIMT nor "
+                            "consistent with the tensor descriptor for SIMD "
                          << tdescTy;
   return success();
 }
@@ -613,30 +602,18 @@ LogicalResult StoreScatterOp::verify() {
     return emitOpError("dim-0 of the Mask and TensorDesc should be the same.");
 
   auto chunkSize = tdescTy.getChunkSize();
-  // for SIMT code, the value should be 1D vector with size of chunkSize.
-  if (valueTy.getRank() == 1 && valueTy.getNumElements() != tdescShape[0]) {
-    if (valueTy.getNumElements() != chunkSize) {
+
+  // a valid shape for SIMT case
+  if (valueTy.getRank() == 1 && valueTy.getNumElements() == chunkSize) {
+    if (tdescTy.getLayoutAttr())
       return emitOpError()
-             << "Value shape " << makeString(valueShape)
-             << " is not a valid distribution for tensor descriptor "
-             << tdescTy;
-    } else { // valid SIMT code doesn't need LayoutAttr and TransposeAttr.
-      if (tdescTy.getLayoutAttr())
-        return emitOpError()
-               << "TensorDesc doesn't need LayoutAttr for SIMT code";
-      if (getTransposeAttr())
-        return emitOpError() << "doesn't need TransposeAttr for SIMT code";
-    }
-    return success();
-  } else if (valueTy.getRank() == 1 && tdescShape[0] == chunkSize) {
-    // for 1D vector and valueTy.getNumElements() == tdescShape[0] case,
-    // it is a valid SIMT code if chunkSize happens to be the same as
-    // subgroup size, e.g., tensor_desc<16x16xf16, chunkSize = 16>
+             << "TensorDesc doesn't need LayoutAttr for SIMT code";
+    if (getTransposeAttr())
+      return emitOpError() << "doesn't need TransposeAttr for SIMT code";
     return success();
   }
 
-  // for SIMD code verification.
-  if (tdescTy.getRank() == 2) {
+  if (tdescTy.getRank() == 2 && valueTy.getRank() == 2) {
     if (!getTransposeAttr())
       return emitOpError("Store of a rank-2 tensor has to be transposed.");
     transpose({1, 0}, tdescShape);
@@ -644,7 +621,8 @@ LogicalResult StoreScatterOp::verify() {
 
   if (tdescShape != valueShape)
     return emitOpError() << "Value shape " << makeString(valueShape)
-                         << " is not consistent with tensor descriptor "
+                         << " is neither a valid distribution for SIMT nor "
+                            "consistent with the tensor descriptor for SIMD "
                          << tdescTy;
 
   return success();
