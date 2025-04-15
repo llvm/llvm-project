@@ -8,9 +8,7 @@ define i1 @uadd_sat_uge(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i1 @uadd_sat_uge(
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[ADD_SAT:%.*]] = call i64 @llvm.uadd.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp uge i64 [[ADD_SAT]], [[A]]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i64 [[ADD_SAT]], [[B]]
-; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 true, true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %add.sat = call i64 @llvm.uadd.sat.i64(i64 %a, i64 %b)
@@ -36,7 +34,7 @@ define i64 @usub_sat_when_lhs_ugt_rhs(i64 noundef %a, i64 noundef %b) {
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ugt i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
+; CHECK-NEXT:    [[SUB_SAT:%.*]] = sub i64 [[A]], [[B]]
 ; CHECK-NEXT:    ret i64 [[SUB_SAT]]
 ;
   %precond = icmp ugt i64 %a, %b
@@ -50,8 +48,7 @@ define i64 @usub_sat_when_lhs_ule_rhs(i64 noundef %a, i64 noundef %b) {
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[PRECOND:%.*]] = icmp ule i64 [[A]], [[B]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    [[SUB_SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[A]], i64 [[B]])
-; CHECK-NEXT:    ret i64 [[SUB_SAT]]
+; CHECK-NEXT:    ret i64 0
 ;
   %precond = icmp ule i64 %a, %b
   call void @llvm.assume(i1 %precond)
