@@ -10,12 +10,14 @@
 // extensions that will eventually be implemented in Fortran.
 
 #include "flang/Runtime/extensions.h"
+#include "unit.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
 #include "flang/Runtime/command.h"
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
+#include "flang/Runtime/iostat-consts.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -274,6 +276,34 @@ void RTNAME(Perror)(const char *str) { perror(str); }
 
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
+
+// Extension procedures related to I/O
+
+namespace io {
+std::int32_t RTNAME(Fseek)(int unitNumber, std::int64_t zeroBasedPos,
+    int whence, const char *sourceFileName, int lineNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    Terminator terminator{sourceFileName, lineNumber};
+    IoErrorHandler handler{terminator};
+    if (unit->Fseek(
+            zeroBasedPos, static_cast<enum FseekWhence>(whence), handler)) {
+      return IostatOk;
+    } else {
+      return IostatCannotReposition;
+    }
+  } else {
+    return IostatBadUnitNumber;
+  }
+}
+
+std::int64_t RTNAME(Ftell)(int unitNumber) {
+  if (ExternalFileUnit * unit{ExternalFileUnit::LookUp(unitNumber)}) {
+    return unit->InquirePos() - 1; // zero-based result
+  } else {
+    return -1;
+  }
+}
+} // namespace io
 
 } // namespace Fortran::runtime
 } // extern "C"

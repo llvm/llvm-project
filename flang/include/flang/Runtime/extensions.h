@@ -38,6 +38,11 @@ void FORTRAN_PROCEDURE_NAME(fdate)(char *string, std::int64_t length);
 
 void RTNAME(Free)(std::intptr_t ptr);
 
+// Common extensions FSEEK & FTELL, variously named
+std::int32_t RTNAME(Fseek)(int unit, std::int64_t zeroBasedPos, int whence,
+    const char *sourceFileName, int lineNumber);
+std::int64_t RTNAME(Ftell)(int unit);
+
 // GNU Fortran 77 compatibility function IARGC.
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)();
 

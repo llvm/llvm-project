@@ -241,7 +241,8 @@ void LandingPadInliningInfo::forwardResume(
   BasicBlock *Dest = getInnerResumeDest();
   BasicBlock *Src = RI->getParent();
 
-  BranchInst::Create(Dest, Src);
+  auto *BI = BranchInst::Create(Dest, Src);
+  BI->setDebugLoc(RI->getDebugLoc());
 
   // Update the PHIs in the destination. They were inserted in an order which
   // makes this work.
@@ -1381,7 +1382,8 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
   // behavior was just using a poison value.
   static const Attribute::AttrKind ExactAttrsToPropagate[] = {
       Attribute::Dereferenceable, Attribute::DereferenceableOrNull,
-      Attribute::NonNull, Attribute::Alignment, Attribute::Range};
+      Attribute::NonNull,         Attribute::NoFPClass,
+      Attribute::Alignment,       Attribute::Range};
 
   for (unsigned I = 0, E = CB.arg_size(); I < E; ++I) {
     ValidObjParamAttrs.emplace_back(AttrBuilder{CB.getContext()});
@@ -1463,6 +1465,10 @@ static void AddParamAndFnBasicAttributes(const CallBase &CB,
               NewAB.addRangeAttr(CombinedRange);
             }
           }
+
+          if (FPClassTest ExistingNoFP = AL.getParamNoFPClass(I))
+            NewAB.addNoFPClassAttr(ExistingNoFP | NewAB.getNoFPClass());
+
           AL = AL.addParamAttributes(Context, I, NewAB);
         } else if (NewInnerCB->getArgOperand(I)->getType()->isPointerTy()) {
           // Check if the underlying value for the parameter is an argument.
@@ -2356,7 +2362,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                         AAResults *CalleeAAR,
                                         bool InsertLifetime,
                                         Function *ForwardVarArgsTo) {
-  if (CtxProf.contexts().empty())
+  if (!CtxProf.isInSpecializedModule())
     return InlineFunction(CB, IFI, MergeAttributes, CalleeAAR, InsertLifetime,
                           ForwardVarArgsTo);
 

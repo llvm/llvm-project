@@ -121,6 +121,11 @@ public:
     return cir::BoolAttr::get(getContext(), getBoolTy(), state);
   }
 
+  mlir::Value createNot(mlir::Value value) {
+    return create<cir::UnaryOp>(value.getLoc(), value.getType(),
+                                cir::UnaryOpKind::Not, value);
+  }
+
   /// Create a do-while operation.
   cir::DoWhileOp createDoWhile(
       mlir::Location loc,
@@ -144,6 +149,16 @@ public:
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> bodyBuilder,
       llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)> stepBuilder) {
     return create<cir::ForOp>(loc, condBuilder, bodyBuilder, stepBuilder);
+  }
+
+  /// Create a break operation.
+  cir::BreakOp createBreak(mlir::Location loc) {
+    return create<cir::BreakOp>(loc);
+  }
+
+  /// Create a continue operation.
+  cir::ContinueOp createContinue(mlir::Location loc) {
+    return create<cir::ContinueOp>(loc);
   }
 
   mlir::TypedAttr getConstPtrAttr(mlir::Type type, int64_t value) {
@@ -184,6 +199,19 @@ public:
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
                                    mlir::Value stride) {
     return create<cir::PtrStrideOp>(loc, base.getType(), base, stride);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Call operators
+  //===--------------------------------------------------------------------===//
+
+  cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee) {
+    auto op = create<cir::CallOp>(loc, callee);
+    return op;
+  }
+
+  cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee) {
+    return createCallOp(loc, mlir::SymbolRefAttr::get(callee));
   }
 
   //===--------------------------------------------------------------------===//
@@ -318,6 +346,11 @@ public:
   mlir::Value createNUWAdd(mlir::Location loc, mlir::Value lhs,
                            mlir::Value rhs) {
     return createAdd(loc, lhs, rhs, OverflowBehavior::NoUnsignedWrap);
+  }
+
+  cir::CmpOp createCompare(mlir::Location loc, cir::CmpOpKind kind,
+                           mlir::Value lhs, mlir::Value rhs) {
+    return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
   //

@@ -3981,7 +3981,9 @@ public:
       if (Result.isInvalid())
         return TemplateArgumentLoc();
 
-      return TemplateArgumentLoc(Result.get(), Result.get());
+      return TemplateArgumentLoc(TemplateArgument(Result.get(),
+                                                  /*IsCanonical=*/false),
+                                 Result.get());
     }
 
     case TemplateArgument::Template:
@@ -4941,7 +4943,8 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
     E = SemaRef.ActOnConstantExpression(E);
     if (E.isInvalid())
       return true;
-    Output = TemplateArgumentLoc(TemplateArgument(E.get()), E.get());
+    Output = TemplateArgumentLoc(
+        TemplateArgument(E.get(), /*IsCanonical=*/false), E.get());
     return false;
   }
   }
@@ -7765,17 +7768,23 @@ QualType TreeTransform<Derived>::TransformDependentTemplateSpecializationType(
   NewTemplateArgs.setLAngleLoc(TL.getLAngleLoc());
   NewTemplateArgs.setRAngleLoc(TL.getRAngleLoc());
 
-  typedef TemplateArgumentLocContainerIterator<
-  DependentTemplateSpecializationTypeLoc> ArgIterator;
-  if (getDerived().TransformTemplateArguments(ArgIterator(TL, 0),
-                                              ArgIterator(TL, TL.getNumArgs()),
-                                              NewTemplateArgs))
+  auto ArgsRange = llvm::make_range<TemplateArgumentLocContainerIterator<
+      DependentTemplateSpecializationTypeLoc>>({TL, 0}, {TL, TL.getNumArgs()});
+
+  if (getDerived().TransformTemplateArguments(ArgsRange.begin(),
+                                              ArgsRange.end(), NewTemplateArgs))
     return QualType();
+  bool TemplateArgumentsChanged = !llvm::equal(
+      ArgsRange, NewTemplateArgs.arguments(),
+      [](const TemplateArgumentLoc &A, const TemplateArgumentLoc &B) {
+        return A.getArgument().structurallyEquals(B.getArgument());
+      });
 
   const DependentTemplateStorage &DTN = T->getDependentTemplateName();
 
   QualType Result = TL.getType();
-  if (getDerived().AlwaysRebuild() || SS.getScopeRep() != DTN.getQualifier()) {
+  if (getDerived().AlwaysRebuild() || SS.getScopeRep() != DTN.getQualifier() ||
+      TemplateArgumentsChanged) {
     TemplateName Name = getDerived().RebuildTemplateName(
         SS, TL.getTemplateKeywordLoc(), DTN.getName(), TL.getTemplateNameLoc(),
         /*ObjectType=*/QualType(), /*FirstQualifierInScope=*/nullptr,
@@ -11760,7 +11769,7 @@ void OpenACCClauseTransform<Derived>::VisitSelfClause(
     }
 
     ParsedClause.setVarListDetails(InstantiatedVarList,
-                                   /*IsReadOnly=*/false, /*IsZero=*/false);
+                                   OpenACCModifierKind::Invalid);
 
     NewClause = OpenACCSelfClause::Create(
         Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11818,7 +11827,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11830,7 +11839,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitHostClause(
     const OpenACCHostClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCHostClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11842,7 +11851,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitDeviceClause(
     const OpenACCDeviceClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCDeviceClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11854,7 +11863,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCFirstPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11866,7 +11875,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitNoCreateClause(
     const OpenACCNoCreateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCNoCreateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11878,7 +11887,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPresentClause(
     const OpenACCPresentClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCPresentClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
@@ -11890,12 +11899,13 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitCopyClause(
     const OpenACCCopyClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 C.getModifierList());
 
   NewClause = OpenACCCopyClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.getVarList(), ParsedClause.getEndLoc());
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
+      ParsedClause.getEndLoc());
 }
 
 template <typename Derived>
@@ -11923,13 +11933,13 @@ void OpenACCClauseTransform<Derived>::VisitBindClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitCopyInClause(
     const OpenACCCopyInClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()), C.isReadOnly(),
-                                 /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+                                 C.getModifierList());
 
   NewClause = OpenACCCopyInClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isReadOnly(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 
@@ -11937,12 +11947,12 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitCopyOutClause(
     const OpenACCCopyOutClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
   NewClause = OpenACCCopyOutClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 
@@ -11950,12 +11960,12 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitCreateClause(
     const OpenACCCreateClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, C.isZero());
+                                 C.getModifierList());
 
   NewClause = OpenACCCreateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getClauseKind(),
       ParsedClause.getBeginLoc(), ParsedClause.getLParenLoc(),
-      ParsedClause.isZero(), ParsedClause.getVarList(),
+      ParsedClause.getModifierList(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
 }
 template <typename Derived>
@@ -11969,8 +11979,7 @@ void OpenACCClauseTransform<Derived>::VisitAttachClause(
         OpenACCClauseKind::Attach, E);
   });
 
-  ParsedClause.setVarListDetails(VarList,
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCAttachClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
@@ -11983,16 +11992,12 @@ void OpenACCClauseTransform<Derived>::VisitDetachClause(
   llvm::SmallVector<Expr *> VarList = VisitVarList(C.getVarList());
 
   // Ensure each var is a pointer type.
-  VarList.erase(
-      std::remove_if(VarList.begin(), VarList.end(),
-                     [&](Expr *E) {
-                       return Self.getSema().OpenACC().CheckVarIsPointerType(
-                           OpenACCClauseKind::Detach, E);
-                     }),
-      VarList.end());
+  llvm::erase_if(VarList, [&](Expr *E) {
+    return Self.getSema().OpenACC().CheckVarIsPointerType(
+        OpenACCClauseKind::Detach, E);
+  });
 
-  ParsedClause.setVarListDetails(VarList,
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCDetachClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
@@ -12003,7 +12008,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitDeleteClause(
     const OpenACCDeleteClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
   NewClause = OpenACCDeleteClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
@@ -12014,7 +12019,7 @@ template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitUseDeviceClause(
     const OpenACCUseDeviceClause &C) {
   ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+                                 OpenACCModifierKind::Invalid);
   NewClause = OpenACCUseDeviceClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
@@ -12032,8 +12037,7 @@ void OpenACCClauseTransform<Derived>::VisitDevicePtrClause(
         OpenACCClauseKind::DevicePtr, E);
   });
 
-  ParsedClause.setVarListDetails(VarList,
-                                 /*IsReadOnly=*/false, /*IsZero=*/false);
+  ParsedClause.setVarListDetails(VarList, OpenACCModifierKind::Invalid);
   NewClause = OpenACCDevicePtrClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
@@ -16127,9 +16131,10 @@ TreeTransform<Derived>::TransformSizeOfPackExpr(SizeOfPackExpr *E) {
             E->getPackLoc());
         if (DRE.isInvalid())
           return ExprError();
-        ArgStorage = new (getSema().Context)
-            PackExpansionExpr(getSema().Context.DependentTy, DRE.get(),
-                              E->getPackLoc(), std::nullopt);
+        ArgStorage = TemplateArgument(
+            new (getSema().Context)
+                PackExpansionExpr(DRE.get(), E->getPackLoc(), std::nullopt),
+            /*IsCanonical=*/false);
       }
       PackArgs = ArgStorage;
     }

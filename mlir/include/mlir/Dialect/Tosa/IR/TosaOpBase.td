@@ -72,7 +72,7 @@ class Tosa_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
 // feed numerical precision parameters to the functional implementation of TOSA
 // operators.
 // The functional behavior is defined in the TOSA specification maintained at
-// https://developer.mlplatform.org/w/tosa/. TOSA leverages MLIR's built in
+// https://www.mlplatform.org/tosa/tosa_spec.html. TOSA leverages MLIR's built in
 // quantization support: https://mlir.llvm.org/docs/Quantization/, and supports
 // uniform quantization. Depending on datatype, asymmetric and symmetric
 // quantization are supported. The types themselves are described in

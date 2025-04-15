@@ -2593,6 +2593,19 @@ class Type(Structure):
         """
         return Type.from_result(conf.lib.clang_getCanonicalType(self), (self,))
 
+    def get_fully_qualified_name(self, policy, with_global_ns_prefix=False):
+        """
+        Get the fully qualified name for a type.
+
+        This includes full qualification of all template parameters.
+
+        policy - This PrintingPolicy can further refine the type formatting
+        with_global_ns_prefix - If true, prepend '::' to qualified names
+        """
+        return _CXString.from_result(
+            conf.lib.clang_getFullyQualifiedName(self, policy, with_global_ns_prefix)
+        )
+
     def is_const_qualified(self):
         """Determine whether a Type has the "const" qualifier set.
 
@@ -4022,6 +4035,7 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_getTypeSpelling", [Type], _CXString),
     ("clang_hashCursor", [Cursor], c_uint),
     ("clang_isAttribute", [CursorKind], bool),
+    ("clang_getFullyQualifiedName", [Type, PrintingPolicy, c_uint], _CXString),
     ("clang_isConstQualifiedType", [Type], bool),
     ("clang_isCursorDefinition", [Cursor], bool),
     ("clang_isDeclaration", [CursorKind], bool),

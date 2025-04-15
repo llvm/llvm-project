@@ -662,6 +662,70 @@ ExprResult Parser::ParseOpenACCConditionExpr() {
   return R.isInvalid() ? ExprError() : R.get().second;
 }
 
+// Tries to parse the 'modifier-list' for a 'copy', 'copyin', 'copyout', or
+// 'create' clause.
+OpenACCModifierKind Parser::tryParseModifierList(OpenACCClauseKind CK) {
+  // Use the tentative parsing to decide whether we are a comma-delmited list of
+  // identifers ending in a colon so we can do an actual parse with diagnostics.
+  {
+    RevertingTentativeParsingAction TPA{*this};
+    // capture any <ident><comma> pairs.
+    while (isTokenIdentifierOrKeyword(*this, getCurToken()) &&
+           NextToken().is(tok::comma)) {
+      ConsumeToken();
+      ConsumeToken();
+    }
+
+    if (!isTokenIdentifierOrKeyword(*this, getCurToken()) ||
+        !NextToken().is(tok::colon)) {
+      // No modifiers as this isn't a valid modifier-list.
+      return OpenACCModifierKind::Invalid;
+    }
+  }
+
+  auto GetModKind = [](Token T) {
+    return StringSwitch<OpenACCModifierKind>(T.getIdentifierInfo()->getName())
+        .Case("always", OpenACCModifierKind::Always)
+        .Case("alwaysin", OpenACCModifierKind::AlwaysIn)
+        .Case("alwaysout", OpenACCModifierKind::AlwaysOut)
+        .Case("readonly", OpenACCModifierKind::Readonly)
+        .Case("zero", OpenACCModifierKind::Zero)
+        .Default(OpenACCModifierKind::Invalid);
+  };
+
+  OpenACCModifierKind CurModList = OpenACCModifierKind::Invalid;
+  auto ConsumeModKind = [&]() {
+    Token IdentToken = getCurToken();
+    OpenACCModifierKind NewKind = GetModKind(IdentToken);
+
+    if (NewKind == OpenACCModifierKind::Invalid)
+      Diag(IdentToken.getLocation(), diag::err_acc_modifier)
+          << diag::ACCModifier::Unknown << IdentToken.getIdentifierInfo() << CK;
+    else if ((NewKind & CurModList) != OpenACCModifierKind::Invalid)
+      Diag(IdentToken.getLocation(), diag::err_acc_modifier)
+          << diag::ACCModifier::Duplicate << IdentToken.getIdentifierInfo()
+          << CK;
+    else
+      CurModList |= NewKind;
+
+    // Consumes the identifier.
+    ConsumeToken();
+    // Consumes the comma or colon.
+    ConsumeToken();
+  };
+
+  // Inspect all but the last item. We inspected enough to know that our current
+  // token is the identifier-like thing, so just check for the comma.
+  while (NextToken().is(tok::comma))
+    ConsumeModKind();
+
+  // Above we confirmed that this should be correct/we should be on the last
+  // item.
+  ConsumeModKind();
+
+  return CurModList;
+}
+
 // OpenACC 3.3, section 1.7:
 // To simplify the specification and convey appropriate constraint information,
 // a pqr-list is a comma-separated list of pdr items. The one exception is a
@@ -981,26 +1045,21 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
 
       break;
     }
+    case OpenACCClauseKind::Copy:
+    case OpenACCClauseKind::PCopy:
+    case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::CopyIn:
     case OpenACCClauseKind::PCopyIn:
-    case OpenACCClauseKind::PresentOrCopyIn: {
-      bool IsReadOnly = tryParseAndConsumeSpecialTokenKind(
-          *this, OpenACCSpecialTokenKind::ReadOnly, ClauseKind);
-      ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
-                                     IsReadOnly,
-                                     /*IsZero=*/false);
-      break;
-    }
-    case OpenACCClauseKind::Create:
-    case OpenACCClauseKind::PCreate:
-    case OpenACCClauseKind::PresentOrCreate:
+    case OpenACCClauseKind::PresentOrCopyIn:
     case OpenACCClauseKind::CopyOut:
     case OpenACCClauseKind::PCopyOut:
-    case OpenACCClauseKind::PresentOrCopyOut: {
-      bool IsZero = tryParseAndConsumeSpecialTokenKind(
-          *this, OpenACCSpecialTokenKind::Zero, ClauseKind);
+    case OpenACCClauseKind::PresentOrCopyOut:
+    case OpenACCClauseKind::Create:
+    case OpenACCClauseKind::PCreate:
+    case OpenACCClauseKind::PresentOrCreate: {
+      OpenACCModifierKind ModList = tryParseModifierList(ClauseKind);
       ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
-                                     /*IsReadOnly=*/false, IsZero);
+                                     ModList);
       break;
     }
     case OpenACCClauseKind::Reduction: {
@@ -1026,15 +1085,12 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
     case OpenACCClauseKind::Detach:
     case OpenACCClauseKind::DevicePtr:
     case OpenACCClauseKind::UseDevice:
-    case OpenACCClauseKind::Copy:
-    case OpenACCClauseKind::PCopy:
-    case OpenACCClauseKind::PresentOrCopy:
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::NoCreate:
     case OpenACCClauseKind::Present:
     case OpenACCClauseKind::Private:
       ParsedClause.setVarListDetails(ParseOpenACCVarList(DirKind, ClauseKind),
-                                     /*IsReadOnly=*/false, /*IsZero=*/false);
+                                     OpenACCModifierKind::Invalid);
       break;
     case OpenACCClauseKind::Collapse: {
       bool HasForce = tryParseAndConsumeSpecialTokenKind(

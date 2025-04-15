@@ -1458,6 +1458,9 @@ def err_acc_invalid_reduction_operator
     : Error<"invalid reduction operator,  expected '+', '*', 'max', 'min', "
             "'&', '|', '^', '&&', or '||'">;
 def err_acc_incorrect_bind_arg : Error<"expected identifier or string literal">;
+def err_acc_modifier
+    : Error<"%enum_select<ACCModifier>{%Unknown{unknown}|%Duplicate{duplicate}}"
+            "0 modifier %1 in OpenACC modifier-list on '%2' clause">;
 
 // OpenMP support.
 def warn_pragma_omp_ignored : Warning<
@@ -1636,7 +1639,7 @@ def note_omp_ctx_compatible_set_and_selector_for_property
            "'match(%2={%1(%0)})'">;
 def warn_omp_ctx_incompatible_score_for_property
     : Warning<"the context selector '%0' in the context set '%1' cannot have a "
-              "score ('%2'); score ignored">,
+              "score (%quoted2); score ignored">,
       InGroup<OpenMPClauses>;
 def warn_omp_more_one_device_type_clause
     : Warning<"more than one 'device_type' clause is specified">,
