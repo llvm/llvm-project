@@ -10,6 +10,7 @@
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
 #include <__assert>
+#include <__concepts/boolean_testable.h>
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/unexpect.h>
@@ -1139,8 +1140,12 @@ public:
 
   // [expected.object.eq], equality operators
   template <class _T2, class _E2>
-    requires(!is_void_v<_T2>)
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
+    requires(!is_void_v<_T2>) && requires {
+      { *__x == *__y } -> __boolean_testable;
+      { __x.error() == __y.error() } -> __boolean_testable;
+    }
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1153,12 +1158,20 @@ public:
   }
 
   template <class _T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
+    requires(!__is_std_expected<_T2>::value) && requires {
+      { *__x == __v } -> __boolean_testable;
+    }
+  {
     return __x.__has_val() && static_cast<bool>(__x.__val() == __v);
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __e)
+    requires requires {
+      { __x.error() == __e.error() } -> __boolean_testable;
+    }
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __e.error());
   }
 };
@@ -1851,7 +1864,11 @@ public:
   // [expected.void.eq], equality operators
   template <class _T2, class _E2>
     requires is_void_v<_T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const expected<_T2, _E2>& __y)
+    requires requires {
+      { __x.error() == __y.error() } -> __boolean_testable;
+    }
+  {
     if (__x.__has_val() != __y.__has_val()) {
       return false;
     } else {
@@ -1860,7 +1877,11 @@ public:
   }
 
   template <class _E2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y) {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const unexpected<_E2>& __y)
+    requires requires {
+      { __x.error() == __y.error() } -> __boolean_testable;
+    }
+  {
     return !__x.__has_val() && static_cast<bool>(__x.__unex() == __y.error());
   }
 };
