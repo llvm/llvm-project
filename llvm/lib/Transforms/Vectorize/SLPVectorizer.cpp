@@ -8402,11 +8402,7 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
             continue;
           }
           SmallVector<std::pair<LoadInst *, int>> LocalLoadsDists(LoadsDists);
-          SmallVector<LoadInst *> OriginalLoads(LocalLoadsDists.size());
-          transform(LoadsDists, OriginalLoads.begin(),
-                    [](const std::pair<LoadInst *, int> &L) -> LoadInst * {
-                      return L.first;
-                    });
+          SmallVector<LoadInst *> OriginalLoads(make_first_range(LoadsDists));
           stable_sort(LocalLoadsDists, LoadSorter);
           SmallVector<LoadInst *> Loads;
           unsigned MaxConsecutiveDistance = 0;
