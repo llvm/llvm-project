@@ -43,7 +43,7 @@ struct CIRRecordLowering final {
     mlir::Type data;
     union {
       const FieldDecl *fieldDecl;
-      // CXXRecordDecl will be used here when supported.
+      // CXXRecordDecl will be used here when base types are supported.
     };
     MemberInfo(CharUnits offset, InfoKind kind, mlir::Type data,
                const FieldDecl *fieldDecl = nullptr)
