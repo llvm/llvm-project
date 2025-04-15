@@ -50,14 +50,8 @@ class VecDesc {
 public:
   VecDesc() = delete;
   VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
-          ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix)
-      : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
-        VectorizationFactor(VectorizationFactor), Masked(Masked),
-        VABIPrefix(VABIPrefix), CC(std::nullopt) {}
-
-  VecDesc(StringRef ScalarFnName, StringRef VectorFnName,
           ElementCount VectorizationFactor, bool Masked, StringRef VABIPrefix,
-          CallingConv::ID Conv)
+          std::optional<CallingConv::ID> Conv = std::nullopt)
       : ScalarFnName(ScalarFnName), VectorFnName(VectorFnName),
         VectorizationFactor(VectorizationFactor), Masked(Masked),
         VABIPrefix(VABIPrefix), CC(Conv) {}
