@@ -32,7 +32,6 @@ using namespace lld::elf;
 void SymbolTable::redirect(Symbol *from, Symbol *to) {
   int &fromIdx = symMap[CachedHashStringRef(from->getName())];
   const int toIdx = symMap[CachedHashStringRef(to->getName())];
-
   fromIdx = toIdx;
 }
 

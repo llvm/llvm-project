@@ -80,6 +80,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
+#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/Parallel.h"
@@ -558,7 +559,7 @@ template <class ELFT> void ICF<ELFT>::run() {
     return {ctx, ctx.arg.printIcfSections ? DiagLevel::Msg : DiagLevel::None};
   };
 
-  DenseMap<Symbol *, Symbol *> symbolMap;
+  EquivalenceClasses<Symbol *> symbolEquivalence;
   // Merge sections by the equivalence class.
   // Merge symbols identified as equivalent during ICF
   forEachClassRange(0, sections.size(), [&](size_t begin, size_t end) {
@@ -577,14 +578,7 @@ template <class ELFT> void ICF<ELFT>::run() {
         if (syms[i] == replacedSyms[i] || !syms[i]->isGlobal() ||
             !replacedSyms[i]->isGlobal())
           continue;
-        auto [it, inserted] =
-            symbolMap.insert(std::make_pair(replacedSyms[i], syms[i]));
-        print() << "  selected symbol: " << syms[i]->getName().data()
-                << "; replaced symbol: " << replacedSyms[i]->getName().data();
-        if (!inserted) {
-          print() << "    replacement already exists: "
-                  << it->getSecond()->getName().data();
-        }
+        symbolEquivalence.unionSets(syms[i], replacedSyms[i]);
       }
 
       // At this point we know sections merged are fully identical and hence
@@ -606,15 +600,23 @@ template <class ELFT> void ICF<ELFT>::run() {
   };
   for (Symbol *sym : ctx.symtab->getSymbols()) {
     fold(sym);
-    if (Symbol *s = symbolMap.lookup(sym))
-      ctx.symtab->redirect(sym, s);
+    auto it = symbolEquivalence.findLeader(sym);
+    if (it != symbolEquivalence.member_end() && *it != sym) {
+      print() << "Redirecting " << sym->getName() << " to " << (*it)->getName();
+      ctx.symtab->redirect(sym, *it);
+    }
   }
   parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
-    for (Symbol *&sym : file->getMutableGlobalSymbols())
-      if (Symbol *s = symbolMap.lookup(sym))
-        sym = s;
+    for (Symbol *&sym : file->getMutableGlobalSymbols()) {
+      auto it = symbolEquivalence.findLeader(sym);
+      if (it != symbolEquivalence.member_end() && *it != sym) {
+        print() << "Redirecting " << sym->getName() << " to "
+                << (*it)->getName();
+        sym = *it;
+      }
+    }
   });
 
   // InputSectionDescription::sections is populated by processSectionCommands().

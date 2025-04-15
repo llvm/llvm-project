@@ -11,16 +11,15 @@
 # EXE-NOT:  {{.}}
 # EXE:      selected section {{.*}}:(.text.g1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.g2)
-# EXE-NEXT:   selected symbol: f1; replaced symbol: f2
 # EXE-NEXT:   removing identical section {{.*}}:(.text.g3)
 # EXE-NEXT: selected section {{.*}}:(.text.f1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.f2)
 # EXE-NEXT: selected section {{.*}}:(.text.h1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h2)
-# EXE-NEXT:   selected symbol: g1; replaced symbol: g2
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h3)
-# EXE-NEXT:   selected symbol: g1; replaced symbol: g3
-# EXE-NOT:  {{.}}
+# EXE-NEXT: Redirecting f2 to f1
+# EXE-NEXT: Redirecting g2 to g1
+# EXE-NEXT: Redirecting g3 to g1
 
 ## Definitions are preemptible in a DSO. Only leaf functions can be folded.
 # DSO-NOT:  {{.}}
