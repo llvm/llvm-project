@@ -80,21 +80,6 @@
       (__v4df)(__m256d)(A), (__v4df)(__m256d)(B), (int)(C),                    \
       (__v4df)_mm256_setzero_pd(), (__mmask8)(U), _MM_FROUND_NO_EXC))
 
-#define _mm256_minmax_round_pd(A, B, C, R)                                     \
-  ((__m256d)__builtin_ia32_vminmaxpd256_round_mask(                            \
-      (__v4df)(__m256d)(A), (__v4df)(__m256d)(B), (int)(C),                    \
-      (__v4df)_mm256_undefined_pd(), (__mmask8)-1, (int)(R)))
-
-#define _mm256_mask_minmax_round_pd(W, U, A, B, C, R)                          \
-  ((__m256d)__builtin_ia32_vminmaxpd256_round_mask(                            \
-      (__v4df)(__m256d)(A), (__v4df)(__m256d)(B), (int)(C),                    \
-      (__v4df)(__m256d)(W), (__mmask8)(U), (int)(R)))
-
-#define _mm256_maskz_minmax_round_pd(U, A, B, C, R)                            \
-  ((__m256d)__builtin_ia32_vminmaxpd256_round_mask(                            \
-      (__v4df)(__m256d)(A), (__v4df)(__m256d)(B), (int)(C),                    \
-      (__v4df)_mm256_setzero_pd(), (__mmask8)(U), (int)(R)))
-
 #define _mm_minmax_ph(A, B, C)                                                 \
   ((__m128h)__builtin_ia32_vminmaxph128_mask(                                  \
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (int)(C),                    \
@@ -125,21 +110,6 @@
       (__v16hf)(__m256h)(A), (__v16hf)(__m256h)(B), (int)(C),                  \
       (__v16hf)_mm256_setzero_ph(), (__mmask16)(U), _MM_FROUND_NO_EXC))
 
-#define _mm256_minmax_round_ph(A, B, C, R)                                     \
-  ((__m256h)__builtin_ia32_vminmaxph256_round_mask(                            \
-      (__v16hf)(__m256h)(A), (__v16hf)(__m256h)(B), (int)(C),                  \
-      (__v16hf)_mm256_undefined_ph(), (__mmask16)-1, (int)(R)))
-
-#define _mm256_mask_minmax_round_ph(W, U, A, B, C, R)                          \
-  ((__m256h)__builtin_ia32_vminmaxph256_round_mask(                            \
-      (__v16hf)(__m256h)(A), (__v16hf)(__m256h)(B), (C),                       \
-      (__v16hf)(__m256h)(W), (__mmask16)(U), (int)(R)))
-
-#define _mm256_maskz_minmax_round_ph(U, A, B, C, R)                            \
-  ((__m256h)__builtin_ia32_vminmaxph256_round_mask(                            \
-      (__v16hf)(__m256h)(A), (__v16hf)(__m256h)(B), (int)(C),                  \
-      (__v16hf)_mm256_setzero_ph(), (__mmask16)(U), (int)(R)))
-
 #define _mm_minmax_ps(A, B, C)                                                 \
   ((__m128)__builtin_ia32_vminmaxps128_mask(                                   \
       (__v4sf)(__m128)(A), (__v4sf)(__m128)(B), (int)(C),                      \
@@ -169,21 +139,6 @@
   ((__m256)__builtin_ia32_vminmaxps256_round_mask(                             \
       (__v8sf)(__m256)(A), (__v8sf)(__m256)(B), (int)(C),                      \
       (__v8sf)_mm256_setzero_ps(), (__mmask8)(U), _MM_FROUND_NO_EXC))
-
-#define _mm256_minmax_round_ps(A, B, C, R)                                     \
-  ((__m256)__builtin_ia32_vminmaxps256_round_mask(                             \
-      (__v8sf)(__m256)(A), (__v8sf)(__m256)(B), (int)(C),                      \
-      (__v8sf)_mm256_undefined_ps(), (__mmask8)-1, (int)(R)))
-
-#define _mm256_mask_minmax_round_ps(W, U, A, B, C, R)                          \
-  ((__m256)__builtin_ia32_vminmaxps256_round_mask(                             \
-      (__v8sf)(__m256)(A), (__v8sf)(__m256)(B), (int)(C), (__v8sf)(__m256)(W), \
-      (__mmask8)(U), (int)(R)))
-
-#define _mm256_maskz_minmax_round_ps(U, A, B, C, R)                            \
-  ((__m256)__builtin_ia32_vminmaxps256_round_mask(                             \
-      (__v8sf)(__m256)(A), (__v8sf)(__m256)(B), (int)(C),                      \
-      (__v8sf)_mm256_setzero_ps(), (__mmask8)(U), (int)(R)))
 
 #define _mm_minmax_sd(A, B, C)                                                 \
   ((__m128d)__builtin_ia32_vminmaxsd_round_mask(                               \
