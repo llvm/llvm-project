@@ -1981,23 +1981,28 @@ LogicalResult tosa::TransposeOp::verify() {
           .failed()) {
     return failure();
   }
-  TensorType inputType = getInput1().getType();
-  TensorType outputType = getOutput().getType();
+
+  const ShapeAdaptor inputShape(getInput1().getType());
+  const ShapeAdaptor outputShape(getOutput().getType());
+
   const llvm::ArrayRef<int32_t> constantPerms = getPerms();
 
-  if (inputType.hasRank() &&
-      constantPerms.size() != static_cast<size_t>(inputType.getRank()))
+  if (inputShape.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(inputShape.getRank()))
     return emitOpError() << "expected perms attribute to have size "
-                         << inputType.getRank() << " (input rank) but got size "
+                         << inputShape.getRank()
+                         << " (input rank) but got size "
                          << constantPerms.size();
-  if (inputType.hasRank() && outputType.hasRank() &&
-      inputType.getRank() != outputType.getRank())
+
+  if (inputShape.hasRank() && outputShape.hasRank() &&
+      inputShape.getRank() != outputShape.getRank())
     return emitOpError()
            << "expected input tensor rank to equal result tensor rank";
-  if (outputType.hasRank() &&
-      constantPerms.size() != static_cast<size_t>(outputType.getRank()))
+
+  if (outputShape.hasRank() &&
+      constantPerms.size() != static_cast<size_t>(outputShape.getRank()))
     return emitOpError() << "expected perms attribute to have size "
-                         << outputType.getRank()
+                         << outputShape.getRank()
                          << " (output rank) but got size "
                          << constantPerms.size();
 
@@ -2010,22 +2015,27 @@ LogicalResult tosa::TransposeOp::verify() {
           constantPerms, [](int32_t v) -> int64_t { return v; }))))
     return emitOpError() << "expected valid permutation indices";
 
+  // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
+  if (inputShape.hasStaticShape() && outputShape.hasStaticShape() &&
+      inputShape.getNumElements() != outputShape.getNumElements())
+    return emitOpError() << "expected input1 and output to have same numbers "
+                            "of elements, got "
+                         << inputShape.getNumElements() << " and "
+                         << outputShape.getNumElements();
+
   // Verify that the types of the input and output tensors are properly
   // permuted.
-  if (inputType.hasRank() && outputType.hasRank()) {
-    assert(constantPerms.size() == static_cast<size_t>(inputType.getRank()) &&
-           inputType.getRank() == outputType.getRank());
-
-    for (auto i = 0; i < outputType.getRank(); i++) {
-      if (inputType.isDynamicDim(constantPerms[i]) ||
-          outputType.isDynamicDim(i))
+  if (inputShape.hasRank() && outputShape.hasRank()) {
+    for (auto i = 0; i < outputShape.getRank(); i++) {
+      if (inputShape.isDynamicDim(constantPerms[i]) ||
+          outputShape.isDynamicDim(i))
         continue;
 
-      if (inputType.getDimSize(constantPerms[i]) != outputType.getDimSize(i))
+      if (inputShape.getDimSize(constantPerms[i]) != outputShape.getDimSize(i))
         return emitOpError()
                << "expected output tensor dim " << i << " to match "
                << "input dim " << constantPerms[i] << " with value of "
-               << inputType.getDimSize(constantPerms[i]);
+               << inputShape.getDimSize(constantPerms[i]);
     }
   }
 
