@@ -1073,17 +1073,17 @@ let Predicates = [HasSME2p2] in {
 } // [HasSME2p2]
 
 let Predicates = [HasSME_TMOP] in {
-  defm FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, nxv8f16,  "ftmopa", int_aarch64_sme_tmopa>;
-  defm FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, nxv4f32,  "ftmopa", int_aarch64_sme_tmopa>;
-  defm BFTMOPA_M2ZZZI_HtoS : sme_tmopa_32b<0b10000, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_tmopa>;
+  defm FTMOPA_M2ZZZI_HtoS  : sme_tmopa_32b<0b11000, ZZ_h_mul_r, ZPR16, nxv8f16,  "ftmopa", int_aarch64_sme_tmopa, [FPCR]>;
+  defm FTMOPA_M2ZZZI_StoS  : sme_tmopa_32b<0b00000, ZZ_s_mul_r, ZPR32, nxv4f32,  "ftmopa", int_aarch64_sme_tmopa, [FPCR]>;
+  defm BFTMOPA_M2ZZZI_HtoS : sme_tmopa_32b<0b10000, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_tmopa, [FPCR]>;
 }
 
 let Predicates = [HasSME_TMOP, HasSMEF16F16] in {
-  defm FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, nxv8f16, "ftmopa", int_aarch64_sme_tmopa>;
+  defm FTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b10001, ZZ_h_mul_r, ZPR16, nxv8f16, "ftmopa", int_aarch64_sme_tmopa, [FPCR]>;
 }
 
 let Predicates = [HasSME_TMOP, HasSMEB16B16] in {
-  defm BFTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b11001, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_tmopa>;
+  defm BFTMOPA_M2ZZZI_HtoH : sme_tmopa_16b<0b11001, ZZ_h_mul_r, ZPR16, nxv8bf16, "bftmopa", int_aarch64_sme_tmopa, [FPCR]>;
 }
 
 let Predicates = [HasSME_TMOP, HasSMEF8F32] in {
