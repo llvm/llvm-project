@@ -5339,14 +5339,23 @@ private:
   // as it's parent convergence instr.
   llvm::ConvergenceControlInst *emitConvergenceLoopToken(llvm::BasicBlock *BB);
 
+  // Emits a convergence_anchor instruction for the given |BB|.
+  llvm::ConvergenceControlInst *
+  emitConvergenceAnchorToken(llvm::BasicBlock *BB);
+
   // Adds a convergence_ctrl token with |ParentToken| as parent convergence
   // instr to the call |Input|.
   llvm::CallBase *addConvergenceControlToken(llvm::CallBase *Input);
 
-  // Find the convergence_entry instruction |F|, or emits ones if none exists.
-  // Returns the convergence instruction.
+  // Find the convergence control token in the entry block of |F|, or if none
+  // exists, create an entry token.
   llvm::ConvergenceControlInst *
   getOrEmitConvergenceEntryToken(llvm::Function *F);
+
+  // Find the convergence control token in the entry block of |F|, or if none
+  // exists, create an anchor token.
+  llvm::ConvergenceControlInst *
+  getOrEmitConvergenceAnchorToken(llvm::Function *F);
 
 private:
   llvm::MDNode *getRangeForLoadFromType(QualType Ty);

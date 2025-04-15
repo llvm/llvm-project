@@ -2866,9 +2866,11 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       if (S.getLangOpts().CPlusPlus && !fscope->isCoroutine() && isNoexcept(FD))
         checkThrowInNonThrowingFunc(S, FD, AC);
 
-  if (!Diags.isIgnored(diag::warn_cycle_created_by_goto_affects_convergence,
-                       D->getBeginLoc()))
-    analyzeForConvergence(S, AC);
+  bool WarnConvergence = !Diags.isIgnored(
+      diag::warn_cycle_created_by_goto_affects_convergence, D->getBeginLoc());
+  bool GenerateTokens = S.getLangOpts().ConvergenceControl;
+  if (GenerateTokens || WarnConvergence)
+    analyzeForConvergence(S, AC, WarnConvergence, GenerateTokens);
 
   // If none of the previous checks caused a CFG build, trigger one here
   // for the logical error handler.

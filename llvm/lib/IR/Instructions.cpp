@@ -623,6 +623,13 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+ConvergenceControlInst *CallBase::getConvergenceControlToken() const {
+  if (auto Bundle = getOperandBundle(llvm::LLVMContext::OB_convergencectrl)) {
+    return cast<ConvergenceControlInst>(Bundle->Inputs[0].get());
+  }
+  return nullptr;
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {

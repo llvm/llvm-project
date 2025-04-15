@@ -6514,6 +6514,8 @@ def note_goto_affects_convergence : Note<
   "jump from this goto statement affects convergence">;
 def note_switch_case_affects_convergence : Note<
   "jump to this case statement affects convergence of loop">;
+def err_jump_into_noconvergent : Error<
+  "cannot jump into a noconvergent statement from outside">;
 def err_goto_into_protected_scope : Error<
   "cannot jump from this goto statement to its label">;
 def ext_goto_into_protected_scope : ExtWarn<

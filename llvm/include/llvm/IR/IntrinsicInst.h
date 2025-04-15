@@ -1889,6 +1889,18 @@ public:
                                             ConvergenceControlInst *Parent);
 };
 
+/// Returns the first occurence of a ConvergenceControlInst in \p BB
+inline ConvergenceControlInst *getConvergenceControlDef(BasicBlock &BB) {
+  for (auto &I : BB) {
+    if (auto *CI = dyn_cast<llvm::ConvergenceControlInst>(&I))
+      return CI;
+  }
+  return nullptr;
+}
+
+CallBase *setConvergenceControlToken(CallBase *CB,
+                                     ConvergenceControlInst *Token);
+
 } // end namespace llvm
 
 #endif // LLVM_IR_INTRINSICINST_H

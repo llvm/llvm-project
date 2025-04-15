@@ -47,6 +47,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/xxhash.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "llvm/Transforms/Utils/FixConvergenceControl.h"
 #include "llvm/Transforms/Utils/PromoteMemToReg.h"
 #include <optional>
 
@@ -370,12 +371,6 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
          "mismatched push/pop of cleanups in EHStack!");
   assert(DeferredDeactivationCleanupStack.empty() &&
          "mismatched activate/deactivate of cleanups!");
-
-  if (CGM.shouldEmitConvergenceTokens()) {
-    ConvergenceTokenStack.pop_back();
-    assert(ConvergenceTokenStack.empty() &&
-           "mismatched push/pop in convergence stack!");
-  }
 
   bool OnlySimpleReturnStmts = NumSimpleReturnExprs > 0
     && NumSimpleReturnExprs == NumReturnExprs
@@ -1362,8 +1357,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     if (const auto *VecWidth = CurFuncDecl->getAttr<MinVectorWidthAttr>())
       LargestVectorWidth = VecWidth->getVectorWidth();
 
-  if (CGM.shouldEmitConvergenceTokens())
-    ConvergenceTokenStack.push_back(getOrEmitConvergenceEntryToken(CurFn));
+  if (CGM.shouldEmitConvergenceTokens()) {
+    llvm::ConvergenceControlInst *Token =
+        (FD && FD->hasAttr<NoConvergentAttr>())
+            ? getOrEmitConvergenceAnchorToken(CurFn)
+            : getOrEmitConvergenceEntryToken(CurFn);
+    ConvergenceTokenStack.push_back(Token);
+  }
 }
 
 void CodeGenFunction::EmitFunctionBody(const Stmt *Body) {
@@ -1645,6 +1645,13 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Builder.CreateUnreachable();
       Builder.ClearInsertionPoint();
     }
+  }
+
+  if (CGM.shouldEmitConvergenceTokens()) {
+    ConvergenceTokenStack.pop_back();
+    assert(ConvergenceTokenStack.empty() &&
+           "mismatched push/pop in convergence stack!");
+    fixConvergenceControl(CurFn);
   }
 
   // Emit the standard function epilogue.

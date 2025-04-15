@@ -5773,7 +5773,13 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     Attrs =
         Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::AlwaysInline);
 
-  // Remove call-site convergent attribute if requested.
+  // Remove call-site convergent attribute if this call occurs inside a
+  // noconvergent statement. This is the legacy behaviour when convergence
+  // control tokens are not in use. It only affects inline asm calls, since all
+  // other function calls inherit the convergent attribute from the callee. When
+  // convergence control tokens are in use, any inline asm calls should be
+  // explicitly marked noconvergent, else they simply inherit whatever token is
+  // currently in scope.
   if (InNoConvergentAttributedStmt)
     Attrs =
         Attrs.removeFnAttribute(getLLVMContext(), llvm::Attribute::Convergent);
