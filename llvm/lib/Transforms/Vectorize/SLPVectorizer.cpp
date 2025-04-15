@@ -20170,6 +20170,10 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
+  if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
+        return match(V, m_SMin(m_Value(), m_Value()));
+      }))
+    IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
