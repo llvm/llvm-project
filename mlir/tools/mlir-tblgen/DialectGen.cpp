@@ -349,7 +349,7 @@ static const char *const dialectDestructorStr = R"(
 {0}::~{0}() = default;
 
 )";
-  
+
 /// The code block to generate a member funcs.
 ///
 /// {0}: The name of the dialect class.
@@ -359,7 +359,7 @@ const {0} *{0}::getLoaded(::mlir::Operation *operation) {{
 }
 
 )";
-  
+
 static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
                            raw_ostream &os) {
   std::string cppClassName = dialect.getCppClassName();
