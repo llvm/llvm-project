@@ -60,7 +60,7 @@
 #include <optional>
 #include <vector>
 
-//#define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
+// #define ENABLE_DEBUG_PRINTF // COMMENT OUT THIS LINE PRIOR TO CHECKIN
 
 #ifdef ENABLE_DEBUG_PRINTF
 #include <cstdio>
@@ -90,7 +90,6 @@ static bool DeclKindIsCXXClass(clang::Decl::Kind decl_kind) {
   }
   return false;
 }
-
 
 ClangASTImporter &DWARFASTParserClang::GetClangASTImporter() {
   if (!m_clang_ast_importer_up) {
@@ -1058,8 +1057,8 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
           log,
           "SymbolFileDWARF({0:p}) - {1:x16}}: {2} ({3}) type \"{4}\" is a "
           "forward declaration, complete DIE is {5}",
-          static_cast<void *>(this), decl_die.GetID(), DW_TAG_value_to_name(tag),
-          tag, attrs.name.GetCString(),
+          static_cast<void *>(this), decl_die.GetID(),
+          DW_TAG_value_to_name(tag), tag, attrs.name.GetCString(),
           def_die ? llvm::utohexstr(def_die.GetID()) : "not found");
     }
   }
@@ -1080,8 +1079,7 @@ TypeSP DWARFASTParserClang::ParseEnum(const SymbolContext &sc,
 
   CompilerType enumerator_clang_type;
   if (attrs.type.IsValid()) {
-    Type *enumerator_type =
-        dwarf->ResolveTypeUID(attrs.type.Reference(), true);
+    Type *enumerator_type = dwarf->ResolveTypeUID(attrs.type.Reference(), true);
     if (enumerator_type)
       enumerator_clang_type = enumerator_type->GetFullCompilerType();
   }
@@ -1156,7 +1154,7 @@ ConvertDWARFCallingConventionToClang(const ParsedDWARFTypeAttributes &attrs) {
 }
 
 bool DWARFASTParserClang::ParseObjCMethod(
-    const ObjCLanguage::MethodName &objc_method, const DWARFDIE &die,
+    const ObjCLanguage::ObjCMethodName &objc_method, const DWARFDIE &die,
     CompilerType clang_type, const ParsedDWARFTypeAttributes &attrs,
     bool is_variadic) {
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -1408,9 +1406,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
-      if (std::optional<const ObjCLanguage::MethodName> objc_method =
-              ObjCLanguage::MethodName::Create(attrs.name.GetStringRef(),
-                                               true)) {
+      if (std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+              ObjCLanguage::ObjCMethodName::Create(attrs.name.GetStringRef(),
+                                                   true)) {
         type_handled =
             ParseObjCMethod(*objc_method, die, clang_type, attrs, is_variadic);
       } else if (is_cxx_method) {
@@ -1527,9 +1525,9 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       }
     }
   }
-  return dwarf->MakeType(
-      die.GetID(), attrs.name, std::nullopt, nullptr, LLDB_INVALID_UID,
-      Type::eEncodingIsUID, &attrs.decl, clang_type, Type::ResolveState::Full);
+  return dwarf->MakeType(die.GetID(), attrs.name, std::nullopt, nullptr,
+                         LLDB_INVALID_UID, Type::eEncodingIsUID, &attrs.decl,
+                         clang_type, Type::ResolveState::Full);
 }
 
 TypeSP
@@ -2878,16 +2876,16 @@ PropertyAttributes::PropertyAttributes(const DWARFDIE &die) {
   // Check if the property getter/setter were provided as full names.
   // We want basenames, so we extract them.
   if (prop_getter_name && prop_getter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_getter_method =
-        ObjCLanguage::MethodName::Create(prop_getter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_getter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_getter_name, true);
     if (prop_getter_method)
       prop_getter_name =
           ConstString(prop_getter_method->GetSelector()).GetCString();
   }
 
   if (prop_setter_name && prop_setter_name[0] == '-') {
-    std::optional<const ObjCLanguage::MethodName> prop_setter_method =
-        ObjCLanguage::MethodName::Create(prop_setter_name, true);
+    std::optional<const ObjCLanguage::ObjCMethodName> prop_setter_method =
+        ObjCLanguage::ObjCMethodName::Create(prop_setter_name, true);
     if (prop_setter_method)
       prop_setter_name =
           ConstString(prop_setter_method->GetSelector()).GetCString();
@@ -3154,8 +3152,7 @@ void DWARFASTParserClang::ParseSingleMember(
     bool detect_unnamed_bitfields = true;
 
     if (TypeSystemClang::IsObjCObjectOrInterfaceType(class_clang_type))
-      detect_unnamed_bitfields =
-          die.GetCU()->Supports_unnamed_objc_bitfields();
+      detect_unnamed_bitfields = die.GetCU()->Supports_unnamed_objc_bitfields();
 
     if (detect_unnamed_bitfields)
       AddUnnamedBitfieldToRecordTypeIfNeeded(layout_info, class_clang_type,

@@ -81,6 +81,9 @@ public:
   std::optional<bool>
   AreEqualForFrameComparison(const SymbolContext &sc1,
                              const SymbolContext &sc2) const override;
+
+  std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const override;
   //------------------------------------------------------------------
   // Static Functions
   //------------------------------------------------------------------

@@ -212,7 +212,7 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "A::operator<=>[abi:tag]<A::B>"}};
 
   for (const auto &test : test_cases) {
-    CPlusPlusLanguage::MethodName method(ConstString(test.input));
+    CPlusPlusLanguage::CxxMethodName method(ConstString(test.input));
     EXPECT_TRUE(method.IsValid()) << test.input;
     if (method.IsValid()) {
       EXPECT_EQ(test.return_type, method.GetReturnType().str());
@@ -243,22 +243,22 @@ TEST(CPlusPlusLanguage, InvalidMethodNameParsing) {
   };
 
   for (const auto &name : test_cases) {
-    CPlusPlusLanguage::MethodName method{ConstString(name)};
+    CPlusPlusLanguage::CxxMethodName method{ConstString(name)};
     EXPECT_FALSE(method.IsValid()) << name;
   }
 }
 
 TEST(CPlusPlusLanguage, ContainsPath) {
-  CPlusPlusLanguage::MethodName 
-      reference_1(ConstString("int foo::bar::func01(int a, double b)"));
-  CPlusPlusLanguage::MethodName
-      reference_2(ConstString("int foofoo::bar::func01(std::string a, int b)"));
-  CPlusPlusLanguage::MethodName reference_3(ConstString("int func01()"));
-  CPlusPlusLanguage::MethodName 
-      reference_4(ConstString("bar::baz::operator bool()"));
-  CPlusPlusLanguage::MethodName reference_5(
+  CPlusPlusLanguage::CxxMethodName reference_1(
+      ConstString("int foo::bar::func01(int a, double b)"));
+  CPlusPlusLanguage::CxxMethodName reference_2(
+      ConstString("int foofoo::bar::func01(std::string a, int b)"));
+  CPlusPlusLanguage::CxxMethodName reference_3(ConstString("int func01()"));
+  CPlusPlusLanguage::CxxMethodName reference_4(
+      ConstString("bar::baz::operator bool()"));
+  CPlusPlusLanguage::CxxMethodName reference_5(
       ConstString("bar::baz::operator bool<int, Type<double>>()"));
-  CPlusPlusLanguage::MethodName reference_6(ConstString(
+  CPlusPlusLanguage::CxxMethodName reference_6(ConstString(
       "bar::baz::operator<<<Type<double>, Type<std::vector<double>>>()"));
 
   EXPECT_TRUE(reference_1.ContainsPath(""));
@@ -270,11 +270,11 @@ TEST(CPlusPlusLanguage, ContainsPath) {
   EXPECT_FALSE(reference_1.ContainsPath("::bar::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("::foo::baz::func01"));
   EXPECT_FALSE(reference_1.ContainsPath("foo::bar::baz::func01"));
-  
+
   EXPECT_TRUE(reference_2.ContainsPath(""));
   EXPECT_TRUE(reference_2.ContainsPath("foofoo::bar::func01"));
   EXPECT_FALSE(reference_2.ContainsPath("foo::bar::func01"));
-  
+
   EXPECT_TRUE(reference_3.ContainsPath(""));
   EXPECT_TRUE(reference_3.ContainsPath("func01"));
   EXPECT_FALSE(reference_3.ContainsPath("func"));
@@ -354,8 +354,8 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       "selector:", context, basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "selector:otherField:", context, basename));
-  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
-      "abc::", context, basename));
+  EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier("abc::", context,
+                                                              basename));
   EXPECT_FALSE(CPlusPlusLanguage::ExtractContextAndIdentifier(
       "f<A<B><C>>", context, basename));
 

@@ -14,6 +14,7 @@
 #include "clang/Lex/Lexer.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -53,7 +54,6 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 
@@ -141,7 +141,8 @@ SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
 }
 
 SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
-    : SymbolFileCommon(std::move(objfile_sp)), m_session_up(), m_global_scope_up() {}
+    : SymbolFileCommon(std::move(objfile_sp)), m_session_up(),
+      m_global_scope_up() {}
 
 SymbolFilePDB::~SymbolFilePDB() = default;
 
@@ -325,7 +326,7 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
 
   auto ts = *type_system_or_err;
   TypeSystemClang *clang_type_system =
-    llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
+      llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return nullptr;
   clang_type_system->GetPDBParser()->GetDeclForSymbol(pdb_func);
@@ -1279,7 +1280,7 @@ void SymbolFilePDB::CacheFunctionNames() {
       if (name.empty())
         continue;
 
-      if (CPlusPlusLanguage::IsCPPMangledName(name.c_str())) {
+      if (Mangled::IsMangledName(name.c_str())) {
         // PDB public symbol has mangled name for its associated function.
         if (auto vm_addr = pub_sym_up->getVirtualAddress()) {
           if (auto it = addr_ids.find(vm_addr); it != addr_ids.end())
@@ -1301,8 +1302,7 @@ void SymbolFilePDB::CacheFunctionNames() {
 void SymbolFilePDB::FindFunctions(
     const lldb_private::Module::LookupInfo &lookup_info,
     const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    bool include_inlines,
-    lldb_private::SymbolContextList &sc_list) {
+    bool include_inlines, lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   ConstString name = lookup_info.GetLookupName();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
@@ -1653,8 +1653,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
   }
 
   auto ts = *type_system_or_err;
-  auto *clang_type_system =
-      llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
+  auto *clang_type_system = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return nullptr;
 
@@ -1673,8 +1672,7 @@ SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
     return CompilerDeclContext();
   }
   auto ts = *type_system_or_err;
-  auto *clang_type_system =
-      llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
+  auto *clang_type_system = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
   if (!clang_type_system)
     return CompilerDeclContext();
 

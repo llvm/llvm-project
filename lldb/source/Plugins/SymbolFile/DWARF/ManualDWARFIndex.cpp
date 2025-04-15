@@ -308,8 +308,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
           bool is_objc_method = false;
           if (cu_language == eLanguageTypeObjC ||
               cu_language == eLanguageTypeObjC_plus_plus) {
-            std::optional<const ObjCLanguage::MethodName> objc_method =
-                ObjCLanguage::MethodName::Create(name, true);
+            std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
+                ObjCLanguage::ObjCMethodName::Create(name, true);
             if (objc_method) {
               is_objc_method = true;
               ConstString class_name_with_category(
@@ -764,8 +764,7 @@ bool ManualDWARFIndex::LoadFromCache() {
   if (!mem_buffer_up)
     return false;
   DataExtractor data(mem_buffer_up->getBufferStart(),
-                     mem_buffer_up->getBufferSize(),
-                     endian::InlHostByteOrder(),
+                     mem_buffer_up->getBufferSize(), endian::InlHostByteOrder(),
                      objfile->GetAddressByteSize());
   bool signature_mismatch = false;
   lldb::offset_t offset = 0;

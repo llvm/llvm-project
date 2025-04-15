@@ -106,21 +106,24 @@ public:
   class EitherTypeScavenger : public TypeScavenger {
   public:
     EitherTypeScavenger() : TypeScavenger() {
-      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
+      for (std::shared_ptr<TypeScavenger> scavenger :
+           {std::shared_ptr<TypeScavenger>(new ScavengerTypes())...}) {
         if (scavenger)
           m_scavengers.push_back(scavenger);
       }
     }
+
   protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = false;
-      for (auto& scavenger : m_scavengers) {
+      for (auto &scavenger : m_scavengers) {
         if (scavenger && scavenger->Find(exe_scope, key, results, append))
           return true;
       }
       return false;
     }
+
   private:
     std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };
@@ -129,22 +132,25 @@ public:
   class UnionTypeScavenger : public TypeScavenger {
   public:
     UnionTypeScavenger() : TypeScavenger() {
-      for (std::shared_ptr<TypeScavenger> scavenger : { std::shared_ptr<TypeScavenger>(new ScavengerTypes())... }) {
+      for (std::shared_ptr<TypeScavenger> scavenger :
+           {std::shared_ptr<TypeScavenger>(new ScavengerTypes())...}) {
         if (scavenger)
           m_scavengers.push_back(scavenger);
       }
     }
+
   protected:
     bool Find_Impl(ExecutionContextScope *exe_scope, const char *key,
                    ResultSet &results) override {
       const bool append = true;
       bool success = false;
-      for (auto& scavenger : m_scavengers) {
+      for (auto &scavenger : m_scavengers) {
         if (scavenger)
           success = scavenger->Find(exe_scope, key, results, append) || success;
       }
       return success;
     }
+
   private:
     std::vector<std::shared_ptr<TypeScavenger>> m_scavengers;
   };
@@ -214,6 +220,104 @@ public:
   virtual std::vector<Language::MethodNameVariant>
   GetMethodNameVariants(ConstString method_name) const {
     return std::vector<Language::MethodNameVariant>();
+  };
+
+  class MethodName {
+  public:
+    MethodName() {}
+
+    MethodName(ConstString full)
+        : m_full(full), m_basename(), m_context(), m_arguments(),
+          m_qualifiers(), m_return_type(), m_scope_qualified(), m_parsed(false),
+          m_parse_error(false) {}
+
+    virtual ~MethodName() {};
+
+    void Clear() {
+      m_full.Clear();
+      m_basename = llvm::StringRef();
+      m_context = llvm::StringRef();
+      m_arguments = llvm::StringRef();
+      m_qualifiers = llvm::StringRef();
+      m_return_type = llvm::StringRef();
+      m_scope_qualified.clear();
+      m_parsed = false;
+      m_parse_error = false;
+    }
+
+    bool IsValid() {
+      if (!m_parsed)
+        Parse();
+      if (m_parse_error)
+        return false;
+      return (bool)m_full;
+    }
+
+    ConstString GetFullName() const { return m_full; }
+
+    llvm::StringRef GetBasename() {
+      if (!m_parsed)
+        Parse();
+      return m_basename;
+    }
+
+    llvm::StringRef GetContext() {
+      if (!m_parsed)
+        Parse();
+      return m_context;
+    }
+
+    llvm::StringRef GetArguments() {
+      if (!m_parsed)
+        Parse();
+      return m_arguments;
+    }
+
+    llvm::StringRef GetQualifiers() {
+      if (!m_parsed)
+        Parse();
+      return m_qualifiers;
+    }
+
+    llvm::StringRef GetReturnType() {
+      if (!m_parsed)
+        Parse();
+      return m_return_type;
+    }
+
+    std::string GetScopeQualifiedName() {
+      if (!m_parsed)
+        Parse();
+      return m_scope_qualified;
+    }
+
+  protected:
+    virtual void Parse() {
+      m_parsed = true;
+      m_parse_error = true;
+    }
+
+    ConstString m_full; // Full name:
+                        // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
+                        // int) const"
+    llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
+    llvm::StringRef m_context;     // Decl context: "lldb::SBTarget"
+    llvm::StringRef m_arguments;   // Arguments:    "(unsigned int)"
+    llvm::StringRef m_qualifiers;  // Qualifiers:   "const"
+    llvm::StringRef m_return_type; // Return type:  "size_t"
+    std::string m_scope_qualified;
+    bool m_parsed = false;
+    bool m_parse_error = false;
+  };
+
+  virtual std::unique_ptr<Language::MethodName>
+  GetMethodName(ConstString name) const {
+    return std::make_unique<Language::MethodName>(name);
+  };
+
+  virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
+  GetFunctionNameInfo(ConstString name) const {
+    return std::pair{lldb::eFunctionNameTypeNone, std::nullopt};
   };
 
   /// Returns true iff the given symbol name is compatible with the mangling

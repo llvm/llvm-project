@@ -26,8 +26,8 @@
 
 #ifdef LLDB_ENABLE_SWIFT
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
-#include "llvm/ADT/DenseMap.h"
 #include "swift/Demangling/Demangle.h"
+#include "llvm/ADT/DenseMap.h"
 #endif // LLDB_ENABLE_SWIFT
 // BEGIN SWIFT
 #include "lldb/Utility/ThreadSafeDenseMap.h"
@@ -42,11 +42,11 @@
 #include <cstring>
 using namespace lldb_private;
 
-static inline bool cstring_is_mangled(llvm::StringRef s) {
-  return Mangled::GetManglingScheme(s) != Mangled::eManglingSchemeNone;
-}
-
 #pragma mark Mangled
+
+bool Mangled::IsMangledName(llvm::StringRef name) {
+  return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
+}
 
 Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef const name) {
   if (name.empty())
@@ -130,7 +130,7 @@ int Mangled::Compare(const Mangled &a, const Mangled &b) {
 
 void Mangled::SetValue(ConstString name) {
   if (name) {
-    if (cstring_is_mangled(name.GetStringRef())) {
+    if (IsMangledName(name.GetStringRef())) {
       m_demangled.Clear();
       m_mangled = name;
     } else {
@@ -260,7 +260,7 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
       return false;
     } else {
       // Demangled successfully, we can try and parse it with
-      // CPlusPlusLanguage::MethodName.
+      // CPlusPlusLanguage::CxxMethodName.
       return context.FromCxxMethodName(m_demangled);
     }
   }
@@ -278,10 +278,10 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName(// BEGIN SWIFT
-                                      const SymbolContext *sc
-                                      // END SWIFT
-                                      ) const {
+ConstString Mangled::GetDemangledName( // BEGIN SWIFT
+    const SymbolContext *sc
+    // END SWIFT
+) const {
   if (!m_mangled)
     return m_demangled;
 
@@ -317,25 +317,25 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
     Log *log = GetLog(LLDBLog::Demangle);
     LLDB_LOGF(log, "demangle swift: %s", mangled_name);
     std::string demangled(SwiftLanguageRuntime::DemangleSymbolAsString(
-                                                                        mangled_name, SwiftLanguageRuntime::eTypeName, sc));
+        mangled_name, SwiftLanguageRuntime::eTypeName, sc));
     // Don't cache the demangled name the function isn't available yet.
     if (!sc || !sc->function) {
-        LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)",
-                  mangled_name, demangled.c_str());
-        return ConstString(demangled);
+      LLDB_LOGF(log, "demangle swift: %s -> \"%s\" (not cached)", mangled_name,
+                demangled.c_str());
+      return ConstString(demangled);
     }
     if (demangled.empty()) {
-        LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
-                  mangled_name);
+      LLDB_LOGF(log, "demangle swift: %s -> error: failed to demangle",
+                mangled_name);
     } else {
-        LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
-                  demangled.c_str());
-        m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
+      LLDB_LOGF(log, "demangle swift: %s -> \"%s\"", mangled_name,
+                demangled.c_str());
+      m_demangled.SetStringWithMangledCounterpart(demangled, m_mangled);
     }
     return m_demangled;
   }
 #endif // LLDB_ENABLE_SWIFT
-    break;
+  break;
   case eManglingSchemeNone:
     // Don't bother demangling anything that isn't mangled.
     break;
@@ -356,7 +356,7 @@ ConstString Mangled::GetDemangledName(// BEGIN SWIFT
 }
 
 ConstString Mangled::GetDisplayDemangledName(
-// BEGIN SWIFT
+    // BEGIN SWIFT
     const SymbolContext *sc) const {
 #ifdef LLDB_ENABLE_SWIFT
   if (m_mangled &&
@@ -364,7 +364,7 @@ ConstString Mangled::GetDisplayDemangledName(
     return ConstString(SwiftLanguageRuntime::DemangleSymbolAsString(
         m_mangled.GetStringRef(), SwiftLanguageRuntime::eSimplified, sc));
 #endif // LLDB_ENABLE_SWIFT
-// END SWIFT
+       // END SWIFT
 
   if (Language *lang = Language::FindPlugin(GuessLanguage()))
     if (ConstString display_name = lang->GetDisplayDemangledName(*this))
@@ -385,7 +385,7 @@ ConstString Mangled::GetName(Mangled::NamePreference preference,
                              // BEGIN SWIFT
                              const SymbolContext *sc
                              // END SWIFT
-                             ) const {
+) const {
   if (preference == ePreferMangled && m_mangled)
     return m_mangled;
 
@@ -499,21 +499,21 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
   m_demangled.Clear();
   MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
   switch (encoding) {
-    case Empty:
-      return true;
+  case Empty:
+    return true;
 
-    case DemangledOnly:
-      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-      return true;
+  case DemangledOnly:
+    m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+    return true;
 
-    case MangledOnly:
-      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-      return true;
+  case MangledOnly:
+    m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+    return true;
 
-    case MangledAndDemangled:
-      m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-      m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
-      return true;
+  case MangledAndDemangled:
+    m_mangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+    m_demangled.SetString(strtab.Get(data.GetU32(offset_ptr)));
+    return true;
   }
   return false;
 }
@@ -560,17 +560,17 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
   }
   file.AppendU8(encoding);
   switch (encoding) {
-    case Empty:
-      break;
-    case DemangledOnly:
-      file.AppendU32(strtab.Add(m_demangled));
-      break;
-    case MangledOnly:
-      file.AppendU32(strtab.Add(m_mangled));
-      break;
-    case MangledAndDemangled:
-      file.AppendU32(strtab.Add(m_mangled));
-      file.AppendU32(strtab.Add(m_demangled));
-      break;
+  case Empty:
+    break;
+  case DemangledOnly:
+    file.AppendU32(strtab.Add(m_demangled));
+    break;
+  case MangledOnly:
+    file.AppendU32(strtab.Add(m_mangled));
+    break;
+  case MangledAndDemangled:
+    file.AppendU32(strtab.Add(m_mangled));
+    file.AppendU32(strtab.Add(m_demangled));
+    break;
   }
 }
