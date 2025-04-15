@@ -2324,8 +2324,8 @@ are listed below.
      $ clang -funique-source-file-names -c bar/foo.c
      $ clang foo/foo.o bar/foo.o
 
-   A misuse of this flag will generally either be harmless or result
-   in a duplicate symbol error at link time.
+   A misuse of this flag may result in a duplicate symbol error at
+   link time.
 
 .. option:: -fforce-emit-vtables
 
