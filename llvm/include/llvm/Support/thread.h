@@ -213,6 +213,7 @@ inline thread::id get_id() { return std::this_thread::get_id(); }
 
 #else // !LLVM_ENABLE_THREADS
 
+#include "llvm/Support/ErrorHandling.h"
 #include <utility>
 
 namespace llvm {
