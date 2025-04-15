@@ -174,7 +174,10 @@ bool containsIrreducibleCFG(RPOTraversalT &RPOTraversal, const LoopInfoT &LI) {
 
   return false;
 }
+
+/// Return true if there is at least a path through which F can return, false if
+/// there is no such path.
 bool canReturn(const Function &F);
-} // End llvm namespace
+} // namespace llvm
 
 #endif
