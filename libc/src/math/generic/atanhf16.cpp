@@ -44,8 +44,13 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
 
   // |x| >= 1
   if (LIBC_UNLIKELY(x_abs >= 0x3c00U)) {
-    if (xbits.is_nan())
+    if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
+    }
 
     // |x| == 1.0
     if (x_abs == 0x3c00U) {
@@ -93,7 +98,7 @@ LLVM_LIBC_FUNCTION(float16, atanhf16, (float16 x)) {
   }
 
   float xf = x;
-  return fputil::cast<float16>(0.5 * log_eval_f((xf + 1.0f) / (xf - 1.0f)));
+  return fputil::cast<float16>(0.5 * log_eval((xf + 1.0f) / (xf - 1.0f)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
