@@ -345,23 +345,21 @@ void llvm::filterDeadComdatFunctions(
 
 std::string llvm::getUniqueModuleId(Module *M) {
   MD5 Md5;
-  bool ExportsSymbols = false;
-  auto AddGlobal = [&](GlobalValue &GV) {
-    if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
-        !GV.hasExternalLinkage() || GV.hasComdat())
-      return;
-    ExportsSymbols = true;
-    Md5.update(GV.getName());
-    Md5.update(ArrayRef<uint8_t>{0});
-  };
 
   auto *UniqueSourceFileNames = mdconst::extract_or_null<ConstantInt>(
-          M->getModuleFlag("Unique Source File Names"));
+      M->getModuleFlag("Unique Source File Names"));
   if (UniqueSourceFileNames && UniqueSourceFileNames->getZExtValue()) {
     Md5.update(M->getSourceFileName());
   } else {
-    for (auto &GV : M->global_values())
-      AddGlobal(GV);
+    bool ExportsSymbols = false;
+    for (auto &GV : M->global_values()) {
+      if (GV.isDeclaration() || GV.getName().starts_with("llvm.") ||
+          !GV.hasExternalLinkage() || GV.hasComdat())
+        continue;
+      ExportsSymbols = true;
+      Md5.update(GV.getName());
+      Md5.update(ArrayRef<uint8_t>{0});
+    }
 
     if (!ExportsSymbols)
       return "";
