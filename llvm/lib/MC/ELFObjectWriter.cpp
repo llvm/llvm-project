@@ -1383,7 +1383,14 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   if (!checkRelocation(Ctx, Fixup.getLoc(), &FixupSection, SecA))
     return;
 
-  unsigned Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+  auto EMachine = TargetObjectWriter->getEMachine();
+  unsigned Type;
+  if (Fixup.getKind() >= FirstLiteralRelocationKind &&
+      EMachine != ELF::EM_LOONGARCH)
+    Type = Fixup.getKind() - FirstLiteralRelocationKind;
+  else
+    Type = TargetObjectWriter->getRelocType(Ctx, Target, Fixup, IsPCRel);
+
   bool UseSectionSym =
       SymA && SymA->getBinding() == ELF::STB_LOCAL && !SymA->isUndefined();
   if (UseSectionSym) {
@@ -1402,8 +1409,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   } else {
     // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
     // reference the null symbol.
-    if (Type == ELF::R_PPC64_TOC &&
-        TargetObjectWriter->getEMachine() == ELF::EM_PPC64)
+    if (Type == ELF::R_PPC64_TOC && EMachine == ELF::EM_PPC64)
       SymA = nullptr;
 
     if (SymA) {
