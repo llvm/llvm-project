@@ -2304,6 +2304,9 @@ are listed below.
    name. This is useful for reducing link times when doing ThinLTO
    in combination with whole-program devirtualization or CFI.
 
+   A misuse of this flag will generally result in a duplicate symbol
+   error at link time.
+
 .. option:: -fforce-emit-vtables
 
    In order to improve devirtualization, forces emitting of vtables even in
