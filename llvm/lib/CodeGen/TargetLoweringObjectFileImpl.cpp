@@ -19,6 +19,7 @@
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/BasicBlockSectionUtils.h"
@@ -2837,6 +2838,9 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
     GOFF::ESDBindingScope SDBindingScope =
         PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
                                                 : GOFF::ESD_BSC_Unspecified;
+    GOFF::ESDAlignment Align =
+        GO->getAlign() ? static_cast<GOFF::ESDAlignment>(Log2(*GO->getAlign()))
+                       : GOFF::ESD_ALIGN_Doubleword;
     MCSectionGOFF *SD = getContext().getGOFFSection(
         SectionKind::getMetadata(), Symbol->getName(),
         GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
@@ -2844,14 +2848,12 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
         SectionKind::getMetadata(), GOFF::CLASS_WSA,
         GOFF::EDAttr{false, GOFF::ESD_EXE_DATA, GOFF::RMODE, GOFF::ESD_NS_Parts,
                      GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
-                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0,
-                     static_cast<GOFF::ESDAlignment>(GO->getAlignment())},
+                     GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, Align},
         SD);
     return getContext().getGOFFSection(
         Kind, Symbol->getName(),
         GOFF::PRAttr{false, false, GOFF::ESD_EXE_DATA, GOFF::LINKAGE,
-                     PRBindingScope,
-                     static_cast<GOFF::ESDAlignment>(GO->getAlignment()), 0},
+                     PRBindingScope, Align, 0},
         ED);
   }
   return TextSection;

@@ -1,4 +1,4 @@
-; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj -o - | \
+; RUN: llc <%s --mtriple s390x-ibm-zos --filetype=obj | \
 ; RUN:   od -Ax -tx1 -v | FileCheck --ignore-case %s
 
 source_filename = "test.ll"
