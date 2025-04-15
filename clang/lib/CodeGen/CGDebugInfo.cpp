@@ -293,7 +293,7 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
 
   PP.SuppressInlineNamespace =
       PrintingPolicy::SuppressInlineNamespaceMode::None;
-  PP.PrintCanonicalTypes = true;
+  PP.PrintAsCanonical = true;
   PP.UsePreferredNames = false;
   PP.AlwaysIncludeTypeForTemplateArgument = true;
   PP.UseEnumerators = false;

@@ -193,7 +193,7 @@ void TypePrinter::spaceBeforePlaceHolder(raw_ostream &OS) {
 
 static SplitQualType splitAccordingToPolicy(QualType QT,
                                             const PrintingPolicy &Policy) {
-  if (Policy.PrintCanonicalTypes)
+  if (Policy.PrintAsCanonical)
     QT = QT.getCanonicalType();
   return QT.split();
 }
@@ -1322,8 +1322,11 @@ void TypePrinter::printTypeOfAfter(const TypeOfType *T, raw_ostream &OS) {}
 
 void TypePrinter::printDecltypeBefore(const DecltypeType *T, raw_ostream &OS) {
   OS << "decltype(";
-  if (T->getUnderlyingExpr())
-    T->getUnderlyingExpr()->printPretty(OS, nullptr, Policy);
+  if (const Expr *E = T->getUnderlyingExpr()) {
+    PrintingPolicy ExprPolicy = Policy;
+    ExprPolicy.PrintAsCanonical = T->isCanonicalUnqualified();
+    E->printPretty(OS, nullptr, ExprPolicy);
+  }
   OS << ')';
   spaceBeforePlaceHolder(OS);
 }
@@ -1604,7 +1607,7 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
     const ASTTemplateArgumentListInfo *TArgAsWritten =
         S->getTemplateArgsAsWritten();
     IncludeStrongLifetimeRAII Strong(Policy);
-    if (TArgAsWritten && !Policy.PrintCanonicalTypes)
+    if (TArgAsWritten && !Policy.PrintAsCanonical)
       printTemplateArgumentList(OS, TArgAsWritten->arguments(), Policy,
                                 TParams);
     else
@@ -2591,9 +2594,8 @@ static void
 printTo(raw_ostream &OS, ArrayRef<TA> Args, const PrintingPolicy &Policy,
         const TemplateParameterList *TPL, bool IsPack, unsigned ParmIndex) {
   // Drop trailing template arguments that match default arguments.
-  if (TPL && Policy.SuppressDefaultTemplateArgs &&
-      !Policy.PrintCanonicalTypes && !Args.empty() && !IsPack &&
-      Args.size() <= TPL->size()) {
+  if (TPL && Policy.SuppressDefaultTemplateArgs && !Policy.PrintAsCanonical &&
+      !Args.empty() && !IsPack && Args.size() <= TPL->size()) {
     llvm::SmallVector<TemplateArgument, 8> OrigArgs;
     for (const TA &A : Args)
       OrigArgs.push_back(getArgument(A));
