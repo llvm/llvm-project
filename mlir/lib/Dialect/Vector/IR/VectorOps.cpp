@@ -5534,11 +5534,12 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 /// Returns true if each element of 'a' is equal to the product of a contiguous
 /// sequence of the elements of 'b'. Returns false otherwise.
-static bool isValidExpandingShapeCast(ArrayRef<int64_t> a,
-                                      ArrayRef<int64_t> b) {
+static bool isExpandingShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
   unsigned rankA = a.size();
   unsigned rankB = b.size();
-  assert(rankA <= rankB);
+  if (rankA > rankB) {
+    return false;
+  }
 
   auto isOne = [](int64_t v) { return v == 1; };
 
@@ -5565,8 +5566,11 @@ static bool isValidExpandingShapeCast(ArrayRef<int64_t> a,
     if (j < rankB && llvm::all_of(b.slice(j), isOne))
       j = rankB;
   }
-
   return i == rankA && j == rankB;
+}
+
+static bool isValidShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
+  return isExpandingShapeCast(a, b) || isExpandingShapeCast(b, a);
 }
 
 static LogicalResult verifyVectorShapeCast(Operation *op,
@@ -5575,25 +5579,21 @@ static LogicalResult verifyVectorShapeCast(Operation *op,
   // Check that element type is the same.
   if (sourceVectorType.getElementType() != resultVectorType.getElementType())
     return op->emitOpError("has different source and result element types");
-  ArrayRef<int64_t> lowRankShape = sourceVectorType.getShape();
-  ArrayRef<int64_t> highRankShape = resultVectorType.getShape();
-  if (lowRankShape.size() > highRankShape.size())
-    std::swap(lowRankShape, highRankShape);
+  ArrayRef<int64_t> inShape = sourceVectorType.getShape();
+  ArrayRef<int64_t> outShape = resultVectorType.getShape();
 
   // Check that product of source dim sizes matches product of result dim sizes.
-  int64_t nLowRankElms =
-      std::accumulate(lowRankShape.begin(), lowRankShape.end(), 1LL,
-                      std::multiplies<int64_t>{});
-  int64_t nHighRankElms =
-      std::accumulate(highRankShape.begin(), highRankShape.end(), 1LL,
-                      std::multiplies<int64_t>{});
+  int64_t nInElms = std::accumulate(inShape.begin(), inShape.end(), 1LL,
+                                    std::multiplies<int64_t>{});
+  int64_t nOutElms = std::accumulate(outShape.begin(), outShape.end(), 1LL,
+                                     std::multiplies<int64_t>{});
 
-  if (nLowRankElms != nHighRankElms) {
+  if (nInElms != nOutElms) {
     return op->emitOpError(
         "has a different number of source and result elements");
   }
 
-  if (!isValidExpandingShapeCast(lowRankShape, highRankShape)) {
+  if (!isValidShapeCast(inShape, outShape)) {
     return op->emitOpError(
         "is invalid (does not uniformly collapse or expand)");
   }
@@ -5641,12 +5641,7 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
     if (resultType == srcType)
       return otherOp.getSource();
 
-    ArrayRef<int64_t> lowRankShape = srcType.getShape();
-    ArrayRef<int64_t> highRankShape = resultType.getShape();
-    if (lowRankShape.size() > highRankShape.size())
-      std::swap(lowRankShape, highRankShape);
-
-    if (!isValidExpandingShapeCast(lowRankShape, highRankShape))
+    if (!isValidShapeCast(srcType.getShape(), resultType.getShape()))
       return {};
 
     setOperand(otherOp.getSource());

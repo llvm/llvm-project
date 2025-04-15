@@ -1290,12 +1290,12 @@ func.func @extract_strided_broadcast4(%arg0: f32) -> vector<1x4xf32> {
 // -----
 
 // CHECK-LABEL: consecutive_shape_cast
-//       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<4x4xf16>
-//  CHECK-NEXT:   return %[[C]] : vector<4x4xf16>
-func.func @consecutive_shape_cast(%arg0: vector<16xf16>) -> vector<4x4xf16> {
+//       CHECK:   %[[C:.*]] = vector.shape_cast %{{.*}} : vector<16xf16> to vector<2x2x4xf16>
+//  CHECK-NEXT:   return %[[C]] : vector<2x2x4xf16>
+func.func @consecutive_shape_cast(%arg0: vector<16xf16>) -> vector<2x2x4xf16> {
   %0 = vector.shape_cast %arg0 : vector<16xf16> to vector<2x8xf16>
-  %1 = vector.shape_cast %0 : vector<2x8xf16> to vector<4x4xf16>
-  return %1 : vector<4x4xf16>
+  %1 = vector.shape_cast %0 : vector<2x8xf16> to vector<2x2x4xf16>
+  return %1 : vector<2x2x4xf16>
 }
 
 // -----
