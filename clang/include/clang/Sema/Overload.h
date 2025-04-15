@@ -408,13 +408,17 @@ class Sema;
     }
 
     bool isPerfect(const ASTContext &C) const {
-      if(!isIdentityConversion())
+      if (!isIdentityConversion())
         return false;
-      if(!ReferenceBinding)
+      // If we are not performing a reference binding, we can skip comparing
+      // the types, which has a noticeable performance impact.
+      if (!ReferenceBinding) {
+        assert(C.hasSameType(getFromType(), getToType(2)));
         return true;
-      if(!C.hasSameType(getFromType(), getToType(2)))
+      }
+      if (!C.hasSameType(getFromType(), getToType(2)))
         return false;
-      if(BindsToRvalue && IsLvalueReference)
+      if (BindsToRvalue && IsLvalueReference)
         return false;
       return true;
     }
@@ -755,6 +759,9 @@ class Sema;
       Standard.setAllToTypes(T);
     }
 
+    /// A conversion sequence is perfect if
+    /// it is an identity conversion and
+    /// the type of the source is the same as the type of the target.
     bool isPerfect(const ASTContext &C) const {
       return isStandard() && Standard.isPerfect(C);
     }
@@ -995,6 +1002,8 @@ class Sema;
       return false;
     }
 
+    // An overload is a perfect match if the conversion
+    // sequences for each argument are perfect.
     bool isPerfectMatch(const ASTContext &Ctx) const {
       if (!Viable)
         return false;
@@ -1046,7 +1055,10 @@ class Sema;
   };
 
   struct DeferredTemplateOverloadCandidate {
+
+    // intrusive linked list support for allocateDeferredCandidate
     DeferredTemplateOverloadCandidate *Next = nullptr;
+
     enum Kind { Function, Method, Conversion };
 
     LLVM_PREFERRED_TYPE(Kind)
@@ -1256,6 +1268,11 @@ class Sema;
       return reinterpret_cast<T *>(FreeSpaceStart);
     }
 
+    // Because the size of OverloadCandidateSet has a noticeable impact on
+    // performance, we store each deferred template candidate in the slab
+    // allocator such that deferred candidates are ultimately a singly-linked
+    // intrusive linked list. This ends up being much more efficient than a
+    // SmallVector that is empty in the common case.
     template <typename T> T *allocateDeferredCandidate() {
       T *C = slabAllocate<T>(1);
       if (!FirstDeferredCandidate)
