@@ -7,7 +7,7 @@ define amdgpu_ps void @raw_buffer_discard(i32 %arg) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    buffer_discard_b32 off, v0, null th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_discard_b128 off, v0, null scope:SCOPE_SE
-; GFX13-NEXT:    buffer_discard_b1024 off, v0, null th:TH_STORE_RT_WB
+; GFX13-NEXT:    buffer_discard_b1024 off, v0, null th:TH_STORE_WB
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.buffer.discard.b32.i32(i32 %arg, i32 0, i32 0, i32 1)

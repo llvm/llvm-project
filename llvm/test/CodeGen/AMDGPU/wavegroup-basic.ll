@@ -87,6 +87,8 @@ attributes #0 = {"amdgpu-flat-work-group-size"="256,256"}
 ; KERNEL-NEXT:         .amdhsa_wavefront_size32 1
 ; KERNEL-NEXT:         .amdhsa_uses_dynamic_stack 0
 ; KERNEL-NEXT:         .amdhsa_enable_wavegroup 1
+; KERNEL-NEXT:         .amdhsa_enable_spatial_cluster 0
+; KERNEL-NEXT:         .amdhsa_enable_asymmetric_cluster_clamp 0
 ; KERNEL-NEXT:         .amdhsa_laneshared_segment_fixed_size 0
 ; KERNEL-NEXT:         .amdhsa_enable_private_segment 0
 ; KERNEL-NEXT:         .amdhsa_system_sgpr_workgroup_id_x 1

@@ -1102,6 +1102,13 @@ supported for the ``amdgcn`` target.
   achieve truly-efficient lane-sharing, compiler needs to promote lane-shared
   variables into wave-group-shared VGPR.
 
+**Distributed**
+  The distributed address space provides a way for all workgroups in a cluster
+  to access all the LDS space across all workgroups in the cluster as one large
+  shared memory space. Other workgroups' LDS is referred to using their
+  workgroup-ID. The 32-bit address consists of two fields: byte address within
+  LDS of one workgroup and logical workgroup ID within the cluster.
+
 **Streamout Registers**
   Dedicated registers used by the GS NGG Streamout Instructions. The register
   file is modelled as a memory in a distinct address space because it is indexed
@@ -4920,6 +4927,24 @@ with the changes defined in table
                                                             to be set to true.
      ".enable_wavegroup"              boolean               (GFX13+) Whether wavegroup launch is enabled.
                                                             Defaults to false.
+     ".spatial_cluster"               boolean               (GFX13+) Whether the kernel should be launched
+                                                            as a spatial cluster.
+
+                                                            Defaults to false.
+
+                                                            Setting this to true requires that "enable_wavegroup"
+                                                            is also set to true and that "cluster_dims"
+                                                            is one-dimensional (Y and Z components must
+                                                            both be 1).
+     ".asymmetric_cluster_clamp"      boolean               (GFX13+) Clamp the cluster size to the size
+                                                            of the shader engine. On hardware with
+                                                            asymmetrically sized shader engines,
+                                                            this allows launching clusters that fill
+                                                            every shader engine.
+
+                                                            Defaults to false.
+
+                                                            Can only be used with 1D cluster sizes.
      ================================ ========== ========== =======================================
 
 Kernel Dispatch
@@ -5276,7 +5301,24 @@ The fields used by CP for code objects before V3 also match those specified in
                                                        If set to 1, execute the
                                                        kernel in wavegroup
                                                        launch mode.
-     463:461 3 bits                                  Reserved, must be 0.
+     461     1 bit   ENABLE_SPATIAL_CLUSTER          GFX6-GFX12
+                                                        Reserved, must be 0.
+                                                     GFX13+
+                                                        If set to 1, execute the kernel
+                                                        in spatial cluster launch mode.
+                                                        In this case, ENABLE_WAVEGROUP
+                                                        must also be set to 1.
+                                                        Can only be used with 1D cluster sizes.
+     462     1 bit                                   Reserved, must be 0.
+     463     1 bit   ENABLE_ASYMMETRIC_CLUSTER_CLAMP GFX6-GFX12
+                                                        Reserved, must be 0.
+                                                     GFX13+
+                                                        Is set to 1, clamp the cluster size to the size
+                                                        of the shader engine. On hardware with
+                                                        asymmetrically sized shader engines,
+                                                        this allows launching clusters that fill
+                                                        every shader engine.
+                                                        Can only be used with 1D cluster sizes.
      470:464 7 bits  KERNARG_PRELOAD_SPEC_LENGTH     GFX6-GFX9
                                                        - Reserved, must be 0.
                                                      GFX90A, GFX942
@@ -18715,6 +18757,10 @@ terminated by an ``.end_amdhsa_kernel`` directive.
      ``.amdhsa_named_barrier_count``                          0                   GFX1250+     Controls NAMED_BAR_CNT in
                                                                                                :ref:`amdgpu-amdhsa-compute_pgm_rsrc3-gfx12-table`.
      ``.amdhsa_enable_wavegroup``                             0                   GFX13+       Controls ENABLE_WAVEGROUP in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_enable_spatial_cluster``                       0                   GFX13+       Controls ENABLE_SPATIAL_CLUSTER in
+                                                                                               :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
+     ``.amdhsa_enable_asymmetric_cluster_clamp``              0                   GFX13+       Controls ENABLE_ASYMMETRIC_CLUSTER_CLAMP in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_system_sgpr_private_segment_wavefront_offset`` 0                   GFX6-GFX10   Controls ENABLE_PRIVATE_SEGMENT in
                                                                                   (except      :ref:`amdgpu-amdhsa-compute_pgm_rsrc2-gfx6-gfx13-table`.

@@ -43,8 +43,8 @@
 // complete
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0070 015021e4 410f007f 5e040000 00000000
+// OBJDUMP-NEXT: 0060 00000000 00000000 1c000000 00000000
+// OBJDUMP-NEXT: 0070 015021e4 410f007f 5eb40000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -140,6 +140,10 @@ wavegroup_kernel:
   .amdhsa_user_sgpr_dispatch_id 1
   .amdhsa_user_sgpr_private_segment_size 1
   .amdhsa_wavefront_size32 1
+  .amdhsa_enable_wavegroup 1
+  .amdhsa_enable_spatial_cluster 1
+  .amdhsa_enable_asymmetric_cluster_clamp 1
+  .amdhsa_laneshared_segment_fixed_size 28
   .amdhsa_enable_private_segment 1
   .amdhsa_system_sgpr_workgroup_id_x 0
   .amdhsa_system_sgpr_workgroup_id_y 1
@@ -178,8 +182,10 @@ wavegroup_kernel:
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
-// ASM-NEXT: .amdhsa_enable_wavegroup 0
-// ASM-NEXT: .amdhsa_laneshared_segment_fixed_size 0
+// ASM-NEXT: .amdhsa_enable_wavegroup 1
+// ASM-NEXT: .amdhsa_enable_spatial_cluster 1
+// ASM-NEXT: .amdhsa_enable_asymmetric_cluster_clamp 1
+// ASM-NEXT: .amdhsa_laneshared_segment_fixed_size 28
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1

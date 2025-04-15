@@ -7298,7 +7298,7 @@ A managed variable can be accessed in both device and host code.
 def HIPLaneSharedAttrDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
-The ``__lane_shared__`` attribute can be applied to a global variable declaration in HIP.
+The ``__exp_amd_laneshared__`` attribute can be applied to a global variable declaration in HIP.
 A lane-shared variable is shared among threads in a wave-group with the SAME lane-id.
 Threads in a wave-group however with different lane-ids do NOT share the variable.
 A lane-shared variable is allocated by the compiler, and can only be accessed in device code.
@@ -7547,9 +7547,11 @@ the field it is attached to, and it may also lead to emission of automatic fix-i
 hints which would help the user replace the use of unsafe functions(/fields) with safe
 alternatives, though the attribute can be used even when the fix can't be automated.
 
-* Attribute attached to functions: The attribute does not suppress
-  ``-Wunsafe-buffer-usage`` inside the function to which it is attached.
-  These warnings still need to be addressed.
+* Attribute attached to functions: The attribute suppresses all
+  ``-Wunsafe-buffer-usage`` warnings within the function it is attached to, as the
+  function is now classified as unsafe. The attribute should be used carefully, as it
+  will silence all unsafe operation warnings inside the function; including any new
+  unsafe operations introduced in the future.
 
   The attribute is warranted even if the only way a function can overflow
   the buffer is by violating the function's preconditions. For example, it

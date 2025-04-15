@@ -25,8 +25,8 @@ namespace llvm {
 namespace AMDGPUAS {
 enum : unsigned {
   // The maximum value for flat, generic, local, private,
-  // constant, region, and lane-shared
-  MAX_AMDGPU_ADDRESS = 10,
+  // constant, region, lane-shared and distributed.
+  MAX_AMDGPU_ADDRESS = 11,
 
   FLAT_ADDRESS = 0,   ///< Address space for flat memory.
   GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
@@ -47,6 +47,8 @@ enum : unsigned {
                               ///< pointers with an additional index.
 
   LANE_SHARED = 10, ///< Address space for wave-group lane-shared
+
+  DISTRIBUTED = 11, ///< Address space for distributed memory. (DDS)
 
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.

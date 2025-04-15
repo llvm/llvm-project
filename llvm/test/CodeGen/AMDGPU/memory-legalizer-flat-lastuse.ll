@@ -28,7 +28,7 @@ define amdgpu_kernel void @flat_last_use_load_0(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: flat_last_use_load_0:
@@ -93,7 +93,7 @@ define amdgpu_kernel void @flat_last_use_load_1(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v1, s[2:3] scale_offset th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: flat_last_use_load_1:
@@ -143,7 +143,7 @@ define amdgpu_kernel void @flat_last_use_and_volatile_load(ptr %in, ptr %out) {
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: flat_last_use_and_volatile_load:
@@ -187,7 +187,7 @@ define amdgpu_kernel void @flat_last_use_and_nontemporal_load(ptr %in, ptr %out)
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] th:TH_LOAD_LU
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
 ;
 ; GFX13-LABEL: flat_last_use_and_nontemporal_load:

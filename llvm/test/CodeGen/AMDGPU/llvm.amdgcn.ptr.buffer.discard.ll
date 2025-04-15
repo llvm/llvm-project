@@ -7,7 +7,7 @@ define amdgpu_ps void @raw_ptr_buffer_discard(ptr addrspace(8) inreg) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    buffer_discard_b32 off, s[0:3], null th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_discard_b128 off, s[0:3], null scope:SCOPE_SE
-; GFX13-NEXT:    buffer_discard_b1024 off, s[0:3], null th:TH_STORE_RT_WB
+; GFX13-NEXT:    buffer_discard_b1024 off, s[0:3], null th:TH_STORE_WB
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.raw.ptr.buffer.discard.b32(ptr addrspace(8) %0, i32 0, i32 0, i32 1)
@@ -108,7 +108,7 @@ define amdgpu_ps void @struct_ptr_buffer_discard_both(ptr addrspace(8) inreg, i3
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    buffer_discard_b32 v[0:1], s[0:3], null idxen offen th:TH_STORE_NT
 ; GFX13-NEXT:    buffer_discard_b128 v[0:1], s[0:3], null idxen offen th:TH_STORE_HT
-; GFX13-NEXT:    buffer_discard_b1024 v[0:1], s[0:3], null idxen offen th:TH_STORE_RT_WB
+; GFX13-NEXT:    buffer_discard_b1024 v[0:1], s[0:3], null idxen offen th:TH_STORE_WB
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.struct.ptr.buffer.discard.b32(ptr addrspace(8) %0, i32 %1, i32 %2, i32 0, i32 1)

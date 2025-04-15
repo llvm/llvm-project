@@ -185,7 +185,7 @@ define amdgpu_kernel void @flat_CFS128B(ptr %addr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_128B
+; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 128);
@@ -198,7 +198,7 @@ define amdgpu_kernel void @flat_CFS64B(ptr %addr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_64B
+; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 256);
@@ -211,7 +211,7 @@ define amdgpu_kernel void @vflat_CFS32B(ptr %addr) {
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 cfs:CFS_32B
+; GFX13-NEXT:    flat_discard_b32 v[0:1] offset:32 scope:SCOPE_SE cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(0) %addr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(0) %gep, i32 384);
@@ -260,7 +260,7 @@ define amdgpu_kernel void @vglobal_CFS32B(ptr addrspace(1) %ptr) {
 define amdgpu_ps void @vscratch_CFS128B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS128B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_128B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_128B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 128);
@@ -270,7 +270,7 @@ define amdgpu_ps void @vscratch_CFS128B(ptr addrspace(5) %ptr) {
 define amdgpu_ps void @vscratch_CFS64B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS64B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_64B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_64B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 256);
@@ -280,7 +280,7 @@ define amdgpu_ps void @vscratch_CFS64B(ptr addrspace(5) %ptr) {
 define amdgpu_ps void @vscratch_CFS32B(ptr addrspace(5) %ptr) {
 ; GFX13-LABEL: vscratch_CFS32B:
 ; GFX13:       ; %bb.0:
-; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 cfs:CFS_32B
+; GFX13-NEXT:    scratch_discard_b32 v0, off offset:32 scope:SCOPE_SE cfs:CFS_32B
 ; GFX13-NEXT:    s_endpgm
   %gep = getelementptr i64, ptr addrspace(5) %ptr, i32 4
   call void @llvm.amdgcn.discard.b32(ptr addrspace(5) %gep, i32 384);

@@ -2792,7 +2792,7 @@ buffer_discard_b128 off, s[12:15], s4 th:TH_STORE_HT
 buffer_discard_b128 off, s[12:15], s4 th:TH_STORE_NT
 // GFX13: encoding: [0x04,0x40,0x13,0xc4,0x00,0x18,0x90,0x00,0x00,0x00,0x00,0x00]
 
-buffer_discard_b128 off, s[12:15], s4 th:TH_STORE_RT_WB
+buffer_discard_b128 off, s[12:15], s4 th:TH_STORE_WB
 // GFX13: encoding: [0x04,0x40,0x13,0xc4,0x00,0x18,0xb0,0x00,0x00,0x00,0x00,0x00]
 
 buffer_discard_b128 off, s[12:15], s4 th:TH_STORE_NT_RT scope:SCOPE_DEV
@@ -2858,7 +2858,7 @@ buffer_discard_b1024 off, s[12:15], s4 th:TH_STORE_HT
 buffer_discard_b1024 off, s[12:15], s4 th:TH_STORE_NT
 // GFX13: encoding: [0x04,0x80,0x13,0xc4,0x00,0x18,0x90,0x00,0x00,0x00,0x00,0x00]
 
-buffer_discard_b1024 off, s[12:15], s4 th:TH_STORE_RT_WB
+buffer_discard_b1024 off, s[12:15], s4 th:TH_STORE_WB
 // GFX13: encoding: [0x04,0x80,0x13,0xc4,0x00,0x18,0xb0,0x00,0x00,0x00,0x00,0x00]
 
 buffer_discard_b1024 off, s[12:15], s4 th:TH_STORE_NT_RT scope:SCOPE_DEV

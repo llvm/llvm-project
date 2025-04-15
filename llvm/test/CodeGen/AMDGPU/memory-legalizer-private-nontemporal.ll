@@ -656,7 +656,7 @@ define amdgpu_kernel void @private_nontemporal_store_0(
 ; GFX1250-NEXT:    s_load_b32 s1, s[2:3], 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT
+; GFX1250-NEXT:    scratch_store_b32 off, v0, s0 th:TH_STORE_NT scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
@@ -889,7 +889,7 @@ define amdgpu_kernel void @private_nontemporal_store_1(
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v0, s2
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
-; GFX1250-NEXT:    scratch_store_b32 v1, v0, s0 scale_offset th:TH_STORE_NT
+; GFX1250-NEXT:    scratch_store_b32 v1, v0, s0 scale_offset th:TH_STORE_NT scope:SCOPE_SE
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:

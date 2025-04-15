@@ -1205,6 +1205,12 @@ def FeatureBVHDualAndBVH8Insts : SubtargetFeature<"bvh-dual-bvh-8-insts",
   "Has image_bvh_dual_intersect_ray and image_bvh8_intersect_ray instructions"
 >;
 
+def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
+  "HasPointSampleAccel",
+  "true",
+  "Has point sample acceleration feature"
+>;
+
 def Feature64BitLiterals : SubtargetFeature<"64-bit-literals",
   "Has64BitLiterals",
   "true",
@@ -1257,12 +1263,6 @@ def FeatureIndexedResources : SubtargetFeature<"indexed-resources",
   "HasIndexedResources",
   "true",
   "Has indexed resources."
->;
-
-def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
-  "HasPointSampleAccel",
-  "true",
-  "Has point sample acceleration feature"
 >;
 
 //===------------------------------------------------------------===//

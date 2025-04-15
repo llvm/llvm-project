@@ -911,7 +911,7 @@ define amdgpu_ps void @store_1d_glc_slc(i32 %rsrc, <4 x float> %vdata, i32 %s) {
 ; GFX13:       ; %bb.0: ; %main_body
 ; GFX13-NEXT:    v_dual_mov_b32 v9, v4 :: v_dual_mov_b32 v8, v3
 ; GFX13-NEXT:    v_dual_mov_b32 v7, v2 :: v_dual_mov_b32 v6, v1
-; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_RT_WB
+; GFX13-NEXT:    image_store v[6:9], v5, v0 dmask:0xf dim:SQ_RSRC_IMG_1D th:TH_STORE_WB
 ; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, i32 %rsrc, i32 0, i32 3)
