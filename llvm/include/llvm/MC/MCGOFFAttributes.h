@@ -78,8 +78,6 @@ struct PRAttr {
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;
   GOFF::ESDBindingScope BindingScope = GOFF::ESD_BSC_Unspecified;
-  GOFF::ESDDuplicateSymbolSeverity DuplicateSymbolSeverity =
-      GOFF::ESD_DSS_NoWarning;
   GOFF::ESDAlignment Alignment = GOFF::ESD_ALIGN_Byte;
   uint32_t SortKey = 0;
 };

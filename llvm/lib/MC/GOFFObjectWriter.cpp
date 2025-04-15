@@ -267,7 +267,6 @@ public:
     BehavAttrs.setAlignment(Attr.Alignment);
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setBindingScope(Attr.BindingScope);
-    BehavAttrs.setDuplicateSymbolSeverity(Attr.DuplicateSymbolSeverity);
     BehavAttrs.setReadOnly(Attr.IsReadOnly);
   }
 };
