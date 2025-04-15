@@ -532,12 +532,14 @@ if(build_runtimes)
                    -DIMAGE_SUPPORT=OFF
                    -DLLVM_RUNTIME_OPENMP=ON)
       set(HSA_DEP rocr-runtime)
+    endif()
 
-      # omptarget device RTL depends on device libs, leading to circular dependency in build scripts.
-      # Providing path to the sources enables to build them as part of compiler build, which
-      # removes the ciruclar dependency on the script-side.
-      if (DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
-        message(STATUS "Add external AMD device-libs: ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}")
+    # omptarget device RTL depends on device libs, leading to circular dependency in build scripts.
+    # Providing path to the sources enables to build them as part of compiler build, which
+    # removes the ciruclar dependency on the script-side.
+    if (DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
+      message(STATUS "Add external AMD device-libs: ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}")
+      if (NOT ${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH} STREQUAL "")
         ExternalProject_Add(rocm-device-libs
           SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
           DEPENDS clang llvm-link lld opt llvm-objcopy
@@ -545,28 +547,17 @@ if(build_runtimes)
                      -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
                      -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn)
+      else()
+        ExternalProject_Add(rocm-device-libs
+          SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
+          DEPENDS clang llvm-link lld opt llvm-objcopy
+          INSTALL_COMMAND ""
+          CMAKE_ARGS -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake
+                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC}
+                     -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn)
       endif()
     endif()
 
-    if(DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH AND
-       DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH AND
-       DEFINED LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH)
-      ExternalProject_Add(roct
-        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH}
-        DEPENDS clang llvm-link lld opt llvm-objcopy
-        INSTALL_COMMAND ""
-        CMAKE_ARGS -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake)
-      ExternalProject_Add(rocr-runtime
-        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_HSA_PATH}
-        DEPENDS clang llvm-link lld opt llvm-objcopy roct
-        INSTALL_COMMAND ""
-        CMAKE_ARGS -DBUILD_SHARED_LIBS=ON -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake -DIMAGE_SUPPORT=OFF -DLLVM_RUNTIME_OPENMP=ON -DHSAKMT_SRC_PATH=${LIBOMPTARGET_EXTERNAL_PROJECT_THUNK_PATH})
-        set(HSA_DEP rocr-runtime)
-      ExternalProject_Add(rocm-device-libs
-        SOURCE_DIR ${LIBOMPTARGET_EXTERNAL_PROJECT_ROCM_DEVICE_LIBS_PATH}
-        DEPENDS clang llvm-link lld opt llvm-objcopy
-        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${ROCM_DEVICE_LIBS_INSTALL_PREFIX_PATH} -DCMAKE_PREFIX_PATH=${CMAKE_BINARY_DIR}/lib/cmake -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_NEW=${ROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC} -DROCM_DEVICE_LIBS_BITCODE_INSTALL_LOC_OLD=amdgcn)
-    endif()
     if("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
       set(AMDGPU_ARCH_DEP amdgpu-arch)
     endif()
