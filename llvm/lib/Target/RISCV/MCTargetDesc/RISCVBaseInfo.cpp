@@ -53,10 +53,10 @@ namespace RISCV {
 
 // Report an error but don't ask the user to report a bug.
 [[noreturn]] static void reportError(const char *Reason) {
-  report_fatal_error(Reason, false);
+  report_fatal_error(Reason, /*gen_crash_diag=*/false);
 }
 [[noreturn]] static void reportError(Error Err) {
-  report_fatal_error(std::move(Err), false);
+  report_fatal_error(std::move(Err), /*gen_crash_diag=*/false);
 }
 
 namespace RISCVABI {
