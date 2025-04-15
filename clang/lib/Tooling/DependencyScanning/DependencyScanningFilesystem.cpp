@@ -113,18 +113,17 @@ void DependencyScanningFilesystemSharedCache::diagnoseNegativeStatCachedPaths(
   // Iterate through all shards and look for cached stat errors.
   for (unsigned i = 0; i < NumShards; i++) {
     const CacheShard &Shard = CacheShards[i];
-    for (const auto &Path : Shard.CacheByFilename.keys()) {
-      auto CachedPairIt = Shard.CacheByFilename.find(Path);
-      auto CachedPair = CachedPairIt->getValue();
+    std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
+    for (const auto &[Path, CachedPair] : Shard.CacheByFilename) {
       const CachedFileSystemEntry *Entry = CachedPair.first;
 
       if (Entry->getError()) {
         // Only examine cached errors.
         llvm::ErrorOr<llvm::vfs::Status> Stat = UnderlyingFS.status(Path);
         if (Stat) {
-          // This is the case where we have negatively cached the non-existence
-          // of the file at Path, but the cache is later invalidated. Report
-          // diagnostics.
+          // This is the case where we have cached the non-existence
+          // of the file at Path, but the file is created but the cache is
+          // not invalidated. Report diagnostics.
           OS << Path << " did not exist when it was first searched "
              << "but was created later. This may have led to a build failure "
                 "due to missing files.\n";
