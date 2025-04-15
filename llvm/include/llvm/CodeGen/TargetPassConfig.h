@@ -457,7 +457,7 @@ protected:
 
   /// Add a CodeGen pass at this point in the pipeline after checking overrides.
   /// Return the pass that was added, or zero if no pass was added.
-  AnalysisID addPass(IdentifyingPassPtr PassID);
+  AnalysisID addPass(AnalysisID PassID);
 
   /// Add a pass to the PassManager if that pass is supposed to be run, as
   /// determined by the StartAfter and StopAfter options. Takes ownership of the
