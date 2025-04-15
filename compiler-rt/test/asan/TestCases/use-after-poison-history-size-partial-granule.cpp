@@ -5,6 +5,10 @@
 // Partial granule
 // RUN: %clangxx_asan -O0 %s -o %t && env ASAN_OPTIONS=poison_history_size=1000 not %run %t    2>&1 | FileCheck %s
 
+// TODO
+// REQUIRES: linux
+// UNSUPPORTED: android
+
 #include <stdio.h>
 #include <stdlib.h>
 
