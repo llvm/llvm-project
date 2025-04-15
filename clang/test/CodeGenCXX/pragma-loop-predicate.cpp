@@ -37,8 +37,7 @@ void test3(int *List, int Length) {
     List[i] = i * 2;
 }
 
-// Check that vectorize is disabled, and also that vectorization_predicate is
-// ignored.
+// Check that vectorization is disabled.
 void test4(int *List, int Length) {
 // CHECK-LABEL: @{{.*}}test4{{.*}}(
 // CHECK: br label {{.*}}, !llvm.loop ![[LOOP4:.*]]
