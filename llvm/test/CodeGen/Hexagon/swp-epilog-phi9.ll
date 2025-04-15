@@ -5,11 +5,13 @@
 ; 2, so the computation for the number of Phis needs to be adjusted when
 ; the incoming prolog block is from prolog 0 or prolog 1.
 ; Note: the pipeliner no longer generates a 3 stage pipeline for this test.
+; Note: the pipeliner has been generating a 4-stage pipelined loop.
 
 ; CHECK: loop0
 ; CHECK: [[REG0:r([0-9]+)]] = add(r{{[0-8]+}},#8)
+; CHECK: r{{[0-9]+}} = [[REG0]]
 ; CHECK: endloop0
-; CHECK: [[REG0]] = add(r{{[0-9]+}},#8)
+; CHECK: r{{[0-9]+}} = add(r{{[0-9]+}},#8)
 
 ; Function Attrs: nounwind
 define void @f0(ptr nocapture readonly %a0, i32 %a1) #0 {
@@ -50,6 +52,6 @@ declare i32 @llvm.hexagon.M2.mpy.ll.s0(i32, i32) #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.M2.mpy.acc.sat.ll.s0(i32, i32, i32) #1
 
-attributes #0 = { nounwind "target-cpu"="hexagonv60" }
+attributes #0 = { nounwind "target-cpu"="hexagonv68" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }
