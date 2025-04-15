@@ -3712,64 +3712,69 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   return failure();
 }
 
+namespace {
+
+// ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
+OpFoldResult foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
+                                                     Attribute foldInput) {
+
+  auto dense = llvm::dyn_cast_if_present<DenseElementsAttr>(foldInput);
+  if (!dense)
+    return {};
+
+  // TODO: Handle non-unit strides when they become available.
+  if (op.hasNonUnitStrides())
+    return {};
+
+  VectorType sourceVecTy = op.getSourceVectorType();
+  ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
+  SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
+
+  VectorType sliceVecTy = op.getType();
+  ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
+  int64_t rank = sliceVecTy.getRank();
+
+  // Expand offsets and sizes to match the vector rank.
+  SmallVector<int64_t, 4> offsets(rank, 0);
+  copy(getI64SubArray(op.getOffsets()), offsets.begin());
+
+  SmallVector<int64_t, 4> sizes(sourceShape);
+  copy(getI64SubArray(op.getSizes()), sizes.begin());
+
+  // Calculate the slice elements by enumerating all slice positions and
+  // linearizing them. The enumeration order is lexicographic which yields a
+  // sequence of monotonically increasing linearized position indices.
+  const auto denseValuesBegin = dense.value_begin<Attribute>();
+  SmallVector<Attribute> sliceValues;
+  sliceValues.reserve(sliceVecTy.getNumElements());
+  SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
+  do {
+    int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
+    assert(linearizedPosition < sourceVecTy.getNumElements() &&
+           "Invalid index");
+    sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
+  } while (succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
+
+  assert(static_cast<int64_t>(sliceValues.size()) ==
+             sliceVecTy.getNumElements() &&
+         "Invalid number of slice elements");
+  return DenseElementsAttr::get(sliceVecTy, sliceValues);
+}
+} // namespace
+
 OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (getSourceVectorType() == getResult().getType())
     return getVector();
   if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
     return getResult();
 
-  // All subsequent successful folds require a constant input.
-  Attribute foldInput = adaptor.getVector();
-  if (!foldInput)
-    return {};
-
   // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
-  if (auto splat = llvm::dyn_cast<SplatElementsAttr>(foldInput))
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
     DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
   // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
-  if (auto dense = llvm::dyn_cast<DenseElementsAttr>(foldInput)) {
-    // TODO: Handle non-unit strides when they become available.
-    if (hasNonUnitStrides())
-      return {};
-
-    VectorType sourceVecTy = getSourceVectorType();
-    ArrayRef<int64_t> sourceShape = sourceVecTy.getShape();
-    SmallVector<int64_t, 4> sourceStrides = computeStrides(sourceShape);
-
-    VectorType sliceVecTy = getType();
-    ArrayRef<int64_t> sliceShape = sliceVecTy.getShape();
-    int64_t rank = sliceVecTy.getRank();
-
-    // Expand offsets and sizes to match the vector rank.
-    SmallVector<int64_t, 4> offsets(rank, 0);
-    copy(getI64SubArray(getOffsets()), offsets.begin());
-
-    SmallVector<int64_t, 4> sizes(sourceShape);
-    copy(getI64SubArray(getSizes()), sizes.begin());
-
-    // Calculate the slice elements by enumerating all slice positions and
-    // linearizing them. The enumeration order is lexicographic which yields a
-    // sequence of monotonically increasing linearized position indices.
-    const auto denseValuesBegin = dense.value_begin<Attribute>();
-    SmallVector<Attribute> sliceValues;
-    sliceValues.reserve(sliceVecTy.getNumElements());
-    SmallVector<int64_t> currSlicePosition(offsets.begin(), offsets.end());
-    do {
-      int64_t linearizedPosition = linearize(currSlicePosition, sourceStrides);
-      assert(linearizedPosition < sourceVecTy.getNumElements() &&
-             "Invalid index");
-      sliceValues.push_back(*(denseValuesBegin + linearizedPosition));
-    } while (
-        succeeded(incSlicePosition(currSlicePosition, sliceShape, offsets)));
-
-    assert(static_cast<int64_t>(sliceValues.size()) ==
-               sliceVecTy.getNumElements() &&
-           "Invalid number of slice elements");
-    return DenseElementsAttr::get(sliceVecTy, sliceValues);
-  }
-
-  return {};
+  return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getVector());
 }
 
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
