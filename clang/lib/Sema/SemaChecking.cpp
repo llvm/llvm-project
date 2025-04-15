@@ -99,6 +99,7 @@
 #include "llvm/Support/Locale.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -6047,8 +6048,14 @@ static void CheckFormatString(
     llvm::SmallBitVector &CheckedVarArgs, UncoveredArgHandler &UncoveredArg,
     bool IgnoreStringsWithoutSpecifiers);
 
-static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
-                                               const Expr *E);
+enum StringLiteralConstEvalResult {
+  SLCER_NotEvaluated,
+  SLCER_NotNullTerminated,
+  SLCER_Evaluated,
+};
+
+static StringLiteralConstEvalResult
+constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL);
 
 // Determine if an expression is a string literal or constant string.
 // If this function returns false on the arguments to a function expecting a
@@ -6080,14 +6087,9 @@ tryAgain:
 
   switch (E->getStmtClass()) {
   case Stmt::InitListExprClass:
-    // Handle expressions like {"foobar"}.
-    if (const clang::Expr *SLE = maybeConstEvalStringLiteral(S.Context, E)) {
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
-    }
-    return SLCT_NotALiteral;
+    // try to constant-evaluate the string
+    break;
+
   case Stmt::BinaryConditionalOperatorClass:
   case Stmt::ConditionalOperatorClass: {
     // The expression is a literal if both sub-expressions were, and it was
@@ -6178,10 +6180,9 @@ tryAgain:
             if (InitList->isStringLiteralInit())
               Init = InitList->getInit(0)->IgnoreParenImpCasts();
           }
-          return checkFormatStringExpr(
-              S, ReferenceFormatString, Init, Args, APK, format_idx,
-              firstDataArg, Type, CallType,
-              /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg, Offset);
+          InFunctionCall = false;
+          E = Init;
+          goto tryAgain;
         }
       }
 
@@ -6254,11 +6255,9 @@ tryAgain:
                 }
                 return SLCT_UncheckedLiteral;
               }
-              return checkFormatStringExpr(
-                  S, ReferenceFormatString, PVFormatMatches->getFormatString(),
-                  Args, APK, format_idx, firstDataArg, Type, CallType,
-                  /*InFunctionCall*/ false, CheckedVarArgs, UncoveredArg,
-                  Offset, IgnoreStringsWithoutSpecifiers);
+              E = PVFormatMatches->getFormatString();
+              InFunctionCall = false;
+              goto tryAgain;
             }
           }
 
@@ -6326,20 +6325,13 @@ tryAgain:
         unsigned BuiltinID = FD->getBuiltinID();
         if (BuiltinID == Builtin::BI__builtin___CFStringMakeConstantString ||
             BuiltinID == Builtin::BI__builtin___NSStringMakeConstantString) {
-          const Expr *Arg = CE->getArg(0);
-          return checkFormatStringExpr(
-              S, ReferenceFormatString, Arg, Args, APK, format_idx,
-              firstDataArg, Type, CallType, InFunctionCall, CheckedVarArgs,
-              UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
+          E = CE->getArg(0);
+          goto tryAgain;
         }
       }
     }
-    if (const Expr *SLE = maybeConstEvalStringLiteral(S.Context, E))
-      return checkFormatStringExpr(
-          S, ReferenceFormatString, SLE, Args, APK, format_idx, firstDataArg,
-          Type, CallType, /*InFunctionCall*/ false, CheckedVarArgs,
-          UncoveredArg, Offset, IgnoreStringsWithoutSpecifiers);
-    return SLCT_NotALiteral;
+    // try to constant-evaluate the string
+    break;
   }
   case Stmt::ObjCMessageExprClass: {
     const auto *ME = cast<ObjCMessageExpr>(E);
@@ -6360,11 +6352,8 @@ tryAgain:
           IgnoreStringsWithoutSpecifiers = true;
         }
 
-        const Expr *Arg = ME->getArg(FA->getFormatIdx().getASTIndex());
-        return checkFormatStringExpr(
-            S, ReferenceFormatString, Arg, Args, APK, format_idx, firstDataArg,
-            Type, CallType, InFunctionCall, CheckedVarArgs, UncoveredArg,
-            Offset, IgnoreStringsWithoutSpecifiers);
+        E = ME->getArg(FA->getFormatIdx().getASTIndex());
+        goto tryAgain;
       }
     }
 
@@ -6426,7 +6415,8 @@ tryAgain:
       }
     }
 
-    return SLCT_NotALiteral;
+    // try to constant-evaluate the string
+    break;
   }
   case Stmt::UnaryOperatorClass: {
     const UnaryOperator *UnaOp = cast<UnaryOperator>(E);
@@ -6443,26 +6433,79 @@ tryAgain:
       }
     }
 
-    return SLCT_NotALiteral;
+    // try to constant-evaluate the string
+    break;
   }
 
   default:
+    // try to constant-evaluate the string
+    break;
+  }
+
+  const StringLiteral *FakeLiteral = nullptr;
+  switch (constEvalStringAsLiteral(S, E, FakeLiteral)) {
+  case SLCER_NotEvaluated:
     return SLCT_NotALiteral;
+
+  case SLCER_NotNullTerminated:
+    S.Diag(Args[format_idx]->getBeginLoc(),
+           diag::warn_printf_format_string_not_null_terminated)
+        << Args[format_idx]->getSourceRange();
+    if (!InFunctionCall)
+      S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+    // Stop checking, as this might just mean we're missing a chunk of the
+    // format string and there would be other spurious format issues.
+    return SLCT_UncheckedLiteral;
+
+  case SLCER_Evaluated:
+    InFunctionCall = false;
+    E = FakeLiteral;
+    goto tryAgain;
   }
 }
 
-// If this expression can be evaluated at compile-time,
-// check if the result is a StringLiteral and return it
-// otherwise return nullptr
-static const Expr *maybeConstEvalStringLiteral(ASTContext &Context,
-                                               const Expr *E) {
+static StringLiteralConstEvalResult
+constEvalStringAsLiteral(Sema &S, const Expr *E, const StringLiteral *&SL) {
+  // As a last resort, try to constant-evaluate the format string. If it
+  // evaluates to a string literal in the first place, we can point to that
+  // string literal in source and use that.
   Expr::EvalResult Result;
-  if (E->EvaluateAsRValue(Result, Context) && Result.Val.isLValue()) {
+  if (E->EvaluateAsRValue(Result, S.Context) && Result.Val.isLValue()) {
     const auto *LVE = Result.Val.getLValueBase().dyn_cast<const Expr *>();
-    if (isa_and_nonnull<StringLiteral>(LVE))
-      return LVE;
+    if (auto *BaseSL = dyn_cast_or_null<StringLiteral>(LVE)) {
+      SL = BaseSL;
+      return SLCER_Evaluated;
+    }
   }
-  return nullptr;
+
+  // Otherwise, try to evaluate the expression as a string constant.
+  std::string FormatString;
+  if (!E->tryEvaluateString(S.Context, FormatString)) {
+    return FormatString.empty() ? SLCER_NotEvaluated : SLCER_NotNullTerminated;
+  }
+
+  std::unique_ptr<llvm::MemoryBuffer> MemBuf;
+  {
+    llvm::SmallString<80> EscapedString;
+    {
+      llvm::raw_svector_ostream OS(EscapedString);
+      OS << '"';
+      OS.write_escaped(FormatString);
+      OS << '"';
+    }
+    MemBuf.reset(new llvm::SmallVectorMemoryBuffer(std::move(EscapedString),
+                                                   "<scratch space>", true));
+  }
+
+  // Plop that string into a scratch buffer, create a string literal and then
+  // go with that.
+  auto ScratchFile = S.getSourceManager().createFileID(std::move(MemBuf));
+  SourceLocation Begin = S.getSourceManager().getLocForStartOfFile(ScratchFile);
+  QualType SLType = S.Context.getStringLiteralArrayType(S.Context.CharTy,
+                                                        FormatString.length());
+  SL = StringLiteral::Create(S.Context, FormatString,
+                             StringLiteralKind::Ordinary, false, SLType, Begin);
+  return SLCER_Evaluated;
 }
 
 StringRef Sema::GetFormatStringTypeName(FormatStringType FST) {
@@ -7086,10 +7129,11 @@ void CheckFormatHandler::EmitFormatDiagnostic(
     S.Diag(IsStringLocation ? ArgumentExpr->getExprLoc() : Loc, PDiag)
       << ArgumentExpr->getSourceRange();
 
-    const Sema::SemaDiagnosticBuilder &Note =
-      S.Diag(IsStringLocation ? Loc : StringRange.getBegin(),
-             diag::note_format_string_defined);
-
+    SourceLocation DiagLoc = IsStringLocation ? Loc : StringRange.getBegin();
+    unsigned DiagID = S.getSourceManager().isWrittenInScratchSpace(DiagLoc)
+                          ? diag::note_format_string_evaluated_to
+                          : diag::note_format_string_defined;
+    const Sema::SemaDiagnosticBuilder &Note = S.Diag(DiagLoc, DiagID);
     Note << StringRange;
     Note << FixIt;
   }

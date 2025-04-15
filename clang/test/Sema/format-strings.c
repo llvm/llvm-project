@@ -3,6 +3,11 @@
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-unknown-fuchsia %s
 // RUN: %clang_cc1 -fblocks -fsyntax-only -verify -Wformat-nonliteral -isystem %S/Inputs -triple=x86_64-linux-android %s
 
+// expected-note@-5{{format string was constant-evaluated}}
+// ^^^ there will be a <scratch space> SourceLocation caused by the
+// test_consteval_init_array test, that -verify treats as if it showed up at
+// line 1 of this file.
+
 #include <stdarg.h>
 #include <stddef.h>
 #define __need_wint_t
@@ -899,4 +904,13 @@ void test_promotion(void) {
   
   // pointers
   printf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+}
+
+void test_consteval_init_array(void) {
+  const char buf_not_terminated[] = {'%', 55 * 2 + 5, '\n'}; // expected-note{{format string is defined here}}
+  printf(buf_not_terminated, "hello"); // expected-warning{{format string is not null-terminated}}
+
+  const char buf[] = {'%', 55 * 2 + 5, '\n', 0};
+  printf(buf, "hello"); // no-warning
+  printf(buf, 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
 }

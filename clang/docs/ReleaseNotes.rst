@@ -382,6 +382,9 @@ related warnings within the method body.
   ``format_matches`` accepts an example valid format string as its third
   argument. For more information, see the Clang attributes documentation.
 
+- Format string checking now supports the compile-time evaluation of format
+  strings as a fallback mechanism.
+
 - Introduced a new statement attribute ``[[clang::atomic]]`` that enables
   fine-grained control over atomic code generation on a per-statement basis.
   Supported options include ``[no_]remote_memory``,

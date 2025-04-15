@@ -17952,15 +17952,36 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
                                   EvalInfo &Info, std::string *StringResult) {
-  if (!E->getType()->hasPointerRepresentation() || !E->isPRValue())
+  QualType Ty = E->getType();
+  if (!E->isPRValue())
     return false;
 
   LValue String;
-
-  if (!EvaluatePointer(E, String, Info))
+  QualType CharTy;
+  if (Ty->canDecayToPointerType()) {
+    if (E->isGLValue()) {
+      if (!EvaluateLValue(E, String, Info))
+        return false;
+    } else {
+      APValue &Value = Info.CurrentCall->createTemporary(
+          E, Ty, ScopeKind::FullExpression, String);
+      if (!EvaluateInPlace(Value, Info, String, E))
+        return false;
+    }
+    // The result is a pointer to the first element of the array.
+    auto *AT = Info.Ctx.getAsArrayType(Ty);
+    CharTy = AT->getElementType();
+    if (auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      String.addArray(Info, E, CAT);
+    else
+      String.addUnsizedArray(Info, E, CharTy);
+  } else if (Ty->hasPointerRepresentation()) {
+    if (!EvaluatePointer(E, String, Info))
+      return false;
+    CharTy = Ty->getPointeeType();
+  } else {
     return false;
-
-  QualType CharTy = E->getType()->getPointeeType();
+  }
 
   // Fast path: if it's a string literal, search the string value.
   if (const StringLiteral *S = dyn_cast_or_null<StringLiteral>(
@@ -18002,13 +18023,16 @@ static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
   }
 }
 
-std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
+bool Expr::tryEvaluateString(ASTContext &Ctx, std::string &StringResult) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantFold);
   uint64_t Result;
-  std::string StringResult;
+  return EvaluateBuiltinStrLen(this, Result, Info, &StringResult);
+}
 
-  if (EvaluateBuiltinStrLen(this, Result, Info, &StringResult))
+std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
+  std::string StringResult;
+  if (tryEvaluateString(Ctx, StringResult))
     return StringResult;
   return {};
 }

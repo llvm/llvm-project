@@ -791,7 +791,14 @@ public:
                                  const Expr *PtrExpression, ASTContext &Ctx,
                                  EvalResult &Status) const;
 
-  /// If the current Expr can be evaluated to a pointer to a null-terminated
+  /// Fill \c Into with the first characters that can be constant-evaluated
+  /// from this \c Expr . When encountering a null character, stop and return
+  /// \c true (the null is not returned in \c Into ). Return \c false if
+  /// evaluation runs off the end of the constant-evaluated string before it
+  /// encounters a null character.
+  bool tryEvaluateString(ASTContext &Ctx, std::string &Into) const;
+
+  /// If the current \c Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
   /// null).
   std::optional<std::string> tryEvaluateString(ASTContext &Ctx) const;

@@ -1,6 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -fblocks -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wformat-nonliteral -Wformat-non-iso -Wformat-pedantic -fblocks -std=c++20 %s
+
+#if __cplusplus >= 202000l
+// expected-note@-6{{format string was constant-evaluated}}
+// ^^^ there will be a <scratch space> SourceLocation caused by the
+// test_constexpr_string test, that -verify treats as if it showed up at
+// line 1 of this file.
+#endif
 
 #include <stdarg.h>
 
@@ -237,4 +245,70 @@ void f(Scoped1 S1, Scoped2 S2) {
 }
 }
 
+#endif
+
+#if __cplusplus >= 202000L
+class my_string {
+  char *data;
+  unsigned size;
+
+public:
+  template<unsigned N>
+  constexpr my_string(const char (&literal)[N]) {
+    data = new char[N+1];
+    for (size = 0; size < N; ++size) {
+      data[size] = literal[size];
+      if (data[size] == 0)
+        break;
+    }
+    data[size] = 0;
+  }
+
+  my_string(const my_string &) = delete;
+
+  constexpr my_string(my_string &&that) {
+    data = that.data;
+    size = that.size;
+    that.data = nullptr;
+    that.size = 0;
+  }
+
+  constexpr ~my_string() {
+    delete[] data;
+  }
+
+  template<unsigned N>
+  constexpr void append(const char (&literal)[N]) {
+    char *cat = new char[size + N + 1];
+    char *tmp = cat;
+    for (unsigned i = 0; i < size; ++i) {
+      *tmp++ = data[i];
+    }
+    for (unsigned i = 0; i < N; ++i) {
+      *tmp = literal[i];
+      if (*tmp == 0)
+        break;
+      ++tmp;
+    }
+    *tmp = 0;
+    delete[] data;
+    size = tmp - cat;
+    data = cat;
+  }
+
+  constexpr const char *c_str() const {
+    return data;
+  }
+};
+
+constexpr my_string const_string() {
+  my_string str("hello %s");
+  str.append(", %d");
+  return str;
+}
+
+void test_constexpr_string() {
+  printf(const_string().c_str(), "hello", 123); // no-warning
+  printf(const_string().c_str(), 123, 456); // expected-warning {{format specifies type 'char *' but the argument has type 'int'}}
+}
 #endif
