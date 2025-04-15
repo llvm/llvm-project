@@ -5597,7 +5597,61 @@ void Sema::InstantiateFunctionDefinition(SourceLocation PointOfInstantiation,
   Function->setLocation(PatternDecl->getLocation());
   Function->setInnerLocStart(PatternDecl->getInnerLocStart());
   Function->setRangeEnd(PatternDecl->getEndLoc());
-  Function->setDeclarationNameLoc(PatternDecl->getNameInfo().getInfo());
+  // Let the instantiation use the Pattern's DeclarationNameLoc, due to the
+  // following awkwardness:
+  //
+  //   1. There are out-of-tree users of getNameInfo().getSourceRange(), who
+  //   expect the source range of the instantiated declaration to be set to
+  //   point to the definition.
+  //
+  //   2. That getNameInfo().getSourceRange() might return the TypeLocInfo's
+  //   location it tracked.
+  //
+  //   3. Function might come from an (implicit) declaration, while the pattern
+  //   comes from a definition. In these cases, we need the PatternDecl's source
+  //   location.
+  //
+  // To that end, we need to more or less tweak the DeclarationNameLoc. However,
+  // we can't blindly copy the DeclarationNameLoc from the PatternDecl to the
+  // function, since it contains associated TypeLocs that should have already
+  // been transformed. So, we rebuild the TypeLoc for that purpose. Technically,
+  // we should create a new function declaration and assign everything we need,
+  // but InstantiateFunctionDefinition updates the declaration in place.
+  auto NameLocPointsToPattern = [&] {
+    DeclarationNameInfo PatternName = PatternDecl->getNameInfo();
+    DeclarationNameLoc PatternNameLoc = PatternName.getInfo();
+    switch (PatternName.getName().getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+    case DeclarationName::CXXConversionFunctionName:
+      break;
+    default:
+      // Cases where DeclarationNameLoc doesn't matter, as it merely contains a
+      // source range.
+      return PatternNameLoc;
+    }
+
+    TypeSourceInfo *TSI = Function->getNameInfo().getNamedTypeInfo();
+    // TSI might be null if the function is named by a constructor template id.
+    // E.g. S<T>() {} for class template S with a template parameter T.
+    if (!TSI) {
+      // We don't care about the DeclarationName of the instantiated function,
+      // but only the DeclarationNameLoc. So if the TypeLoc is absent, we do
+      // nothing.
+      return PatternNameLoc;
+    }
+
+    QualType InstT = TSI->getType();
+    // We want to use a TypeLoc that reflects the transformed type while
+    // preserving the source location from the pattern.
+    TypeLocBuilder TLB;
+    TLB.pushTrivial(
+        Context, InstT,
+        PatternNameLoc.getNamedTypeInfo()->getTypeLoc().getBeginLoc());
+    return DeclarationNameLoc::makeNamedTypeLoc(
+        TLB.getTypeSourceInfo(Context, InstT));
+  };
+  Function->setDeclarationNameLoc(NameLocPointsToPattern());
 
   EnterExpressionEvaluationContext EvalContext(
       *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
