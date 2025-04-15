@@ -1827,13 +1827,6 @@ bool MachineConstEvaluator::evaluateSplati(const APInt &A1, unsigned Bits,
 // ----------------------------------------------------------------------
 // Hexagon-specific code.
 
-namespace llvm {
-
-  FunctionPass *createHexagonConstPropagationPass();
-  void initializeHexagonConstPropagationPass(PassRegistry &Registry);
-
-} // end namespace llvm
-
 namespace {
 
   class HexagonConstEvaluator : public MachineConstEvaluator {

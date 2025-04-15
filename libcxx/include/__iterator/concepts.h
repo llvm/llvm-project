@@ -38,6 +38,7 @@
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_primary_template.h>
 #include <__type_traits/is_reference.h>
+#include <__type_traits/is_referenceable.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
@@ -132,7 +133,7 @@ concept incrementable = regular<_Ip> && weakly_incrementable<_Ip> && requires(_I
 // [iterator.concept.iterator]
 template <class _Ip>
 concept input_or_output_iterator = requires(_Ip __i) {
-  { *__i } -> __can_reference;
+  { *__i } -> __referenceable;
 } && weakly_incrementable<_Ip>;
 
 // [iterator.concept.sentinel]

@@ -247,6 +247,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // EraseStmt
+//===----------------------------------------------------------------------===//
 
 /// This statement represents the `erase` statement in PDLL. This statement
 /// erases the given root operation, corresponding roughly to the
@@ -261,6 +262,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // ReplaceStmt
+//===----------------------------------------------------------------------===//
 
 /// This statement represents the `replace` statement in PDLL. This statement
 /// replace the given root operation with a set of values, corresponding roughly
@@ -292,6 +294,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // RewriteStmt
+//===----------------------------------------------------------------------===//
 
 /// This statement represents an operation rewrite that contains a block of
 /// nested rewrite commands. This allows for building more complex operation
@@ -478,6 +481,7 @@ private:
 
 //===----------------------------------------------------------------------===//
 // AllResultsMemberAccessExpr
+//===----------------------------------------------------------------------===//
 
 /// This class represents an instance of MemberAccessExpr that references all
 /// results of an operation.
@@ -742,6 +746,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // AttrConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents an Attribute constraint, and constrains a variable to
 /// be an Attribute.
@@ -765,6 +770,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // OpConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents an Operation constraint, and constrains a variable to
 /// be an Operation.
@@ -790,6 +796,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // TypeConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents a Type constraint, and constrains a variable to be a
 /// Type.
@@ -804,6 +811,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // TypeRangeConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents a TypeRange constraint, and constrains a variable to be
 /// a TypeRange.
@@ -818,6 +826,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // ValueConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents a Value constraint, and constrains a variable to be a
 /// Value.
@@ -840,6 +849,7 @@ protected:
 
 //===----------------------------------------------------------------------===//
 // ValueRangeConstraintDecl
+//===----------------------------------------------------------------------===//
 
 /// The class represents a ValueRange constraint, and constrains a variable to
 /// be a ValueRange.

@@ -65,6 +65,7 @@ def CC_Hexagon: CallingConv<[
   CCIfType<[i32],
     CCIfSplit<
       CCCustom<"CC_SkipOdd">>>,
+  CCIfType<[v2i1],  CCPromoteToType<v2i32>>,
   CCIfType<[v4i1],  CCPromoteToType<v4i16>>,
   CCIfType<[v8i1],  CCPromoteToType<v8i8>>,
 

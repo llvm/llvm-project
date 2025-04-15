@@ -1040,7 +1040,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   InterleaveGroup<Instruction> IG(4, false, Align(4));
-  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false);
+  VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, DebugLoc());
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1269,7 +1269,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     InductionDescriptor IndDesc;
-    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2);
+    VPScalarIVStepsRecipe Recipe(IndDesc, Op1, Op2, Op2);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());

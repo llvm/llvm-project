@@ -350,7 +350,7 @@ define void @store_i32_stride5_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; AVX-NEXT:    vshufpd {{.*#+}} ymm4 = ymm4[0,0,3,3]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2,3],ymm4[4,5,6],ymm5[7]
 ; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = mem[0,1,0,1]
-; AVX-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm7
+; AVX-NEXT:    vblendps {{.*#+}} ymm7 = ymm0[0,1,2,3],ymm5[4,5,6,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm4 = ymm7[0],ymm4[1,2,3],ymm7[4],ymm4[5,6,7]
 ; AVX-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[u,u,u,2,u,u,u,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4,5,6,7]

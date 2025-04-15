@@ -20,6 +20,14 @@
 
 using namespace ompx;
 
+// FIXME: This resolves the handling for the AMDGPU workgroup size when the ABI
+// is set to 'none'. We only support COV5+ but this can be removed when COV4 is
+// fully deprecated.
+#ifdef __AMDGPU__
+extern const inline uint32_t __oclc_ABI_version = 500;
+[[gnu::alias("__oclc_ABI_version")]] const uint32_t __oclc_ABI_version__;
+#endif
+
 static bool isInLastWarp() {
   uint32_t MainTId = (mapping::getNumberOfThreadsInBlock() - 1) &
                      ~(mapping::getWarpSize() - 1);

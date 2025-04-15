@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64ExternalSymbolizer.h"
+#include "MCTargetDesc/AArch64MCExpr.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -19,23 +20,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-disassembler"
 
-static MCSymbolRefExpr::VariantKind
-getVariant(uint64_t LLVMDisassembler_VariantKind) {
+static AArch64MCExpr::Specifier
+getMachOSpecifier(uint64_t LLVMDisassembler_VariantKind) {
   switch (LLVMDisassembler_VariantKind) {
   case LLVMDisassembler_VariantKind_None:
-    return MCSymbolRefExpr::VK_None;
+    return AArch64MCExpr::None;
   case LLVMDisassembler_VariantKind_ARM64_PAGE:
-    return MCSymbolRefExpr::VK_PAGE;
+    return AArch64MCExpr::M_PAGE;
   case LLVMDisassembler_VariantKind_ARM64_PAGEOFF:
-    return MCSymbolRefExpr::VK_PAGEOFF;
+    return AArch64MCExpr::M_PAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGE:
-    return MCSymbolRefExpr::VK_GOTPAGE;
+    return AArch64MCExpr::M_GOTPAGE;
   case LLVMDisassembler_VariantKind_ARM64_GOTPAGEOFF:
-    return MCSymbolRefExpr::VK_GOTPAGEOFF;
+    return AArch64MCExpr::M_GOTPAGEOFF;
   case LLVMDisassembler_VariantKind_ARM64_TLVP:
-    return MCSymbolRefExpr::VK_TLVPPAGE;
+    return AArch64MCExpr::M_TLVPPAGE;
   case LLVMDisassembler_VariantKind_ARM64_TLVOFF:
-    return MCSymbolRefExpr::VK_TLVPPAGEOFF;
+    return AArch64MCExpr::M_TLVPPAGEOFF;
   default:
     llvm_unreachable("bad LLVMDisassembler_VariantKind");
   }
@@ -170,9 +171,9 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
     if (SymbolicOp.AddSymbol.Name) {
       StringRef Name(SymbolicOp.AddSymbol.Name);
       MCSymbol *Sym = Ctx.getOrCreateSymbol(Name);
-      MCSymbolRefExpr::VariantKind Variant = getVariant(SymbolicOp.VariantKind);
-      if (Variant != MCSymbolRefExpr::VK_None)
-        Add = MCSymbolRefExpr::create(Sym, Variant, Ctx);
+      auto Spec = getMachOSpecifier(SymbolicOp.VariantKind);
+      if (Spec != AArch64MCExpr::None)
+        Add = MCSymbolRefExpr::create(Sym, Spec, Ctx);
       else
         Add = MCSymbolRefExpr::create(Sym, Ctx);
     } else {
