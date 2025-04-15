@@ -1988,35 +1988,6 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     return success();
   }
 
-  if (inst->getOpcode() == llvm::Instruction::IndirectBr) {
-    auto *indBrInst = cast<llvm::IndirectBrInst>(inst);
-
-    FailureOr<Value> basePtr = convertValue(indBrInst->getAddress());
-    if (failed(basePtr))
-      return failure();
-
-    SmallVector<Block *> succBlocks;
-    // `succBlockArgs` is storage for the block arguments ranges used in
-    // `succBlockArgsRange`, so the later references live data.
-    SmallVector<SmallVector<Value>> succBlockArgs;
-    SmallVector<ValueRange> succBlockArgsRange;
-    for (auto i : llvm::seq<unsigned>(0, indBrInst->getNumSuccessors())) {
-      llvm::BasicBlock *succ = indBrInst->getSuccessor(i);
-      SmallVector<Value> blockArgs;
-      if (failed(convertBranchArgs(indBrInst, succ, blockArgs)))
-        return failure();
-      succBlocks.push_back(lookupBlock(succ));
-      succBlockArgs.push_back(blockArgs);
-      succBlockArgsRange.push_back(succBlockArgs.back());
-    }
-    Location loc = translateLoc(inst->getDebugLoc());
-    auto indBrOp = builder.create<LLVM::IndirectBrOp>(
-        loc, *basePtr, succBlockArgsRange, succBlocks);
-
-    mapNoResultOp(inst, indBrOp);
-    return success();
-  }
-
   // Convert all instructions that have an mlirBuilder.
   if (succeeded(convertInstructionImpl(builder, inst, *this, iface)))
     return success();
@@ -2027,8 +1998,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 LogicalResult ModuleImport::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData.
   // FIXME: Add support for call / operand attributes.
-  // FIXME: Add support for the cleanupret, catchret, catchswitch, callbr,
-  // vaarg, catchpad, cleanuppad instructions.
+  // FIXME: Add support for the indirectbr, cleanupret, catchret, catchswitch,
+  // callbr, vaarg, catchpad, cleanuppad instructions.
 
   // Convert LLVM intrinsics calls to MLIR intrinsics.
   if (auto *intrinsic = dyn_cast<llvm::IntrinsicInst>(inst))
