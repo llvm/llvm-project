@@ -32,10 +32,12 @@ namespace object {
 /// The producer of the associated offloading image.
 enum OffloadKind : uint16_t {
   OFK_None = 0,
-  OFK_OpenMP,
-  OFK_Cuda,
-  OFK_HIP,
-  OFK_LAST,
+  OFK_OpenMP = (1 << 1),
+  OFK_FIRST = OFK_OpenMP,
+  OFK_Cuda = (1 << 2),
+  OFK_HIP = (1 << 3),
+  OFK_SYCL = (1 << 4),
+  OFK_LAST = (1 << 5),
 };
 
 /// The type of contents the offloading image contains.
