@@ -411,6 +411,16 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
     set( LIBCLC_ARCH_OBJFILE_DIR "${LIBCLC_OBJFILE_DIR}/${arch_suffix}" )
     file( MAKE_DIRECTORY ${LIBCLC_ARCH_OBJFILE_DIR} )
 
+    # OpenCL 3.0 extensions
+    string(CONCAT CL_3_0_EXTENSIONS
+      "-cl-ext="
+      "+cl_khr_fp64,"
+      "+cl_khr_fp16,"
+      "+__opencl_c_3d_image_writes,"
+      "+__opencl_c_images,"
+      "+cl_khr_3d_image_writes")
+    list( APPEND build_flags -cl-std=CL3.0 "-Xclang" ${CL_3_0_EXTENSIONS} )
+
     string( TOUPPER "CLC_${MACRO_ARCH}" CLC_TARGET_DEFINE )
 
     list( APPEND build_flags
