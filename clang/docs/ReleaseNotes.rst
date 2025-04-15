@@ -38,6 +38,9 @@ Potentially Breaking Changes
 - Fix missing diagnostics for uses of declarations when performing typename access,
   such as when performing member access on a '[[deprecated]]' type alias.
   (#GH58547)
+- For ARM targets when compiling assembly files, the features included in the selected CPU
+  or Architecture's FPU are included. If you wish not to use a specific feature,
+  the relevant ``+no`` option will need to be amended to the command line option.
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -170,6 +173,8 @@ C23 Feature Support
   scope.
 - Fixed a bug where you could not cast a null pointer constant to type
   ``nullptr_t``. Fixes #GH133644.
+- Fixed a failed assertion with an invalid parameter to the ``#embed``
+  directive. Fixes #GH126940.
 
 C11 Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -189,6 +194,7 @@ Non-comprehensive list of changes in this release
 - Support parsing the `cc` operand modifier and alias it to the `c` modifier (#GH127719).
 - Added `__builtin_elementwise_exp10`.
 - For AMDPGU targets, added `__builtin_v_cvt_off_f32_i4` that maps to the `v_cvt_off_f32_i4` instruction.
+- Added `__builtin_elementwise_minnum` and `__builtin_elementwise_maxnum`.
 
 New Compiler Flags
 ------------------
@@ -210,6 +216,8 @@ Modified Compiler Flags
   Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
 
 - The compiler flag `-fbracket-depth` default value is increased from 256 to 2048. (#GH94728)
+
+- `-Wpadded` option implemented for the `x86_64-windows-msvc` target. Fixes #61702
 
 Removed Compiler Flags
 -------------------------
@@ -334,6 +342,7 @@ Improvements to Clang's diagnostics
 - Fixed an assertion when referencing an out-of-bounds parameter via a function
   attribute whose argument list refers to parameters by index and the function
   is variadic. e.g.,
+
   .. code-block:: c
 
     __attribute__ ((__format_arg__(2))) void test (int i, ...) { }
@@ -348,6 +357,8 @@ Improvements to Clang's diagnostics
 
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
+
+- An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
 - ``-Whigher-precisision-for-complex-divison`` no longer incorrectly warns when the divisor is real
   in complex division. (#GH131127)
@@ -434,6 +445,7 @@ Bug Fixes to C++ Support
   by template argument deduction.
 - Clang is now better at instantiating the function definition after its use inside
   of a constexpr lambda. (#GH125747)
+- Fixed a local class member function instantiation bug inside dependent lambdas. (#GH59734), (#GH132208)
 - Clang no longer crashes when trying to unify the types of arrays with
   certain differences in qualifiers (this could happen during template argument
   deduction or when building a ternary operator). (#GH97005)
@@ -519,6 +531,7 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+- For ARM targets, cc1as now considers the FPU's features for the selected CPU or Architecture.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -533,7 +546,6 @@ Windows Support
 - Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
   extensions are enabled. This allows for properly processing ``intsafe.h`` in
   the Windows SDK.
-- Clang now supports MSVC vector deleting destructors (GH19772).
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^

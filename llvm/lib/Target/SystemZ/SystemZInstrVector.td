@@ -105,7 +105,8 @@ let Predicates = [FeatureVector] in {
 
 let Predicates = [FeatureVector] in {
   // Load.
-  defm VL : UnaryVRXAlign<"vl", 0xE706>;
+  let SimpleBDXLoad = 1 in
+      defm VL : UnaryVRXAlign<"vl", 0xE706>;
 
   // Load to block boundary.  The number of loaded bytes is only known
   // at run time.  The instruction is really polymorphic, but v128b matches
@@ -213,7 +214,8 @@ defm : ReplicatePeephole<VLREPG, v2f64, z_load, f64>;
 
 let Predicates = [FeatureVector] in {
   // Store.
-  defm VST : StoreVRXAlign<"vst", 0xE70E>;
+  let SimpleBDXStore = 1 in
+      defm VST : StoreVRXAlign<"vst", 0xE70E>;
 
   // Store with length.  The number of stored bytes is only known at run time.
   def VSTL : StoreLengthVRSb<"vstl", 0xE73F, int_s390_vstl, 0>;

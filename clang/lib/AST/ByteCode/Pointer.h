@@ -469,6 +469,10 @@ public:
     assert(isFunctionPointer());
     return PointeeStorage.Fn;
   }
+  [[nodiscard]] const TypeidPointer &asTypeidPointer() const {
+    assert(isTypeidPointer());
+    return PointeeStorage.Typeid;
+  }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
@@ -577,6 +581,8 @@ public:
   uint64_t getByteOffset() const {
     if (isIntegralPointer())
       return asIntPointer().Value + Offset;
+    if (isTypeidPointer())
+      return reinterpret_cast<uintptr_t>(asTypeidPointer().TypePtr) + Offset;
     if (isOnePastEnd())
       return PastEndMark;
     return Offset;
