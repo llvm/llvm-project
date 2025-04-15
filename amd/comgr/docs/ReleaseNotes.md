@@ -27,7 +27,8 @@ behaviors:
   be found in amd/comgr/README.md.
 - Updated the license used for Comgr from Illinois to Apache 2.0 with LLVM
 Extensions (the same license used by LLVM).
-
+- Added Image Support to Comgr's handling of ISA metadata. Support for images
+can now be queried with Comgr's metadata APIs.
 
 Bug Fixes
 ---------

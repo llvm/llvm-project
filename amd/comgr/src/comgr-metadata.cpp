@@ -341,6 +341,7 @@ struct IsaInfo {
   bool XnackSupported;
   unsigned ElfMachine;
   bool TrapHandlerEnabled;
+  bool ImageSupport;
   unsigned LDSSize;
   unsigned LDSBankCount;
   unsigned EUsPerCU;
@@ -355,16 +356,17 @@ struct IsaInfo {
 } IsaInfos[] = {
 #define HANDLE_ISA(TARGET_TRIPLE, PROCESSOR, SRAMECC_SUPPORTED,                \
                    XNACK_SUPPORTED, ELF_MACHINE, TRAP_HANDLER_ENABLED,         \
-                   LDS_SIZE, LDS_BANK_COUNT, EUS_PER_CU, MAX_WAVES_PER_CU,     \
-                   MAX_FLAT_WORK_GROUP_SIZE, SGPR_ALLOC_GRANULE,               \
-                   TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, VGPR_ALLOC_GRANULE, \
-                   TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS)                     \
+                   IMAGE_SUPPORT, LDS_SIZE, LDS_BANK_COUNT, EUS_PER_CU,        \
+                   MAX_WAVES_PER_CU, MAX_FLAT_WORK_GROUP_SIZE,                 \
+                   SGPR_ALLOC_GRANULE, TOTAL_NUM_SGPRS, ADDRESSABLE_NUM_SGPRS, \
+                   VGPR_ALLOC_GRANULE, TOTAL_NUM_VGPRS, ADDRESSABLE_NUM_VGPRS) \
   {TARGET_TRIPLE "-" PROCESSOR,                                                \
    PROCESSOR,                                                                  \
    SRAMECC_SUPPORTED,                                                          \
    XNACK_SUPPORTED,                                                            \
    ELF::ELF_MACHINE,                                                           \
    TRAP_HANDLER_ENABLED,                                                       \
+   IMAGE_SUPPORT,                                                              \
    LDS_SIZE,                                                                   \
    LDS_BANK_COUNT,                                                             \
    EUS_PER_CU,                                                                 \
@@ -864,6 +866,8 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName,
   auto Info = IsaInfos[IsaIndex];
   Root["TrapHandlerEnabled"] =
       Doc.getNode(std::to_string(Info.TrapHandlerEnabled), /*Copy=*/true);
+  Root["ImageSupport"] =
+      Doc.getNode(std::to_string(Info.ImageSupport), /*Copy=*/true);
   Root["LocalMemorySize"] =
       Doc.getNode(std::to_string(Info.LDSSize), /*Copy=*/true);
   Root["EUsPerCU"] = Doc.getNode(std::to_string(Info.EUsPerCU), /*Copy=*/true);
