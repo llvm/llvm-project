@@ -1660,8 +1660,8 @@ public:
   /// Return a non-unique reference to the type for a variable array of
   /// the specified element type.
   QualType getVariableArrayType(QualType EltTy, Expr *NumElts,
-                                ArraySizeModifier ASM, unsigned IndexTypeQuals,
-                                SourceRange Brackets) const;
+                                ArraySizeModifier ASM,
+                                unsigned IndexTypeQuals) const;
 
   /// Return a non-unique reference to the type for a dependently-sized
   /// array of the specified element type.
@@ -1670,8 +1670,7 @@ public:
   /// point.
   QualType getDependentSizedArrayType(QualType EltTy, Expr *NumElts,
                                       ArraySizeModifier ASM,
-                                      unsigned IndexTypeQuals,
-                                      SourceRange Brackets) const;
+                                      unsigned IndexTypeQuals) const;
 
   /// Return a unique reference to the type for an incomplete array of
   /// the specified element type.
