@@ -111,6 +111,7 @@ DependencyScanningFilesystemSharedCache::getShardForUID(
 void DependencyScanningFilesystemSharedCache::diagnoseNegativeStatCachedPaths(
     llvm::raw_ostream &OS, llvm::vfs::FileSystem &UnderlyingFS) const {
   // Iterate through all shards and look for cached stat errors.
+  SmallVector<StringRef, 4> InvalidCachedPaths;
   for (unsigned i = 0; i < NumShards; i++) {
     const CacheShard &Shard = CacheShards[i];
     std::lock_guard<std::mutex> LockGuard(Shard.CacheLock);
@@ -124,12 +125,18 @@ void DependencyScanningFilesystemSharedCache::diagnoseNegativeStatCachedPaths(
           // This is the case where we have cached the non-existence
           // of the file at Path, but the file is created but the cache is
           // not invalidated. Report diagnostics.
-          OS << Path << " did not exist when it was first searched "
-             << "but was created later. This may have led to a build failure "
-                "due to missing files.\n";
+          InvalidCachedPaths.push_back(Path);
         }
       }
     }
+  }
+
+  if (InvalidCachedPaths.size()) {
+    OS << "The following paths did not exist when they were first searched, "
+          "but files they point to were created later:\n";
+    for (const auto P : InvalidCachedPaths)
+      OS << "\t" << P << "\n";
+    OS << "Files missing at the paths above may have caused build errors.\n";
   }
 }
 

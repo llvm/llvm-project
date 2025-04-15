@@ -182,7 +182,6 @@ TEST(DependencyScanningFilesystem, CacheStatFailures) {
 TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFS->setCurrentWorkingDirectory("/");
-  InMemoryFS->addFile("/dir", 0, llvm::MemoryBuffer::getMemBuffer(""));
 
   DependencyScanningFilesystemSharedCache SharedCache;
   DependencyScanningWorkerFilesystem DepFS(SharedCache, InMemoryFS);
@@ -202,7 +201,8 @@ TEST(DependencyScanningFilesystem, DiagnoseStaleStatFailures) {
   SharedCache.diagnoseNegativeStatCachedPaths(DiagsStream, *InMemoryFS.get());
 
   ASSERT_STREQ(
-      "/path1 did not exist when it was first searched but was created later. "
-      "This may have led to a build failure due to missing files.\n",
+      "The following paths did not exist when they were first searched, but "
+      "files they point to were created later:\n\t/path1\nFiles missing at the "
+      "paths above may have caused build errors.\n",
       Diags.c_str());
 }
