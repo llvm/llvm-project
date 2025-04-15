@@ -70,7 +70,6 @@ add_llvm_unittest(SupportTests
   PerThreadBumpPtrAllocatorTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
-  ProgramStackTest.cpp
   RecyclerTest.cpp
   RegexTest.cpp
   ReverseIterationTest.cpp
