@@ -4224,6 +4224,18 @@ CINDEX_LINKAGE CXString clang_getTypePrettyPrinted(CXType CT,
                                                    CXPrintingPolicy cxPolicy);
 
 /**
+ * Get the fully qualified name for a type.
+ *
+ * This includes full qualification of all template parameters.
+ *
+ * Policy - Further refine the type formatting
+ * WithGlobalNsPrefix - If non-zero, function will prepend a '::' to qualified
+ * names
+ */
+CINDEX_LINKAGE CXString clang_getFullyQualifiedName(
+    CXType CT, CXPrintingPolicy Policy, unsigned WithGlobalNsPrefix);
+
+/**
  * Retrieve the display name for the entity referenced by this cursor.
  *
  * The display name contains extra information that helps identify the cursor,
