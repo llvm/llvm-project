@@ -10,10 +10,6 @@ load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_X86_64")
 
-# TODO: Remove this helper function once all donwstream users are migrated.
-def libc_internal_target(name):
-    return name
-
 def libc_common_copts():
     root_label = Label(":libc")
     libc_include_path = paths.join(root_label.workspace_root, root_label.package)
@@ -84,10 +80,7 @@ def libc_function(name, **kwargs):
     # Builds "internal" library with a function, exposed as a C++ function in
     # the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
     # presence of another libc.
-    _libc_library(
-        name = libc_internal_target(name),
-        **kwargs
-    )
+    _libc_library(name = name, **kwargs)
 
 LibcLibraryInfo = provider(
     "All source files and textual headers for building a particular library.",
