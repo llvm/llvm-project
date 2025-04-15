@@ -1134,7 +1134,6 @@ void State::addInfoFor(BasicBlock &BB) {
     case Intrinsic::smin:
     case Intrinsic::smax:
     case Intrinsic::usub_sat:
-      // TODO: handle llvm.abs as well
       WorkList.push_back(
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       // TODO: Check if it is possible to instead only added the min/max facts
