@@ -1780,7 +1780,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   bool Changed = false;
   Value *A = II->getArgOperand(0);
   Value *B = II->getArgOperand(1);
-  Type *Ty = II->getType();
+  Type *Ty = A->getType();
   auto *Zero = ConstantInt::get(Ty, 0);
 
   switch (II->getIntrinsicID()) {
