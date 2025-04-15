@@ -2838,6 +2838,18 @@ public:
   /// immediately following this class.
   template <typename T> const T *getAs() const;
 
+  /// Look through sugar for an instance of TemplateSpecializationType which
+  /// is not a type alias.
+  const TemplateSpecializationType *
+  getAsNonAliasTemplateSpecializationType() const;
+
+  const TemplateSpecializationType *
+  castAsNonAliasTemplateSpecializationType() const {
+    auto TST = getAsNonAliasTemplateSpecializationType();
+    assert(TST && "not a TemplateSpecializationType");
+    return TST;
+  }
+
   /// Member-template getAsAdjusted<specific type>. Look through specific kinds
   /// of sugar (parens, attributes, etc) for an instance of \<specific type>.
   /// This is used when you need to walk over sugar nodes that represent some

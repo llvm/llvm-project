@@ -1938,6 +1938,17 @@ TagDecl *Type::getAsTagDecl() const {
   return nullptr;
 }
 
+const TemplateSpecializationType *
+Type::getAsNonAliasTemplateSpecializationType() const {
+  for (const auto *T = this; /**/; /**/) {
+    const TemplateSpecializationType *TST =
+        T->getAs<TemplateSpecializationType>();
+    if (!TST || !TST->isTypeAlias())
+      return TST;
+    T = TST->desugar().getTypePtr();
+  }
+}
+
 bool Type::hasAttr(attr::Kind AK) const {
   const Type *Cur = this;
   while (const auto *AT = Cur->getAs<AttributedType>()) {
