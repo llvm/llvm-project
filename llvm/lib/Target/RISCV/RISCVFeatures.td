@@ -1300,12 +1300,12 @@ def HasVendorXCVbi
                          "'XCVbi' (CORE-V Immediate Branching)">;
 // MIPS Extensions
 
-def FeatureVendorXMIPSCMove
-    : RISCVExtension<1, 0, "MIPS conditional move instruction(s) (ccmov)">;
-def HasVendorXMIPSCMove
-    : Predicate<"Subtarget->hasVendorXMIPSCMove()">,
-      AssemblerPredicate<(all_of FeatureVendorXMIPSCMove),
-                         "'Xmipscmove' ('mips.ccmov' instruction)">;
+def FeatureVendorXMIPSCMov
+    : RISCVExtension<1, 0, "MIPS conditional move instruction (mips.ccmov)">;
+def HasVendorXMIPSCMov
+    : Predicate<"Subtarget->hasVendorXMIPSCMov()">,
+      AssemblerPredicate<(all_of FeatureVendorXMIPSCMov),
+                         "'Xmipscmov' ('mips.ccmov' instruction)">;
 def UseCCMovInsn : Predicate<"Subtarget->useCCMovInsn()">;
 def FeatureVendorXMIPSLSP
     : RISCVExtension<1, 0, "MIPS optimization for hardware load-store bonding">;
