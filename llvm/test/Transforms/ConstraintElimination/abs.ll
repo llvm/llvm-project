@@ -167,5 +167,48 @@ define i1 @abs_is_nonnegative_constant_arg() {
   ret i1 %cmp
 }
 
+define i64 @abs_assume_nonnegative(i64 %arg) {
+; CHECK-LABEL: define i64 @abs_assume_nonnegative(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp sge i64 [[ARG]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    [[ABS:%.*]] = tail call i64 @llvm.abs.i64(i64 [[ARG]], i1 false)
+; CHECK-NEXT:    ret i64 [[ABS]]
+;
+  %precond = icmp sge i64 %arg, 0
+  call void @llvm.assume(i1 %precond)
+  %abs = tail call i64 @llvm.abs.i64(i64 %arg, i1 false)
+  ret i64 %abs
+}
+
+define i64 @abs_assume_negative(i64 %arg) {
+; CHECK-LABEL: define i64 @abs_assume_negative(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i64 [[ARG]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    [[ABS:%.*]] = tail call i64 @llvm.abs.i64(i64 [[ARG]], i1 false)
+; CHECK-NEXT:    ret i64 [[ABS]]
+;
+  %precond = icmp slt i64 %arg, 0
+  call void @llvm.assume(i1 %precond)
+  %abs = tail call i64 @llvm.abs.i64(i64 %arg, i1 false)
+  ret i64 %abs
+}
+
+; Negative test
+define i64 @abs_assume_unrelated(i64 %arg) {
+; CHECK-LABEL: define i64 @abs_assume_unrelated(
+; CHECK-SAME: i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[PRECOND:%.*]] = icmp slt i64 [[ARG]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
+; CHECK-NEXT:    [[ABS:%.*]] = tail call i64 @llvm.abs.i64(i64 [[ARG]], i1 false)
+; CHECK-NEXT:    ret i64 [[ABS]]
+;
+  %precond = icmp slt i64 %arg, 3
+  call void @llvm.assume(i1 %precond)
+  %abs = tail call i64 @llvm.abs.i64(i64 %arg, i1 false)
+  ret i64 %abs
+}
+
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 declare void @llvm.assume(i1)

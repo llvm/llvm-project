@@ -1128,6 +1128,7 @@ void State::addInfoFor(BasicBlock &BB) {
           FactOrCheck::getCheck(DT.getNode(&BB), cast<CallInst>(&I)));
       break;
     // Enqueue the intrinsics to add extra info.
+    case Intrinsic::abs:
     case Intrinsic::umin:
     case Intrinsic::umax:
     case Intrinsic::smin:
@@ -1139,7 +1140,6 @@ void State::addInfoFor(BasicBlock &BB) {
       // TODO: Check if it is possible to instead only added the min/max facts
       // when simplifying uses of the min/max intrinsics.
       [[fallthrough]];
-    case Intrinsic::abs:
     case Intrinsic::uadd_sat:
       if (!isGuaranteedNotToBePoison(&I))
         break;
@@ -1537,6 +1537,28 @@ static bool checkAndReplaceUSubSat(SaturatingInst *I, ConstraintInfo &Info,
   return false;
 }
 
+static bool checkAndReplaceAbs(IntrinsicInst *I, ConstraintInfo &Info,
+                               SmallVectorImpl<Instruction *> &ToRemove) {
+  assert(I->getIntrinsicID() == Intrinsic::abs && "Expected abs intrinsic");
+  Value *Op = I->getOperand(0);
+  if (checkCondition(ICmpInst::ICMP_SGE, Op, ConstantInt::get(Op->getType(), 0),
+                     I, Info)
+          .value_or(false)) {
+    I->replaceAllUsesWith(Op);
+    ToRemove.push_back(I);
+    return true;
+  }
+  if (checkCondition(ICmpInst::ICMP_SLT, Op, ConstantInt::get(Op->getType(), 0),
+                     I, Info)
+          .value_or(false)) {
+    IRBuilder<> Builder(I->getParent(), I->getIterator());
+    I->replaceAllUsesWith(Builder.CreateNeg(Op));
+    ToRemove.push_back(I);
+    return true;
+  }
+  return false;
+}
+
 static void
 removeEntryFromStack(const StackEntry &E, ConstraintInfo &Info,
                      Module *ReproducerModule,
@@ -1863,6 +1885,10 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           Changed |= checkAndReplaceUSubSat(SatIntr, Info, ToRemove);
         else
           llvm_unreachable("Unexpected intrinsic.");
+      } else if (auto *II = dyn_cast<IntrinsicInst>(Inst)) {
+        if (II->getIntrinsicID() == Intrinsic::abs) {
+          Changed |= checkAndReplaceAbs(II, Info, ToRemove);
+        }
       }
       continue;
     }
