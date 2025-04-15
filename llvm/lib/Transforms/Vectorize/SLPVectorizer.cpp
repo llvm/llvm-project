@@ -22683,7 +22683,7 @@ private:
                         Type *DestTy) {
     Value *Rdx;
     if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
-      unsigned DestTyNumElements = VecTy->getNumElements();
+      unsigned DestTyNumElements = getNumElements(VecTy);
       unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
       Rdx = PoisonValue::get(
           getWidenedType(Vec->getType()->getScalarType(), DestTyNumElements));
