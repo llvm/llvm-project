@@ -697,6 +697,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+#if LLPC_BUILD_NPI
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+
+#endif /* LLPC_BUILD_NPI */
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:

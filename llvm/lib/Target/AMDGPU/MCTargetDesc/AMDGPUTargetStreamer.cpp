@@ -515,6 +515,14 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEGROUP,
                ".amdhsa_enable_wavegroup");
+    PrintField(KD.kernel_code_properties,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER_SHIFT,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER,
+               ".amdhsa_enable_spatial_cluster");
+    PrintField(KD.kernel_code_properties,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP_SHIFT,
+               amdhsa::KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP,
+               ".amdhsa_enable_asymmetric_cluster_clamp");
     OS << "\t\t.amdhsa_laneshared_segment_fixed_size ";
     EmitMCExpr(KD.laneshared_segment_fixed_size);
     OS << '\n';

@@ -624,25 +624,26 @@ static inline bool addrspacesMayAlias(unsigned AS1, unsigned AS2) {
     return true;
 
 #if LLPC_BUILD_NPI
-  // This array is indexed by address space value enum elements 0 ... to 10
+  // This array is indexed by address space value enum elements 0 ... to 11
 #else /* LLPC_BUILD_NPI */
   // This array is indexed by address space value enum elements 0 ... to 9
 #endif /* LLPC_BUILD_NPI */
   // clang-format off
 #if LLPC_BUILD_NPI
-  static const bool ASAliasRules[11][11] = {
-    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared*/
-    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true},
-    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
-    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false},
-    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false, false},
-    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true,  false},
-    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false},
-    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true,  false},
-    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
-    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
-    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true,  false},
-    /* Lane Shared */         {true,  false, false, false, false, false, false, false, false, false, true},
+  static const bool ASAliasRules[12][12] = {
+    /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr LaneShared Distributed*/
+    /* Flat     */            {true,  true,  false, true,  true,  true,  true,  true,  true,  true,  true,  true},
+    /* Global   */            {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
+    /* Region   */            {false, false, true,  false, false, false, false, false, false, false, false, false},
+    /* Local    */            {true,  false, false, true,  false, false, false, false, false, false, false, true},
+    /* Constant */            {true,  true,  false, false, false, false, true,  true,  true,  true,  false, false},
+    /* Private  */            {true,  false, false, false, false, true,  false, false, false, false, false, false},
+    /* Constant 32-bit */     {true,  true,  false, false, true,  false, false, true,  true,  true,  false, false},
+    /* Buffer Fat Ptr  */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
+    /* Buffer Resource */     {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
+    /* Buffer Strided Ptr  */ {true,  true,  false, false, true,  false, true,  true,  true,  true,  false, false},
+    /* Lane Shared */         {true,  false, false, false, false, false, false, false, false, false, true,  false},
+    /* Distributed */         {true,  false, false, true,  false, false, false, false, false, false, false, true},
 #else /* LLPC_BUILD_NPI */
   static const bool ASAliasRules[10][10] = {
     /*                       Flat   Global Region  Local Constant Private Const32 BufFatPtr BufRsrc BufStrdPtr */

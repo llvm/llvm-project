@@ -863,7 +863,11 @@ public:
         (!Inst.mayLoad() || SIInstrInfo::isAtomicNoRet(Inst))) {
       // FLAT and SCRATCH instructions may access scratch. Other VMEM
       // instructions do not.
+#if LLPC_BUILD_NPI
+      if (TII->mayAccessScratchThroughFlat(Inst))
+#else /* LLPC_BUILD_NPI */
       if (SIInstrInfo::isFLAT(Inst) && mayAccessScratchThroughFlat(Inst))
+#endif /* LLPC_BUILD_NPI */
         return SCRATCH_WRITE_ACCESS;
       return VMEM_WRITE_ACCESS;
     }
@@ -881,7 +885,10 @@ public:
 
   bool mayAccessVMEMThroughFlat(const MachineInstr &MI) const;
   bool mayAccessLDSThroughFlat(const MachineInstr &MI) const;
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+#endif /* LLPC_BUILD_NPI */
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
@@ -2665,6 +2672,8 @@ bool SIInsertWaitcnts::mayAccessLDSThroughFlat(const MachineInstr &MI) const {
   return false;
 }
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 // This is a flat memory operation. Check to see if it has memory tokens for
 // either scratch or FLAT.
 bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
@@ -2691,6 +2700,7 @@ bool SIInsertWaitcnts::mayAccessScratchThroughFlat(
   });
 }
 
+#endif /* LLPC_BUILD_NPI */
 static bool isCacheInvOrWBInst(MachineInstr &Inst) {
   auto Opc = Inst.getOpcode();
   return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||

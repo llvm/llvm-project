@@ -308,10 +308,6 @@ protected:
   bool HasMin3Max3PKF16 = false;
 #endif /* LLPC_BUILD_NPI */
   bool HasMinimum3Maximum3PKF16 = false;
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-  bool HasPointSampleAccel = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasLshlAddU64Inst = false;
 #if LLPC_BUILD_NPI
   bool HasAddSubU64Insts = false;
@@ -320,8 +316,8 @@ protected:
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
-  bool HasPointSampleAccel = false;
 #endif /* LLPC_BUILD_NPI */
+  bool HasPointSampleAccel = false;
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;

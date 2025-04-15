@@ -720,7 +720,7 @@ static StringRef computeDataLayout(const Triple &TT) {
   // like getelementptr.
   return "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
 #if LLPC_BUILD_NPI
-         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32"
+         "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-p10:32:32-p11:32:32"
          "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:"
 #else /* LLPC_BUILD_NPI */
          "-p7:160:256:256:32-p8:128:128-p9:192:256:256:32-i64:64-v16:16-v24:32-"
@@ -973,7 +973,8 @@ int64_t AMDGPUTargetMachine::getNullPointerValue(unsigned AddrSpace) {
           AddrSpace == AMDGPUAS::PRIVATE_ADDRESS ||
 #if LLPC_BUILD_NPI
           AddrSpace == AMDGPUAS::REGION_ADDRESS ||
-          AddrSpace == AMDGPUAS::LANE_SHARED)
+          AddrSpace == AMDGPUAS::LANE_SHARED ||
+          AddrSpace == AMDGPUAS::DISTRIBUTED)
 #else /* LLPC_BUILD_NPI */
           AddrSpace == AMDGPUAS::REGION_ADDRESS)
 #endif /* LLPC_BUILD_NPI */
@@ -1135,6 +1136,15 @@ GCNTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
 
   if (SchedStrategy == "max-memory-clause")
     return createGCNMaxMemoryClauseMachineScheduler(C);
+
+  if (SchedStrategy == "iterative-ilp")
+    return createIterativeILPMachineScheduler(C);
+
+  if (SchedStrategy == "iterative-minreg")
+    return createMinRegScheduler(C);
+
+  if (SchedStrategy == "iterative-maxocc")
+    return createIterativeGCNMaxOccupancyMachineScheduler(C);
 
   return createGCNMaxOccupancyMachineScheduler(C);
 }

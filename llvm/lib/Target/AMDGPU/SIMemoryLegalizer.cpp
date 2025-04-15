@@ -387,7 +387,12 @@ public:
                                               bool IsNonTemporal,
                                               bool IsLastUse = false) const = 0;
 
+#if LLPC_BUILD_NPI
+  virtual bool finalizeStore(MachineBasicBlock::iterator &MI,
+                             bool Atomic) const {
+#else /* LLPC_BUILD_NPI */
   virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
+#endif /* LLPC_BUILD_NPI */
     return false;
   };
 
@@ -688,7 +693,12 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
+#if LLPC_BUILD_NPI
+  bool finalizeStore(MachineBasicBlock::iterator &MI,
+                     bool Atomic) const override;
+#else /* LLPC_BUILD_NPI */
   bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
+#endif /* LLPC_BUILD_NPI */
 
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
@@ -2801,22 +2811,46 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-bool SIGfx12CacheControl::expandSystemScopeStore(
-    MachineBasicBlock::iterator &MI) const {
 #if LLPC_BUILD_NPI
-  if (ST.hasGFX1250Insts())
-    return false;
-
+bool SIGfx12CacheControl::finalizeStore(MachineBasicBlock::iterator &MI,
+                                        bool Atomic) const {
   // Only required on gfx120x.
   auto CoreMI = &*MI;
   if (MI->isBundle()) {
     CoreMI = SIInstrInfo::bundleWithGPRIndexing(*MI);
     assert(CoreMI);
   }
+
+  // GFX120x specific: we must add waits before a system scope store.
+#else /* LLPC_BUILD_NPI */
+bool SIGfx12CacheControl::expandSystemScopeStore(
+    MachineBasicBlock::iterator &MI) const {
 #endif /* LLPC_BUILD_NPI */
   MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
+#if LLPC_BUILD_NPI
+  if (!CPol)
+    return false;
+
+  // No scope operand means SCOPE_CU.
+  const unsigned Scope = CPol->getImm() & CPol::SCOPE;
+
+  // GFX120x only: Extra waits needed before system scope stores.
+  if (!ST.hasGFX1250Insts()) {
+    if (!Atomic && Scope == CPol::SCOPE_SYS)
+      return insertWaitsBeforeSystemScopeStore(MI);
+    return false;
+  }
+
+  // GFX1250 only: Require SCOPE_SE on stores that may hit the scratch address
+  // space.
+  if (TII->mayAccessScratchThroughFlat(*MI) && Scope == CPol::SCOPE_CU)
+    return setScope(MI, CPol::SCOPE_SE);
+
+  // TODO: Introduce a target feature to always enforce SCOPE_SE.
+#else /* LLPC_BUILD_NPI */
   if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
     return insertWaitsBeforeSystemScopeStore(MI);
+#endif /* LLPC_BUILD_NPI */
 
   return false;
 }
@@ -2974,6 +3008,9 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
+#if LLPC_BUILD_NPI
+    Changed |= CC->finalizeStore(MI, /*Atomic=*/true);
+#endif /* LLPC_BUILD_NPI */
     return Changed;
   }
 
@@ -2984,12 +3021,14 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, MOI.isVolatile(),
       MOI.isNonTemporal());
 
+#if LLPC_BUILD_NPI
+  Changed |= CC->finalizeStore(MI, /*Atomic=*/false);
+
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+#else /* LLPC_BUILD_NPI */
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
   Changed |= CC->expandSystemScopeStore(MI);
-#if LLPC_BUILD_NPI
-
-  Changed |= CC->setCFS(MI, MOI.getCFS());
 #endif /* LLPC_BUILD_NPI */
   return Changed;
 }

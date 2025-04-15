@@ -4491,6 +4491,32 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
+#if LLPC_BUILD_NPI
+bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
+  if (!isFLAT(MI) || isFLATGlobal(MI))
+    return false;
+
+  // If scratch is not initialized, we can never access it.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
+
+  // SCRATCH instructions always access scratch.
+  if (isFLATScratch(MI))
+    return true;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access scratch.
+  if (MI.memoperands_empty())
+    return true;
+
+  // See if any memory operand specifies an address space that involves scratch.
+  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+    unsigned AS = Memop->getAddrSpace();
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  });
+}
+
+#endif /* LLPC_BUILD_NPI */
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   // Skip the full operand and register alias search modifiesRegister
   // does. There's only a handful of instructions that touch this, it's only an
@@ -7635,14 +7661,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 #if LLPC_BUILD_NPI
         .add(SrcMO);
     SrcMO.ChangeToRegister(Reg, false);
-#else /* LLPC_BUILD_NPI */
-        .add(Src0);
-    Src0.ChangeToRegister(Reg, false);
-#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
-#if LLPC_BUILD_NPI
   if (MI.getOpcode() == AMDGPU::V_PERMUTE_PAIR_GENSGPR_B32) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_64_XEXECRegClass);
@@ -7666,9 +7687,14 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
         .addImm(AMDGPU::sub1);
 
     Src1.ChangeToRegister(Reg, false);
+#else /* LLPC_BUILD_NPI */
+        .add(Src0);
+    Src0.ChangeToRegister(Reg, false);
+#endif /* LLPC_BUILD_NPI */
     return nullptr;
   }
 
+#if LLPC_BUILD_NPI
   // Legalize TENSOR_LOAD_TO_LDS, TENSOR_LOAD_TO_LDS_D2, TENSOR_STORE_FROM_LDS,
   // TENSOR_STORE_FROM_LDS_D2. All their operands are scalar.
   if (MI.getOpcode() == AMDGPU::TENSOR_LOAD_TO_LDS ||

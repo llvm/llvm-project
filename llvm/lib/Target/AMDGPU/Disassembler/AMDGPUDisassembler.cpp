@@ -2926,6 +2926,24 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
                                        amdhsa::KERNEL_CODE_PROPERTIES_OFFSET,
                                        "must be zero prior to gfx13");
     }
+
+    if (isGFX13Plus()) {
+      PRINT_DIRECTIVE(".amdhsa_enable_asymmetric_cluster_clamp",
+                      KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP) {
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_ENABLE_ASYMMETRIC_CLUSTER_CLAMP,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET,
+                                       "must be zero prior to gfx13");
+    }
+
+    if (isGFX13Plus()) {
+      PRINT_DIRECTIVE(".amdhsa_enable_spatial_cluster",
+                      KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER);
+    } else if (TwoByteBuffer & KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER) {
+      return createReservedKDBitsError(KERNEL_CODE_PROPERTY_ENABLE_SPATIAL_CLUSTER,
+                                       amdhsa::KERNEL_CODE_PROPERTIES_OFFSET,
+                                       "must be zero prior to gfx13");
+    }
 #endif /* LLPC_BUILD_NPI */
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1) {

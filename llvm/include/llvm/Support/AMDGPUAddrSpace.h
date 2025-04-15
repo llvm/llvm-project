@@ -26,8 +26,8 @@ namespace AMDGPUAS {
 enum : unsigned {
 #if LLPC_BUILD_NPI
   // The maximum value for flat, generic, local, private,
-  // constant, region, and lane-shared
-  MAX_AMDGPU_ADDRESS = 10,
+  // constant, region, lane-shared and distributed.
+  MAX_AMDGPU_ADDRESS = 11,
 #else /* LLPC_BUILD_NPI */
   // The maximum value for flat, generic, local, private, constant and region.
   MAX_AMDGPU_ADDRESS = 9,
@@ -53,6 +53,8 @@ enum : unsigned {
 #if LLPC_BUILD_NPI
 
   LANE_SHARED = 10, ///< Address space for wave-group lane-shared
+
+  DISTRIBUTED = 11, ///< Address space for distributed memory. (DDS)
 #endif /* LLPC_BUILD_NPI */
 
   /// Internal address spaces. Can be freely renumbered.
