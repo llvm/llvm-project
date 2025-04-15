@@ -131,8 +131,7 @@ class BareSImmNAsmOperand<int width>
 
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
-def bare_simm32 : RISCVOp<XLenVT>,
-                  ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]> {
+def bare_simm32 : RISCVOp<XLenVT> {
   let ParserMatchClass = BareSImmNAsmOperand<32>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<32>";
@@ -1256,11 +1255,11 @@ def PseudoQC_E_JAL: Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
 
 class PatGprNoX0Simm26NoSimm12<SDPatternOperator OpNode, RVInst48 Inst>
     : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm26_nosimm12:$imm)),
-          (Inst GPRNoX0:$rs1, simm26:$imm)>;
+          (Inst GPRNoX0:$rs1, simm26_nosimm12:$imm)>;
 
 class PatGprNoX0Simm32NoSimm26<SDPatternOperator OpNode, RVInst48 Inst>
     : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm32_nosimm26:$imm)),
-          (Inst GPRNoX0:$rs1, bare_simm32:$imm)>;
+          (Inst GPRNoX0:$rs1, simm32_nosimm26:$imm)>;
 
 /// Simple arithmetic operations
 
