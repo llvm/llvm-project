@@ -42,13 +42,12 @@ class OpenACCClauseCIREmitter final
   // This is necessary since a few of the clauses emit differently based on the
   // directive kind they are attached to.
   OpenACCDirectiveKind dirKind;
-  // This source location should be able to go away once the NYI diagnostics are
-  // gone.
+  // TODO(cir): This source location should be able to go away once the NYI
+  // diagnostics are gone.
   SourceLocation dirLoc;
 
   void clauseNotImplemented(const OpenACCClause &c) {
-    cgf.getCIRGenModule().errorNYI(c.getSourceRange(), "OpenACC Clause",
-                                   c.getClauseKind());
+    cgf.cgm.errorNYI(c.getSourceRange(), "OpenACC Clause", c.getClauseKind());
   }
 
 public:
@@ -136,8 +135,8 @@ public:
         mlir::Value condition =
             cgf.evaluateExprAsBool(clause.getConditionExpr());
 
-        mlir::Location exprLoc = cgf.getCIRGenModule().getLoc(
-            clause.getConditionExpr()->getBeginLoc());
+        mlir::Location exprLoc =
+            cgf.cgm.getLoc(clause.getConditionExpr()->getBeginLoc());
         mlir::IntegerType targetType = mlir::IntegerType::get(
             &cgf.getMLIRContext(), /*width=*/1,
             mlir::IntegerType::SignednessSemantics::Signless);
@@ -271,46 +270,46 @@ mlir::LogicalResult CIRGenFunction::emitOpenACCShutdownConstruct(
 
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCLoopConstruct(const OpenACCLoopConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Loop Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Loop Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCCombinedConstruct(
     const OpenACCCombinedConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Combined Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCEnterDataConstruct(
     const OpenACCEnterDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC EnterData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCExitDataConstruct(
     const OpenACCExitDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC ExitData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult CIRGenFunction::emitOpenACCHostDataConstruct(
     const OpenACCHostDataConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC HostData Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCWaitConstruct(const OpenACCWaitConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Wait Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCUpdateConstruct(const OpenACCUpdateConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Update Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Update Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCAtomicConstruct(const OpenACCAtomicConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Atomic Construct");
   return mlir::failure();
 }
 mlir::LogicalResult
 CIRGenFunction::emitOpenACCCacheConstruct(const OpenACCCacheConstruct &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenACC Cache Construct");
+  cgm.errorNYI(s.getSourceRange(), "OpenACC Cache Construct");
   return mlir::failure();
 }
