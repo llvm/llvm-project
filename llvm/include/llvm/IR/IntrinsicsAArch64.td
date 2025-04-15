@@ -3118,11 +3118,14 @@ let TargetPrefix = "aarch64" in {
          [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
           IntrInaccessibleMemOnly]>;
 
-  def int_aarch64_sme_tmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_stmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_utmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_sutmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_ustmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za16_ftmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za16_bftmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_ftmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_bftmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_stmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_utmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_sutmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_za32_ustmopa : SME_OuterProduct_TMOP_Intrinsic;
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
