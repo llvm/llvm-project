@@ -3897,7 +3897,9 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           return std::nullopt;
       }
       if (!ForHasEmbed) {
-        Diag(CurTok, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        Diag(ParamStartLoc, diag::err_pp_unknown_parameter) << 1 << Parameter;
+        if (CurTok.isNot(tok::eod))
+          DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
     }
@@ -4010,6 +4012,12 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     Diag(FilenameTok, diag::err_pp_file_not_found) << Filename;
     return;
   }
+
+  if (MaybeFileRef->isDeviceFile()) {
+    Diag(FilenameTok, diag::err_pp_embed_device_file) << Filename;
+    return;
+  }
+
   std::optional<llvm::MemoryBufferRef> MaybeFile =
       getSourceManager().getMemoryBufferForFileOrNone(*MaybeFileRef);
   if (!MaybeFile) {

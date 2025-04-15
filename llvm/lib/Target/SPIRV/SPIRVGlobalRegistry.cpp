@@ -54,6 +54,7 @@ static unsigned typeToAddressSpace(const Type *Ty) {
   report_fatal_error("Unable to convert LLVM type to SPIRVType", true);
 }
 
+#ifndef NDEBUG
 static bool
 storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
@@ -85,6 +86,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   }
   llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
+#endif
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
     : PointerSize(PointerSize), Bound(0) {}
@@ -1741,7 +1743,8 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 
 SPIRVType *SPIRVGlobalRegistry::changePointerStorageClass(
     SPIRVType *PtrType, SPIRV::StorageClass::StorageClass SC, MachineInstr &I) {
-  SPIRV::StorageClass::StorageClass OldSC = getPointerStorageClass(PtrType);
+  [[maybe_unused]] SPIRV::StorageClass::StorageClass OldSC =
+      getPointerStorageClass(PtrType);
   assert(storageClassRequiresExplictLayout(OldSC) ==
          storageClassRequiresExplictLayout(SC));
 

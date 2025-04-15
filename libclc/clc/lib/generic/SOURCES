@@ -7,6 +7,7 @@ integer/clc_abs.cl
 integer/clc_abs_diff.cl
 integer/clc_add_sat.cl
 integer/clc_clz.cl
+integer/clc_ctz.cl
 integer/clc_hadd.cl
 integer/clc_mad24.cl
 integer/clc_mad_sat.cl

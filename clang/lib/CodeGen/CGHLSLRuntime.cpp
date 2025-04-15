@@ -282,11 +282,14 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
 
 void CGHLSLRuntime::finishCodeGen() {
   auto &TargetOpts = CGM.getTarget().getTargetOpts();
+  auto &CodeGenOpts = CGM.getCodeGenOpts();
   auto &LangOpts = CGM.getLangOpts();
   llvm::Module &M = CGM.getModule();
   Triple T(M.getTargetTriple());
   if (T.getArch() == Triple::ArchType::dxil)
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
+  if (CodeGenOpts.ResMayAlias)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
 
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to

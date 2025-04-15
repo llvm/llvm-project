@@ -42,10 +42,6 @@ private:
   void authenticateLR(MachineFunction &MF,
                       MachineBasicBlock::iterator MBBI) const;
 
-  /// Stores blend(AddrDisc, IntDisc) to the Result register.
-  void emitBlend(MachineBasicBlock::iterator MBBI, Register Result,
-                 Register AddrDisc, unsigned IntDisc) const;
-
   bool checkAuthenticatedLR(MachineBasicBlock::iterator TI) const;
 };
 

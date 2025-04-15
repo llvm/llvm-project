@@ -710,6 +710,7 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenCallSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPReductionSC ||
@@ -883,6 +884,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1040,11 +1048,19 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+  VPInstructionWithType(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Type *ResultTy, FastMathFlags FMFs, DebugLoc DL = {},
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
-    return R->isScalarCast();
+    if (R->isScalarCast())
+      return true;
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
   }
 
   static inline bool classof(const VPUser *R) {
@@ -2047,6 +2063,9 @@ public:
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
 
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
   void print(raw_ostream &O, const Twine &Indent,
@@ -2077,17 +2096,21 @@ public:
 /// scalar value.
 class VPPartialReductionRecipe : public VPSingleDefRecipe {
   unsigned Opcode;
+  /// The divisor by which the VF of this recipe's output should be divided
+  /// during execution.
+  unsigned VFScaleFactor;
 
 public:
   VPPartialReductionRecipe(Instruction *ReductionInst, VPValue *Op0,
-                           VPValue *Op1)
+                           VPValue *Op1, unsigned VFScaleFactor)
       : VPPartialReductionRecipe(ReductionInst->getOpcode(), Op0, Op1,
-                                 ReductionInst) {}
+                                 VFScaleFactor, ReductionInst) {}
   VPPartialReductionRecipe(unsigned Opcode, VPValue *Op0, VPValue *Op1,
+                           unsigned VFScaleFactor,
                            Instruction *ReductionInst = nullptr)
       : VPSingleDefRecipe(VPDef::VPPartialReductionSC,
                           ArrayRef<VPValue *>({Op0, Op1}), ReductionInst),
-        Opcode(Opcode) {
+        Opcode(Opcode), VFScaleFactor(VFScaleFactor) {
     [[maybe_unused]] auto *AccumulatorRecipe =
         getOperand(1)->getDefiningRecipe();
     assert((isa<VPReductionPHIRecipe>(AccumulatorRecipe) ||
@@ -2098,7 +2121,7 @@ public:
 
   VPPartialReductionRecipe *clone() override {
     return new VPPartialReductionRecipe(Opcode, getOperand(0), getOperand(1),
-                                        getUnderlyingInstr());
+                                        VFScaleFactor, getUnderlyingInstr());
   }
 
   VP_CLASSOF_IMPL(VPDef::VPPartialReductionSC)
@@ -2112,6 +2135,9 @@ public:
 
   /// Get the binary op's opcode.
   unsigned getOpcode() const { return Opcode; }
+
+  /// Get the factor that the VF of this recipe's output should be scaled by.
+  unsigned getVFScaleFactor() const { return VFScaleFactor; }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3789,6 +3815,13 @@ public:
   /// via the other early exit).
   bool hasEarlyExit() const {
     return ExitBlocks.size() > 1 || ExitBlocks[0]->getNumPredecessors() > 1;
+  }
+
+  /// Returns true if the scalar tail may execute after the vector loop. Note
+  /// that this relies on unneeded branches to the scalar tail loop being
+  /// removed.
+  bool hasScalarTail() const {
+    return getScalarPreheader()->getNumPredecessors() != 0;
   }
 };
 

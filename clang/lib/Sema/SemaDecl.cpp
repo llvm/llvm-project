@@ -2996,6 +2996,21 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // msvc will allow a subsequent definition to add an uuid to a class
       ++I;
       continue;
+    } else if (isa<DeprecatedAttr, WarnUnusedResultAttr, UnusedAttr>(
+                   NewAttribute) &&
+               NewAttribute->isStandardAttributeSyntax()) {
+      // C++14 [dcl.attr.deprecated]p3: A name or entity declared without the
+      // deprecated attribute can later be re-declared with the attribute and
+      // vice-versa.
+      // C++17 [dcl.attr.unused]p4: A name or entity declared without the
+      // maybe_unused attribute can later be redeclared with the attribute and
+      // vice versa.
+      // C++20 [dcl.attr.nodiscard]p2: A name or entity declared without the
+      // nodiscard attribute can later be redeclared with the attribute and
+      // vice-versa.
+      // C23 6.7.13.3p3, 6.7.13.4p3. and 6.7.13.5p5 give the same allowances.
+      ++I;
+      continue;
     } else if (const AlignedAttr *AA = dyn_cast<AlignedAttr>(NewAttribute)) {
       if (AA->isAlignas()) {
         // C++11 [dcl.align]p6:
@@ -10169,10 +10184,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
       // deallocation function shall not be declared with the consteval
       // specifier.
       if (ConstexprKind == ConstexprSpecKind::Consteval &&
-          (NewFD->getOverloadedOperator() == OO_New ||
-           NewFD->getOverloadedOperator() == OO_Array_New ||
-           NewFD->getOverloadedOperator() == OO_Delete ||
-           NewFD->getOverloadedOperator() == OO_Array_Delete)) {
+          NewFD->getDeclName().isAnyOperatorNewOrDelete()) {
         Diag(D.getDeclSpec().getConstexprSpecLoc(),
              diag::err_invalid_consteval_decl_kind)
             << NewFD;
@@ -10276,9 +10288,8 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     //   A deallocation function with no exception-specification is treated
     //   as if it were specified with noexcept(true).
     const FunctionProtoType *FPT = R->getAs<FunctionProtoType>();
-    if ((Name.getCXXOverloadedOperator() == OO_Delete ||
-         Name.getCXXOverloadedOperator() == OO_Array_Delete) &&
-        getLangOpts().CPlusPlus11 && FPT && !FPT->hasExceptionSpec())
+    if (Name.isAnyOperatorDelete() && getLangOpts().CPlusPlus11 && FPT &&
+        !FPT->hasExceptionSpec())
       NewFD->setType(Context.getFunctionType(
           FPT->getReturnType(), FPT->getParamTypes(),
           FPT->getExtProtoInfo().withExceptionSpec(EST_BasicNoexcept)));

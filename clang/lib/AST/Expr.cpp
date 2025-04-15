@@ -71,9 +71,6 @@ const CXXRecordDecl *Expr::getBestDynamicClassType() const {
   if (const PointerType *PTy = DerivedType->getAs<PointerType>())
     DerivedType = PTy->getPointeeType();
 
-  while (const ArrayType *ATy = DerivedType->getAsArrayTypeUnsafe())
-    DerivedType = ATy->getElementType();
-
   if (DerivedType->isDependentType())
     return nullptr;
 
@@ -1655,8 +1652,11 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (!isTypeDependent()) {
     if (const auto *Method =
             dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-        Method && Method->isExplicitObjectMemberFunction())
-      return getArg(0)->getBeginLoc();
+        Method && Method->isExplicitObjectMemberFunction()) {
+      if (auto FirstArgLoc = getArg(0)->getBeginLoc(); FirstArgLoc.isValid()) {
+        return FirstArgLoc;
+      }
+    }
   }
 
   SourceLocation begin = getCallee()->getBeginLoc();

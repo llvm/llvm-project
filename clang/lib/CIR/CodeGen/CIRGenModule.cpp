@@ -262,6 +262,7 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   errorNYI(d->getSourceRange(), "reference of undeclared global");
+  return {};
 }
 
 cir::GlobalOp
@@ -587,6 +588,11 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   case Decl::OpenACCDeclare:
     emitGlobalOpenACCDecl(cast<OpenACCDeclareDecl>(decl));
+    break;
+
+  case Decl::Record:
+  case Decl::CXXRecord:
+    assert(!cir::MissingFeatures::generateDebugInfo());
     break;
   }
 }
