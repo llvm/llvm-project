@@ -135,10 +135,6 @@ MCRegister PPC::getRegNumForOperand(const MCInstrDesc &Desc, MCRegister Reg,
       if (PPC::isVRRegister(Reg))
 	return PPC::VSX32 + (Reg - PPC::V0);
       break;
-    case PPC::DMRROWpRCRegClassID: {
-      // Reference to dmr reg. There are four dmrrow pairs per dmr.
-      return PPC::DMR0 + ((Reg - PPC::DMRROWp0) / 4);
-    }
     // Other RegClass doesn't need mapping
     default:
       break;
