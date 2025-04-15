@@ -141,9 +141,9 @@ public:
         mlir::IntegerType targetType = mlir::IntegerType::get(
             &cgf.getMLIRContext(), /*width=*/1,
             mlir::IntegerType::SignednessSemantics::Signless);
-        auto ConversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
+        auto conversionOp = builder.create<mlir::UnrealizedConversionCastOp>(
             exprLoc, targetType, condition);
-        operation.getSelfCondMutable().append(ConversionOp.getResult(0));
+        operation.getSelfCondMutable().append(conversionOp.getResult(0));
       } else {
         llvm_unreachable("var-list version of self shouldn't get here");
       }
