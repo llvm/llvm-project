@@ -5822,7 +5822,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+                  LTOPhase == ThinOrFullLTOPhase::CustomLTOPostLink;
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
   unsigned MaxFixpointIterations =
@@ -5900,7 +5901,8 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
-                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
+                  LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink ||
+                  LTOPhase == ThinOrFullLTOPhase::CustomLTOPostLink;
   SetVector<Function *> Functions(llvm::from_range, SCC);
   OMPInformationCache InfoCache(*(Functions.back()->getParent()), AG, Allocator,
                                 /*CGSCC*/ &Functions, PostLink);
