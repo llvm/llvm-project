@@ -499,6 +499,9 @@ def CIR_RecordType : CIR_Type<"Record", "record",
     std::string getPrefixedName() {
       return getKindAsStr() + "." + getName().getValue().str();
     }
+
+    void complete(llvm::ArrayRef<mlir::Type> members, bool packed,
+                  bool isPadded);
   }];
 
   let hasCustomAssemblyFormat = 1;
