@@ -14,7 +14,7 @@
 // RUN: mlir-opt --convert-vector-to-llvm --dump-pass-pipeline %s 2>&1 | FileCheck %s --check-prefix=DEFAULT
 
 // RUN: mlir-opt --convert-vector-to-llvm='vector-contract-lowering=matmul vector-transpose-lowering=flat' \
-// RUN:          --dump-pass-pipeline 2>&1 | FileCheck %s --check-prefix=NON-DEFAULT
+// RUN:          --dump-pass-pipeline %s 2>&1 | FileCheck %s --check-prefix=NON-DEFAULT
 
 // CHECK: builtin.module(
 // CHECK-SAME: convert-vector-to-llvm{

@@ -33,6 +33,9 @@ public:
         TLI(ST->getTargetLowering()) {}
 
   bool hasDivRemOp(Type *DataType, bool IsSigned);
+
+  bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
+                     const TargetTransformInfo::LSRCost &C2);
 };
 
 } // end namespace llvm

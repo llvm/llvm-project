@@ -147,6 +147,11 @@ struct Config {
     FullPlaceholders,
   };
 
+  enum class HeaderInsertionPolicy {
+    IWYU,       // Include what you use
+    NeverInsert // Never insert headers as part of code completion
+  };
+
   /// Configures code completion feature.
   struct {
     /// Whether code completion includes results that are not visible in current
@@ -154,6 +159,8 @@ struct Config {
     bool AllScopes = true;
     /// controls the completion options for argument lists.
     ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
+    /// Controls if headers should be inserted when completions are accepted
+    HeaderInsertionPolicy HeaderInsertion = HeaderInsertionPolicy::IWYU;
   } Completion;
 
   /// Configures hover feature.

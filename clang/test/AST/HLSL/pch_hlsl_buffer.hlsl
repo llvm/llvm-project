@@ -19,14 +19,12 @@ float foo() {
 // Make sure cbuffer/tbuffer works for PCH.
 // CHECK: HLSLBufferDecl {{.*}} line:7:9 imported <undeserialized declarations> cbuffer A
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit CBuffer
 // CHECK-NEXT: VarDecl 0x[[A:[0-9a-f]+]] {{.*}} imported used a 'hlsl_constant float'
 // CHECK-NEXT: CXXRecordDecl {{.*}} imported implicit <undeserialized declarations> struct __cblayout_A definition
 // CHECK: FieldDecl {{.*}} imported a 'float'
 
 // CHECK: HLSLBufferDecl {{.*}} line:11:9 imported <undeserialized declarations> tbuffer B
 // CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit SRV
-// CHECK-NEXT: HLSLResourceAttr {{.*}} Implicit TBuffer
 // CHECK-NEXT: VarDecl 0x[[B:[0-9a-f]+]] {{.*}} imported used b 'hlsl_constant float'
 // CHECK-NEXT: CXXRecordDecl 0x{{[0-9a-f]+}} {{.*}} imported implicit <undeserialized declarations> struct __cblayout_B definition
 // CHECK: FieldDecl 0x{{[0-9a-f]+}} {{.*}} imported b 'float'

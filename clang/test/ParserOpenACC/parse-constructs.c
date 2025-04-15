@@ -150,7 +150,6 @@ void func() {
   for(;;){}
 }
 
-// expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine seq
 void routine_func();
 // expected-error@+2{{invalid OpenACC clause 'clause'}}

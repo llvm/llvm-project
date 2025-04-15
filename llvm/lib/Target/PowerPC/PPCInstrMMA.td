@@ -1,12 +1,4 @@
 
-// Mask immediates for MMA instructions (2, 4 and 8 bits).
-def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
-def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
-def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
-
-def MMA : Predicate<"Subtarget->hasMMA()">;
-
-
 // Multiclass definitions for MMA accumulator instructions.
 // ----------------------------------------------------------------------------
 
@@ -1055,19 +1047,18 @@ let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
 }
 
 def ConcatsMMA {
-  dag VecsToVecPair0 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
-      $vs1, sub_vsx0));
-  dag VecsToVecPair1 =
-    (v256i1 (INSERT_SUBREG
-      (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
-      $vs3, sub_vsx0));
-  dag VecsToVecQuad =
-    (BUILD_UACC (INSERT_SUBREG
-                  (INSERT_SUBREG (v512i1 (IMPLICIT_DEF)),
-                                 (KILL_PAIR VecsToVecPair0), sub_pair0),
-                  (KILL_PAIR VecsToVecPair1), sub_pair1));
+   dag VecsToVecPair0 =
+          (v256i1 (INSERT_SUBREG
+                    (INSERT_SUBREG (IMPLICIT_DEF), $vs0, sub_vsx1),
+                    $vs1, sub_vsx0));
+   dag VecsToVecPair1 =
+          (v256i1 (INSERT_SUBREG
+                    (INSERT_SUBREG (IMPLICIT_DEF), $vs2, sub_vsx1),
+                    $vs3, sub_vsx0));
+  dag VecsToVecQuad = (BUILD_UACC
+          (v512i1 (REG_SEQUENCE UACCRC,
+                                (KILL_PAIR VecsToVecPair0), sub_pair0,
+                                (KILL_PAIR VecsToVecPair1), sub_pair1)));
 }
 
 def Extracts {
@@ -1098,9 +1089,9 @@ let Predicates = [MMA, IsNotISAFuture] in {
 
 let Predicates = [MMA, IsISAFuture] in {
   def : Pat<(v512i1 (PPCAccBuild v4i32:$vs1, v4i32:$vs0, v4i32:$vs3, v4i32:$vs2)),
-            (DMXXINSTFDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
+            (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
   def : Pat<(v512i1 (int_ppc_mma_assemble_acc v16i8:$vs1, v16i8:$vs0,
                                               v16i8:$vs3, v16i8:$vs2)),
-            (DMXXINSTFDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
+            (DMXXINSTDMR512 ConcatsMMA.VecsToVecPair0, ConcatsMMA.VecsToVecPair1)>;
   def : Pat<(v512i1 immAllZerosV), (XXSETACCZW)>;
 }

@@ -276,7 +276,7 @@ public:
                                int &FrameIndex) const override;
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex,
-                               unsigned &MemBytes) const override;
+                               TypeSize &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -287,7 +287,7 @@ public:
                               int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex,
-                              unsigned &MemBytes) const override;
+                              TypeSize &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
   /// reliable for correctness.
@@ -514,7 +514,7 @@ public:
   /// the global base register value. Output instructions required to
   /// initialize the register in the function entry block, if necessary.
   ///
-  unsigned getGlobalBaseReg(MachineFunction *MF) const;
+  Register getGlobalBaseReg(MachineFunction *MF) const;
 
   std::pair<uint16_t, uint16_t>
   getExecutionDomain(const MachineInstr &MI) const override;
@@ -570,11 +570,6 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
-
-  MachineInstr *optimizeLoadInstr(MachineInstr &MI,
-                                  const MachineRegisterInfo *MRI,
-                                  Register &FoldAsLoadDefReg,
-                                  MachineInstr *&DefMI) const override;
 
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const override;

@@ -20,4 +20,5 @@ function(add_clang_mlir_type_interface interface)
 endfunction()
 
 add_clang_mlir_op_interface(CIROpInterfaces)
+add_clang_mlir_op_interface(CIRLoopOpInterface)
 add_clang_mlir_type_interface(CIRFPTypeInterface)

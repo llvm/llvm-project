@@ -843,7 +843,7 @@ static void setVisibilityFromDLLStorageClass(const clang::LangOptions &LO,
 static bool isStackProtectorOn(const LangOptions &LangOpts,
                                const llvm::Triple &Triple,
                                clang::LangOptions::StackProtectorMode Mode) {
-  if (Triple.isAMDGPU() || Triple.isNVPTX())
+  if (Triple.isGPU())
     return false;
   return LangOpts.getStackProtector() == Mode;
 }
@@ -853,8 +853,7 @@ void CodeGenModule::Release() {
   if (CXX20ModuleInits && Primary && !Primary->isHeaderLikeModule())
     EmitModuleInitializers(Primary);
   EmitDeferred();
-  DeferredDecls.insert(EmittedDeferredDecls.begin(),
-                       EmittedDeferredDecls.end());
+  DeferredDecls.insert_range(EmittedDeferredDecls);
   EmittedDeferredDecls.clear();
   EmitVTablesOpportunistically();
   applyGlobalValReplacements();
@@ -1904,6 +1903,9 @@ static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
     } else if (FD && FD->hasAttr<CUDAGlobalAttr>() &&
                GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
       Out << "__device_stub__" << II->getName();
+    } else if (FD && FD->hasAttr<OpenCLKernelAttr>() &&
+               GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      Out << "__clang_ocl_kern_imp_" << II->getName();
     } else {
       Out << II->getName();
     }
@@ -2667,7 +2669,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     for (const CXXRecordDecl *Base : getMostBaseClasses(MD->getParent())) {
       llvm::Metadata *Id =
           CreateMetadataIdentifierForType(Context.getMemberPointerType(
-              MD->getType(), Context.getRecordType(Base).getTypePtr()));
+              MD->getType(), /*Qualifier=*/nullptr, Base));
       F->addTypeMetadata(0, Id);
     }
   }
@@ -2935,10 +2937,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
                                           bool IsIncompleteFunction,
                                           bool IsThunk) {
 
-  if (llvm::Intrinsic::ID IID = F->getIntrinsicID()) {
-    // If this is an intrinsic function, set the function's attributes
-    // to the intrinsic's attributes.
-    F->setAttributes(llvm::Intrinsic::getAttributes(getLLVMContext(), IID));
+  if (F->getIntrinsicID() != llvm::Intrinsic::not_intrinsic) {
+    // If this is an intrinsic function, the attributes will have been set
+    // when the function was created.
     return;
   }
 
@@ -3892,6 +3893,9 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
 
   // Ignore declarations, they will be emitted on their first use.
   if (const auto *FD = dyn_cast<FunctionDecl>(Global)) {
+    if (FD->hasAttr<OpenCLKernelAttr>() && FD->doesThisDeclarationHaveABody())
+      addDeferredDeclToEmit(GlobalDecl(FD, KernelReferenceKind::Stub));
+
     // Update deferred annotations with the latest declaration if the function
     // function was already used or defined.
     if (FD->hasAttr<AnnotateAttr>()) {
@@ -4859,6 +4863,11 @@ CodeGenModule::GetAddrOfFunction(GlobalDecl GD, llvm::Type *Ty, bool ForVTable,
   if (!Ty) {
     const auto *FD = cast<FunctionDecl>(GD.getDecl());
     Ty = getTypes().ConvertType(FD->getType());
+    if (FD->hasAttr<OpenCLKernelAttr>() &&
+        GD.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      const CGFunctionInfo &FI = getTypes().arrangeGlobalDeclaration(GD);
+      Ty = getTypes().GetFunctionType(FI);
+    }
   }
 
   // Devirtualized destructor calls may come through here instead of via

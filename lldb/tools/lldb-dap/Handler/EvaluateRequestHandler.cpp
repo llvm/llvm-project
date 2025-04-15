@@ -205,7 +205,8 @@ void EvaluateRequestHandler::operator()(
       else
         EmplaceSafeString(response, "message", "evaluate failed");
     } else {
-      VariableDescription desc(value, dap.enable_auto_variable_summaries);
+      VariableDescription desc(value,
+                               dap.configuration.enableAutoVariableSummaries);
       EmplaceSafeString(body, "result", desc.GetResult(context));
       EmplaceSafeString(body, "type", desc.display_type_name);
       int64_t var_ref = 0;

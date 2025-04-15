@@ -14,12 +14,10 @@
 namespace llvm {
 class HexagonMCExpr : public MCTargetExpr {
 public:
-  enum VariantKind {
+  enum VariantKind : uint8_t {
     VK_None,
 
-    // While not strictly necessary, start at a larger number to avoid confusion
-    // with MCSymbolRefExpr::VariantKind.
-    VK_DTPREL = 100,
+    VK_DTPREL = MCSymbolRefExpr::FirstTargetSpecifier,
     VK_GD_GOT,
     VK_GD_PLT,
     VK_GOT,
@@ -43,7 +41,6 @@ public:
                                  const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
   MCExpr const *getExpr() const;
   void setMustExtend(bool Val = true);
   bool mustExtend() const;

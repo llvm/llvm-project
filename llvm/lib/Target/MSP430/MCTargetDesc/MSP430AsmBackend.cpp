@@ -46,17 +46,6 @@ public:
     return createMSP430ELFObjectWriter(OSABI);
   }
 
-  bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
-                                    uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override {
-    return false;
-  }
-
-  unsigned getNumFixupKinds() const override {
-    return MSP430::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[MSP430::NumTargetFixupKinds] = {

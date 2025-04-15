@@ -44,9 +44,9 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX10-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX10-NEXT:    v_lshlrev_b64 v[4:5], 4, v[0:1]
 ; GFX10-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v5, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v5, vcc_lo
 ; GFX10-NEXT:    v_add_co_u32 v4, vcc_lo, s2, v4
-; GFX10-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, s3, v5, vcc_lo
+; GFX10-NEXT:    v_add_co_ci_u32_e64 v5, null, s3, v5, vcc_lo
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_not_b32_e32 v3, v3
@@ -72,11 +72,12 @@ define amdgpu_kernel void @test(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX11-NEXT:    v_lshlrev_b64 v[4:5], 4, v[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v4
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, s1, v5, vcc_lo
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v5, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v4, vcc_lo, s2, v4
-; GFX11-NEXT:    v_add_co_ci_u32_e32 v5, vcc_lo, s3, v5, vcc_lo
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_ci_u32_e64 v5, null, s3, v5, vcc_lo
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_not_b32_e32 v3, v3

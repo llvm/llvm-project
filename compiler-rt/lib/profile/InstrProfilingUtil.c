@@ -21,6 +21,15 @@
 #include <unistd.h>
 #endif
 
+#ifdef _AIX
+#include <sys/statfs.h>
+// <sys/vmount.h> depends on `uint` to be a typedef from <sys/types.h> to
+// `uint_t`; however, <sys/types.h> does not always declare `uint`. We provide
+// the typedef prior to including <sys/vmount.h> to work around this issue.
+typedef uint_t uint;
+#include <sys/vmount.h>
+#endif
+
 #ifdef COMPILER_RT_HAS_UNAME
 #include <sys/utsname.h>
 #endif
@@ -256,6 +265,121 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
 #endif
 
   return f;
+}
+
+#if defined(_AIX)
+// Return 1 (true) if the file descriptor Fd represents a file that is on a
+// local filesystem, otherwise return 0.
+static int isLocalFilesystem(int Fd) {
+  struct statfs Vfs;
+  if (fstatfs(Fd, &Vfs) != 0) {
+    PROF_ERR("%s: fstatfs(%d) failed: %s\n", __func__, Fd, strerror(errno));
+    return 0;
+  }
+
+  int Ret;
+  size_t BufSize = 2048u;
+  char *Buf;
+  int Tries = 3;
+  while (Tries--) {
+    Buf = malloc(BufSize);
+    // mntctl returns -1 if `Buf` is `NULL`.
+    Ret = mntctl(MCTL_QUERY, BufSize, Buf);
+    if (Ret != 0)
+      break;
+    BufSize = *(unsigned int *)Buf;
+    free(Buf);
+  }
+
+  if (Ret != -1) {
+    // Look for the correct vmount entry.
+    char *CurObjPtr = Buf;
+    while (Ret--) {
+      struct vmount *Vp = (struct vmount *)CurObjPtr;
+      _Static_assert(sizeof(Vfs.f_fsid) == sizeof(Vp->vmt_fsid),
+                     "fsid length mismatch");
+      if (memcmp(&Vfs.f_fsid, &Vp->vmt_fsid, sizeof Vfs.f_fsid) == 0) {
+        int Answer = (Vp->vmt_flags & MNT_REMOTE) == 0;
+        free(Buf);
+        return Answer;
+      }
+      CurObjPtr += Vp->vmt_length;
+    }
+  }
+
+  free(Buf);
+  // There was an error in mntctl or vmount entry not found; "remote" is the
+  // conservative answer.
+  return 0;
+}
+#endif
+
+static int isMmapSafe(int Fd) {
+  if (getenv("LLVM_PROFILE_NO_MMAP")) // For testing purposes.
+    return 0;
+#ifdef _AIX
+  return isLocalFilesystem(Fd);
+#else
+  return 1;
+#endif
+}
+
+COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
+                                                      ManagedMemory *Buf) {
+  Buf->Status = MS_INVALID;
+  if (isMmapSafe(fileno(F))) {
+    Buf->Addr =
+        mmap(NULL, Length, PROT_READ, MAP_SHARED | MAP_FILE, fileno(F), 0);
+    if (Buf->Addr == MAP_FAILED)
+      PROF_ERR("%s: mmap failed: %s\n", __func__, strerror(errno))
+    else
+      Buf->Status = MS_MMAP;
+    return;
+  }
+
+  if (getenv("LLVM_PROFILE_VERBOSE"))
+    PROF_NOTE("%s\n", "could not use mmap; using fread instead");
+
+  void *Buffer = malloc(Length);
+  if (!Buffer) {
+    PROF_ERR("%s: malloc failed: %s\n", __func__, strerror(errno));
+    return;
+  }
+  if (ftell(F) != 0) {
+    PROF_ERR("%s: expecting ftell to return zero\n", __func__);
+    free(Buffer);
+    return;
+  }
+
+  // Read the entire file into memory.
+  size_t BytesRead = fread(Buffer, 1, Length, F);
+  if (BytesRead != (size_t)Length) {
+    PROF_ERR("%s: fread failed%s\n", __func__,
+             feof(F) ? ": end of file reached" : "");
+    free(Buffer);
+    return;
+  }
+
+  // Reading was successful, record the result in the Buf parameter.
+  Buf->Addr = Buffer;
+  Buf->Status = MS_MALLOC;
+}
+
+COMPILER_RT_VISIBILITY
+void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
+  switch (Buf->Status) {
+  case MS_MALLOC:
+    free(Buf->Addr);
+    break;
+  case MS_MMAP:
+    (void)munmap(Buf->Addr, Length);
+    break;
+  default:
+    PROF_ERR("%s: Buffer has invalid state: %d\n", __func__, Buf->Status);
+    break;
+  }
+  Buf->Addr = NULL;
+  Buf->Status = MS_INVALID;
 }
 
 COMPILER_RT_VISIBILITY const char *lprofGetPathPrefix(int *PrefixStrip,

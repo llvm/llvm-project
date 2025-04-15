@@ -41,6 +41,7 @@ class HexagonAsmBackend : public MCAsmBackend {
   uint8_t OSABI;
   StringRef CPU;
   mutable uint64_t relaxedCnt;
+  mutable const MCInst *RelaxedMCB = nullptr;
   std::unique_ptr <MCInstrInfo> MCII;
   std::unique_ptr <MCInst *> RelaxTarget;
   MCInst * Extender;
@@ -82,9 +83,6 @@ public:
     return Result;
   }
 
-  unsigned getNumFixupKinds() const override {
-    return Hexagon::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
@@ -195,13 +193,14 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) <
+               Hexagon::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
     switch(Fixup.getTargetKind()) {
       default:
@@ -562,17 +561,17 @@ public:
   /// \param Inst - The instruction to test.
   bool mayNeedRelaxation(MCInst const &Inst,
                          const MCSubtargetInfo &STI) const override {
+    RelaxedMCB = &Inst;
     return true;
   }
 
   /// fixupNeedsRelaxation - Target specific predicate for whether a given
   /// fixup requires the associated instruction to be relaxed.
   bool fixupNeedsRelaxationAdvanced(const MCAssembler &Asm,
-                                    const MCFixup &Fixup, bool Resolved,
+                                    const MCFixup &Fixup, const MCValue &,
                                     uint64_t Value,
-                                    const MCRelaxableFragment *DF,
-                                    const bool WasForced) const override {
-    MCInst const &MCB = DF->getInst();
+                                    bool Resolved) const override {
+    MCInst const &MCB = *RelaxedMCB;
     assert(HexagonMCInstrInfo::isBundle(MCB));
 
     *RelaxTarget = nullptr;
