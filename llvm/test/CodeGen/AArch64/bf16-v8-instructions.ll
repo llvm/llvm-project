@@ -882,11 +882,11 @@ define <8 x i16> @fptoui_i16(<8 x bfloat> %a) #0 {
 define <8 x i1> @test_fcmp_une(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_une:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -896,34 +896,34 @@ define <8 x i1> @test_fcmp_une(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, ne
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, ne
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, ne
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -945,54 +945,54 @@ define <8 x i1> @test_fcmp_une(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ueq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ueq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v2.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v0.4h, #16
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    csinv w8, w8, wzr, vc
 ; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    shll v3.4s, v4.4h, #16
+; CHECK-NEXT:    shll v2.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h3, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[4]
 ; CHECK-NEXT:    csetm w9, eq
 ; CHECK-NEXT:    csinv w9, w9, wzr, vc
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
+; CHECK-NEXT:    fcmp s4, s2
+; CHECK-NEXT:    mov h4, v0.h[4]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
 ; CHECK-NEXT:    csinv w8, w8, wzr, vc
-; CHECK-NEXT:    fcmp s4, s3
+; CHECK-NEXT:    fcmp s6, s3
 ; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h5, v1.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    csinv w8, w8, wzr, vc
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    mov h4, v0.h[6]
+; CHECK-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    csinv w8, w8, wzr, vc
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
+; CHECK-NEXT:    fcmp s6, s5
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    mov v2.h[4], w8
@@ -1016,11 +1016,11 @@ define <8 x i1> @test_fcmp_ueq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ugt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ugt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1030,34 +1030,34 @@ define <8 x i1> @test_fcmp_ugt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, hi
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, hi
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, hi
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, hi
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1079,11 +1079,11 @@ define <8 x i1> @test_fcmp_ugt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_uge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_uge:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1093,34 +1093,34 @@ define <8 x i1> @test_fcmp_uge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, pl
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, pl
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, pl
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, pl
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1142,11 +1142,11 @@ define <8 x i1> @test_fcmp_uge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ult(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ult:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1156,34 +1156,34 @@ define <8 x i1> @test_fcmp_ult(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, lt
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, lt
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, lt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1205,11 +1205,11 @@ define <8 x i1> @test_fcmp_ult(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ule(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ule:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1219,34 +1219,34 @@ define <8 x i1> @test_fcmp_ule(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, le
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, le
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1268,11 +1268,11 @@ define <8 x i1> @test_fcmp_ule(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_uno(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_uno:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1282,34 +1282,34 @@ define <8 x i1> @test_fcmp_uno(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, vs
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, vs
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, vs
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, vs
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1331,54 +1331,54 @@ define <8 x i1> @test_fcmp_uno(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_one(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v2.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v0.4h, #16
 ; CHECK-NEXT:    csetm w8, mi
 ; CHECK-NEXT:    csinv w8, w8, wzr, le
 ; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    shll v3.4s, v4.4h, #16
+; CHECK-NEXT:    shll v2.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h3, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[4]
 ; CHECK-NEXT:    csetm w9, mi
 ; CHECK-NEXT:    csinv w9, w9, wzr, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
+; CHECK-NEXT:    fcmp s4, s2
+; CHECK-NEXT:    mov h4, v0.h[4]
 ; CHECK-NEXT:    fmov s2, w9
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, mi
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
 ; CHECK-NEXT:    csinv w8, w8, wzr, le
-; CHECK-NEXT:    fcmp s4, s3
+; CHECK-NEXT:    fcmp s6, s3
 ; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h5, v1.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, mi
 ; CHECK-NEXT:    csinv w8, w8, wzr, le
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    mov h4, v0.h[6]
+; CHECK-NEXT:    shll v5.4s, v5.4h, #16
+; CHECK-NEXT:    shll v6.4s, v6.4h, #16
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, mi
 ; CHECK-NEXT:    csinv w8, w8, wzr, le
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
+; CHECK-NEXT:    fcmp s6, s5
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    shll v4.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-NEXT:    mov v2.h[4], w8
@@ -1402,11 +1402,11 @@ define <8 x i1> @test_fcmp_one(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_oeq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_oeq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1416,34 +1416,34 @@ define <8 x i1> @test_fcmp_oeq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, eq
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1465,11 +1465,11 @@ define <8 x i1> @test_fcmp_oeq(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ogt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ogt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1479,34 +1479,34 @@ define <8 x i1> @test_fcmp_ogt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, gt
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, gt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, gt
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, gt
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1528,11 +1528,11 @@ define <8 x i1> @test_fcmp_ogt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_oge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_oge:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1542,34 +1542,34 @@ define <8 x i1> @test_fcmp_oge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, ge
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, ge
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, ge
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, ge
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1591,11 +1591,11 @@ define <8 x i1> @test_fcmp_oge(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_olt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_olt:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1605,34 +1605,34 @@ define <8 x i1> @test_fcmp_olt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, mi
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, mi
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, mi
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, mi
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1654,11 +1654,11 @@ define <8 x i1> @test_fcmp_olt(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ole(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ole:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1668,34 +1668,34 @@ define <8 x i1> @test_fcmp_ole(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, ls
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, ls
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, ls
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, ls
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
@@ -1717,11 +1717,11 @@ define <8 x i1> @test_fcmp_ole(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 define <8 x i1> @test_fcmp_ord(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-LABEL: test_fcmp_ord:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    dup v2.4h, v1.h[1]
-; CHECK-NEXT:    dup v3.4h, v0.h[1]
-; CHECK-NEXT:    dup v4.4h, v1.h[2]
-; CHECK-NEXT:    dup v5.4h, v0.h[2]
-; CHECK-NEXT:    dup v6.4h, v0.h[3]
+; CHECK-NEXT:    mov h2, v1.h[1]
+; CHECK-NEXT:    mov h3, v0.h[1]
+; CHECK-NEXT:    mov h4, v1.h[2]
+; CHECK-NEXT:    mov h5, v0.h[2]
+; CHECK-NEXT:    mov h6, v0.h[3]
 ; CHECK-NEXT:    shll v2.4s, v2.4h, #16
 ; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    fcmp s3, s2
@@ -1731,34 +1731,34 @@ define <8 x i1> @test_fcmp_ord(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-NEXT:    fcmp s3, s2
 ; CHECK-NEXT:    shll v3.4s, v4.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.4h, v1.h[3]
+; CHECK-NEXT:    mov h5, v1.h[3]
 ; CHECK-NEXT:    csetm w9, vc
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[4]
-; CHECK-NEXT:    dup v6.8h, v0.h[4]
+; CHECK-NEXT:    mov h3, v1.h[4]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[4]
 ; CHECK-NEXT:    mov v2.h[1], w8
 ; CHECK-NEXT:    csetm w8, vc
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
+; CHECK-NEXT:    mov h5, v1.h[5]
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[5]
-; CHECK-NEXT:    dup v6.8h, v0.h[5]
+; CHECK-NEXT:    mov h6, v0.h[5]
 ; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, vc
 ; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
-; CHECK-NEXT:    shll v4.4s, v6.4h, #16
-; CHECK-NEXT:    dup v5.8h, v1.h[6]
-; CHECK-NEXT:    dup v6.8h, v0.h[6]
-; CHECK-NEXT:    dup v1.8h, v1.h[7]
-; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    mov h3, v1.h[6]
+; CHECK-NEXT:    shll v4.4s, v5.4h, #16
+; CHECK-NEXT:    shll v5.4s, v6.4h, #16
+; CHECK-NEXT:    mov h6, v0.h[6]
+; CHECK-NEXT:    mov h1, v1.h[7]
+; CHECK-NEXT:    mov h0, v0.h[7]
 ; CHECK-NEXT:    mov v2.h[3], w8
 ; CHECK-NEXT:    csetm w8, vc
-; CHECK-NEXT:    fcmp s4, s3
-; CHECK-NEXT:    shll v3.4s, v5.4h, #16
+; CHECK-NEXT:    fcmp s5, s4
+; CHECK-NEXT:    shll v3.4s, v3.4h, #16
 ; CHECK-NEXT:    shll v4.4s, v6.4h, #16
 ; CHECK-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-NEXT:    shll v0.4s, v0.4h, #16
