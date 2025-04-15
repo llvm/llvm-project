@@ -263,3 +263,425 @@ define <8 x i16> @blendw_to_blendd_fail_16(<8 x i16> %x, <8 x i16> %y, <8 x i16>
   %shuffle = shufflevector <8 x i16> %x1, <8 x i16> %y, <8 x i32> <i32 8, i32 1, i32 10, i32 11, i32 4, i32 5, i32 14, i32 15>
   ret <8 x i16> %shuffle
 }
+
+define <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
+; X86-SSE41-LABEL: blend_broadcasts_v4f64:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movaps (%ecx), %xmm2
+; X86-SSE41-NEXT:    movaps (%eax), %xmm1
+; X86-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE41-NEXT:    retl
+;
+; X64-SSE41-LABEL: blend_broadcasts_v4f64:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movaps (%rdi), %xmm2
+; X64-SSE41-NEXT:    movaps (%rsi), %xmm1
+; X64-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-SSE41-NEXT:    retq
+;
+; X86-AVX-LABEL: blend_broadcasts_v4f64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X86-AVX-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: blend_broadcasts_v4f64:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-AVX-NEXT:    vbroadcastsd (%rsi), %ymm1
+; X64-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX2-LABEL: blend_broadcasts_v4f64:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X86-AVX2-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: blend_broadcasts_v4f64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-AVX2-NEXT:    vbroadcastsd (%rsi), %ymm1
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X64-AVX2-NEXT:    retq
+;
+; X86-AVX512-LABEL: blend_broadcasts_v4f64:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vbroadcastsd (%ecx), %ymm0
+; X86-AVX512-NEXT:    vbroadcastsd (%eax), %ymm1
+; X86-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: blend_broadcasts_v4f64:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vbroadcastsd (%rdi), %ymm0
+; X64-AVX512-NEXT:    vbroadcastsd (%rsi), %ymm1
+; X64-AVX512-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3,4,5],ymm0[6,7]
+; X64-AVX512-NEXT:    retq
+  %ld0 = load <4 x double>, ptr %p0, align 32
+  %ld1 = load <4 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <4 x double> %ld0, <4 x double> undef, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <4 x double> %ld1, <4 x double> undef, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v2f64(ptr %p0, ptr %p1) {
+; X86-SSE41-LABEL: blend_broadcasts_v2f64:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movaps (%ecx), %xmm2
+; X86-SSE41-NEXT:    movaps (%eax), %xmm1
+; X86-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE41-NEXT:    retl
+;
+; X64-SSE41-LABEL: blend_broadcasts_v2f64:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movaps (%rdi), %xmm2
+; X64-SSE41-NEXT:    movaps (%rsi), %xmm1
+; X64-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-SSE41-NEXT:    retq
+;
+; X86-AVX-LABEL: blend_broadcasts_v2f64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X86-AVX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: blend_broadcasts_v2f64:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X64-AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X64-AVX-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX2-LABEL: blend_broadcasts_v2f64:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X86-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X86-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X86-AVX2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: blend_broadcasts_v2f64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; X64-AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm2 = ymm1[0,1,2,3],ymm0[4,5,6,7]
+; X64-AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; X64-AVX2-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; X64-AVX2-NEXT:    retq
+;
+; X86-AVX512-LABEL: blend_broadcasts_v2f64:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X86-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = mem[0,1,0,1]
+; X86-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,4,6,2]
+; X86-AVX512-NEXT:    vpermi2pd %ymm1, %ymm2, %ymm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: blend_broadcasts_v2f64:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; X64-AVX512-NEXT:    vbroadcastf128 {{.*#+}} ymm2 = mem[0,1,0,1]
+; X64-AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,4,6,2]
+; X64-AVX512-NEXT:    vpermi2pd %ymm1, %ymm2, %ymm0
+; X64-AVX512-NEXT:    retq
+  %ld0 = load <2 x double>, ptr %p0, align 32
+  %ld1 = load <2 x double>, ptr %p1, align 32
+  %blend = shufflevector <2 x double> %ld0, <2 x double> %ld1, <4 x i32> <i32 0, i32 2, i32 2, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64(ptr %p0, ptr %p1) {
+; X86-SSE41-LABEL: blend_broadcasts_v1f64:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE41-NEXT:    retl
+;
+; X64-SSE41-LABEL: blend_broadcasts_v1f64:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-SSE41-NEXT:    retq
+;
+; X86-AVX-LABEL: blend_broadcasts_v1f64:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: blend_broadcasts_v1f64:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX2-LABEL: blend_broadcasts_v1f64:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: blend_broadcasts_v1f64:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    retq
+;
+; X86-AVX512-LABEL: blend_broadcasts_v1f64:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: blend_broadcasts_v1f64:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %blend = shufflevector <1 x double> %ld0, <1 x double> %ld1, <4 x i32> <i32 0, i32 1, i32 1, i32 0>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_4x(ptr %p0, ptr %p1) {
+; X86-SSE41-LABEL: blend_broadcasts_v1f64_4x:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE41-NEXT:    retl
+;
+; X64-SSE41-LABEL: blend_broadcasts_v1f64_4x:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-SSE41-NEXT:    retq
+;
+; X86-AVX-LABEL: blend_broadcasts_v1f64_4x:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: blend_broadcasts_v1f64_4x:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX2-LABEL: blend_broadcasts_v1f64_4x:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: blend_broadcasts_v1f64_4x:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    retq
+;
+; X86-AVX512-LABEL: blend_broadcasts_v1f64_4x:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: blend_broadcasts_v1f64_4x:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <4 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <4 x i32> zeroinitializer
+  %blend = shufflevector <4 x double> %bcst0, <4 x double> %bcst1, <4 x i32> <i32 0, i32 5, i32 6, i32 3>
+  ret <4 x double> %blend
+}
+
+define <4 x double> @blend_broadcasts_v1f64_2x(ptr %p0, ptr %p1) {
+; X86-SSE41-LABEL: blend_broadcasts_v1f64_2x:
+; X86-SSE41:       # %bb.0:
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X86-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X86-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X86-SSE41-NEXT:    retl
+;
+; X64-SSE41-LABEL: blend_broadcasts_v1f64_2x:
+; X64-SSE41:       # %bb.0:
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X64-SSE41-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X64-SSE41-NEXT:    movaps %xmm2, %xmm0
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-SSE41-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; X64-SSE41-NEXT:    retq
+;
+; X86-AVX-LABEL: blend_broadcasts_v1f64_2x:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: blend_broadcasts_v1f64_2x:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX-NEXT:    retq
+;
+; X86-AVX2-LABEL: blend_broadcasts_v1f64_2x:
+; X86-AVX2:       # %bb.0:
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    retl
+;
+; X64-AVX2-LABEL: blend_broadcasts_v1f64_2x:
+; X64-AVX2:       # %bb.0:
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX2-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX2-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    retq
+;
+; X86-AVX512-LABEL: blend_broadcasts_v1f64_2x:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X86-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X86-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X86-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X86-AVX512-NEXT:    retl
+;
+; X64-AVX512-LABEL: blend_broadcasts_v1f64_2x:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; X64-AVX512-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm1[0],xmm0[0]
+; X64-AVX512-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; X64-AVX512-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
+  %ld0 = load <1 x double>, ptr %p0, align 32
+  %ld1 = load <1 x double>, ptr %p1, align 32
+  %bcst0 = shufflevector <1 x double> %ld0, <1 x double> undef, <2 x i32> zeroinitializer
+  %bcst1 = shufflevector <1 x double> %ld1, <1 x double> undef, <2 x i32> zeroinitializer
+  %blend = shufflevector <2 x double> %bcst0, <2 x double> %bcst1, <4 x i32> <i32 0, i32 2, i32 3, i32 1>
+  ret <4 x double> %blend
+}
