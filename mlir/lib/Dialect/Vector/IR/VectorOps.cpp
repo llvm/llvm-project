@@ -341,7 +341,7 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   SmallVector<Value> values;
   llvm::transform(foldResults, std::back_inserter(values),
                   [&](OpFoldResult foldResult) {
-                    if (auto attr = foldResult.dyn_cast<Attribute>())
+                    if (auto attr = dyn_cast<Attribute>(foldResult))
                       return builder
                           .create<arith::ConstantIndexOp>(
                               loc, cast<IntegerAttr>(attr).getInt())
@@ -2970,7 +2970,7 @@ LogicalResult InsertOp::verify() {
     return emitOpError(
         "expected position attribute rank to match the dest vector rank");
   for (auto [idx, pos] : llvm::enumerate(position)) {
-    if (auto attr = pos.dyn_cast<Attribute>()) {
+    if (auto attr = dyn_cast<Attribute>(pos)) {
       int64_t constIdx = cast<IntegerAttr>(attr).getInt();
       if (!isValidPositiveIndexOrPoison(constIdx, kPoisonIndex,
                                         destVectorType.getDimSize(idx))) {
@@ -5348,6 +5348,9 @@ public:
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return rewriter.notifyMatchFailure(op, "base must be of memref type");
+
     if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
       return failure();
 

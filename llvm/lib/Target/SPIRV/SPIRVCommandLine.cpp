@@ -125,8 +125,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
     if (Token.starts_with("+")) {
       EnabledExtensions.insert(NameValuePair->second);
     } else if (EnabledExtensions.count(NameValuePair->second)) {
-      if (std::find(Tokens.begin(), Tokens.end(), "+" + ExtensionName.str()) !=
-          Tokens.end())
+      if (llvm::is_contained(Tokens, "+" + ExtensionName.str()))
         return O.error(
             "Extension cannot be allowed and disallowed at the same time: " +
             ExtensionName.str());
