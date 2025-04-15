@@ -103,11 +103,9 @@ private:
 
   /// The current set of on-disk tables.
   table_range tables() {
-    auto Begin = Tables.begin(), End = Tables.end();
-    if (getMergedTable())
-      ++Begin;
-    return llvm::make_range(llvm::map_iterator(Begin, AsOnDiskTable()),
-                            llvm::map_iterator(End, AsOnDiskTable()));
+    bool DropBegin = getMergedTable();
+    return llvm::map_range(llvm::drop_begin(Tables, DropBegin),
+                           AsOnDiskTable());
   }
 
   MergedTable *getMergedTable() const {
