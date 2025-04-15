@@ -693,7 +693,7 @@ mlir::Type changeElementType(mlir::Type type, mlir::Type newElementType,
         mlir::Type newInnerType =
             changeElementType(t.getEleTy(), newElementType, false);
         if (turnBoxIntoClass)
-          return fir::ClassType::get(newInnerType);
+          return fir::ClassType::get(newInnerType, t.isVolatile());
         return fir::BoxType::get(newInnerType, t.isVolatile());
       })
       .Default([&](mlir::Type t) -> mlir::Type {

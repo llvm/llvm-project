@@ -518,8 +518,8 @@ Fortran::lower::genCallOpAndResult(
         // Do not attempt any reboxing here that could break this.
         bool legacyLowering =
             !converter.getLoweringOptions().getLowerToHighLevelFIR();
-        cast =
-            builder.createVolatileCast(loc, fir::isa_volatile_type(snd), fst);
+        bool isVolatile = fir::isa_volatile_type(snd);
+        cast = builder.createVolatileCast(loc, isVolatile, fst);
         cast = builder.convertWithSemantics(loc, snd, cast,
                                             callingImplicitInterface,
                                             /*allowRebox=*/legacyLowering);
@@ -589,10 +589,8 @@ Fortran::lower::genCallOpAndResult(
 
     mlir::Value stream; // stream is optional.
     if (caller.getCallDescription().chevrons().size() > 3)
-      stream = builder.createConvert(
-          loc, i32Ty,
-          fir::getBase(converter.genExprValue(
-              caller.getCallDescription().chevrons()[3], stmtCtx)));
+      stream = fir::getBase(converter.genExprValue(
+          caller.getCallDescription().chevrons()[3], stmtCtx));
 
     builder.create<cuf::KernelLaunchOp>(
         loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y, grid_z,
@@ -1420,22 +1418,8 @@ static PreparedDummyArgument preparePresentUserCallActualArgument(
 
   // If the volatility of the input type does not match the dummy type,
   // we need to cast the argument.
-  if (fir::isa_volatile_type(dummyTypeWithActualRank) !=
-      fir::isa_volatile_type(addr.getType())) {
-    const bool isToTypeVolatile =
-        fir::isa_volatile_type(dummyTypeWithActualRank);
-    mlir::Type volatileAdjustedType =
-        llvm::TypeSwitch<mlir::Type, mlir::Type>(addr.getType())
-            .Case<fir::ReferenceType, fir::BoxType>([&](auto ty) {
-              using TYPE = decltype(ty);
-              return TYPE::get(ty.getElementType(), isToTypeVolatile);
-            })
-            .Default([](auto t) {
-              assert(false && "unexpected type");
-              return t;
-            });
-    addr = builder.create<fir::VolatileCastOp>(loc, volatileAdjustedType, addr);
-  }
+  const bool isToTypeVolatile = fir::isa_volatile_type(dummyTypeWithActualRank);
+  addr = builder.createVolatileCast(loc, isToTypeVolatile, addr);
 
   // For ranked actual passed to assumed-rank dummy, the cast to assumed-rank
   // box is inserted when building the fir.call op. Inserting it here would

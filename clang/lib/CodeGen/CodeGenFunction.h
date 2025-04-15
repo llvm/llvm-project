@@ -4461,7 +4461,8 @@ public:
                               const ObjCIvarDecl *Ivar);
   llvm::Value *EmitIvarOffsetAsPointerDiff(const ObjCInterfaceDecl *Interface,
                                            const ObjCIvarDecl *Ivar);
-  LValue EmitLValueForField(LValue Base, const FieldDecl *Field);
+  LValue EmitLValueForField(LValue Base, const FieldDecl *Field,
+                            bool IsInBounds = true);
   LValue EmitLValueForLambdaField(const FieldDecl *Field);
   LValue EmitLValueForLambdaField(const FieldDecl *Field,
                                   llvm::Value *ThisValue);
@@ -4558,6 +4559,8 @@ public:
                                                const CXXRecordDecl *RD);
 
   bool isPointerKnownNonNull(const Expr *E);
+  /// Check whether the underlying base pointer is a constant null.
+  bool isUnderlyingBasePointerConstantNull(const Expr *E);
 
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
@@ -4639,7 +4642,7 @@ public:
   // Compute the object pointer.
   Address EmitCXXMemberDataPointerAddress(
       const Expr *E, Address base, llvm::Value *memberPtr,
-      const MemberPointerType *memberPtrType,
+      const MemberPointerType *memberPtrType, bool IsInBounds,
       LValueBaseInfo *BaseInfo = nullptr, TBAAAccessInfo *TBAAInfo = nullptr);
   RValue EmitCXXMemberPointerCallExpr(const CXXMemberCallExpr *E,
                                       ReturnValueSlot ReturnValue,
@@ -5305,6 +5308,9 @@ public:
   llvm::Value *emitBoolVecConversion(llvm::Value *SrcVec,
                                      unsigned NumElementsDst,
                                      const llvm::Twine &Name = "");
+
+  void maybeAttachRangeForLoad(llvm::LoadInst *Load, QualType Ty,
+                               SourceLocation Loc);
 
 private:
   // Emits a convergence_loop instruction for the given |BB|, with |ParentToken|

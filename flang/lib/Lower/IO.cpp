@@ -744,7 +744,8 @@ static void genOutputItemList(
         outputFuncArgs.push_back(parts.first);
         outputFuncArgs.push_back(parts.second);
       } else {
-        itemValue = builder.createConvert(loc, argType, itemValue);
+        itemValue =
+            builder.createConvertWithVolatileCast(loc, argType, itemValue);
         outputFuncArgs.push_back(itemValue);
       }
     }
@@ -828,7 +829,8 @@ createIoRuntimeCallForItem(Fortran::lower::AbstractConverter &converter,
     mlir::Value box = fir::getBase(item);
     auto boxTy = mlir::dyn_cast<fir::BaseBoxType>(box.getType());
     assert(boxTy && "must be previously emboxed");
-    inputFuncArgs.push_back(builder.createConvert(loc, argType, box));
+    auto casted = builder.createConvertWithVolatileCast(loc, argType, box);
+    inputFuncArgs.push_back(casted);
     if (containsDerivedType(boxTy))
       inputFuncArgs.push_back(getNonTbpDefinedIoTableAddr(converter));
   } else {

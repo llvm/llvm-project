@@ -12,11 +12,11 @@
 
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
-#include "flang/Optimizer/CodeGen/CGOps.h"
 #include "flang/Optimizer/CodeGen/CodeGenOpenMP.h"
 #include "flang/Optimizer/CodeGen/FIROpPatterns.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -3278,8 +3278,7 @@ struct LoadOpConversion : public fir::FIROpConversion<fir::LoadOp> {
     } else {
       mlir::LLVM::LoadOp loadOp = rewriter.create<mlir::LLVM::LoadOp>(
           load.getLoc(), llvmLoadTy, adaptor.getOperands(), load->getAttrs());
-      if (isVolatile)
-        loadOp.setVolatile_Attr(rewriter.getUnitAttr());
+      loadOp.setVolatile_(isVolatile);
       if (std::optional<mlir::ArrayAttr> optionalTag = load.getTbaa())
         loadOp.setTBAATags(*optionalTag);
       else
@@ -3570,8 +3569,10 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
       newOp = rewriter.create<mlir::LLVM::MemcpyOp>(loc, llvmMemref, llvmValue,
                                                     boxSize, isVolatile);
     } else {
-      newOp = rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref,
-                                                   /*alignment=*/0, isVolatile);
+      mlir::LLVM::StoreOp storeOp =
+          rewriter.create<mlir::LLVM::StoreOp>(loc, llvmValue, llvmMemref);
+      storeOp.setVolatile_(isVolatile);
+      newOp = storeOp;
     }
     if (std::optional<mlir::ArrayAttr> optionalTag = store.getTbaa())
       newOp.setTBAATags(*optionalTag);
