@@ -109,6 +109,7 @@ def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 11>;
 // CK_DerivedToBaseMemberPointer
 def CK_MemberPointerToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 17>;
 // CK_ReinterpretMemberPointer
+// CK_BoundMemberFunctionToFunctionPointer
 // CK_UserDefinedConversion
 // CK_ConstructorConversion
 def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 21>;

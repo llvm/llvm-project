@@ -926,7 +926,8 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
 
   assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
          E->getCastKind() == CK_BaseToDerivedMemberPointer ||
-         E->getCastKind() == CK_ReinterpretMemberPointer);
+         E->getCastKind() == CK_ReinterpretMemberPointer ||
+         E->getCastKind() == CK_BoundMemberFunctionToFunctionPointer);
 
   CGBuilderTy &Builder = CGF.Builder;
   QualType DstType = E->getType();
@@ -973,6 +974,8 @@ ItaniumCXXABI::EmitMemberPointerConversion(CodeGenFunction &CGF,
 
   // Under Itanium, reinterprets don't require any additional processing.
   if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
+  if (E->getCastKind() == CK_BoundMemberFunctionToFunctionPointer)
+    return Builder.CreateExtractValue(src, 0, "src.ptr");
 
   llvm::Constant *adj = getMemberPointerAdjustment(E);
   if (!adj) return src;
@@ -1047,7 +1050,8 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
                                            llvm::Constant *src) {
   assert(E->getCastKind() == CK_DerivedToBaseMemberPointer ||
          E->getCastKind() == CK_BaseToDerivedMemberPointer ||
-         E->getCastKind() == CK_ReinterpretMemberPointer);
+         E->getCastKind() == CK_ReinterpretMemberPointer ||
+         E->getCastKind() == CK_BoundMemberFunctionToFunctionPointer);
 
   QualType DstType = E->getType();
 
@@ -1057,6 +1061,20 @@ ItaniumCXXABI::EmitMemberPointerConversion(const CastExpr *E,
 
   // Under Itanium, reinterprets don't require any additional processing.
   if (E->getCastKind() == CK_ReinterpretMemberPointer) return src;
+  if (E->getCastKind() == CK_BoundMemberFunctionToFunctionPointer) {
+    llvm::Type *PtrTy = llvm::PointerType::getUnqual(CGM.getLLVMContext());
+    llvm::Constant *FuncPtr = llvm::ConstantExpr::getIntToPtr(
+        ConstantFoldExtractValueInstruction(src, 0), PtrTy);
+
+    const auto &NewAuthInfo = CGM.getFunctionPointerAuthInfo(DstType);
+    const auto &CurAuthInfo =
+        CGM.getMemberFunctionPointerAuthInfo(E->getSubExpr()->getType());
+
+    if (!NewAuthInfo && !CurAuthInfo)
+      return FuncPtr;
+
+    return pointerAuthResignConstant(FuncPtr, CurAuthInfo, NewAuthInfo, CGM);
+  }
 
   // If the adjustment is trivial, we don't need to do anything.
   llvm::Constant *adj = getMemberPointerAdjustment(E);

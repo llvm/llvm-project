@@ -524,7 +524,8 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_VectorSplat:
       case CK_HLSLElementwiseCast:
       case CK_HLSLAggregateSplatCast:
-      case CK_HLSLVectorTruncation: {
+      case CK_HLSLVectorTruncation:
+      case CK_BoundMemberFunctionToFunctionPointer: {
         QualType resultType = CastE->getType();
         if (CastE->isGLValue())
           resultType = getContext().getPointerType(resultType);

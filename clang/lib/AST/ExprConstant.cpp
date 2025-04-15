@@ -15103,6 +15103,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer:
   case CK_ReinterpretMemberPointer:
+  case CK_BoundMemberFunctionToFunctionPointer:
   case CK_ConstructorConversion:
   case CK_IntegralToPointer:
   case CK_ToVoid:
@@ -15960,6 +15961,7 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_DerivedToBaseMemberPointer:
   case CK_MemberPointerToBoolean:
   case CK_ReinterpretMemberPointer:
+  case CK_BoundMemberFunctionToFunctionPointer:
   case CK_ConstructorConversion:
   case CK_IntegralToPointer:
   case CK_PointerToIntegral:

@@ -1043,6 +1043,7 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
   case CK_DerivedToBaseMemberPointer:
   case CK_MemberPointerToBoolean:
   case CK_ReinterpretMemberPointer:
+  case CK_BoundMemberFunctionToFunctionPointer:
   case CK_IntegralToPointer:
   case CK_PointerToIntegral:
   case CK_PointerToBoolean:
@@ -1600,6 +1601,7 @@ static bool castPreservesZero(const CastExpr *CE) {
   case CK_MemberPointerToBoolean:
   case CK_NullToMemberPointer:
   case CK_ReinterpretMemberPointer:
+  case CK_BoundMemberFunctionToFunctionPointer:
     // FIXME: ABI-dependent.
     return false;
 

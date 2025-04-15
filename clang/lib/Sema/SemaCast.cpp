@@ -153,6 +153,11 @@ namespace {
     bool isPlaceholder(BuiltinType::Kind K) const {
       return PlaceholderKind == K;
     }
+    bool isBoundPMFConversion() const {
+      return isPlaceholder(BuiltinType::BoundMember) &&
+             DestType->isFunctionPointerType() &&
+             SrcExpr.get()->isBoundMemberFunction(Self.Context);
+    }
 
     // Language specific cast restrictions for address spaces.
     void checkAddressSpaceCast(QualType SrcType, QualType DestType);
@@ -254,13 +259,11 @@ static TryCastResult TryStaticDowncast(Sema &Self, CanQualType SrcType,
                                        QualType OrigDestType, unsigned &msg,
                                        CastKind &Kind,
                                        CXXCastPath &BasePath);
-static TryCastResult TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr,
-                                               QualType SrcType,
-                                               QualType DestType,bool CStyle,
-                                               SourceRange OpRange,
-                                               unsigned &msg,
-                                               CastKind &Kind,
-                                               CXXCastPath &BasePath);
+static TryCastResult
+TryStaticMemberPointerUpcast(Sema &Self, ExprResult &SrcExpr, QualType SrcType,
+                             QualType DestType, bool CStyle,
+                             SourceRange OpRange, unsigned &msg, CastKind &Kind,
+                             CXXCastPath &BasePath);
 
 static TryCastResult
 TryStaticImplicitCast(Sema &Self, ExprResult &SrcExpr, QualType DestType,
@@ -1234,9 +1237,10 @@ static unsigned int checkCastFunctionType(Sema &Self, const ExprResult &SrcExpr,
 /// like this:
 /// char *bytes = reinterpret_cast\<char*\>(int_ptr);
 void CastOperation::CheckReinterpretCast() {
-  if (ValueKind == VK_PRValue && !isPlaceholder(BuiltinType::Overload))
-    SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
-  else
+  if (ValueKind == VK_PRValue) {
+    if (!isPlaceholder(BuiltinType::Overload) && !isBoundPMFConversion())
+      SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
+  } else
     checkNonOverloadPlaceholders();
   if (SrcExpr.isInvalid()) // if conversion failed, don't report another error
     return;
@@ -2363,6 +2367,16 @@ static TryCastResult TryReinterpretCast(Sema &Self, ExprResult &SrcExpr,
     return TC_Success;
   }
 
+  // GNU extension: check if we can convert a pmf to a function pointer
+  if (DestType->isFunctionPointerType() &&
+      (SrcType->isMemberFunctionPointerType() ||
+       SrcExpr.get()->isBoundMemberFunction(Self.Context)) &&
+      Self.Context.getTargetInfo().getCXXABI().isItaniumFamily()) {
+    Kind = CK_BoundMemberFunctionToFunctionPointer;
+    msg = diag::ext_bound_member_function_conversion;
+    return TC_Extension;
+  }
+
   // See below for the enumeral issue.
   if (SrcType->isNullPtrType() && DestType->isIntegralType(Self.Context)) {
     // C++0x 5.2.10p4: A pointer can be explicitly converted to any integral
@@ -2729,9 +2743,11 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       return;
     }
 
-    checkNonOverloadPlaceholders();
-    if (SrcExpr.isInvalid())
-      return;
+    if (!isBoundPMFConversion()) {
+      checkNonOverloadPlaceholders();
+      if (SrcExpr.isInvalid())
+        return;
+    }
   }
 
   // C++ 5.2.9p4: Any expression can be explicitly converted to type "cv void".
@@ -2769,7 +2785,7 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
   }
 
   if (ValueKind == VK_PRValue && !DestType->isRecordType() &&
-      !isPlaceholder(BuiltinType::Overload)) {
+      !isPlaceholder(BuiltinType::Overload) && !isBoundPMFConversion()) {
     SrcExpr = Self.DefaultFunctionArrayLvalueConversion(SrcExpr.get());
     if (SrcExpr.isInvalid())
       return;
@@ -2827,12 +2843,16 @@ void CastOperation::CheckCXXCStyleCast(bool FunctionalStyle,
       return;
 
     if (tcr == TC_NotApplicable) {
-      // ... or if that is not possible, a static_cast, ignoring const and
-      // addr space, ...
-      tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,
-                          BasePath, ListInitialization);
-      if (SrcExpr.isInvalid())
-        return;
+      // FIXME: Bound member function to function pointer conversion is blocked
+      // by an immediate error inside ``Sema::CheckPlaceholderExpr``.
+      if (!isBoundPMFConversion()) {
+        // ... or if that is not possible, a static_cast, ignoring const and
+        // addr space, ...
+        tcr = TryStaticCast(Self, SrcExpr, DestType, CCK, OpRange, msg, Kind,
+                            BasePath, ListInitialization);
+        if (SrcExpr.isInvalid())
+          return;
+      }
 
       if (tcr == TC_NotApplicable) {
         // ... and finally a reinterpret_cast, ignoring const and addr space.

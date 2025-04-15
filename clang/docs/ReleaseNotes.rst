@@ -96,6 +96,11 @@ C++ Language Changes
       asm((std::string_view("nop")) ::: (std::string_view("memory")));
     }
 
+- Implemented `GCC bound member functions extension <https://gcc.gnu.org/onlinedocs/gcc/Bound-member-functions.html>`_ for Itanium ABI.
+  This extension allows extracting the function pointer from a bound pointer to member function.
+  It is useful to save vtable lookups when the same member function is executed multiple times inside a loop.
+  When using this extension, a warning is emitted unless ``-Wno-pmf-conversions`` is passed.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

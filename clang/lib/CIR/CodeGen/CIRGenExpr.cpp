@@ -83,6 +83,7 @@ Address CIRGenFunction::emitPointerWithAlignment(const Expr *expr,
     case CK_NullToMemberPointer:
     case CK_NullToPointer:
     case CK_ReinterpretMemberPointer:
+    case CK_BoundMemberFunctionToFunctionPointer:
       // Common pointer conversions, nothing to do here.
       // TODO: Is there any reason to treat base-to-derived conversions
       // specially?

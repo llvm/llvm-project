@@ -575,6 +575,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_DerivedToBaseMemberPointer:
   case CK_MemberPointerToBoolean:
   case CK_ReinterpretMemberPointer:
+  case CK_BoundMemberFunctionToFunctionPointer:
   case CK_ConstructorConversion:
   case CK_IntegralToPointer:
   case CK_PointerToIntegral:

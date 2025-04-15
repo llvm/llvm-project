@@ -795,6 +795,7 @@ def DuplicateDeclSpecifier : DiagGroup<"duplicate-decl-specifier">;
 def CompareDistinctPointerType : DiagGroup<"compare-distinct-pointer-types">;
 def GNUUnionCast : DiagGroup<"gnu-union-cast">;
 def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end">;
+def GNUPMFCast : DiagGroup<"pmf-conversions">;
 def Varargs : DiagGroup<"varargs">;
 def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
@@ -1294,22 +1295,21 @@ def C2y : DiagGroup<"c2y-extensions">;
 def GNUBinaryLiteral : DiagGroup<"gnu-binary-literal">;
 
 // A warning group for warnings about GCC extensions.
-def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,
-                            GNUAutoType, GNUBinaryLiteral, GNUCaseRange,
-                            GNUComplexInteger, GNUCompoundLiteralInitializer,
-                            GNUConditionalOmittedOperand, GNUDesignator,
-                            GNUEmptyStruct,
-                            VLAExtension, GNUFlexibleArrayInitializer,
-                            GNUFlexibleArrayUnionMember, GNUFoldingConstant,
-                            GNUImaginaryConstant, GNUIncludeNext,
-                            GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
-                            GNUOffsetofExtensions, GNUPointerArith,
-                            RedeclaredClassMember, GNURedeclaredEnum,
-                            GNUStatementExpression, GNUStaticFloatInit,
-                            GNUStringLiteralOperatorTemplate, GNUUnionCast,
-                            GNUVariableSizedTypeNotAtEnd, ZeroLengthArray,
-                            GNUZeroLineDirective,
-                            GNUZeroVariadicMacroArguments]>;
+def GNU
+    : DiagGroup<
+          "gnu", [GNUAlignofExpression, GNUAnonymousStruct, GNUAutoType,
+                  GNUBinaryLiteral, GNUCaseRange, GNUComplexInteger,
+                  GNUCompoundLiteralInitializer, GNUConditionalOmittedOperand,
+                  GNUDesignator, GNUEmptyStruct, VLAExtension,
+                  GNUFlexibleArrayInitializer, GNUFlexibleArrayUnionMember,
+                  GNUFoldingConstant, GNUImaginaryConstant, GNUIncludeNext,
+                  GNULabelsAsValue, GNULineMarker, GNUNullPointerArithmetic,
+                  GNUOffsetofExtensions, GNUPointerArith, RedeclaredClassMember,
+                  GNURedeclaredEnum, GNUStatementExpression, GNUStaticFloatInit,
+                  GNUStringLiteralOperatorTemplate, GNUUnionCast,
+                  GNUVariableSizedTypeNotAtEnd, ZeroLengthArray,
+                  GNUZeroLineDirective, GNUZeroVariadicMacroArguments,
+                  GNUPMFCast]>;
 // A warning group for warnings about code that clang accepts but gcc doesn't.
 def GccCompat : DiagGroup<"gcc-compat">;
 

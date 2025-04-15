@@ -152,6 +152,10 @@ CAST_OPERATION(MemberPointerToBoolean)
 /// many ABIs do not guarantee this on all possible intermediate types).
 CAST_OPERATION(ReinterpretMemberPointer)
 
+/// CK_BoundPointerToMemberFunctionToFunctionPointer - Convert a bound
+/// member function pointer to a function pointer.  This is a GNU extension.
+CAST_OPERATION(BoundMemberFunctionToFunctionPointer)
+
 /// CK_UserDefinedConversion - Conversion using a user defined type
 /// conversion function.
 ///    struct A { operator int(); }; int i = int(A());

@@ -2628,6 +2628,38 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return CGF.CGM.getCXXABI().EmitNullMemberPointer(MPT);
   }
 
+  case CK_BoundMemberFunctionToFunctionPointer: {
+    // Special handling bound member functions
+    if (E->isBoundMemberFunction(CGF.getContext())) {
+      auto *BO = cast<BinaryOperator>(E->IgnoreParens());
+      const Expr *BaseExpr = BO->getLHS();
+      const Expr *MemFnExpr = BO->getRHS();
+
+      const auto *MPT = MemFnExpr->getType()->castAs<MemberPointerType>();
+      const auto *FPT = MPT->getPointeeType()->castAs<FunctionProtoType>();
+      const auto *RD = MPT->getMostRecentCXXRecordDecl();
+
+      // Emit the 'this' pointer.
+      Address This = Address::invalid();
+      if (BO->getOpcode() == BO_PtrMemI)
+        This = CGF.EmitPointerWithAlignment(BaseExpr, nullptr, nullptr,
+                                            KnownNonNull);
+      else
+        This = CGF.EmitLValue(BaseExpr, KnownNonNull).getAddress();
+
+      // Get the member function pointer.
+      llvm::Value *MemFnPtr = CGF.EmitScalarExpr(MemFnExpr);
+
+      // Ask the ABI to load the callee.  Note that This is modified.
+      llvm::Value *ThisPtrForCall = nullptr;
+      CGCallee Callee = CGF.CGM.getCXXABI().EmitLoadOfMemberFunctionPointer(
+          CGF, BO, This, ThisPtrForCall, MemFnPtr, MPT);
+      return Callee.getFunctionPointer();
+    }
+
+    // fallback to the case without the base object address
+  }
+    [[fallthrough]];
   case CK_ReinterpretMemberPointer:
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {

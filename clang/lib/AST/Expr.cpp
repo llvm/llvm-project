@@ -1864,6 +1864,13 @@ bool CastExpr::CastConsistency() const {
     assert(getSubExpr()->getType()->isMemberPointerType());
     goto CheckNoBasePath;
 
+  case CK_BoundMemberFunctionToFunctionPointer:
+    assert(getType()->isFunctionPointerType());
+    assert(getSubExpr()->getType()->isMemberPointerType() ||
+           getSubExpr()->getType()->isSpecificPlaceholderType(
+               BuiltinType::BoundMember));
+    goto CheckNoBasePath;
+
   case CK_BitCast:
     // Arbitrary casts to C pointer types count as bitcasts.
     // Otherwise, we should only have block and ObjC pointer casts
