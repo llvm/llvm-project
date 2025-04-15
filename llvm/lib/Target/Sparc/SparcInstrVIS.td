@@ -279,8 +279,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(+0.0);}]>;
-def fpnegimm0 : PatLeaf<(fpimm), [{return N->isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
 
 // VIS instruction patterns.
 let Predicates = [HasVIS] in {
