@@ -1778,21 +1778,20 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   };
 
   bool Changed = false;
+  Value *A = II->getArgOperand(0);
+  Value *B = II->getArgOperand(1);
+  Type *Ty = II->getType();
+  auto *Zero = ConstantInt::get(Ty, 0);
+
   switch (II->getIntrinsicID()) {
   default:
     llvm_unreachable("Unexpected intrinsic.");
   case Intrinsic::sadd_with_overflow: {
-    Value *A = II->getArgOperand(0);
-    Value *B = II->getArgOperand(1);
-    bool ASgeZero = DoesConditionHold(CmpInst::ICMP_SGE, A,
-                                      ConstantInt::get(A->getType(), 0), Info);
-    bool BSgeZero = DoesConditionHold(CmpInst::ICMP_SGE, B,
-                                      ConstantInt::get(B->getType(), 0), Info);
-    bool ASleZero = DoesConditionHold(CmpInst::ICMP_SLE, A,
-                                      ConstantInt::get(A->getType(), 0), Info);
-    bool BSleZero = DoesConditionHold(CmpInst::ICMP_SLE, B,
-                                      ConstantInt::get(B->getType(), 0), Info);
-    
+    bool ASgeZero = DoesConditionHold(CmpInst::ICMP_SGE, A, Zero, Info);
+    bool BSgeZero = DoesConditionHold(CmpInst::ICMP_SGE, B, Zero, Info);
+    bool ASleZero = DoesConditionHold(CmpInst::ICMP_SLE, A, Zero, Info);
+    bool BSleZero = DoesConditionHold(CmpInst::ICMP_SLE, B, Zero, Info);
+
     // If A and B have different signs, sadd.with.overflow(a, b) should not
     // overflow.
     if ((ASgeZero && BSleZero) || (ASleZero && BSgeZero)) {
@@ -1804,11 +1803,8 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
   case Intrinsic::ssub_with_overflow: {
     // If A s>= B && B s>= 0, ssub.with.overflow(a, b) should not overflow and
     // can be simplified to a regular sub.
-    Value *A = II->getArgOperand(0);
-    Value *B = II->getArgOperand(1);
     if (!DoesConditionHold(CmpInst::ICMP_SGE, A, B, Info) ||
-        !DoesConditionHold(CmpInst::ICMP_SGE, B,
-                           ConstantInt::get(A->getType(), 0), Info))
+        !DoesConditionHold(CmpInst::ICMP_SGE, B, Zero, Info))
       return false;
     Changed = replaceSubOverflowUses(II, A, B, ToRemove);
     break;
