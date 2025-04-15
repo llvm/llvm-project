@@ -125,7 +125,8 @@ class BareSImmNAsmOperand<int width>
 
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
 // sign-/zero-extension. This is represented internally as a signed 32-bit value.
-def bare_simm32 : RISCVOp<XLenVT> {
+def bare_simm32 : RISCVOp<XLenVT>,
+                  ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]> {
   let ParserMatchClass = BareSImmNAsmOperand<32>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<32>";
@@ -1244,6 +1245,44 @@ def PseudoQC_E_JAL: Pseudo<(outs), (ins pseudo_qc_jump_symbol:$func), [],
 //===----------------------------------------------------------------------===//
 // Code Gen Patterns
 //===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatGprNoX0Simm26<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), simm26:$imm)),
+          (Inst GPRNoX0:$rs1, simm26:$imm)>;
+
+class PatGprNoX0Imm32<SDPatternOperator OpNode, RVInst48 Inst>
+    : Pat<(i32 (OpNode (i32 GPRNoX0:$rs1), bare_simm32:$imm)),
+          (Inst GPRNoX0:$rs1, bare_simm32:$imm)>;
+
+/// Simple arithmetic operations
+
+let Predicates = [HasVendorXqcilia, IsRV32] in {
+//
+// LLVM sorts by number of covered nodes plus AddedComplexity,
+// highest first. All these patterns cover the same number of
+// nodes (but the immediate leafs are different sizes), so we use
+// AddedComplexity to deprioritise the longer immediate encodings,
+// and achieve the following order for pattern matching:
+// 1. Base RISC-V arithmetic instructions
+// 2. Xqcilia instructions with 26 bit immediate
+// 3. Xqcilia instructions with 32 bit immediate
+//
+let AddedComplexity = -2 in {
+def : PatGprNoX0Imm32<add, QC_E_ADDAI>;
+def : PatGprNoX0Imm32<and, QC_E_ANDAI>;
+def : PatGprNoX0Imm32<or, QC_E_ORAI>;
+def : PatGprNoX0Imm32<xor, QC_E_XORAI>;
+} // AddedComplexity = -2
+
+let AddedComplexity = -1 in {
+def : PatGprNoX0Simm26<add, QC_E_ADDI>;
+def : PatGprNoX0Simm26<and, QC_E_ANDI>;
+def : PatGprNoX0Simm26<or, QC_E_ORI>;
+def : PatGprNoX0Simm26<xor, QC_E_XORI>;
+} // AddedComplexity = -1
+} // Predicates = [HasVendorXqcilia, IsRV32]
 
 let Predicates = [HasVendorXqciint, IsRV32] in
 def : Pat<(riscv_mileaveret_glue), (QC_C_MILEAVERET)>;
