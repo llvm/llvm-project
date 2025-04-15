@@ -26,9 +26,8 @@ define i1 @foo(ptr %0, [2 x i32] %1) {
 ; CHECK: declare i32 @memcmp(ptr, ptr, i32)
 declare i32 @memcmp(ptr, ptr, i32)
 
-;; Ensure bcmp is removed from module. Follow up patches can address this.
-; CHECK-NOT: declare{{.*}}i32 @bcmp
-; CHECK-NOT: define{{.*}}i32 @bcmp
+;; Ensure bcmp is not removed from module.
+; CHECK: define{{.*}}i32 @bcmp
 define i32 @bcmp(ptr %0, ptr %1, i32 %2) {
   ret i32 0
 }
