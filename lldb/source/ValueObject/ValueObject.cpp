@@ -2794,8 +2794,9 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();
 
-  const bool is_pointer_or_reference_type = IsPointerOrReferenceType();
-  if (is_pointer_or_reference_type) {
+  const bool is_valid_dereference_type =
+      GetCompilerType().IsValidDereferenceType();
+  if (is_valid_dereference_type) {
     bool omit_empty_base_classes = true;
     bool ignore_array_bounds = false;
 
@@ -2871,7 +2872,7 @@ ValueObjectSP ValueObject::Dereference(Status &error) {
     StreamString strm;
     GetExpressionPath(strm);
 
-    if (is_pointer_or_reference_type)
+    if (is_valid_dereference_type)
       error = Status::FromErrorStringWithFormat(
           "dereference failed: (%s) %s",
           GetTypeName().AsCString("<invalid type>"), strm.GetData());

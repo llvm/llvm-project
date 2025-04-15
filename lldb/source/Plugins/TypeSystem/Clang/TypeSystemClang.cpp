@@ -3443,6 +3443,13 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
+bool TypeSystemClang::IsValidDereferenceType(
+    lldb::opaque_compiler_type_t type) {
+  CompilerType compiler_type = GetType(clang::QualType::getFromOpaquePtr(type));
+  return compiler_type.IsPointerOrReferenceType() ||
+         compiler_type.IsArrayType();
+}
+
 bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
                                           uint32_t &count, bool &is_complex) {
   if (type) {
@@ -6548,6 +6555,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
             return size_or_err.takeError();
           child_byte_size = *size_or_err;
           child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
+          if (idx == 0)
+            child_is_deref_of_parent = true;
           return element_type;
         }
       }

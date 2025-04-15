@@ -716,6 +716,8 @@ public:
   bool IsReferenceType(lldb::opaque_compiler_type_t type,
                        CompilerType *pointee_type, bool *is_rvalue) override;
 
+  bool IsValidDereferenceType(lldb::opaque_compiler_type_t type) override;
+
   bool IsScalarType(lldb::opaque_compiler_type_t type) override;
 
   bool IsTypedefType(lldb::opaque_compiler_type_t type) override;

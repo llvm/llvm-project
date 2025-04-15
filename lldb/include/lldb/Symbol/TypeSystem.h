@@ -489,6 +489,8 @@ public:
   virtual bool IsReferenceType(lldb::opaque_compiler_type_t type,
                                CompilerType *pointee_type, bool *is_rvalue) = 0;
 
+  virtual bool IsValidDereferenceType(lldb::opaque_compiler_type_t type) = 0;
+
   virtual bool
   ShouldTreatScalarValueAsAddress(lldb::opaque_compiler_type_t type) {
     return IsPointerOrReferenceType(type, nullptr);

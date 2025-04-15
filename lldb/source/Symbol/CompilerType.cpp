@@ -233,6 +233,13 @@ bool CompilerType::IsReferenceType(CompilerType *pointee_type,
   return false;
 }
 
+bool CompilerType::IsValidDereferenceType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsValidDereferenceType(m_type);
+  return false;
+}
+
 bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
