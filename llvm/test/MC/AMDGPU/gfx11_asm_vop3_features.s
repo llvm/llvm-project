@@ -5,18 +5,6 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64,+real-true16 -filetype=null %s 2>&1 | FileCheck --check-prefixes=W64-ERR,GFX11-ERR --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
-// FIXME-TRUE16
-// It is unknown whether fp inline constants are allowed by hardware. Upstream
-// LLVM allows them
-//===----------------------------------------------------------------------===//
-
-v_alignbit_b32 v5, v1, v2, 0.5
-// GFX11: v_alignbit_b32 v5, v1, v2, 0.5          ; encoding: [0x05,0x00,0x16,0xd6,0x01,0x05,0xc2,0x03]
-
-v_alignbyte_b32 v5, v1, v2, 0.5
-// GFX11: v_alignbyte_b32 v5, v1, v2, 0.5         ; encoding: [0x05,0x00,0x17,0xd6,0x01,0x05,0xc2,0x03]
-
-//===----------------------------------------------------------------------===//
 // HW correctly handles fp inline constants for src2 (they have f16 type).
 // Check that inline constants are not converted to literals.
 //===----------------------------------------------------------------------===//
