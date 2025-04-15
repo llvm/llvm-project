@@ -1064,7 +1064,8 @@ public:
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
-        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        if (CIValue.ult(CIValue.getBitWidth()))
+          InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
         break;
       case Instruction::Mul:
         if (CIValue.isOne()) {
@@ -20529,6 +20530,10 @@ void BoUpSLP::computeMinimumValueSizes() {
     IsTruncRoot = true;
   }
   bool IsSignedCmp = false;
+  if (UserIgnoreList && all_of(*UserIgnoreList, [](Value *V) {
+        return match(V, m_SMin(m_Value(), m_Value()));
+      }))
+    IsSignedCmp = true;
   while (NodeIdx < VectorizableTree.size()) {
     ArrayRef<Value *> TreeRoot = VectorizableTree[NodeIdx]->Scalars;
     unsigned Limit = 2;
@@ -22499,53 +22504,16 @@ public:
         }
 
         Type *ScalarTy = VL.front()->getType();
-        if (isa<FixedVectorType>(ScalarTy)) {
-          assert(SLPReVec && "FixedVectorType is not expected.");
-          unsigned ScalarTyNumElements = getNumElements(ScalarTy);
-          Value *ReducedSubTree = PoisonValue::get(
-              getWidenedType(ScalarTy->getScalarType(), ScalarTyNumElements));
-          for (unsigned I : seq<unsigned>(ScalarTyNumElements)) {
-            // Do reduction for each lane.
-            // e.g., do reduce add for
-            // VL[0] = <4 x Ty> <a, b, c, d>
-            // VL[1] = <4 x Ty> <e, f, g, h>
-            // Lane[0] = <2 x Ty> <a, e>
-            // Lane[1] = <2 x Ty> <b, f>
-            // Lane[2] = <2 x Ty> <c, g>
-            // Lane[3] = <2 x Ty> <d, h>
-            // result[0] = reduce add Lane[0]
-            // result[1] = reduce add Lane[1]
-            // result[2] = reduce add Lane[2]
-            // result[3] = reduce add Lane[3]
-            SmallVector<int, 16> Mask =
-                createStrideMask(I, ScalarTyNumElements, VL.size());
-            Value *Lane = Builder.CreateShuffleVector(VectorizedRoot, Mask);
-            Value *Val =
-                createSingleOp(Builder, *TTI, Lane,
-                               OptReusedScalars && SameScaleFactor
-                                   ? SameValuesCounter.front().second
-                                   : 1,
-                               Lane->getType()->getScalarType() !=
-                                       VL.front()->getType()->getScalarType()
-                                   ? V.isSignedMinBitwidthRootNode()
-                                   : true,
-                               RdxRootInst->getType());
-            ReducedSubTree =
-                Builder.CreateInsertElement(ReducedSubTree, Val, I);
-          }
-          VectorizedTree = GetNewVectorizedTree(VectorizedTree, ReducedSubTree);
-        } else {
-          Type *VecTy = VectorizedRoot->getType();
-          Type *RedScalarTy = VecTy->getScalarType();
-          VectorValuesAndScales.emplace_back(
-              VectorizedRoot,
-              OptReusedScalars && SameScaleFactor
-                  ? SameValuesCounter.front().second
-                  : 1,
-              RedScalarTy != ScalarTy->getScalarType()
-                  ? V.isSignedMinBitwidthRootNode()
-                  : true);
-        }
+        Type *VecTy = VectorizedRoot->getType();
+        Type *RedScalarTy = VecTy->getScalarType();
+        VectorValuesAndScales.emplace_back(
+            VectorizedRoot,
+            OptReusedScalars && SameScaleFactor
+                ? SameValuesCounter.front().second
+                : 1,
+            RedScalarTy != ScalarTy->getScalarType()
+                ? V.isSignedMinBitwidthRootNode()
+                : true);
 
         // Count vectorized reduced values to exclude them from final reduction.
         for (Value *RdxVal : VL) {
@@ -22718,9 +22686,35 @@ private:
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
                         Value *Vec, unsigned Scale, bool IsSigned,
                         Type *DestTy) {
-    Value *Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
-    if (Rdx->getType() != DestTy->getScalarType())
-      Rdx = Builder.CreateIntCast(Rdx, DestTy->getScalarType(), IsSigned);
+    Value *Rdx;
+    if (auto *VecTy = dyn_cast<FixedVectorType>(DestTy)) {
+      unsigned DestTyNumElements = getNumElements(VecTy);
+      unsigned VF = getNumElements(Vec->getType()) / DestTyNumElements;
+      Rdx = PoisonValue::get(
+          getWidenedType(Vec->getType()->getScalarType(), DestTyNumElements));
+      for (unsigned I : seq<unsigned>(DestTyNumElements)) {
+        // Do reduction for each lane.
+        // e.g., do reduce add for
+        // VL[0] = <4 x Ty> <a, b, c, d>
+        // VL[1] = <4 x Ty> <e, f, g, h>
+        // Lane[0] = <2 x Ty> <a, e>
+        // Lane[1] = <2 x Ty> <b, f>
+        // Lane[2] = <2 x Ty> <c, g>
+        // Lane[3] = <2 x Ty> <d, h>
+        // result[0] = reduce add Lane[0]
+        // result[1] = reduce add Lane[1]
+        // result[2] = reduce add Lane[2]
+        // result[3] = reduce add Lane[3]
+        SmallVector<int, 16> Mask = createStrideMask(I, DestTyNumElements, VF);
+        Value *Lane = Builder.CreateShuffleVector(Vec, Mask);
+        Rdx = Builder.CreateInsertElement(
+            Rdx, emitReduction(Lane, Builder, &TTI, DestTy), I);
+      }
+    } else {
+      Rdx = emitReduction(Vec, Builder, &TTI, DestTy);
+    }
+    if (Rdx->getType() != DestTy)
+      Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
     // Improved analysis for add/fadd/xor reductions with same scale
     // factor for all operands of reductions. We can emit scalar ops for
     // them instead.
@@ -22787,30 +22781,32 @@ private:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
       if (!AllConsts) {
-        if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
-          assert(SLPReVec && "FixedVectorType is not expected.");
-          unsigned ScalarTyNumElements = VecTy->getNumElements();
-          for (unsigned I : seq<unsigned>(ReducedVals.size())) {
-            VectorCost += TTI->getShuffleCost(
-                TTI::SK_PermuteSingleSrc, VectorTy,
-                createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
-            VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy, FMF,
-                                                          CostKind);
-          }
-          VectorCost += TTI->getScalarizationOverhead(
-              VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
-              /*Extract*/ false, TTI::TCK_RecipThroughput);
-        } else if (DoesRequireReductionOp) {
-          Type *RedTy = VectorTy->getElementType();
-          auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
-              std::make_pair(RedTy, true));
-          if (RType == RedTy) {
-            VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
-                                                         FMF, CostKind);
+        if (DoesRequireReductionOp) {
+          if (auto *VecTy = dyn_cast<FixedVectorType>(ScalarTy)) {
+            assert(SLPReVec && "FixedVectorType is not expected.");
+            unsigned ScalarTyNumElements = VecTy->getNumElements();
+            for (unsigned I : seq<unsigned>(ReducedVals.size())) {
+              VectorCost += TTI->getShuffleCost(
+                  TTI::SK_PermuteSingleSrc, VectorTy,
+                  createStrideMask(I, ScalarTyNumElements, ReducedVals.size()));
+              VectorCost += TTI->getArithmeticReductionCost(RdxOpcode, VecTy,
+                                                            FMF, CostKind);
+            }
+            VectorCost += TTI->getScalarizationOverhead(
+                VecTy, APInt::getAllOnes(ScalarTyNumElements), /*Insert*/ true,
+                /*Extract*/ false, TTI::TCK_RecipThroughput);
           } else {
-            VectorCost = TTI->getExtendedReductionCost(
-                RdxOpcode, !IsSigned, RedTy, getWidenedType(RType, ReduxWidth),
-                FMF, CostKind);
+            Type *RedTy = VectorTy->getElementType();
+            auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
+                std::make_pair(RedTy, true));
+            if (RType == RedTy) {
+              VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
+                                                           FMF, CostKind);
+            } else {
+              VectorCost = TTI->getExtendedReductionCost(
+                  RdxOpcode, !IsSigned, RedTy,
+                  getWidenedType(RType, ReduxWidth), FMF, CostKind);
+            }
           }
         } else {
           Type *RedTy = VectorTy->getElementType();
