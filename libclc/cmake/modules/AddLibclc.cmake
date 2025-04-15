@@ -24,7 +24,7 @@ function(compile_to_bc)
     ${ARGN}
   )
 
-  # If this is an LLVM IR file (identified soley by its file suffix),
+  # If this is an LLVM IR file (identified solely by its file suffix),
   # pre-process it with clang to a temp file, then assemble that to bytecode.
   set( TMP_SUFFIX )
   get_filename_component( FILE_EXT ${ARG_INPUT} EXT )
