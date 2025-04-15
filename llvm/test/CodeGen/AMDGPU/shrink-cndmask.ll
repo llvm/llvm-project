@@ -162,6 +162,47 @@ define amdgpu_cs void @test_u32_eq(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out
   ret void
 }
 
+define amdgpu_cs void @test_negative_case(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_negative_case:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp eq i32 %a, -1
+  %val1 = select i1 %vcc, i32 %p, i32 0
+  %val2 = select i1 %vcc, i32 0, i32 %q
+  %ret0 = insertelement <2 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <2 x i32> %ret0, i32 %val2, i32 1
+  store <2 x i32> %ret1, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_cs void @test_mixed(i32 %a, i32 %p, i32 %q, i32 %r, i32 %s, ptr addrspace(1) %out) {
+; GCN-LABEL: test_mixed:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_ne_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc_lo
+; GCN-NEXT:    v_dual_cndmask_b32 v2, 0, v3 :: v_dual_cndmask_b32 v3, 0, v4
+; GCN-NEXT:    global_store_b128 v[5:6], v[0:3], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp eq i32 -1, %a
+  %val1 = select i1 %vcc, i32 0, i32 %p
+  %val2 = select i1 %vcc, i32 %q, i32 0
+  %val3 = select i1 %vcc, i32 0, i32 %r
+  %val4 = select i1 %vcc, i32 0, i32 %s
+  %ret0 = insertelement <4 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <4 x i32> %ret0, i32 %val2, i32 1
+  %ret2 = insertelement <4 x i32> %ret1, i32 %val3, i32 2
+  %ret3 = insertelement <4 x i32> %ret2, i32 %val4, i32 3
+  store <4 x i32> %ret3, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_cs void @test_u32_ne(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_ne:
 ; GCN:       ; %bb.0: ; %.entry
@@ -374,6 +415,25 @@ define amdgpu_cs void @test_f32_oeq(float %a, float %p, float %q, ptr addrspace(
   ret void
 }
 
+define amdgpu_cs void @test_f32_negative_modifiers(float %a, float %p, float %q, ptr addrspace(1) %out) {
+; GCN-LABEL: test_f32_negative_modifiers:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_eq_f32_e32 vcc_lo, 2.0, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v1, 0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v2, 0, vcc_lo
+; GCN-NEXT:    global_store_b64 v[3:4], v[0:1], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %r = fneg float %p
+  %s = fneg  float %q
+  %vcc = fcmp oeq float 2.0, %a
+  %val1 = select i1 %vcc, float 0.0, float %r
+  %val2 = select i1 %vcc, float 0.0, float %s
+  %ret0 = insertelement <2 x float> poison, float %val1, i32 0
+  %ret1 = insertelement <2 x float> %ret0, float %val2, i32 1
+  store <2 x float> %ret1, ptr addrspace(1) %out
+  ret void
+}
 
 define amdgpu_cs void @test_f32_one(float %a, float %p, float %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_f32_one:

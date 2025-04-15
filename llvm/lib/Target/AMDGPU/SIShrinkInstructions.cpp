@@ -877,7 +877,7 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
     return AMDGPU::V_CMP_LE_U32_e64;
   case AMDGPU::V_CMP_LT_U32_e64:
     return AMDGPU::V_CMP_GE_U32_e64;
-    // unsigned 64
+  // unsigned 64
   case AMDGPU::V_CMP_EQ_U64_e64:
     return AMDGPU::V_CMP_NE_U64_e64;
   case AMDGPU::V_CMP_NE_U64_e64:
@@ -956,7 +956,7 @@ unsigned SIShrinkInstructions::getInverseCompareOpcode(MachineInstr &MI) const {
 bool SIShrinkInstructions::shouldSwapCndOperands(
     MachineInstr &MI, SmallVector<MachineOperand *, 4> &UsesToProcess) const {
   auto AllUses = MRI->use_nodbg_operands(MI.getOperand(0).getReg());
-  unsigned Swap = 0, SwapNot = 0;
+  int InstsToSwap = 0;
 
   for (auto &Use : AllUses) {
     MachineInstr *UseInst = Use.getParent();
@@ -972,12 +972,12 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
     bool Src1Imm = Src1.isImm();
 
     if (!Src1Imm && Src0Imm)
-      SwapNot++;
+      InstsToSwap--;
     else if (Src1Imm && !Src0Imm &&
              UseInst->getOperand(1).getImm() == SISrcMods::NONE)
-      Swap++;
+      InstsToSwap++;
   }
-  return (Swap > SwapNot);
+  return (InstsToSwap > 0);
 }
 
 static void swapCndOperands(MachineInstr &MI) {
@@ -994,7 +994,9 @@ static void swapCndOperands(MachineInstr &MI) {
   }
 
   if (Op4.isReg()) {
-    Op2.setReg(Op4.getReg());
+    Op2.ChangeToRegister(Op4.getReg(), Op4.isDef(), Op4.isImplicit(),
+                         Op4.isKill(), Op4.isDead(), Op4.isUndef(),
+                         Op4.isDebug());
     Op2.setSubReg(Op4.getSubReg());
   } else if (Op4.isImm()) {
     Op2.ChangeToImmediate(Op4.getImm());
