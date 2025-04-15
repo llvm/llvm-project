@@ -38,9 +38,9 @@ bool fromJSON(const json::Value &Params, PresentationHint &PH, json::Path P) {
 
 bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&
-         O.mapOptional("presentationHint", S.presentationHint) &&
-         O.mapOptional("sourceReference", S.sourceReference);
+  return O && O.map("name", S.name) && O.map("path", S.path) &&
+         O.map("presentationHint", S.presentationHint) &&
+         O.map("sourceReference", S.sourceReference);
 }
 
 json::Value toJSON(const ExceptionBreakpointsFilter &EBF) {

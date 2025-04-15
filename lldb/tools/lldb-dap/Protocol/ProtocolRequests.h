@@ -100,7 +100,7 @@ enum PathFormat : unsigned { ePatFormatPath, ePathFormatURI };
 /// Arguments for `initialize` request.
 struct InitializeRequestArguments {
   /// The ID of the debug adapter.
-  std::string adatperID;
+  std::string adapterID;
 
   /// The ID of the client using this adapter.
   std::optional<std::string> clientID;
@@ -113,7 +113,7 @@ struct InitializeRequestArguments {
 
   /// Determines in what format paths are specified. The default is `path`,
   /// which is the native format.
-  std::optional<PathFormat> pathFormat = ePatFormatPath;
+  PathFormat pathFormat = ePatFormatPath;
 
   /// If true all line numbers are 1-based (default).
   std::optional<bool> linesStartAt1;

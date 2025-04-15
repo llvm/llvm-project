@@ -20,16 +20,16 @@ namespace lldb_dap::protocol {
 bool fromJSON(const llvm::json::Value &Params, CancelArguments &CA,
               llvm::json::Path P) {
   llvm::json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("requestId", CA.requestId) &&
-         O.mapOptional("progressId", CA.progressId);
+  return O && O.map("requestId", CA.requestId) &&
+         O.map("progressId", CA.progressId);
 }
 
 bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
               json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("restart", DA.restart) &&
-         O.mapOptional("terminateDebuggee", DA.terminateDebuggee) &&
-         O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
+  return O && O.map("restart", DA.restart) &&
+         O.map("terminateDebuggee", DA.terminateDebuggee) &&
+         O.map("suspendDebuggee", DA.suspendDebuggee);
 }
 
 bool fromJSON(const llvm::json::Value &Params, PathFormat &PF,
@@ -75,23 +75,33 @@ bool fromJSON(const llvm::json::Value &Params, InitializeRequestArguments &IRA,
 
   const json::Object *O = Params.getAsObject();
 
-  for (auto &kv : ClientFeatureByKey)
-    if (std::optional<bool> v = O->getBoolean(kv.first()); v && *v)
-      IRA.supportedFeatures.insert(kv.second);
+  for (auto &kv : ClientFeatureByKey) {
+    const json::Value *value_ref = O->get(kv.first());
+    if (!value_ref)
+      continue;
 
-  return OM.mapOptional("adatperID", IRA.adatperID) &&
-         OM.mapOptional("clientID", IRA.clientID) &&
-         OM.mapOptional("clientName", IRA.clientName) &&
-         OM.mapOptional("locale", IRA.locale) &&
-         OM.mapOptional("linesStartAt1", IRA.linesStartAt1) &&
-         OM.mapOptional("columnsStartAt1", IRA.columnsStartAt1) &&
-         OM.mapOptional("pathFormat", IRA.pathFormat) &&
-         OM.mapOptional("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
+    const std::optional<bool> value = value_ref->getAsBoolean();
+    if (!value) {
+      P.field(kv.first()).report("expected bool");
+      return false;
+    }
+
+    if (*value)
+      IRA.supportedFeatures.insert(kv.second);
+  }
+
+  return OM.map("adapterID", IRA.adapterID) &&
+         OM.map("clientID", IRA.clientID) &&
+         OM.map("clientName", IRA.clientName) && OM.map("locale", IRA.locale) &&
+         OM.map("linesStartAt1", IRA.linesStartAt1) &&
+         OM.map("columnsStartAt1", IRA.columnsStartAt1) &&
+         OM.map("pathFormat", IRA.pathFormat) &&
+         OM.map("$__lldb_sourceInitFile", IRA.lldbExtSourceInitFile);
 }
 
 bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
   json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("source", SA.source) &&
+  return O && O.map("source", SA.source) &&
          O.map("sourceReference", SA.sourceReference);
 }
 
