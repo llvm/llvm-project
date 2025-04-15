@@ -415,7 +415,7 @@ class Sema;
       // If we are not performing a reference binding, we can skip comparing
       // the types, which has a noticeable performance impact.
       if (!ReferenceBinding) {
-        assert(C.hasSameType(getFromType(), getToType(2)));
+        assert(First || C.hasSameUnqualifiedType(getFromType(), getToType(2)));
         return true;
       }
       if (!C.hasSameType(getFromType(), getToType(2)))
