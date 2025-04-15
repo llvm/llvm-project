@@ -3118,14 +3118,12 @@ let TargetPrefix = "aarch64" in {
          [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
           IntrInaccessibleMemOnly]>;
 
-  def int_aarch64_sme_za16_ftmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za16_bftmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_ftmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_bftmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_stmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_utmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_sutmopa : SME_OuterProduct_TMOP_Intrinsic;
-  def int_aarch64_sme_za32_ustmopa : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_tmopa_za16 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_tmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_stmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_utmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_sutmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
+  def int_aarch64_sme_ustmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],

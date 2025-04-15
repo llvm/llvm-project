@@ -911,28 +911,27 @@ let SMETargetGuard = "sme-f16f16" in {
 // SME2 - TMOP, SUTMOP, USTMOP
 
 let SMETargetGuard = "sme2,sme-tmop" in {
-  def SVFTMOPA_ZA32   : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "hf",  MergeNone, "aarch64_sme_za32_ftmopa",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-  def SVBTMOPA_ZA32   : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "b",   MergeNone, "aarch64_sme_za32_bftmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-  def SVSTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "cs",   MergeNone, "aarch64_sme_za32_stmopa",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-  def SVUTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "UcUs", MergeNone, "aarch64_sme_za32_utmopa",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-  def SVSUTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2u[i", "c",    MergeNone, "aarch64_sme_za32_sutmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
-  def SVUSTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2x[i", "Uc",   MergeNone, "aarch64_sme_za32_ustmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA32   : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "hbf",  MergeNone, "aarch64_sme_tmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVSTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "cs",   MergeNone, "aarch64_sme_stmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVUTMOPA_ZA32  : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2d[i", "UcUs", MergeNone, "aarch64_sme_utmopa_za32",  [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVSUTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2u[i", "c",    MergeNone, "aarch64_sme_sutmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVUSTMOPA_ZA32 : Inst<"svtmopa_lane_za32[_{d}_{3}]", "vi2x[i", "Uc",   MergeNone, "aarch64_sme_ustmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f16f16" in {
-  def SVTMOPA_F16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "h", MergeNone, "aarch64_sme_za16_ftmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_F16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "h", MergeNone, "aarch64_sme_tmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-b16b16" in {
-  def SVTMOPA_BF16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "b", MergeNone, "aarch64_sme_za16_bftmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_BF16 : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2d[i", "b", MergeNone, "aarch64_sme_tmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f16" in {
-  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_za16_ftmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA16_FPM : Inst<"svtmopa_lane_za16[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_tmopa_za16", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_1>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 let SMETargetGuard = "sme2,sme-tmop,sme-f8f32" in {
-  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_za32_ftmopa", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
+  def SVTMOPA_ZA32_FPM : Inst<"svtmopa_lane_za32[_{d}_{d}]", "vi2.dd[i>", "m", MergeNone, "aarch64_sme_tmopa_za32", [IsStreaming, IsInOutZA], [ImmCheck<0, ImmCheck0_3>, ImmCheck<4, ImmCheck0_3>]>;
 }
 
 multiclass ZAReadz<string n_suffix, string vg_num, string t, string i_prefix, list<ImmCheck> ch> {

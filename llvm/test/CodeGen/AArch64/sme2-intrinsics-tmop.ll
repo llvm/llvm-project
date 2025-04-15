@@ -11,7 +11,7 @@ define void @stmopa_za32_s8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    stmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.stmopa.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.stmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -23,7 +23,7 @@ define void @utmopa_za32_u8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    utmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.utmopa.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.utmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -35,7 +35,7 @@ define void @ustmopa_za32_u8_s8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ustmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.ustmopa.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.ustmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -47,7 +47,7 @@ define void @sutmopa_za32_s8_u8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    sutmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.sutmopa.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.sutmopa.za32.nxv16i8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -59,7 +59,7 @@ define void @stmopa_za32_s16(<vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    stmopa za0.s, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.stmopa.nxv8i16(i32 0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.stmopa.za32.nxv8i16(i32 0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -71,7 +71,7 @@ define void @utmopa_za32_u16(<vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    utmopa za0.s, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.utmopa.nxv8i16(i32 0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.utmopa.za32.nxv8i16(i32 0, <vscale x 8 x i16> %zn1, <vscale x 8 x i16> %zn2, <vscale x 8 x i16> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -83,7 +83,7 @@ define void @ftmopa_za32_f16(<vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2,
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.s, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.ftmopa.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za32.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -95,7 +95,7 @@ define void @bftmopa_za32_bf16(<vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat>
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bftmopa za0.s, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.bftmopa.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za32.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -107,7 +107,7 @@ define void @ftmopa_za32_f32(<vscale x 4 x float> %zn1, <vscale x 4 x float> %zn
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.s, { z0.s, z1.s }, z2.s, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.ftmopa.nxv4f32(i32 0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za32.nxv4f32(i32 0, <vscale x 4 x float> %zn1, <vscale x 4 x float> %zn2, <vscale x 4 x float> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -119,7 +119,7 @@ define void @ftmopa_za16_f16(<vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2,
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.h, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za16.ftmopa.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za16.nxv8f16(i32 0, <vscale x 8 x half> %zn1, <vscale x 8 x half> %zn2, <vscale x 8 x half> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -131,7 +131,7 @@ define void @bftmopa_za16_bf16(<vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat>
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bftmopa za0.h, { z0.h, z1.h }, z2.h, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za16.bftmopa.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za16.nxv8bf16(i32 0, <vscale x 8 x bfloat> %zn1, <vscale x 8 x bfloat> %zn2, <vscale x 8 x bfloat> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -143,7 +143,7 @@ define void @ftmopa_za16_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.h, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za16.ftmopa.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za16.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
@@ -155,7 +155,7 @@ define void @ftmopa_za32_f8(<vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <v
 ; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    ftmopa za0.s, { z0.b, z1.b }, z2.b, z28[0]
 ; CHECK-NEXT:    ret
-  call void @llvm.aarch64.sme.za32.ftmopa.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
+  call void @llvm.aarch64.sme.tmopa.za32.nxv16if8(i32 0, <vscale x 16 x i8> %zn1, <vscale x 16 x i8> %zn2, <vscale x 16 x i8> %zm, <vscale x 16 x i8> %zk, i32 0)
   ret void
 }
 
