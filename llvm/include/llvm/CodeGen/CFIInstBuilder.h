@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_CFIINSTREMITTERHELPER_H
-#define LLVM_CODEGEN_CFIINSTREMITTERHELPER_H
+#ifndef LLVM_CODEGEN_CFIINSTBUILDER_H
+#define LLVM_CODEGEN_CFIINSTBUILDER_H
 
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -16,8 +16,8 @@
 
 namespace llvm {
 
-/// Helper class for emitting CFI instructions into Machine IR.
-class CFIInstEmitterHelper {
+/// Helper class for creating CFI instructions and inserting them into MIR.
+class CFIInstBuilder {
   MachineFunction &MF;
   MachineBasicBlock &MBB;
   MachineBasicBlock::iterator InsertPt;
@@ -36,9 +36,8 @@ class CFIInstEmitterHelper {
   const MIMetadata MIMD; // Default-initialized, no debug location desired.
 
 public:
-  CFIInstEmitterHelper(MachineBasicBlock &MBB,
-                       MachineBasicBlock::iterator InsertPt,
-                       MachineInstr::MIFlag MIFlag, bool IsEH = true)
+  CFIInstBuilder(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                 MachineInstr::MIFlag MIFlag, bool IsEH = true)
       : MF(*MBB.getParent()), MBB(MBB), MIFlag(MIFlag), IsEH(IsEH),
         TRI(*MF.getSubtarget().getRegisterInfo()),
         CFIID(MF.getSubtarget().getInstrInfo()->get(
@@ -48,41 +47,42 @@ public:
 
   void setInsertPoint(MachineBasicBlock::iterator IP) { InsertPt = IP; }
 
-  void emitCFIInst(const MCCFIInstruction &CFIInst) const {
+  void insertCFIInst(const MCCFIInstruction &CFIInst) const {
     BuildMI(MBB, InsertPt, MIMD, CFIID)
         .addCFIIndex(MF.addFrameInst(CFIInst))
         .setMIFlag(MIFlag);
   }
 
-  void emitDefCFA(MCRegister Reg, int64_t Offset) const {
-    emitCFIInst(MCCFIInstruction::cfiDefCfa(
+  void buildDefCFA(MCRegister Reg, int64_t Offset) const {
+    insertCFIInst(MCCFIInstruction::cfiDefCfa(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
-  void emitDefCFARegister(MCRegister Reg) const {
-    emitCFIInst(MCCFIInstruction::createDefCfaRegister(
+  void buildDefCFARegister(MCRegister Reg) const {
+    insertCFIInst(MCCFIInstruction::createDefCfaRegister(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
-  void emitDefCFAOffset(int64_t Offset) const {
-    emitCFIInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
+  void buildDefCFAOffset(int64_t Offset) const {
+    insertCFIInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, Offset));
   }
 
-  void emitOffset(MCRegister Reg, int64_t Offset) const {
-    emitCFIInst(MCCFIInstruction::createOffset(
+  void buildOffset(MCRegister Reg, int64_t Offset) const {
+    insertCFIInst(MCCFIInstruction::createOffset(
         nullptr, TRI.getDwarfRegNum(Reg, IsEH), Offset));
   }
 
-  void emitRestore(MCRegister Reg) const {
-    emitCFIInst(MCCFIInstruction::createRestore(nullptr,
-                                                TRI.getDwarfRegNum(Reg, IsEH)));
+  void buildRestore(MCRegister Reg) const {
+    insertCFIInst(MCCFIInstruction::createRestore(
+        nullptr, TRI.getDwarfRegNum(Reg, IsEH)));
   }
 
-  void emitEscape(StringRef Bytes) const {
-    emitCFIInst(MCCFIInstruction::createEscape(nullptr, Bytes));
+  void buildEscape(StringRef Bytes, StringRef Comment = "") const {
+    insertCFIInst(
+        MCCFIInstruction::createEscape(nullptr, Bytes, SMLoc(), Comment));
   }
 };
 
 } // namespace llvm
 
-#endif // LLVM_CODEGEN_CFIINSTREMITTERHELPER_H
+#endif // LLVM_CODEGEN_CFIINSTBUILDER_H
