@@ -203,6 +203,27 @@ define amdgpu_cs void @test_mixed(i32 %a, i32 %p, i32 %q, i32 %r, i32 %s, ptr ad
   ret void
 }
 
+define amdgpu_cs void @test_sgpr(i32 %a, i32 %p, i32 inreg %q, i32 inreg %r, ptr addrspace(1) %out) {
+; GCN-LABEL: test_sgpr:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc_lo, -1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v1, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v5, s0, 0, vcc_lo
+; GCN-NEXT:    v_cndmask_b32_e64 v6, s1, 0, vcc_lo
+; GCN-NEXT:    global_store_b96 v[2:3], v[4:6], off
+; GCN-NEXT:    s_endpgm
+.entry:
+  %vcc = icmp eq i32 %a, -1
+  %val1 = select i1 %vcc, i32 %p, i32 0
+  %val2 = select i1 %vcc, i32 0, i32 %q
+  %val3 = select i1 %vcc, i32 0, i32 %r
+  %ret0 = insertelement <3 x i32> poison, i32 %val1, i32 0
+  %ret1 = insertelement <3 x i32> %ret0, i32 %val2, i32 1
+  %ret2 = insertelement <3 x i32> %ret1, i32 %val3, i32 2
+  store <3 x i32> %ret2, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_cs void @test_u32_ne(i32 %a, i32 %p, i32 %q, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_u32_ne:
 ; GCN:       ; %bb.0: ; %.entry

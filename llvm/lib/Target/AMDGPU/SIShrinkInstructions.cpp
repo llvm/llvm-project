@@ -974,7 +974,8 @@ bool SIShrinkInstructions::shouldSwapCndOperands(
     if (!Src1Imm && Src0Imm)
       InstsToSwap--;
     else if (Src1Imm && !Src0Imm &&
-             UseInst->getOperand(1).getImm() == SISrcMods::NONE)
+             UseInst->getOperand(1).getImm() == SISrcMods::NONE &&
+             TRI->isVGPR(*MRI, Src0.getReg()))
       InstsToSwap++;
   }
   return (InstsToSwap > 0);
