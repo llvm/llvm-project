@@ -942,7 +942,7 @@ Expected<SmallVector<StringRef>> linkAndWrapDeviceFiles(
       return OutputOrErr.takeError();
 
     // Store the offloading image for each linked output file.
-    for (OffloadKind Kind = OFK_FIRST; Kind != OFK_LAST;
+    for (OffloadKind Kind = OFK_OpenMP; Kind != OFK_LAST;
          Kind = static_cast<OffloadKind>((uint16_t)(Kind) << 1)) {
       if ((ActiveOffloadKindMask & Kind) == 0)
         continue;
