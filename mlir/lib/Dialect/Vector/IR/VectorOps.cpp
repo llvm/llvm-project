@@ -5534,7 +5534,8 @@ void ShapeCastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 
 /// Returns true if each element of 'a' is equal to the product of a contiguous
 /// sequence of the elements of 'b'. Returns false otherwise.
-static bool isValidExpandingShapeCast(ArrayRef<int64_t> a, ArrayRef<int64_t> b) {
+static bool isValidExpandingShapeCast(ArrayRef<int64_t> a,
+                                      ArrayRef<int64_t> b) {
   unsigned rankA = a.size();
   unsigned rankB = b.size();
   assert(rankA <= rankB);
