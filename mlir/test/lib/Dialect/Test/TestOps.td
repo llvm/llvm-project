@@ -2811,8 +2811,14 @@ def TestNVVMRequiresSMOp : TEST_Op<"nvvm_requires_sm_80",
   let assemblyFormat = "attr-dict";
 }
 
-def TestNVVMRequiresSMArchCondOp : TEST_Op<"nvvm_requires_sm_90a",
-                                          [NVVMRequiresSM<90, "true">]> {
+def TestNVVMRequiresAtleastSMArchCondOp : 
+    TEST_Op<"nvvm_requires_sm_atleast_90_aa", [NVVMRequiresSM<90, "true">]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresExactSMArchCondOp : TEST_Op<"nvvm_requires_sm_90a",
+                                          [NVVMRequiresSM90a]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
