@@ -272,7 +272,7 @@ int FORTRAN_PROCEDURE_NAME(hostnm)(char *hn, int length) {
   }
 
 #ifdef _WIN32
-  DWORD dwSize{length};
+  DWORD dwSize{static_cast<DWORD>(length)};
 
   // Note: Winsock has gethostname(), but use Win32 API GetComputerNameEx(),
   // in order to avoid adding dependency on Winsock.
