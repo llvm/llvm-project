@@ -23,6 +23,7 @@ set(supported_sources
   assign.cpp
   buffer.cpp
   character.cpp
+  complex-powi.cpp
   connection.cpp
   copy.cpp
   derived-api.cpp

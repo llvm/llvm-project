@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/float128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
@@ -18,7 +19,7 @@ namespace Fortran::runtime {
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
 
-template <typename C, typename I> C tgpowi(C base, I exp) {
+template <typename C, typename I> inline RT_API_ATTRS C tgpowi(C base, I exp) {
   if (exp == 0) {
     return C{1};
   }
@@ -65,21 +66,23 @@ template <typename C, typename I> C tgpowi(C base, I exp) {
 #ifndef _MSC_VER
 // With most compilers, C complex is implemented as a builtin type that may have
 // specific ABI requirements
-extern "C" float _Complex RTNAME(cpowi)(float _Complex base, std::int32_t exp) {
+extern "C" RT_API_ATTRS CppTypeFor<TypeCategory::Complex, 4> RTNAME(cpowi)(
+    CppTypeFor<TypeCategory::Complex, 4> base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" double _Complex RTNAME(zpowi)(
-    double _Complex base, std::int32_t exp) {
+extern "C" RT_API_ATTRS CppTypeFor<TypeCategory::Complex, 8> RTNAME(zpowi)(
+    CppTypeFor<TypeCategory::Complex, 8> base, std::int32_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" float _Complex RTNAME(cpowk)(float _Complex base, std::int64_t exp) {
+extern "C" RT_API_ATTRS CppTypeFor<TypeCategory::Complex, 4> RTNAME(cpowk)(
+    CppTypeFor<TypeCategory::Complex, 4> base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
-extern "C" double _Complex RTNAME(zpowk)(
-    double _Complex base, std::int64_t exp) {
+extern "C" RT_API_ATTRS CppTypeFor<TypeCategory::Complex, 8> RTNAME(zpowk)(
+    CppTypeFor<TypeCategory::Complex, 8> base, std::int64_t exp) {
   return tgpowi(base, exp);
 }
 
