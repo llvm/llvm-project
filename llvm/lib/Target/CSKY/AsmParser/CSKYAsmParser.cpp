@@ -850,9 +850,9 @@ bool CSKYAsmParser::processLRW(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out) {
     const MCExpr *AdjustExpr = nullptr;
     if (const CSKYMCExpr *CSKYExpr =
             dyn_cast<CSKYMCExpr>(Inst.getOperand(1).getExpr())) {
-      if (CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSGD ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSIE ||
-          CSKYExpr->getKind() == CSKYMCExpr::VK_CSKY_TLSLDM) {
+      if (CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSGD ||
+          CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSIE ||
+          CSKYExpr->getSpecifier() == CSKYMCExpr::VK_TLSLDM) {
         MCSymbol *Dot = getContext().createNamedTempSymbol();
         Out.emitLabel(Dot);
         AdjustExpr = MCSymbolRefExpr::create(Dot, getContext());
@@ -1172,25 +1172,25 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier");
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKYMCExpr::Specifier Kind = CSKYMCExpr::VK_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT;
+    Kind = CSKYMCExpr::VK_GOT;
   else if (Identifier.consume_back("@GOTOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTOFF;
+    Kind = CSKYMCExpr::VK_GOTOFF;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT;
+    Kind = CSKYMCExpr::VK_PLT;
   else if (Identifier.consume_back("@GOTPC"))
-    Kind = CSKYMCExpr::VK_CSKY_GOTPC;
+    Kind = CSKYMCExpr::VK_GOTPC;
   else if (Identifier.consume_back("@TLSGD32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSGD;
+    Kind = CSKYMCExpr::VK_TLSGD;
   else if (Identifier.consume_back("@GOTTPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSIE;
+    Kind = CSKYMCExpr::VK_TLSIE;
   else if (Identifier.consume_back("@TPOFF"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLE;
+    Kind = CSKYMCExpr::VK_TLSLE;
   else if (Identifier.consume_back("@TLSLDM32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDM;
+    Kind = CSKYMCExpr::VK_TLSLDM;
   else if (Identifier.consume_back("@TLSLDO32"))
-    Kind = CSKYMCExpr::VK_CSKY_TLSLDO;
+    Kind = CSKYMCExpr::VK_TLSLDO;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1210,7 +1210,7 @@ ParseStatus CSKYAsmParser::parseCSKYSymbol(OperandVector &Operands) {
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
   default:
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
+    if (Kind != CSKYMCExpr::VK_None)
       Res = CSKYMCExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createImm(Res, S, E));
@@ -1258,11 +1258,11 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
   if (getParser().parseIdentifier(Identifier))
     return Error(getLoc(), "unknown identifier " + Identifier);
 
-  CSKYMCExpr::VariantKind Kind = CSKYMCExpr::VK_CSKY_None;
+  CSKYMCExpr::Specifier Kind = CSKYMCExpr::VK_None;
   if (Identifier.consume_back("@GOT"))
-    Kind = CSKYMCExpr::VK_CSKY_GOT_IMM18_BY4;
+    Kind = CSKYMCExpr::VK_GOT_IMM18_BY4;
   else if (Identifier.consume_back("@PLT"))
-    Kind = CSKYMCExpr::VK_CSKY_PLT_IMM18_BY4;
+    Kind = CSKYMCExpr::VK_PLT_IMM18_BY4;
 
   MCSymbol *Sym = getContext().getInlineAsmLabel(Identifier);
 
@@ -1288,7 +1288,7 @@ ParseStatus CSKYAsmParser::parseDataSymbol(OperandVector &Operands) {
 
     getLexer().Lex(); // Eat ']'.
 
-    if (Kind != CSKYMCExpr::VK_CSKY_None)
+    if (Kind != CSKYMCExpr::VK_None)
       Res = CSKYMCExpr::create(Res, Kind, getContext());
 
     Operands.push_back(CSKYOperand::createConstpoolOp(Res, S, E));

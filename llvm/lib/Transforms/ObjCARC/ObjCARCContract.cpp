@@ -660,7 +660,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
     };
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
-    Value *OrigArg = Arg;
 
     // TODO: Change this to a do-while.
     for (;;) {
@@ -686,24 +685,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         }
         break;
       }
-    }
-
-    // Replace bitcast users of Arg that are dominated by Inst.
-    SmallVector<BitCastInst *, 2> BitCastUsers;
-
-    // Add all bitcast users of the function argument first.
-    for (User *U : OrigArg->users())
-      if (auto *BC = dyn_cast<BitCastInst>(U))
-        BitCastUsers.push_back(BC);
-
-    // Replace the bitcasts with the call return. Iterate until list is empty.
-    while (!BitCastUsers.empty()) {
-      auto *BC = BitCastUsers.pop_back_val();
-      for (User *U : BC->users())
-        if (auto *B = dyn_cast<BitCastInst>(U))
-          BitCastUsers.push_back(B);
-
-      ReplaceArgUses(BC);
     }
   }
 

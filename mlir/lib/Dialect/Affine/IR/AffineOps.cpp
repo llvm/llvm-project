@@ -1236,8 +1236,7 @@ mlir::affine::makeComposedFoldedAffineApply(OpBuilder &b, Location loc,
   }
 
   applyOp->erase();
-  assert(foldResults.size() == 1 && "expected 1 folded result");
-  return foldResults.front();
+  return llvm::getSingleElement(foldResults);
 }
 
 OpFoldResult
@@ -1306,8 +1305,7 @@ static OpFoldResult makeComposedFoldedMinMax(OpBuilder &b, Location loc,
   }
 
   minMaxOp->erase();
-  assert(foldResults.size() == 1 && "expected 1 folded result");
-  return foldResults.front();
+  return llvm::getSingleElement(foldResults);
 }
 
 OpFoldResult
@@ -5083,10 +5081,8 @@ struct DropLinearizeUnitComponentsIfDisjointOrZero final
   }
 };
 
-/// Return the product of `terms`, creating an `affine.apply` if any of them are
-/// non-constant values. If any of `terms` is `nullptr`, return `nullptr`.
-static OpFoldResult computeProduct(Location loc, OpBuilder &builder,
-                                   ArrayRef<OpFoldResult> terms) {
+OpFoldResult computeProduct(Location loc, OpBuilder &builder,
+                            ArrayRef<OpFoldResult> terms) {
   int64_t nDynamic = 0;
   SmallVector<Value> dynamicPart;
   AffineExpr result = builder.getAffineConstantExpr(1);

@@ -80,6 +80,23 @@ contains
 ! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
 ! CHECK-NEXT: run 2 evaluate: forall/region_assign1
 
+  subroutine test_null_no_conflict(x)
+    type(t) :: x(10)
+    forall(i=1:10) x(i)%p => null()
+  end subroutine
+! CHECK: ------------ scheduling forall in _QMproc_ptr_forallPtest_null_no_conflict ------------
+! CHECK-NEXT: run 1 evaluate: forall/region_assign1
+
+  subroutine test_null_need_to_save_lhs(x)
+    type(t) :: x(10)
+    forall(i=1:10) x(x(11-i)%p())%p => null()
+  end subroutine
+! CHECK: ------------ scheduling forall in _QMproc_ptr_forallPtest_null_need_to_save_lhs ------------
+! CHECK-NEXT: unknown effect: %{{.*}} = fir.call
+! CHECK-NEXT: unknown effect: %{{.*}} = fir.call
+! CHECK-NEXT: conflict: R/W
+! CHECK-NEXT: run 1 save    : forall/region_assign1/lhs
+! CHECK-NEXT: run 2 evaluate: forall/region_assign1
 
 ! End-to-end test utilities for debugging purposes.
 
@@ -102,6 +119,17 @@ contains
       print *, "got:", [(a(i)%p(), i=1,10)]
     end if
   end function
+
+  logical function check_association(a, expected)
+    type(t) :: a(:)
+    logical :: expected(:)
+    check_association = all([(associated(a(i)%p), i=1,10)].eqv.expected)
+    if (.not.check_association) then
+      print *, "expected:", expected
+      print *, "got:", [(associated(a(i)%p), i=1,10)]
+    end if
+  end function
+
 end module
 
 ! End-to-end test for debugging purposes (not verified by lit).
@@ -119,5 +147,10 @@ end module
   call reset(a)
   call test_need_to_save_lhs_and_rhs(a)
   if (.not.check_equal(a, [2, 4, 6, 8, 10, 1, 3, 5, 7, 9])) stop 3
+
+  call reset(a)
+  call test_null_need_to_save_lhs(a)
+  if (.not.check_association(a, [(.false., i=1,10)])) stop 4
+
   print *, "PASS"
 end

@@ -98,7 +98,8 @@ void ReadMemoryRequestHandler::operator()(
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
 
-  llvm::StringRef memoryReference = GetString(arguments, "memoryReference");
+  llvm::StringRef memoryReference =
+      GetString(arguments, "memoryReference").value_or("");
   auto addr_opt = DecodeMemoryReference(memoryReference);
   if (!addr_opt.has_value()) {
     response["success"] = false;

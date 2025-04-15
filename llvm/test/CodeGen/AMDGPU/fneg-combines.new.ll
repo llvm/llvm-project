@@ -1186,7 +1186,7 @@ define <2 x float> @v_fneg_minnum_multi_use_minnum_f32_no_ieee(float %a, float %
   %min = call float @llvm.minnum.f32(float %a, float %b)
   %fneg = fneg float %min
   %use1 = fmul float %min, 4.0
-  %ins0 = insertelement <2 x float> undef, float %fneg, i32 0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
   %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
   ret <2 x float> %ins1
 }
@@ -1376,7 +1376,7 @@ define <2 x float> @v_fneg_maxnum_multi_use_maxnum_f32_no_ieee(float %a, float %
   %max = call float @llvm.maxnum.f32(float %a, float %b)
   %fneg = fneg float %max
   %use1 = fmul float %max, 4.0
-  %ins0 = insertelement <2 x float> undef, float %fneg, i32 0
+  %ins0 = insertelement <2 x float> poison, float %fneg, i32 0
   %ins1 = insertelement <2 x float> %ins0, float %use1, i32 1
   ret <2 x float> %ins1
 }

@@ -580,6 +580,35 @@ void mlir::python::populateIRAffine(nb::module_ &m) {
              return PyAffineExpr(self.getContext(),
                                  mlirAffineExprCompose(self, other));
            })
+      .def(
+          "shift_dims",
+          [](PyAffineExpr &self, uint32_t numDims, uint32_t shift,
+             uint32_t offset) {
+            return PyAffineExpr(
+                self.getContext(),
+                mlirAffineExprShiftDims(self, numDims, shift, offset));
+          },
+          nb::arg("num_dims"), nb::arg("shift"), nb::arg("offset").none() = 0)
+      .def(
+          "shift_symbols",
+          [](PyAffineExpr &self, uint32_t numSymbols, uint32_t shift,
+             uint32_t offset) {
+            return PyAffineExpr(
+                self.getContext(),
+                mlirAffineExprShiftSymbols(self, numSymbols, shift, offset));
+          },
+          nb::arg("num_symbols"), nb::arg("shift"),
+          nb::arg("offset").none() = 0)
+      .def_static(
+          "simplify_affine_expr",
+          [](PyAffineExpr &self, uint32_t numDims, uint32_t numSymbols) {
+            return PyAffineExpr(
+                self.getContext(),
+                mlirSimplifyAffineExpr(self, numDims, numSymbols));
+          },
+          nb::arg("expr"), nb::arg("num_dims"), nb::arg("num_symbols"),
+          "Simplify an affine expression by flattening and some amount of "
+          "simple analysis.")
       .def_static(
           "get_add", &PyAffineAddExpr::get,
           "Gets an affine expression containing a sum of two expressions.")

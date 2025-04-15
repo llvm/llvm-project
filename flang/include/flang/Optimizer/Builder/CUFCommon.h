@@ -14,6 +14,7 @@
 #include "mlir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
+static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem";
 
 namespace fir {
 class FirOpBuilder;

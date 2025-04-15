@@ -426,8 +426,7 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
          "requires statically sized, normalized forall op");
   SmallVector<int64_t> tmpMappingSizes = numParallelIterations.value();
   SetVector<Attribute> forallMappingAttrs;
-  forallMappingAttrs.insert(forallOp.getMapping()->getValue().begin(),
-                            forallOp.getMapping()->getValue().end());
+  forallMappingAttrs.insert_range(forallOp.getMapping()->getValue());
   auto comparator = [](Attribute a, Attribute b) -> bool {
     return cast<DeviceMappingAttrInterface>(a).getMappingId() <
            cast<DeviceMappingAttrInterface>(b).getMappingId();

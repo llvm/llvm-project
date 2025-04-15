@@ -81,7 +81,8 @@ define float @fold_abs_in_branch_undef(float %arg1, float %arg2) {
 entry:
   %0 = fadd reassoc nnan nsz arcp contract afn float %arg1, %arg2
   %1 = fadd reassoc nnan nsz arcp contract afn float %0, %arg2
-  %2 = call reassoc nnan nsz arcp contract afn float @llvm.fabs.f32(float undef)
+  %undef = freeze float poison
+  %2 = call reassoc nnan nsz arcp contract afn float @llvm.fabs.f32(float %undef)
   %3 = fmul reassoc nnan nsz arcp contract afn float %2, 2.000000e+00
   %4 = fcmp ule float %3, 1.000000e+00
   br i1 %4, label %if, label %exit

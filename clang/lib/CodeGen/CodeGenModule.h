@@ -528,9 +528,6 @@ private:
   /// that we don't re-emit the initializer.
   llvm::DenseMap<const Decl*, unsigned> DelayedCXXInitPosition;
 
-  /// To remember which types did require a vector deleting dtor.
-  llvm::SmallPtrSet<const CXXRecordDecl *, 16> RequireVectorDeletingDtor;
-
   typedef std::pair<OrderGlobalInitsOrStermFinalizers, llvm::Function *>
       GlobalInitData;
 
@@ -1076,10 +1073,8 @@ public:
 
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool ForEH = false) {
-    return (ForEH || getLangOpts().RTTI) && !getLangOpts().CUDAIsDevice &&
-           !(getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
-             (getTriple().isNVPTX() || getTriple().isAMDGPU() ||
-              getTriple().isSPIRV()));
+    return (ForEH || getLangOpts().RTTI) &&
+           (!getLangOpts().isTargetDevice() || !getTriple().isGPU());
   }
 
   /// Get the address of the RTTI descriptor for the given type.
@@ -1547,7 +1542,6 @@ public:
   void EmitGlobal(GlobalDecl D);
 
   bool TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D);
-  void EmitDefinitionAsAlias(GlobalDecl Alias, GlobalDecl Target);
 
   llvm::GlobalValue *GetGlobalValue(StringRef Ref);
 
@@ -1815,8 +1809,6 @@ public:
     // behavior. So projects like the Linux kernel can rely on it.
     return !getLangOpts().CPlusPlus;
   }
-  void requireVectorDestructorDefinition(const CXXRecordDecl *RD);
-  bool classNeedsVectorDestructor(const CXXRecordDecl *RD);
 
 private:
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;

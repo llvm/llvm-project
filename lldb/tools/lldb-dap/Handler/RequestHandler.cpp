@@ -6,15 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RequestHandler.h"
+#include "Handler/RequestHandler.h"
 #include "DAP.h"
+#include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolBase.h"
 #include "RunInTerminal.h"
+#include "llvm/Support/Error.h"
 
 #if !defined(_WIN32)
 #include <unistd.h>
 #endif
+
+using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
 
@@ -45,7 +50,7 @@ static uint32_t SetLaunchFlag(uint32_t flags, const llvm::json::Object *obj,
 
 // Both attach and launch take either a sourcePath or a sourceMap
 // argument (or neither), from which we need to set the target.source-map.
-void RequestHandler::SetSourceMapFromArguments(
+void BaseRequestHandler::SetSourceMapFromArguments(
     const llvm::json::Object &arguments) const {
   const char *sourceMapHelp =
       "source must be be an array of two-element arrays, "
@@ -54,7 +59,7 @@ void RequestHandler::SetSourceMapFromArguments(
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
   constexpr llvm::StringRef sourceMapKey = "sourceMap";
@@ -96,6 +101,11 @@ void RequestHandler::SetSourceMapFromArguments(
 static llvm::Error RunInTerminal(DAP &dap,
                                  const llvm::json::Object &launch_request,
                                  const uint64_t timeout_seconds) {
+  if (!dap.clientFeatures.contains(
+          protocol::eClientFeatureRunInTerminalRequest))
+    return llvm::make_error<DAPError>("Cannot use runInTerminal, feature is "
+                                      "not supported by the connected client");
+
   dap.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -112,7 +122,7 @@ static llvm::Error RunInTerminal(DAP &dap,
   debugger_pid = getpid();
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, dap.debug_adapter_path, comm_file.m_path, debugger_pid);
+      launch_request, comm_file.m_path, debugger_pid);
   dap.SendReverseRequest<LogFailureResponseHandler>("runInTerminal",
                                                     std::move(reverse_request));
 
@@ -158,8 +168,30 @@ static llvm::Error RunInTerminal(DAP &dap,
                                  error.GetCString());
 }
 
+void BaseRequestHandler::Run(const Request &request) {
+  // If this request was cancelled, send a cancelled response.
+  if (dap.IsCancelled(request)) {
+    Response cancelled{/*request_seq=*/request.seq,
+                       /*command=*/request.command,
+                       /*success=*/false,
+                       /*message=*/eResponseMessageCancelled,
+                       /*body=*/std::nullopt};
+    dap.Send(cancelled);
+    return;
+  }
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to move this into
+  // RequestHandler<>::operator().
+  operator()(request);
+
+  // FIXME: After all the requests have migrated from LegacyRequestHandler >
+  // RequestHandler<> we should be able to check `debugger.InterruptRequest` and
+  // mark the response as cancelled.
+}
+
 lldb::SBError
-RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
+BaseRequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   lldb::SBError error;
   const auto *arguments = request.getObject("arguments");
   auto launchCommands = GetStrings(arguments, "launchCommands");
@@ -169,7 +201,7 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
-  const auto cwd = GetString(arguments, "cwd");
+  const auto cwd = GetString(arguments, "cwd").value_or("");
   if (!cwd.empty())
     launch_info.SetWorkingDirectory(cwd.data());
 
@@ -228,13 +260,13 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
   return error;
 }
 
-void RequestHandler::PrintWelcomeMessage() const {
+void BaseRequestHandler::PrintWelcomeMessage() const {
 #ifdef LLDB_DAP_WELCOME_MESSAGE
   dap.SendOutput(OutputType::Console, LLDB_DAP_WELCOME_MESSAGE);
 #endif
 }
 
-bool RequestHandler::HasInstructionGranularity(
+bool BaseRequestHandler::HasInstructionGranularity(
     const llvm::json::Object &arguments) const {
   if (std::optional<llvm::StringRef> value = arguments.getString("granularity"))
     return value == "instruction";

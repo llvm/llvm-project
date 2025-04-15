@@ -76,6 +76,40 @@ void IRBuilderBase::SetInstDebugLocation(Instruction *I) const {
     }
 }
 
+Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
+  Type *SrcTy = V->getType();
+  if (SrcTy == DestTy)
+    return V;
+
+  if (SrcTy->isAggregateType()) {
+    unsigned NumElements;
+    if (SrcTy->isStructTy()) {
+      assert(DestTy->isStructTy() && "Expected StructType");
+      assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements() &&
+             "Expected StructTypes with equal number of elements");
+      NumElements = SrcTy->getStructNumElements();
+    } else {
+      assert(SrcTy->isArrayTy() && DestTy->isArrayTy() && "Expected ArrayType");
+      assert(SrcTy->getArrayNumElements() == DestTy->getArrayNumElements() &&
+             "Expected ArrayTypes with equal number of elements");
+      NumElements = SrcTy->getArrayNumElements();
+    }
+
+    Value *Result = PoisonValue::get(DestTy);
+    for (unsigned I = 0; I < NumElements; ++I) {
+      Type *ElementTy = SrcTy->isStructTy() ? DestTy->getStructElementType(I)
+                                            : DestTy->getArrayElementType();
+      Value *Element =
+          CreateAggregateCast(CreateExtractValue(V, ArrayRef(I)), ElementTy);
+
+      Result = CreateInsertValue(Result, Element, ArrayRef(I));
+    }
+    return Result;
+  }
+
+  return CreateBitOrPointerCast(V, DestTy);
+}
+
 CallInst *
 IRBuilderBase::createCallHelper(Function *Callee, ArrayRef<Value *> Ops,
                                 const Twine &Name, FMFSource FMFSource,
@@ -945,6 +979,26 @@ CallInst *IRBuilderBase::CreateConstrainedFPBinOp(
 
   CallInst *C = CreateIntrinsic(ID, {L->getType()},
                                 {L, R, RoundingV, ExceptV}, nullptr, Name);
+  setConstrainedFPCallAttr(C);
+  setFPAttrs(C, FPMathTag, UseFMF);
+  return C;
+}
+
+CallInst *IRBuilderBase::CreateConstrainedFPIntrinsic(
+    Intrinsic::ID ID, ArrayRef<Type *> Types, ArrayRef<Value *> Args,
+    FMFSource FMFSource, const Twine &Name, MDNode *FPMathTag,
+    std::optional<RoundingMode> Rounding,
+    std::optional<fp::ExceptionBehavior> Except) {
+  Value *RoundingV = getConstrainedFPRounding(Rounding);
+  Value *ExceptV = getConstrainedFPExcept(Except);
+
+  FastMathFlags UseFMF = FMFSource.get(FMF);
+
+  llvm::SmallVector<Value *, 5> ExtArgs(Args);
+  ExtArgs.push_back(RoundingV);
+  ExtArgs.push_back(ExceptV);
+
+  CallInst *C = CreateIntrinsic(ID, Types, ExtArgs, nullptr, Name);
   setConstrainedFPCallAttr(C);
   setFPAttrs(C, FPMathTag, UseFMF);
   return C;

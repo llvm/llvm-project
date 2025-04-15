@@ -41,7 +41,7 @@ bb9:                                              ; preds = %bb14, %bb8
   br i1 %tmp12, label %bb13, label %bb14
 
 bb13:                                             ; preds = %bb9
-  store volatile i32 0, ptr addrspace(1) undef, align 4
+  store volatile i32 0, ptr addrspace(1) poison, align 4
   br label %bb14
 
 bb14:                                             ; preds = %bb13, %bb9

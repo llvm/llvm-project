@@ -203,6 +203,16 @@ const struct StrA sc = *sb;
 _Static_assert(sc.a == 12, ""); // pedantic-ref-warning {{GNU extension}} \
                                 // pedantic-expected-warning {{GNU extension}}
 
+struct ComplexS {
+  int a;
+  float b;
+  struct StrA sa[2];
+};
+const struct ComplexS CS = {12, 23.0f, {{1}, {2}}};
+const struct ComplexS CS2 = CS;
+_Static_assert(CS2.sa[0].a == 1, ""); // pedantic-ref-warning {{GNU extension}} \
+                                      // pedantic-expected-warning {{GNU extension}}
+
 _Static_assert(((void*)0 + 1) != (void*)0, ""); // pedantic-expected-warning {{arithmetic on a pointer to void is a GNU extension}} \
                                                 // pedantic-expected-warning {{not an integer constant expression}} \
                                                 // pedantic-expected-note {{cannot perform pointer arithmetic on null pointer}} \

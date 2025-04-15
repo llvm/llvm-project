@@ -103,7 +103,7 @@ TEST_F(PGOCtxProfRWTest, RoundTrip) {
       PGOCtxProfileWriter Writer(Out);
       Writer.startContextSection();
       for (auto &[_, R] : roots())
-        Writer.writeContextual(*R);
+        Writer.writeContextual(*R, nullptr, 1);
       Writer.endContextSection();
     }
   }
@@ -155,7 +155,7 @@ TEST_F(PGOCtxProfRWTest, InvalidCounters) {
     {
       PGOCtxProfileWriter Writer(Out);
       Writer.startContextSection();
-      Writer.writeContextual(*R);
+      Writer.writeContextual(*R, nullptr, 2);
       Writer.endContextSection();
     }
   }
@@ -181,7 +181,7 @@ TEST_F(PGOCtxProfRWTest, CountersAllZero) {
     {
       PGOCtxProfileWriter Writer(Out);
       Writer.startContextSection();
-      Writer.writeContextual(*R);
+      Writer.writeContextual(*R, nullptr, 42);
       Writer.endContextSection();
     }
   }
@@ -208,7 +208,7 @@ TEST_F(PGOCtxProfRWTest, CountersAllZeroWithOverride) {
       PGOCtxProfileWriter Writer(Out, /*VersionOverride=*/std::nullopt,
                                  /*IncludeEmpty=*/true);
       Writer.startContextSection();
-      Writer.writeContextual(*R);
+      Writer.writeContextual(*R, nullptr, 8);
       Writer.endContextSection();
     }
   }
@@ -293,8 +293,8 @@ TEST_F(PGOCtxProfRWTest, DuplicateRoots) {
       PGOCtxProfileWriter Writer(Out, /*VersionOverride=*/std::nullopt,
                                  /*IncludeEmpty=*/true);
       Writer.startContextSection();
-      Writer.writeContextual(*createNode(1, 1, 1));
-      Writer.writeContextual(*createNode(1, 1, 1));
+      Writer.writeContextual(*createNode(1, 1, 1), nullptr, 1);
+      Writer.writeContextual(*createNode(1, 1, 1), nullptr, 1);
       Writer.endContextSection();
     }
   }
@@ -322,7 +322,7 @@ TEST_F(PGOCtxProfRWTest, DuplicateTargets) {
       R->subContexts()[0] = L2;
       PGOCtxProfileWriter Writer(Out);
       Writer.startContextSection();
-      Writer.writeContextual(*R);
+      Writer.writeContextual(*R, nullptr, 1);
       Writer.endContextSection();
     }
   }

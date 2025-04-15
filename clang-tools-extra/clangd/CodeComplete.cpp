@@ -294,7 +294,7 @@ struct CompletionCandidate {
   std::optional<llvm::StringRef>
   headerToInsertIfAllowed(const CodeCompleteOptions &Opts,
                           CodeCompletionContext::Kind ContextKind) const {
-    if (Opts.InsertIncludes == CodeCompleteOptions::NeverInsert ||
+    if (Opts.InsertIncludes == Config::HeaderInsertionPolicy::NeverInsert ||
         RankedIncludeHeaders.empty() ||
         !contextAllowsHeaderInsertion(ContextKind))
       return std::nullopt;
@@ -1467,7 +1467,6 @@ bool allowIndex(CodeCompletionContext &CC) {
     return true;
   case NestedNameSpecifier::Super:
   case NestedNameSpecifier::TypeSpec:
-  case NestedNameSpecifier::TypeSpecWithTemplate:
   // Unresolved inside a template.
   case NestedNameSpecifier::Identifier:
     return false;

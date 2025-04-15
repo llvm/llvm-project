@@ -155,33 +155,13 @@ void UnrollState::unrollWidenInductionByUF(
   if (isa_and_present<FPMathOperator>(ID.getInductionBinOp()))
     FMFs = ID.getInductionBinOp()->getFastMathFlags();
 
-  VPValue *VectorStep = &Plan.getVF();
-  VPBuilder Builder(PH);
-  if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
-    Instruction::CastOps CastOp =
-        IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;
-    VectorStep = Builder.createWidenCast(CastOp, VectorStep, IVTy);
-    ToSkip.insert(VectorStep->getDefiningRecipe());
-  }
-
   VPValue *ScalarStep = IV->getStepValue();
-  auto *ConstStep = ScalarStep->isLiveIn()
-                        ? dyn_cast<ConstantInt>(ScalarStep->getLiveInIRValue())
-                        : nullptr;
-  if (!ConstStep || ConstStep->getValue() != 1) {
-    if (TypeInfo.inferScalarType(ScalarStep) != IVTy) {
-      ScalarStep =
-          Builder.createWidenCast(Instruction::Trunc, ScalarStep, IVTy);
-      ToSkip.insert(ScalarStep->getDefiningRecipe());
-    }
+  VPBuilder Builder(PH);
+  VPInstruction *VectorStep = Builder.createNaryOp(
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, FMFs,
+      IV->getDebugLoc());
 
-    unsigned MulOpc =
-        IVTy->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
-    VPInstruction *Mul = Builder.createNaryOp(MulOpc, {VectorStep, ScalarStep},
-                                              FMFs, IV->getDebugLoc());
-    VectorStep = Mul;
-    ToSkip.insert(Mul);
-  }
+  ToSkip.insert(VectorStep);
 
   // Now create recipes to compute the induction steps for part 1 .. UF. Part 0
   // remains the header phi. Parts > 0 are computed by adding Step to the
@@ -311,12 +291,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
     if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(Copy) ||
+            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy, m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>(
                         m_VPValue())))
       Copy->addOperand(getConstantVPV(Part));
 
-    if (isa<VPVectorPointerRecipe, VPReverseVectorPointerRecipe>(R))
+    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -348,7 +328,9 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     // the parts to compute the final reduction value.
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
-                      m_VPValue(), m_VPValue(Op1)))) {
+                      m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_VPInstruction<VPInstruction::ComputeFindLastIVResult>(
+                      m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));

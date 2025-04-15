@@ -100,7 +100,7 @@ OUTPUT OPTIONS
 
  Each command is printed before it is executed. This can be valuable for
  debugging test failures, as the last printed command is the one that failed.
- Moreover, :program:`lit` inserts ``'RUN: at line N'`` before each
+ Moreover, :program:`lit` inserts ``'RUN: at line N'`` after each
  command pipeline in the output to help you locate the source line of
  the failed command.
 

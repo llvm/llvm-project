@@ -189,6 +189,9 @@ Expected<bool> LockFileManager::tryLock() {
     return createStringError(EC, "failed to create unique file " +
                                      UniqueLockFileName);
 
+  // Clean up the unique file on signal or scope exit.
+  RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
+
   // Write our process ID to our unique lock file.
   {
     SmallString<256> HostID;
@@ -200,20 +203,14 @@ Expected<bool> LockFileManager::tryLock() {
     Out.close();
 
     if (Out.has_error()) {
-      // We failed to write out PID, so report the error, remove the
-      // unique lock file, and fail.
+      // We failed to write out PID, so report the error and fail.
       Error Err = createStringError(Out.error(),
                                     "failed to write to " + UniqueLockFileName);
-      sys::fs::remove(UniqueLockFileName);
       // Don't call report_fatal_error.
       Out.clear_error();
       return std::move(Err);
     }
   }
-
-  // Clean up the unique file on signal, which also releases the lock if it is
-  // held since the .lock symlink will point to a nonexistent file.
-  RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
 
   while (true) {
     // Create a link from the lock file name. If this succeeds, we're done.
@@ -232,8 +229,6 @@ Expected<bool> LockFileManager::tryLock() {
     // Someone else managed to create the lock file first. Read the process ID
     // from the lock file.
     if (auto LockFileOwner = readLockFile(LockFileName)) {
-      // Wipe out our unique lock file (it's useless now)
-      sys::fs::remove(UniqueLockFileName);
       Owner = std::move(*LockFileOwner);
       return false;
     }
@@ -264,8 +259,8 @@ LockFileManager::~LockFileManager() {
   sys::DontRemoveFileOnSignal(UniqueLockFileName);
 }
 
-LockFileManager::WaitForUnlockResult
-LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
+WaitForUnlockResult
+LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -275,25 +270,25 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
   // algorithm. This improves performance on machines with high core counts
   // when the file lock is heavily contended by multiple clang processes
   using namespace std::chrono_literals;
-  ExponentialBackoff Backoff(std::chrono::seconds(MaxSeconds), 10ms, 500ms);
+  ExponentialBackoff Backoff(MaxSeconds, 10ms, 500ms);
 
   // Wait first as this is only called when the lock is known to be held.
   while (Backoff.waitForNextAttempt()) {
     // FIXME: implement event-based waiting
     if (sys::fs::access(LockFileName.c_str(), sys::fs::AccessMode::Exist) ==
         errc::no_such_file_or_directory)
-      return Res_Success;
+      return WaitForUnlockResult::Success;
 
     // If the process owning the lock died without cleaning up, just bail out.
     if (!processStillExecuting(LockFileOwner->OwnerHostName,
                                LockFileOwner->OwnerPID))
-      return Res_OwnerDied;
+      return WaitForUnlockResult::OwnerDied;
   }
 
   // Give up.
-  return Res_Timeout;
+  return WaitForUnlockResult::Timeout;
 }
 
-std::error_code LockFileManager::unsafeRemoveLockFile() {
+std::error_code LockFileManager::unsafeMaybeUnlock() {
   return sys::fs::remove(LockFileName);
 }

@@ -30,7 +30,7 @@ bb:
   %tmp3 = fsub fast double %arg2, %arg
   %tmp4 = fadd fast double %tmp3, %tmp
   %tmp5 = fsub fast double %tmp, %tmp3
-  %tmp6 = insertvalue { double, double } undef, double %tmp4, 0
+  %tmp6 = insertvalue { double, double } poison, double %tmp4, 0
   %tmp7 = insertvalue { double, double } %tmp6, double %tmp5, 1
   ret { double, double } %tmp7
 }

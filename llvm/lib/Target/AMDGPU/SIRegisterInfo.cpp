@@ -511,6 +511,7 @@ SIRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
 Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI = ST.getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+
   // During ISel lowering we always reserve the stack pointer in entry and chain
   // functions, but never actually want to reference it when accessing our own
   // frame. If we need a frame pointer we use it, but otherwise we can just use
@@ -2769,12 +2770,15 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         // available.
         if (!TmpReg)
           TmpReg = RS->scavengeRegisterBackwards(AMDGPU::SReg_32_XM0RegClass,
-                                                 MI, false, 0);
-        BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
-            .addDef(TmpReg, RegState::Renamable)
-            .addReg(FrameReg)
-            .addImm(ST.getWavefrontSizeLog2())
-            .setOperandDead(3); // Set SCC dead
+                                                 MI, /*RestoreAfter=*/false, 0,
+                                                 /*AllowSpill=*/false);
+        if (TmpReg) {
+          BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_LSHR_B32))
+              .addDef(TmpReg, RegState::Renamable)
+              .addReg(FrameReg)
+              .addImm(ST.getWavefrontSizeLog2())
+              .setOperandDead(3); // Set SCC dead
+        }
         MaterializedReg = TmpReg;
       }
 
@@ -2802,18 +2806,20 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           DstReg = TmpReg;
         }
 
-        auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
-                          .addDef(DstReg, RegState::Renamable)
-                          .addReg(MaterializedReg, RegState::Kill)
-                          .add(OtherOp);
-        if (DeadSCC)
-          AddI32.setOperandDead(3);
+        if (TmpReg) {
+          auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
+                            .addDef(DstReg, RegState::Renamable)
+                            .addReg(MaterializedReg, RegState::Kill)
+                            .add(OtherOp);
+          if (DeadSCC)
+            AddI32.setOperandDead(3);
 
-        MaterializedReg = DstReg;
+          MaterializedReg = DstReg;
 
-        OtherOp.ChangeToRegister(MaterializedReg, false);
-        OtherOp.setIsKill(true);
-        OtherOp.setIsRenamable(true);
+          OtherOp.ChangeToRegister(MaterializedReg, false);
+          OtherOp.setIsKill(true);
+          OtherOp.setIsRenamable(true);
+        }
         FIOp->ChangeToImmediate(Offset);
       } else {
         // If we don't have any other offset to apply, we can just directly
@@ -3711,6 +3717,73 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
     return Empty;
 
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
+}
+
+bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
+                                           ArrayRef<MCPhysReg> Order,
+                                           SmallVectorImpl<MCPhysReg> &Hints,
+                                           const MachineFunction &MF,
+                                           const VirtRegMap *VRM,
+                                           const LiveRegMatrix *Matrix) const {
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
+
+  switch (Hint.first) {
+  case AMDGPURI::Size32: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys =
+          getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
+                                       &AMDGPU::VGPR_32RegClass);
+    }
+
+    // Prefer the paired physreg.
+    if (PairedPhys)
+      // isLo(Paired) is implicitly true here from the API of
+      // getMatchingSuperReg.
+      Hints.push_back(PairedPhys);
+    return false;
+  }
+  case AMDGPURI::Size16: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
+    }
+
+    // First prefer the paired physreg.
+    if (PairedPhys)
+      Hints.push_back(PairedPhys);
+    else {
+      // Add all the lo16 physregs.
+      // When the Paired operand has not yet been assigned a physreg it is
+      // better to try putting VirtReg in a lo16 register, because possibly
+      // later Paired can be assigned to the overlapping register and the COPY
+      // can be eliminated.
+      for (MCPhysReg PhysReg : Order) {
+        if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
+          continue;
+        if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
+            !MRI.isReserved(PhysReg))
+          Hints.push_back(PhysReg);
+      }
+    }
+    return false;
+  }
+  default:
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
+  }
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {

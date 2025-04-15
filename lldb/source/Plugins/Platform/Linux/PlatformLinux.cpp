@@ -210,8 +210,7 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
   if (name != "__kernel_rt_sigreturn")
     return unwind_plan_sp;
 
-  UnwindPlan::RowSP row = std::make_shared<UnwindPlan::Row>();
-  row->SetOffset(0);
+  UnwindPlan::Row row;
 
   // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
   //  - 128-byte siginfo struct
@@ -235,48 +234,48 @@ static lldb::UnwindPlanSP GetAArch64TrapHandlerUnwindPlan(ConstString name) {
 
   // Skip fault address
   offset += 8;
-  row->GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
+  row.GetCFAValue().SetIsRegisterPlusOffset(arm64_dwarf::sp, offset);
 
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
-  row->SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x0, 0 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x1, 1 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x2, 2 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x3, 3 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x4, 4 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x5, 5 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x6, 6 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x7, 7 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x8, 8 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x9, 9 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x10, 10 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x11, 11 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x12, 12 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x13, 13 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x14, 14 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x15, 15 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x16, 16 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x17, 17 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x18, 18 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x19, 19 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x20, 20 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x21, 21 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x22, 22 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x23, 23 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x24, 24 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x25, 25 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x26, 26 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x27, 27 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x28, 28 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::fp, 29 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::x30, 30 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::sp, 31 * 8, false);
+  row.SetRegisterLocationToAtCFAPlusOffset(arm64_dwarf::pc, 32 * 8, false);
 
   // The sigcontext may also contain floating point and SVE registers.
   // However this would require a dynamic unwind plan so they are not included
   // here.
 
   unwind_plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
-  unwind_plan_sp->AppendRow(row);
+  unwind_plan_sp->AppendRow(std::move(row));
   unwind_plan_sp->SetSourceName("AArch64 Linux sigcontext");
   unwind_plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
   // Because sp is the same throughout the function

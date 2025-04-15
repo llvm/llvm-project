@@ -14,7 +14,7 @@ using namespace llvm;
 
 namespace {
 std::unique_ptr<TargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("loongarch64--"));
+  Triple TT("loongarch64--");
   std::string CPU("generic-la64");
   std::string FS("+64bit");
 

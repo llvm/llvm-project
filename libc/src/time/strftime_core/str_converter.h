@@ -27,7 +27,8 @@ unwrap_opt(cpp::optional<cpp::string_view> str_opt) {
   return str_opt.has_value() ? *str_opt : OUT_OF_BOUNDS_STR;
 }
 
-LIBC_INLINE int convert_str(printf_core::Writer *writer,
+template <printf_core::WriteMode write_mode>
+LIBC_INLINE int convert_str(printf_core::Writer<write_mode> *writer,
                             const FormatSection &to_conv, const tm *timeptr) {
   cpp::string_view str;
   cpp::optional<cpp::string_view> str_opt;

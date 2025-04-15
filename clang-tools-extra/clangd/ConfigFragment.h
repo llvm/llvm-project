@@ -341,6 +341,14 @@ struct Fragment {
     ///   Delimiters: empty pair of delimiters "()" or "<>"
     ///   FullPlaceholders: full name of both type and parameter
     std::optional<Located<std::string>> ArgumentLists;
+    /// Add #include directives when accepting code completions. Config
+    /// equivalent of the CLI option '--header-insertion'
+    /// Valid values are enum Config::HeaderInsertionPolicy values:
+    ///   "IWYU": Include what you use. Insert the owning header for top-level
+    ///     symbols, unless the header is already directly included or the
+    ///     symbol is forward-declared
+    ///   "NeverInsert": Never insert headers
+    std::optional<Located<std::string>> HeaderInsertion;
   };
   CompletionBlock Completion;
 

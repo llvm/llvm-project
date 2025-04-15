@@ -48,7 +48,7 @@ define void @test(i1 %c0) #1 {
 
   unreach.blk:                                      ; preds = %preheader.blk, %pre.false.blk
     %phi.val = phi i32 [ %call.pre.false, %pre.false.blk ], [ poison, %preheader.blk ]
-    store i32 %phi.val, ptr undef
+    store i32 %phi.val, ptr poison
     unreachable
 
   exit:                                             ; preds = %switch.blk

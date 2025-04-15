@@ -2,7 +2,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,SDAG %s
 ; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s 2>&1 | FileCheck -check-prefix=GISEL %s
 
-; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-large-fp-convert emits.
+; FIXME: GISEL can't handle the "fptrunc float to bfloat" that expand-fp emits.
 
 ; GISEL: unable to translate instruction: fptrunc
 

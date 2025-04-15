@@ -192,10 +192,10 @@ define amdgpu_kernel void @kernel_3_8() #8 {
 define internal void @default_captured_address() {
 ; CHECK-LABEL: define internal void @default_captured_address
 ; CHECK-SAME: () #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    store volatile ptr @default_captured_address, ptr undef, align 8
+; CHECK-NEXT:    store volatile ptr @default_captured_address, ptr poison, align 8
 ; CHECK-NEXT:    ret void
 ;
-  store volatile ptr @default_captured_address, ptr undef, align 8
+  store volatile ptr @default_captured_address, ptr poison, align 8
   ret void
 }
 

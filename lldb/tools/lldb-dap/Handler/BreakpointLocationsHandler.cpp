@@ -130,7 +130,7 @@ void BreakpointLocationsRequestHandler::operator()(
   FillResponse(request, response);
   auto *arguments = request.getObject("arguments");
   auto *source = arguments->getObject("source");
-  std::string path = GetString(source, "path").str();
+  std::string path = GetString(source, "path").value_or("").str();
   const auto start_line = GetInteger<uint64_t>(arguments, "line")
                               .value_or(LLDB_INVALID_LINE_NUMBER);
   const auto start_column = GetInteger<uint64_t>(arguments, "column")

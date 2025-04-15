@@ -74,6 +74,18 @@ libc_test_library(
 )
 
 libc_test_library(
+    name = "errno_test_helpers",
+    hdrs = [
+        "ErrnoCheckingTest.h",
+    ],
+    deps = [
+        ":LibcUnitTest",
+        "//libc:__support_macros_config",
+        "//libc:errno",
+    ],
+)
+
+libc_test_library(
     name = "fp_test_helpers",
     srcs = [
         "FEnvSafeTest.cpp",

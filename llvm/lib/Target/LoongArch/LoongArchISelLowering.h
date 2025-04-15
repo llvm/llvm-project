@@ -147,7 +147,15 @@ enum NodeType : unsigned {
 
   // Floating point approximate reciprocal operation
   FRECIPE,
-  FRSQRTE
+  FRSQRTE,
+
+  // Vector logicial left / right shift by immediate
+  VSLLI,
+  VSRLI,
+
+  // Vector byte logicial left / right shift
+  VBSLL,
+  VBSRL
 
   // Intrinsic operations end =============================================
 };
@@ -271,7 +279,14 @@ public:
       unsigned *Fast = nullptr) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
-    return false;
+    if (!VT.isSimple())
+      return false;
+
+    // Not for i1 vectors
+    if (VT.getSimpleVT().getScalarType() == MVT::i1)
+      return false;
+
+    return isTypeLegal(VT.getSimpleVT());
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;

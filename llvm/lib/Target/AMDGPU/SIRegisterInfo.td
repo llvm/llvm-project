@@ -431,7 +431,7 @@ def TTMP_LO16 : SIRegisterClass<"AMDGPU", [i16, f16, bf16], 16,
 def TTMP_64Regs : SIRegisterTuples<getSubRegs<2>.ret, TTMP_32, 15, 2, 2, "ttmp">;
 
 // Trap handler TMP 96-bit registers
-def TTMP_96Regs : SIRegisterTuples<getSubRegs<3>.ret, TTMP_32, 15, 3, 3, "ttmp">;
+def TTMP_96Regs : SIRegisterTuples<getSubRegs<3>.ret, TTMP_32, 15, 4, 3, "ttmp">;
 
 // Trap handler TMP 128-bit registers
 def TTMP_128Regs : SIRegisterTuples<getSubRegs<4>.ret, TTMP_32, 15, 4, 4, "ttmp">;
