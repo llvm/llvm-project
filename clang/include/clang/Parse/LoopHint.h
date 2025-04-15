@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_PARSE_LOOPHINT_H
 #define LLVM_CLANG_PARSE_LOOPHINT_H
 
+#include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
 
 namespace clang {
