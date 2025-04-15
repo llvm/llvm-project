@@ -7744,6 +7744,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.addOptInFlag(CmdArgs, options::OPT_fexperimental_late_parse_attributes,
                     options::OPT_fno_experimental_late_parse_attributes);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_funique_source_file_names,
+                    options::OPT_fno_unique_source_file_names);
+
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, Input, D);
   if (!StatsFile.empty()) {
