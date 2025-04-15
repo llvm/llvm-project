@@ -360,15 +360,12 @@ Improvements to Clang's diagnostics
 
 - An error is now emitted when a ``musttail`` call is made to a function marked with the ``not_tail_called`` attribute. (#GH133509).
 
-- ``-Whigher-precisision-for-complex-divison`` no longer incorrectly warns when the divisor is real
-  in complex division. (#GH131127)
+- ``-Whigher-precisision-for-complex-divison`` warns when:
 
-- ``-Whigher-precisision-for-complex-divison`` now correctly warns when:
+  -	The divisor is complex
+  -	When the complex division happens in a higher precision type due to arithmetic promotion
+  -	When using the divide and assign operator (``/=``)
 
-  - The dividend is real, but the divisor is complex.
-  - When the complex division happens in a higher precision type than the dividend due to arithmetic promotion.
-  - When using the divide and assign operator (``/=``)
-  
   Fixes #GH131127
 
 Improvements to Clang's time-trace
