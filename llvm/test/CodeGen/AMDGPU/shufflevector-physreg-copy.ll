@@ -734,10 +734,10 @@ define i32 @shufflevector_v4i32_3210_physreg_even_vgpr_quad_copy_other_use_elt(p
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; def v4, v5, v6, v7
 ; GFX900-NEXT:    ;;#ASMEND
-; GFX900-NEXT:    v_mov_b32_e32 v9, v5
-; GFX900-NEXT:    v_mov_b32_e32 v8, v6
-; GFX900-NEXT:    v_mov_b32_e32 v10, v4
-; GFX900-NEXT:    global_store_dwordx4 v0, v[7:10], s[16:17]
+; GFX900-NEXT:    v_mov_b32_e32 v3, v5
+; GFX900-NEXT:    v_mov_b32_e32 v2, v6
+; GFX900-NEXT:    v_mov_b32_e32 v1, v7
+; GFX900-NEXT:    global_store_dwordx4 v0, v[1:4], s[16:17]
 ; GFX900-NEXT:    v_mov_b32_e32 v0, v6
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
