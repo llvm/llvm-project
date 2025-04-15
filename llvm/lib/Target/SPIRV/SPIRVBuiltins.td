@@ -670,6 +670,7 @@ defm : DemangledNativeBuiltin<"__spirv_GetDefaultQueue", OpenCL_std, Enqueue, 0,
 defm : DemangledNativeBuiltin<"ndrange_1D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
 defm : DemangledNativeBuiltin<"ndrange_2D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
 defm : DemangledNativeBuiltin<"ndrange_3D", OpenCL_std, Enqueue, 1, 3, OpBuildNDRange>;
+defm : DemangledNativeBuiltin<"enqueue_marker", OpenCL_std, Enqueue, 4, 4, OpEnqueueMarker>;
 
 // Spec constant builtin records:
 defm : DemangledNativeBuiltin<"__spirv_SpecConstant", OpenCL_std, SpecConstant, 2, 2, OpSpecConstant>;
@@ -1653,6 +1654,7 @@ def : OpenCLType<"opencl.event_t", "spirv.Event">;
 def : OpenCLType<"opencl.queue_t", "spirv.Queue">;
 def : OpenCLType<"opencl.sampler_t", "spirv.Sampler">;
 def : OpenCLType<"opencl.clk_event_t", "spirv.DeviceEvent">;
+def : OpenCLType<"opencl.clkevent_t", "spirv.DeviceEvent">;
 
 foreach aq = ["_t", "_ro_t", "_wo_t", "_rw_t"] in {
   defvar p = !cond(!not(!eq(!find(aq, "_rw_t"), -1)) : "2",
