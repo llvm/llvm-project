@@ -41,6 +41,9 @@ using namespace llvm;
 TargetLowering::TargetLowering(const TargetMachine &tm)
     : TargetLoweringBase(tm) {}
 
+// Define the virtual destructor out-of-line for build efficiency.
+TargetLowering::~TargetLowering() = default;
+
 const char *TargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
