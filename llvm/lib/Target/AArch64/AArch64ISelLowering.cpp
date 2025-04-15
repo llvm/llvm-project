@@ -1586,23 +1586,41 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     if (EnablePartialReduceNodes) {
-      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
-        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
-          // 1. Set all combinations where a type is illegal to "Legal"
-          // - These will be legalized to a legal type pair
-          // - Avoid expanding them too early (or preventing folds)
-          if (!isTypeLegal(VT) || !isTypeLegal(InnerVT)) {
-            setPartialReduceMLAAction(VT, InnerVT, Legal);
-            continue;
-          }
-          //  2. Set all legal combinations to "Expand"
-          // - Not all of these can be lowered (via a Legal or Custom lowering).
-          setPartialReduceMLAAction(VT, InnerVT, Expand);
-        }
-      }
-      // 3. Mark known legal pairs as 'Legal' (these will expand to USDOT).
+      // Mark known legal pairs as 'Legal' (these will expand to UDOT or SDOT).
+      // Other pairs will default to 'Expand'.
       setPartialReduceMLAAction(MVT::nxv2i64, MVT::nxv8i16, Legal);
       setPartialReduceMLAAction(MVT::nxv4i32, MVT::nxv16i8, Legal);
+
+      auto CanSplitToLegalPartialReduce = [&](MVT AccTy, MVT InTy) {
+        while (true) {
+          switch (getTypeAction(AccTy)) {
+          case TargetLoweringBase::TypeLegal:
+            return isPartialReduceMLALegalOrCustom(AccTy, InTy);
+          case TargetLoweringBase::TypeSplitVector:
+            if (!InTy.getVectorElementCount().isKnownEven())
+              return false;
+            // Currently, we only implement spillting for partial reductions,
+            // which splits the result and both operands.
+            AccTy = AccTy.getHalfNumVectorElementsVT();
+            InTy = InTy.getHalfNumVectorElementsVT();
+            break;
+          default:
+            // Assume all other type pairs are expanded.
+            return false;
+          }
+        }
+      };
+
+      for (MVT VT : MVT::integer_scalable_vector_valuetypes()) {
+        for (MVT InnerVT : MVT::integer_scalable_vector_valuetypes()) {
+          // Mark illegal type pairs that split to a legal pair as legal.
+          // This is needed as otherwise we may not apply useful combines.
+          if (!isTypeLegal(VT) || !isTypeLegal(InnerVT)) {
+            if (CanSplitToLegalPartialReduce(VT, InnerVT))
+              setPartialReduceMLAAction(VT, InnerVT, Legal);
+          }
+        }
+      }
     }
 
     // Firstly, exclude all scalable vector extending loads/truncating stores,
