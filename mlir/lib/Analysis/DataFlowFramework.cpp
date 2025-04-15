@@ -109,6 +109,11 @@ LogicalResult DataFlowSolver::initializeAndRun(Operation *top) {
   isRunning = true;
   auto guard = llvm::make_scope_exit([&]() { isRunning = false; });
 
+  // Initialize equivalent lattice anchors.
+  for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
+    analysis.initializeEquivalentLatticeAnchor(top);
+  }
+
   // Initialize the analyses.
   for (DataFlowAnalysis &analysis : llvm::make_pointee_range(childAnalyses)) {
     DATAFLOW_DEBUG(llvm::dbgs()

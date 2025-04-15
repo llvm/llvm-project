@@ -1639,7 +1639,7 @@ def note_omp_ctx_compatible_set_and_selector_for_property
            "'match(%2={%1(%0)})'">;
 def warn_omp_ctx_incompatible_score_for_property
     : Warning<"the context selector '%0' in the context set '%1' cannot have a "
-              "score ('%2'); score ignored">,
+              "score (%quoted2); score ignored">,
       InGroup<OpenMPClauses>;
 def warn_omp_more_one_device_type_clause
     : Warning<"more than one 'device_type' clause is specified">,

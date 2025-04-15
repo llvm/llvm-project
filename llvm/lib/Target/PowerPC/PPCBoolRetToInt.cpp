@@ -178,9 +178,7 @@ class PPCBoolRetToInt : public FunctionPass {
  public:
   static char ID;
 
-  PPCBoolRetToInt() : FunctionPass(ID) {
-    initializePPCBoolRetToIntPass(*PassRegistry::getPassRegistry());
-  }
+  PPCBoolRetToInt() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))

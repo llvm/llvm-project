@@ -884,6 +884,13 @@ public:
     AnyOf,
     // Calculates the first active lane index of the vector predicate operand.
     FirstActiveLane,
+
+    // The opcodes below are used for VPInstructionWithType.
+    //
+    /// Scale the first operand (vector step) by the second operand
+    /// (scalar-step).  Casts both operands to the result type if needed.
+    WideIVStep,
+
   };
 
 private:
@@ -1041,11 +1048,19 @@ public:
   VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
                         Type *ResultTy, DebugLoc DL, const Twine &Name = "")
       : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+  VPInstructionWithType(unsigned Opcode,
+                        std::initializer_list<VPValue *> Operands,
+                        Type *ResultTy, FastMathFlags FMFs, DebugLoc DL = {},
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, FMFs, DL, Name), ResultTy(ResultTy) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     // VPInstructionWithType are VPInstructions with specific opcodes requiring
     // type information.
-    return R->isScalarCast();
+    if (R->isScalarCast())
+      return true;
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && VPI->getOpcode() == VPInstruction::WideIVStep;
   }
 
   static inline bool classof(const VPUser *R) {
